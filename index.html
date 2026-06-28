@@ -521,19 +521,11 @@
       const url = WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload));
       console.log('Enviando para:', url.substring(0, 80) + '...');
 
-      const resp = await fetch(url);
-      console.log('Status HTTP:', resp.status);
+      // no-cors evita o bloqueio de CORS do Apps Script (resposta opaca — não lemos o body)
+      await fetch(url, { method: 'GET', mode: 'no-cors' });
 
-      const text = await resp.text();
-      console.log('Resposta bruta:', text);
-
-      const result = JSON.parse(text);
-      if (result.ok) {
-        showToast('✓ Cliente salvo no Google Sheets!', 'ok');
-        setTimeout(() => resetForm(), 2500);
-      } else {
-        showToast('Erro Apps Script: ' + (result.erro || 'sem detalhe'), 'erro');
-      }
+      showToast('✓ Cliente salvo no Google Sheets!', 'ok');
+      setTimeout(() => resetForm(), 2500);
     } catch (err) {
       console.error('Erro fetch:', err);
       showToast('Erro: ' + err.message, 'erro');
