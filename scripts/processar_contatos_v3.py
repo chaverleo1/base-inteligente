@@ -22,7 +22,7 @@ import unicodedata
 from pathlib import Path
 
 # ── CAMINHOS PADRÃO (usados quando não há argumentos) ───────────────────────
-ENTRADA_PADRAO = Path(r"C:\Users\User\Downloads\contatos.xlsx")
+ENTRADA_PADRAO = Path(r"C:\Users\User\Downloads\contacts.csv")
 SAIDA_PADRAO   = Path(r"C:\Users\User\Downloads\base_processada.csv")
 
 # ── CONSTANTES ──────────────────────────────────────────────────────────────
@@ -33,12 +33,13 @@ COLUNAS_SAIDA = [
     "canal", "finalidade",
     "valorMin", "valorMax",
     "score", "prioridade", "categoria",
+    "historico",
     "nome_bruto",
 ]
 
 # Colunas de telefone aceitas (case-insensitive, com ou sem espaço/underline)
 PADROES_FONE = re.compile(
-    r"^(phone|fone|tel|telefone)\s*[\s_\-]?\s*(\d+)\s*[\-_]?\s*(value|valor)?$",
+    r"^(phone|fone|fon|tel|telefone)\s*[\s_\-]?\s*(\d+)\s*[\-_]?\s*(value|valor)?$",
     re.IGNORECASE,
 )
 
@@ -423,7 +424,8 @@ def calcular_score(row: dict) -> tuple[int, str]:
 def colunas_fone(cabecalho: list[str]) -> list[int]:
     """
     Retorna índices das colunas que contêm telefone.
-    Aceita: Phone 1 - Value, fone1, fone2, tel1, telefone1, etc.
+    Aceita: Phone 1 - Value ... Phone 6 - Value (Google Contatos),
+            fone1..fone5, fon4, tel1, telefone1, etc. (campos customizados).
     """
     indices = []
     for i, col in enumerate(cabecalho):
@@ -432,19 +434,36 @@ def colunas_fone(cabecalho: list[str]) -> list[int]:
         if re.match(r"^phone\s+\d+\s*-\s*value$", c, re.IGNORECASE):
             indices.append(i)
             continue
-        # Padrões customizados: fone1, fone2, fone 1, tel1, telefone1...
+        # Padrões customizados: fone1, fone2, fon4, tel1, telefone1...
         if PADROES_FONE.match(c):
             indices.append(i)
     return indices
 
 
 def colunas_email(cabecalho: list[str]) -> list[int]:
+    """
+    Aceita: E-mail 1 - Value, E-mail 2 - Value (Google Contatos),
+            email1, e-mail, etc.
+    """
     indices = []
     for i, col in enumerate(cabecalho):
         c = col.strip()
-        if re.match(r"^email\s+\d+\s*-\s*value$", c, re.IGNORECASE):
+        # "E-mail 1 - Value" ou "Email 1 - Value"
+        if re.match(r"^e-?mail\s+\d+\s*-\s*value$", c, re.IGNORECASE):
             indices.append(i)
-        elif re.match(r"^(email|e-mail)\s*[\s_-]?\s*\d*$", c, re.IGNORECASE):
+        # "email1", "email", "e-mail"
+        elif re.match(r"^e-?mail\s*[\s_-]?\s*\d*$", c, re.IGNORECASE):
+            indices.append(i)
+    return indices
+
+
+def colunas_relation(cabecalho: list[str]) -> list[int]:
+    """
+    Retorna índices das colunas Relation N - Value (anotações de conversa).
+    """
+    indices = []
+    for i, col in enumerate(cabecalho):
+        if re.match(r"^relation\s+\d+\s*-\s*value$", col.strip(), re.IGNORECASE):
             indices.append(i)
     return indices
 
@@ -452,12 +471,22 @@ def colunas_email(cabecalho: list[str]) -> list[int]:
 # ── PROCESSAMENTO PRINCIPAL ───────────────────────────────────────────────────
 
 def processar_linha(row_raw: dict, cabecalho: list[str],
-                    idx_fones: list[int], idx_emails: list[int]) -> list[dict]:
+                    idx_fones: list[int], idx_emails: list[int],
+                    idx_relations: list[int]) -> list[dict]:
     """
     Para cada telefone válido encontrado retorna uma linha de saída.
     Um mesmo contato com 3 telefones gera 3 linhas.
     """
-    nome_bruto = row_raw.get("Name", row_raw.get("name", "")).strip()
+    # Tenta coluna "Name" primeiro; senão monta de First+Middle+Last Name
+    nome_bruto = (
+        row_raw.get("Name") or
+        row_raw.get("name") or
+        " ".join(filter(None, [
+            row_raw.get("First Name", "").strip(),
+            row_raw.get("Middle Name", "").strip(),
+            row_raw.get("Last Name", "").strip(),
+        ]))
+    ).strip()
     if not nome_bruto:
         return []
 
@@ -505,6 +534,15 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
                 email = e
                 break
 
+    # Coletar histórico de conversa (Relation N - Value)
+    partes_historico = []
+    for idx in idx_relations:
+        if idx < len(valores_linha):
+            v = valores_linha[idx].strip()
+            if v:
+                partes_historico.append(v)
+    historico = " | ".join(partes_historico)
+
     if not telefones:
         # Mantém a linha sem telefone (para não perder o contato)
         telefones = [""]
@@ -525,6 +563,7 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
             "score":         0,
             "prioridade":    "—",
             "categoria":     categoria,
+            "historico":     historico,
             "nome_bruto":    nome_bruto,
         }
         base["score"], base["prioridade"] = calcular_score(base)
@@ -603,18 +642,20 @@ def main():
 
     cabecalho, linhas_raw = ler_arquivo(entrada)
 
-    print(f"  → {len(linhas_raw)} contatos brutos")
-    print(f"  → Colunas: {cabecalho}")
+    print(f"  ->{len(linhas_raw)} contatos brutos")
+    print(f"  ->Colunas: {cabecalho}")
 
-    idx_fones  = colunas_fone(cabecalho)
-    idx_emails = colunas_email(cabecalho)
+    idx_fones     = colunas_fone(cabecalho)
+    idx_emails    = colunas_email(cabecalho)
+    idx_relations = colunas_relation(cabecalho)
 
-    print(f"  → Colunas de telefone detectadas: {[cabecalho[i] for i in idx_fones]}")
-    print(f"  → Colunas de email detectadas:    {[cabecalho[i] for i in idx_emails]}")
+    print(f"  ->Telefones : {[cabecalho[i] for i in idx_fones]}")
+    print(f"  ->Emails    : {[cabecalho[i] for i in idx_emails]}")
+    print(f"  ->Historico : {[cabecalho[i] for i in idx_relations]}")
 
     resultados = []
     for row in linhas_raw:
-        resultados.extend(processar_linha(row, cabecalho, idx_fones, idx_emails))
+        resultados.extend(processar_linha(row, cabecalho, idx_fones, idx_emails, idx_relations))
 
     # Ordenar por score desc
     resultados.sort(key=lambda r: -int(r["score"]))
@@ -636,16 +677,16 @@ def main():
         if r["segmento"]:
             por_seg[r["segmento"]] = por_seg.get(r["segmento"], 0) + 1
 
-    print(f"\n✓ {total} linhas geradas → {saida}\n")
-    print("─── Categorias ───────────────────────────────")
+    print(f"\nOK: {total} linhas geradas -> {saida}\n")
+    print("--- Categorias ---")
     for cat, n in sorted(por_cat.items(), key=lambda x: -x[1]):
         print(f"  {cat:<20} {n:>5}")
-    print("\n─── Prioridade (compradores/leads/investidores) ─")
+    print("\n--- Prioridade (compradores/leads/investidores) ---")
     print(f"  Alta   {por_pri['Alta']:>5}")
-    print(f"  Média  {por_pri['Média']:>5}")
+    print(f"  Media  {por_pri['Média']:>5}")
     print(f"  Baixa  {por_pri['Baixa']:>5}")
-    print(f"  —      {por_pri['—']:>5}")
-    print("\n─── Segmentos ────────────────────────────────")
+    print(f"  S/prio {por_pri['—']:>5}")
+    print("\n--- Segmentos ---")
     for seg, n in sorted(por_seg.items(), key=lambda x: -x[1]):
         print(f"  {seg:<25} {n:>5}")
 
