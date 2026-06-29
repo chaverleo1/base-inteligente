@@ -102,6 +102,54 @@
   .loading{text-align:center;padding:48px;color:var(--text3);font-size:14px}
   .dot-anim::after{content:'...';animation:dots 1.2s steps(4,end) infinite}
   @keyframes dots{0%,20%{content:'.'}40%{content:'..'}60%,100%{content:'...'}}
+
+  /* ── DRAWER CLIENTE ── */
+  .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .25s}
+  .drawer-overlay.open{opacity:1;pointer-events:all}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:480px;max-width:100vw;background:var(--surface);
+          border-left:1px solid var(--border);z-index:501;overflow-y:auto;transform:translateX(100%);
+          transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+  .drawer.open{transform:translateX(0)}
+  .drawer::-webkit-scrollbar{width:5px}
+  .drawer::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  .drawer-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;position:sticky;top:0;background:var(--surface);z-index:1}
+  .drawer-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0}
+  .drawer-nome{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--text);line-height:1.2}
+  .drawer-cod{font-size:12px;color:var(--text3);margin-top:2px}
+  .drawer-close{margin-left:auto;background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+  .drawer-close:hover{color:var(--text)}
+  .drawer-score-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .d-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px}
+  .d-badge-hot{background:rgba(255,90,90,.15);color:var(--hot)}
+  .d-badge-warm{background:rgba(245,166,35,.15);color:var(--warm)}
+  .d-badge-cold{background:rgba(79,124,255,.15);color:var(--cold)}
+  .d-badge-green{background:rgba(0,212,170,.15);color:var(--accent2)}
+  .d-badge-neutral{background:var(--surface2);color:var(--text2)}
+  .drawer-body{padding:20px 24px;flex:1}
+  .d-section{margin-bottom:22px}
+  .d-section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .d-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+  .d-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .d-field{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px}
+  .d-field-label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+  .d-field-value{font-size:14px;color:var(--text);font-weight:500;word-break:break-word}
+  .d-field.full{grid-column:1/-1}
+  .d-text{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+  .d-actions{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+  .d-btn{flex:1;min-width:120px;padding:11px 14px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .d-btn-wpp{background:#25d366;color:#fff}
+  .d-btn-wpp:hover{background:#1ebe5d}
+  .d-btn-tel{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+  .d-btn-tel:hover{border-color:var(--accent);color:var(--accent)}
+  .d-btn-edit{background:var(--accent);color:#fff}
+  .d-btn-edit:hover{background:#3d6aee}
+  .d-steps{display:flex;flex-direction:column;gap:8px}
+  .d-step{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px}
+  .d-step-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+  .d-step-text{font-size:13px;color:var(--text2);line-height:1.5}
+  .d-step-text b{color:var(--text)}
+  .drawer-loading{padding:60px 24px;text-align:center;color:var(--text3)}
+
   .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
   .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
   .login-logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:6px}
@@ -243,6 +291,23 @@
     </table>
   </div>
 
+</div>
+
+<!-- DRAWER CLIENTE -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="fecharDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header" id="drawerHeader">
+    <div class="drawer-avatar" id="drawerAvatar">?</div>
+    <div style="flex:1;min-width:0">
+      <div class="drawer-nome" id="drawerNome">Carregando...</div>
+      <div class="drawer-cod"  id="drawerCod"></div>
+      <div class="drawer-score-row" id="drawerBadges"></div>
+    </div>
+    <button class="drawer-close" onclick="fecharDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody">
+    <div class="drawer-loading dot-anim">Carregando dados</div>
+  </div>
 </div>
 
 <script>
@@ -401,7 +466,8 @@ function renderDados(json) {
     const rankClass = i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'rank';
     const urg = d.urg || '';
     const urgClass = urg==='Alta'?'pill-alta':urg==='Media'?'pill-media':'pill-baixa';
-    return `<tr>
+    const nomeEsc = (d.nome||'').replace(/'/g,"\\'");
+    return `<tr style="cursor:pointer" onclick="abrirCliente('${nomeEsc}', ${d.score||0}, '${d.cod||''}')">
       <td class="rank ${rankClass}">${i+1}</td>
       <td><b>${d.nome||'—'}</b><br><small style="color:var(--text3)">${d.cod||''}</small></td>
       <td>${d.seg||'—'}</td>
@@ -418,9 +484,8 @@ function renderMatchCol(elId, lista, tipo) {
     el.innerHTML = '<div class="empty-state">Nenhum ainda.<br><small>Score insuficiente ou base vazia.</small></div>';
     return;
   }
-  // exibe até 50 itens com scroll
   el.innerHTML = lista.slice(0, 50).map(d => `
-    <div class="match-item">
+    <div class="match-item" onclick="abrirCliente('${(d.nome||'').replace(/'/g,"\\'")}', ${d.score||0}, '${d.cod||''}')">
       <span class="match-score score-${tipo}">${d.score}</span>
       <div class="match-name">${d.nome||'—'}</div>
       <div class="match-detail">${[d.seg,d.pad,d.urg].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
@@ -452,6 +517,160 @@ function renderGrafico(canvasId, chartInst, entries, setChart, unidade) {
     }
   });
   setChart(c);
+}
+
+// ── DRAWER CLIENTE ────────────────────────────────────────────────────────────
+
+function abrirDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function abrirCliente(nome, score, cod) {
+  document.getElementById('drawerNome').textContent = nome || '—';
+  document.getElementById('drawerCod').textContent  = cod  || '';
+  document.getElementById('drawerAvatar').textContent = (nome||'?')[0].toUpperCase();
+  const sc = parseInt(score) || 0;
+  const badgeCls = sc >= 70 ? 'd-badge-hot' : sc >= 40 ? 'd-badge-warm' : 'd-badge-cold';
+  const badgeTxt = sc >= 70 ? '🔴 Quente' : sc >= 40 ? '🟡 Morno' : '🔵 Frio';
+  document.getElementById('drawerBadges').innerHTML =
+    `<span class="d-badge ${badgeCls}">Score ${sc}</span>
+     <span class="d-badge d-badge-neutral">${badgeTxt}</span>`;
+  document.getElementById('drawerBody').innerHTML =
+    '<div class="drawer-loading dot-anim">Buscando dados do cliente</div>';
+  abrirDrawer();
+
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(nome));
+    const lista = await resp.json();
+    const c = Array.isArray(lista) ? lista.find(x => x.nome === nome) || lista[0] : null;
+    if (!c) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Cliente não encontrado.</div>'; return; }
+    renderDrawer(c, sc);
+  } catch(e) {
+    document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Erro ao carregar dados.</div>';
+  }
+}
+
+function val(v) { return v && v !== '—' && v !== '' ? v : null; }
+function campo(label, value, full) {
+  if (!val(value)) return '';
+  return `<div class="d-field${full?' full':''}"><div class="d-field-label">${label}</div><div class="d-field-value">${value}</div></div>`;
+}
+
+function renderDrawer(c, score) {
+  const tel    = (c.telefone||'').replace(/\D/g,'');
+  const wppUrl = tel ? `https://wa.me/55${tel}` : null;
+  const telUrl = tel ? `tel:+55${tel}` : null;
+
+  // Urgência e dias desde último contato
+  const urg = c.urgencia || c.prioridade || '';
+  let diasUlt = '';
+  if (c.ultimoContato) {
+    const parts = String(c.ultimoContato).split('/');
+    if (parts.length === 3) {
+      const d = new Date(parts[2], parts[1]-1, parts[0]);
+      const diff = Math.round((new Date() - d) / 86400000);
+      diasUlt = isNaN(diff) ? '' : `${diff} dias atrás`;
+    }
+  }
+
+  // Próximos passos automáticos
+  const steps = [];
+  const sc = parseInt(score) || 0;
+  if (sc >= 70) steps.push({icon:'🔴', text:'<b>Contato imediato.</b> Cliente com score máximo — priorize agora.'});
+  else if (sc >= 40) steps.push({icon:'🟡', text:'<b>Aquecer o lead.</b> Entre em contato para entender o momento de compra.'});
+  else steps.push({icon:'🔵', text:'<b>Nutrição.</b> Compartilhe conteúdo relevante ou novidades do portfólio.'});
+  if (diasUlt) steps.push({icon:'📅', text:`Último contato: <b>${c.ultimoContato}</b> (${diasUlt}). Boa hora para retomar.`});
+  if (c.fgts === 'Sim' || c.fgts === 'sim') steps.push({icon:'🏦', text:'Cliente tem <b>FGTS</b> disponível — verificar saldo e elegibilidade.'});
+  if (c.financ === 'Sim' || c.financ === 'sim') steps.push({icon:'💳', text:'Pretende <b>financiar</b> — verificar análise de crédito ou pré-aprovação.'});
+  if (c.permuta === 'Sim' || c.permuta === 'sim') steps.push({icon:'🔄', text:'Interesse em <b>permuta</b> — avaliar imóvel atual como parte do negócio.'});
+  if (val(c.naoFechou)) steps.push({icon:'⚠️', text:`Não fechou antes por: <b>${c.naoFechou}</b>.`});
+  if (val(c.bairroInteresse)) steps.push({icon:'📍', text:`Foco no(s) bairro(s): <b>${c.bairroInteresse}</b>.`});
+
+  // Faixa de preço formatada
+  const faixa = [val(c.valorMin)?'a partir de R$ '+c.valorMin:'', val(c.valorMax)?'até R$ '+c.valorMax:''].filter(Boolean).join(' · ') || '—';
+
+  const urgBadge = urg ? `<span class="d-badge ${urg==='Alta'?'d-badge-hot':urg==='Media'||urg==='Média'?'d-badge-warm':'d-badge-cold'}">${urg}</span>` : '';
+  const segBadge = val(c.segmento) ? `<span class="d-badge d-badge-neutral">${c.segmento}</span>` : '';
+  const padBadge = val(c.padrao)   ? `<span class="d-badge d-badge-green">${c.padrao}</span>` : '';
+
+  // Atualiza badges do header
+  document.getElementById('drawerBadges').innerHTML =
+    `<span class="d-badge ${sc>=70?'d-badge-hot':sc>=40?'d-badge-warm':'d-badge-cold'}">Score ${sc}</span>
+     ${urgBadge}${segBadge}${padBadge}`;
+
+  document.getElementById('drawerBody').innerHTML = `
+
+    <div class="d-actions">
+      ${wppUrl ? `<a class="d-btn d-btn-wpp" href="${wppUrl}" target="_blank">💬 WhatsApp</a>` : ''}
+      ${telUrl ? `<a class="d-btn d-btn-tel" href="${telUrl}">📞 ${c.telefone}</a>` : ''}
+      <a class="d-btn d-btn-edit" href="index.html?buscar=${encodeURIComponent(c.nome||'')}" target="_blank">✏️ Editar</a>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Contato</div>
+      <div class="d-grid">
+        ${campo('Nome completo', c.nome, true)}
+        ${campo('Telefone', c.telefone)}
+        ${campo('E-mail', c.email)}
+        ${campo('Nascimento', c.nascimento)}
+        ${campo('Estado civil', c.estadoCivil)}
+        ${campo('Filhos', c.filhos)}
+        ${campo('Profissão', c.profissao)}
+        ${campo('Empresa', c.empresa)}
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Perfil de busca</div>
+      <div class="d-grid">
+        ${campo('Segmento', c.segmento)}
+        ${campo('Padrão', c.padrao)}
+        ${campo('Faixa de preço', faixa, true)}
+        ${campo('Bairro de interesse', c.bairroInteresse, true)}
+        ${campo('Bairro que mora', c.bairroMora)}
+        ${campo('Cidade', c.cidadeMora)}
+        ${campo('FGTS', c.fgts)}
+        ${campo('Financiamento', c.financ)}
+        ${campo('Entrada/chip', c.entrada_chip)}
+        ${campo('Permuta', c.permuta)}
+        ${campo('Entrada', c.entrada)}
+        ${campo('Finalidade', c.finalidade)}
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Origem e histórico</div>
+      <div class="d-grid">
+        ${campo('Canal', c.canal)}
+        ${campo('Indicado por', c.indicadoPor)}
+        ${campo('Primeiro contato', c.primeiroContato)}
+        ${campo('Último contato', c.ultimoContato ? `${c.ultimoContato}${diasUlt?' ('+diasUlt+')':''}` : null)}
+        ${campo('Produto origem', c.produtoOrigem, true)}
+        ${campo('Urgência', c.urgencia || c.prioridade)}
+        ${campo('Não fechou por', c.naoFechou, true)}
+      </div>
+    </div>
+
+    ${val(c.conversa) ? `<div class="d-section">
+      <div class="d-section-title">Conversa / observações</div>
+      <div class="d-text">${(c.conversa||'').replace(/</g,'&lt;')}${val(c.observacoes)?'\n\n'+c.observacoes.replace(/</g,'&lt;'):''}</div>
+    </div>` : ''}
+
+    <div class="d-section">
+      <div class="d-section-title">Próximos passos</div>
+      <div class="d-steps">
+        ${steps.map(s=>`<div class="d-step"><div class="d-step-icon">${s.icon}</div><div class="d-step-text">${s.text}</div></div>`).join('')}
+      </div>
+    </div>
+  `;
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
