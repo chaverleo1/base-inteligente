@@ -466,8 +466,7 @@ function renderDados(json) {
     const rankClass = i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'rank';
     const urg = d.urg || '';
     const urgClass = urg==='Alta'?'pill-alta':urg==='Media'?'pill-media':'pill-baixa';
-    const nomeEsc = (d.nome||'').replace(/'/g,"\\'");
-    return `<tr style="cursor:pointer" onclick="abrirCliente('${nomeEsc}', ${d.score||0}, '${d.cod||''}')">
+    return `<tr style="cursor:pointer" data-nome="${(d.nome||'').replace(/"/g,'&quot;')}" data-score="${d.score||0}" data-cod="${d.cod||''}">
       <td class="rank ${rankClass}">${i+1}</td>
       <td><b>${d.nome||'—'}</b><br><small style="color:var(--text3)">${d.cod||''}</small></td>
       <td>${d.seg||'—'}</td>
@@ -476,6 +475,11 @@ function renderDados(json) {
       <td>${urg?`<span class="pill ${urgClass}">${urg}</span>`:''}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="6" class="loading">Sem dados</td></tr>';
+
+  document.getElementById('top20Body').onclick = e => {
+    const row = e.target.closest('[data-nome]');
+    if (row) abrirCliente(row.dataset.nome, row.dataset.score, row.dataset.cod);
+  };
 }
 
 function renderMatchCol(elId, lista, tipo) {
@@ -485,11 +489,15 @@ function renderMatchCol(elId, lista, tipo) {
     return;
   }
   el.innerHTML = lista.slice(0, 50).map(d => `
-    <div class="match-item" onclick="abrirCliente('${(d.nome||'').replace(/'/g,"\\'")}', ${d.score||0}, '${d.cod||''}')">
+    <div class="match-item" data-nome="${(d.nome||'').replace(/"/g,'&quot;')}" data-score="${d.score||0}" data-cod="${d.cod||''}">
       <span class="match-score score-${tipo}">${d.score}</span>
       <div class="match-name">${d.nome||'—'}</div>
       <div class="match-detail">${[d.seg,d.pad,d.urg].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
     </div>`).join('');
+  el.onclick = e => {
+    const item = e.target.closest('[data-nome]');
+    if (item) abrirCliente(item.dataset.nome, item.dataset.score, item.dataset.cod);
+  };
 }
 
 function renderGrafico(canvasId, chartInst, entries, setChart, unidade) {
