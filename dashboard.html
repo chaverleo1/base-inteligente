@@ -168,6 +168,14 @@
   .imovel-link{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--accent);padding:7px;border-top:1px solid var(--border);transition:background .15s}
   .imovel-link:hover{background:rgba(79,124,255,.08)}
 
+  .imovel-gatilho{margin:0 12px 10px;padding:10px;background:var(--surface);border:1px dashed var(--border);border-radius:8px}
+  .imovel-gatilho-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em}
+  .imovel-gatilho-texto{font-size:12.5px;color:var(--text2);line-height:1.5;white-space:pre-wrap}
+  .imovel-gatilho-actions{display:flex;gap:8px;margin-top:8px}
+  .imovel-gatilho-actions .d-btn{font-size:12px;padding:6px 10px}
+  .imovel-btn-copiar{background:var(--surface2);color:var(--text2);border:1px solid var(--border);cursor:pointer}
+  .imovel-btn-copiar:hover{background:var(--border)}
+
   .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
   .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
   .login-logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:6px}
@@ -553,7 +561,56 @@ function abrirDrawer() {
   document.body.style.overflow = 'hidden';
 }
 
-async function carregarMatchesDrawer(cod) {
+function primeiroNome_(nome) { return String(nome||'').trim().split(' ')[0] || 'tudo bem'; }
+
+// Gera texto de oferta humanizado, conectando o perfil do cliente ao imóvel
+function gerarMensagemOferta_(c, m) {
+  const nome = primeiroNome_(c.nome);
+
+  // Abertura — varia conforme urgência/motivação do cliente
+  const urg = (c.urgencia || c.prioridade || '').toLowerCase();
+  let abertura;
+  if (urg.indexOf('imediat') >= 0 || urg.indexOf('alta') >= 0) {
+    abertura = `Oi ${nome}! Lembrei de você agora porque apareceu algo que encaixa exatamente no que você está procurando.`;
+  } else if (val(c.naoFechou)) {
+    abertura = `Oi ${nome}! Surgiu uma oportunidade que pode resolver justamente aquele ponto que tinha travado da última vez.`;
+  } else {
+    abertura = `Oi ${nome}, tudo bem? Apareceu uma opção que eu acho que vale a pena você conhecer.`;
+  }
+
+  // Descrição do imóvel em linguagem natural
+  const tipo  = (m.imoTipo || 'imóvel').toLowerCase();
+  const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(', em ');
+  const localTxt = local ? ` no ${local}` : '';
+
+  const detalhes = [];
+  if (m.imoQuartos) detalhes.push(`${m.imoQuartos} quartos`);
+  if (m.imoSuites && parseInt(m.imoSuites) > 0) detalhes.push(`${m.imoSuites} suíte${parseInt(m.imoSuites)>1?'s':''}`);
+  if (m.imoVagas && parseInt(m.imoVagas) > 0) detalhes.push(`${m.imoVagas} vaga${parseInt(m.imoVagas)>1?'s':''} de garagem`);
+  if (m.imoAreaUtil) detalhes.push(`${m.imoAreaUtil} m²`);
+  const detalhesTxt = detalhes.length ? ` É um ${tipo} com ${detalhes.join(', ')}.` : ` É um ${tipo}.`;
+
+  // Conexão com o interesse declarado pelo cliente (sem termos técnicos de score)
+  let conexao = '';
+  if (val(c.bairroInteresse) && local && norm_(local).indexOf(norm_(String(c.bairroInteresse).split(/[,;]/)[0])) >= 0) {
+    conexao = ` Você tinha falado que tinha interesse nessa região, então pensei logo em você.`;
+  } else if (val(c.padrao)) {
+    conexao = ` O padrão do imóvel está bem alinhado com o que você busca.`;
+  }
+
+  const valor = m.imoValorVenda ? ` O valor é ${m.imoValorVenda}.` : '';
+
+  // Fechamento — convite, não venda forçada
+  let fechamento = ' Topa eu te mandar fotos e mais detalhes?';
+  if (c.fgts === 'Sim' || c.fgts === 'sim') fechamento = ' Dá até pra usar o FGTS na entrada. Quer que eu te mande mais informações?';
+  else if (c.financ === 'Sim' || c.financ === 'sim') fechamento = ' Posso já verificar simulação de financiamento pra você, se quiser.';
+
+  return `${abertura}${localTxt ? ' Fica' + localTxt + '.' : ''}${detalhesTxt}${conexao}${valor}${fechamento}`;
+}
+
+function norm_(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); }
+
+async function carregarMatchesDrawer(cod, cliente) {
   const el = document.getElementById('drawerImoveis');
   if (!el) return;
   try {
@@ -563,7 +620,8 @@ async function carregarMatchesDrawer(cod) {
       el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>';
       return;
     }
-    el.innerHTML = `<div class="imovel-cards">${lista.map(m => {
+    const tel = String((cliente && cliente.telefone) || '').replace(/\D/g,'');
+    el.innerHTML = `<div class="imovel-cards">${lista.map((m, idx) => {
       const sc  = parseInt(m.scoreMatch) || 0;
       const cls = sc >= 70 ? 'd-badge-hot' : sc >= 40 ? 'd-badge-warm' : 'd-badge-cold';
       const attrs = [
@@ -579,6 +637,9 @@ async function carregarMatchesDrawer(cod) {
         ? `<img class="imovel-foto" src="${m.imoFoto}" onerror="this.style.display='none'">`
         : `<div class="imovel-foto-placeholder">🏠</div>`;
       const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(' — ');
+      const msgId = `msgOferta_${idx}`;
+      const mensagem = cliente ? gerarMensagemOferta_(cliente, m) : '';
+      const wppHref = tel && mensagem ? `https://wa.me/55${tel}?text=${encodeURIComponent(mensagem)}` : null;
       return `<div class="imovel-card">
         <div class="imovel-card-top">
           ${foto}
@@ -591,12 +652,30 @@ async function carregarMatchesDrawer(cod) {
         </div>
         ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
         ${det ? `<div class="imovel-det">${det}</div>` : ''}
+        ${mensagem ? `
+        <div class="imovel-gatilho">
+          <div class="imovel-gatilho-label">💬 Sugestão de mensagem</div>
+          <div class="imovel-gatilho-texto" id="${msgId}">${mensagem}</div>
+          <div class="imovel-gatilho-actions">
+            ${wppHref ? `<a class="d-btn d-btn-wpp" href="${wppHref}" target="_blank">📤 Enviar via WhatsApp</a>` : ''}
+            <button type="button" class="d-btn imovel-btn-copiar" onclick="copiarTexto_('${msgId}', this)">📋 Copiar</button>
+          </div>
+        </div>` : ''}
         ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>`;
     }).join('')}</div>`;
   } catch(e) {
     el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Erro ao buscar matches.</div>';
   }
+}
+
+function copiarTexto_(id, btn) {
+  const texto = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(texto).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
 }
 
 function fecharDrawer() {
@@ -634,7 +713,7 @@ async function abrirCliente(nome, score, cod) {
       : null;
     if (!c) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Cliente não encontrado na base.</div>'; return; }
     renderDrawer(c, sc);
-    carregarMatchesDrawer(cod);
+    carregarMatchesDrawer(cod, c);
   } catch(e) {
     document.getElementById('drawerBody').innerHTML =
       `<div class="drawer-loading">Erro: ${e.message}</div>`;
