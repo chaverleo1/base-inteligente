@@ -190,8 +190,24 @@
     </div>
   </div>
 
+  <!-- PRODUTOS -->
+  <div class="section-title">Portfólio de revendas</div>
+  <div class="cards-row" id="cardsRevenda">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+  </div>
+  <div class="charts-row" style="margin-bottom:32px">
+    <div class="chart-card">
+      <div class="chart-title">Imóveis por tipo</div>
+      <div class="chart-wrap"><canvas id="chartTipo"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Imóveis por faixa de preço</div>
+      <div class="chart-wrap"><canvas id="chartFaixa"></canvas></div>
+    </div>
+  </div>
+
   <!-- GRÁFICOS -->
-  <div class="section-title">Composição da base</div>
+  <div class="section-title">Composição da base de clientes</div>
   <div class="charts-row">
     <div class="chart-card">
       <div class="chart-title">Por segmento</div>
@@ -280,6 +296,8 @@ verificarAuth();
 
 let chartSeg = null;
 let chartPad = null;
+let chartTipo  = null;
+let chartFaixa = null;
 
 // ── CARREGAR DADOS DO SHEETS ──────────────────────────────────────────────────
 
@@ -339,7 +357,39 @@ function renderDados(json) {
   renderMatchCol('listWarm', mornos,  'warm');
   renderMatchCol('listCold', frios,   'cold');
 
-  // ── Gráficos
+  // ── Cards REVENDA
+  const pr = json.produtos || {};
+  const porTipo  = pr.porTipo  || {};
+  const porFaixa = pr.porFaixa || {};
+  const porPadrao= pr.porPadrao|| {};
+  const tipoTop  = Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}: ${v}`).join(' · ');
+  document.getElementById('cardsRevenda').innerHTML = `
+    <div class="card">
+      <div class="card-label">Total de imóveis</div>
+      <div class="card-value green">${pr.total||0}</div>
+      <div class="card-sub">disponíveis para venda</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Até R$ 300k</div>
+      <div class="card-value cold">${porFaixa['Ate 300k']||0}</div>
+      <div class="card-sub">faixa popular</div>
+    </div>
+    <div class="card">
+      <div class="card-label">R$ 300k – 700k</div>
+      <div class="card-value" style="color:var(--accent2)">${porFaixa['300k-700k']||0}</div>
+      <div class="card-sub">faixa média</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Acima de R$ 700k</div>
+      <div class="card-value warm">${(porFaixa['700k-1.5M']||0)+(porFaixa['Acima 1.5M']||0)}</div>
+      <div class="card-sub">alto e luxo</div>
+    </div>`;
+
+  // ── Gráficos REVENDA
+  renderGrafico('chartTipo',  chartTipo,  porTipo,   c => { chartTipo  = c; });
+  renderGrafico('chartFaixa', chartFaixa, porFaixa,  c => { chartFaixa = c; });
+
+  // ── Gráficos clientes
   renderGrafico('chartSegmento', chartSeg, json.segmentos||[], c => { chartSeg = c; });
   renderGrafico('chartPadrao',   chartPad, json.padroes||[],   c => { chartPad = c; });
 
