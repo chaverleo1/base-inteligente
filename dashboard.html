@@ -557,12 +557,19 @@ async function abrirCliente(nome, score, cod) {
 
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(nome));
-    const lista = await resp.json();
+    const text = await resp.text();
+    let lista;
+    try { lista = JSON.parse(text); } catch(pe) {
+      document.getElementById('drawerBody').innerHTML =
+        `<div class="drawer-loading">Erro de resposta do servidor.<br><small style="font-size:11px;color:var(--text3)">${text.substring(0,200)}</small></div>`;
+      return;
+    }
     const c = Array.isArray(lista) ? lista.find(x => x.nome === nome) || lista[0] : null;
-    if (!c) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Cliente não encontrado.</div>'; return; }
+    if (!c) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Cliente não encontrado na base.</div>'; return; }
     renderDrawer(c, sc);
   } catch(e) {
-    document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Erro ao carregar dados.</div>';
+    document.getElementById('drawerBody').innerHTML =
+      `<div class="drawer-loading">Erro: ${e.message}</div>`;
   }
 }
 
