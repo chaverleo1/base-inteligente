@@ -52,8 +52,8 @@
   /* ── MATCHES ── */
   .matches-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
   @media(max-width:700px){.matches-grid{grid-template-columns:1fr}}
-  .match-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-  .match-col-header{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+  .match-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+  .match-col-header{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);flex-shrink:0}
   .match-badge{width:10px;height:10px;border-radius:50%}
   .badge-hot{background:var(--hot);box-shadow:0 0 8px var(--hot)}
   .badge-warm{background:var(--warm);box-shadow:0 0 8px var(--warm)}
@@ -61,6 +61,10 @@
   .match-col-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px}
   .match-col-count{margin-left:auto;font-size:12px;color:var(--text3);background:var(--surface2);
                     padding:2px 8px;border-radius:99px}
+  .match-list-body{overflow-y:auto;max-height:560px;flex:1}
+  .match-list-body::-webkit-scrollbar{width:5px}
+  .match-list-body::-webkit-scrollbar-track{background:transparent}
+  .match-list-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
   .match-item{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
   .match-item:last-child{border-bottom:none}
   .match-item:hover{background:var(--surface2)}
@@ -170,7 +174,7 @@
         <div class="match-col-title">Quentes</div>
         <div class="match-col-count" id="countHot">—</div>
       </div>
-      <div id="listHot"><div class="empty-state dot-anim">Carregando</div></div>
+      <div class="match-list-body" id="listHot"><div class="empty-state dot-anim">Carregando</div></div>
     </div>
     <div class="match-col">
       <div class="match-col-header">
@@ -178,7 +182,7 @@
         <div class="match-col-title">Mornos</div>
         <div class="match-col-count" id="countWarm">—</div>
       </div>
-      <div id="listWarm"><div class="empty-state dot-anim">Carregando</div></div>
+      <div class="match-list-body" id="listWarm"><div class="empty-state dot-anim">Carregando</div></div>
     </div>
     <div class="match-col">
       <div class="match-col-header">
@@ -186,7 +190,7 @@
         <div class="match-col-title">Frios</div>
         <div class="match-col-count" id="countCold">—</div>
       </div>
-      <div id="listCold"><div class="empty-state dot-anim">Carregando</div></div>
+      <div class="match-list-body" id="listCold"><div class="empty-state dot-anim">Carregando</div></div>
     </div>
   </div>
 
@@ -229,9 +233,8 @@
           <th>Nome</th>
           <th>Segmento</th>
           <th>Padrão</th>
-          <th>Produto interesse</th>
           <th>Score</th>
-          <th>Prioridade</th>
+          <th>Urgência</th>
         </tr>
       </thead>
       <tbody id="top20Body">
@@ -259,9 +262,8 @@ async function verificarAuth() {
 async function entrar() {
   const senha = document.getElementById('inputSenha').value;
   const err   = document.getElementById('loginErr');
-  const btn   = document.getElementById('btnEntrar');
   if (!senha) { err.textContent = 'Digite sua senha.'; return; }
-  btn.disabled = true; btn.textContent = 'Verificando...'; err.textContent = '';
+  err.textContent = '';
   const hash = await sha256(senha + USER_EMAIL);
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=verificar_senha&hash=' + encodeURIComponent(hash));
@@ -273,11 +275,9 @@ async function entrar() {
     } else {
       err.textContent = 'Senha incorreta.';
       document.getElementById('inputSenha').value = '';
-      btn.disabled = false; btn.textContent = 'Entrar';
     }
   } catch(e) {
     err.textContent = 'Erro de conexão.';
-    btn.disabled = false; btn.textContent = 'Entrar';
   }
 }
 
@@ -318,37 +318,35 @@ async function carregarDados() {
 // ── RENDERIZAR ────────────────────────────────────────────────────────────────
 
 function renderDados(json) {
-  const t = json.totais || {};
-  const pct = t.total ? ((t.compradores/t.total)*100).toFixed(0) : 0;
+  const total   = json.total   || 0;
+  const quentes = json.quentes || [];
+  const mornos  = json.mornos  || [];
+  const frios   = json.frios   || [];
 
   // ── Cards totais
   document.getElementById('cardsRow').innerHTML = `
     <div class="card">
       <div class="card-label">Total de contatos</div>
-      <div class="card-value">${(t.total||0).toLocaleString('pt-BR')}</div>
+      <div class="card-value">${total.toLocaleString('pt-BR')}</div>
       <div class="card-sub">na base atual</div>
     </div>
     <div class="card">
-      <div class="card-label">Compradores / Leads</div>
-      <div class="card-value green">${(t.compradores||0).toLocaleString('pt-BR')}</div>
-      <div class="card-sub">${pct}% da base</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Score Alto (≥70)</div>
-      <div class="card-value hot">${t.scoreAlto||0}</div>
+      <div class="card-label">Quentes (score ≥70)</div>
+      <div class="card-value hot">${quentes.length}</div>
       <div class="card-sub">prioridade máxima</div>
     </div>
     <div class="card">
-      <div class="card-label">Score Médio (40–69)</div>
-      <div class="card-value warm">${t.scoreMedio||0}</div>
+      <div class="card-label">Mornos (40–69)</div>
+      <div class="card-value warm">${mornos.length}</div>
       <div class="card-sub">potencial de conversão</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Frios (score &lt;40)</div>
+      <div class="card-value cold">${frios.length}</div>
+      <div class="card-sub">nurturing / aguardar</div>
     </div>`;
 
   // ── Matches
-  const quentes = json.quentes || [];
-  const mornos  = json.mornos  || [];
-  const frios   = json.frios   || [];
-
   document.getElementById('countHot').textContent  = quentes.length;
   document.getElementById('countWarm').textContent = mornos.length;
   document.getElementById('countCold').textContent = frios.length;
@@ -358,11 +356,9 @@ function renderDados(json) {
   renderMatchCol('listCold', frios,   'cold');
 
   // ── Cards REVENDA
-  const pr = json.produtos || {};
+  const pr       = json.produtos || {};
   const porTipo  = pr.porTipo  || {};
   const porFaixa = pr.porFaixa || {};
-  const porPadrao= pr.porPadrao|| {};
-  const tipoTop  = Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k}: ${v}`).join(' · ');
   document.getElementById('cardsRevenda').innerHTML = `
     <div class="card">
       <div class="card-label">Total de imóveis</div>
@@ -385,61 +381,69 @@ function renderDados(json) {
       <div class="card-sub">alto e luxo</div>
     </div>`;
 
-  // ── Gráficos REVENDA
-  renderGrafico('chartTipo',  chartTipo,  porTipo,   c => { chartTipo  = c; });
-  renderGrafico('chartFaixa', chartFaixa, porFaixa,  c => { chartFaixa = c; });
+  // ── Gráficos REVENDA (objeto → entries)
+  renderGrafico('chartTipo',  chartTipo,  Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).slice(0,8),
+                c => { chartTipo  = c; }, 'imóveis');
+  renderGrafico('chartFaixa', chartFaixa, Object.entries(porFaixa),
+                c => { chartFaixa = c; }, 'imóveis');
 
-  // ── Gráficos clientes
-  renderGrafico('chartSegmento', chartSeg, json.segmentos||[], c => { chartSeg = c; });
-  renderGrafico('chartPadrao',   chartPad, json.padroes||[],   c => { chartPad = c; });
+  // ── Gráficos clientes (objeto → entries)
+  renderGrafico('chartSegmento', chartSeg,
+                Object.entries(json.segmentos||{}).sort((a,b)=>b[1]-a[1]),
+                c => { chartSeg = c; }, 'clientes');
+  renderGrafico('chartPadrao', chartPad,
+                Object.entries(json.padroes||{}).sort((a,b)=>b[1]-a[1]),
+                c => { chartPad = c; }, 'clientes');
 
-  // ── Top 20
+  // ── Top 20 (campos: cod, nome, seg, pad, urg, score)
   const top20 = json.top20 || [];
   document.getElementById('top20Body').innerHTML = top20.length ? top20.map((d, i) => {
     const rankClass = i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'rank';
-    const prioClass = d.prioridade==='Alta'?'pill-alta':d.prioridade==='Média'?'pill-media':'pill-baixa';
-    const prio = d.prioridade && d.prioridade!=='—' ? d.prioridade : '';
+    const urg = d.urg || '';
+    const urgClass = urg==='Alta'?'pill-alta':urg==='Media'?'pill-media':'pill-baixa';
     return `<tr>
       <td class="rank ${rankClass}">${i+1}</td>
-      <td><b>${d.nome||'—'}</b><br><small style="color:var(--text3)">${d.codigo||''}</small></td>
-      <td>${d.segmento||'—'}</td>
-      <td>${d.padrao||'—'}</td>
-      <td>${d.produtoOrigem||'—'}</td>
+      <td><b>${d.nome||'—'}</b><br><small style="color:var(--text3)">${d.cod||''}</small></td>
+      <td>${d.seg||'—'}</td>
+      <td>${d.pad||'—'}</td>
       <td><b>${d.score||0}</b></td>
-      <td>${prio?`<span class="pill ${prioClass}">${prio}</span>`:''}</td>
+      <td>${urg?`<span class="pill ${urgClass}">${urg}</span>`:''}</td>
     </tr>`;
-  }).join('') : '<tr><td colspan="7" class="loading">Sem dados</td></tr>';
+  }).join('') : '<tr><td colspan="6" class="loading">Sem dados</td></tr>';
 }
 
 function renderMatchCol(elId, lista, tipo) {
   const el = document.getElementById(elId);
-  if (!lista.length) {
+  if (!lista || !lista.length) {
     el.innerHTML = '<div class="empty-state">Nenhum ainda.<br><small>Score insuficiente ou base vazia.</small></div>';
     return;
   }
-  el.innerHTML = lista.map(d => `
+  // exibe até 50 itens com scroll
+  el.innerHTML = lista.slice(0, 50).map(d => `
     <div class="match-item">
       <span class="match-score score-${tipo}">${d.score}</span>
       <div class="match-name">${d.nome||'—'}</div>
-      <div class="match-detail">${[d.segmento,d.padrao,d.produtoOrigem].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
+      <div class="match-detail">${[d.seg,d.pad,d.urg].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
     </div>`).join('');
 }
 
-function renderGrafico(canvasId, chartInst, dados, setChart) {
+function renderGrafico(canvasId, chartInst, entries, setChart, unidade) {
   if (chartInst) chartInst.destroy();
+  if (!entries || !entries.length) return;
   const ctx = document.getElementById(canvasId).getContext('2d');
   const colors = ['#4f7cff','#00d4aa','#f5a623','#ff5a5a','#a78bfa','#34d399','#fb923c','#60a5fa'];
   const c = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: dados.map(([k])=>k),
-      datasets: [{ data: dados.map(([,v])=>v), backgroundColor: colors.slice(0,dados.length),
+      labels: entries.map(([k])=>k),
+      datasets: [{ data: entries.map(([,v])=>v),
+                   backgroundColor: colors.slice(0, entries.length),
                    borderRadius:6, borderSkipped:false }]
     },
     options: {
       responsive:true, maintainAspectRatio:false, indexAxis:'y',
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{
-        label: ctx => ` ${ctx.parsed.x} clientes`
+        label: ctx => ` ${ctx.parsed.x} ${unidade||''}`
       }}},
       scales:{
         x:{ grid:{color:'rgba(42,48,80,.6)'}, ticks:{color:'#8892aa'} },
