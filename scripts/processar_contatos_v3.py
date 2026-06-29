@@ -33,7 +33,8 @@ COLUNAS_SAIDA = [
     "canal", "finalidade",
     "valorMin", "valorMax",
     "score", "prioridade", "categoria",
-    "historico",
+    "observacoes",
+    "conversa",
     "nome_bruto",
 ]
 
@@ -534,14 +535,14 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
                 email = e
                 break
 
-    # Coletar histórico de conversa (Relation N - Value)
-    partes_historico = []
+    # Coletar observacoes (Relation N - Value = anotações do Google Contatos)
+    partes_obs = []
     for idx in idx_relations:
         if idx < len(valores_linha):
             v = valores_linha[idx].strip()
             if v:
-                partes_historico.append(v)
-    historico = " | ".join(partes_historico)
+                partes_obs.append(v)
+    observacoes = " | ".join(partes_obs)
 
     if not telefones:
         # Mantém a linha sem telefone (para não perder o contato)
@@ -563,7 +564,8 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
             "score":         0,
             "prioridade":    "—",
             "categoria":     categoria,
-            "historico":     historico,
+            "observacoes":   observacoes,
+            "conversa":      "",
             "nome_bruto":    nome_bruto,
         }
         base["score"], base["prioridade"] = calcular_score(base)
