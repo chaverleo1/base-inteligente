@@ -383,7 +383,12 @@
     document.querySelectorAll('.mode-btn').forEach((b, i) => {
       b.classList.toggle('active', (i === 0 && m === 'novo') || (i === 1 && m === 'atualizar'));
     });
-    document.getElementById('searchBar').style.display = m === 'atualizar' ? 'block' : 'none';
+    const isAtualizar = m === 'atualizar';
+    document.getElementById('searchBar').style.display   = isAtualizar ? 'block' : 'none';
+    document.querySelector('.progress-wrap').style.display = isAtualizar ? 'none' : '';
+    document.querySelector('.form-wrap').style.display     = isAtualizar ? 'none' : '';
+    document.querySelector('.nav-bar').style.display       = isAtualizar ? 'none' : '';
+    if (!isAtualizar) { linhaAtual = null; }
   }
 
   // ── CHIPS ──────────────────────────────────────────────────────────────────
@@ -519,6 +524,7 @@
       conversa:        g('conversa'),
       observacoes:     g('observacoes'),
       score,
+      ...(linhaAtual ? { _linha: linhaAtual } : {}),
     };
 
     try {
@@ -529,7 +535,9 @@
       const body = new URLSearchParams({ dados: JSON.stringify(payload) });
       await fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body });
 
-      showToast('✓ Cliente salvo no Google Sheets!', 'ok');
+      const msg = linhaAtual ? '✓ Contato atualizado no Sheets!' : '✓ Cliente salvo no Google Sheets!';
+      linhaAtual = null;
+      showToast(msg, 'ok');
       setTimeout(() => resetForm(), 2500);
     } catch (err) {
       console.error('Erro fetch:', err);
@@ -563,11 +571,123 @@
     setTimeout(() => t.classList.remove('show'), 3500);
   }
 
-  // ── SEARCH (placeholder) ──────────────────────────────────────────────────
+  // ── SEARCH ────────────────────────────────────────────────────────────────
+  let searchTimer = null;
+  let linhaAtual = null; // linha no Sheets do contato carregado
+
   function filterClients() {
-    const q = document.getElementById('searchInput').value;
-    document.getElementById('searchResults').innerHTML = q.length > 1
-      ? `<div style="color:var(--text3);font-size:13px;padding:8px 0">Busca conectada ao Sheets via Apps Script</div>` : '';
+    const q = document.getElementById('searchInput').value.trim();
+    clearTimeout(searchTimer);
+    if (q.length < 2) {
+      document.getElementById('searchResults').innerHTML = '';
+      return;
+    }
+    document.getElementById('searchResults').innerHTML =
+      '<div style="color:var(--text3);font-size:13px;padding:8px 0">Buscando...</div>';
+    searchTimer = setTimeout(() => buscarNoSheets(q), 500);
+  }
+
+  async function buscarNoSheets(q) {
+    try {
+      const url = WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(q);
+      const res = await fetch(url);
+      const json = await res.json();
+      const lista = Array.isArray(json) ? json : (json.status ? [] : []);
+      renderResultados(lista);
+    } catch(err) {
+      document.getElementById('searchResults').innerHTML =
+        '<div style="color:var(--danger);font-size:13px;padding:8px 0">Erro na busca: ' + err.message + '</div>';
+    }
+  }
+
+  function renderResultados(lista) {
+    const el = document.getElementById('searchResults');
+    if (!lista.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum resultado encontrado.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(c => `
+      <div onclick="carregarContato(${JSON.stringify(c).replace(/"/g,'&quot;')})"
+           style="padding:12px 14px;background:var(--surface2);border:1px solid var(--border);
+                  border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:border .2s"
+           onmouseover="this.style.borderColor='var(--accent)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;color:var(--text)">${c.nome || '—'}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:3px">
+          ${c.telefone || ''} ${c.email ? '· '+c.email : ''} ${c.categoria ? '· '+c.categoria : ''}
+          ${c.score ? '· Score '+c.score : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  function carregarContato(c) {
+    linhaAtual = c._linha;
+
+    // Limpa o formulário e volta ao step 1
+    resetForm();
+    goToStep(1);
+
+    // Preenche campos de texto
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('nome',           c.nome);
+    set('telefone',       c.telefone);
+    set('email',          c.email);
+    set('nascimento',     c.nascimento);
+    set('estadoCivil',    c.estadoCivil);
+    set('profissao',      c.profissao);
+    set('empresa',        c.empresa);
+    set('bairroMora',     c.bairroMora);
+    set('cidadeMora',     c.cidadeMora);
+    set('bairroTrabalha', c.bairroTrabalha);
+    set('raioMaximo',     c.raioMaximo);
+    set('bairroInteresse',c.bairroInteresse);
+    set('valorMin',       c.valorMin);
+    set('valorMax',       c.valorMax);
+    set('entrada',        c.entrada);
+    set('primeiroContato',c.primeiroContato);
+    set('ultimoContato',  c.ultimoContato);
+    set('produtoOrigem',  c.produtoOrigem);
+    set('indicadoPor',    c.indicadoPor);
+    set('conversa',       c.conversa);
+    set('observacoes',    c.observacoes);
+
+    // Ativa chips
+    const ativarChip = (grupo, valor) => {
+      if (!valor) return;
+      document.querySelectorAll(`[onclick*="'${grupo}'"]`).forEach(chip => {
+        if (chip.textContent.trim() === valor) {
+          chip.classList.add('selected');
+          chipState[grupo] = valor;
+        }
+      });
+    };
+    ativarChip('filhos',      c.filhos);
+    ativarChip('moradia',     c.moradia);
+    ativarChip('segmento',    c.segmento);
+    ativarChip('padrao',      c.padrao);
+    ativarChip('finalidade',  c.finalidade);
+    ativarChip('fgts',        c.fgts);
+    ativarChip('financ',      c.financ);
+    ativarChip('entrada_chip',c.entrada_chip);
+    ativarChip('permuta',     c.permuta);
+    ativarChip('canal',       c.canal);
+    ativarChip('naoFechou',   c.naoFechou);
+    ativarChip('urgencia',    c.urgencia);
+
+    // Esconde barra de busca e mostra formulário
+    document.getElementById('searchBar').style.display = 'none';
+    document.querySelector('.progress-wrap').style.display = '';
+    document.querySelector('.form-wrap').style.display = '';
+
+    updateScore();
+    showToast('Contato carregado — edite e salve', 'ok');
+  }
+
+  function goToStep(n) {
+    currentStep = n;
+    document.querySelectorAll('.step-card').forEach((s, i) => s.classList.toggle('active', i === n - 1));
+    updateNav();
+    renderDots();
   }
 
   init();
