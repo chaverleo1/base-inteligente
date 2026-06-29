@@ -13,6 +13,26 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;min-height:100vh;padding:0 0 80px}
+
+  /* ── LOGIN ── */
+  .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
+  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
+  .login-logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:6px}
+  .login-logo span{color:var(--text2);font-weight:400}
+  .login-sub{text-align:center;color:var(--text3);font-size:13px;margin-bottom:32px}
+  .login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  .login-field label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+  .login-field input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:15px;font-family:'Inter',sans-serif;padding:12px 14px;outline:none;transition:border .2s;width:100%}
+  .login-field input:focus{border-color:var(--accent)}
+  .login-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:8px;transition:background .2s}
+  .login-btn:hover{background:#3d6aee}
+  .login-btn:disabled{opacity:.5;cursor:default}
+  .login-err{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:18px}
+  .login-link{text-align:center;margin-top:16px;font-size:13px;color:var(--text3)}
+  .login-link a{color:var(--accent);cursor:pointer;text-decoration:none}
+  .login-link a:hover{text-decoration:underline}
+  .login-user{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text2);font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+  .login-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
   .header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
   .logo{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--accent);letter-spacing:-0.3px}
   .logo span{color:var(--text2);font-weight:400}
@@ -107,6 +127,50 @@
   const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw4u6YmOS4RqT_WUM1H80Xv-DvcWlaMZUUcQCz-ADdJu0eQZRZ65Xx_T0jcWyn9UNnS/exec";
 </script>
 
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">BASE <span>INTELIGENTE</span></div>
+    <div class="login-sub" id="loginSub">Acesso administrativo</div>
+
+    <div class="login-user">
+      <div class="login-avatar">L</div>
+      <div>
+        <div style="font-weight:600;color:var(--text);font-size:14px">Leonardo Viana</div>
+        <div style="font-size:12px">chaverleo@gmail.com</div>
+      </div>
+    </div>
+
+    <!-- TELA LOGIN -->
+    <div id="telaLogin">
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="inputSenha" placeholder="Digite sua senha"
+               onkeydown="if(event.key==='Enter')entrar()">
+      </div>
+      <button class="login-btn" id="btnEntrar" onclick="entrar()">Entrar</button>
+      <div class="login-err" id="loginErr"></div>
+      <div class="login-link"><a onclick="mostrarTelaCriar()">Criar / redefinir senha</a></div>
+    </div>
+
+    <!-- TELA CRIAR SENHA -->
+    <div id="telaCriar" style="display:none">
+      <div class="login-field">
+        <label>Nova senha</label>
+        <input type="password" id="inputNova" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="login-field">
+        <label>Confirmar senha</label>
+        <input type="password" id="inputConfirma" placeholder="Repita a senha"
+               onkeydown="if(event.key==='Enter')criarSenha()">
+      </div>
+      <button class="login-btn" onclick="criarSenha()">Definir senha e entrar</button>
+      <div class="login-err" id="criarErr"></div>
+      <div class="login-link"><a onclick="mostrarTelaLogin()">← Voltar ao login</a></div>
+    </div>
+  </div>
+</div>
+
 <!-- HEADER -->
 <div class="header">
   <div class="logo">BASE <span>INTELIGENTE</span></div>
@@ -119,6 +183,11 @@
        background:transparent;color:var(--text2);font-size:13px;font-weight:500;text-decoration:none;
        transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Dashboard →</a>
+    <button onclick="sair()" style="padding:6px 14px;border-radius:6px;border:1px solid var(--border);
+       background:transparent;color:var(--text3);font-size:13px;font-weight:500;cursor:pointer;
+       font-family:'Inter',sans-serif;transition:all .2s"
+       onmouseover="this.style.borderColor='var(--danger)';this.style.color='var(--danger)'"
+       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">Sair</button>
   </div>
 </div>
 
@@ -339,6 +408,89 @@
 </div>
 
 <script>
+  // ── AUTH ───────────────────────────────────────────────────────────────────
+  const AUTH_KEY  = 'bi_auth_hash';
+  const SESS_KEY  = 'bi_session';
+  const USER_EMAIL = 'chaverleo@gmail.com';
+
+  async function sha256(texto) {
+    const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function verificarAuth() {
+    const sessao = sessionStorage.getItem(SESS_KEY);
+    if (sessao === 'ok') { fecharLogin(); return; }
+    const hashSalvo = localStorage.getItem(AUTH_KEY);
+    if (!hashSalvo) {
+      // Primeira vez — pede criação de senha
+      mostrarTelaCriar();
+      document.getElementById('loginSub').textContent = 'Crie sua senha de acesso';
+    }
+    // Overlay já está visível por padrão
+  }
+
+  async function entrar() {
+    const senha = document.getElementById('inputSenha').value;
+    const err   = document.getElementById('loginErr');
+    const btn   = document.getElementById('btnEntrar');
+    if (!senha) { err.textContent = 'Digite sua senha.'; return; }
+    btn.disabled = true;
+    btn.textContent = 'Verificando...';
+    const hash      = await sha256(senha + USER_EMAIL);
+    const hashSalvo = localStorage.getItem(AUTH_KEY);
+    if (hash === hashSalvo) {
+      sessionStorage.setItem(SESS_KEY, 'ok');
+      fecharLogin();
+    } else {
+      err.textContent = 'Senha incorreta.';
+      document.getElementById('inputSenha').value = '';
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  }
+
+  async function criarSenha() {
+    const nova     = document.getElementById('inputNova').value;
+    const confirma = document.getElementById('inputConfirma').value;
+    const err      = document.getElementById('criarErr');
+    if (nova.length < 6)       { err.textContent = 'Mínimo 6 caracteres.'; return; }
+    if (nova !== confirma)     { err.textContent = 'Senhas não coincidem.'; return; }
+    const hash = await sha256(nova + USER_EMAIL);
+    localStorage.setItem(AUTH_KEY, hash);
+    sessionStorage.setItem(SESS_KEY, 'ok');
+    fecharLogin();
+  }
+
+  function fecharLogin() {
+    document.getElementById('loginOverlay').style.display = 'none';
+  }
+
+  function mostrarTelaCriar() {
+    document.getElementById('telaLogin').style.display  = 'none';
+    document.getElementById('telaCriar').style.display  = 'block';
+    document.getElementById('loginSub').textContent     = 'Crie sua senha de acesso';
+    document.getElementById('inputNova').focus();
+  }
+
+  function mostrarTelaLogin() {
+    document.getElementById('telaCriar').style.display  = 'none';
+    document.getElementById('telaLogin').style.display  = 'block';
+    document.getElementById('loginSub').textContent     = 'Acesso administrativo';
+    document.getElementById('inputSenha').focus();
+  }
+
+  function sair() {
+    sessionStorage.removeItem(SESS_KEY);
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('inputSenha').value = '';
+    document.getElementById('loginErr').textContent = '';
+    mostrarTelaLogin();
+  }
+
+  // Inicia verificação ao carregar
+  verificarAuth();
+
   // ── STATE ──────────────────────────────────────────────────────────────────
   let currentStep = 1;
   const totalSteps = 5;

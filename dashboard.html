@@ -98,9 +98,45 @@
   .loading{text-align:center;padding:48px;color:var(--text3);font-size:14px}
   .dot-anim::after{content:'...';animation:dots 1.2s steps(4,end) infinite}
   @keyframes dots{0%,20%{content:'.'}40%{content:'..'}60%,100%{content:'...'}}
+  .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
+  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
+  .login-logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:6px}
+  .login-logo span{color:var(--text2);font-weight:400}
+  .login-sub{text-align:center;color:var(--text3);font-size:13px;margin-bottom:24px}
+  .login-user{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--text2);font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+  .login-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+  .login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  .login-field label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+  .login-field input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;padding:12px 14px;outline:none;transition:border .2s;width:100%}
+  .login-field input:focus{border-color:var(--accent)}
+  .login-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:background .2s}
+  .login-btn:hover{background:#3d6aee}
+  .login-err{color:#ff5a5a;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
 </style>
 </head>
 <body>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">BASE <span>INTELIGENTE</span></div>
+    <div class="login-sub">Acesso administrativo</div>
+    <div class="login-user">
+      <div class="login-avatar">L</div>
+      <div>
+        <div style="font-weight:600;color:var(--text);font-size:14px">Leonardo Viana</div>
+        <div style="font-size:12px">chaverleo@gmail.com</div>
+      </div>
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="inputSenha" placeholder="Digite sua senha"
+             onkeydown="if(event.key==='Enter')entrar()">
+    </div>
+    <button class="login-btn" onclick="entrar()">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
 
 <div class="header">
   <div class="logo">BASE <span>INTELIGENTE</span></div>
@@ -108,7 +144,13 @@
     <a href="index.html" class="nav-tab">Formulário</a>
     <a href="dashboard.html" class="nav-tab active">Dashboard</a>
   </div>
-  <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
+  <div style="display:flex;gap:8px">
+    <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
+    <button class="refresh-btn" onclick="sair()"
+      style="border-color:transparent;color:var(--text3)"
+      onmouseover="this.style.borderColor='#ff5a5a';this.style.color='#ff5a5a'"
+      onmouseout="this.style.borderColor='transparent';this.style.color='var(--text3)'">Sair</button>
+  </div>
 </div>
 
 <div class="page">
@@ -185,7 +227,52 @@
 </div>
 
 <script>
-const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw4u6YmOS4RqT_WUM1H80Xv-DvcWlaMZUUcQCz-ADdJu0eQZRZ65Xx_T0jcWyn9UNnS/exec';
+const WEBHOOK_URL  = 'https://script.google.com/macros/s/AKfycbw4u6YmOS4RqT_WUM1H80Xv-DvcWlaMZUUcQCz-ADdJu0eQZRZ65Xx_T0jcWyn9UNnS/exec';
+const AUTH_KEY     = 'bi_auth_hash';
+const SESS_KEY     = 'bi_session';
+const USER_EMAIL   = 'chaverleo@gmail.com';
+
+async function sha256(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function verificarAuth() {
+  if (sessionStorage.getItem(SESS_KEY) === 'ok') { fecharLogin(); carregarDados(); return; }
+  if (!localStorage.getItem(AUTH_KEY)) {
+    // Sem senha criada ainda — redireciona para o formulário criar
+    window.location.href = 'index.html';
+  }
+  // Mostra overlay de login (já visível por padrão)
+}
+
+async function entrar() {
+  const senha = document.getElementById('inputSenha').value;
+  const err   = document.getElementById('loginErr');
+  if (!senha) { err.textContent = 'Digite sua senha.'; return; }
+  const hash = await sha256(senha + USER_EMAIL);
+  if (hash === localStorage.getItem(AUTH_KEY)) {
+    sessionStorage.setItem(SESS_KEY, 'ok');
+    fecharLogin();
+    carregarDados();
+  } else {
+    err.textContent = 'Senha incorreta.';
+    document.getElementById('inputSenha').value = '';
+  }
+}
+
+function fecharLogin() {
+  document.getElementById('loginOverlay').style.display = 'none';
+}
+
+function sair() {
+  sessionStorage.removeItem(SESS_KEY);
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('inputSenha').value = '';
+  document.getElementById('loginErr').textContent = '';
+}
+
+verificarAuth();
 
 let chartSeg = null;
 let chartPad = null;
