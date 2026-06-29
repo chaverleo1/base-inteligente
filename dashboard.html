@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base Inteligente — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+  :root {
+    --bg:#0f1117;--surface:#181c27;--surface2:#1e2335;--border:#2a3050;
+    --accent:#4f7cff;--accent2:#00d4aa;--text:#e8ecf4;--text2:#8892aa;
+    --text3:#4a5470;--danger:#ff5a5a;--success:#00d4aa;--radius:12px;--radius-sm:8px;
+    --hot:#ff5a5a;--warm:#f5a623;--cold:#4f7cff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;min-height:100vh}
+  a{text-decoration:none;color:inherit}
+
+  /* ── HEADER ── */
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;
+          display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .logo{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--accent);letter-spacing:-0.3px}
+  .logo span{color:var(--text2);font-weight:400}
+  .nav-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px}
+  .nav-tab{padding:6px 16px;border-radius:6px;border:none;background:transparent;color:var(--text2);
+            font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;text-decoration:none;display:inline-block}
+  .nav-tab.active{background:var(--accent);color:#fff}
+  .refresh-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);
+                padding:6px 14px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+  .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* ── LAYOUT ── */
+  .page{max-width:1100px;margin:0 auto;padding:28px 24px 60px}
+  .section-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;
+                  color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;
+                  display:flex;align-items:center;gap:10px}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  /* ── CARDS TOTAIS ── */
+  .cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px}
+  @media(max-width:700px){.cards-row{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px}
+  .card-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+  .card-value{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;color:var(--text);line-height:1}
+  .card-sub{font-size:12px;color:var(--text3);margin-top:6px}
+  .card-value.hot{color:var(--hot)}
+  .card-value.warm{color:var(--warm)}
+  .card-value.cold{color:var(--cold)}
+  .card-value.green{color:var(--accent2)}
+
+  /* ── MATCHES ── */
+  .matches-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+  @media(max-width:700px){.matches-grid{grid-template-columns:1fr}}
+  .match-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .match-col-header{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+  .match-badge{width:10px;height:10px;border-radius:50%}
+  .badge-hot{background:var(--hot);box-shadow:0 0 8px var(--hot)}
+  .badge-warm{background:var(--warm);box-shadow:0 0 8px var(--warm)}
+  .badge-cold{background:var(--cold);box-shadow:0 0 8px rgba(79,124,255,.5)}
+  .match-col-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px}
+  .match-col-count{margin-left:auto;font-size:12px;color:var(--text3);background:var(--surface2);
+                    padding:2px 8px;border-radius:99px}
+  .match-item{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+  .match-item:last-child{border-bottom:none}
+  .match-item:hover{background:var(--surface2)}
+  .match-name{font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .match-detail{font-size:12px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .match-score{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;float:right;margin-top:1px}
+  .score-hot{background:rgba(255,90,90,.15);color:var(--hot)}
+  .score-warm{background:rgba(245,166,35,.15);color:var(--warm)}
+  .score-cold{background:rgba(79,124,255,.15);color:var(--cold)}
+  .empty-state{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
+
+  /* ── GRÁFICOS ── */
+  .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+  @media(max-width:700px){.charts-row{grid-template-columns:1fr}}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+  .chart-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text)}
+  .chart-wrap{position:relative;height:220px}
+
+  /* ── TOP 20 ── */
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .top-table{width:100%;border-collapse:collapse}
+  .top-table th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);
+                 text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .top-table td{padding:11px 16px;font-size:13px;border-bottom:1px solid var(--border);color:var(--text)}
+  .top-table tr:last-child td{border-bottom:none}
+  .top-table tr:hover td{background:var(--surface2)}
+  .rank{font-weight:700;color:var(--text3);width:32px}
+  .rank-gold{color:#f5a623}
+  .rank-silver{color:#8892aa}
+  .rank-bronze{color:#cd7f32}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+  .pill-alta{background:rgba(255,90,90,.15);color:var(--hot)}
+  .pill-media{background:rgba(245,166,35,.15);color:var(--warm)}
+  .pill-baixa{background:rgba(79,124,255,.15);color:var(--cold)}
+  .loading{text-align:center;padding:48px;color:var(--text3);font-size:14px}
+  .dot-anim::after{content:'...';animation:dots 1.2s steps(4,end) infinite}
+  @keyframes dots{0%,20%{content:'.'}40%{content:'..'}60%,100%{content:'...'}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="index.html" class="nav-tab">Formulário</a>
+    <a href="dashboard.html" class="nav-tab active">Dashboard</a>
+  </div>
+  <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
+</div>
+
+<div class="page">
+
+  <!-- TOTAIS -->
+  <div class="section-title">Visão geral</div>
+  <div class="cards-row" id="cardsRow">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando dados</div>
+  </div>
+
+  <!-- MATCHES -->
+  <div class="section-title">Matches do momento</div>
+  <div class="matches-grid">
+    <div class="match-col">
+      <div class="match-col-header">
+        <div class="match-badge badge-hot"></div>
+        <div class="match-col-title">Quentes</div>
+        <div class="match-col-count" id="countHot">—</div>
+      </div>
+      <div id="listHot"><div class="empty-state dot-anim">Carregando</div></div>
+    </div>
+    <div class="match-col">
+      <div class="match-col-header">
+        <div class="match-badge badge-warm"></div>
+        <div class="match-col-title">Mornos</div>
+        <div class="match-col-count" id="countWarm">—</div>
+      </div>
+      <div id="listWarm"><div class="empty-state dot-anim">Carregando</div></div>
+    </div>
+    <div class="match-col">
+      <div class="match-col-header">
+        <div class="match-badge badge-cold"></div>
+        <div class="match-col-title">Frios</div>
+        <div class="match-col-count" id="countCold">—</div>
+      </div>
+      <div id="listCold"><div class="empty-state dot-anim">Carregando</div></div>
+    </div>
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="section-title">Composição da base</div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Por segmento</div>
+      <div class="chart-wrap"><canvas id="chartSegmento"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Por padrão</div>
+      <div class="chart-wrap"><canvas id="chartPadrao"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TOP 20 -->
+  <div class="section-title">Top 20 — maior score</div>
+  <div class="table-card">
+    <table class="top-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nome</th>
+          <th>Segmento</th>
+          <th>Padrão</th>
+          <th>Produto interesse</th>
+          <th>Score</th>
+          <th>Prioridade</th>
+        </tr>
+      </thead>
+      <tbody id="top20Body">
+        <tr><td colspan="7" class="loading dot-anim">Carregando</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const SHEET_ID  = '1cr1Qs9o9_4mFXy0fZmVx-54xYiBNF6Vx5fHcIsiAkNI';
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=CONTATOS`;
+
+let chartSeg = null;
+let chartPad = null;
+
+// ── CARREGAR DADOS DO SHEETS ──────────────────────────────────────────────────
+
+async function carregarDados() {
+  try {
+    const res  = await fetch(SHEET_URL);
+    const text = await res.text();
+    // Google retorna JSONP: /*O_o*/google.visualization.Query.setResponse({...});
+    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/)[1]);
+    const rows = json.table.rows;
+    const cols = json.table.cols.map(c => c.label);
+    const dados = rows.map(r => {
+      const obj = {};
+      cols.forEach((col, i) => { obj[col] = r.c[i] ? (r.c[i].v ?? r.c[i].f ?? '') : ''; });
+      return obj;
+    }).filter(d => d.nome);
+
+    renderDados(dados);
+  } catch(err) {
+    document.getElementById('cardsRow').innerHTML =
+      `<div style="grid-column:1/-1;color:var(--danger);padding:16px">
+        Erro ao carregar dados.<br>
+        <small>A planilha precisa estar <b>compartilhada publicamente</b> (qualquer pessoa com o link pode ver).</small>
+      </div>`;
+    console.error(err);
+  }
+}
+
+// ── RENDERIZAR ────────────────────────────────────────────────────────────────
+
+function renderDados(dados) {
+  const compradores = dados.filter(d => ['Comprador','Lead','Investidor','Inquilino'].includes(d.categoria));
+  const scoreAlto   = compradores.filter(d => parseInt(d.score||0) >= 70);
+  const scoreMedio  = compradores.filter(d => { const s=parseInt(d.score||0); return s>=40 && s<70; });
+
+  // ── Cards totais
+  document.getElementById('cardsRow').innerHTML = `
+    <div class="card">
+      <div class="card-label">Total de contatos</div>
+      <div class="card-value">${dados.length.toLocaleString('pt-BR')}</div>
+      <div class="card-sub">na base atual</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Compradores / Leads</div>
+      <div class="card-value green">${compradores.length.toLocaleString('pt-BR')}</div>
+      <div class="card-sub">${((compradores.length/dados.length)*100).toFixed(0)}% da base</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Score Alto (≥70)</div>
+      <div class="card-value hot">${scoreAlto.length}</div>
+      <div class="card-sub">prioridade máxima</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Score Médio (40–69)</div>
+      <div class="card-value warm">${scoreMedio.length}</div>
+      <div class="card-sub">potencial de conversão</div>
+    </div>`;
+
+  // ── Matches (usando score dos compradores — matches reais virão da Aba MATCHES)
+  const quentes = compradores.filter(d => parseInt(d.score||0) >= 70).slice(0,8);
+  const mornos  = compradores.filter(d => { const s=parseInt(d.score||0); return s>=40 && s<70; }).slice(0,8);
+  const frios   = compradores.filter(d => parseInt(d.score||0) < 40 && parseInt(d.score||0) > 0).slice(0,8);
+
+  document.getElementById('countHot').textContent  = quentes.length;
+  document.getElementById('countWarm').textContent = mornos.length;
+  document.getElementById('countCold').textContent = frios.length;
+
+  renderMatchCol('listHot',  quentes, 'hot');
+  renderMatchCol('listWarm', mornos,  'warm');
+  renderMatchCol('listCold', frios,   'cold');
+
+  // ── Gráficos
+  const segmentos = contarPor(compradores, 'segmento');
+  const padroes   = contarPor(compradores, 'padrao');
+  renderGrafico('chartSegmento', chartSeg, segmentos, (c) => { chartSeg = c; });
+  renderGrafico('chartPadrao',   chartPad, padroes,   (c) => { chartPad = c; });
+
+  // ── Top 20
+  const top20 = [...compradores].sort((a,b) => parseInt(b.score||0)-parseInt(a.score||0)).slice(0,20);
+  document.getElementById('top20Body').innerHTML = top20.map((d, i) => {
+    const rankClass = i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'rank';
+    const prioClass = d.prioridade==='Alta'?'pill-alta':d.prioridade==='Média'?'pill-media':'pill-baixa';
+    const prio = d.prioridade && d.prioridade!=='—' ? d.prioridade : '';
+    return `<tr>
+      <td class="rank ${rankClass}">${i+1}</td>
+      <td><b>${d.nome||'—'}</b><br><small style="color:var(--text3)">${d.telefone||''}</small></td>
+      <td>${d.segmento||'—'}</td>
+      <td>${d.padrao||'—'}</td>
+      <td>${d.produtoOrigem||'—'}</td>
+      <td><b>${d.score||0}</b></td>
+      <td>${prio?`<span class="pill ${prioClass}">${prio}</span>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMatchCol(elId, lista, tipo) {
+  const el = document.getElementById(elId);
+  if (!lista.length) {
+    el.innerHTML = '<div class="empty-state">Nenhum match ainda.<br><small>Cadastre produtos na Aba 2.</small></div>';
+    return;
+  }
+  el.innerHTML = lista.map(d => `
+    <div class="match-item">
+      <span class="match-score score-${tipo}">${d.score}</span>
+      <div class="match-name">${d.nome||'—'}</div>
+      <div class="match-detail">${[d.segmento, d.padrao, d.produtoOrigem].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
+    </div>`).join('');
+}
+
+function contarPor(dados, campo) {
+  const mapa = {};
+  dados.forEach(d => {
+    const v = d[campo] || 'Não informado';
+    mapa[v] = (mapa[v]||0) + 1;
+  });
+  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,8);
+}
+
+function renderGrafico(canvasId, chartInst, dados, setChart) {
+  if (chartInst) chartInst.destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const colors = ['#4f7cff','#00d4aa','#f5a623','#ff5a5a','#a78bfa','#34d399','#fb923c','#60a5fa'];
+  const c = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dados.map(([k])=>k),
+      datasets: [{ data: dados.map(([,v])=>v), backgroundColor: colors.slice(0,dados.length),
+                   borderRadius:6, borderSkipped:false }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{
+        label: ctx => ` ${ctx.parsed.x} clientes`
+      }}},
+      scales:{
+        x:{ grid:{color:'rgba(42,48,80,.6)'}, ticks:{color:'#8892aa'} },
+        y:{ grid:{display:false}, ticks:{color:'#e8ecf4',font:{size:12}} }
+      }
+    }
+  });
+  setChart(c);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+carregarDados();
+</script>
+</body>
+</html>
