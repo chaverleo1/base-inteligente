@@ -150,6 +150,24 @@
   .d-step-text b{color:var(--text)}
   .drawer-loading{padding:60px 24px;text-align:center;color:var(--text3)}
 
+  /* ── CARDS IMÓVEIS NO DRAWER ── */
+  .imovel-cards{display:flex;flex-direction:column;gap:10px}
+  .imovel-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:border-color .2s}
+  .imovel-card:hover{border-color:var(--accent)}
+  .imovel-card-top{display:flex;gap:12px;padding:12px}
+  .imovel-foto{width:72px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--border)}
+  .imovel-foto-placeholder{width:72px;height:56px;border-radius:6px;flex-shrink:0;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:20px}
+  .imovel-info{flex:1;min-width:0}
+  .imovel-tipo{font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .imovel-local{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .imovel-valor{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px}
+  .imovel-score-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;align-self:flex-start;flex-shrink:0}
+  .imovel-attrs{display:flex;gap:8px;padding:0 12px 10px;flex-wrap:wrap}
+  .imovel-attr{font-size:11px;color:var(--text3);background:var(--surface);padding:2px 7px;border-radius:4px}
+  .imovel-det{font-size:11px;color:var(--text3);padding:0 12px 10px;line-height:1.5}
+  .imovel-link{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--accent);padding:7px;border-top:1px solid var(--border);transition:background .15s}
+  .imovel-link:hover{background:rgba(79,124,255,.08)}
+
   .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
   .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
   .login-logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:6px}
@@ -535,6 +553,52 @@ function abrirDrawer() {
   document.body.style.overflow = 'hidden';
 }
 
+async function carregarMatchesDrawer(cod) {
+  const el = document.getElementById('drawerImoveis');
+  if (!el) return;
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=matches_cliente&cod=' + encodeURIComponent(cod));
+    const lista = await resp.json();
+    if (!Array.isArray(lista) || !lista.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="imovel-cards">${lista.map(m => {
+      const sc  = parseInt(m.scoreMatch) || 0;
+      const cls = sc >= 70 ? 'd-badge-hot' : sc >= 40 ? 'd-badge-warm' : 'd-badge-cold';
+      const attrs = [
+        m.imoQuartos   ? m.imoQuartos   + ' qtos'  : '',
+        m.imoSuites    ? m.imoSuites    + ' suítes' : '',
+        m.imoVagas     ? m.imoVagas     + ' vagas'  : '',
+        m.imoAreaUtil  ? m.imoAreaUtil  + ' m²'     : '',
+        m.imoPadrao    || '',
+        m.imoEstagio   || ''
+      ].filter(Boolean);
+      const det = (m.detalheMatch||'').replace(/\|/g,'·');
+      const foto = m.imoFoto && m.imoFoto.startsWith('http')
+        ? `<img class="imovel-foto" src="${m.imoFoto}" onerror="this.style.display='none'">`
+        : `<div class="imovel-foto-placeholder">🏠</div>`;
+      const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(' — ');
+      return `<div class="imovel-card">
+        <div class="imovel-card-top">
+          ${foto}
+          <div class="imovel-info">
+            <div class="imovel-tipo">${m.imoTipo||'Imóvel'}</div>
+            <div class="imovel-local">${local||'—'}</div>
+            <div class="imovel-valor">${m.imoValorVenda||'—'}</div>
+          </div>
+          <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
+        </div>
+        ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+        ${det ? `<div class="imovel-det">${det}</div>` : ''}
+        ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Erro ao buscar matches.</div>';
+  }
+}
+
 function fecharDrawer() {
   document.getElementById('drawer').classList.remove('open');
   document.getElementById('drawerOverlay').classList.remove('open');
@@ -570,6 +634,7 @@ async function abrirCliente(nome, score, cod) {
       : null;
     if (!c) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Cliente não encontrado na base.</div>'; return; }
     renderDrawer(c, sc);
+    carregarMatchesDrawer(cod);
   } catch(e) {
     document.getElementById('drawerBody').innerHTML =
       `<div class="drawer-loading">Erro: ${e.message}</div>`;
@@ -687,6 +752,11 @@ function renderDrawer(c, score) {
       <div class="d-steps">
         ${steps.map(s=>`<div class="d-step"><div class="d-step-icon">${s.icon}</div><div class="d-step-text">${s.text}</div></div>`).join('')}
       </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Imóveis compatíveis</div>
+      <div id="drawerImoveis"><div class="drawer-loading dot-anim" style="padding:20px 0">Buscando matches</div></div>
     </div>
   `;
 }
