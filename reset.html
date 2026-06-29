@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base Inteligente — Redefinir Senha</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+  :root{--bg:#0f1117;--surface:#181c27;--surface2:#1e2335;--border:#2a3050;--accent:#4f7cff;--accent2:#00d4aa;--text:#e8ecf4;--text2:#8892aa;--text3:#4a5470;--danger:#ff5a5a;--radius-sm:8px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
+  .logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:6px}
+  .logo span{color:var(--text2);font-weight:400}
+  .sub{text-align:center;color:var(--text2);font-size:13px;margin-bottom:32px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  .field label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+  .field input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:15px;font-family:'Inter',sans-serif;padding:12px 14px;outline:none;transition:border .2s;width:100%}
+  .field input:focus{border-color:var(--accent)}
+  .btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:8px;transition:background .2s}
+  .btn:hover{background:#3d6aee}
+  .btn:disabled{opacity:.5;cursor:default}
+  .msg{font-size:13px;text-align:center;margin-top:12px;min-height:18px}
+  .msg.erro{color:var(--danger)}
+  .msg.ok{color:var(--accent2)}
+  .link{text-align:center;margin-top:16px;font-size:13px;color:var(--text3)}
+  .link a{color:var(--accent);text-decoration:none;cursor:pointer}
+  .link a:hover{text-decoration:underline}
+  #telaInvalida{display:none}
+  #telaForm{display:none}
+  #telaSucesso{display:none}
+  #telaCarregando{text-align:center;color:var(--text2);font-size:14px;padding:20px 0}
+</style>
+</head>
+<body>
+
+<div class="box">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+
+  <!-- Carregando -->
+  <div id="telaCarregando">
+    <div class="sub" style="margin:0">Validando link...</div>
+  </div>
+
+  <!-- Token inválido / expirado -->
+  <div id="telaInvalida">
+    <div class="sub">Link inválido ou expirado.</div>
+    <p style="text-align:center;font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:24px">
+      O link de redefinição expira em <strong style="color:var(--text)">1 hora</strong>.<br>
+      Solicite um novo link na tela de login.
+    </p>
+    <a href="index.html"><button class="btn">Voltar ao login</button></a>
+  </div>
+
+  <!-- Formulário de nova senha -->
+  <div id="telaForm">
+    <div class="sub">Crie uma nova senha de acesso</div>
+    <div class="field">
+      <label>Nova senha</label>
+      <input type="password" id="inputNova" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="field">
+      <label>Confirmar senha</label>
+      <input type="password" id="inputConfirma" placeholder="Repita a senha"
+             onkeydown="if(event.key==='Enter')salvarSenha()">
+    </div>
+    <button class="btn" id="btnSalvar" onclick="salvarSenha()">Definir nova senha</button>
+    <div class="msg erro" id="formMsg"></div>
+  </div>
+
+  <!-- Sucesso -->
+  <div id="telaSucesso">
+    <div class="sub">Senha definida com sucesso!</div>
+    <p style="text-align:center;font-size:14px;color:var(--text2);margin-bottom:24px">
+      Você já pode fazer login com a nova senha.
+    </p>
+    <a href="index.html"><button class="btn" style="background:var(--accent2);color:#0f1117">Ir para o login</button></a>
+  </div>
+</div>
+
+<script>
+  const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzh7M4qqh1gHWS-978gyJbSERWd0smo9GDGDV4AfJ1a0fHCLAXfivjSPAgYdF07FQKW/exec';
+  const USER_EMAIL  = 'chaverleo@gmail.com';
+
+  async function sha256(texto) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function mostrar(id) {
+    ['telaCarregando','telaInvalida','telaForm','telaSucesso'].forEach(function(t) {
+      document.getElementById(t).style.display = t === id ? 'block' : 'none';
+    });
+  }
+
+  // Pega token da URL e valida com Apps Script
+  async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const token  = params.get('token');
+    if (!token) { mostrar('telaInvalida'); return; }
+
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=validar_token&token=' + encodeURIComponent(token));
+      const data = await resp.json();
+      if (data.ok) {
+        mostrar('telaForm');
+        document.getElementById('inputNova').focus();
+      } else {
+        mostrar('telaInvalida');
+      }
+    } catch(e) {
+      mostrar('telaInvalida');
+    }
+  }
+
+  async function salvarSenha() {
+    const nova     = document.getElementById('inputNova').value;
+    const confirma = document.getElementById('inputConfirma').value;
+    const msg      = document.getElementById('formMsg');
+    const btn      = document.getElementById('btnSalvar');
+
+    if (nova.length < 6)    { msg.textContent = 'Mínimo 6 caracteres.'; return; }
+    if (nova !== confirma)  { msg.textContent = 'Senhas não coincidem.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    msg.textContent = '';
+
+    const token = new URLSearchParams(window.location.search).get('token');
+    const hash  = await sha256(nova + USER_EMAIL);
+
+    try {
+      const resp = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_senha', hash: hash, token: token }) })
+      });
+      // no-cors não retorna body — aguarda 1s e assume sucesso se token era válido
+      await new Promise(r => setTimeout(r, 1000));
+      mostrar('telaSucesso');
+    } catch(e) {
+      msg.textContent = 'Erro ao salvar. Tente novamente.';
+      btn.disabled = false;
+      btn.textContent = 'Definir nova senha';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

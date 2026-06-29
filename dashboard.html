@@ -227,8 +227,7 @@
 </div>
 
 <script>
-const WEBHOOK_URL  = 'https://script.google.com/macros/s/AKfycbw4u6YmOS4RqT_WUM1H80Xv-DvcWlaMZUUcQCz-ADdJu0eQZRZ65Xx_T0jcWyn9UNnS/exec';
-const AUTH_KEY     = 'bi_auth_hash';
+const WEBHOOK_URL  = 'https://script.google.com/macros/s/AKfycbzh7M4qqh1gHWS-978gyJbSERWd0smo9GDGDV4AfJ1a0fHCLAXfivjSPAgYdF07FQKW/exec';
 const SESS_KEY     = 'bi_session';
 const USER_EMAIL   = 'chaverleo@gmail.com';
 
@@ -239,25 +238,30 @@ async function sha256(texto) {
 
 async function verificarAuth() {
   if (sessionStorage.getItem(SESS_KEY) === 'ok') { fecharLogin(); carregarDados(); return; }
-  if (!localStorage.getItem(AUTH_KEY)) {
-    // Sem senha criada ainda — redireciona para o formulário criar
-    window.location.href = 'index.html';
-  }
-  // Mostra overlay de login (já visível por padrão)
 }
 
 async function entrar() {
   const senha = document.getElementById('inputSenha').value;
   const err   = document.getElementById('loginErr');
+  const btn   = document.getElementById('btnEntrar');
   if (!senha) { err.textContent = 'Digite sua senha.'; return; }
+  btn.disabled = true; btn.textContent = 'Verificando...'; err.textContent = '';
   const hash = await sha256(senha + USER_EMAIL);
-  if (hash === localStorage.getItem(AUTH_KEY)) {
-    sessionStorage.setItem(SESS_KEY, 'ok');
-    fecharLogin();
-    carregarDados();
-  } else {
-    err.textContent = 'Senha incorreta.';
-    document.getElementById('inputSenha').value = '';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=verificar_senha&hash=' + encodeURIComponent(hash));
+    const data = await resp.json();
+    if (data.ok) {
+      sessionStorage.setItem(SESS_KEY, 'ok');
+      fecharLogin();
+      carregarDados();
+    } else {
+      err.textContent = 'Senha incorreta.';
+      document.getElementById('inputSenha').value = '';
+      btn.disabled = false; btn.textContent = 'Entrar';
+    }
+  } catch(e) {
+    err.textContent = 'Erro de conexão.';
+    btn.disabled = false; btn.textContent = 'Entrar';
   }
 }
 
