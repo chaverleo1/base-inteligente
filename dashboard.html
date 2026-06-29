@@ -185,8 +185,7 @@
 </div>
 
 <script>
-const SHEET_ID  = '1cr1Qs9o9_4mFXy0fZmVx-54xYiBNF6Vx5fHcIsiAkNI';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=CONTATOS`;
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw4u6YmOS4RqT_WUM1H80Xv-DvcWlaMZUUcQCz-ADdJu0eQZRZ65Xx_T0jcWyn9UNnS/exec';
 
 let chartSeg = null;
 let chartPad = null;
@@ -195,24 +194,13 @@ let chartPad = null;
 
 async function carregarDados() {
   try {
-    const res  = await fetch(SHEET_URL);
-    const text = await res.text();
-    // Google retorna JSONP: /*O_o*/google.visualization.Query.setResponse({...});
-    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/)[1]);
-    const rows = json.table.rows;
-    const cols = json.table.cols.map(c => c.label);
-    const dados = rows.map(r => {
-      const obj = {};
-      cols.forEach((col, i) => { obj[col] = r.c[i] ? (r.c[i].v ?? r.c[i].f ?? '') : ''; });
-      return obj;
-    }).filter(d => d.nome);
-
-    renderDados(dados);
+    const res  = await fetch(WEBHOOK_URL + '?acao=dashboard');
+    const json = await res.json();
+    renderDados(json);
   } catch(err) {
     document.getElementById('cardsRow').innerHTML =
       `<div style="grid-column:1/-1;color:var(--danger);padding:16px">
-        Erro ao carregar dados.<br>
-        <small>A planilha precisa estar <b>compartilhada publicamente</b> (qualquer pessoa com o link pode ver).</small>
+        Erro ao carregar dados: ${err.message}
       </div>`;
     console.error(err);
   }
@@ -220,38 +208,37 @@ async function carregarDados() {
 
 // ── RENDERIZAR ────────────────────────────────────────────────────────────────
 
-function renderDados(dados) {
-  const compradores = dados.filter(d => ['Comprador','Lead','Investidor','Inquilino'].includes(d.categoria));
-  const scoreAlto   = compradores.filter(d => parseInt(d.score||0) >= 70);
-  const scoreMedio  = compradores.filter(d => { const s=parseInt(d.score||0); return s>=40 && s<70; });
+function renderDados(json) {
+  const t = json.totais || {};
+  const pct = t.total ? ((t.compradores/t.total)*100).toFixed(0) : 0;
 
   // ── Cards totais
   document.getElementById('cardsRow').innerHTML = `
     <div class="card">
       <div class="card-label">Total de contatos</div>
-      <div class="card-value">${dados.length.toLocaleString('pt-BR')}</div>
+      <div class="card-value">${(t.total||0).toLocaleString('pt-BR')}</div>
       <div class="card-sub">na base atual</div>
     </div>
     <div class="card">
       <div class="card-label">Compradores / Leads</div>
-      <div class="card-value green">${compradores.length.toLocaleString('pt-BR')}</div>
-      <div class="card-sub">${((compradores.length/dados.length)*100).toFixed(0)}% da base</div>
+      <div class="card-value green">${(t.compradores||0).toLocaleString('pt-BR')}</div>
+      <div class="card-sub">${pct}% da base</div>
     </div>
     <div class="card">
       <div class="card-label">Score Alto (≥70)</div>
-      <div class="card-value hot">${scoreAlto.length}</div>
+      <div class="card-value hot">${t.scoreAlto||0}</div>
       <div class="card-sub">prioridade máxima</div>
     </div>
     <div class="card">
       <div class="card-label">Score Médio (40–69)</div>
-      <div class="card-value warm">${scoreMedio.length}</div>
+      <div class="card-value warm">${t.scoreMedio||0}</div>
       <div class="card-sub">potencial de conversão</div>
     </div>`;
 
-  // ── Matches (usando score dos compradores — matches reais virão da Aba MATCHES)
-  const quentes = compradores.filter(d => parseInt(d.score||0) >= 70).slice(0,8);
-  const mornos  = compradores.filter(d => { const s=parseInt(d.score||0); return s>=40 && s<70; }).slice(0,8);
-  const frios   = compradores.filter(d => parseInt(d.score||0) < 40 && parseInt(d.score||0) > 0).slice(0,8);
+  // ── Matches
+  const quentes = json.quentes || [];
+  const mornos  = json.mornos  || [];
+  const frios   = json.frios   || [];
 
   document.getElementById('countHot').textContent  = quentes.length;
   document.getElementById('countWarm').textContent = mornos.length;
@@ -262,50 +249,39 @@ function renderDados(dados) {
   renderMatchCol('listCold', frios,   'cold');
 
   // ── Gráficos
-  const segmentos = contarPor(compradores, 'segmento');
-  const padroes   = contarPor(compradores, 'padrao');
-  renderGrafico('chartSegmento', chartSeg, segmentos, (c) => { chartSeg = c; });
-  renderGrafico('chartPadrao',   chartPad, padroes,   (c) => { chartPad = c; });
+  renderGrafico('chartSegmento', chartSeg, json.segmentos||[], c => { chartSeg = c; });
+  renderGrafico('chartPadrao',   chartPad, json.padroes||[],   c => { chartPad = c; });
 
   // ── Top 20
-  const top20 = [...compradores].sort((a,b) => parseInt(b.score||0)-parseInt(a.score||0)).slice(0,20);
-  document.getElementById('top20Body').innerHTML = top20.map((d, i) => {
+  const top20 = json.top20 || [];
+  document.getElementById('top20Body').innerHTML = top20.length ? top20.map((d, i) => {
     const rankClass = i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'rank';
     const prioClass = d.prioridade==='Alta'?'pill-alta':d.prioridade==='Média'?'pill-media':'pill-baixa';
     const prio = d.prioridade && d.prioridade!=='—' ? d.prioridade : '';
     return `<tr>
       <td class="rank ${rankClass}">${i+1}</td>
-      <td><b>${d.nome||'—'}</b><br><small style="color:var(--text3)">${d.telefone||''}</small></td>
+      <td><b>${d.nome||'—'}</b><br><small style="color:var(--text3)">${d.codigo||''}</small></td>
       <td>${d.segmento||'—'}</td>
       <td>${d.padrao||'—'}</td>
       <td>${d.produtoOrigem||'—'}</td>
       <td><b>${d.score||0}</b></td>
       <td>${prio?`<span class="pill ${prioClass}">${prio}</span>`:''}</td>
     </tr>`;
-  }).join('');
+  }).join('') : '<tr><td colspan="7" class="loading">Sem dados</td></tr>';
 }
 
 function renderMatchCol(elId, lista, tipo) {
   const el = document.getElementById(elId);
   if (!lista.length) {
-    el.innerHTML = '<div class="empty-state">Nenhum match ainda.<br><small>Cadastre produtos na Aba 2.</small></div>';
+    el.innerHTML = '<div class="empty-state">Nenhum ainda.<br><small>Score insuficiente ou base vazia.</small></div>';
     return;
   }
   el.innerHTML = lista.map(d => `
     <div class="match-item">
       <span class="match-score score-${tipo}">${d.score}</span>
       <div class="match-name">${d.nome||'—'}</div>
-      <div class="match-detail">${[d.segmento, d.padrao, d.produtoOrigem].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
+      <div class="match-detail">${[d.segmento,d.padrao,d.produtoOrigem].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
     </div>`).join('');
-}
-
-function contarPor(dados, campo) {
-  const mapa = {};
-  dados.forEach(d => {
-    const v = d[campo] || 'Não informado';
-    mapa[v] = (mapa[v]||0) + 1;
-  });
-  return Object.entries(mapa).sort((a,b)=>b[1]-a[1]).slice(0,8);
 }
 
 function renderGrafico(canvasId, chartInst, dados, setChart) {
