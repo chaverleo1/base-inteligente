@@ -1,9 +1,18 @@
 """
 BASE INTELIGENTE — processar_contatos_v3.py
-Uso: python processar_contatos_v3.py contacts.csv base_processada.csv
 
+Uso padrão (argumentos):
+    python processar_contatos_v3.py contatos.xlsx base_processada.csv
+
+Uso sem argumentos (caminhos fixos abaixo):
+    python processar_contatos_v3.py
+
+Aceita .xlsx e .csv como entrada.
 Para cada telefone encontrado em fone1..fone5 gera uma linha separada,
 permitindo rastrear todos os pontos de contato mesmo que o nome se repita.
+
+Dependência extra para .xlsx:
+    pip install openpyxl
 """
 
 import csv
@@ -11,6 +20,10 @@ import re
 import sys
 import unicodedata
 from pathlib import Path
+
+# ── CAMINHOS PADRÃO (usados quando não há argumentos) ───────────────────────
+ENTRADA_PADRAO = Path(r"C:\Users\User\Downloads\contatos.xlsx")
+SAIDA_PADRAO   = Path(r"C:\Users\User\Downloads\base_processada.csv")
 
 # ── CONSTANTES ──────────────────────────────────────────────────────────────
 
@@ -520,15 +533,67 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
     return linhas
 
 
+# ── LEITURA DE ARQUIVO (csv ou xlsx) ─────────────────────────────────────────
+
+def ler_arquivo(entrada: Path) -> tuple[list[str], list[dict]]:
+    """Lê .csv ou .xlsx e retorna (cabecalho, lista_de_dicts)."""
+    ext = entrada.suffix.lower()
+
+    if ext == ".xlsx":
+        try:
+            import openpyxl
+        except ImportError:
+            print("Instale openpyxl:  pip install openpyxl")
+            sys.exit(1)
+
+        wb = openpyxl.load_workbook(entrada, read_only=True, data_only=True)
+        ws = wb.active
+        rows = list(ws.iter_rows(values_only=True))
+        wb.close()
+
+        if not rows:
+            return [], []
+
+        cabecalho = [str(c).strip() if c is not None else "" for c in rows[0]]
+        linhas_raw = []
+        for row in rows[1:]:
+            d = {}
+            for i, col in enumerate(cabecalho):
+                val = row[i] if i < len(row) else None
+                d[col] = str(val).strip() if val is not None else ""
+            # Ignora linha completamente vazia
+            if any(v for v in d.values()):
+                linhas_raw.append(d)
+        return cabecalho, linhas_raw
+
+    else:  # csv
+        # Tenta utf-8-sig primeiro, fallback para latin-1
+        for enc in ("utf-8-sig", "latin-1"):
+            try:
+                with open(entrada, newline="", encoding=enc) as f:
+                    reader = csv.DictReader(f)
+                    cabecalho = reader.fieldnames or []
+                    linhas_raw = list(reader)
+                return cabecalho, linhas_raw
+            except UnicodeDecodeError:
+                continue
+        print("Não foi possível ler o arquivo. Tente converter para UTF-8.")
+        sys.exit(1)
+
+
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main():
-    if len(sys.argv) < 3:
-        print("Uso: python processar_contatos_v3.py contacts.csv base_processada.csv")
+    if len(sys.argv) == 3:
+        entrada = Path(sys.argv[1])
+        saida   = Path(sys.argv[2])
+    elif len(sys.argv) == 1:
+        entrada = ENTRADA_PADRAO
+        saida   = SAIDA_PADRAO
+        print(f"Usando caminhos padrão:\n  entrada: {entrada}\n  saída:   {saida}\n")
+    else:
+        print("Uso: python processar_contatos_v3.py contatos.xlsx base_processada.csv")
         sys.exit(1)
-
-    entrada  = Path(sys.argv[1])
-    saida    = Path(sys.argv[2])
 
     if not entrada.exists():
         print(f"Arquivo não encontrado: {entrada}")
@@ -536,10 +601,7 @@ def main():
 
     print(f"Lendo: {entrada}")
 
-    with open(entrada, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        cabecalho = reader.fieldnames or []
-        linhas_raw = list(reader)
+    cabecalho, linhas_raw = ler_arquivo(entrada)
 
     print(f"  → {len(linhas_raw)} contatos brutos")
     print(f"  → Colunas: {cabecalho}")
