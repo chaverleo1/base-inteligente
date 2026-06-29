@@ -325,6 +325,7 @@
     <button class="btn btn-secondary" id="btnBack" onclick="prevStep()" style="display:none">← Voltar</button>
     <button class="btn btn-primary" id="btnNext" onclick="nextStep()">Continuar →</button>
     <button class="btn btn-success" id="btnSave" onclick="saveClient()" style="display:none">✓ Salvar no Sheets</button>
+    <button class="btn btn-primary" id="btnUpdate" onclick="saveClient()" style="display:none">✓ Atualizar contato</button>
   </div>
 </div>
 
@@ -369,14 +370,12 @@
   }
 
   function updateNav() {
-    document.getElementById('btnBack').style.display = currentStep > 1 ? 'block' : 'none';
-    if (currentStep === totalSteps) {
-      document.getElementById('btnNext').style.display = 'none';
-      document.getElementById('btnSave').style.display = 'block';
-    } else {
-      document.getElementById('btnNext').style.display = 'block';
-      document.getElementById('btnSave').style.display = 'none';
-    }
+    document.getElementById('btnBack').style.display = currentStep > 1 ? 'inline-flex' : 'none';
+    const isLast = currentStep === totalSteps;
+    const isEdit = !!linhaAtual;
+    document.getElementById('btnNext').style.display   = !isLast ? 'inline-flex' : 'none';
+    document.getElementById('btnSave').style.display   = isLast && !isEdit ? 'inline-flex' : 'none';
+    document.getElementById('btnUpdate').style.display = isLast && isEdit  ? 'inline-flex' : 'none';
   }
 
   function setMode(m) {
