@@ -522,11 +522,12 @@
     };
 
     try {
-      const url = WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload));
-      console.log('Enviando para:', url.substring(0, 80) + '...');
+      console.log('Enviando para:', WEBHOOK_URL.substring(0, 80) + '...');
 
-      // no-cors evita o bloqueio de CORS do Apps Script (resposta opaca — não lemos o body)
-      await fetch(url, { method: 'GET', mode: 'no-cors' });
+      // POST via form-urlencoded + no-cors contorna CORS do Apps Script
+      // (resposta opaca — não lemos o body, mas os dados chegam)
+      const body = new URLSearchParams({ dados: JSON.stringify(payload) });
+      await fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body });
 
       showToast('✓ Cliente salvo no Google Sheets!', 'ok');
       setTimeout(() => resetForm(), 2500);
