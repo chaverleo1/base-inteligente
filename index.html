@@ -68,10 +68,14 @@
   .search-bar input:focus{box-shadow:none;border:none}
   .search-icon{color:var(--text3);font-size:16px}
   .nav-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 24px;display:flex;gap:10px;justify-content:center;z-index:100}
-  .nav-inner{max-width:680px;width:100%;display:flex;gap:10px}
+  .nav-inner{max-width:680px;width:100%;display:flex;gap:10px;align-items:center}
   .btn{padding:13px 24px;border-radius:var(--radius-sm);border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;font-family:'Inter',sans-serif;flex:1}
   .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#3d6aee}
   .btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);flex:0 0 auto;padding:13px 20px}
+  .btn-arrow{width:48px;height:48px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:20px;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .btn-arrow:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,124,255,.08)}
+  .btn-arrow:disabled{opacity:0.25;cursor:default;pointer-events:none}
+  .nav-step-label{flex:1;text-align:center;font-size:13px;color:var(--text2);font-weight:500}
   .btn-secondary:hover{color:var(--text);border-color:var(--text3)}
   .btn-success{background:var(--accent2);color:#0f1117}.btn-success:hover{background:#00bfa0}
   .btn-success:disabled{opacity:.5;cursor:not-allowed}
@@ -320,12 +324,13 @@
 </div>
 
 <!-- NAV -->
-<div class="nav-bar">
+<div class="nav-bar" id="navBar">
   <div class="nav-inner">
-    <button class="btn btn-secondary" id="btnBack" onclick="prevStep()" style="display:none">← Voltar</button>
-    <button class="btn btn-primary" id="btnNext" onclick="nextStep()">Continuar →</button>
-    <button class="btn btn-success" id="btnSave" onclick="saveClient()" style="display:none">✓ Salvar no Sheets</button>
-    <button class="btn btn-primary" id="btnUpdate" onclick="saveClient()" style="display:none">✓ Atualizar contato</button>
+    <button class="btn-arrow" id="btnBack" onclick="prevStep()" title="Etapa anterior">&#8592;</button>
+    <div class="nav-step-label" id="navLabel">Etapa 1 de 5</div>
+    <button class="btn-arrow" id="btnNext" onclick="nextStep()" title="Próxima etapa">&#8594;</button>
+    <button class="btn btn-success" id="btnSave" onclick="saveClient()" style="display:none">✓ Salvar</button>
+    <button class="btn btn-primary" id="btnUpdate" onclick="saveClient()" style="display:none">✓ Atualizar</button>
   </div>
 </div>
 
@@ -370,12 +375,23 @@
   }
 
   function updateNav() {
-    document.getElementById('btnBack').style.display = currentStep > 1 ? 'inline-flex' : 'none';
     const isLast = currentStep === totalSteps;
     const isEdit = !!linhaAtual;
-    document.getElementById('btnNext').style.display   = !isLast ? 'inline-flex' : 'none';
-    document.getElementById('btnSave').style.display   = isLast && !isEdit ? 'inline-flex' : 'none';
-    document.getElementById('btnUpdate').style.display = isLast && isEdit  ? 'inline-flex' : 'none';
+
+    const btnBack   = document.getElementById('btnBack');
+    const btnNext   = document.getElementById('btnNext');
+    const btnSave   = document.getElementById('btnSave');
+    const btnUpdate = document.getElementById('btnUpdate');
+    const navLabel  = document.getElementById('navLabel');
+
+    btnBack.disabled = currentStep === 1;
+    btnNext.disabled = isLast;
+    btnNext.style.display   = 'inline-flex';
+    btnBack.style.display   = 'inline-flex';
+    btnSave.style.display   = isLast && !isEdit ? 'inline-flex' : 'none';
+    btnUpdate.style.display = isLast && isEdit  ? 'inline-flex' : 'none';
+
+    if (navLabel) navLabel.textContent = 'Etapa ' + currentStep + ' de ' + totalSteps;
   }
 
   function setMode(m) {
