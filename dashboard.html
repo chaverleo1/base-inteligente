@@ -171,6 +171,15 @@
   .imovel-link{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--accent);padding:7px;border-top:1px solid var(--border);transition:background .15s}
   .imovel-link:hover{background:rgba(79,124,255,.08)}
 
+  .imovel-card-const{border-color:rgba(0,212,170,.3)}
+  .imovel-card-const:hover{border-color:var(--accent2)}
+  .imovel-fonte-row{margin-bottom:4px}
+  .imovel-fonte-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
+  .fonte-rev{background:rgba(79,124,255,.12);color:var(--accent)}
+  .fonte-const{background:rgba(0,212,170,.12);color:var(--accent2)}
+  .imovel-condpag{padding:0 12px 10px;display:flex;flex-direction:column;gap:4px;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px}
+  .imovel-condpag-item{font-size:12px;color:var(--text2);line-height:1.4}
+
   .imovel-gatilho{margin:0 12px 10px;padding:10px;background:var(--surface);border:1px dashed var(--border);border-radius:8px}
   .imovel-gatilho-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em}
   .imovel-gatilho-texto{font-size:12.5px;color:var(--text2);line-height:1.5;white-space:pre-wrap}
@@ -632,28 +641,48 @@ async function carregarMatchesDrawer(cod, cliente) {
     }
     const tel = String((cliente && cliente.telefone) || '').replace(/\D/g,'');
     el.innerHTML = `<div class="imovel-cards">${lista.map((m, idx) => {
-      const sc  = parseInt(m.scoreMatch) || 0;
-      const cls = sc >= 70 ? 'd-badge-hot' : sc >= 40 ? 'd-badge-warm' : 'd-badge-cold';
+      const sc      = parseInt(m.scoreMatch) || 0;
+      const cls     = sc >= 70 ? 'd-badge-hot' : sc >= 40 ? 'd-badge-warm' : 'd-badge-cold';
+      const isConst = m.fonte === 'CONSTRUTORA';
       const attrs = [
-        m.imoQuartos   ? m.imoQuartos   + ' qtos'  : '',
-        m.imoSuites    ? m.imoSuites    + ' suítes' : '',
-        m.imoVagas     ? m.imoVagas     + ' vagas'  : '',
-        m.imoAreaUtil  ? m.imoAreaUtil  + ' m²'     : '',
-        m.imoPadrao    || '',
-        m.imoEstagio   || ''
+        m.imoQuartos  ? m.imoQuartos  + ' qtos'   : '',
+        m.imoSuites   ? m.imoSuites   + ' suítes'  : '',
+        m.imoVagas    ? m.imoVagas    + ' vagas'   : '',
+        m.imoAreaUtil ? m.imoAreaUtil + ' m²'      : '',
+        m.imoPadrao   || '',
+        m.imoEstagio  || ''
       ].filter(Boolean);
-      const det = (m.detalheMatch||'').replace(/\|/g,'·');
-      const foto = m.imoFoto && m.imoFoto.startsWith('http')
+      const det   = (m.detalheMatch||'').replace(/\|/g,'·');
+      const foto  = m.imoFoto && m.imoFoto.startsWith('http')
         ? `<img class="imovel-foto" src="${m.imoFoto}" onerror="this.style.display='none'">`
-        : `<div class="imovel-foto-placeholder">🏠</div>`;
+        : `<div class="imovel-foto-placeholder">${isConst ? '🏗️' : '🏠'}</div>`;
       const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(' — ');
       const msgId = `msgOferta_${idx}`;
-      const mensagem = cliente ? gerarMensagemOferta_(cliente, m) : '';
+
+      // Condições de pagamento (só construtora)
+      const condPag = [];
+      if (m.imoConstrutora)  condPag.push(`🏢 ${m.imoConstrutora}`);
+      if (m.imoEntrega)      condPag.push(`📅 Entrega: ${m.imoEntrega}`);
+      if (m.imoEntradaPerc)  condPag.push(`💰 Entrada: ${m.imoEntradaPerc}%${m.imoEntradaValor?' (R$ '+m.imoEntradaValor+')':''}`);
+      if (m.imoSinalPerc)    condPag.push(`🤝 Sinal: ${m.imoSinalPerc}%${m.imoSinalValor?' (R$ '+m.imoSinalValor+')':''}`);
+      if (m.imoCorretorPerc) condPag.push(`📊 Comissão corretor: ${m.imoCorretorPerc}%`);
+      if (m.imoTabela)       condPag.push(`📋 Tabela: ${m.imoTabela}`);
+
+      // Mensagem adaptada: menciona condições de pagamento para construtora
+      let mensagem = cliente ? gerarMensagemOferta_(cliente, m) : '';
+      if (isConst && m.imoEntradaPerc && mensagem) {
+        mensagem = mensagem.replace(' Posso te mandar fotos e mais detalhes?',
+          ` A entrada é de apenas ${m.imoEntradaPerc}% — e as condições de pagamento são bem facilitadas. Posso te mandar a tabela completa?`);
+      }
       const wppHref = tel && mensagem ? `https://wa.me/55${tel}?text=${encodeURIComponent(mensagem)}` : null;
-      return `<div class="imovel-card">
+
+      return `<div class="imovel-card${isConst ? ' imovel-card-const' : ''}">
         <div class="imovel-card-top">
           ${foto}
           <div class="imovel-info">
+            <div class="imovel-fonte-row">
+              <span class="imovel-fonte-badge ${isConst ? 'fonte-const' : 'fonte-rev'}">${isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
+            </div>
             <div class="imovel-tipo">${m.imoTipo||'Imóvel'}</div>
             <div class="imovel-local">${local||'—'}</div>
             <div class="imovel-valor">${m.imoValorVenda||'—'}</div>
@@ -661,6 +690,7 @@ async function carregarMatchesDrawer(cod, cliente) {
           <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
         </div>
         ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+        ${condPag.length ? `<div class="imovel-condpag">${condPag.map(p=>`<div class="imovel-condpag-item">${p}</div>`).join('')}</div>` : ''}
         ${det ? `<div class="imovel-det">${det}</div>` : ''}
         ${mensagem ? `
         <div class="imovel-gatilho">
