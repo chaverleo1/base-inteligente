@@ -654,7 +654,9 @@ function renderMatchCol(elId, lista, tipo) {
 }
 
 function renderGrafico(canvasId, chartInst, entries, setChart, unidade) {
-  if (chartInst) chartInst.destroy();
+  const existing = Chart.getChart(canvasId);
+  if (existing) existing.destroy();
+  else if (chartInst) chartInst.destroy();
   if (!entries || !entries.length) return;
   const ctx = document.getElementById(canvasId).getContext('2d');
   const colors = ['#4f7cff','#00d4aa','#f5a623','#ff5a5a','#a78bfa','#34d399','#fb923c','#60a5fa'];
