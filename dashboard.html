@@ -171,6 +171,26 @@
   .imovel-link{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--accent);padding:7px;border-top:1px solid var(--border);transition:background .15s}
   .imovel-link:hover{background:rgba(79,124,255,.08)}
 
+  /* ── CONSTRUTORA DESTAQUES ── */
+  .const-destaques-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px}
+  @media(max-width:700px){.const-destaques-grid{grid-template-columns:1fr}}
+  .const-card{background:var(--surface);border:1px solid rgba(0,212,170,.25);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
+  .const-card:hover{border-color:var(--accent2)}
+  .const-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .const-card-nome{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+  .const-card-const{font-size:11px;color:var(--accent2);font-weight:600;margin-top:2px}
+  .const-card-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
+  .status-entregue{background:rgba(0,212,170,.15);color:var(--accent2)}
+  .status-obras{background:rgba(245,166,35,.15);color:var(--warm)}
+  .status-lancamento{background:rgba(79,124,255,.15);color:var(--accent)}
+  .status-consultar{background:var(--surface2);color:var(--text3)}
+  .const-card-preco{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--accent2)}
+  .const-card-attrs{display:flex;flex-wrap:wrap;gap:6px}
+  .const-card-attr{font-size:11px;color:var(--text3);background:var(--surface2);padding:2px 8px;border-radius:4px}
+  .const-card-footer{display:flex;gap:8px;align-items:center;padding-top:8px;border-top:1px solid var(--border)}
+  .const-card-bairro{font-size:12px;color:var(--text2);flex:1}
+  .const-card-entrada{font-size:11px;font-weight:700;color:var(--accent);background:rgba(79,124,255,.1);padding:2px 8px;border-radius:4px}
+
   .imovel-card-const{border-color:rgba(0,212,170,.3)}
   .imovel-card-const:hover{border-color:var(--accent2)}
   .imovel-fonte-row{margin-bottom:4px}
@@ -293,6 +313,23 @@
     <div class="chart-card">
       <div class="chart-title">Imóveis por faixa de preço</div>
       <div class="chart-wrap"><canvas id="chartFaixa"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CONSTRUTORA-APARTAMENTOS -->
+  <div class="section-title">🏗️ Construtora — Apartamentos novos</div>
+  <div class="cards-row" id="cardsConstrutora">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+  </div>
+  <div class="const-destaques-grid" id="consDestaquesGrid"></div>
+  <div class="charts-row" style="margin-bottom:32px">
+    <div class="chart-card">
+      <div class="chart-title">Empreendimentos por status</div>
+      <div class="chart-wrap"><canvas id="chartConsStatus"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Unidades por faixa de preço</div>
+      <div class="chart-wrap"><canvas id="chartConsFaixa"></canvas></div>
     </div>
   </div>
 
@@ -489,6 +526,75 @@ function renderDados(json) {
                 c => { chartTipo  = c; }, 'imóveis');
   renderGrafico('chartFaixa', chartFaixa, Object.entries(porFaixa),
                 c => { chartFaixa = c; }, 'imóveis');
+
+  // ── CONSTRUTORA
+  const cs     = json.construtora || {};
+  const cFaixa = cs.porFaixa    || {};
+  const cStat  = cs.porStatus   || {};
+  const cCls   = cs.porClasse   || {};
+  const nEmps  = Object.keys(cs.porConstrutora || {}).length;
+
+  document.getElementById('cardsConstrutora').innerHTML = `
+    <div class="card">
+      <div class="card-label">Unidades cadastradas</div>
+      <div class="card-value" style="color:var(--accent2)">${cs.total||0}</div>
+      <div class="card-sub">${nEmps} empreendimentos</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Até R$ 300k</div>
+      <div class="card-value cold">${cFaixa['Ate 300k']||0}</div>
+      <div class="card-sub">faixa popular</div>
+    </div>
+    <div class="card">
+      <div class="card-label">R$ 300k – 700k</div>
+      <div class="card-value" style="color:var(--accent2)">${cFaixa['300k-700k']||0}</div>
+      <div class="card-sub">faixa média</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Acima de R$ 700k</div>
+      <div class="card-value warm">${(cFaixa['700k-1.5M']||0)+(cFaixa['Acima 1.5M']||0)}</div>
+      <div class="card-sub">alto padrão e luxo</div>
+    </div>`;
+
+  // Cards destaque por empreendimento
+  const destaques = cs.destaques || [];
+  function statusCls_(s) {
+    const t = (s||'').toLowerCase();
+    if (t.indexOf('entregue') >= 0)   return 'status-entregue';
+    if (t.indexOf('obras') >= 0 || t.indexOf('finalizando') >= 0) return 'status-obras';
+    if (t.indexOf('lançamento') >= 0 || t.indexOf('lancamento') >= 0) return 'status-lancamento';
+    return 'status-consultar';
+  }
+  document.getElementById('consDestaquesGrid').innerHTML = destaques.length
+    ? destaques.map(d => {
+        const precoFmt = d.preco ? 'R$ ' + Number(d.preco).toLocaleString('pt-BR') : '—';
+        const attrs = [
+          d.quartos ? d.quartos + ' qtos' : '',
+          d.area    ? d.area + ' m²'      : '',
+          d.entrega ? 'Entrega: ' + d.entrega : ''
+        ].filter(Boolean);
+        return `<div class="const-card">
+          <div class="const-card-header">
+            <div>
+              <div class="const-card-nome">${d.empreendimento}</div>
+              <div class="const-card-const">🏢 ${d.construtora||'—'}</div>
+            </div>
+            <span class="const-card-status ${statusCls_(d.status)}">${d.status||'—'}</span>
+          </div>
+          <div class="const-card-preco">${precoFmt}</div>
+          ${attrs.length ? `<div class="const-card-attrs">${attrs.map(a=>`<span class="const-card-attr">${a}</span>`).join('')}</div>` : ''}
+          <div class="const-card-footer">
+            <span class="const-card-bairro">📍 ${d.bairro||'—'}</span>
+            ${d.entradaPerc ? `<span class="const-card-entrada">Entrada ${d.entradaPerc}%</span>` : `<span class="const-card-attr">${d.classe||''}</span>`}
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty-state" style="grid-column:1/-1">Nenhum empreendimento cadastrado.</div>';
+
+  renderGrafico('chartConsStatus', null, Object.entries(cStat).sort((a,b)=>b[1]-a[1]),
+                () => {}, 'unidades');
+  renderGrafico('chartConsFaixa', null, Object.entries(cFaixa),
+                () => {}, 'unidades');
 
   // ── Gráficos clientes (objeto → entries)
   renderGrafico('chartSegmento', chartSeg,
