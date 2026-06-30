@@ -438,6 +438,8 @@ let chartSeg = null;
 let chartPad = null;
 let chartTipo  = null;
 let chartFaixa = null;
+let chartConsStatus = null;
+let chartConsFaixa  = null;
 
 // ── CARREGAR DADOS DO SHEETS ──────────────────────────────────────────────────
 
@@ -591,10 +593,10 @@ function renderDados(json) {
       }).join('')
     : '<div class="empty-state" style="grid-column:1/-1">Nenhum empreendimento cadastrado.</div>';
 
-  renderGrafico('chartConsStatus', null, Object.entries(cStat).sort((a,b)=>b[1]-a[1]),
-                () => {}, 'unidades');
-  renderGrafico('chartConsFaixa', null, Object.entries(cFaixa),
-                () => {}, 'unidades');
+  renderGrafico('chartConsStatus', chartConsStatus, Object.entries(cStat).sort((a,b)=>b[1]-a[1]),
+                c => { chartConsStatus = c; }, 'unidades');
+  renderGrafico('chartConsFaixa', chartConsFaixa, Object.entries(cFaixa),
+                c => { chartConsFaixa = c; }, 'unidades');
 
   // ── Gráficos clientes (objeto → entries)
   renderGrafico('chartSegmento', chartSeg,
