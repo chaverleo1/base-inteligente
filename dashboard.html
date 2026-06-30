@@ -723,7 +723,7 @@ function gerarMensagemOferta_(c, m) {
     conexao = ` O padrão do imóvel está bem alinhado com o que você busca.`;
   }
 
-  const valor = m.imoValorVenda ? ` O valor é ${m.imoValorVenda}.` : '';
+  const valor = m.imoValorVenda ? ` O valor é ${fmt_(m.imoValorVenda)}.` : '';
 
   // Fechamento — convite, não venda forçada
   let fechamento = ' Posso te mandar fotos e mais detalhes?';
@@ -734,6 +734,12 @@ function gerarMensagemOferta_(c, m) {
 }
 
 function norm_(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); }
+
+function fmt_(v) {
+  const n = parseInt(String(v || '').replace(/\D/g, '')) || 0;
+  if (!n) return '';
+  return 'R$ ' + n.toLocaleString('pt-BR');
+}
 
 async function carregarMatchesDrawer(cod, cliente) {
   const el = document.getElementById('drawerImoveis');
@@ -791,7 +797,7 @@ async function carregarMatchesDrawer(cod, cliente) {
             </div>
             <div class="imovel-tipo">${m.imoTipo||'Imóvel'}</div>
             <div class="imovel-local">${local||'—'}</div>
-            <div class="imovel-valor">${m.imoValorVenda||'—'}</div>
+            <div class="imovel-valor">${fmt_(m.imoValorVenda)||'—'}</div>
           </div>
           <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
         </div>
