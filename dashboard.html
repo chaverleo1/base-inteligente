@@ -68,8 +68,11 @@
   .match-item{padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:10px}
   .match-item:last-child{border-bottom:none}
   .match-item:hover{background:var(--surface2)}
-  .match-mc{flex-shrink:0;width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
-  .match-mc.has-match{background:rgba(79,124,255,.15);border-color:var(--accent);color:var(--accent)}
+  .match-mc{flex-shrink:0;height:28px;border-radius:6px;display:flex;align-items:center;font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--text2);overflow:hidden;min-width:28px}
+  .match-mc.has-match{border-color:var(--accent)}
+  .match-mc-hot{background:#ff5a5a;color:#fff;padding:0 7px;height:100%;display:flex;align-items:center;border-radius:5px 0 0 5px}
+  .match-mc-warm{background:rgba(79,124,255,.15);color:var(--accent);padding:0 6px;height:100%;display:flex;align-items:center;border-radius:0 5px 5px 0}
+  .match-mc-only{padding:0 8px;height:100%;display:flex;align-items:center;justify-content:center;border-radius:5px}
   .match-body{flex:1;min-width:0}
   .match-name{font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .match-detail{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -635,11 +638,20 @@ function renderMatchCol(elId, lista, tipo) {
     return;
   }
   el.innerHTML = lista.slice(0, 50).map(d => {
-    const mc = parseInt(d.mc) || 0;
-    const mcCls = mc > 0 ? 'match-mc has-match' : 'match-mc';
+    const mc80 = parseInt(d.mc80) || 0;
+    const mc70 = parseInt(d.mc70) || 0;
+    const mcTotal = mc80 + mc70;
+    const mcCls = mcTotal > 0 ? 'match-mc has-match' : 'match-mc';
+    const mcHtml = mcTotal === 0
+      ? `<span class="match-mc-only">0</span>`
+      : mc80 > 0 && mc70 > 0
+        ? `<span class="match-mc-hot">${mc80}</span><span class="match-mc-warm">${mc70}</span>`
+        : mc80 > 0
+          ? `<span class="match-mc-hot match-mc-only">${mc80}</span>`
+          : `<span class="match-mc-warm match-mc-only">${mc70}</span>`;
     return `
     <div class="match-item" data-nome="${(d.nome||'').replace(/"/g,'&quot;')}" data-score="${d.score||0}" data-cod="${d.cod||''}">
-      <div class="${mcCls}" title="${mc} imóvel(is) com match">${mc}</div>
+      <div class="${mcCls}" title="${mc80} acima de 80 · ${mc70} entre 70 e 79">${mcHtml}</div>
       <div class="match-body">
         <span class="match-score score-${tipo}">${d.score}</span>
         <div class="match-name">${d.nome||'—'}</div>
