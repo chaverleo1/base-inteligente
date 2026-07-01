@@ -1,5 +1,43 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 9) — Score de preço ruim escondido atrás de um total 100
+
+Usuário reportou: cliente CLI-10048 (precoLimite 600 mil) recebeu match de imóvel de R$420.000
+(30% abaixo do limite) com score 100 — o mesmo valor de um match perfeito.
+
+**Causa:** `scorePreco_` deu 60 pontos corretamente pros 30% de distância (correto, no limite da
+margem), mas a soma `tipo(25) + preco(60) + quartos(12) + padrao(10) = 107` estourava o teto de
+100 (`Math.min(total,100)`) e escondia que o preço estava ruim. Isso só passou a acontecer depois
+que o preço virou uma escala de 0-100 (parte 2/margem de 30%) — antes ele valia no máximo 30
+pontos no total, então não estourava.
+
+**Fix:** a nota de preço exibida continua em 0-100 (como pedido), mas a contribuição dela pro
+score total voltou a ser proporcional — até 30 pontos, como era antes:
+`ptPrecoContrib = ptPreco * 0.3`. Testado: imóvel 30% abaixo do limite agora fica em 65 (abaixo
+do corte de 70, não aparece mais como match); imóvel 8,3% acima continua qualificado (76); match
+genuinamente perfeito continua 100.
+
+**Efeito colateral esperado:** vários matches que hoje mostram "100" devem cair de score depois
+de rodar `rodarMatching()` de novo (removendo os "falsos 100" que só pareciam perfeitos pela
+soma, não pelo preço de verdade).
+
+## 2026-07-01 (parte 10) — Nome completo em vez de só primeiro nome
+
+**Migração (`processar_contatos_v3.py`)**: a limpeza do nome só reconhecia `-`/`–`/`—` como
+separador entre o nome e a anotação do corretor. Nomes separados por `"//"` (muito comuns na
+base, ex: `"Antônia // 15/4, CS ARUANA 3, 420K"`) não eram cortados — o campo `nome` ficava igual
+ao `nome_bruto` inteiro. Corrigido: `re.split(r"\s*(?:[-–—]|//)\s*", nome_limpo)[0]` — testado
+contra os exemplos reais do usuário, ambos batendo exatamente (`"Antônia"` e `"João Carlos"`).
+
+**Dashboard (`Code.gs`)**: `dadosDashboard()`, `top20` e `empurrarMatch_()` cortavam o nome pro
+primeiro nome só (`.split(' ')[0]`) antes de exibir nas listas — essa é exatamente a causa da
+ambiguidade "Olinda" (48 registros diferentes com o mesmo primeiro nome) descoberta na parte 7.
+Agora exibe o nome completo (`.trim()`, sem cortar), melhorando a identificação nas listas
+quente/morno e na aba MATCHES.
+
+Migração regenerada — 0 linhas com `//` sobrando no campo nome (confirmado por varredura
+completa da base).
+
 ## 2026-07-01 (parte 8) — Editar não encontra cliente até o Code.gs ser reimplantado
 
 Usuário testou o botão Editar: parou de abrir nova janela (fix da parte 7 funcionou), mas ainda

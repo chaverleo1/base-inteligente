@@ -538,8 +538,9 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
         r"NEWLEAD|ORIG|CADFACE|FCAD|IBNF|PASTOR[A]?)\s+",
         "", nome_bruto, flags=re.IGNORECASE
     ).strip()
-    # Remove sufixos de canal/produto do nome
-    nome_limpo = re.split(r"\s*[-–—]\s*", nome_limpo)[0].strip()
+    # Remove sufixos de canal/produto/anotação do nome (ex: "Antônia // 15/4,
+    # CS ARUANA 3, 420K" -> "Antônia"; "PP João Carlos - Lote..." -> "João Carlos")
+    nome_limpo = re.split(r"\s*(?:[-–—]|//)\s*", nome_limpo)[0].strip()
 
     # Coletar todos os telefones
     valores_linha = list(row_raw.values())
