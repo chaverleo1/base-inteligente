@@ -486,17 +486,17 @@ function renderDados(json) {
       <div class="card-sub">na base atual</div>
     </div>
     <div class="card">
-      <div class="card-label">Quentes (score ≥70)</div>
+      <div class="card-label">Quentes (score ≥80)</div>
       <div class="card-value hot">${quentes.length}</div>
       <div class="card-sub">prioridade máxima</div>
     </div>
     <div class="card">
-      <div class="card-label">Mornos (40–69)</div>
+      <div class="card-label">Mornos (70–79)</div>
       <div class="card-value warm">${mornos.length}</div>
       <div class="card-sub">potencial de conversão</div>
     </div>
     <div class="card">
-      <div class="card-label">Frios (score &lt;40)</div>
+      <div class="card-label">Frios (60–69)</div>
       <div class="card-value cold">${frios.length}</div>
       <div class="card-sub">nurturing / aguardar</div>
     </div>`;
@@ -925,9 +925,10 @@ function renderDrawer(c, score) {
   // Próximos passos automáticos
   const steps = [];
   const sc = parseInt(score) || 0;
-  if (sc >= 70) steps.push({icon:'🔴', text:'<b>Contato imediato.</b> Cliente com score máximo — priorize agora.'});
-  else if (sc >= 40) steps.push({icon:'🟡', text:'<b>Aquecer o lead.</b> Entre em contato para entender o momento de compra.'});
-  else steps.push({icon:'🔵', text:'<b>Nutrição.</b> Compartilhe conteúdo relevante ou novidades do portfólio.'});
+  if (sc >= 80) steps.push({icon:'🔴', text:'<b>Contato imediato.</b> Cliente quente — priorize agora.'});
+  else if (sc >= 70) steps.push({icon:'🟡', text:'<b>Aquecer o lead.</b> Entre em contato para entender o momento de compra.'});
+  else if (sc >= 60) steps.push({icon:'🔵', text:'<b>Nutrição.</b> Compartilhe conteúdo relevante ou novidades do portfólio.'});
+  else steps.push({icon:'⚪', text:'<b>Base fria.</b> Mantenha em lista para campanhas futuras.'});
   if (diasUlt) steps.push({icon:'📅', text:`Último contato: <b>${c.ultimoContato}</b> (${diasUlt}). Boa hora para retomar.`});
   if (c.fgts === 'Sim' || c.fgts === 'sim') steps.push({icon:'🏦', text:'Cliente tem <b>FGTS</b> disponível — verificar saldo e elegibilidade.'});
   if (c.financ === 'Sim' || c.financ === 'sim') steps.push({icon:'💳', text:'Pretende <b>financiar</b> — verificar análise de crédito ou pré-aprovação.'});
