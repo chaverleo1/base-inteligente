@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 6) — Investigação: só 261 de 5.715 contatos migrados com precoLimite
+
+Usuário reportou só 263 contatos exportados com "preço limite". Investigação confirmou: **261
+de 5.715** (bate com o número reportado). Causa raiz: `extrair_valores()` (em
+`processar_contatos_v3.py`) só extrai preço do que está **literalmente escrito no nome do
+contato** (padrões "250K", "3.900.000") — a grande maioria dos contatos simplesmente não tem
+nenhum valor mencionado no nome. Isso não é bug, é limitação inerente da heurística (não há outro
+campo com informação de preço pra contatos migrados).
+
+Encontrado e corrigido um padrão real que a extração não reconhecia: notação **"Mi"** e
+**"milhão"/"milhões"** usada por alguns corretores (ex: `"2.700Mi"`, `"1milhao"`, `"3mi"`).
+Adicionado suporte com heurística de magnitude pra desambiguar "Mi": número < 100 é tratado como
+milhão (`"3mi"` → R$ 3.000.000), número >= 100 é tratado como mil (`"2.700Mi"` → 2700 mil = R$
+2.700.000) — testado contra os casos reais encontrados na base e todos batem com o valor
+esperado. Também corrigido um falso positivo descoberto no teste: "123 Milhas" (nome de empresa)
+estava sendo lido como R$ 123 milhões antes do regex exigir a palavra completa
+(`MILHAO`/`MILHOES`, não só o prefixo `MILH`).
+
+**Resultado:** 261 → 275 contatos com precoLimite (ganho pequeno, ~14 casos). Migração
+regenerada em `planilha_modelo_contatos.xlsx`. Os ~5.440 restantes sem precoLimite é o
+comportamento correto/esperado — não há preço nenhum escrito nesses nomes pra extrair.
+
 ## 2026-07-01 (parte 5) — Filtro de elegibilidade do matching excluía quase toda a base migrada
 
 Após a correção da parte 4, `rodarMatching()` ainda gerou só 16 pares (log real da execução:

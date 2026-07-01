@@ -349,6 +349,27 @@ def extrair_valores(nome_norm: str):
         except ValueError:
             pass
 
+    # 123MI — corretores usam "Mi" de forma ambígua: número pequeno quase
+    # sempre quer dizer milhão (ex: "3MI" = 3 milhões), número grande quase
+    # sempre quer dizer mil (ex: "2.700MI" = 2700 mil = 2,7 milhões)
+    for m in re.finditer(r"(\d[\d.,\s]*)\s*MI\b", nome_norm):
+        try:
+            bruto = m.group(1).replace(" ", "").replace(".", "").replace(",", ".")
+            num = float(bruto)
+            mult = 1_000_000 if num < 100 else 1_000
+            valores.append(int(num * mult))
+        except ValueError:
+            pass
+
+    # 123 MILHAO / MILHOES — sem ambiguidade, sempre milhão
+    # (\bMILH(AO|OES)\b evita falso positivo com palavras como "MILHAS")
+    for m in re.finditer(r"(\d[\d.,]*)\s*MILH(?:AO|OES)\b", nome_norm):
+        try:
+            v = float(m.group(1).replace(".", "").replace(",", ".")) * 1_000_000
+            valores.append(int(v))
+        except ValueError:
+            pass
+
     valores = sorted(set(valores))
     if not valores:
         return "", ""
