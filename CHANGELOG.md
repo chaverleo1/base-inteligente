@@ -1,5 +1,34 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 3) — Correção: matches de tipo incompatível e temperatura sem produto
+
+Dois bugs reais reportados pelo usuário em produção, encontrados logo após a implementação do
+Score Total/margem de preço (parte 2):
+
+**Bug 1 — cliente "morno" sem nenhum imóvel em match.** `calcularScoreTotal_` caía de volta pro
+score de cadastro puro quando não havia matches (`return scoreCliente`), o que contrariava a
+própria premissa da feature (cliente sem produto deveria ser mais frio, não mais quente).
+Corrigido para `return scoreCliente * 0.35` — sem matches, o Score Total máximo possível é 35,
+sempre "frio".
+
+**Bug 2 — "Casa" aparecendo como oferta para cliente que quer Apartamento/Lote em cond.** Duas
+causas somadas:
+1. `scorePreco_` (parte 2) passou a valer até 100 pontos sozinho — suficiente pra ultrapassar o
+   limite de 70 do match mesmo com tipo de imóvel completamente incompatível (`scoreTipo_`
+   retornava 0, mas isso só zerava o componente, não desqualificava a soma final).
+2. `scoreTipo_` extraía o tipo desejado do texto livre (conversa/observações) **antes** do campo
+   estruturado `segmento` — uma observação mencionando "moramos numa casa alugada" sequestrava a
+   detecção, ignorando o segmento real escolhido no formulário.
+
+Corrigido: `scoreTipo_` agora prioriza `segmento` sobre texto livre; `calcularMatch_` desqualifica
+o match inteiro (`score: 0`) quando `ptTipo === 0` (tipo genuinamente incompatível — grupos
+vertical/horizontal/terra/comercial diferentes), em vez de deixar preço/bairro compensarem.
+
+**Importante:** essas correções não retroagem sobre matches já gravados na aba MATCHES — foi
+necessário rodar `rodarMatching()` manualmente uma vez após o deploy pra regerar os dados
+corretos (confirmado em produção: matches de "Vinicius/CLI-10053" antes misturavam Casa e
+Apartamento, depois do rerun ficaram 100% Apartamento).
+
 ## 2026-07-01 (parte 2) — Score Total: temperatura do match ≠ score do cliente
 
 Problema identificado pelo usuário: um cliente com score de cadastro baixo mas com vários
