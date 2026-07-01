@@ -16,6 +16,11 @@ deve subir de ~128 para a casa de milhares — **atenção a possível timeout**
 `rodarMatching()` no Apps Script (limite de 6 min de execução) com esse volume maior; se
 acontecer, vai ser necessário processar em lotes/gatilhos.
 
+**Resultado confirmado em produção** (execução real após o deploy): 2.983 contatos aptos (era
+128), 1.450 pares gerados (era 16), rodou em ~25s sem timeout. Dashboard após o rerun: 227
+quentes (era 3), 4 mornos (era 0), 4.279 frios — distribuição condizente com os matches reais
+gerados (todo cliente quente tem `mc80`/`mc70` > 0 na amostra verificada).
+
 ## 2026-07-01 (parte 4) — Correção: tipo do imóvel não normalizado derrubava quase todos os matches
 
 Depois da parte 3 (desqualificação por tipo incompatível), o número de matches despencou pra
