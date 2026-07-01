@@ -1,5 +1,26 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 4) — Correção: tipo do imóvel não normalizado derrubava quase todos os matches
+
+Depois da parte 3 (desqualificação por tipo incompatível), o número de matches despencou pra
+quase zero em segmentos inteiros — ex: nenhum cliente de "Lote em cond." tinha qualquer match,
+mesmo havendo estoque compatível.
+
+**Causa:** `scoreTipo_` normalizava o tipo do **cliente** com `extrairTipo_()` (reduz pra um
+vocabulário fixo: apartamento/casa/sobrado/lote/comercial/chacara), mas comparava contra o tipo
+do **imóvel** só com `norm_()` (lowercase/sem acento, sem reduzir vocabulário). Resultado: cliente
+que escolhe "Lote em cond." vira `'lote'`, mas um imóvel que a Imobzi rotula como `"Terreno"`
+continuava literalmente `"terreno"` — as strings nunca batiam, e a desqualificação por tipo
+incompatível (parte 3) descartava o par inteiro.
+
+**Fix:** `tipoImo` agora também passa por `extrairTipo_()` primeiro (com fallback pro texto
+normalizado bruto se não reconhecer nenhum padrão, preservando match exato por nome como
+"Flat"). Testado com Lote em cond.×Terreno, Casa×Sobrado, Sala comercial×Loja, Apartamento×Casa
+(desqualificado) — todos batendo como esperado.
+
+**Novamente:** precisa rodar `rodarMatching()` manualmente após o deploy pra regerar a aba
+MATCHES com a correção.
+
 ## 2026-07-01 (parte 3) — Correção: matches de tipo incompatível e temperatura sem produto
 
 Dois bugs reais reportados pelo usuário em produção, encontrados logo após a implementação do
