@@ -114,6 +114,10 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .webhook-config{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:16px 0;font-size:13px;color:var(--text2);line-height:1.6}
   .webhook-config code{background:var(--bg);padding:2px 6px;border-radius:4px;font-family:monospace;color:var(--accent);font-size:12px}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:var(--border);outline:none;padding:0;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 4px rgba(79,124,255,.15)}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+  .range-label{color:var(--text);font-weight:600;text-transform:none;letter-spacing:0}
 </style>
 </head>
 <body>
@@ -124,7 +128,7 @@
 <script>
   // PASSO 1: Implante o Code.gs como "Aplicativo da Web" no Google Apps Script
   // PASSO 2: Cole a URL gerada aqui:
-  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxDtQ5eQsI2faVM3BPeajZ_xhzJJiJ3VPcKn6sRTc1qhvmvThOXNkyt7MTKPuE2j4tp/exec";
+  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzK3KMdPy6OMYscvGwF8pFjMXjhdkl1zkJb0sMQvlB4ze_Pm7loa2fZhSK6SQpfc7vd/exec";
 </script>
 
 <!-- LOGIN OVERLAY -->
@@ -281,14 +285,66 @@
     <div class="field-group">
       <div class="field"><label>Tipo de imóvel <span class="req">*</span></label>
         <div class="chip-group">
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore()">Casa</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore()">Sobrado</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore()">Apartamento</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore()">Lote em cond.</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore()">Sala comercial</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore()">Indefinido</div>
+          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Casa</div>
+          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Sobrado</div>
+          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Apartamento</div>
+          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Lote em cond.</div>
+          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Sala comercial</div>
+          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Indefinido</div>
         </div>
       </div>
+
+      <hr class="divider">
+      <div class="section-label">Características do imóvel</div>
+      <div class="field"><label>Quartos</label>
+        <div class="chip-group">
+          <div class="chip" onclick="toggleChip(this,'quartos')">1</div>
+          <div class="chip" onclick="toggleChip(this,'quartos')">2</div>
+          <div class="chip" onclick="toggleChip(this,'quartos')">3</div>
+          <div class="chip" onclick="toggleChip(this,'quartos')">4+</div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field campo-apto" id="campoSuites"><label>Suítes</label>
+          <div class="chip-group">
+            <div class="chip" onclick="toggleChip(this,'suites')">0</div>
+            <div class="chip" onclick="toggleChip(this,'suites')">1</div>
+            <div class="chip" onclick="toggleChip(this,'suites')">2</div>
+            <div class="chip" onclick="toggleChip(this,'suites')">3+</div>
+          </div>
+        </div>
+        <div class="field"><label>Vagas de garagem</label>
+          <div class="chip-group">
+            <div class="chip" onclick="toggleChip(this,'vagas')">0</div>
+            <div class="chip" onclick="toggleChip(this,'vagas')">1</div>
+            <div class="chip" onclick="toggleChip(this,'vagas')">2</div>
+            <div class="chip" onclick="toggleChip(this,'vagas')">3+</div>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Área útil aproximada <span class="range-label" id="areaUtilVal">50m²</span></label>
+        <input type="range" id="areaUtil" min="50" max="500" step="10" value="50" oninput="updateAreaUtilLabel()">
+      </div>
+      <div class="field campo-casa" id="campoTerreno">
+        <label>Área de terreno (m²) <span class="opt">casas e lotes</span></label>
+        <input type="text" id="areaTerreno" inputmode="numeric" placeholder="Ex: 300" oninput="this.value=this.value.replace(/\D/g,'')">
+      </div>
+      <div class="field"><label>Comodidades desejadas</label>
+        <div class="chip-group">
+          <div class="chip campo-casa" onclick="toggleBool(this,'adensavel')">Área adensável</div>
+          <div class="chip campo-apto" onclick="toggleBool(this,'andarAlto')">Andar alto</div>
+          <div class="chip" onclick="toggleBool(this,'aceitaTerreo')">Aceita térreo</div>
+          <div class="chip campo-casa" onclick="toggleBool(this,'churrasqueira')">Churrasqueira/área gourmet</div>
+          <div class="chip" onclick="toggleBool(this,'piscina')">Piscina</div>
+          <div class="chip" onclick="toggleBool(this,'homeOffice')">Home office</div>
+          <div class="chip" onclick="toggleBool(this,'condFechado')">Condomínio fechado</div>
+          <div class="chip campo-apto" onclick="toggleBool(this,'elevador')">Elevador</div>
+          <div class="chip" onclick="toggleBool(this,'acessibilidade')">Acessibilidade</div>
+        </div>
+      </div>
+
+      <hr class="divider">
       <div class="field"><label>Padrão</label>
         <div class="chip-group">
           <div class="chip" onclick="toggleChip(this,'padrao');updateScore()">Econômico</div>
@@ -297,10 +353,7 @@
           <div class="chip" onclick="toggleChip(this,'padrao');updateScore()">Luxo</div>
         </div>
       </div>
-      <div class="field-row">
-        <div class="field"><label>Valor mínimo</label><input type="text" id="valorMin" placeholder="Ex: 400.000" oninput="formatMoney(this);updateScore()"></div>
-        <div class="field"><label>Valor máximo</label><input type="text" id="valorMax" placeholder="Ex: 800.000" oninput="formatMoney(this);updateScore()"></div>
-      </div>
+      <div class="field"><label>Preço limite</label><input type="text" id="precoLimite" placeholder="Ex: 250.000" oninput="formatMoney(this);updateScore()"></div>
       <div class="field"><label>Finalidade</label>
         <div class="chip-group">
           <div class="chip" onclick="toggleChip(this,'finalidade')">Moradia</div>
@@ -516,7 +569,7 @@
   const stepNames = ['Identificação','Localização','Perfil de compra','Histórico','Resumo'];
 
   // ── INIT ───────────────────────────────────────────────────────────────────
-  function init() { renderDots(); updateNav(); }
+  function init() { renderDots(); updateNav(); updateCamposImovel(); updateAreaUtilLabel(); }
 
   function renderDots() {
     const c = document.getElementById('stepDots');
@@ -591,6 +644,32 @@
     }
   }
 
+  // Toggle independente (não desmarca os "irmãos" — várias comodidades podem ficar ativas ao mesmo tempo)
+  function toggleBool(el, key) {
+    if (el.classList.toggle('selected')) {
+      chipState[key] = el.textContent.trim();
+    } else {
+      delete chipState[key];
+    }
+  }
+
+  // ── CARACTERÍSTICAS DO IMÓVEL (condicional por segmento) ────────────────────
+  function updateCamposImovel() {
+    const seg = chipState['segmento'] || '';
+    const isApto     = seg === 'Apartamento';
+    const isCasaLote = seg === 'Casa' || seg === 'Sobrado' || seg === 'Lote em cond.';
+    document.querySelectorAll('.campo-apto').forEach(el => el.style.display = isApto ? '' : 'none');
+    document.querySelectorAll('.campo-casa').forEach(el => el.style.display = isCasaLote ? '' : 'none');
+  }
+
+  function updateAreaUtilLabel() {
+    const el = document.getElementById('areaUtil');
+    const span = document.getElementById('areaUtilVal');
+    if (!el || !span) return;
+    const v = parseInt(el.value) || 50;
+    span.textContent = v >= 500 ? '500m²+' : v + 'm²';
+  }
+
   // ── SCORE ──────────────────────────────────────────────────────────────────
   function updateScore() {
     let score = 0;
@@ -607,7 +686,7 @@
     else if (urg === 'Curto prazo (3 meses)') score += 15;
     else if (urg === 'Médio prazo (6 meses)') score += 8;
     if (document.getElementById('bairroMora')?.value) score += 5;
-    if (document.getElementById('valorMin')?.value)   score += 5;
+    if (document.getElementById('precoLimite')?.value) score += 5;
     score = Math.min(score, 100);
     document.getElementById('scoreNum').textContent = score;
     const pct = score + '%';
@@ -623,6 +702,11 @@
     let v = el.value.replace(/\D/g, '');
     if (v) v = parseInt(v).toLocaleString('pt-BR');
     el.value = v;
+  }
+
+  function comodidadesSelecionadas() {
+    return ['adensavel','andarAlto','aceitaTerreo','churrasqueira','piscina','homeOffice','condFechado','elevador','acessibilidade']
+      .map(k => chipState[k]).filter(Boolean).join(', ');
   }
 
   // ── SUMMARY ────────────────────────────────────────────────────────────────
@@ -643,9 +727,14 @@
       { key: 'Bairro trabalha', val: g('bairroTrabalha') },
       { key: 'Bairro interesse',val: g('bairroInteresse') },
       { key: 'Tipo de imóvel',  val: chipState['segmento'] },
+      { key: 'Quartos',         val: chipState['quartos'] },
+      { key: 'Suítes',          val: chipState['suites'] },
+      { key: 'Vagas de garagem',val: chipState['vagas'] },
+      { key: 'Área útil',       val: g('areaUtil') ? (parseInt(g('areaUtil'))>=500 ? '500m²+' : g('areaUtil')+'m²') : '' },
+      { key: 'Área de terreno', val: g('areaTerreno') ? g('areaTerreno') + 'm²' : '' },
+      { key: 'Comodidades',     val: comodidadesSelecionadas() },
       { key: 'Padrão',          val: chipState['padrao'] },
-      { key: 'Valor mín',       val: g('valorMin') ? 'R$ ' + g('valorMin') : '' },
-      { key: 'Valor máx',       val: g('valorMax') ? 'R$ ' + g('valorMax') : '' },
+      { key: 'Preço limite',    val: g('precoLimite') ? 'R$ ' + g('precoLimite') : '' },
       { key: 'Finalidade',      val: chipState['finalidade'] },
       { key: 'Urgência',        val: chipState['urgencia'] },
       { key: 'Canal origem',    val: chipState['canal'] },
@@ -693,9 +782,22 @@
       raioMaximo:      g('raioMaximo'),
       bairroInteresse: g('bairroInteresse'),
       segmento:        chipState['segmento']      || '',
+      quartos:         chipState['quartos']       || '',
+      suites:          chipState['suites']        || '',
+      vagas:           chipState['vagas']         || '',
+      areaUtil:        g('areaUtil'),
+      areaTerreno:     g('areaTerreno'),
+      adensavel:       chipState['adensavel']     || '',
+      andarAlto:       chipState['andarAlto']     || '',
+      aceitaTerreo:    chipState['aceitaTerreo']  || '',
+      churrasqueira:   chipState['churrasqueira'] || '',
+      piscina:         chipState['piscina']       || '',
+      homeOffice:      chipState['homeOffice']    || '',
+      condFechado:     chipState['condFechado']   || '',
+      elevador:        chipState['elevador']      || '',
+      acessibilidade:  chipState['acessibilidade']|| '',
       padrao:          chipState['padrao']        || '',
-      valorMin:        g('valorMin'),
-      valorMax:        g('valorMax'),
+      precoLimite:     g('precoLimite'),
       finalidade:      chipState['finalidade']    || '',
       fgts:            chipState['fgts']          || '',
       financ:          chipState['financ']        || '',
@@ -747,6 +849,9 @@
     });
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected','selected-green'));
     Object.keys(chipState).forEach(k => delete chipState[k]);
+    const areaUtilEl = document.getElementById('areaUtil');
+    if (areaUtilEl) { areaUtilEl.value = 50; updateAreaUtilLabel(); }
+    updateCamposImovel();
     goToStep(1);
   }
 
@@ -829,8 +934,9 @@
     set('bairroTrabalha', c.bairroTrabalha);
     set('raioMaximo',     c.raioMaximo);
     set('bairroInteresse',c.bairroInteresse);
-    set('valorMin',       c.valorMin);
-    set('valorMax',       c.valorMax);
+    set('areaUtil',       c.areaUtil);
+    set('areaTerreno',    c.areaTerreno);
+    set('precoLimite',    c.precoLimite);
     set('entrada',        c.entrada);
     set('primeiroContato',c.primeiroContato);
     set('ultimoContato',  c.ultimoContato);
@@ -852,6 +958,18 @@
     ativarChip('filhos',      c.filhos);
     ativarChip('moradia',     c.moradia);
     ativarChip('segmento',    c.segmento);
+    ativarChip('quartos',     c.quartos);
+    ativarChip('suites',      c.suites);
+    ativarChip('vagas',       c.vagas);
+    ativarChip('adensavel',      c.adensavel);
+    ativarChip('andarAlto',      c.andarAlto);
+    ativarChip('aceitaTerreo',   c.aceitaTerreo);
+    ativarChip('churrasqueira',  c.churrasqueira);
+    ativarChip('piscina',        c.piscina);
+    ativarChip('homeOffice',     c.homeOffice);
+    ativarChip('condFechado',    c.condFechado);
+    ativarChip('elevador',       c.elevador);
+    ativarChip('acessibilidade', c.acessibilidade);
     ativarChip('padrao',      c.padrao);
     ativarChip('finalidade',  c.finalidade);
     ativarChip('fgts',        c.fgts);
@@ -862,6 +980,9 @@
     ativarChip('naoFechou',   c.naoFechou);
     ativarChip('urgencia',    c.urgencia);
 
+    updateCamposImovel();
+    updateAreaUtilLabel();
+
     // Esconde barra de busca e mostra formulário
     document.getElementById('searchBar').style.display = 'none';
     document.querySelector('.progress-wrap').style.display = '';
@@ -869,13 +990,6 @@
 
     updateScore();
     showToast('Contato carregado — edite e salve', 'ok');
-  }
-
-  function goToStep(n) {
-    currentStep = n;
-    document.querySelectorAll('.step-card').forEach((s, i) => s.classList.toggle('active', i === n - 1));
-    updateNav();
-    renderDots();
   }
 
   init();

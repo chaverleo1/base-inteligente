@@ -29,7 +29,12 @@ COLUNAS_SHEETS = [
     "profissao", "empresa",
     "bairroMora", "cidadeMora", "moradia",
     "bairroTrabalha", "raioMaximo", "bairroInteresse",
-    "segmento", "padrao", "valorMin", "valorMax",
+    "segmento",
+    # Características do imóvel (etapa 3 do formulário)
+    "quartos", "suites", "vagas", "areaUtil", "areaTerreno",
+    "adensavel", "andarAlto", "aceitaTerreo", "churrasqueira",
+    "piscina", "homeOffice", "condFechado", "elevador", "acessibilidade",
+    "padrao", "precoLimite", "margem_preco",
     "finalidade", "fgts", "financ", "entrada_chip", "permuta", "entrada",
     "canal", "primeiroContato", "ultimoContato",
     "produtoOrigem", "naoFechou", "urgencia",
@@ -38,6 +43,8 @@ COLUNAS_SHEETS = [
     "score",
     # Colunas extras da base local (nao vem do formulario)
     "prioridade", "categoria", "nome_bruto",
+    # Colunas usadas pelo dashboard, preenchidas manualmente no Sheets
+    "tipo_contato", "tags",
 ]
 
 # Mapeamento: coluna do Sheets -> coluna no base_processada.csv

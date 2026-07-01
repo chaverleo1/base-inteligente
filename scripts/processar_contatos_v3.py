@@ -31,7 +31,7 @@ COLUNAS_SAIDA = [
     "nome", "telefone", "email",
     "segmento", "padrao", "produtoOrigem",
     "canal", "finalidade",
-    "valorMin", "valorMax",
+    "precoLimite",
     "score", "prioridade", "categoria",
     "observacoes",
     "conversa",
@@ -403,7 +403,7 @@ def calcular_score(row: dict) -> tuple[int, str]:
     if cat == "Inquilino":
         score += 8
 
-    if row["valorMax"]:
+    if row["precoLimite"]:
         score += 5
 
     score = min(score, 100)
@@ -507,6 +507,9 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
     canal      = detectar_canal(nome_norm)
     finalidade = detectar_finalidade(nome_norm)
     valor_min, valor_max = extrair_valores(nome_norm)
+    # precoLimite: teto informado pelo cliente. Quando há só 1 valor no nome,
+    # extrair_valores ja retorna ele em valor_max; quando há uma faixa, usa o teto.
+    preco_limite = valor_max or valor_min
 
     # Nome limpo (remove prefixos de categoria)
     nome_limpo = re.sub(
@@ -559,8 +562,7 @@ def processar_linha(row_raw: dict, cabecalho: list[str],
             "produtoOrigem": produto or "",
             "canal":         canal,
             "finalidade":    finalidade,
-            "valorMin":      valor_min,
-            "valorMax":      valor_max,
+            "precoLimite":   preco_limite,
             "score":         0,
             "prioridade":    "—",
             "categoria":     categoria,
