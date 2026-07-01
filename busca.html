@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Busca Aberta — BASE INTELIGENTE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg:        #0f1117;
+  --surface:   #181c27;
+  --surface2:  #1e2335;
+  --surface3:  #242840;
+  --border:    #2a3050;
+  --border2:   #343d60;
+  --accent:    #4f7cff;
+  --accent2:   #00d4aa;
+  --amber:     #f59e0b;
+  --coral:     #ff6b6b;
+  --text:      #e8ecf4;
+  --text2:     #8892aa;
+  --text3:     #4a5470;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+a { text-decoration: none; color: inherit; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -.3px; }
+.logo span { color: var(--text2); font-weight: 400; }
+.nav-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px}
+.nav-tab{padding:6px 16px;border-radius:6px;border:none;background:transparent;color:var(--text2);
+          font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;text-decoration:none;display:inline-block}
+.nav-tab.active{background:var(--accent);color:#fff}
+.refresh-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);
+              padding:6px 14px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── LAYOUT ── */
+.app { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 53px); }
+@media (max-width: 900px) { .app { grid-template-columns: 1fr; } }
+
+/* ── PAINEL ESQUERDO ── */
+.painel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 53px);
+  position: sticky; top: 53px;
+}
+.painel-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px; font-weight: 700; color: var(--text);
+  margin-bottom: 4px;
+}
+.painel-sub { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
+
+/* ── SEÇÃO DE FILTRO ── */
+.filtro-secao { margin-bottom: 18px; }
+.filtro-label {
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .8px;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.filtro-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── CHIPS ── */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 5px 12px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text2); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all .15s; user-select: none;
+  font-family: 'Inter', sans-serif;
+}
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.chip.on { background: rgba(79,124,255,.15); border-color: var(--accent); color: var(--accent); }
+
+/* ── SLIDER ── */
+.slider-wrap { position: relative; padding: 4px 0 0; }
+.slider-val {
+  font-size: 18px; font-weight: 700; color: var(--accent);
+  font-family: 'Space Grotesk', sans-serif; margin-bottom: 8px;
+}
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 4px;
+  background: var(--border); border-radius: 99px; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--accent); cursor: pointer;
+  border: 3px solid var(--surface);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.slider-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+.slider-labels span { font-size: 10px; color: var(--text3); }
+
+/* ── INPUT TEXTO ── */
+.input-busca {
+  width: 100%; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif;
+  padding: 10px 12px; outline: none; resize: vertical; min-height: 80px;
+  line-height: 1.5; transition: border .2s;
+}
+.input-busca:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.1); }
+.input-busca::placeholder { color: var(--text3); }
+
+/* ── BTN BUSCAR ── */
+.btn-buscar {
+  width: 100%; padding: 13px; border-radius: var(--radius-sm);
+  background: var(--accent); color: #fff; border: none;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .18s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 16px;
+}
+.btn-buscar:hover { background: #3d6aee; }
+.btn-buscar:disabled { opacity: .6; cursor: default; }
+
+/* ── PAINEL DIREITO ── */
+.resultado { padding: 20px 24px; overflow-y: auto; }
+
+/* ── ESTADO INICIAL ── */
+.estado-inicial {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 60vh; text-align: center; gap: 12px;
+}
+.icone-busca { font-size: 48px; opacity: .3; }
+.estado-inicial h2 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; color: var(--text2); }
+.estado-inicial p { font-size: 13px; color: var(--text3); max-width: 320px; line-height: 1.6; }
+
+/* ── RESULTADO HEADER ── */
+.resultado-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+}
+.resultado-titulo {
+  font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700;
+}
+.resultado-count {
+  font-size: 12px; color: var(--text3);
+}
+.resultado-count b { color: var(--accent2); font-size: 18px; }
+
+/* ── RESUMO DA BUSCA ── */
+.resumo-busca {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  margin-bottom: 16px; font-size: 12px; color: var(--text2);
+  line-height: 1.6;
+}
+.resumo-busca strong { color: var(--accent); }
+
+/* ── CARDS ── */
+.cards-grid { display: flex; flex-direction: column; gap: 12px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color .2s, transform .15s;
+  cursor: pointer;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.card.top { border-color: rgba(0,212,170,.4); }
+
+.card-inner { display: grid; grid-template-columns: 140px 1fr; }
+@media (max-width: 600px) { .card-inner { grid-template-columns: 1fr; } }
+
+.card-foto {
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  min-height: 120px; font-size: 32px; position: relative;
+  flex-direction: column; gap: 4px;
+}
+.card-foto img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.card-foto .tipo-badge {
+  background: rgba(0,0,0,.6); color: #fff;
+  font-size: 10px; font-weight: 700; padding: 3px 8px;
+  border-radius: 4px; letter-spacing: .4px; z-index: 1;
+}
+.card-rank {
+  position: absolute; top: 8px; left: 8px; z-index: 1;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-rank.top1 { background: var(--accent2); }
+.card-rank.top2 { background: var(--amber); }
+.card-rank.top3 { background: var(--coral); }
+
+.card-body { padding: 14px 16px; }
+
+.card-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+
+.card-titulo { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; }
+.card-end { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+.score-badge {
+  flex-shrink: 0;
+  padding: 4px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.score-alto  { background: rgba(0,212,170,.15); color: var(--accent2); border: 1px solid rgba(0,212,170,.3); }
+.score-medio { background: rgba(79,124,255,.15); color: var(--accent);  border: 1px solid rgba(79,124,255,.3); }
+.score-baixo { background: rgba(74,84,112,.2);   color: var(--text2);   border: 1px solid var(--border); }
+
+.card-specs { display: flex; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+.spec { font-size: 11px; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+.spec b { color: var(--text); font-weight: 600; }
+
+.card-preco {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px; font-weight: 700; color: var(--text);
+  margin: 6px 0;
+}
+.card-preco span { font-size: 11px; color: var(--text3); font-weight: 400; font-family: 'Inter', sans-serif; }
+
+.tags-match { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.tag {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 4px; letter-spacing: .2px;
+}
+.tag-ok    { background: rgba(0,212,170,.12); color: var(--accent2); }
+.tag-fonte-const { background: rgba(0,212,170,.12); color: var(--accent2); }
+.tag-fonte-rev   { background: rgba(79,124,255,.12); color: var(--accent); }
+
+.card-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.btn-sm {
+  padding: 7px 14px; border-radius: var(--radius-xs); font-size: 12px;
+  font-weight: 600; cursor: pointer; border: none; font-family: 'Inter', sans-serif;
+  transition: all .15s;
+}
+.btn-ver { background: var(--accent); color: #fff; }
+.btn-ver:hover { background: #3d6aee; }
+.btn-link-ext { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+.btn-link-ext:hover { color: var(--text); border-color: var(--text3); }
+
+/* ── BARRA DE CADASTRO ── */
+.barra-cadastro {
+  position: fixed; bottom: 0; left: 340px; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 12px 24px; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; z-index: 50; flex-wrap: wrap;
+}
+@media (max-width: 900px) { .barra-cadastro { left: 0; } }
+.barra-txt { font-size: 13px; color: var(--text2); }
+.barra-txt b { color: var(--text); }
+.barra-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.barra-btns input {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-xs);
+  color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif; padding: 8px 10px; outline: none; width: 150px;
+}
+.barra-btns input:focus { border-color: var(--accent); }
+.btn-cadastrar {
+  padding: 9px 18px; border-radius: var(--radius-xs);
+  background: var(--accent2); color: #0f1117;
+  font-size: 13px; font-weight: 700; border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .15s;
+}
+.btn-cadastrar:hover { background: #00bfa0; }
+.btn-cadastrar:disabled { opacity: .6; cursor: default; }
+.btn-nova-busca {
+  padding: 9px 14px; border-radius: var(--radius-xs);
+  background: var(--surface2); color: var(--text2);
+  font-size: 13px; border: 1px solid var(--border); cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── MODAL DETALHE ── */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); z-index: 200;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); width: 100%; max-width: 560px;
+  max-height: 85vh; overflow-y: auto; padding: 24px;
+}
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.modal-titulo { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; }
+.modal-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; }
+.modal-preco { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; color: var(--accent2); margin-bottom: 16px; }
+
+.detalhe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.detalhe-item { background: var(--surface2); border-radius: var(--radius-xs); padding: 10px 12px; }
+.detalhe-key { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+.detalhe-val { font-size: 14px; color: var(--text); font-weight: 600; }
+
+.msg-box {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+  font-size: 13px; color: var(--text2); line-height: 1.7;
+  margin-bottom: 14px; white-space: pre-line;
+}
+.msg-label { font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }
+
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-copiar {
+  flex: 1; padding: 11px; border-radius: var(--radius-xs);
+  background: var(--accent); color: #fff; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+}
+.btn-copiar:hover { background: #3d6aee; }
+.btn-wpp-grande {
+  flex: 1; padding: 11px; border-radius: var(--radius-xs);
+  background: rgba(37,211,102,.15); color: #25d366;
+  border: 1px solid rgba(37,211,102,.3);
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-20px);
+  background: var(--accent2); color: #0f1117; padding: 10px 22px;
+  border-radius: 99px; font-weight: 700; font-size: 13px;
+  opacity: 0; transition: all .3s; z-index: 300; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.erro { background: var(--coral); color: #fff; }
+
+.divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+/* ── LOGIN ── */
+.login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
+.login-logo{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:6px}
+.login-logo span{color:var(--text2);font-weight:400}
+.login-sub{text-align:center;color:var(--text3);font-size:13px;margin-bottom:24px}
+.login-user{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;color:var(--text2);font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.login-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;flex-shrink:0}
+.login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.login-field label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+.login-field input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Inter',sans-serif;padding:12px 14px;outline:none;transition:border .2s;width:100%}
+.login-field input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:background .2s}
+.login-btn:hover{background:#3d6aee}
+.login-err{color:#ff5a5a;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast">✓ Copiado!</div>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">BASE <span>INTELIGENTE</span></div>
+    <div class="login-sub">Acesso administrativo</div>
+    <div class="login-user">
+      <div class="login-avatar">L</div>
+      <div>
+        <div style="font-weight:600;color:var(--text);font-size:14px">Leonardo Viana</div>
+        <div style="font-size:12px">chaverleo@gmail.com</div>
+      </div>
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="inputSenha" placeholder="Digite sua senha"
+             onkeydown="if(event.key==='Enter')entrar()">
+    </div>
+    <button class="login-btn" onclick="entrar()">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="index.html" class="nav-tab">Formulário</a>
+    <a href="dashboard.html" class="nav-tab">Dashboard</a>
+    <a href="busca.html" class="nav-tab active">Busca Aberta</a>
+  </div>
+  <button class="refresh-btn" onclick="sair()"
+    onmouseover="this.style.borderColor='#ff5a5a';this.style.color='#ff5a5a'"
+    onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Sair</button>
+</div>
+
+<div class="app">
+
+  <!-- PAINEL DE FILTROS -->
+  <div class="painel">
+    <div class="painel-title">O que o cliente busca?</div>
+    <div class="painel-sub">Preencha o que souber — campos em branco são ignorados</div>
+
+    <!-- Tipo de imóvel -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Tipo de imóvel</div>
+      <div class="chips" id="chips-tipo">
+        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Casa</div>
+        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Sobrado</div>
+        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Apartamento</div>
+        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Lote em cond.</div>
+        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Sala comercial</div>
+      </div>
+    </div>
+
+    <!-- Quartos -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Quartos</div>
+      <div class="chips" id="chips-quartos">
+        <div class="chip" data-group="quartos" onclick="toggleChip(this)">1</div>
+        <div class="chip" data-group="quartos" onclick="toggleChip(this)">2</div>
+        <div class="chip" data-group="quartos" onclick="toggleChip(this)">3</div>
+        <div class="chip" data-group="quartos" onclick="toggleChip(this)">4+</div>
+      </div>
+    </div>
+
+    <!-- Suítes + Vagas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="filtro-secao">
+        <div class="filtro-label">Suítes</div>
+        <div class="chips" id="chips-suites">
+          <div class="chip" data-group="suites" onclick="toggleChip(this)">0</div>
+          <div class="chip" data-group="suites" onclick="toggleChip(this)">1</div>
+          <div class="chip" data-group="suites" onclick="toggleChip(this)">2</div>
+          <div class="chip" data-group="suites" onclick="toggleChip(this)">3+</div>
+        </div>
+      </div>
+      <div class="filtro-secao">
+        <div class="filtro-label">Vagas</div>
+        <div class="chips" id="chips-vagas">
+          <div class="chip" data-group="vagas" onclick="toggleChip(this)">0</div>
+          <div class="chip" data-group="vagas" onclick="toggleChip(this)">1</div>
+          <div class="chip" data-group="vagas" onclick="toggleChip(this)">2</div>
+          <div class="chip" data-group="vagas" onclick="toggleChip(this)">3+</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preço máximo -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Preço de referência</div>
+      <div class="slider-val" id="slider-val">R$ 500.000</div>
+      <div class="slider-wrap">
+        <input type="range" id="slider-preco" min="100000" max="5000000" step="10000" value="500000"
+               oninput="atualizarSlider(this.value)">
+        <div class="slider-labels"><span>R$ 100k</span><span>R$ 5M+</span></div>
+      </div>
+    </div>
+
+    <!-- Bairros -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Bairros / regiões aceitos</div>
+      <div class="chips" id="chips-bairro">
+        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Resid. Olinda</div>
+        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Conjunto Riviera</div>
+        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Conjunto Aruanã</div>
+        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Setor Bueno</div>
+        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Jardim Goiás</div>
+        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Alphaville</div>
+      </div>
+      <div class="hint" style="font-size:11px;color:var(--text3);margin-top:6px">Não achou o bairro? Descreva no texto livre abaixo — ele também entra na busca.</div>
+    </div>
+
+    <!-- Condições de pagamento -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Condições de pagamento</div>
+      <div class="chips" id="chips-cond">
+        <div class="chip" data-group="cond" onclick="toggleChip(this)">Aceita financiamento</div>
+        <div class="chip" data-group="cond" onclick="toggleChip(this)">FGTS</div>
+        <div class="chip" data-group="cond" onclick="toggleChip(this)">Permuta</div>
+        <div class="chip" data-group="cond" onclick="toggleChip(this)">À vista</div>
+      </div>
+    </div>
+
+    <!-- Características desejadas -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Características desejadas</div>
+      <div class="chips" id="chips-extra">
+        <div class="chip" data-group="extra" onclick="toggleChip(this)">Quintal</div>
+        <div class="chip" data-group="extra" onclick="toggleChip(this)">Na laje</div>
+        <div class="chip" data-group="extra" onclick="toggleChip(this)">Piscina</div>
+        <div class="chip" data-group="extra" onclick="toggleChip(this)">Churrasqueira</div>
+        <div class="chip" data-group="extra" onclick="toggleChip(this)">Cond. fechado</div>
+        <div class="chip" data-group="extra" onclick="toggleChip(this)">Home office</div>
+      </div>
+      <div class="hint" style="font-size:11px;color:var(--text3);margin-top:6px">Ainda não influenciam o score — a base de imóveis não tem essas informações cadastradas hoje. Ficam salvas se você cadastrar o cliente.</div>
+    </div>
+
+    <!-- Texto livre -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Descrição livre</div>
+      <textarea class="input-busca" id="texto-livre"
+        placeholder="Ex: cliente quer casa com quintal grande, aceita reformar, prefere rua sem saída..."></textarea>
+    </div>
+
+    <!-- Urgência -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Urgência de compra</div>
+      <div class="chips" id="chips-urgencia">
+        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Imediata (até 30 dias)</div>
+        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Curto prazo (3 meses)</div>
+        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Médio prazo (6 meses)</div>
+        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Sem prazo definido</div>
+      </div>
+    </div>
+
+    <button class="btn-buscar" id="btnBuscar" onclick="executarBusca()">
+      <span>🔍 Buscar imóveis compatíveis</span>
+    </button>
+  </div>
+
+  <!-- PAINEL DE RESULTADOS -->
+  <div class="resultado" id="resultado">
+    <div class="estado-inicial" id="estado-inicial">
+      <div class="icone-busca">🔍</div>
+      <h2>Preencha o perfil ao lado</h2>
+      <p>Configure os filtros com o que o cliente busca e clique em Buscar para ver os imóveis mais compatíveis da base, sem precisar cadastrar ninguém antes.</p>
+    </div>
+    <div id="resultado-conteudo" style="display:none; padding-bottom: 90px;"></div>
+  </div>
+</div>
+
+<!-- BARRA INFERIOR (aparece após busca) -->
+<div class="barra-cadastro" id="barra-cadastro" style="display:none">
+  <div class="barra-txt"><b id="barra-count">0</b> imóveis encontrados — cadastrar esse cliente?</div>
+  <div class="barra-btns">
+    <input type="text" id="cadNome" placeholder="Nome">
+    <input type="text" id="cadTelefone" placeholder="Telefone">
+    <button class="btn-nova-busca" onclick="novaBusca()">↺ Nova busca</button>
+    <button class="btn-cadastrar" id="btnCadastrar" onclick="cadastrarCliente()">+ Cadastrar cliente</button>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="overlay" id="overlay" onclick="fecharModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-titulo" id="modal-titulo"></div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px" id="modal-end"></div>
+      </div>
+      <button class="modal-close" onclick="fecharModalBtn()">✕</button>
+    </div>
+    <div class="modal-preco" id="modal-preco"></div>
+    <div class="detalhe-grid" id="modal-grid"></div>
+    <div class="divider"></div>
+    <div class="msg-label">💬 Mensagem pronta para WhatsApp</div>
+    <div class="msg-box" id="modal-msg"></div>
+    <div class="modal-actions">
+      <button class="btn-copiar" onclick="copiarMsg()">📋 Copiar mensagem</button>
+      <button class="btn-wpp-grande" onclick="abrirWpp()">📲 Abrir WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxDv_H8bxKienuLd-LZteJpKxNGPYe8nnNo4FTd39FIWsyBUBWYZ1evZqR5dt2HCCOk/exec';
+const SESS_KEY   = 'bi_session';
+const USER_EMAIL = 'chaverleo@gmail.com';
+
+// ─── AUTH ───────────────────────────────────────────────────────────────────
+async function sha256(texto) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function verificarAuth() {
+  if (sessionStorage.getItem(SESS_KEY) === 'ok') fecharLogin();
+}
+async function entrar() {
+  const senha = document.getElementById('inputSenha').value;
+  const err   = document.getElementById('loginErr');
+  if (!senha) { err.textContent = 'Digite sua senha.'; return; }
+  err.textContent = '';
+  const hash = await sha256(senha + USER_EMAIL);
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=verificar_senha&hash=' + encodeURIComponent(hash));
+    const data = await resp.json();
+    if (data.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); fecharLogin(); }
+    else { err.textContent = 'Senha incorreta.'; document.getElementById('inputSenha').value = ''; }
+  } catch(e) { err.textContent = 'Erro de conexão.'; }
+}
+function fecharLogin() { document.getElementById('loginOverlay').style.display = 'none'; }
+function sair() {
+  sessionStorage.removeItem(SESS_KEY);
+  document.getElementById('loginOverlay').style.display = 'flex';
+}
+verificarAuth();
+
+// ─── ESTADO ───────────────────────────────────────────────────────────────────
+const state = { imovelAtual: null, ultimoInterpretado: null, ultimoTexto: '' };
+
+// ─── CHIPS ────────────────────────────────────────────────────────────────────
+function toggleChip(el) {
+  const group = el.dataset.group;
+  const multi = ['bairro', 'cond', 'extra'].includes(group);
+  if (!multi) {
+    el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  }
+  el.classList.toggle('on');
+}
+function getChips(group) {
+  return [...document.querySelectorAll(`.chip.on[data-group="${group}"]`)].map(c => c.textContent.trim());
+}
+function getChipUnico(group) {
+  const el = document.querySelector(`.chip.on[data-group="${group}"]`);
+  return el ? el.textContent.trim() : '';
+}
+
+// ─── SLIDER ───────────────────────────────────────────────────────────────────
+function atualizarSlider(val) {
+  const n = parseInt(val);
+  document.getElementById('slider-val').textContent = 'R$ ' + n.toLocaleString('pt-BR');
+}
+
+function fmt_(v) {
+  const n = parseInt(String(v || '').replace(/\D/g, '')) || 0;
+  if (!n) return '—';
+  return 'R$ ' + n.toLocaleString('pt-BR');
+}
+
+// ─── BUSCA (chama o Apps Script de verdade) ───────────────────────────────────
+async function executarBusca() {
+  const filtros = {
+    acao:      'busca_aberta',
+    tipo:      getChipUnico('tipo'),
+    quartos:   getChipUnico('quartos'),
+    suites:    getChipUnico('suites'),
+    vagas:     getChipUnico('vagas'),
+    bairros:   getChips('bairro'),
+    condPagto: getChips('cond'),
+    extras:    getChips('extra'),
+    urgencia:  getChipUnico('urgencia'),
+    precoMax:  parseInt(document.getElementById('slider-preco').value),
+    texto:     document.getElementById('texto-livre').value.trim(),
+  };
+
+  const btn = document.getElementById('btnBuscar');
+  btn.disabled = true;
+  btn.innerHTML = '<span>Buscando...</span>';
+
+  try {
+    const body = new URLSearchParams({ dados: JSON.stringify(filtros) });
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const json = await resp.json();
+
+    if (json.status) { // erro/acao desconhecida — Code.gs ainda nao tem busca_aberta implantado
+      mostrarToast('Erro: ' + (json.motivo || json.status), 'erro');
+      return;
+    }
+
+    state.ultimoInterpretado = json.interpretado || {};
+    state.ultimoTexto = filtros.texto;
+    renderResultados(json.resultados || [], filtros, json.interpretado || {});
+  } catch (e) {
+    mostrarToast('Erro na busca: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>🔍 Buscar imóveis compatíveis</span>';
+  }
+}
+
+function renderResultados(resultados, filtros, interpretado) {
+  document.getElementById('estado-inicial').style.display = 'none';
+  const conteudo = document.getElementById('resultado-conteudo');
+  conteudo.style.display = 'block';
+
+  const partes = [];
+  if (interpretado.tipo) partes.push(interpretado.tipo);
+  if (interpretado.bairros) partes.push(interpretado.bairros);
+  partes.push('referência ' + fmt_(interpretado.precoLimite || filtros.precoMax));
+  if (filtros.quartos) partes.push(filtros.quartos + ' quartos');
+  if (filtros.extras.length) partes.push(filtros.extras.slice(0, 3).join(', '));
+
+  conteudo.innerHTML = `
+    <div class="resultado-header">
+      <div>
+        <div class="resultado-titulo">Imóveis compatíveis</div>
+        <div class="resultado-count"><b>${resultados.length}</b> encontrados para este perfil</div>
+      </div>
+    </div>
+    <div class="resumo-busca">
+      Buscando: <strong>${partes.join(' · ')}</strong>
+      ${filtros.urgencia ? ` · Urgência: <strong>${filtros.urgencia}</strong>` : ''}
+    </div>
+    <div class="cards-grid" id="cards-grid"></div>
+  `;
+
+  const grid = document.getElementById('cards-grid');
+  if (!resultados.length) {
+    grid.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px">Nenhum imóvel compatível encontrado com esse perfil. Tente afrouxar os filtros.</div>';
+  }
+
+  resultados.forEach((im, i) => {
+    const rankClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    const scoreCls = im.score >= 80 ? 'score-alto' : im.score >= 60 ? 'score-medio' : 'score-baixo';
+    const isConst = im.fonte === 'CONSTRUTORA';
+    const isTop = i === 0;
+
+    const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
+    const fotoHtml = im.foto && im.foto.startsWith('http')
+      ? `<img src="${im.foto}" onerror="this.style.display='none'">`
+      : `<div style="font-size:36px;z-index:1">${isConst ? '🏗️' : '🏠'}</div>`;
+
+    const card = document.createElement('div');
+    card.className = `card${isTop ? ' top' : ''}`;
+    card.onclick = () => abrirDetalhe(im);
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="card-foto">
+          <div class="card-rank ${rankClass}">${i+1}</div>
+          ${fotoHtml}
+          <div class="tipo-badge">${(im.tipo || 'IMÓVEL').toUpperCase()}</div>
+        </div>
+        <div class="card-body">
+          <div class="card-top-row">
+            <div>
+              <div class="card-titulo">${im.codigo ? im.codigo + ' · ' : ''}${local || im.bairro || '—'}</div>
+              <div class="card-end">${im.endereco || ''}</div>
+            </div>
+            <div class="score-badge ${scoreCls}">${im.score}% match</div>
+          </div>
+          <div class="card-specs">
+            ${im.quartos ? `<div class="spec">🛏️ <b>${im.quartos}</b> quartos</div>` : ''}
+            ${im.suites  ? `<div class="spec">🚿 <b>${im.suites}</b> suítes</div>` : ''}
+            ${im.vagas   ? `<div class="spec">🚗 <b>${im.vagas}</b> vagas</div>` : ''}
+            ${im.areaUtil? `<div class="spec">📐 <b>${im.areaUtil}m²</b></div>` : ''}
+          </div>
+          <div class="card-preco">${fmt_(im.valorVenda)} ${im.padrao ? `<span>· ${im.padrao}</span>` : ''}</div>
+          <div class="tags-match">
+            <span class="tag ${isConst ? 'tag-fonte-const' : 'tag-fonte-rev'}">${isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn-sm btn-ver" onclick="event.stopPropagation();abrirDetalhe(${JSON.stringify(im).replace(/"/g,'&quot;')})">Ver detalhes e mensagem</button>
+            ${im.url && im.url.startsWith('http') ? `<a class="btn-sm btn-link-ext" href="${im.url}" target="_blank" onclick="event.stopPropagation()">Ver anúncio →</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  const barra = document.getElementById('barra-cadastro');
+  barra.style.display = 'flex';
+  document.getElementById('barra-count').textContent = resultados.length;
+}
+
+// ─── DETALHE / MENSAGEM ────────────────────────────────────────────────────────
+function abrirDetalhe(im) {
+  state.imovelAtual = im;
+  const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
+
+  document.getElementById('modal-titulo').textContent = `${im.codigo || im.tipo} — ${local || im.bairro || ''}`;
+  document.getElementById('modal-end').textContent = im.endereco || '';
+  document.getElementById('modal-preco').textContent = fmt_(im.valorVenda);
+
+  document.getElementById('modal-grid').innerHTML = `
+    <div class="detalhe-item"><div class="detalhe-key">Tipo</div><div class="detalhe-val">${im.tipo || '—'}</div></div>
+    <div class="detalhe-item"><div class="detalhe-key">Área</div><div class="detalhe-val">${im.areaUtil ? im.areaUtil + ' m²' : '—'}</div></div>
+    <div class="detalhe-item"><div class="detalhe-key">Quartos</div><div class="detalhe-val">${im.quartos || '—'}${im.suites ? ' (' + im.suites + ' suíte(s))' : ''}</div></div>
+    <div class="detalhe-item"><div class="detalhe-key">Vagas</div><div class="detalhe-val">${im.vagas || '—'}</div></div>
+    <div class="detalhe-item"><div class="detalhe-key">Padrão</div><div class="detalhe-val">${im.padrao || '—'}</div></div>
+    <div class="detalhe-item"><div class="detalhe-key">Score do match</div><div class="detalhe-val">${im.score}</div></div>
+  `;
+
+  document.getElementById('modal-msg').textContent = gerarMensagem(im);
+  document.getElementById('overlay').classList.add('open');
+}
+
+function gerarMensagem(im) {
+  const local = [im.condominio, im.bairro].filter(Boolean).join(', em ');
+  const detalhes = [];
+  if (im.quartos) detalhes.push(`${im.quartos} quartos`);
+  if (im.suites)  detalhes.push(`${im.suites} suíte${parseInt(im.suites) > 1 ? 's' : ''}`);
+  if (im.vagas)   detalhes.push(`${im.vagas} vaga${parseInt(im.vagas) > 1 ? 's' : ''}`);
+  if (im.areaUtil) detalhes.push(`${im.areaUtil} m²`);
+  const detalhesTxt = detalhes.length ? ` Tem ${detalhes.join(', ')}.` : '';
+
+  return `Oi! Encontrei uma opção que pode te interessar 😊
+
+${im.tipo || 'Imóvel'}${local ? ' no ' + local : ''}.${detalhesTxt}
+
+Valor: *${fmt_(im.valorVenda)}*.
+
+Posso te mandar mais fotos e detalhes?`;
+}
+
+function fecharModal(e) { if (e.target === document.getElementById('overlay')) fecharModalBtn(); }
+function fecharModalBtn() { document.getElementById('overlay').classList.remove('open'); }
+
+function copiarMsg() {
+  const msg = document.getElementById('modal-msg').textContent;
+  navigator.clipboard.writeText(msg).then(() => mostrarToast('✓ Mensagem copiada!'));
+}
+function abrirWpp() {
+  if (!state.imovelAtual) return;
+  const msg = encodeURIComponent(gerarMensagem(state.imovelAtual));
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function mostrarToast(txt, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = txt;
+  t.className = 'toast show' + (tipo === 'erro' ? ' erro' : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── AÇÕES BARRA ─────────────────────────────────────────────────────────────
+function novaBusca() {
+  document.getElementById('estado-inicial').style.display = 'flex';
+  document.getElementById('resultado-conteudo').style.display = 'none';
+  document.getElementById('barra-cadastro').style.display = 'none';
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  document.getElementById('texto-livre').value = '';
+  document.getElementById('cadNome').value = '';
+  document.getElementById('cadTelefone').value = '';
+  document.getElementById('slider-preco').value = 500000;
+  atualizarSlider(500000);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function cadastrarCliente() {
+  const nome     = document.getElementById('cadNome').value.trim();
+  const telefone = document.getElementById('cadTelefone').value.trim();
+  if (!nome || !telefone) { mostrarToast('Preencha nome e telefone', 'erro'); return; }
+
+  const btn = document.getElementById('btnCadastrar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const interp = state.ultimoInterpretado || {};
+  const payload = {
+    nome, telefone,
+    segmento: interp.tipo || '',
+    precoLimite: interp.precoLimite || '',
+    bairroInteresse: interp.bairros || '',
+    conversa: state.ultimoTexto || '',
+    canal: 'Busca aberta',
+    score: 0,
+  };
+
+  try {
+    const body = new URLSearchParams({ dados: JSON.stringify(payload) });
+    await fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body });
+    mostrarToast('✓ Cliente cadastrado!');
+    setTimeout(novaBusca, 1200);
+  } catch (e) {
+    mostrarToast('Erro ao cadastrar: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Cadastrar cliente';
+  }
+}
+</script>
+</body>
+</html>

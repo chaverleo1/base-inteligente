@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 12) — Busca Aberta: encontrar imóveis sem precisar de cadastro
+
+Nova página `busca.html` (nova aba no menu de todas as páginas) — descreve o que um possível
+cliente busca (chips estruturados de tipo/quartos/suítes/vagas/preço/bairros/condições de
+pagamento/características + texto livre) e mostra os imóveis compatíveis da base real
+(REVENDA + CONSTRUTORA-APARTAMENTOS), sem precisar cadastrar a pessoa antes. No fim, oferece
+cadastrar o cliente (nome + telefone) com os critérios já identificados.
+
+**Backend (Code.gs):**
+- `buscaAberta_(d)`: recebe os filtros estruturados, monta um "contato sintético" e roda no
+  mesmo motor de match do `rodarMatching()` (`calcularMatch_`) contra todos os imóveis — não
+  grava nada, é só consulta. Limiar de score mais permissivo (40, contra 70 do matching oficial)
+  porque aqui é exploratório.
+- `extrairValorTexto_()`: versão em JS do extrator de preço do script de migração (K/mil/Mi/milhão).
+- Nova rota em `doPost`: `acao: 'busca_aberta'`.
+
+**Limitação conhecida**: os chips de "características desejadas" (quintal, na laje, piscina
+etc.) não influenciam o score ainda — REVENDA/CONSTRUTORA-APARTAMENTOS não têm essas colunas
+hoje (só existem como preferência do cliente em CONTATOS). Ficam salvos no cadastro se a pessoa
+for cadastrada, mas não filtram imóveis por enquanto.
+
+**Incidente durante o desenvolvimento**: um teste da função antes do deploy do backend caiu no
+fallback padrão do `doPost` (que sempre chamava `salvar()` pra ações não reconhecidas) e criou um
+contato em branco na planilha de produção (linha 5042). Identificado e apagado na hora via
+`buscar_linha`/`excluir`, sem perda de dados reais. Corrigido o `doPost` pra nunca mais deixar
+isso acontecer: uma ação nomeada mas não reconhecida agora retorna erro em vez de cair no
+`salvar()`, e o próprio `salvar()` exige nome+telefone.
+
 ## 2026-07-01 (parte 11) — ID permanente do cliente (fim do CLI-XXXXX instável)
 
 Problema descoberto ao investigar um caso confuso: o usuário perguntou sobre CLI-10048 e, ao
