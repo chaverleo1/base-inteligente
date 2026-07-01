@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 7) — Botão "Editar" do dashboard não preenchia o formulário
+
+Problema: botão Editar na página do cliente abria `index.html` em branco (às vezes pedindo login
+de novo). Causas:
+1. O link passava `?buscar=<nome>` mas o `index.html` nunca leu esse parâmetro — não existia
+   nenhum código pra buscar/preencher automaticamente a partir da URL.
+2. Identificar pelo nome é frágil — "Olinda" aparece em 48 registros diferentes na base (nome de
+   bairro/empreendimento usado como texto no campo nome do contato).
+3. O link abria em nova aba (`target="_blank"`); cópia de `sessionStorage` pra nova aba não é
+   garantida em todos os navegadores, podendo pedir login de novo.
+
+**Fix:**
+- `dashboard.html`: botão Editar agora usa `_linha` (identificador único, já usado em
+  editar/excluir no resto do app) em vez do nome, e não abre mais em nova aba.
+- `index.html`: nova função `carregarClienteDaUrl()` lê `?linha=N` no load e busca+preenche via
+  nova ação `buscar_linha` (Code.gs), reaproveitando `carregarContato()` que já existia pro fluxo
+  de busca manual.
+- `Code.gs`: nova ação `buscar_linha` no `doGet` — busca uma linha específica por índice (mais
+  direto que o `buscar` por texto, que faz varredura completa).
+
+Validado no preview: `carregarContato()` preenche nome/telefone/segmento corretamente e
+`linhaAtual` fica setado pra apontar pra atualização (não criação de linha nova) ao salvar.
+
 ## 2026-07-01 (parte 6) — Investigação: só 261 de 5.715 contatos migrados com precoLimite
 
 Usuário reportou só 263 contatos exportados com "preço limite". Investigação confirmou: **261

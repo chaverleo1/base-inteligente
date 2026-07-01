@@ -992,7 +992,23 @@
     showToast('Contato carregado — edite e salve', 'ok');
   }
 
+  // ── ABRIR DIRETO EM MODO EDIÇÃO (link "Editar" do dashboard) ────────────────
+  async function carregarClienteDaUrl() {
+    const linha = new URLSearchParams(window.location.search).get('linha');
+    if (!linha) return;
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=buscar_linha&linha=' + encodeURIComponent(linha));
+      const c = await resp.json();
+      if (!c) { showToast('Cliente não encontrado', 'erro'); return; }
+      setMode('atualizar');
+      carregarContato(c);
+    } catch (e) {
+      showToast('Erro ao carregar cliente: ' + e.message, 'erro');
+    }
+  }
+
   init();
+  carregarClienteDaUrl();
 </script>
 </body>
 </html>
