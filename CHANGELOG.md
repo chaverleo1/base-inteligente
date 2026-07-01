@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 13) — Busca Aberta: chips dinâmicos + preço digitável
+
+Dois ajustes na Busca Aberta (parte 12):
+
+1. **Chips de tipo e bairro agora vêm da base real**, não de lista fixa. Nova ação
+   `opcoes_filtro` no Code.gs lê os valores distintos de `tipo` e `bairro` em REVENDA +
+   CONSTRUTORA-APARTAMENTOS e devolve ordenado; `busca.html` carrega isso ao abrir a página e
+   monta os chips dinamicamente. Confirmado na base real: 15 tipos distintos em REVENDA, 34+
+   bairros só na construtora (a lista fixa anterior tinha só 5 tipos e 6 bairros de exemplo).
+2. **"Preço máximo" renomeado para "Preço limite"** (consistente com o resto do app), e
+   adicionado um campo de texto pra digitar o valor exato, sincronizado com a barra de
+   rolagem — útil pra valores fora da faixa visual dela (ex: acima de R$ 5M) ou pra digitar
+   direto em vez de arrastar.
+
 ## 2026-07-01 (parte 12) — Busca Aberta: encontrar imóveis sem precisar de cadastro
 
 Nova página `busca.html` (nova aba no menu de todas as páginas) — descreve o que um possível

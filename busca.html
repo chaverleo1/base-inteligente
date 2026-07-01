@@ -89,6 +89,20 @@ a { text-decoration: none; color: inherit; }
 .chip:hover { border-color: var(--accent); color: var(--text); }
 .chip.on { background: rgba(79,124,255,.15); border-color: var(--accent); color: var(--accent); }
 
+/* ── PREÇO (input + slider) ── */
+.preco-input-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 12px; margin-bottom: 10px; transition: border .2s;
+}
+.preco-input-row:focus-within { border-color: var(--accent); }
+.preco-prefixo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--accent); font-size: 15px; }
+.preco-input {
+  flex: 1; background: none; border: none; outline: none; color: var(--text);
+  font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+}
+.preco-input::placeholder { color: var(--text3); font-weight: 400; }
+
 /* ── SLIDER ── */
 .slider-wrap { position: relative; padding: 4px 0 0; }
 .slider-val {
@@ -406,11 +420,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="filtro-secao">
       <div class="filtro-label">Tipo de imóvel</div>
       <div class="chips" id="chips-tipo">
-        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Casa</div>
-        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Sobrado</div>
-        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Apartamento</div>
-        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Lote em cond.</div>
-        <div class="chip" data-group="tipo" onclick="toggleChip(this)">Sala comercial</div>
+        <span style="font-size:12px;color:var(--text3)">Carregando...</span>
       </div>
     </div>
 
@@ -447,10 +457,14 @@ input[type=range]::-webkit-slider-thumb {
       </div>
     </div>
 
-    <!-- Preço máximo -->
+    <!-- Preço limite -->
     <div class="filtro-secao">
-      <div class="filtro-label">Preço de referência</div>
-      <div class="slider-val" id="slider-val">R$ 500.000</div>
+      <div class="filtro-label">Preço limite</div>
+      <div class="preco-input-row">
+        <span class="preco-prefixo">R$</span>
+        <input type="text" class="preco-input" id="preco-digitado" placeholder="500.000"
+               oninput="atualizarPrecoDigitado(this.value)">
+      </div>
       <div class="slider-wrap">
         <input type="range" id="slider-preco" min="100000" max="5000000" step="10000" value="500000"
                oninput="atualizarSlider(this.value)">
@@ -462,12 +476,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="filtro-secao">
       <div class="filtro-label">Bairros / regiões aceitos</div>
       <div class="chips" id="chips-bairro">
-        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Resid. Olinda</div>
-        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Conjunto Riviera</div>
-        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Conjunto Aruanã</div>
-        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Setor Bueno</div>
-        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Jardim Goiás</div>
-        <div class="chip" data-group="bairro" onclick="toggleChip(this)">Alphaville</div>
+        <span style="font-size:12px;color:var(--text3)">Carregando...</span>
       </div>
       <div class="hint" style="font-size:11px;color:var(--text3);margin-top:6px">Não achou o bairro? Descreva no texto livre abaixo — ele também entra na busca.</div>
     </div>
@@ -599,6 +608,32 @@ verificarAuth();
 
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
 const state = { imovelAtual: null, ultimoInterpretado: null, ultimoTexto: '' };
+let precoAtual = 500000;
+
+// ─── OPÇÕES DINÂMICAS (tipos/bairros existentes na base) ──────────────────────
+async function carregarOpcoesFiltro() {
+  const chipsTipo   = document.getElementById('chips-tipo');
+  const chipsBairro = document.getElementById('chips-bairro');
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=opcoes_filtro');
+    const json = await resp.json();
+    const tipos   = json.tipos   || [];
+    const bairros = json.bairros || [];
+
+    chipsTipo.innerHTML = tipos.length
+      ? tipos.map(t => `<div class="chip" data-group="tipo" onclick="toggleChip(this)">${t}</div>`).join('')
+      : '<span style="font-size:12px;color:var(--text3)">Nenhum tipo cadastrado ainda</span>';
+
+    chipsBairro.innerHTML = bairros.length
+      ? bairros.map(b => `<div class="chip" data-group="bairro" onclick="toggleChip(this)">${b}</div>`).join('')
+      : '<span style="font-size:12px;color:var(--text3)">Nenhum bairro cadastrado ainda</span>';
+  } catch (e) {
+    chipsTipo.innerHTML   = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar tipos</span>';
+    chipsBairro.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar bairros</span>';
+  }
+}
+carregarOpcoesFiltro();
+atualizarSlider(500000);
 
 // ─── CHIPS ────────────────────────────────────────────────────────────────────
 function toggleChip(el) {
@@ -617,10 +652,24 @@ function getChipUnico(group) {
   return el ? el.textContent.trim() : '';
 }
 
-// ─── SLIDER ───────────────────────────────────────────────────────────────────
+// ─── PREÇO (slider + caixa de texto, sincronizados) ───────────────────────────
 function atualizarSlider(val) {
-  const n = parseInt(val);
-  document.getElementById('slider-val').textContent = 'R$ ' + n.toLocaleString('pt-BR');
+  precoAtual = parseInt(val) || 0;
+  document.getElementById('preco-digitado').value = precoAtual.toLocaleString('pt-BR');
+}
+
+function atualizarPrecoDigitado(val) {
+  const digitos = val.replace(/\D/g, '');
+  precoAtual = parseInt(digitos) || 0;
+  const input = document.getElementById('preco-digitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+  input.value = digitos ? precoAtual.toLocaleString('pt-BR') : '';
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
+
+  // Move a barra dentro do que ela suporta visualmente, sem travar o valor digitado
+  const slider = document.getElementById('slider-preco');
+  const min = parseInt(slider.min), max = parseInt(slider.max);
+  slider.value = Math.min(Math.max(precoAtual || min, min), max);
 }
 
 function fmt_(v) {
@@ -641,7 +690,7 @@ async function executarBusca() {
     condPagto: getChips('cond'),
     extras:    getChips('extra'),
     urgencia:  getChipUnico('urgencia'),
-    precoMax:  parseInt(document.getElementById('slider-preco').value),
+    precoMax:  precoAtual,
     texto:     document.getElementById('texto-livre').value.trim(),
   };
 
@@ -678,7 +727,7 @@ function renderResultados(resultados, filtros, interpretado) {
   const partes = [];
   if (interpretado.tipo) partes.push(interpretado.tipo);
   if (interpretado.bairros) partes.push(interpretado.bairros);
-  partes.push('referência ' + fmt_(interpretado.precoLimite || filtros.precoMax));
+  partes.push('preço limite ' + fmt_(interpretado.precoLimite || filtros.precoMax));
   if (filtros.quartos) partes.push(filtros.quartos + ' quartos');
   if (filtros.extras.length) partes.push(filtros.extras.slice(0, 3).join(', '));
 
