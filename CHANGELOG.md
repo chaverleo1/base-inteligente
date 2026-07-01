@@ -1,5 +1,21 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 5) — Filtro de elegibilidade do matching excluía quase toda a base migrada
+
+Após a correção da parte 4, `rodarMatching()` ainda gerou só 16 pares (log real da execução:
+"Contatos: 5715 | Revenda: 495 | Construtora: 354 | Contatos aptos: 128 de 5715"). A causa não
+era mais o tipo — era o filtro `contataveis`, que exigia `score >= 40` **e** alguma preferência
+declarada. A base migrada tem score calculado por heurística de nome (script
+`processar_contatos_v3.py`) e a maioria fica abaixo de 40 mesmo com segmento bem identificado
+(estatística da migração: 127 "Média" + 1.622 "Baixa" + 3.966 "S/prio", quase tudo abaixo do
+piso). Isso excluía ~97% da base do motor de matching, mesmo tendo estoque compatível.
+
+**Decisão confirmada com o usuário:** remover o piso de score, manter só a exigência de
+preferência declarada (segmento, precoLimite ou bairroInteresse). Volume de contatos elegíveis
+deve subir de ~128 para a casa de milhares — **atenção a possível timeout** do
+`rodarMatching()` no Apps Script (limite de 6 min de execução) com esse volume maior; se
+acontecer, vai ser necessário processar em lotes/gatilhos.
+
 ## 2026-07-01 (parte 4) — Correção: tipo do imóvel não normalizado derrubava quase todos os matches
 
 Depois da parte 3 (desqualificação por tipo incompatível), o número de matches despencou pra
