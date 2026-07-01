@@ -399,7 +399,7 @@
 </div>
 
 <script>
-const WEBHOOK_URL  = 'https://script.google.com/macros/s/AKfycbzK3KMdPy6OMYscvGwF8pFjMXjhdkl1zkJb0sMQvlB4ze_Pm7loa2fZhSK6SQpfc7vd/exec';
+const WEBHOOK_URL  = 'https://script.google.com/macros/s/AKfycbwaxMKgGGq9H7xTVi2Kx7_K815GaijJcPby12tD8UVLEoccuoRGboy9Q5Psvf7TsK_o/exec';
 const SESS_KEY     = 'bi_session';
 const USER_EMAIL   = 'chaverleo@gmail.com';
 
@@ -659,11 +659,12 @@ function renderMatchCol(elId, lista, tipo) {
         : mc80 > 0
           ? `<span class="match-mc-hot match-mc-only">${mc80}</span>`
           : `<span class="match-mc-warm match-mc-only">${mc70}</span>`;
+    const scoreTotal = d.scoreTotal != null ? d.scoreTotal : d.score;
     return `
-    <div class="match-item" data-nome="${(d.nome||'').replace(/"/g,'&quot;')}" data-score="${d.score||0}" data-cod="${d.cod||''}">
+    <div class="match-item" data-nome="${(d.nome||'').replace(/"/g,'&quot;')}" data-score="${scoreTotal||0}" data-cod="${d.cod||''}">
       <div class="${mcCls}" title="${mc80} acima de 80 · ${mc70} entre 70 e 79">${mcHtml}</div>
       <div class="match-body">
-        <span class="match-score score-${tipo}">${d.score}</span>
+        <span class="match-score score-${tipo}" title="Score cadastro: ${d.score}">${scoreTotal}</span>
         <div class="match-name">${d.nome||'—'}</div>
         <div class="match-detail">${[d.seg,d.pad,d.urg].filter(Boolean).join(' · ')||'Sem detalhes'}</div>
       </div>
@@ -868,8 +869,8 @@ async function abrirCliente(nome, score, cod) {
   document.getElementById('drawerCod').textContent  = cod  || '';
   document.getElementById('drawerAvatar').textContent = (nome||'?')[0].toUpperCase();
   const sc = parseInt(score) || 0;
-  const badgeCls = sc >= 80 ? 'd-badge-hot' : sc >= 70 ? 'd-badge-warm' : 'd-badge-cold';
-  const badgeTxt = sc >= 80 ? '🔴 Quente' : sc >= 70 ? '🟡 Morno' : '🔵 Frio';
+  const badgeCls = sc >= 75 ? 'd-badge-hot' : sc >= 50 ? 'd-badge-warm' : 'd-badge-cold';
+  const badgeTxt = sc >= 75 ? '🔴 Quente' : sc >= 50 ? '🟡 Morno' : '🔵 Frio';
   document.getElementById('drawerBadges').innerHTML =
     `<span class="d-badge ${badgeCls}">Score ${sc}</span>
      <span class="d-badge d-badge-neutral">${badgeTxt}</span>`;
@@ -925,9 +926,8 @@ function renderDrawer(c, score) {
   // Próximos passos automáticos
   const steps = [];
   const sc = parseInt(score) || 0;
-  if (sc >= 80) steps.push({icon:'🔴', text:'<b>Contato imediato.</b> Cliente quente — priorize agora.'});
-  else if (sc >= 70) steps.push({icon:'🟡', text:'<b>Aquecer o lead.</b> Entre em contato para entender o momento de compra.'});
-  else if (sc >= 60) steps.push({icon:'🔵', text:'<b>Nutrição.</b> Compartilhe conteúdo relevante ou novidades do portfólio.'});
+  if (sc >= 75) steps.push({icon:'🔴', text:'<b>Contato imediato.</b> Cliente quente — priorize agora.'});
+  else if (sc >= 50) steps.push({icon:'🟡', text:'<b>Aquecer o lead.</b> Entre em contato para entender o momento de compra.'});
   else steps.push({icon:'⚪', text:'<b>Base fria.</b> Mantenha em lista para campanhas futuras.'});
   if (diasUlt) steps.push({icon:'📅', text:`Último contato: <b>${c.ultimoContato}</b> (${diasUlt}). Boa hora para retomar.`});
   if (c.fgts === 'Sim' || c.fgts === 'sim') steps.push({icon:'🏦', text:'Cliente tem <b>FGTS</b> disponível — verificar saldo e elegibilidade.'});

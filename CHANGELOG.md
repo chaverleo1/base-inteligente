@@ -1,6 +1,51 @@
 # Changelog — Base Inteligente
 
-## 2026-07-01 — Características do imóvel, Preço Limite e classificação automática
+## 2026-07-01 (parte 2) — Score Total: temperatura do match ≠ score do cliente
+
+Problema identificado pelo usuário: um cliente com score de cadastro baixo mas com vários
+imóveis ideais disponíveis é, na prática, um lead mais quente que um cliente com score alto e
+nenhum produto compatível. A classificação quente/morno/frio do dashboard passou a refletir isso.
+
+**Fórmula (`Code.gs`, funções novas `calcularScoreTotal_` / `classificarTemperatura_` em
+`dadosDashboard()`):**
+
+```
+peso por posição no ranking de matches do cliente: 1º=5, 2º=4, 3º=3, 4º=2, 5º em diante=1
+média ponderada = Σ(score_imóvel × peso) / Σ(peso)
+Score Total = (score_cliente × 0.35) + (média_ponderada × 0.65)
+
+Score Total ≥ 75        → 🔴 QUENTE
+Score Total 50–74       → 🟡 MORNO
+Score Total < 50        → 🔵 FRIO
+Regra especial: qualquer match com score ≥ 85 força QUENTE, mesmo com Score Total abaixo de 75
+Sem nenhum match: Score Total = score_cliente (fallback)
+```
+
+- `dadosDashboard()` agora lê a aba MATCHES **antes** de classificar cada contato (precisa dos
+  scores dos matches pra calcular o Score Total), e monta `matchCounts`/`mc80`/`mc70` a partir
+  dessa mesma leitura (removida a segunda leitura redundante da aba MATCHES que existia antes).
+- **Decisão confirmada com o usuário**: contatos com `categoria` em `Corretor`, `Parceiro`,
+  `Descartar` ou `Igreja` (campo que só existe em contatos migrados da base legada) continuam
+  fora das listas quente/morno/frio — sem esse filtro, o Score Total classificaria por padrão
+  qualquer contato sem info (score 0, sem matches) como "frio" (< 50), o que faria a lista
+  "frios" incluir corretores e contatos descartados que antes eram excluídos pelo piso antigo de
+  `score >= 60`.
+- **Top 20 não mudou** — continua ordenado pelo score de cadastro puro (`obj.score`), não pelo
+  Score Total. É uma métrica diferente ("maior score de cadastro" vs "temperatura de match").
+- `dashboard.html`: as listas quente/morno/frio agora mostram o `scoreTotal` no badge (com o
+  score de cadastro original em tooltip), e os limiares do drawer do cliente (badge de
+  temperatura + "próximos passos") foram recalibrados de 80/70/60 para 75/50, pra ficar
+  consistente com a nova classificação. O card individual de cada imóvel dentro do drawer
+  (`m.scoreMatch`, dentro de `carregarMatchesDrawer`) **não mudou** — continua com os limiares
+  80/70 antigos, porque é uma escala diferente (score do match individual, não a temperatura do
+  cliente).
+
+**Cancelado nesta sessão**: um pedido de botão "Atualizar" no dashboard (revenda → construtoras →
+matching em sequência) foi cancelado pelo usuário antes da implementação, por falta de definição
+de que função deveria rodar pra "atualizar construtoras" (não existe sync automático pra essa
+aba hoje).
+
+## 2026-07-01 (parte 1) — Características do imóvel, Preço Limite e classificação automática
 
 Contexto: sessão de trabalho feita numa estação cliente (`C:\base_inteligente`), com deploy do
 backend em Google Apps Script (arquivo `Code.gs`, não versionado neste repositório — vive só no
