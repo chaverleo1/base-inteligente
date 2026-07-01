@@ -999,7 +999,10 @@
     try {
       const resp = await fetch(WEBHOOK_URL + '?acao=buscar_linha&linha=' + encodeURIComponent(linha));
       const c = await resp.json();
-      if (!c) { showToast('Cliente não encontrado', 'erro'); return; }
+      if (!c || c.status || !c.nome) {
+        showToast('Não foi possível carregar o cliente (Code.gs desatualizado?)', 'erro');
+        return;
+      }
       setMode('atualizar');
       carregarContato(c);
     } catch (e) {

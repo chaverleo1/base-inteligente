@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 8) — Editar não encontra cliente até o Code.gs ser reimplantado
+
+Usuário testou o botão Editar: parou de abrir nova janela (fix da parte 7 funcionou), mas ainda
+não encontra o cadastro. Causa: a ação `buscar_linha` só existe no `code.gs.txt` local — a
+implantação em produção ainda não foi atualizada com esse trecho, então a chamada retorna
+`{"status":"acao desconhecida"}` (confirmado via curl direto na URL do Web App).
+
+`carregarClienteDaUrl()` tratava essa resposta como se fosse um cliente válido (só checava `!c`,
+não o formato), preenchendo o formulário com campos vazios sem avisar o motivo. Agora valida
+`c.status` (indica erro/ação não reconhecida) e `c.nome` (campo obrigatório que só existe num
+cliente de verdade) antes de prosseguir, mostrando um toast claro em vez de falhar em silêncio.
+
+**Ação pendente do usuário**: colar o trecho `buscar_linha` (parte 7) no Code.gs e reimplantar.
+
 ## 2026-07-01 (parte 7) — Botão "Editar" do dashboard não preenchia o formulário
 
 Problema: botão Editar na página do cliente abria `index.html` em branco (às vezes pedindo login
