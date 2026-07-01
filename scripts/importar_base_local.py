@@ -45,6 +45,9 @@ COLUNAS_SHEETS = [
     "prioridade", "categoria", "nome_bruto",
     # Colunas usadas pelo dashboard, preenchidas manualmente no Sheets
     "tipo_contato", "tags",
+    # ID permanente do cliente — gerado aqui na migração, nunca recalculado
+    # por posição de linha (ver preencherIdsFaltantes() no Code.gs)
+    "idCliente",
 ]
 
 # Mapeamento: coluna do Sheets -> coluna no base_processada.csv
@@ -87,7 +90,7 @@ def main():
         writer = csv.DictWriter(f, fieldnames=COLUNAS_SHEETS, extrasaction="ignore")
         writer.writeheader()
 
-        for row in linhas:
+        for idx, row in enumerate(linhas, start=1):
             nova = {}
             for col in COLUNAS_SHEETS:
                 origem = MAPA.get(col, col)  # usa mapeamento ou nome direto
@@ -100,6 +103,11 @@ def main():
             # urgencia: se veio de prioridade, limpa o "—"
             if nova.get("urgencia") == "—":
                 nova["urgencia"] = ""
+
+            # ID permanente — mesma numeracao do gerarCodigo_ historico
+            # (linha 1 de dados = CLI-10001), mas gravado na planilha em vez
+            # de recalculado pela posicao da linha
+            nova["idCliente"] = f"CLI-{10000 + idx}"
 
             writer.writerow(nova)
 

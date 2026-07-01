@@ -1,5 +1,38 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 11) — ID permanente do cliente (fim do CLI-XXXXX instável)
+
+Problema descoberto ao investigar um caso confuso: o usuário perguntou sobre CLI-10048 e, ao
+verificar de novo minutos depois, esse código já apontava pra uma **pessoa completamente
+diferente** ("Fernando Neves" em vez de "Priscila"). Causa raiz: `gerarCodigo_(linha)` calculava
+o código **a partir da posição da linha na planilha**, não é um identificador real — toda vez que
+a aba CONTATOS é reimportada/reordenada (o que já aconteceu várias vezes nesta sessão), todos os
+códigos CLI-XXXXX silenciosamente passam a apontar pra pessoas diferentes.
+
+**Fix — ID permanente de verdade:**
+- Nova coluna `idCliente` no `CABECALHO` (Code.gs) — gravada na própria linha, nunca recalculada.
+- `proximoIdCliente_()`: gera o próximo ID lendo o maior número já usado na coluna + 1 (com
+  `LockService` pra evitar corrida em cadastros simultâneos).
+- `salvar()`: gera e grava um ID novo pra todo cadastro novo.
+- `atualizar()`: preserva o ID existente, igual já fazíamos com `dataCadastro`/`tipo_contato`.
+- `preencherIdsFaltantes()`: função pra rodar **uma vez manualmente** depois do deploy — garante
+  o cabeçalho da coluna e preenche o ID de todo contato que já existe na planilha hoje (a base
+  toda, migrada antes dessa feature existir). Não mexe em mais nada da linha, só preenche o que
+  falta.
+- `dadosDashboard()`, `top20`, `empurrarMatch_()`: agora usam `obj.idCliente` (com fallback pro
+  cálculo antigo só como segurança, caso alguma linha ainda não tenha sido preenchida).
+- `dashboard.html`: a função `abrirCliente()` fazia uma conta frágil (`_linha` esperada a partir
+  do código) pra desambiguar clientes com nome repetido — simplificado pra `x.idCliente === cod`,
+  direto e correto.
+- `importar_base_local.py`: futuras migrações já saem com `idCliente` de fábrica
+  (`CLI-{10000+posição}`, mesma numeração histórica).
+
+**Importante**: a planilha `planilha_modelo_contatos.xlsx` regenerada NÃO deve ser reimportada
+sobre a aba CONTATOS em produção — a planilha ao vivo já divergiu bastante do arquivo de
+migração local (reimportações/edições manuais ao longo da sessão). Em vez disso, depois de
+reimplantar o Code.gs, **rodar `preencherIdsFaltantes()` uma vez** no editor do Apps Script —
+ela trabalha em cima do que já está na planilha, sem substituir nada.
+
 ## 2026-07-01 (parte 9) — Score de preço ruim escondido atrás de um total 100
 
 Usuário reportou: cliente CLI-10048 (precoLimite 600 mil) recebeu match de imóvel de R$420.000
