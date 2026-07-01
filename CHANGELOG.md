@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-01 (parte 14) — Correção: bairros duplicados por grafia diferente
+
+`opcoes_filtro` (parte 13) retornou 220 bairros em produção — inflado porque o mesmo bairro
+aparece cadastrado com grafias diferentes (ex: "AEROVIARIO" maiúsculo sem acento e "Aeroviário"
+com acento contam como dois distintos). Corrigido: `opcoesFiltro_()` agora agrupa por texto
+normalizado (`norm_`, mesma função usada no motor de matching) antes de montar a lista, mantendo
+uma versão em Title Case pra exibição. Testado: 5 grafias diferentes de 3 bairros reais
+viraram corretamente 3 chips, sem duplicata.
+
 ## 2026-07-01 (parte 13) — Busca Aberta: chips dinâmicos + preço digitável
 
 Dois ajustes na Busca Aberta (parte 12):
