@@ -695,6 +695,13 @@ async function carregarMatchesDrawer(cod, cliente) {
       const condPag = [];
       if (m.imoConstrutora)  condPag.push(`🏢 ${m.imoConstrutora}`);
       if (m.imoEntrega)      condPag.push(`📅 Entrega: ${m.imoEntrega}`);
+      if (isLanc && m.imoDataTabela) {
+        const stOk = m.imoStatusTabela === 'Atualizada';
+        const stDes = m.imoStatusTabela === 'Desatualizada';
+        const stIcon = stDes ? '⚠️' : stOk ? '✅' : '📋';
+        const stColor = stDes ? 'color:#c98000;font-weight:700' : stOk ? 'color:#00a884;font-weight:700' : '';
+        condPag.push(`<span style="${stColor}">${stIcon} Tabela ${m.imoDataTabela}${m.imoStatusTabela ? ' — ' + m.imoStatusTabela : ''}</span>`);
+      }
       if (m.imoEntradaPerc)  condPag.push(`💰 Entrada: ${m.imoEntradaPerc}%${m.imoEntradaValor?' (R$ '+m.imoEntradaValor+')':''}`);
       if (m.imoSinalPerc)    condPag.push(`🤝 Sinal: ${m.imoSinalPerc}%${m.imoSinalValor?' (R$ '+m.imoSinalValor+')':''}`);
       if (m.imoCorretorPerc) condPag.push(`📊 Comissão corretor: ${m.imoCorretorPerc}%`);

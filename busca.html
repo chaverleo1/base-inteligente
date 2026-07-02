@@ -1009,6 +1009,7 @@ function renderResultados(resultados, filtros, interpretado) {
           <div class="card-preco">${isLanc && im.precoMin && im.precoMax ? `${fmt_(im.precoMin)} – ${fmt_(im.precoMax)}` : fmt_(im.valorVenda)} ${im.padrao ? `<span>· ${im.padrao}</span>` : ''}</div>
           <div class="tags-match">
             <span class="tag ${isLanc ? 'tag-fonte-lanc' : isConst ? 'tag-fonte-const' : 'tag-fonte-rev'}">${isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
+            ${isLanc && im.dataTabela ? `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:${im.statusTabela==='Desatualizada'?'rgba(201,128,0,.18)':'rgba(0,180,148,.14)'};color:${im.statusTabela==='Desatualizada'?'#c98000':'#00a884'}">${im.statusTabela==='Desatualizada'?'⚠️':'✅'} Tabela ${im.dataTabela}${im.statusTabela?' · '+im.statusTabela:''}</span>` : ''}
           </div>
           <div class="card-actions">
             <button class="btn-sm btn-ver" onclick="event.stopPropagation();abrirDetalhe(${JSON.stringify(im).replace(/"/g,'&quot;')})">Ver detalhes e mensagem</button>
@@ -1046,6 +1047,7 @@ function abrirDetalhe(im) {
     ${isLancM ? `<div class="detalhe-item"><div class="detalhe-key">Tipologia</div><div class="detalhe-val">${im.tipologiaLabel || '—'}</div></div>` : `<div class="detalhe-item"><div class="detalhe-key">Padrão</div><div class="detalhe-val">${im.padrao || '—'}</div></div>`}
     ${isLancM && im.construtora ? `<div class="detalhe-item"><div class="detalhe-key">Construtora</div><div class="detalhe-val">${im.construtora}</div></div>` : ''}
     ${isLancM && im.estagio ? `<div class="detalhe-item"><div class="detalhe-key">Status obra</div><div class="detalhe-val">${im.estagio}</div></div>` : ''}
+    ${isLancM && im.dataTabela ? `<div class="detalhe-item"><div class="detalhe-key">Tabela de preços</div><div class="detalhe-val" style="font-weight:700;color:${im.statusTabela==='Desatualizada'?'#c98000':'#00a884'}">${im.statusTabela==='Desatualizada'?'⚠️':'✅'} ${im.dataTabela}${im.statusTabela?' — '+im.statusTabela:''}</div></div>` : ''}
     <div class="detalhe-item"><div class="detalhe-key">Score do match</div><div class="detalhe-val">${im.score}</div></div>
   `;
 
