@@ -344,6 +344,16 @@ select.form-input option { background: var(--surface2); }
           <input class="form-input" id="f-construtora" placeholder="Nome da construtora">
         </div>
         <div class="form-group">
+          <div class="form-label">Tipo de imóvel</div>
+          <select class="form-input" id="f-tipo">
+            <option value="">Selecione</option>
+            <option value="Apartamento">Apartamento</option>
+            <option value="Casa">Casa</option>
+            <option value="Terreno">Terreno / Lote</option>
+            <option value="Comercial">Comercial</option>
+          </select>
+        </div>
+        <div class="form-group">
           <div class="form-label">Status</div>
           <select class="form-input" id="f-status">
             <option value="">Selecione</option>
@@ -354,8 +364,21 @@ select.form-input option { background: var(--surface2); }
           </select>
         </div>
         <div class="form-group">
+          <div class="form-label">Padrão</div>
+          <select class="form-input" id="f-padrao">
+            <option value="">Selecione</option>
+            <option value="Alto">Alto</option>
+            <option value="Médio">Médio</option>
+            <option value="Popular">Popular / Econômico</option>
+          </select>
+        </div>
+        <div class="form-group">
           <div class="form-label">Bairro <span class="lbl-warn" id="lbl-bairro" style="display:none">⚠ não detectado</span></div>
           <input class="form-input" id="f-bairro" placeholder="Bairro / Região">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Cidade</div>
+          <input class="form-input" id="f-cidade" placeholder="Ex: Goiânia">
         </div>
         <div class="form-group">
           <div class="form-label">Previsão de entrega</div>
@@ -364,6 +387,10 @@ select.form-input option { background: var(--surface2); }
         <div class="form-group span2">
           <div class="form-label">Endereço</div>
           <input class="form-input" id="f-endereco" placeholder="Rua, número, complemento">
+        </div>
+        <div class="form-group span2">
+          <div class="form-label">URL do site / Orulo</div>
+          <input class="form-input" id="f-urlSite" placeholder="https://...">
         </div>
         <div class="form-group span2">
           <div class="form-label">Lazer / Infraestrutura</div>
@@ -421,14 +448,17 @@ select.form-input option { background: var(--surface2); }
         <table class="unidades-table">
           <thead>
             <tr>
-              <th style="width:90px">Tipologia</th>
-              <th style="width:70px">Área m²</th>
-              <th style="width:55px">Qtd</th>
-              <th style="width:55px">Vagas</th>
-              <th style="width:65px">Escaninho</th>
-              <th class="r" style="width:110px">Preço Médio</th>
-              <th class="r" style="width:100px">Mínimo</th>
-              <th class="r" style="width:100px">Máximo</th>
+              <th style="width:48px">Qtos</th>
+              <th style="width:48px">Suítes</th>
+              <th style="width:45px">Banh</th>
+              <th style="width:68px">Área m²</th>
+              <th style="width:68px">Área Terr</th>
+              <th style="width:48px">Qtd</th>
+              <th style="width:48px">Vagas</th>
+              <th style="width:60px">Escaninho</th>
+              <th class="r" style="width:105px">Preço Médio</th>
+              <th class="r" style="width:95px">Mínimo</th>
+              <th class="r" style="width:95px">Máximo</th>
               <th style="width:28px"></th>
             </tr>
           </thead>
@@ -831,12 +861,9 @@ function agruparPorArea(uns) {
     const vagas  = g.items.map(u => u.vagas).filter(v => v > 0);
     const qModa  = moda(g.items.map(u => u.quartos || 0));
     const sModa  = moda(g.items.map(u => u.suites  || 0));
-    // Quartos=0 e vagas=0 → lote/terreno → tipologia vazia (usuário preenche)
-    const tipologia = (qModa === 0 && vMedia === 0)
-      ? ''
-      : (qModa === 0 ? 'Studio' : qModa + 'q' + (sModa > 0 ? '+' + sModa + 's' : ''));
     return {
-      tipologia,
+      quartos:     qModa,
+      suites:      sModa,
       areaUtil:    g.area,
       qtdUnidades: g.items.length,
       vagas:       vagas.length ? Math.round(vagas.reduce((a, b) => a + b, 0) / vagas.length) : 0,
@@ -910,11 +937,13 @@ function renderB1(b) {
   set('f-nome', b.nomeEmpreendimento);
   set('f-construtora', b.construtora);
   set('f-bairro', b.bairro);
+  set('f-cidade', b.cidade);
   set('f-endereco', b.endereco);
   set('f-entrega', b.previsaoEntrega);
   set('f-lazer', b.lazer);
   set('f-conceito', b.conceito);
   if (b.status) document.getElementById('f-status').value = b.status;
+  if (b.tipo)   document.getElementById('f-tipo').value   = b.tipo;
 }
 
 function renderPlano(p) {
@@ -944,12 +973,15 @@ function criarLinha(u = {}) {
   const inp = (val, ph, align) =>
     `<input class="t-inp" value="${val}" placeholder="${ph}" style="text-align:${align||'left'}">`;
   tr.innerHTML = `
-    <td>${inp(fmtN(u.tipologia), 'Ex: 3q+2s', 'left')}</td>
-    <td>${inp(u.areaUtil||'', 'm²', 'right')}</td>
+    <td>${inp(u.quartos  != null && u.quartos  !== '' ? u.quartos  : '', '0', 'center')}</td>
+    <td>${inp(u.suites   != null && u.suites   !== '' ? u.suites   : '', '0', 'center')}</td>
+    <td>${inp(u.banheiros!= null && u.banheiros!== '' ? u.banheiros: '', '0', 'center')}</td>
+    <td>${inp(u.areaUtil ||'', 'm²',  'right')}</td>
+    <td>${inp(u.areaTerr ||'', 'm²',  'right')}</td>
     <td>${inp(u.qtdUnidades||'', 'qtd', 'center')}</td>
-    <td>${inp(u.vagas||'', 'qtd', 'center')}</td>
+    <td>${inp(u.vagas    ||'', 'qtd', 'center')}</td>
     <td>${inp(fmtN(u.escaninho), 'S/N', 'center')}</td>
-    <td>${inp(fmtP(u.precoMedio), 'R$', 'right')}</td>
+    <td>${inp(fmtP(u.precoMedio), 'R$',  'right')}</td>
     <td>${inp(fmtP(u.precoMin),   'mín', 'right')}</td>
     <td>${inp(fmtP(u.precoMax),   'máx', 'right')}</td>
     <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
@@ -972,11 +1004,14 @@ function limparMotor() {
   if (linkEl) { linkEl.style.display = 'none'; }
   document.getElementById('preview-box').style.display = 'none';
   // Limpar campos
-  ['f-nome','f-construtora','f-bairro','f-endereco','f-entrega','f-lazer','f-conceito',
+  ['f-nome','f-construtora','f-cidade','f-bairro','f-endereco','f-entrega',
+   'f-urlSite','f-lazer','f-conceito',
    'f-entrada','f-parcOb','f-parcEntrega','f-banco','f-planoLongo'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
   });
   document.getElementById('f-status').value = '';
+  document.getElementById('f-tipo').value   = '';
+  document.getElementById('f-padrao').value = '';
   document.getElementById('f-fgts').value   = '';
   document.getElementById('unidades-tbody').innerHTML = '';
 }
@@ -987,10 +1022,14 @@ function lerPreview() {
   const empr = {
     nomeEmpreendimento: g('f-nome'),
     construtora:        g('f-construtora'),
+    tipo:               g('f-tipo'),
     bairro:             g('f-bairro'),
+    cidade:             g('f-cidade'),
     endereco:           g('f-endereco'),
     status:             g('f-status'),
     previsaoEntrega:    g('f-entrega'),
+    padrao:             g('f-padrao'),
+    urlSite:            g('f-urlSite'),
     lazer:              g('f-lazer'),
     conceito:           g('f-conceito'),
     entrada:            g('f-entrada'),
@@ -1003,11 +1042,16 @@ function lerPreview() {
   const unidades = [];
   document.querySelectorAll('#unidades-tbody tr').forEach(tr => {
     const inps = [...tr.querySelectorAll('input')];
-    if (inps.length < 8) return;
+    if (inps.length < 11) return;
     const v = inps.map(i => i.value.trim());
     const limP = s => { const n = parseFloat(s.replace(/\./g,'').replace(',','.').replace('R$','').trim()); return isNaN(n)?0:(n<10000?n*1000:n); };
-    const a = parseFloat(v[1]) || 0;
-    if (a > 0) unidades.push({ tipologia:v[0], areaUtil:a, qtdUnidades:parseInt(v[2])||0, vagas:parseInt(v[3])||0, escaninho:v[4], precoMedio:limP(v[5]), precoMin:limP(v[6]), precoMax:limP(v[7]) });
+    // v[0]=quartos v[1]=suites v[2]=banheiros v[3]=areaUtil v[4]=areaTerr v[5]=qtd v[6]=vagas v[7]=escaninho v[8]=precoMedio v[9]=precoMin v[10]=precoMax
+    const q  = parseInt(v[0]) || 0;
+    const s  = parseInt(v[1]) || 0;
+    const vg = parseInt(v[6]) || 0;
+    const tipologia = (q === 0 && vg === 0) ? '' : (q === 0 ? 'Studio' : q + 'q' + (s > 0 ? '+' + s + 's' : ''));
+    const a = parseFloat(v[3]) || 0;
+    if (a > 0) unidades.push({ tipologia, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:parseFloat(v[4])||0, qtdUnidades:parseInt(v[5])||0, vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]) });
   });
   return { ...empr, unidades };
 }
