@@ -1,0 +1,189 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ADIÇÕES AO CODE.GS — MÓDULO LANCAMENTOS
+// Cole estes trechos no seu Code.gs (arquivo code.txt) nos locais indicados.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 1. CABEÇALHO DA ABA LANCAMENTOS ─────────────────────────────────────────
+// Adicione esta constante perto das outras definições de cabeçalho (ex: CABECALHO_MATCHES)
+
+const CABECALHO_LANCAMENTOS = [
+  'idLancamento', 'nomeEmpreendimento', 'construtora', 'bairro', 'endereco',
+  'status', 'previsaoEntrega', 'tipologia', 'areaUtil', 'qtdUnidades',
+  'vagas', 'escaninho', 'precoMedio', 'precoMin', 'precoMax',
+  'entrada', 'parcelasObra', 'parcelasEntrega', 'avaliacaoBanco', 'fgts',
+  'planoLongo', 'lazer', 'conceito', 'dataCadastro'
+];
+
+
+// ── 2. ADICIONE NO doGet — dentro do switch/if de acao ──────────────────────
+// Localize onde ficam os outros casos (ex: case 'buscar', case 'dashboard')
+// e adicione:
+
+  if (acao === 'listar_lancamentos') {
+    return respJson_(listarLancamentos_());
+  }
+
+
+// ── 3. ADICIONE NO doPost — dentro do switch/if de acao ─────────────────────
+// Localize onde ficam os outros casos POST (ex: 'salvar', 'atualizar', 'excluir')
+// e adicione:
+
+  if (acao === 'salvar_lancamento') {
+    return respJson_(salvarLancamento_(dados));
+  }
+
+  if (acao === 'excluir_lancamento') {
+    return respJson_(excluirLancamento_(dados));
+  }
+
+
+// ── 4. FUNÇÕES AUXILIARES — cole no final do Code.gs ────────────────────────
+
+function obterAbaLancamentos_(ss) {
+  let aba = ss.getSheetByName('LANCAMENTOS');
+  if (!aba) {
+    aba = ss.insertSheet('LANCAMENTOS');
+    aba.appendRow(CABECALHO_LANCAMENTOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_LANCAMENTOS.length)
+       .setFontWeight('bold')
+       .setBackground('#1e2335')
+       .setFontColor('#e8ecf4');
+  }
+  return aba;
+}
+
+function proximoIdLancamento_(ss) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const aba  = obterAbaLancamentos_(ss);
+    const vals = aba.getRange(2, 1, Math.max(aba.getLastRow() - 1, 1), 1).getValues().flat().filter(v => v);
+    const nums  = vals.map(v => parseInt(String(v).replace('LAN-', ''))).filter(n => !isNaN(n));
+    const prox  = nums.length ? Math.max(...nums) + 1 : 1;
+    return 'LAN-' + String(prox).padStart(5, '0');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listarLancamentos_() {
+  try {
+    const ss  = SpreadsheetApp.openById(SHEET_ID);
+    const aba = obterAbaLancamentos_(ss);
+    const lr  = aba.getLastRow();
+    if (lr < 2) return { lancamentos: [] };
+
+    const dados = aba.getRange(2, 1, lr - 1, CABECALHO_LANCAMENTOS.length).getValues();
+    const lancamentos = dados
+      .filter(r => r[0])
+      .map(r => {
+        const obj = {};
+        CABECALHO_LANCAMENTOS.forEach((col, i) => obj[col] = r[i]);
+        return obj;
+      });
+    return { lancamentos };
+  } catch(e) {
+    return { lancamentos: [], erro: e.message };
+  }
+}
+
+function salvarLancamento_(dados) {
+  try {
+    const ss     = SpreadsheetApp.openById(SHEET_ID);
+    const aba    = obterAbaLancamentos_(ss);
+    const id     = proximoIdLancamento_(ss);
+    const agora  = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const unidades = dados.unidades || [];
+
+    // Verificar se já existe empreendimento com mesmo nome (merge)
+    const lr = aba.getLastRow();
+    if (lr > 1) {
+      const nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
+      const idxExistente = nomes.findIndex(n =>
+        n && String(n).toLowerCase().trim() === String(dados.nomeEmpreendimento || '').toLowerCase().trim()
+      );
+      if (idxExistente >= 0) {
+        // Empreendimento já existe — apaga todas as linhas dele e reinsere
+        const idExistente = aba.getRange(idxExistente + 2, 1).getValue();
+        excluirLancamento_({ idLancamento: idExistente });
+      }
+    }
+
+    // Gravar uma linha por Unidade Referência
+    const linhasParaGravar = unidades.map(u => [
+      id,
+      dados.nomeEmpreendimento || '',
+      dados.construtora        || '',
+      dados.bairro             || '',
+      dados.endereco           || '',
+      dados.status             || '',
+      dados.previsaoEntrega    || '',
+      u.tipologia              || '',
+      u.areaUtil               || '',
+      u.qtdUnidades            || '',
+      u.vagas                  || '',
+      u.escaninho              || '',
+      u.precoMedio             || '',
+      u.precoMin               || '',
+      u.precoMax               || '',
+      dados.entrada            || '',
+      dados.parcelasObra       || '',
+      dados.parcelasEntrega    || '',
+      dados.avaliacaoBanco     || '',
+      dados.fgts               || '',
+      dados.planoLongo         || '',
+      dados.lazer              || '',
+      dados.conceito           || '',
+      agora,
+    ]);
+
+    if (linhasParaGravar.length) {
+      aba.getRange(aba.getLastRow() + 1, 1, linhasParaGravar.length, CABECALHO_LANCAMENTOS.length)
+         .setValues(linhasParaGravar);
+    }
+
+    return { ok: true, idLancamento: id, unidades: linhasParaGravar.length };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+function excluirLancamento_(dados) {
+  try {
+    const ss  = SpreadsheetApp.openById(SHEET_ID);
+    const aba = obterAbaLancamentos_(ss);
+    const lr  = aba.getLastRow();
+    if (lr < 2) return { ok: true };
+
+    const ids = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+    // Apagar de baixo para cima para não deslocar índices
+    for (let i = ids.length - 1; i >= 0; i--) {
+      const igual = dados.idLancamento
+        ? ids[i] === dados.idLancamento
+        : String(aba.getRange(i + 2, 2).getValue()).toLowerCase().trim() === String(dados.nomeEmpreendimento || '').toLowerCase().trim();
+      if (igual) aba.deleteRow(i + 2);
+    }
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+
+// ── 5. MATCHING — incluir LANCAMENTOS no motor (opcional) ───────────────────
+// No Code.gs, localize a função que lê REVENDA e CONSTRUTORA-APARTAMENTOS
+// para o motor de matching (provavelmente algo como carregarProdutos_() ou similar).
+// Adicione a leitura da aba LANCAMENTOS da mesma forma, mapeando:
+//   tipo        → tipologia
+//   bairro      → bairro
+//   quartos     → extrair número de tipologia (ex: "3q" → 3)
+//   valorVenda  → precoMedio
+//   areaUtil    → areaUtil
+//   fonte       → 'LANCAMENTO'
+//   condominio  → nomeEmpreendimento
+//   endereco    → endereco
+//
+// Regra especial de urgência:
+//   Se o cliente tem urgência ALTA, não incluir lançamentos cuja
+//   previsaoEntrega for mais de 12 meses à frente da data atual.

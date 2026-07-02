@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lançamentos — BASE INTELIGENTE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg:        #0f1117;
+  --surface:   #181c27;
+  --surface2:  #1e2335;
+  --surface3:  #242840;
+  --border:    #2a3050;
+  --border2:   #343d60;
+  --accent:    #4f7cff;
+  --accent2:   #00d4aa;
+  --amber:     #f59e0b;
+  --coral:     #ff6b6b;
+  --danger:    #ff6b6b;
+  --text:      #e8ecf4;
+  --text2:     #8892aa;
+  --text3:     #4a5470;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+a { text-decoration: none; color: inherit; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -.3px; }
+.logo span { color: var(--text2); font-weight: 400; }
+.nav-tabs { display: flex; background: var(--bg); border-radius: 8px; padding: 3px; gap: 2px; }
+.nav-tab { padding: 6px 16px; border-radius: 6px; border: none; background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif; text-decoration: none; display: inline-block; }
+.nav-tab.active { background: var(--accent); color: #fff; }
+
+/* ── MAIN ── */
+.main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; }
+
+/* ── SECTION HEADER ── */
+.sec-header { margin-bottom: 14px; }
+.sec-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; }
+.sec-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+/* ── MOTOR ── */
+.motor-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 36px;
+}
+.motor-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+textarea.motor-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 13px;
+  font-family: 'Inter', sans-serif; padding: 12px; outline: none;
+  resize: vertical; min-height: 170px; line-height: 1.55; transition: border .2s;
+}
+textarea.motor-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,.1); }
+textarea.motor-input::placeholder { color: var(--text3); }
+.motor-actions { display: flex; gap: 10px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+.btn-extrair {
+  padding: 11px 22px; border-radius: var(--radius-sm); background: var(--accent);
+  color: #fff; border: none; font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .18s;
+}
+.btn-extrair:hover { background: #3d6aee; }
+.btn-extrair:disabled { opacity: .5; cursor: default; }
+.btn-sec {
+  padding: 11px 16px; border-radius: var(--radius-sm); background: var(--surface2);
+  color: var(--text2); border: 1px solid var(--border); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s;
+}
+.btn-sec:hover { border-color: var(--border2); color: var(--text); }
+.motor-hint { font-size: 12px; color: var(--text3); }
+
+/* ── PREVIEW ── */
+.preview-box {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 20px; margin-top: 20px;
+}
+.preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
+.preview-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; color: var(--accent); }
+.preview-badge { font-size: 11px; padding: 3px 10px; border-radius: 4px; font-weight: 700; }
+
+/* ── FORM ── */
+.bloco-title {
+  font-size: 11px; font-weight: 700; color: var(--accent2); text-transform: uppercase;
+  letter-spacing: .7px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.bloco-title::after { content: ''; flex: 1; height: 1px; background: rgba(0,212,170,.2); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .form-grid .span2, .form-grid .span3 { grid-column: span 1; } }
+.form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 700px) { .form-grid.cols3 { grid-template-columns: 1fr 1fr; } }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.span2 { grid-column: span 2; }
+.form-group.span3 { grid-column: span 3; }
+.form-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; display: flex; align-items: center; gap: 6px; }
+.lbl-warn { font-size: 10px; color: var(--coral); font-weight: 700; }
+.form-input {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xs);
+  color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif;
+  padding: 8px 10px; outline: none; transition: border .2s;
+}
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,124,255,.1); }
+.form-input::placeholder { color: var(--text3); }
+.form-input.ok { border-color: rgba(0,212,170,.4); }
+.form-input.warn { border-color: rgba(255,107,107,.4); }
+textarea.form-input { resize: vertical; min-height: 68px; line-height: 1.5; }
+select.form-input option { background: var(--surface2); }
+
+/* ── PREVIEW DIVIDER ── */
+.pdiv { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* ── TABELA UNIDADES ── */
+.table-wrap { overflow-x: auto; margin-bottom: 14px; }
+.unidades-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+.unidades-table th {
+  background: var(--surface); color: var(--text3); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px;
+  border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap;
+}
+.unidades-table th.r { text-align: right; }
+.unidades-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.unidades-table tbody tr:last-child td { border-bottom: none; }
+.unidades-table tbody tr:hover td { background: rgba(255,255,255,.02); }
+.t-inp {
+  background: transparent; border: 1px solid transparent; border-radius: 4px;
+  color: var(--text); font-size: 12px; font-family: 'Inter', sans-serif;
+  padding: 3px 6px; outline: none; width: 100%; min-width: 60px; transition: border .15s;
+}
+.t-inp:focus { border-color: var(--accent); background: var(--surface); }
+.t-inp::placeholder { color: var(--text3); }
+
+/* ── BOTÃO ADICIONAR LINHA ── */
+.bloco-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.btn-add-linha {
+  font-size: 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); color: var(--accent); padding: 5px 14px;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s;
+}
+.btn-add-linha:hover { border-color: var(--accent); }
+
+/* ── SALVAR ── */
+.btn-salvar {
+  padding: 12px 28px; border-radius: var(--radius-sm); background: var(--accent2);
+  color: #0f1117; border: none; font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .18s;
+}
+.btn-salvar:hover { background: #00bfa0; transform: translateY(-1px); }
+.btn-salvar:disabled { opacity: .5; cursor: default; transform: none; }
+
+/* ── LISTA ── */
+.lista-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+}
+.lista-count { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.lista-count b { color: var(--accent2); font-size: 16px; }
+.filtro-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+.filtro-chip {
+  padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text2); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif;
+}
+.filtro-chip.on { background: rgba(79,124,255,.15); border-color: var(--accent); color: var(--accent); }
+.filtro-chip:hover { border-color: var(--border2); color: var(--text); }
+
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+
+/* ── CARD EMPREENDIMENTO ── */
+.emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
+.emp-card:hover { border-color: var(--border2); }
+.emp-card-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.emp-nome { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.emp-sub { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.emp-badges { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.st-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 4px; letter-spacing: .3px; }
+.st-obras   { background: rgba(245,158,11,.15); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
+.st-planta  { background: rgba(79,124,255,.15);  color: var(--accent); border: 1px solid rgba(79,124,255,.3); }
+.st-pronto  { background: rgba(0,212,170,.2);    color: var(--accent2); border: 1px solid rgba(0,212,170,.35); }
+.st-entregue{ background: rgba(0,212,170,.12);   color: var(--accent2); border: 1px solid rgba(0,212,170,.25); }
+.st-data    { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+
+.emp-card-body { padding: 14px 16px; }
+.emp-tipologias { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tip-chip { font-size: 11px; padding: 3px 10px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
+.emp-preco { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
+.emp-preco small { font-size: 11px; color: var(--text3); font-weight: 400; font-family: 'Inter', sans-serif; margin-left: 6px; }
+
+.emp-card-footer {
+  padding: 10px 16px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.btn-toggle { font-size: 12px; font-weight: 600; color: var(--accent); background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; padding: 0; }
+.btn-toggle:hover { text-decoration: underline; }
+.btn-del-emp { font-size: 11px; color: var(--text3); background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; }
+.btn-del-emp:hover { color: var(--danger); }
+
+/* ── PANEL UNIDADES ── */
+.emp-panel { display: none; border-top: 1px solid var(--border); background: var(--surface2); padding: 14px 16px; overflow-x: auto; }
+.emp-panel.open { display: block; }
+.plano-info { font-size: 11px; color: var(--text2); padding-top: 8px; border-top: 1px solid var(--border); margin-top: 4px; line-height: 1.7; }
+
+/* ── VAZIO ── */
+.vazio { text-align: center; padding: 60px 20px; }
+.vazio h3 { font-family: 'Space Grotesk', sans-serif; font-size: 18px; color: var(--text2); margin-bottom: 8px; }
+.vazio p { font-size: 13px; color: var(--text3); line-height: 1.6; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: var(--surface3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 12px 18px;
+  font-size: 13px; font-weight: 500; max-width: 340px;
+  transform: translateY(80px); opacity: 0; transition: all .3s; pointer-events: none;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.ok   { border-left: 3px solid var(--accent2); }
+.toast.erro { border-left: 3px solid var(--coral); }
+
+/* ── LOGIN ── */
+.login-overlay {
+  position: fixed; inset: 0; background: rgba(15,17,23,.96);
+  display: flex; align-items: center; justify-content: center; z-index: 9000;
+}
+.login-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; width: 340px; }
+.login-title { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.login-sub { font-size: 13px; color: var(--text3); margin-bottom: 24px; line-height: 1.5; }
+.login-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); color: var(--text); font-size: 14px;
+  font-family: 'Inter', sans-serif; padding: 11px 14px; outline: none;
+  margin-bottom: 12px; transition: border .2s;
+}
+.login-input:focus { border-color: var(--accent); }
+.btn-login { width: 100%; padding: 12px; border-radius: var(--radius-xs); background: var(--accent); color: #fff; border: none; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
+.btn-login:disabled { opacity: .6; cursor: default; }
+.login-erro { font-size: 12px; color: var(--coral); margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-title">BASE INTELIGENTE</div>
+    <div class="login-sub">Acesse com sua senha para continuar.</div>
+    <input class="login-input" type="password" id="login-senha" placeholder="Senha de acesso" onkeydown="if(event.key==='Enter')entrar()">
+    <button class="btn-login" id="btn-login" onclick="entrar()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="index.html"       class="nav-tab">Formulário</a>
+    <a href="dashboard.html"   class="nav-tab">Dashboard</a>
+    <a href="busca.html"       class="nav-tab">Busca Aberta</a>
+    <a href="lancamentos.html" class="nav-tab active">Lançamentos</a>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- MOTOR -->
+  <div class="sec-header">
+    <div class="sec-title">Novo Lançamento</div>
+    <div class="sec-sub">Cole o texto copiado da ORULO — o motor extrai e estrutura automaticamente em Bloco 1 (empreendimento) e Bloco 2 (unidades referência agrupadas por metragem).</div>
+  </div>
+
+  <div class="motor-box">
+    <div class="motor-label">Texto livre (ORULO ou outra fonte)</div>
+    <textarea class="motor-input" id="textoMotor"
+      placeholder="Cole aqui o texto completo da página do empreendimento. Inclua: nome, construtora, endereço, bairro, lazer, status, previsão de entrega, tabela de unidades com áreas e preços, e plano de pagamento..."></textarea>
+    <div class="motor-actions">
+      <button class="btn-extrair" id="btnExtrair" onclick="extrairDados()">⚡ Extrair Dados</button>
+      <button class="btn-sec" onclick="limparMotor()">✕ Limpar</button>
+      <span class="motor-hint">Campos extraídos ficam editáveis para revisão antes de salvar.</span>
+    </div>
+
+    <!-- PREVIEW -->
+    <div id="preview-box" class="preview-box" style="display:none">
+      <div class="preview-header">
+        <div class="preview-title">Pré-visualização — revise antes de salvar</div>
+        <span class="preview-badge" id="preview-badge"></span>
+      </div>
+
+      <!-- BLOCO 1 -->
+      <div class="bloco-title">Bloco 1 — Empreendimento</div>
+      <div class="form-grid">
+        <div class="form-group span2">
+          <div class="form-label">Nome do empreendimento <span class="lbl-warn" id="lbl-nome" style="display:none">⚠ não detectado</span></div>
+          <input class="form-input" id="f-nome" placeholder="Ex: Residencial Park Privilege">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Construtora / Incorporadora</div>
+          <input class="form-input" id="f-construtora" placeholder="Nome da construtora">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Status</div>
+          <select class="form-input" id="f-status">
+            <option value="">Selecione</option>
+            <option value="Em planta">Em planta</option>
+            <option value="Em obras">Em obras</option>
+            <option value="Pronto">Pronto para entregar</option>
+            <option value="Entregue">Entregue</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Bairro <span class="lbl-warn" id="lbl-bairro" style="display:none">⚠ não detectado</span></div>
+          <input class="form-input" id="f-bairro" placeholder="Bairro / Região">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Previsão de entrega</div>
+          <input class="form-input" id="f-entrega" placeholder="Ex: Dez/2026">
+        </div>
+        <div class="form-group span2">
+          <div class="form-label">Endereço</div>
+          <input class="form-input" id="f-endereco" placeholder="Rua, número, complemento">
+        </div>
+        <div class="form-group span2">
+          <div class="form-label">Lazer / Infraestrutura</div>
+          <textarea class="form-input" id="f-lazer" placeholder="Piscina, academia, salão de festas, espaço gourmet..."></textarea>
+        </div>
+        <div class="form-group span2">
+          <div class="form-label">Conceito / Descrição do empreendimento</div>
+          <textarea class="form-input" id="f-conceito" placeholder="Texto de apresentação do empreendimento"></textarea>
+        </div>
+      </div>
+
+      <hr class="pdiv">
+
+      <!-- PLANO DE PAGAMENTO -->
+      <div class="bloco-title">Plano de pagamento</div>
+      <div class="form-grid cols3">
+        <div class="form-group">
+          <div class="form-label">Entrada (R$ ou %)</div>
+          <input class="form-input" id="f-entrada" placeholder="Ex: 20% ou R$ 80.000">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Parcelas em obra</div>
+          <input class="form-input" id="f-parcOb" placeholder="Ex: 36 × R$ 1.500">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Saldo na entrega / chaves</div>
+          <input class="form-input" id="f-parcEntrega" placeholder="Ex: R$ 120.000">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Avaliação banco</div>
+          <input class="form-input" id="f-banco" placeholder="Ex: Caixa, Bradesco">
+        </div>
+        <div class="form-group">
+          <div class="form-label">FGTS</div>
+          <select class="form-input" id="f-fgts">
+            <option value="">Não informado</option>
+            <option value="Sim">Aceita FGTS</option>
+            <option value="Não">Não aceita FGTS</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Outros planos</div>
+          <input class="form-input" id="f-planoLongo" placeholder="Ex: Direto 120 meses">
+        </div>
+      </div>
+
+      <hr class="pdiv">
+
+      <!-- BLOCO 2 -->
+      <div class="bloco-row">
+        <div class="bloco-title" style="margin-bottom:0;flex:1">Bloco 2 — Unidades Referência <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(agrupadas por metragem)</span></div>
+        <button class="btn-add-linha" onclick="addLinhaUnidade()">+ Linha</button>
+      </div>
+      <div class="table-wrap">
+        <table class="unidades-table">
+          <thead>
+            <tr>
+              <th style="width:90px">Tipologia</th>
+              <th style="width:70px">Área m²</th>
+              <th style="width:55px">Qtd</th>
+              <th style="width:55px">Vagas</th>
+              <th style="width:65px">Escaninho</th>
+              <th class="r" style="width:110px">Preço Médio</th>
+              <th class="r" style="width:100px">Mínimo</th>
+              <th class="r" style="width:100px">Máximo</th>
+              <th style="width:28px"></th>
+            </tr>
+          </thead>
+          <tbody id="unidades-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn-salvar" id="btnSalvar" onclick="salvarLancamento()">💾 Salvar Lançamento</button>
+    </div>
+  </div>
+
+  <!-- LISTA -->
+  <div class="lista-header">
+    <div>
+      <div class="sec-title">Empreendimentos cadastrados</div>
+      <div class="lista-count" id="lista-count">Carregando...</div>
+    </div>
+    <div class="filtro-bar" id="filtro-bar"></div>
+  </div>
+  <div id="lista-grid" class="cards-grid">
+    <div class="vazio"><h3>Carregando...</h3><p>Aguarde enquanto os empreendimentos são carregados.</p></div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwCZrfa9a3TeemXDbNmEe-Gs5FyrYQysQH_aS1lOFH1MvbfOBfepgTxJu9dURB_tlfg/exec';
+const SESS_KEY   = 'bi_session';
+const USER_EMAIL = 'chaverleo@gmail.com';
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+async function sha256(txt) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function verificarAuth() {
+  if (sessionStorage.getItem(SESS_KEY) === 'ok') fecharLogin();
+}
+async function entrar() {
+  const senha = document.getElementById('login-senha').value.trim();
+  const btn   = document.getElementById('btn-login');
+  const erro  = document.getElementById('login-erro');
+  if (!senha) return;
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  erro.textContent = '';
+  try {
+    const hash = await sha256(senha);
+    const r = await fetch(`${WEBHOOK_URL}?acao=verificar_senha&email=${encodeURIComponent(USER_EMAIL)}&hash=${hash}`);
+    const j = await r.json();
+    if (j.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); fecharLogin(); carregarLancamentos(); }
+    else { erro.textContent = 'Senha incorreta.'; btn.textContent = 'Entrar'; btn.disabled = false; }
+  } catch { erro.textContent = 'Erro de conexão.'; btn.textContent = 'Entrar'; btn.disabled = false; }
+}
+function fecharLogin() { document.getElementById('login-overlay').style.display = 'none'; }
+
+// ─── UTILIDADES ───────────────────────────────────────────────────────────────
+function fmt_(v) {
+  if (!v || isNaN(v) || v === 0) return '';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+let _tt;
+function mostrarToast(msg, tipo = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${tipo} show`;
+  clearTimeout(_tt); _tt = setTimeout(() => t.classList.remove('show'), 3800);
+}
+
+// ─── PARSER — BLOCO 1 ─────────────────────────────────────────────────────────
+function extrairBloco1(txt) {
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', status:'', previsaoEntrega:'', lazer:'', conceito:'' };
+  const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+
+  // Nome: busca linha com maiúsculas ou palavras de empreendimento (primeiras 8 linhas)
+  for (let i = 0; i < Math.min(8, linhas.length); i++) {
+    const l = linhas[i];
+    if (l.length < 4 || l.length > 90) continue;
+    if (/^\d/.test(l)) continue;
+    if (/residencial|village|garden|park|plaza|torre|studios?|palace|reserva|vista|prive|grand|royal|flat/i.test(l) ||
+        /[A-ZÁÉÍÓÚ]{4,}/.test(l)) {
+      b.nomeEmpreendimento = l; break;
+    }
+  }
+  if (!b.nomeEmpreendimento) b.nomeEmpreendimento = linhas.find(l => !/^\d/.test(l) && l.length > 3) || '';
+
+  // Construtora
+  const cM = txt.match(/(?:construtora|incorporadora|incorpora[çc][aã]o|grupo|by\s+)\s*[:\-]?\s*([A-ZÁÉÍÓÚ][^\n,;]{2,40})/i);
+  if (cM) b.construtora = cM[1].trim();
+
+  // Endereço
+  const eM = txt.match(/((?:Rua|Av\.|Avenida|R\.|Alameda|Al\.|Qd\.|Quadra|Setor|St\.)\s+[^\n]{4,80})/i);
+  if (eM) b.endereco = eM[1].trim().replace(/\s+/g, ' ');
+
+  // Bairro
+  const bM = txt.match(/(?:bairro|setor|jardim|parque|vila|residencial)\s*[:\-]?\s*([^\n,;]{3,40})/i);
+  if (bM) b.bairro = bM[1].trim();
+  else if (b.endereco) {
+    const pts = b.endereco.split(/[–,]/);
+    if (pts.length > 1) b.bairro = pts[pts.length - 1].trim().substring(0, 40);
+  }
+
+  // Status
+  if      (/pr[eé]-lan[çc]amento/i.test(txt))          b.status = 'Em planta';
+  else if (/em\s+(obras|constru[çc])/i.test(txt))       b.status = 'Em obras';
+  else if (/pronto\s+para\s+entregar/i.test(txt))       b.status = 'Pronto';
+  else if (/entregue|conclu[íi]do/i.test(txt))          b.status = 'Entregue';
+  else if (/em\s+planta/i.test(txt))                    b.status = 'Em planta';
+
+  // Previsão de entrega
+  const meses = 'jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez';
+  const entRx = new RegExp(`(?:entrega|previs[aã]o|conclus[aã]o)[^\\n]{0,40}?((?:${meses})[a-z]*\\.?\\s*(?:\\/|de\\s*)?\\s*20\\d\\d)`, 'i');
+  const entM = txt.match(entRx);
+  if (entM) b.previsaoEntrega = entM[1];
+  else {
+    const dtM = txt.match(new RegExp(`((?:${meses})[a-z]*\\.?\\s*(?:\\/|\\s)20\\d\\d)`, 'i'));
+    if (dtM) b.previsaoEntrega = dtM[1];
+  }
+
+  // Lazer
+  const lzM = txt.match(/(?:lazer|infraestrutura|amenidade|diferencial)[:\s\n]+([\s\S]{20,700}?)(?:\n{2,}|\n(?=[A-Z\d]))/i);
+  if (lzM) {
+    b.lazer = lzM[1].split('\n').map(l => l.trim()).filter(l => l.length > 1 && !/^\d+$/.test(l)).join(', ').substring(0, 500);
+  }
+
+  // Conceito: primeiro parágrafo longo sem área/preço
+  const paras = txt.split(/\n{2,}/);
+  for (const p of paras) {
+    const clean = p.trim();
+    if (clean.length > 80 && !/\d+\s*m[²2]/.test(clean) && !/R\$/.test(clean) && !/^\d/.test(clean)) {
+      b.conceito = clean.substring(0, 600); break;
+    }
+  }
+  return b;
+}
+
+// ─── PARSER — PLANO DE PAGAMENTO ─────────────────────────────────────────────
+function extrairPlano(txt) {
+  const p = { entrada:'', parcelasObra:'', parcelasEntrega:'', avaliacaoBanco:'', fgts:'', planoLongo:'' };
+
+  const entM = txt.match(/entrada[^:\n]{0,20}[:\-]\s*([^\n]{2,60})/i);
+  if (entM) p.entrada = entM[1].trim();
+  else {
+    const pM = txt.match(/(\d+(?:[.,]\d+)?)\s*%\s*(?:de\s+)?entrada/i);
+    if (pM) p.entrada = pM[1] + '% de entrada';
+  }
+
+  const parMatches = [...txt.matchAll(/(\d+)\s*[xX×]\s*R?\$?\s*([\d.,]+)/g)];
+  if (parMatches.length) p.parcelasObra = parMatches.map(m => `${m[1]}x R$ ${m[2]}`).slice(0, 3).join(' + ');
+
+  const saldoM = txt.match(/(?:saldo|chaves|entrega\s+d(?:o|as)\s+chaves)[^\n]*R\$\s*([\d.,]+)/i);
+  if (saldoM) p.parcelasEntrega = 'R$ ' + saldoM[1];
+
+  const bancoM = txt.match(/\b(Caixa|CEF|Bradesco|Ita[uú]|Santander|BB|Banco\s+do\s+Brasil|Inter|Sicoob)\b/i);
+  if (bancoM) p.avaliacaoBanco = bancoM[1];
+
+  if (/\bfgts\b/i.test(txt)) p.fgts = 'Sim';
+
+  const planoM = txt.match(/(?:plano\s+direto|financiamento\s+direto)[^\n]{0,80}/i);
+  if (planoM) p.planoLongo = planoM[0].trim().substring(0, 120);
+
+  return p;
+}
+
+// ─── PARSER — BLOCO 2 (unidades) ─────────────────────────────────────────────
+function extrairBloco2(txt) {
+  const linhas = txt.split('\n').map(l => l.trim()).filter(l => l);
+  let unidades = [];
+
+  // Tentar detectar header de tabela Orulo
+  let headerIdx = -1, cols = {};
+  for (let i = 0; i < linhas.length; i++) {
+    const ll = linhas[i].toLowerCase();
+    if (ll.includes('área') || ll.includes('area') || ll.includes('m²') || ll.includes('valor')) {
+      const pts = linhas[i].split(/\t|\s{2,}/);
+      pts.forEach((p, j) => {
+        const pl = p.toLowerCase();
+        if ((pl.includes('área') || pl.includes('area')) && pl.includes('priv')) cols.area = j;
+        else if (pl.includes('área') || pl.includes('area')) cols.area = cols.area ?? j;
+        if (pl.includes('valor') || pl.includes('preço') || pl.includes('preco')) cols.preco = j;
+        if (pl.includes('vaga')) cols.vagas = j;
+        if (pl.includes('dorm') || pl.includes('quarto') || pl.includes('suíte') || pl.includes('suite')) cols.dorm = j;
+      });
+      if (Object.keys(cols).length >= 1) { headerIdx = i; break; }
+    }
+  }
+
+  if (headerIdx >= 0) {
+    for (let i = headerIdx + 1; i < linhas.length; i++) {
+      const pts = linhas[i].split(/\t|\s{2,}/);
+      let area = 0, preco = 0, vagas = 0, tip = '';
+
+      const getNum = str => { const m = (str||'').match(/(\d+[,.]\d*|\d+)/); return m ? parseFloat(m[1].replace(',','.')) : 0; };
+
+      if (cols.area != null && pts[cols.area]) area = getNum(pts[cols.area]);
+      if (!area) { const m = linhas[i].match(/(\d{2,3}[,.]\d{0,2})\s*m[²2]|(\d{2,3})\s*m[²2]/i); if (m) area = parseFloat((m[1]||m[2]).replace(',','.')); }
+      if (area < 20 || area > 600) continue;
+
+      if (cols.preco != null && pts[cols.preco]) {
+        const ps = (pts[cols.preco]||'').replace(/\./g,'').replace(',','.');
+        preco = parseFloat(ps.match(/[\d.]+/)?.[0] || '0');
+        if (preco > 0 && preco < 10000) preco *= 1000;
+      }
+      if (!preco) {
+        const m = linhas[i].match(/R\$\s*([\d.,]+)/i);
+        if (m) { preco = parseFloat(m[1].replace(/\./g,'').replace(',','.')); if (preco < 10000) preco *= 1000; }
+      }
+
+      if (cols.vagas != null && pts[cols.vagas]) vagas = parseInt(pts[cols.vagas]) || 0;
+      if (!vagas) { const m = linhas[i].match(/(\d)\s*vaga/i); if (m) vagas = parseInt(m[1]); }
+
+      tip = detectarTipologia(linhas[i]);
+      unidades.push({ area, preco, vagas, tip });
+    }
+  }
+
+  // Fallback scanner geral
+  if (!unidades.length) {
+    for (const l of linhas) {
+      const am = l.match(/(\d{2,3}[,.]\d{0,2})\s*m[²2]|(\d{2,3})\s*m[²2]/i);
+      if (!am) continue;
+      const area = parseFloat((am[1]||am[2]).replace(',','.'));
+      if (area < 20 || area > 600) continue;
+      const pm = l.match(/R\$\s*([\d.,]+)/i);
+      let preco = 0;
+      if (pm) { preco = parseFloat(pm[1].replace(/\./g,'').replace(',','.')); if (preco < 10000) preco *= 1000; }
+      const vm = l.match(/(\d)\s*vaga/i);
+      unidades.push({ area, preco, vagas: vm ? parseInt(vm[1]) : 0, tip: detectarTipologia(l) });
+    }
+  }
+
+  return agruparPorArea(unidades);
+}
+
+function detectarTipologia(l) {
+  if (/studio|quitinete/i.test(l)) return 'Studio';
+  const sm = l.match(/(\d+)\s*su[íi]te/i);
+  const qm = l.match(/(\d+)\s*(?:quarto|dormit)/i);
+  if (qm) return qm[1] + 'q' + (sm ? '+' + sm[1] + 's' : '');
+  if (sm) return sm[1] + 's';
+  return '';
+}
+
+function agruparPorArea(uns) {
+  const grupos = {};
+  for (const u of uns) {
+    const key = (Math.round(u.area * 10) / 10).toFixed(1);
+    if (!grupos[key]) grupos[key] = { area: u.area, items: [] };
+    grupos[key].items.push(u);
+  }
+  return Object.values(grupos).map(g => {
+    const precos = g.items.map(u => u.preco).filter(p => p > 0);
+    const vagas  = g.items.map(u => u.vagas).filter(v => v > 0);
+    const tips   = [...new Set(g.items.map(u => u.tip).filter(t => t))];
+    return {
+      tipologia:   tips[0] || '',
+      areaUtil:    g.area,
+      qtdUnidades: g.items.length,
+      vagas:       vagas.length ? Math.round(vagas.reduce((a,b)=>a+b,0)/vagas.length) : 0,
+      escaninho:   '',
+      precoMedio:  precos.length ? Math.round(precos.reduce((a,b)=>a+b,0)/precos.length) : 0,
+      precoMin:    precos.length ? Math.min(...precos) : 0,
+      precoMax:    precos.length ? Math.max(...precos) : 0,
+    };
+  }).sort((a,b) => a.areaUtil - b.areaUtil);
+}
+
+// ─── EXTRAIR ──────────────────────────────────────────────────────────────────
+function extrairDados() {
+  const txt = document.getElementById('textoMotor').value.trim();
+  if (txt.length < 20) { mostrarToast('Cole o texto do empreendimento primeiro.', 'erro'); return; }
+  const btn = document.getElementById('btnExtrair');
+  btn.disabled = true; btn.textContent = '⏳ Extraindo...';
+  setTimeout(() => {
+    try {
+      const b1    = extrairBloco1(txt);
+      const plano = extrairPlano(txt);
+      const b2    = extrairBloco2(txt);
+
+      renderB1(b1); renderPlano(plano); renderB2(b2);
+
+      const campos = [b1.nomeEmpreendimento, b1.bairro, b1.status, b1.previsaoEntrega].filter(v=>v).length;
+      const badge = document.getElementById('preview-badge');
+      badge.textContent = `${b2.length} metragem(ns) detectada(s) · ${campos}/4 campos identificados`;
+      badge.style.cssText = `background:${campos>=3?'rgba(0,212,170,.15)':'rgba(245,158,11,.15)'};color:${campos>=3?'var(--accent2)':'var(--amber)'};`;
+
+      document.getElementById('lbl-nome').style.display   = b1.nomeEmpreendimento ? 'none' : 'inline';
+      document.getElementById('lbl-bairro').style.display = b1.bairro             ? 'none' : 'inline';
+      document.getElementById('f-nome').className   = 'form-input ' + (b1.nomeEmpreendimento ? 'ok' : 'warn');
+      document.getElementById('f-bairro').className = 'form-input ' + (b1.bairro             ? 'ok' : 'warn');
+
+      document.getElementById('preview-box').style.display = 'block';
+      document.getElementById('preview-box').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      if (!b2.length) mostrarToast('Nenhuma unidade detectada automaticamente — adicione manualmente.', 'erro');
+      else mostrarToast(`${b2.length} tipologia(s) extraída(s) com sucesso!`, 'ok');
+    } catch(e) {
+      mostrarToast('Erro ao extrair. Verifique o texto ou preencha manualmente.', 'erro');
+      console.error(e);
+    } finally {
+      btn.disabled = false; btn.textContent = '⚡ Extrair Dados';
+    }
+  }, 80);
+}
+
+function renderB1(b) {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = val || '';
+    if (val) el.classList.add('ok');
+  };
+  set('f-nome', b.nomeEmpreendimento);
+  set('f-construtora', b.construtora);
+  set('f-bairro', b.bairro);
+  set('f-endereco', b.endereco);
+  set('f-entrega', b.previsaoEntrega);
+  set('f-lazer', b.lazer);
+  set('f-conceito', b.conceito);
+  if (b.status) document.getElementById('f-status').value = b.status;
+}
+
+function renderPlano(p) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val) { el.value = val; el.classList.add('ok'); } };
+  set('f-entrada', p.entrada);
+  set('f-parcOb', p.parcelasObra);
+  set('f-parcEntrega', p.parcelasEntrega);
+  set('f-banco', p.avaliacaoBanco);
+  set('f-planoLongo', p.planoLongo);
+  if (p.fgts) document.getElementById('f-fgts').value = p.fgts;
+}
+
+function renderB2(unidades) {
+  const tbody = document.getElementById('unidades-tbody');
+  tbody.innerHTML = '';
+  if (!unidades.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:16px 0">Nenhuma unidade detectada — use "+ Linha" para adicionar.</td></tr>';
+    return;
+  }
+  unidades.forEach(u => tbody.appendChild(criarLinha(u)));
+}
+
+function criarLinha(u = {}) {
+  const fmtN = v => v || '';
+  const fmtP = v => (v && v > 0) ? String(Math.round(v)) : '';
+  const tr = document.createElement('tr');
+  const inp = (val, ph, align) =>
+    `<input class="t-inp" value="${val}" placeholder="${ph}" style="text-align:${align||'left'}">`;
+  tr.innerHTML = `
+    <td>${inp(fmtN(u.tipologia), 'Ex: 3q+2s', 'left')}</td>
+    <td>${inp(u.areaUtil||'', 'm²', 'right')}</td>
+    <td>${inp(u.qtdUnidades||'', 'qtd', 'center')}</td>
+    <td>${inp(u.vagas||'', 'qtd', 'center')}</td>
+    <td>${inp(fmtN(u.escaninho), 'S/N', 'center')}</td>
+    <td>${inp(fmtP(u.precoMedio), 'R$', 'right')}</td>
+    <td>${inp(fmtP(u.precoMin),   'mín', 'right')}</td>
+    <td>${inp(fmtP(u.precoMax),   'máx', 'right')}</td>
+    <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
+  return tr;
+}
+
+function addLinhaUnidade() {
+  const tbody = document.getElementById('unidades-tbody');
+  const td = tbody.querySelector('td[colspan]');
+  if (td) td.closest('tr').remove();
+  tbody.appendChild(criarLinha());
+}
+
+function limparMotor() {
+  document.getElementById('textoMotor').value = '';
+  document.getElementById('preview-box').style.display = 'none';
+  // Limpar campos
+  ['f-nome','f-construtora','f-bairro','f-endereco','f-entrega','f-lazer','f-conceito',
+   'f-entrada','f-parcOb','f-parcEntrega','f-banco','f-planoLongo'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
+  });
+  document.getElementById('f-status').value = '';
+  document.getElementById('f-fgts').value   = '';
+  document.getElementById('unidades-tbody').innerHTML = '';
+}
+
+// ─── LER PREVIEW ──────────────────────────────────────────────────────────────
+function lerPreview() {
+  const g = id => document.getElementById(id)?.value.trim() || '';
+  const empr = {
+    nomeEmpreendimento: g('f-nome'),
+    construtora:        g('f-construtora'),
+    bairro:             g('f-bairro'),
+    endereco:           g('f-endereco'),
+    status:             g('f-status'),
+    previsaoEntrega:    g('f-entrega'),
+    lazer:              g('f-lazer'),
+    conceito:           g('f-conceito'),
+    entrada:            g('f-entrada'),
+    parcelasObra:       g('f-parcOb'),
+    parcelasEntrega:    g('f-parcEntrega'),
+    avaliacaoBanco:     g('f-banco'),
+    fgts:               g('f-fgts'),
+    planoLongo:         g('f-planoLongo'),
+  };
+  const unidades = [];
+  document.querySelectorAll('#unidades-tbody tr').forEach(tr => {
+    const inps = [...tr.querySelectorAll('input')];
+    if (inps.length < 8) return;
+    const v = inps.map(i => i.value.trim());
+    const limP = s => { const n = parseFloat(s.replace(/\./g,'').replace(',','.').replace('R$','').trim()); return isNaN(n)?0:(n<10000?n*1000:n); };
+    const a = parseFloat(v[1]) || 0;
+    if (a > 0) unidades.push({ tipologia:v[0], areaUtil:a, qtdUnidades:parseInt(v[2])||0, vagas:parseInt(v[3])||0, escaninho:v[4], precoMedio:limP(v[5]), precoMin:limP(v[6]), precoMax:limP(v[7]) });
+  });
+  return { ...empr, unidades };
+}
+
+// ─── SALVAR ───────────────────────────────────────────────────────────────────
+async function salvarLancamento() {
+  const dados = lerPreview();
+  if (!dados.nomeEmpreendimento) { mostrarToast('Informe o nome do empreendimento.', 'erro'); return; }
+  if (!dados.bairro)             { mostrarToast('Informe o bairro do empreendimento.', 'erro'); return; }
+  if (!dados.unidades.length)    { mostrarToast('Adicione ao menos uma Unidade Referência.', 'erro'); return; }
+
+  const btn = document.getElementById('btnSalvar');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'salvar_lancamento', dados })
+    });
+    const json = await resp.json();
+    if (json.ok) {
+      mostrarToast(`"${dados.nomeEmpreendimento}" salvo com sucesso!`, 'ok');
+      limparMotor();
+      await carregarLancamentos();
+    } else {
+      mostrarToast(json.erro || 'Erro ao salvar.', 'erro');
+    }
+  } catch { mostrarToast('Erro de conexão ao salvar.', 'erro'); }
+  finally { btn.disabled = false; btn.innerHTML = '💾 Salvar Lançamento'; }
+}
+
+// ─── CARREGAR LISTA ───────────────────────────────────────────────────────────
+let _todos = [], _filtroStatus = '';
+
+async function carregarLancamentos() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos`);
+    const json = await resp.json();
+    _todos = json.lancamentos || [];
+    renderFiltros();
+    renderLista(_todos);
+  } catch {
+    document.getElementById('lista-grid').innerHTML =
+      '<div class="vazio"><h3>Erro ao carregar</h3><p>Verifique a conexão com o Apps Script.<br>O backend precisa ter a rota <code>listar_lancamentos</code> implantada.</p></div>';
+    document.getElementById('lista-count').textContent = '';
+  }
+}
+
+function renderFiltros() {
+  const statuses = [...new Set(_todos.map(l => l.status).filter(Boolean))];
+  const bar = document.getElementById('filtro-bar');
+  bar.innerHTML = '';
+  if (!statuses.length) return;
+  const all = document.createElement('button');
+  all.className = 'filtro-chip' + (!_filtroStatus ? ' on' : '');
+  all.textContent = 'Todos'; all.onclick = () => setFiltro('');
+  bar.appendChild(all);
+  statuses.forEach(s => {
+    const c = document.createElement('button');
+    c.className = 'filtro-chip' + (_filtroStatus === s ? ' on' : '');
+    c.textContent = s; c.onclick = () => setFiltro(s);
+    bar.appendChild(c);
+  });
+}
+
+function setFiltro(s) {
+  _filtroStatus = s; renderFiltros();
+  renderLista(s ? _todos.filter(l => l.status === s) : _todos);
+}
+
+function renderLista(lista) {
+  const grid = document.getElementById('lista-grid');
+  const cnt  = document.getElementById('lista-count');
+
+  if (!lista.length) {
+    grid.innerHTML = '<div class="vazio"><h3>Nenhum empreendimento cadastrado</h3><p>Use o motor acima para cadastrar o primeiro lançamento.</p></div>';
+    cnt.innerHTML  = '0 empreendimentos';
+    return;
+  }
+
+  // Agrupar por idLancamento
+  const mapa = {};
+  for (const l of lista) {
+    const key = l.idLancamento || l.nomeEmpreendimento;
+    if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
+    mapa[key].unidades.push(l);
+  }
+  const emps = Object.values(mapa);
+  cnt.innerHTML = `<b>${emps.length}</b> empreendimento${emps.length !== 1 ? 's' : ''}`;
+
+  grid.innerHTML = emps.map((e, i) => {
+    const tips   = [...new Set(e.unidades.map(u => u.tipologia).filter(Boolean))];
+    const precos = e.unidades.map(u => Number(u.precoMedio)).filter(p => p > 0);
+    const pMin   = precos.length ? Math.min(...precos) : 0;
+    const pMax   = precos.length ? Math.max(...precos) : 0;
+    const stCls  = { 'Em obras':'st-obras','Em planta':'st-planta','Pronto':'st-pronto','Entregue':'st-entregue' }[e.status] || 'st-planta';
+
+    return `
+    <div class="emp-card" id="ec-${i}">
+      <div class="emp-card-header">
+        <div class="emp-nome">${e.nomeEmpreendimento || '—'}</div>
+        <div class="emp-sub">${[e.construtora, e.bairro].filter(Boolean).join(' · ')}</div>
+        <div class="emp-badges">
+          ${e.status ? `<span class="st-badge ${stCls}">${e.status}</span>` : ''}
+          ${e.previsaoEntrega ? `<span class="st-badge st-data">📅 ${e.previsaoEntrega}</span>` : ''}
+        </div>
+      </div>
+      <div class="emp-card-body">
+        ${tips.length ? `<div class="emp-tipologias">${tips.map(t=>`<span class="tip-chip">${t}</span>`).join('')}</div>` : ''}
+        <div class="emp-preco">
+          ${pMin ? fmt_(pMin) + (pMax>pMin ? ' – ' + fmt_(pMax) : '') : '—'}
+          <small>${e.unidades.length} tipologia${e.unidades.length!==1?'s':''}</small>
+        </div>
+      </div>
+      <div class="emp-card-footer">
+        <button class="btn-toggle" onclick="togglePanel(${i})">▶ Ver unidades</button>
+        <button class="btn-del-emp" onclick="excluirEmp('${e.idLancamento||''}','${(e.nomeEmpreendimento||'').replace(/'/g,'\\&apos;')}')">🗑 Excluir</button>
+      </div>
+      <div class="emp-panel" id="ep-${i}">${renderPanel(e.unidades)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPanel(unidades) {
+  const linhas = unidades.map(u => `
+    <tr>
+      <td>${u.tipologia||'—'}</td>
+      <td style="text-align:right">${u.areaUtil||'—'}m²</td>
+      <td style="text-align:center">${u.qtdUnidades||'—'}</td>
+      <td style="text-align:center">${u.vagas||'—'}</td>
+      <td style="text-align:center">${u.escaninho||'—'}</td>
+      <td style="text-align:right;color:var(--accent2);font-weight:700">${u.precoMedio>0?fmt_(u.precoMedio):'—'}</td>
+      <td style="text-align:right;color:var(--text3);font-size:11px">${u.precoMin>0&&u.precoMax>0?fmt_(u.precoMin)+' – '+fmt_(u.precoMax):'—'}</td>
+    </tr>`).join('');
+
+  const pl = unidades[0] || {};
+  const planoInfo = [
+    pl.entrada        ? `Entrada: ${pl.entrada}` : '',
+    pl.parcelasObra   ? `Obra: ${pl.parcelasObra}` : '',
+    pl.parcelasEntrega? `Chaves: ${pl.parcelasEntrega}` : '',
+    pl.avaliacaoBanco ? `Banco: ${pl.avaliacaoBanco}` : '',
+    pl.fgts==='Sim'   ? '✓ FGTS' : '',
+    pl.planoLongo     ? pl.planoLongo : '',
+  ].filter(Boolean).join(' · ');
+
+  return `
+    <table class="unidades-table" style="min-width:560px">
+      <thead><tr>
+        <th>Tipologia</th><th style="text-align:right">Área</th>
+        <th style="text-align:center">Qtd</th><th style="text-align:center">Vagas</th>
+        <th style="text-align:center">Escaninho</th>
+        <th style="text-align:right">Preço Médio</th><th style="text-align:right">Faixa</th>
+      </tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+    ${planoInfo ? `<div class="plano-info">${planoInfo}</div>` : ''}`;
+}
+
+function togglePanel(i) {
+  const panel = document.getElementById(`ep-${i}`);
+  const btn   = document.querySelector(`#ec-${i} .btn-toggle`);
+  const open  = panel.classList.toggle('open');
+  btn.textContent = open ? '▼ Ocultar unidades' : '▶ Ver unidades';
+}
+
+async function excluirEmp(id, nome) {
+  if (!confirm(`Excluir "${nome}" e todas as suas unidades? Essa ação não pode ser desfeita.`)) return;
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'excluir_lancamento', idLancamento: id, nomeEmpreendimento: nome })
+    });
+    const json = await resp.json();
+    if (json.ok) { mostrarToast('Empreendimento excluído.', 'ok'); carregarLancamentos(); }
+    else mostrarToast(json.erro || 'Erro ao excluir.', 'erro');
+  } catch { mostrarToast('Erro de conexão ao excluir.', 'erro'); }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+verificarAuth();
+if (sessionStorage.getItem(SESS_KEY) === 'ok') carregarLancamentos();
+</script>
+</body>
+</html>
