@@ -80,6 +80,15 @@ textarea.motor-input::placeholder { color: var(--text3); }
 }
 .btn-sec:hover { border-color: var(--border2); color: var(--text); }
 .motor-hint { font-size: 12px; color: var(--text3); }
+.motor-url-row { display: flex; gap: 8px; align-items: center; }
+.motor-url-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif; padding: 9px 12px; outline: none; transition: border .2s; }
+.motor-url-input:focus { border-color: var(--accent); }
+.motor-url-input::placeholder { color: var(--text3); }
+.btn-url-open { padding: 9px 14px; border-radius: var(--radius-sm); background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: border-color .2s, color .2s; }
+.btn-url-open:hover { border-color: var(--accent); color: var(--accent); }
+.motor-tag { display: inline-block; padding: 2px 8px; border-radius: 20px; background: rgba(79,124,255,.15); color: var(--accent); font-size: 10px; font-weight: 700; letter-spacing: .5px; margin-left: 6px; vertical-align: middle; }
+.motor-sep { border: none; border-top: 1px solid var(--border); margin: 16px 0 14px; }
+.motor-label-hint { font-size: 11px; color: var(--text3); font-weight: 400; margin-left: 8px; }
 
 /* ── PREVIEW ── */
 .preview-box {
@@ -277,17 +286,43 @@ select.form-input option { background: var(--surface2); }
   <!-- MOTOR -->
   <div class="sec-header">
     <div class="sec-title">Novo Lançamento</div>
-    <div class="sec-sub">Cole o texto copiado da ORULO — o motor extrai e estrutura automaticamente em Bloco 1 (empreendimento) e Bloco 2 (unidades referência agrupadas por metragem).</div>
+    <div class="sec-sub">Cole a URL do empreendimento para referência, os dados gerais no BOX 1 e a tabela de unidades no BOX 2 — o motor estrutura e agrupa as tipologias automaticamente.</div>
   </div>
 
   <div class="motor-box">
-    <div class="motor-label">Texto livre (ORULO ou outra fonte)</div>
-    <textarea class="motor-input" id="textoMotor"
-      placeholder="Cole aqui o texto completo da página do empreendimento. Inclua: nome, construtora, endereço, bairro, lazer, status, previsão de entrega, tabela de unidades com áreas e preços, e plano de pagamento..."></textarea>
+    <!-- Campo 1: URL -->
+    <div class="motor-label">URL do Empreendimento</div>
+    <div class="motor-url-row">
+      <input type="url" class="motor-url-input" id="urlEmpreendimento"
+        placeholder="https://www.orulo.com.br/buildings/25408"
+        oninput="atualizarUrlLink(this.value)">
+      <a id="url-link" href="#" target="_blank" rel="noopener" class="btn-url-open" style="display:none">&#8599; Abrir</a>
+    </div>
+
+    <hr class="motor-sep">
+
+    <!-- Campo 2: Dados Gerais / Bloco 1 -->
+    <div class="motor-label">
+      Dados Gerais <span class="motor-tag">BOX 1</span>
+      <span class="motor-label-hint">Nome, construtora, endere&ccedil;o, status, entrega, lazer, plano de pagamento</span>
+    </div>
+    <textarea class="motor-input" id="txtBloco1" rows="6"
+      placeholder="Cole aqui o texto da p&aacute;gina principal do empreendimento&#10;&#10;Exemplo:&#10;Max Buriti - Vega Incorpora&ccedil;&otilde;es&#10;Avenida Francisco de Melo 234. Vila Rosa - Goi&acirc;nia/GO&#10;Est&aacute;gio: Pronto novo&#10;Entrega: 30/11/2025"></textarea>
+
+    <hr class="motor-sep">
+
+    <!-- Campo 3: Tabela Digital / Bloco 2 -->
+    <div class="motor-label">
+      Tabela Digital <span class="motor-tag">BOX 2</span>
+      <span class="motor-label-hint">Unidades com status, &aacute;rea, pre&ccedil;o e quartos &mdash; agrupadas por metragem</span>
+    </div>
+    <textarea class="motor-input" id="txtBloco2" rows="7"
+      placeholder="Cole aqui a tabela de unidades copiada da ORULO&#10;&#10;Exemplo:&#10;Dispon&iacute;vel&#10;102B&#10;Apartamento&#10;63,2&#10;&#10;470.195&#10;&#10;-&#10;&#10;3&#10;1&#10;2"></textarea>
+
     <div class="motor-actions">
-      <button class="btn-extrair" id="btnExtrair" onclick="extrairDados()">⚡ Extrair Dados</button>
-      <button class="btn-sec" onclick="limparMotor()">✕ Limpar</button>
-      <span class="motor-hint">Campos extraídos ficam editáveis para revisão antes de salvar.</span>
+      <button class="btn-extrair" id="btnExtrair" onclick="extrairDados()">&#9889; Extrair Dados</button>
+      <button class="btn-sec" onclick="limparMotor()">&#10005; Limpar</button>
+      <span class="motor-hint">Campos extra&iacute;dos ficam edit&aacute;veis para revis&atilde;o antes de salvar.</span>
     </div>
 
     <!-- PREVIEW -->
@@ -466,65 +501,154 @@ function mostrarToast(msg, tipo = 'ok') {
 // ─── PARSER — BLOCO 1 ─────────────────────────────────────────────────────────
 function extrairBloco1(txt) {
   const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', status:'', previsaoEntrega:'', lazer:'', conceito:'' };
-  const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+  const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  // Nome: busca linha com maiúsculas ou palavras de empreendimento (primeiras 8 linhas)
-  for (let i = 0; i < Math.min(8, linhas.length); i++) {
-    const l = linhas[i];
-    if (l.length < 4 || l.length > 90) continue;
-    if (/^\d/.test(l)) continue;
-    if (/residencial|village|garden|park|plaza|torre|studios?|palace|reserva|vista|prive|grand|royal|flat/i.test(l) ||
-        /[A-ZÁÉÍÓÚ]{4,}/.test(l)) {
-      b.nomeEmpreendimento = l; break;
+  // ── Nome + Construtora ──
+  // Formato Orulo linha 1 pode ter 1 ou mais " - ":
+  //   "Max Buriti - Vega Incorporações"         → nome = Max Buriti,   construtora = Vega Incorporações
+  //   "Citàge Santé - Residencial - City"        → nome = Citàge Santé, construtora = City (último segmento)
+  const linha0 = linhas[0] || '';
+  const partes0 = linha0.split(' - ');
+  if (partes0.length >= 2) {
+    b.nomeEmpreendimento = partes0[0].trim();
+    b.construtora        = partes0[partes0.length - 1].trim(); // sempre o último segmento
+  } else if (linha0.length > 3 && !/^\d/.test(linha0)) {
+    b.nomeEmpreendimento = linha0;
+  }
+
+  // Fallback nome: varredura das primeiras 10 linhas para título óbvio
+  if (!b.nomeEmpreendimento || b.nomeEmpreendimento.length < 3) {
+    const SKIP = new Set(['tabela digital','tabela','status','disponível','disponivel',
+      'vendido','reservado','filtros','observações','unidades','tipo','quartos',
+      'suites','vagas','área','area','valor','preço','apartamento','cobertura',
+      'características','informações','integração','código']);
+    for (let i = 0; i < Math.min(10, linhas.length); i++) {
+      const l = linhas[i];
+      if (l.length < 4 || l.length > 90 || /^\d/.test(l) || SKIP.has(l.toLowerCase())) continue;
+      if (/[A-ZÁÉÍÓÚ]{3,}/.test(l) ||
+          (l.split(/\s+/).length >= 2 && /^[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][a-záéíóúâêîôûãõç]/.test(l)) ||
+          /residencial|village|garden|park|plaza|torre|studios?|palace|reserva/i.test(l)) {
+        b.nomeEmpreendimento = l.split(' - ')[0].trim(); break;
+      }
     }
   }
-  if (!b.nomeEmpreendimento) b.nomeEmpreendimento = linhas.find(l => !/^\d/.test(l) && l.length > 3) || '';
 
-  // Construtora
-  const cM = txt.match(/(?:construtora|incorporadora|incorpora[çc][aã]o|grupo|by\s+)\s*[:\-]?\s*([A-ZÁÉÍÓÚ][^\n,;]{2,40})/i);
-  if (cM) b.construtora = cM[1].trim();
-
-  // Endereço
-  const eM = txt.match(/((?:Rua|Av\.|Avenida|R\.|Alameda|Al\.|Qd\.|Quadra|Setor|St\.)\s+[^\n]{4,80})/i);
-  if (eM) b.endereco = eM[1].trim().replace(/\s+/g, ' ');
-
-  // Bairro
-  const bM = txt.match(/(?:bairro|setor|jardim|parque|vila|residencial)\s*[:\-]?\s*([^\n,;]{3,40})/i);
-  if (bM) b.bairro = bM[1].trim();
-  else if (b.endereco) {
-    const pts = b.endereco.split(/[–,]/);
-    if (pts.length > 1) b.bairro = pts[pts.length - 1].trim().substring(0, 40);
+  // Construtora: prioridade seção "Informações Comerciais" do Orulo
+  // (primeira linha após o header — pode ser apenas o nome curto da empresa)
+  const infComM = txt.match(/Informa[çc][oõ]es\s+Comerciais[^\n]*\n\s*([^\n]{2,60})/i);
+  if (infComM) {
+    const cand = infComM[1].trim();
+    if (cand && !/^(avaliar|exibir|ver|enviar|mais|clique|saiba)/i.test(cand)) {
+      b.construtora = cand;
+    }
+  }
+  // Fallback se não veio da "Informações Comerciais" nem da linha 1
+  if (!b.construtora) {
+    const cM = txt.match(/^([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ][^\n]{3,50}(?:Incorpora[çc][aã]o|Construtora|Empreendimento)s?)\s*$/im);
+    if (cM) b.construtora = cM[1].trim();
+    else {
+      const cM2 = txt.match(/(?:construtora|incorporadora|incorpora[çc][aã]o|grupo)\s*[:\-]?\s*([A-ZÁÉÍÓÚ][^\n,;]{2,40})/i);
+      if (cM2) b.construtora = cM2[1].trim();
+    }
   }
 
-  // Status
-  if      (/pr[eé]-lan[çc]amento/i.test(txt))          b.status = 'Em planta';
-  else if (/em\s+(obras|constru[çc])/i.test(txt))       b.status = 'Em obras';
-  else if (/pronto\s+para\s+entregar/i.test(txt))       b.status = 'Pronto';
-  else if (/entregue|conclu[íi]do/i.test(txt))          b.status = 'Entregue';
-  else if (/em\s+planta/i.test(txt))                    b.status = 'Em planta';
-
-  // Previsão de entrega
-  const meses = 'jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez';
-  const entRx = new RegExp(`(?:entrega|previs[aã]o|conclus[aã]o)[^\\n]{0,40}?((?:${meses})[a-z]*\\.?\\s*(?:\\/|de\\s*)?\\s*20\\d\\d)`, 'i');
-  const entM = txt.match(entRx);
-  if (entM) b.previsaoEntrega = entM[1];
-  else {
-    const dtM = txt.match(new RegExp(`((?:${meses})[a-z]*\\.?\\s*(?:\\/|\\s)20\\d\\d)`, 'i'));
-    if (dtM) b.previsaoEntrega = dtM[1];
+  // ── Endereço e Bairro ──
+  // Orulo linha 2: "Avenida Francisco de Melo 234. Vila Rosa - Goiânia/GO"
+  for (let i = 1; i < Math.min(6, linhas.length); i++) {
+    const l = linhas[i];
+    if (!/^(Rua|Av\.|Avenida|R\.|Alameda|Al\.|Qd\.|Quadra|Setor|St\.|Rodovia|Travessa)\s/i.test(l)) continue;
+    b.endereco = l;
+    // Padrão Orulo: "Av. Nome 123. Bairro - Cidade/GO" — bairro após ". "
+    const bM = l.match(/\.\s+([^.\-,]+?)(?:\s+-\s+\S+\/[A-Z]{2})?$/);
+    if (bM) {
+      b.bairro = bM[1].trim();
+    } else {
+      // Fallback: parte antes de " - Cidade"
+      const pts = l.split(/\s+-\s+/);
+      if (pts.length > 1) {
+        const ant = pts[pts.length - 2].split(/[,;]/);
+        b.bairro = ant[ant.length - 1].trim().substring(0, 50);
+      }
+    }
+    break;
+  }
+  // Bairro via keyword se ainda vazio
+  if (!b.bairro) {
+    const bKM = txt.match(/(?:bairro|setor|jardim|parque|vila)\s*[:\-]?\s*([^\n,;]{3,40})/i);
+    if (bKM) b.bairro = bKM[1].trim();
   }
 
-  // Lazer
-  const lzM = txt.match(/(?:lazer|infraestrutura|amenidade|diferencial)[:\s\n]+([\s\S]{20,700}?)(?:\n{2,}|\n(?=[A-Z\d]))/i);
-  if (lzM) {
-    b.lazer = lzM[1].split('\n').map(l => l.trim()).filter(l => l.length > 1 && !/^\d+$/.test(l)).join(', ').substring(0, 500);
+  // ── Status ── prioridade: "Estágio: ..." (Orulo)
+  const estagioM = txt.match(/Est[aá]gio:\s*([^\n]+)/i);
+  if (estagioM) {
+    const es = estagioM[1].trim().toLowerCase();
+    if      (es.includes('planta') || es.includes('lança') || es.includes('pré'))       b.status = 'Em planta';
+    else if (es.includes('obra')   || es.includes('constru'))                            b.status = 'Em obras';
+    else if (es.includes('pronto') || es.includes('pronto novo'))                        b.status = 'Pronto';
+    else if (es.includes('entregue') || es.includes('conclu'))                           b.status = 'Entregue';
+    else                                                                                  b.status = estagioM[1].trim().substring(0, 40);
+  } else {
+    if      (/pr[eé]-lan[çc]amento/i.test(txt))              b.status = 'Em planta';
+    else if (/em\s+(obras|constru[çc])/i.test(txt))          b.status = 'Em obras';
+    else if (/pronto\s+para\s+entregar/i.test(txt))          b.status = 'Pronto';
+    else if (/entregue|conclu[íi]do/i.test(txt))             b.status = 'Entregue';
+    else if (/em\s+planta/i.test(txt))                       b.status = 'Em planta';
   }
 
-  // Conceito: primeiro parágrafo longo sem área/preço
-  const paras = txt.split(/\n{2,}/);
-  for (const p of paras) {
-    const clean = p.trim();
-    if (clean.length > 80 && !/\d+\s*m[²2]/.test(clean) && !/R\$/.test(clean) && !/^\d/.test(clean)) {
-      b.conceito = clean.substring(0, 600); break;
+  // ── Previsão de entrega ── prioridade: "Entrega: DD/MM/YYYY" (Orulo)
+  const entOruloM = txt.match(/Entrega:\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if (entOruloM) {
+    b.previsaoEntrega = entOruloM[1];
+  } else {
+    const meses = 'jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez';
+    const entRx = new RegExp(`(?:entrega|previs[aã]o|conclus[aã]o)[^\\n]{0,40}?((?:${meses})[a-z]*\\.?\\s*(?:\\/|de\\s*)?\\s*20\\d\\d)`, 'i');
+    const entM = txt.match(entRx);
+    if (entM) b.previsaoEntrega = entM[1];
+    else {
+      const dtM = txt.match(new RegExp(`((?:${meses})[a-z]*\\.?\\s*(?:\\/|\\s)20\\d\\d)`, 'i'));
+      if (dtM) b.previsaoEntrega = dtM[1];
+    }
+  }
+
+  // ── Lazer ── "Características condominiais" + opcionalmente "Características da unidade"
+  const limpItem = l => l.trim().length > 1 && !/^\d+$/.test(l.trim()) && !/alguma informa[çc]/i.test(l);
+  const lzCond = txt.match(/Caracter[íi]sticas\s+condominiais\s*\n([\s\S]+?)(?:\nCaracter[íi]sticas\s+da|\nTipologia|\nInforma[çc]|\nOutras|$)/i);
+  const lzUnit = txt.match(/Caracter[íi]sticas\s+da\s+unidade\s*\n([\s\S]+?)(?:\nTipologia|\nInforma[çc]|\nOutras|\nEnviar|$)/i);
+  if (lzCond || lzUnit) {
+    const partesCond = lzCond ? lzCond[1].split('\n').filter(limpItem).map(l => l.trim()) : [];
+    const partesUnit = lzUnit ? lzUnit[1].split('\n').filter(limpItem).map(l => l.trim()) : [];
+    const itensUnit  = partesUnit.filter(i => !/nenhuma caracter[íi]stica/i.test(i));
+    b.lazer = [
+      ...partesCond,
+      ...(itensUnit.length ? ['| Unidade: ' + itensUnit.join(', ')] : []),
+    ].join(', ').substring(0, 600);
+  } else {
+    const lzM2 = txt.match(/(?:lazer|infraestrutura|amenidade|diferencial)[:\s\n]+([\s\S]{20,700}?)(?:\n{2,}|\n(?=[A-Z\d]))/i);
+    if (lzM2) {
+      b.lazer = lzM2[1].split('\n').map(l => l.trim()).filter(l => l.length > 1 && !/^\d+$/.test(l)).join(', ').substring(0, 600);
+    }
+  }
+
+  // ── Conceito ── prioridade: seção "Descrição" do Orulo
+  const descM = txt.match(/Descri[çc][aã]o\s*\n([\s\S]+?)(?:\nIr para website|\nPlantas|\nArquivos|\nALERTA|$)/i);
+  if (descM) {
+    // Pega só o primeiro parágrafo da descrição (antes de "Ver menos" ou quebra dupla)
+    const descTxt = descM[1].split(/\n{2,}|Ver menos/i)[0].trim();
+    if (descTxt.length > 20) b.conceito = descTxt.substring(0, 600);
+  }
+  // Fallback: primeiro parágrafo longo que não seja lista de amenidades (muitas linhas curtas)
+  if (!b.conceito) {
+    const paras = txt.split(/\n{2,}/);
+    for (const p of paras) {
+      const clean = p.trim();
+      const linhasP = clean.split('\n');
+      const mediaLen = linhasP.reduce((s, l) => s + l.length, 0) / linhasP.length;
+      // Rejeita listas de amenidades (muitas linhas curtas de média < 25 chars)
+      if (clean.length > 80 && mediaLen > 25 &&
+          !/\d+\s*m[²2]/.test(clean) && !/R\$/.test(clean) && !/^\d/.test(clean) &&
+          !/caracter[íi]stica/i.test(clean)) {
+        b.conceito = clean.substring(0, 600); break;
+      }
     }
   }
   return b;
@@ -559,82 +683,140 @@ function extrairPlano(txt) {
 }
 
 // ─── PARSER — BLOCO 2 (unidades) ─────────────────────────────────────────────
-function extrairBloco2(txt) {
-  const linhas = txt.split('\n').map(l => l.trim()).filter(l => l);
-  let unidades = [];
 
-  // Tentar detectar header de tabela Orulo
-  let headerIdx = -1, cols = {};
-  for (let i = 0; i < linhas.length; i++) {
-    const ll = linhas[i].toLowerCase();
-    if (ll.includes('área') || ll.includes('area') || ll.includes('m²') || ll.includes('valor')) {
-      const pts = linhas[i].split(/\t|\s{2,}/);
-      pts.forEach((p, j) => {
-        const pl = p.toLowerCase();
-        if ((pl.includes('área') || pl.includes('area')) && pl.includes('priv')) cols.area = j;
-        else if (pl.includes('área') || pl.includes('area')) cols.area = cols.area ?? j;
-        if (pl.includes('valor') || pl.includes('preço') || pl.includes('preco')) cols.preco = j;
-        if (pl.includes('vaga')) cols.vagas = j;
-        if (pl.includes('dorm') || pl.includes('quarto') || pl.includes('suíte') || pl.includes('suite')) cols.dorm = j;
-      });
-      if (Object.keys(cols).length >= 1) { headerIdx = i; break; }
-    }
-  }
-
-  if (headerIdx >= 0) {
-    for (let i = headerIdx + 1; i < linhas.length; i++) {
-      const pts = linhas[i].split(/\t|\s{2,}/);
-      let area = 0, preco = 0, vagas = 0, tip = '';
-
-      const getNum = str => { const m = (str||'').match(/(\d+[,.]\d*|\d+)/); return m ? parseFloat(m[1].replace(',','.')) : 0; };
-
-      if (cols.area != null && pts[cols.area]) area = getNum(pts[cols.area]);
-      if (!area) { const m = linhas[i].match(/(\d{2,3}[,.]\d{0,2})\s*m[²2]|(\d{2,3})\s*m[²2]/i); if (m) area = parseFloat((m[1]||m[2]).replace(',','.')); }
-      if (area < 20 || area > 600) continue;
-
-      if (cols.preco != null && pts[cols.preco]) {
-        const ps = (pts[cols.preco]||'').replace(/\./g,'').replace(',','.');
-        preco = parseFloat(ps.match(/[\d.]+/)?.[0] || '0');
-        if (preco > 0 && preco < 10000) preco *= 1000;
-      }
-      if (!preco) {
-        const m = linhas[i].match(/R\$\s*([\d.,]+)/i);
-        if (m) { preco = parseFloat(m[1].replace(/\./g,'').replace(',','.')); if (preco < 10000) preco *= 1000; }
-      }
-
-      if (cols.vagas != null && pts[cols.vagas]) vagas = parseInt(pts[cols.vagas]) || 0;
-      if (!vagas) { const m = linhas[i].match(/(\d)\s*vaga/i); if (m) vagas = parseInt(m[1]); }
-
-      tip = detectarTipologia(linhas[i]);
-      unidades.push({ area, preco, vagas, tip });
-    }
-  }
-
-  // Fallback scanner geral
-  if (!unidades.length) {
-    for (const l of linhas) {
-      const am = l.match(/(\d{2,3}[,.]\d{0,2})\s*m[²2]|(\d{2,3})\s*m[²2]/i);
-      if (!am) continue;
-      const area = parseFloat((am[1]||am[2]).replace(',','.'));
-      if (area < 20 || area > 600) continue;
-      const pm = l.match(/R\$\s*([\d.,]+)/i);
-      let preco = 0;
-      if (pm) { preco = parseFloat(pm[1].replace(/\./g,'').replace(',','.')); if (preco < 10000) preco *= 1000; }
-      const vm = l.match(/(\d)\s*vaga/i);
-      unidades.push({ area, preco, vagas: vm ? parseInt(vm[1]) : 0, tip: detectarTipologia(l) });
-    }
-  }
-
-  return agruparPorArea(unidades);
+// Converte preço em formato BR para inteiro (ex: "470.195" → 470195, "R$ 470.195,00" → 470195)
+function parsePrecoBR(str) {
+  if (!str) return 0;
+  const s = str.replace(/R\$\s*/i, '').replace(/\s/g, '');
+  if (/^\d{1,3}(\.\d{3})+$/.test(s))         return parseInt(s.replace(/\./g, ''));        // 470.195
+  if (/^\d{1,3}(\.\d{3})+,\d{2}$/.test(s))   return Math.round(parseFloat(s.replace(/\./g,'').replace(',','.'))); // 470.195,00
+  if (/^\d{5,}$/.test(s))                     return parseInt(s);                           // 470195
+  if (/^\d{1,3}(,\d{3})+$/.test(s))           return parseInt(s.replace(/,/g, ''));         // 470,195
+  return 0;
 }
 
-function detectarTipologia(l) {
-  if (/studio|quitinete/i.test(l)) return 'Studio';
-  const sm = l.match(/(\d+)\s*su[íi]te/i);
-  const qm = l.match(/(\d+)\s*(?:quarto|dormit)/i);
-  if (qm) return qm[1] + 'q' + (sm ? '+' + sm[1] + 's' : '');
-  if (sm) return sm[1] + 's';
-  return '';
+// Moda estatística (valor mais frequente no array)
+function moda(arr) {
+  if (!arr.length) return 0;
+  const freq = {};
+  arr.forEach(v => { freq[v] = (freq[v] || 0) + 1; });
+  return parseInt(Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0]);
+}
+
+// Parser estado-a-estado para o formato Orulo (cada campo em linha separada)
+function extrairOruloLinhaALinha(linhas) {
+  const STATUS_VALS = new Set(['disponível','disponivel','vendido','reservado','reservada']);
+  const unidades = [];
+  let i = 0;
+
+  while (i < linhas.length) {
+    if (!STATUS_VALS.has(linhas[i].toLowerCase())) { i++; continue; }
+
+    const status = linhas[i]; i++;
+
+    // código da unidade (ex: 102B)
+    while (i < linhas.length && !linhas[i]) i++;
+    const unidade = linhas[i] || ''; i++;
+
+    // tipo (ex: Apartamento)
+    while (i < linhas.length && !linhas[i]) i++;
+    const tipo = linhas[i] || ''; i++;
+
+    // área: número com vírgula decimal (ex: "63,2")
+    while (i < linhas.length && !linhas[i]) i++;
+    const areaStr = linhas[i] || ''; i++;
+    const area = parseFloat(areaStr.replace(',', '.')) || 0;
+    if (area < 15 || area > 5000) continue;
+
+    // preço (linhas vazias antes são normais)
+    while (i < linhas.length && !linhas[i]) i++;
+    const precoStr = linhas[i] || ''; i++;
+    const preco = parsePrecoBR(precoStr);
+
+    // valor promo — consome se for "-" ou número; ignora
+    while (i < linhas.length && !linhas[i]) i++;
+    if (i < linhas.length) {
+      const promoL = linhas[i];
+      if (promoL === '-' || parsePrecoBR(promoL) > 0) i++;
+    }
+
+    // quartos, suites, vagas — próximos inteiros simples (até 4)
+    const nums = [];
+    while (i < linhas.length && nums.length < 4) {
+      const ll = linhas[i];
+      if (!ll) { i++; continue; }
+      if (/^\d+$/.test(ll)) { nums.push(parseInt(ll)); i++; }
+      else break;
+    }
+
+    unidades.push({
+      area,
+      preco,
+      quartos: nums[0] || 0,
+      suites:  nums[1] || 0,
+      vagas:   nums[2] || 0,
+      status,
+      unidade,
+    });
+  }
+
+  return unidades;
+}
+
+// Mini-tabela "Tipologias disponíveis" do Orulo:
+// "R$ 406.631\n51,2\t2\t1\t1" → preco + area/quartos/suites/vagas por linha
+function extrairTipologiasCompactas(linhas) {
+  const unidades = [];
+  for (let i = 0; i < linhas.length - 1; i++) {
+    const l = linhas[i];
+    if (!/^R\$\s*[\d.,]+$/.test(l)) continue;
+    const preco = parsePrecoBR(l.replace(/R\$\s*/i, '').trim());
+    if (!preco) continue;
+    const next   = linhas[i + 1];
+    const partes = next.split('\t').map(p => p.trim());
+    if (partes.length < 2) continue;
+    const area = parseFloat(partes[0].replace(',', '.')) || 0;
+    if (area < 15 || area > 5000) continue;
+    unidades.push({
+      area,
+      preco,
+      quartos: parseInt(partes[1]) || 0,
+      suites:  parseInt(partes[2]) || 0,
+      vagas:   parseInt(partes[3]) || 0,
+    });
+    i++;
+  }
+  return unidades;
+}
+
+function extrairBloco2(txt) {
+  const linhas = txt.split('\n').map(l => l.trim());
+
+  // 1ª tentativa: parser linha-a-linha (formato completo Orulo — unidade por unidade)
+  const uns1 = extrairOruloLinhaALinha(linhas);
+  if (uns1.length) return agruparPorArea(uns1);
+
+  // 2ª tentativa: mini-tabela "Tipologias disponíveis" (formato compacto Orulo)
+  const uns2 = extrairTipologiasCompactas(linhas);
+  if (uns2.length) return agruparPorArea(uns2);
+
+  // Fallback: scanner por m² + R$ na mesma linha
+  const uns3 = [];
+  for (const l of linhas.filter(l => l)) {
+    const am = l.match(/(\d{2,3}[,.]\d{0,2})\s*m[²2]|(\d{2,3})\s*m[²2]/i);
+    if (!am) continue;
+    const area = parseFloat((am[1] || am[2]).replace(',', '.'));
+    if (area < 20 || area > 600) continue;
+    const pm = l.match(/R\$\s*([\d.,]+)/i);
+    let preco = 0;
+    if (pm) { preco = parsePrecoBR(pm[1]); if (preco > 0 && preco < 10000) preco *= 1000; }
+    const vm = l.match(/(\d)\s*vaga/i);
+    const qm = l.match(/(\d+)\s*(?:quarto|dormit)/i);
+    const sm = l.match(/(\d+)\s*su[íi]te/i);
+    uns3.push({ area, preco, vagas: vm ? parseInt(vm[1]) : 0,
+                quartos: qm ? parseInt(qm[1]) : 0, suites: sm ? parseInt(sm[1]) : 0 });
+  }
+  return agruparPorArea(uns3);
 }
 
 function agruparPorArea(uns) {
@@ -647,31 +829,50 @@ function agruparPorArea(uns) {
   return Object.values(grupos).map(g => {
     const precos = g.items.map(u => u.preco).filter(p => p > 0);
     const vagas  = g.items.map(u => u.vagas).filter(v => v > 0);
-    const tips   = [...new Set(g.items.map(u => u.tip).filter(t => t))];
+    const qModa  = moda(g.items.map(u => u.quartos || 0));
+    const sModa  = moda(g.items.map(u => u.suites  || 0));
+    // Quartos=0 e vagas=0 → lote/terreno → tipologia vazia (usuário preenche)
+    const tipologia = (qModa === 0 && vMedia === 0)
+      ? ''
+      : (qModa === 0 ? 'Studio' : qModa + 'q' + (sModa > 0 ? '+' + sModa + 's' : ''));
     return {
-      tipologia:   tips[0] || '',
+      tipologia,
       areaUtil:    g.area,
       qtdUnidades: g.items.length,
-      vagas:       vagas.length ? Math.round(vagas.reduce((a,b)=>a+b,0)/vagas.length) : 0,
+      vagas:       vagas.length ? Math.round(vagas.reduce((a, b) => a + b, 0) / vagas.length) : 0,
       escaninho:   '',
-      precoMedio:  precos.length ? Math.round(precos.reduce((a,b)=>a+b,0)/precos.length) : 0,
+      precoMedio:  precos.length ? Math.round(precos.reduce((a, b) => a + b, 0) / precos.length) : 0,
       precoMin:    precos.length ? Math.min(...precos) : 0,
       precoMax:    precos.length ? Math.max(...precos) : 0,
     };
-  }).sort((a,b) => a.areaUtil - b.areaUtil);
+  }).sort((a, b) => a.areaUtil - b.areaUtil);
 }
 
 // ─── EXTRAIR ──────────────────────────────────────────────────────────────────
+function atualizarUrlLink(val) {
+  const link = document.getElementById('url-link');
+  if (val && (val.startsWith('http://') || val.startsWith('https://'))) {
+    link.href = val;
+    link.style.display = 'inline-block';
+  } else {
+    link.style.display = 'none';
+  }
+}
+
 function extrairDados() {
-  const txt = document.getElementById('textoMotor').value.trim();
-  if (txt.length < 20) { mostrarToast('Cole o texto do empreendimento primeiro.', 'erro'); return; }
+  const txtB1 = document.getElementById('txtBloco1').value.trim();
+  const txtB2 = document.getElementById('txtBloco2').value.trim();
+  if (!txtB1 && !txtB2) { mostrarToast('Cole o texto nos campos BOX 1 ou BOX 2 primeiro.', 'erro'); return; }
   const btn = document.getElementById('btnExtrair');
   btn.disabled = true; btn.textContent = '⏳ Extraindo...';
   setTimeout(() => {
     try {
-      const b1    = extrairBloco1(txt);
-      const plano = extrairPlano(txt);
-      const b2    = extrairBloco2(txt);
+      // BOX 1 → dados gerais; se vazio usa BOX 2 como fallback
+      const srcB1 = txtB1 || txtB2;
+      const b1    = extrairBloco1(srcB1);
+      const plano = extrairPlano(srcB1);
+      // BOX 2 → tabela de unidades; se vazio tenta mini-tabela do BOX 1
+      const b2    = extrairBloco2(txtB2 || txtB1);
 
       renderB1(b1); renderPlano(plano); renderB2(b2);
 
@@ -763,7 +964,12 @@ function addLinhaUnidade() {
 }
 
 function limparMotor() {
-  document.getElementById('textoMotor').value = '';
+  document.getElementById('txtBloco1').value = '';
+  document.getElementById('txtBloco2').value = '';
+  const urlEl = document.getElementById('urlEmpreendimento');
+  if (urlEl) { urlEl.value = ''; }
+  const linkEl = document.getElementById('url-link');
+  if (linkEl) { linkEl.style.display = 'none'; }
   document.getElementById('preview-box').style.display = 'none';
   // Limpar campos
   ['f-nome','f-construtora','f-bairro','f-endereco','f-entrega','f-lazer','f-conceito',
