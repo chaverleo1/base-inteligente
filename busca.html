@@ -735,43 +735,34 @@ function gerarHtmlPDF(lista) {
   const data = new Date().toLocaleDateString('pt-BR');
   const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-  const cards = lista.map((im, i) => {
-    const local    = [im.condominio, im.bairro].filter(Boolean).join(' — ');
-    const specs    = [
-      im.quartos  ? `🛏️ ${im.quartos} quartos` : '',
-      im.suites   ? `🚿 ${im.suites} suítes`  : '',
-      im.vagas    ? `🚗 ${im.vagas} vagas`    : '',
-      im.areaUtil ? `📐 ${im.areaUtil} m²`    : '',
-      im.padrao   ? im.padrao                 : '',
-    ].filter(Boolean).join('  ·  ');
+  const linhas = lista.map((im, i) => {
+    const local  = [im.condominio, im.bairro].filter(Boolean).join(' · ');
+    const specs  = [
+      im.quartos  ? `${im.quartos}q`   : '',
+      im.suites   ? `${im.suites}s`    : '',
+      im.vagas    ? `${im.vagas}v`     : '',
+      im.areaUtil ? `${im.areaUtil}m²` : '',
+      im.padrao   ? im.padrao          : '',
+    ].filter(Boolean).join(' · ');
 
-    const fotoHtml = im.foto && im.foto.startsWith('http')
-      ? `<img src="${im.foto}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;display:block;margin-bottom:14px" onerror="this.style.display='none'">`
-      : '';
-
-    const msg = gerarMensagem(im);
-    const sc  = im.score || 0;
+    const sc      = im.score || 0;
     const scColor = sc >= 80 ? '#00b894' : sc >= 60 ? '#4f7cff' : '#8892aa';
-    const fonte = im.fonte === 'CONSTRUTORA' ? '🏗️ CONSTRUTORA' : '🔑 REVENDA';
+    const isCons  = im.fonte === 'CONSTRUTORA';
+    const bg      = i % 2 === 1 ? 'background:#f9fafc' : '';
 
-    return `<div style="page-break-inside:avoid;border:1px solid #ddd;border-radius:10px;padding:20px;margin-bottom:20px;background:#fff">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <div>
-          <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${fonte} · #${i + 1}</div>
-          <div style="font-size:18px;font-weight:700;color:#1a1a2e;line-height:1.2">${im.tipo || 'Imóvel'} — ${local || '—'}</div>
-          ${im.endereco ? `<div style="font-size:12px;color:#666;margin-top:2px">${im.endereco}</div>` : ''}
-        </div>
-        <div style="background:${scColor}18;color:${scColor};border:1px solid ${scColor}55;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;margin-left:12px">${sc}% match</div>
-      </div>
-      ${fotoHtml}
-      <div style="font-size:26px;font-weight:800;color:#00b894;margin:8px 0 6px">${fmt_(im.valorVenda) || '—'}</div>
-      ${specs ? `<div style="font-size:13px;color:#555;margin-bottom:14px;line-height:1.6">${specs}</div>` : ''}
-      <div style="background:#f8f9fa;border-radius:8px;padding:14px;font-size:12.5px;color:#444;line-height:1.75;white-space:pre-line">
-        <div style="font-size:10px;font-weight:700;color:#4f7cff;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">💬 Mensagem sugerida para WhatsApp</div>
-        ${msg}
-      </div>
-      ${im.url && im.url.startsWith('http') ? `<div style="margin-top:10px;font-size:12px;color:#4f7cff">${im.url}</div>` : ''}
-    </div>`;
+    return `<tr style="${bg}">
+      <td style="padding:6px 6px;text-align:center;color:#bbb;font-size:11px;font-weight:700;width:26px">${i + 1}</td>
+      <td style="padding:6px 8px;font-size:12px;font-weight:700;white-space:nowrap;color:#1a1a2e;width:110px">${im.tipo || '—'}</td>
+      <td style="padding:6px 8px;font-size:12px;color:#333;max-width:0;width:99%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${local || im.endereco || '—'}</td>
+      <td style="padding:6px 8px;font-size:11px;color:#666;white-space:nowrap;width:130px">${specs || '—'}</td>
+      <td style="padding:6px 10px;font-size:13px;font-weight:800;color:#00b894;white-space:nowrap;text-align:right;width:110px">${fmt_(im.valorVenda) || '—'}</td>
+      <td style="padding:6px 7px;text-align:center;white-space:nowrap;width:58px">
+        <span style="background:${scColor}1a;color:${scColor};border:1px solid ${scColor}55;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700">${sc}%</span>
+      </td>
+      <td style="padding:6px 7px;text-align:center;width:52px">
+        <span style="background:${isCons ? '#4f7cff1a' : '#00b8941a'};color:${isCons ? '#4f7cff' : '#00b894'};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${isCons ? 'CONST' : 'REV'}</span>
+      </td>
+    </tr>`;
   }).join('');
 
   return `<!DOCTYPE html>
@@ -781,23 +772,42 @@ function gerarHtmlPDF(lista) {
 <title>Ofertas Selecionadas — Base Inteligente</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; padding: 32px; max-width: 800px; margin: 0 auto; }
-  @media print { body { padding: 0; } @page { margin: 15mm; size: A4; } }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; padding: 22px 26px; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  thead th { background: #f0f4ff; color: #4f7cff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 7px 8px; border-bottom: 2px solid #4f7cff44; text-align: left; }
+  thead th.r { text-align: right; }
+  thead th.c { text-align: center; }
+  tbody tr { border-bottom: 1px solid #eee; }
+  tbody tr:last-child { border-bottom: none; }
+  @media print { body { padding: 0; } @page { margin: 10mm; size: A4; } }
 </style>
 </head>
 <body>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:18px;border-bottom:3px solid #4f7cff">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:3px solid #4f7cff">
     <div>
-      <div style="font-size:22px;font-weight:800;color:#4f7cff;letter-spacing:-.5px">BASE INTELIGENTE</div>
-      <div style="font-size:13px;color:#666;margin-top:3px">Seleção de Imóveis · ${data} às ${hora}</div>
+      <div style="font-size:18px;font-weight:800;color:#4f7cff;letter-spacing:-.5px">BASE INTELIGENTE</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">Seleção de Imóveis · ${data} às ${hora}</div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:32px;font-weight:800;color:#1a1a2e;line-height:1">${lista.length}</div>
-      <div style="font-size:12px;color:#666">imóvel(is)</div>
+      <div style="font-size:26px;font-weight:800;color:#1a1a2e;line-height:1">${lista.length}</div>
+      <div style="font-size:10px;color:#888">${lista.length === 1 ? 'imóvel' : 'imóveis'}</div>
     </div>
   </div>
-  ${cards}
-  <div style="margin-top:24px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:14px">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26px" class="c">#</th>
+        <th style="width:110px">Tipo</th>
+        <th>Local / Condomínio</th>
+        <th style="width:130px">Quartos · Vagas · Área</th>
+        <th style="width:110px" class="r">Preço</th>
+        <th style="width:58px" class="c">Match</th>
+        <th style="width:52px" class="c">Fonte</th>
+      </tr>
+    </thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <div style="margin-top:16px;text-align:center;font-size:10px;color:#bbb;border-top:1px solid #eee;padding-top:10px">
     Gerado em ${data} às ${hora} · Base Inteligente — Sistema de Matching Imobiliário
   </div>
   <script>window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });<\/script>
