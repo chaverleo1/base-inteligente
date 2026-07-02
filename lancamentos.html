@@ -1027,8 +1027,6 @@ async function salvarLancamento() {
       body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_lancamento', dados }) })
     });
     const texto = await resp.text();
-    console.log('SAVE STATUS:', resp.status, resp.url);
-    console.log('SAVE RESPONSE:', texto);
     let json;
     try { json = JSON.parse(texto); } catch { json = {}; }
     if (json.ok) {
@@ -1036,12 +1034,9 @@ async function salvarLancamento() {
       limparMotor();
       await carregarLancamentos();
     } else {
-      mostrarToast('Erro: ' + (json.erro || texto.substring(0, 120)), 'erro');
+      mostrarToast(json.erro || 'Erro ao salvar.', 'erro');
     }
-  } catch(err) {
-    console.error('SAVE ERROR:', err);
-    mostrarToast('Erro de conexão ao salvar.', 'erro');
-  }
+  } catch { mostrarToast('Erro de conexão ao salvar.', 'erro'); }
   finally { btn.disabled = false; btn.innerHTML = '💾 Salvar Lançamento'; }
 }
 
