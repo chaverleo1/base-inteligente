@@ -750,10 +750,16 @@ function gerarHtmlPDF(lista) {
     const isCons  = im.fonte === 'CONSTRUTORA';
     const bg      = i % 2 === 1 ? 'background:#f9fafc' : '';
 
+    const localL1 = [im.codigo, im.condominio, im.bairro].filter(Boolean).join(' — ');
+    const localL2 = im.endereco || '';
+
     return `<tr style="${bg}">
       <td style="padding:6px 6px;text-align:center;color:#bbb;font-size:11px;font-weight:700;width:26px">${i + 1}</td>
       <td style="padding:6px 8px;font-size:12px;font-weight:700;white-space:nowrap;color:#1a1a2e;width:110px">${im.tipo || '—'}</td>
-      <td style="padding:6px 8px;font-size:12px;color:#333;max-width:0;width:99%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${local || im.endereco || '—'}</td>
+      <td style="padding:5px 8px;max-width:0;width:99%;overflow:hidden">
+        <div style="font-size:12px;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${localL1 || '—'}</div>
+        ${localL2 ? `<div style="font-size:10px;color:#888;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${localL2}</div>` : ''}
+      </td>
       <td style="padding:6px 8px;font-size:11px;color:#666;white-space:nowrap;width:130px">${specs || '—'}</td>
       <td style="padding:6px 10px;font-size:13px;font-weight:800;color:#00b894;white-space:nowrap;text-align:right;width:110px">${fmt_(im.valorVenda) || '—'}</td>
       <td style="padding:6px 7px;text-align:center;white-space:nowrap;width:58px">
