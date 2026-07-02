@@ -770,21 +770,32 @@ function extrairOruloLinhaALinha(linhas) {
       if (promoL === '-' || parsePrecoBR(promoL) > 0) i++;
     }
 
-    // quartos, suites, vagas — próximos inteiros simples (até 4)
-    const nums = [];
-    while (i < linhas.length && nums.length < 4) {
+    // quartos, suites, vagas, banheiros — formato "3 (QUARTOS)" ou só "3"
+    const campos = { quartos: 0, suites: 0, vagas: 0, banheiros: 0 };
+    const ordem  = ['quartos','suites','vagas','banheiros'];
+    let numIdx = 0;
+    while (i < linhas.length && numIdx < 5) {
       const ll = linhas[i];
       if (!ll) { i++; continue; }
-      if (/^\d+$/.test(ll)) { nums.push(parseInt(ll)); i++; }
-      else break;
+      const nm = ll.match(/^(\d+)(?:\s*\(([^)]+)\))?$/);
+      if (!nm) break;
+      const val   = parseInt(nm[1]);
+      const label = (nm[2] || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      if      (label.includes('quarto') || label.includes('dormit')) campos.quartos   = val;
+      else if (label.includes('suite')  || label.includes('suite'))  campos.suites    = val;
+      else if (label.includes('vaga'))                               campos.vagas     = val;
+      else if (label.includes('banheir'))                            campos.banheiros = val;
+      else if (numIdx < ordem.length)                                campos[ordem[numIdx]] = val;
+      numIdx++; i++;
     }
 
     unidades.push({
       area,
       preco,
-      quartos: nums[0] || 0,
-      suites:  nums[1] || 0,
-      vagas:   nums[2] || 0,
+      quartos:   campos.quartos,
+      suites:    campos.suites,
+      vagas:     campos.vagas,
+      banheiros: campos.banheiros,
       status,
       unidade,
     });
@@ -859,11 +870,13 @@ function agruparPorArea(uns) {
   return Object.values(grupos).map(g => {
     const precos = g.items.map(u => u.preco).filter(p => p > 0);
     const vagas  = g.items.map(u => u.vagas).filter(v => v > 0);
-    const qModa  = moda(g.items.map(u => u.quartos || 0));
-    const sModa  = moda(g.items.map(u => u.suites  || 0));
+    const qModa  = moda(g.items.map(u => u.quartos   || 0));
+    const sModa  = moda(g.items.map(u => u.suites    || 0));
+    const bModa  = moda(g.items.map(u => u.banheiros || 0));
     return {
       quartos:     qModa,
       suites:      sModa,
+      banheiros:   bModa,
       areaUtil:    g.area,
       qtdUnidades: g.items.length,
       vagas:       vagas.length ? Math.round(vagas.reduce((a, b) => a + b, 0) / vagas.length) : 0,
