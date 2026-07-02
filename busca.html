@@ -192,9 +192,22 @@ input[type=range]::-webkit-slider-thumb {
 }
 .card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .card.top { border-color: rgba(0,212,170,.4); }
+.card.selecionado { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(0,212,170,.25); }
+.card.selecionado .card-check { background: rgba(0,212,170,.12); }
 
-.card-inner { display: grid; grid-template-columns: 140px 1fr; }
-@media (max-width: 600px) { .card-inner { grid-template-columns: 1fr; } }
+.card-inner { display: grid; grid-template-columns: 44px 140px 1fr; }
+@media (max-width: 600px) { .card-inner { grid-template-columns: 44px 1fr; } }
+
+.card-check {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border-right: 1px solid var(--border);
+  cursor: pointer; transition: background .15s; flex-shrink: 0;
+}
+.card-check:hover { background: rgba(0,212,170,.08); }
+.card-check input[type=checkbox] {
+  width: 18px; height: 18px; cursor: pointer;
+  accent-color: var(--accent2); flex-shrink: 0;
+}
 
 .card-foto {
   background: var(--surface2);
@@ -296,6 +309,25 @@ input[type=range]::-webkit-slider-thumb {
   font-size: 13px; border: 1px solid var(--border); cursor: pointer;
   font-family: 'Inter', sans-serif;
 }
+.barra-esq { display: flex; flex-direction: column; gap: 5px; }
+.barra-sel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.barra-sel-info { font-size: 13px; color: var(--accent2); font-weight: 700; }
+.btn-pdf {
+  padding: 9px 18px; border-radius: var(--radius-xs);
+  background: var(--accent2); color: #0f1117;
+  font-size: 13px; font-weight: 700; border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .18s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-pdf:hover { background: #00bfa0; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,212,170,.35); }
+.btn-pdf:disabled { opacity: .6; cursor: default; transform: none; box-shadow: none; }
+.btn-sel-all {
+  padding: 6px 12px; border-radius: var(--radius-xs);
+  background: transparent; color: var(--text3);
+  font-size: 12px; border: 1px solid var(--border); cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .15s;
+}
+.btn-sel-all:hover { color: var(--accent2); border-color: var(--accent2); }
 
 /* ── MODAL DETALHE ── */
 .overlay {
@@ -352,6 +384,26 @@ input[type=range]::-webkit-slider-thumb {
 .toast.erro { background: var(--coral); color: #fff; }
 
 .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+/* ── PRINT / PDF ── */
+@media print {
+  .header,.painel,.barra-cadastro,.overlay,.login-overlay,
+  .card-actions,.btn-buscar,.estado-inicial,
+  .resultado-header { display: none !important; }
+  .app { display: block !important; }
+  .resultado { padding: 0 !important; }
+  body { background: #fff !important; color: #111 !important; font-size: 13px; }
+  .card { page-break-inside: avoid; border: 1px solid #ddd !important;
+          box-shadow: none !important; transform: none !important;
+          background: #fff !important; }
+  .card.selecionado { border-color: #00d4aa !important; }
+  .card:not(.selecionado) { display: none !important; }
+  .card-check { display: none !important; }
+  .card-inner { grid-template-columns: 160px 1fr !important; }
+  .score-badge { border: 1px solid #ccc !important; }
+  .cards-grid { gap: 14px !important; }
+  .imovel-gatilho { display: none; }
+}
 
 /* ── LOGIN ── */
 .login-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -542,9 +594,17 @@ input[type=range]::-webkit-slider-thumb {
 
 <!-- BARRA INFERIOR (aparece após busca) -->
 <div class="barra-cadastro" id="barra-cadastro" style="display:none">
-  <div class="barra-txt"><b id="barra-count">0</b> imóveis encontrados — cadastrar esse cliente?</div>
+  <div class="barra-esq">
+    <div class="barra-txt"><b id="barra-count">0</b> imóveis encontrados</div>
+    <div class="barra-sel" id="barra-sel" style="display:none">
+      <span class="barra-sel-info">📋 <b id="barra-sel-count">0</b> selecionados</span>
+      <button class="btn-pdf" id="btnPDF" onclick="gerarPDF()">📄 Gerar PDF de Ofertas</button>
+      <button class="btn-sel-all" id="btnSelAll" onclick="selecionarTodos()">☑ Todos</button>
+      <button class="btn-sel-all" onclick="limparSelecao()" style="color:var(--danger);border-color:var(--danger)">✕ Limpar</button>
+    </div>
+  </div>
   <div class="barra-btns">
-    <input type="text" id="cadNome" placeholder="Nome">
+    <input type="text" id="cadNome" placeholder="Nome do cliente">
     <input type="text" id="cadTelefone" placeholder="Telefone">
     <button class="btn-nova-busca" onclick="novaBusca()">↺ Nova busca</button>
     <button class="btn-cadastrar" id="btnCadastrar" onclick="cadastrarCliente()">+ Cadastrar cliente</button>
@@ -607,8 +667,143 @@ function sair() {
 verificarAuth();
 
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
-const state = { imovelAtual: null, ultimoInterpretado: null, ultimoTexto: '' };
+const state = {
+  imovelAtual: null,
+  ultimoInterpretado: null,
+  ultimoTexto: '',
+  selecionados: new Map(),   // idx → im
+  resultadosAtuais: []
+};
 let precoAtual = 500000;
+
+// ─── SELEÇÃO / PDF ────────────────────────────────────────────────────────────
+function toggleSelecionado(idx, el) {
+  const im = state.resultadosAtuais[idx];
+  if (!im) return;
+  const card = el.closest('.card');
+  if (el.checked) { state.selecionados.set(idx, im); card.classList.add('selecionado'); }
+  else            { state.selecionados.delete(idx);   card.classList.remove('selecionado'); }
+  atualizarBarraSel();
+}
+
+function atualizarBarraSel() {
+  const n   = state.selecionados.size;
+  const sel = document.getElementById('barra-sel');
+  const cnt = document.getElementById('barra-sel-count');
+  const btn = document.getElementById('btnSelAll');
+  if (cnt) cnt.textContent = n;
+  if (sel) sel.style.display = n > 0 ? 'flex' : 'none';
+  if (btn) btn.textContent = n === state.resultadosAtuais.length ? '☐ Desmarcar' : '☑ Todos';
+}
+
+function selecionarTodos() {
+  const todos = state.resultadosAtuais.length;
+  const jaEstaoTodos = state.selecionados.size === todos;
+  document.querySelectorAll('.card-check input[type=checkbox]').forEach((chk, idx) => {
+    chk.checked = !jaEstaoTodos;
+    const card = chk.closest('.card');
+    if (!jaEstaoTodos) { state.selecionados.set(idx, state.resultadosAtuais[idx]); card.classList.add('selecionado'); }
+    else               { state.selecionados.delete(idx); card.classList.remove('selecionado'); }
+  });
+  atualizarBarraSel();
+}
+
+function limparSelecao() {
+  state.selecionados.clear();
+  document.querySelectorAll('.card-check input[type=checkbox]').forEach(chk => { chk.checked = false; });
+  document.querySelectorAll('.card.selecionado').forEach(c => c.classList.remove('selecionado'));
+  atualizarBarraSel();
+}
+
+function gerarPDF() {
+  const selecionados = [...state.selecionados.values()];
+  if (!selecionados.length) { mostrarToast('Selecione ao menos um imóvel', 'erro'); return; }
+  const btn = document.getElementById('btnPDF');
+  btn.disabled = true; btn.textContent = '⏳ Gerando...';
+  try {
+    const html = gerarHtmlPDF(selecionados);
+    const win = window.open('', '_blank');
+    if (!win) { mostrarToast('Permita popups para gerar o PDF', 'erro'); return; }
+    win.document.write(html);
+    win.document.close();
+  } finally {
+    setTimeout(() => { btn.disabled = false; btn.innerHTML = '📄 Gerar PDF de Ofertas'; }, 800);
+  }
+}
+
+function gerarHtmlPDF(lista) {
+  const data = new Date().toLocaleDateString('pt-BR');
+  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  const cards = lista.map((im, i) => {
+    const local    = [im.condominio, im.bairro].filter(Boolean).join(' — ');
+    const specs    = [
+      im.quartos  ? `🛏️ ${im.quartos} quartos` : '',
+      im.suites   ? `🚿 ${im.suites} suítes`  : '',
+      im.vagas    ? `🚗 ${im.vagas} vagas`    : '',
+      im.areaUtil ? `📐 ${im.areaUtil} m²`    : '',
+      im.padrao   ? im.padrao                 : '',
+    ].filter(Boolean).join('  ·  ');
+
+    const fotoHtml = im.foto && im.foto.startsWith('http')
+      ? `<img src="${im.foto}" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;display:block;margin-bottom:14px" onerror="this.style.display='none'">`
+      : '';
+
+    const msg = gerarMensagem(im);
+    const sc  = im.score || 0;
+    const scColor = sc >= 80 ? '#00b894' : sc >= 60 ? '#4f7cff' : '#8892aa';
+    const fonte = im.fonte === 'CONSTRUTORA' ? '🏗️ CONSTRUTORA' : '🔑 REVENDA';
+
+    return `<div style="page-break-inside:avoid;border:1px solid #ddd;border-radius:10px;padding:20px;margin-bottom:20px;background:#fff">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${fonte} · #${i + 1}</div>
+          <div style="font-size:18px;font-weight:700;color:#1a1a2e;line-height:1.2">${im.tipo || 'Imóvel'} — ${local || '—'}</div>
+          ${im.endereco ? `<div style="font-size:12px;color:#666;margin-top:2px">${im.endereco}</div>` : ''}
+        </div>
+        <div style="background:${scColor}18;color:${scColor};border:1px solid ${scColor}55;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;margin-left:12px">${sc}% match</div>
+      </div>
+      ${fotoHtml}
+      <div style="font-size:26px;font-weight:800;color:#00b894;margin:8px 0 6px">${fmt_(im.valorVenda) || '—'}</div>
+      ${specs ? `<div style="font-size:13px;color:#555;margin-bottom:14px;line-height:1.6">${specs}</div>` : ''}
+      <div style="background:#f8f9fa;border-radius:8px;padding:14px;font-size:12.5px;color:#444;line-height:1.75;white-space:pre-line">
+        <div style="font-size:10px;font-weight:700;color:#4f7cff;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">💬 Mensagem sugerida para WhatsApp</div>
+        ${msg}
+      </div>
+      ${im.url && im.url.startsWith('http') ? `<div style="margin-top:10px;font-size:12px;color:#4f7cff">${im.url}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Ofertas Selecionadas — Base Inteligente</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; padding: 32px; max-width: 800px; margin: 0 auto; }
+  @media print { body { padding: 0; } @page { margin: 15mm; size: A4; } }
+</style>
+</head>
+<body>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:18px;border-bottom:3px solid #4f7cff">
+    <div>
+      <div style="font-size:22px;font-weight:800;color:#4f7cff;letter-spacing:-.5px">BASE INTELIGENTE</div>
+      <div style="font-size:13px;color:#666;margin-top:3px">Seleção de Imóveis · ${data} às ${hora}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:32px;font-weight:800;color:#1a1a2e;line-height:1">${lista.length}</div>
+      <div style="font-size:12px;color:#666">imóvel(is)</div>
+    </div>
+  </div>
+  ${cards}
+  <div style="margin-top:24px;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:14px">
+    Gerado em ${data} às ${hora} · Base Inteligente — Sistema de Matching Imobiliário
+  </div>
+  <script>window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });<\/script>
+</body>
+</html>`;
+}
 
 // ─── OPÇÕES DINÂMICAS (tipos/bairros existentes na base) ──────────────────────
 async function carregarOpcoesFiltro() {
@@ -720,6 +915,8 @@ async function executarBusca() {
 }
 
 function renderResultados(resultados, filtros, interpretado) {
+  state.resultadosAtuais = resultados;
+  state.selecionados.clear();
   document.getElementById('estado-inicial').style.display = 'none';
   const conteudo = document.getElementById('resultado-conteudo');
   conteudo.style.display = 'block';
@@ -766,6 +963,10 @@ function renderResultados(resultados, filtros, interpretado) {
     card.onclick = () => abrirDetalhe(im);
     card.innerHTML = `
       <div class="card-inner">
+        <div class="card-check" onclick="event.stopPropagation()">
+          <input type="checkbox" title="Selecionar para PDF"
+                 onclick="event.stopPropagation();toggleSelecionado(${i}, this)">
+        </div>
         <div class="card-foto">
           <div class="card-rank ${rankClass}">${i+1}</div>
           ${fotoHtml}
@@ -802,6 +1003,7 @@ function renderResultados(resultados, filtros, interpretado) {
   const barra = document.getElementById('barra-cadastro');
   barra.style.display = 'flex';
   document.getElementById('barra-count').textContent = resultados.length;
+  document.getElementById('barra-sel').style.display = 'none';
 }
 
 // ─── DETALHE / MENSAGEM ────────────────────────────────────────────────────────
@@ -867,9 +1069,12 @@ function mostrarToast(txt, tipo) {
 
 // ─── AÇÕES BARRA ─────────────────────────────────────────────────────────────
 function novaBusca() {
+  state.selecionados.clear();
+  state.resultadosAtuais = [];
   document.getElementById('estado-inicial').style.display = 'flex';
   document.getElementById('resultado-conteudo').style.display = 'none';
   document.getElementById('barra-cadastro').style.display = 'none';
+  document.getElementById('barra-sel').style.display = 'none';
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
   document.getElementById('texto-livre').value = '';
   document.getElementById('cadNome').value = '';
