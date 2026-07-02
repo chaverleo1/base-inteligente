@@ -1024,8 +1024,7 @@ async function salvarLancamento() {
   try {
     const resp = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acao: 'salvar_lancamento', dados })
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_lancamento', dados }) })
     });
     const json = await resp.json();
     if (json.ok) {
@@ -1178,8 +1177,7 @@ async function excluirEmp(id, nome) {
   try {
     const resp = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acao: 'excluir_lancamento', idLancamento: id, nomeEmpreendimento: nome })
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_lancamento', idLancamento: id, nomeEmpreendimento: nome }) })
     });
     const json = await resp.json();
     if (json.ok) { mostrarToast('Empreendimento excluído.', 'ok'); carregarLancamentos(); }
