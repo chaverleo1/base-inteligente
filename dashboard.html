@@ -176,6 +176,9 @@
   .imovel-fonte-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
   .fonte-rev{background:rgba(79,124,255,.12);color:var(--accent)}
   .fonte-const{background:rgba(0,212,170,.12);color:var(--accent2)}
+  .fonte-lanc{background:rgba(255,165,0,.15);color:#e67e00}
+  .imovel-card-lanc{border-color:rgba(255,165,0,.3)}
+  .imovel-card-lanc:hover{border-color:#e67e00}
   .imovel-condpag{padding:0 12px 10px;display:flex;flex-direction:column;gap:4px;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px}
   .imovel-condpag-item{font-size:12px;color:var(--text2);line-height:1.4}
 
@@ -672,6 +675,7 @@ async function carregarMatchesDrawer(cod, cliente) {
       const sc      = parseInt(m.scoreMatch || m.score || m.cliScore) || 0;
       const cls     = sc >= 80 ? 'd-badge-hot' : sc >= 70 ? 'd-badge-warm' : 'd-badge-cold';
       const isConst = m.fonte === 'CONSTRUTORA';
+      const isLanc  = m.fonte === 'LANCAMENTO';
       const attrs = [
         m.imoQuartos  ? m.imoQuartos  + ' qtos'   : '',
         m.imoSuites   ? m.imoSuites   + ' suítes'  : '',
@@ -683,7 +687,7 @@ async function carregarMatchesDrawer(cod, cliente) {
       const det   = (m.detalheMatch||'').replace(/\|/g,'·');
       const foto  = m.imoFoto && m.imoFoto.startsWith('http')
         ? `<img class="imovel-foto" src="${m.imoFoto}" onerror="this.style.display='none'">`
-        : `<div class="imovel-foto-placeholder">${isConst ? '🏗️' : '🏠'}</div>`;
+        : `<div class="imovel-foto-placeholder">${isLanc ? '🚀' : isConst ? '🏗️' : '🏠'}</div>`;
       const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(' — ');
       const msgId = `msgOferta_${idx}`;
 
@@ -704,12 +708,12 @@ async function carregarMatchesDrawer(cod, cliente) {
       }
       const wppHref = tel && mensagem ? `https://wa.me/55${tel}?text=${encodeURIComponent(mensagem)}` : null;
 
-      return `<div class="imovel-card${isConst ? ' imovel-card-const' : ''}">
+      return `<div class="imovel-card${isLanc ? ' imovel-card-lanc' : isConst ? ' imovel-card-const' : ''}">
         <div class="imovel-card-top">
           ${foto}
           <div class="imovel-info">
             <div class="imovel-fonte-row">
-              <span class="imovel-fonte-badge ${isConst ? 'fonte-const' : 'fonte-rev'}">${isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
+              <span class="imovel-fonte-badge ${isLanc ? 'fonte-lanc' : isConst ? 'fonte-const' : 'fonte-rev'}">${isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
             </div>
             <div class="imovel-tipo">${m.imoTipo||'Imóvel'}</div>
             <div class="imovel-local">${local||'—'}</div>
