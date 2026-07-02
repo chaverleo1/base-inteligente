@@ -453,7 +453,7 @@ select.form-input option { background: var(--surface2); }
               <th style="width:45px">Banh</th>
               <th style="width:68px">Área m²</th>
               <th style="width:68px">Área Terr</th>
-              <th style="width:48px">Unidades</th>
+              <th style="width:65px">Unid.</th>
               <th style="width:48px">Vagas</th>
               <th style="width:60px">Escaninho</th>
               <th class="r" style="width:95px">Preço Médio</th>
@@ -879,7 +879,7 @@ function agruparPorArea(uns) {
       suites:      sModa,
       banheiros:   bModa,
       areaUtil:    g.area,
-      unidades:    g.items.length,
+      unidades:    '',
       vagas:       vagas.length ? Math.round(vagas.reduce((a, b) => a + b, 0) / vagas.length) : 0,
       escaninho:   '',
       precoMedio:  precos.length ? Math.round(precos.reduce((a, b) => a + b, 0) / precos.length) : 0,
@@ -992,7 +992,7 @@ function criarLinha(u = {}) {
     <td>${inp(u.banheiros!= null && u.banheiros!== '' ? u.banheiros: '', '0', 'center')}</td>
     <td>${inp(u.areaUtil ||'', 'm²',  'right')}</td>
     <td>${inp(u.areaTerr ||'', 'm²',  'right')}</td>
-    <td>${inp(u.unidades  ||'', 'qtd', 'center')}</td>
+    <td>${inp(u.unidades  ||'', 'cód.', 'left')}</td>
     <td>${inp(u.vagas    ||'', 'qtd', 'center')}</td>
     <td>${inp(fmtN(u.escaninho), 'S/N', 'center')}</td>
     <td>${inp(fmtP(u.precoMedio), 'R$',  'right')}</td>
@@ -1066,7 +1066,7 @@ function lerPreview() {
     const vg = parseInt(v[6]) || 0;
     const tipologia = (q === 0 && vg === 0) ? '' : (q === 0 ? 'Studio' : q + 'q' + (s > 0 ? '+' + s + 's' : ''));
     const a = parseFloat(v[3]) || 0;
-    if (a > 0) unidades.push({ tipologia, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:parseFloat(v[4])||0, unidades:parseInt(v[5])||0, vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]), preco:limP(v[11]) });
+    if (a > 0) unidades.push({ tipologia, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:parseFloat(v[4])||0, unidades:v[5]||'', vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]), preco:limP(v[11]) });
   });
   return { ...empr, unidades };
 }
