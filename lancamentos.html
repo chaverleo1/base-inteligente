@@ -453,12 +453,13 @@ select.form-input option { background: var(--surface2); }
               <th style="width:45px">Banh</th>
               <th style="width:68px">Área m²</th>
               <th style="width:68px">Área Terr</th>
-              <th style="width:48px">Qtd</th>
+              <th style="width:48px">Unidades</th>
               <th style="width:48px">Vagas</th>
               <th style="width:60px">Escaninho</th>
-              <th class="r" style="width:105px">Preço Médio</th>
-              <th class="r" style="width:95px">Mínimo</th>
-              <th class="r" style="width:95px">Máximo</th>
+              <th class="r" style="width:95px">Preço Médio</th>
+              <th class="r" style="width:85px">Mínimo</th>
+              <th class="r" style="width:85px">Máximo</th>
+              <th class="r" style="width:95px">Preço Manual</th>
               <th style="width:28px"></th>
             </tr>
           </thead>
@@ -878,7 +879,7 @@ function agruparPorArea(uns) {
       suites:      sModa,
       banheiros:   bModa,
       areaUtil:    g.area,
-      qtdUnidades: g.items.length,
+      unidades:    g.items.length,
       vagas:       vagas.length ? Math.round(vagas.reduce((a, b) => a + b, 0) / vagas.length) : 0,
       escaninho:   '',
       precoMedio:  precos.length ? Math.round(precos.reduce((a, b) => a + b, 0) / precos.length) : 0,
@@ -991,12 +992,13 @@ function criarLinha(u = {}) {
     <td>${inp(u.banheiros!= null && u.banheiros!== '' ? u.banheiros: '', '0', 'center')}</td>
     <td>${inp(u.areaUtil ||'', 'm²',  'right')}</td>
     <td>${inp(u.areaTerr ||'', 'm²',  'right')}</td>
-    <td>${inp(u.qtdUnidades||'', 'qtd', 'center')}</td>
+    <td>${inp(u.unidades  ||'', 'qtd', 'center')}</td>
     <td>${inp(u.vagas    ||'', 'qtd', 'center')}</td>
     <td>${inp(fmtN(u.escaninho), 'S/N', 'center')}</td>
     <td>${inp(fmtP(u.precoMedio), 'R$',  'right')}</td>
     <td>${inp(fmtP(u.precoMin),   'mín', 'right')}</td>
     <td>${inp(fmtP(u.precoMax),   'máx', 'right')}</td>
+    <td>${inp(fmtP(u.preco),      'R$',  'right')}</td>
     <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
   return tr;
 }
@@ -1055,16 +1057,16 @@ function lerPreview() {
   const unidades = [];
   document.querySelectorAll('#unidades-tbody tr').forEach(tr => {
     const inps = [...tr.querySelectorAll('input')];
-    if (inps.length < 11) return;
+    if (inps.length < 12) return;
     const v = inps.map(i => i.value.trim());
     const limP = s => { const n = parseFloat(s.replace(/\./g,'').replace(',','.').replace('R$','').trim()); return isNaN(n)?0:(n<10000?n*1000:n); };
-    // v[0]=quartos v[1]=suites v[2]=banheiros v[3]=areaUtil v[4]=areaTerr v[5]=qtd v[6]=vagas v[7]=escaninho v[8]=precoMedio v[9]=precoMin v[10]=precoMax
+    // v[0]=quartos v[1]=suites v[2]=banheiros v[3]=areaUtil v[4]=areaTerr v[5]=unidades v[6]=vagas v[7]=escaninho v[8]=precoMedio v[9]=precoMin v[10]=precoMax v[11]=preco
     const q  = parseInt(v[0]) || 0;
     const s  = parseInt(v[1]) || 0;
     const vg = parseInt(v[6]) || 0;
     const tipologia = (q === 0 && vg === 0) ? '' : (q === 0 ? 'Studio' : q + 'q' + (s > 0 ? '+' + s + 's' : ''));
     const a = parseFloat(v[3]) || 0;
-    if (a > 0) unidades.push({ tipologia, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:parseFloat(v[4])||0, qtdUnidades:parseInt(v[5])||0, vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]) });
+    if (a > 0) unidades.push({ tipologia, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:parseFloat(v[4])||0, unidades:parseInt(v[5])||0, vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]), preco:limP(v[11]) });
   });
   return { ...empr, unidades };
 }
