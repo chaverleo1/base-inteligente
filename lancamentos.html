@@ -126,6 +126,11 @@ textarea.motor-input::placeholder { color: var(--text3); }
 textarea.form-input { resize: vertical; min-height: 68px; line-height: 1.5; }
 select.form-input option { background: var(--surface2); }
 
+/* ── ALERTA DATA TABELA ── */
+#grp-dataTabela.alerta-tabela .form-input { background: rgba(255,185,0,.13); border-color: #c98000; color: var(--text); }
+.alerta-tabela-tag { font-size:10px; font-weight:700; color:#c98000; margin-left:6px; animation: pisca .9s step-end infinite; }
+@keyframes pisca { 0%,100%{opacity:1} 50%{opacity:0} }
+
 /* ── PREVIEW DIVIDER ── */
 .pdiv { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
@@ -384,6 +389,10 @@ select.form-input option { background: var(--surface2); }
           <div class="form-label">Previsão de entrega</div>
           <input class="form-input" id="f-entrega" placeholder="Ex: Dez/2026">
         </div>
+        <div class="form-group" id="grp-dataTabela">
+          <div class="form-label">Data da tabela de preços <span class="alerta-tabela-tag" id="lbl-dataTabela" style="display:none">⚠ VERIFICAR PREÇOS</span></div>
+          <input class="form-input" id="f-dataTabela" placeholder="Ex: Jun/2026">
+        </div>
         <div class="form-group span2">
           <div class="form-label">Endereço</div>
           <input class="form-input" id="f-endereco" placeholder="Rua, número, complemento">
@@ -531,7 +540,7 @@ function mostrarToast(msg, tipo = 'ok') {
 
 // ─── PARSER — BLOCO 1 ─────────────────────────────────────────────────────────
 function extrairBloco1(txt) {
-  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', status:'', previsaoEntrega:'', lazer:'', conceito:'' };
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'' };
   const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   // ── Nome + Construtora ──
@@ -682,6 +691,21 @@ function extrairBloco1(txt) {
       }
     }
   }
+  // ── Data da tabela de preços ── detecta "tabela_..._mês_2025.pdf" nos arquivos listados
+  const MESES_LAB = {
+    janeiro:'Jan', fevereiro:'Fev', marco:'Mar', abril:'Abr', maio:'Mai',
+    junho:'Jun', julho:'Jul', agosto:'Ago', setembro:'Set', outubro:'Out',
+    novembro:'Nov', dezembro:'Dez',
+    jan:'Jan', fev:'Fev', mar:'Mar', abr:'Abr', mai:'Mai', jun:'Jun',
+    jul:'Jul', ago:'Ago', set:'Set', out:'Out', nov:'Nov', dez:'Dez',
+  };
+  const tabelaRx = /tabela[_\-][^\n\s]*?[_\-](janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[_\-](\d{4})/i;
+  const tabelaM = txt.match(tabelaRx);
+  if (tabelaM) {
+    const mesKey = tabelaM[1].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace('ç','c');
+    b.dataTabela = (MESES_LAB[mesKey] || tabelaM[1]) + '/' + tabelaM[2];
+  }
+
   return b;
 }
 
@@ -958,6 +982,19 @@ function renderB1(b) {
   set('f-conceito', b.conceito);
   if (b.status) document.getElementById('f-status').value = b.status;
   if (b.tipo)   document.getElementById('f-tipo').value   = b.tipo;
+  const dtEl  = document.getElementById('f-dataTabela');
+  const grpEl = document.getElementById('grp-dataTabela');
+  const lblEl = document.getElementById('lbl-dataTabela');
+  if (b.dataTabela) {
+    dtEl.value = b.dataTabela;
+    dtEl.classList.add('ok');
+    grpEl.classList.add('alerta-tabela');
+    lblEl.style.display = 'inline';
+  } else {
+    dtEl.value = '';
+    grpEl.classList.remove('alerta-tabela');
+    lblEl.style.display = 'none';
+  }
 }
 
 function renderPlano(p) {
@@ -1019,7 +1056,9 @@ function limparMotor() {
   if (linkEl) { linkEl.style.display = 'none'; }
   document.getElementById('preview-box').style.display = 'none';
   // Limpar campos
-  ['f-nome','f-construtora','f-cidade','f-bairro','f-endereco','f-entrega',
+  document.getElementById('grp-dataTabela').classList.remove('alerta-tabela');
+  document.getElementById('lbl-dataTabela').style.display = 'none';
+  ['f-nome','f-construtora','f-cidade','f-bairro','f-endereco','f-entrega','f-dataTabela',
    'f-urlSite','f-lazer','f-conceito',
    'f-entrada','f-parcOb','f-parcEntrega','f-banco','f-planoLongo'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
@@ -1043,6 +1082,7 @@ function lerPreview() {
     endereco:           g('f-endereco'),
     status:             g('f-status'),
     previsaoEntrega:    g('f-entrega'),
+    dataTabela:         g('f-dataTabela'),
     padrao:             g('f-padrao'),
     urlSite:            g('f-urlSite'),
     lazer:              g('f-lazer'),
