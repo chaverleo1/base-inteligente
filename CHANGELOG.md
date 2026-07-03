@@ -1,5 +1,36 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 12) — Filtros de Cidade, Padrão e Estado na Busca Aberta
+
+Pedido do usuário: mais colunas de LANCAMENTOS viravam filtro importante na Busca Aberta. Além de
+tipo/bairro/status (já feitos), adicionados:
+
+- **Cidade** e **Estado (UF)** — filtro **rígido** (ou é a cidade/estado certo ou não é, igual ao
+  filtro de status). Cidade coleta de REVENDA + CONSTRUTORA + LANCAMENTOS (as 3 fontes têm essa
+  coluna). Estado só existe em LANCAMENTOS hoje — filtrar por estado naturalmente restringe a
+  busca só a Lançamentos, o que é esperado dado o schema atual.
+- **Padrão** (Popular/Médio/Alto/Luxo) — diferente dos outros dois, usa o **`scorePadrao_` que já
+  existe no motor** (soft-score, dá crédito parcial pra padrão vizinho, ex: Alto x Médio) em vez
+  de filtro rígido — antes `buscaAberta_()` sempre mandava `padrao: ''` pro contato sintético,
+  agora manda `d.padrao`. Coleta de REVENDA (`padrao`) + LANCAMENTOS (`padrao`) +
+  CONSTRUTORA-APARTAMENTOS (via `classe`, que é a coluna que `constutoraParaImovel_()` já usa como
+  padrão desse imóvel).
+
+**Fix colateral necessário**: `lancamentoParaImovel_()` não expunha `estado` no objeto de imóvel
+retornado (só existia na linha crua da planilha) — sem isso o filtro de estado não teria como
+comparar nada. Adicionado `estado: row.estado || ''` no mapeamento.
+
+`busca.html`: 3 novas seções de chips single-select (Padrão, Cidade, Estado), populadas
+dinamicamente pelo mesmo `opcoes_filtro` que já alimenta tipo/bairro/status, incluídas no payload
+de `executarBusca()` e no resumo exibido em cima dos resultados.
+
+Testado em Node com 3 fontes simuladas (Revenda em Goiânia, Construtora em Goiânia via `classe`,
+3 Lançamentos em Goiânia/GO, Anápolis/GO e Brasília/DF): cidades/padrões/estados aparecem
+corretamente nas opções: filtro por cidade isola só o lançamento certo; filtro por estado GO pega
+os 2 de Goiás e exclui o de Brasília e a Revenda/Construtora (sem coluna estado); filtro de padrão
+não quebra a busca. Testado no preview: chips renderizam, seleção entra no payload e aparece no
+resumo ("Apartamento · Alto · Goiânia/GO · Setor A"). `testarMatching()` continua 19/19.
+
 ## 2026-07-03 (parte 11) — LANCAMENTOS também alimenta tipos/bairros da Busca Aberta
 
 Usuário zerou a aba CONSTRUTORA-APARTAMENTOS de propósito, pra usar só os dados atualizados de

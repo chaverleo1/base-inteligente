@@ -598,6 +598,7 @@ function lancamentoParaImovel_(row) {
     idLancamento:  row.idLancamento|| '',
     dataTabela:    row.dataTabela  || '',
     statusTabela:  row.statusTabela|| '',
+    estado:        row.estado      || '',
     fonte:         'LANCAMENTO',
   };
 }
@@ -965,11 +966,51 @@ function opcoesFiltro_() {
   lancamentos.forEach(function(r) { registrarStatus(r.status); });
   construtora.forEach(function(r) { registrarStatus(r.status); });
 
-  var tipos  = Object.keys(tiposMap).map(function(k) { return tiposMap[k]; }).sort();
-  var bairros = Object.keys(bairrosMap).map(function(k) { return bairrosMap[k]; }).sort();
-  var status  = Object.keys(statusMap).map(function(k) { return statusMap[k]; }).sort();
+  // Cidade — as 3 fontes têm coluna própria com esse nome.
+  var cidadesMap = {};
+  function registrarCidade(c) {
+    c = String(c || '').trim();
+    if (!c) return;
+    var chave = norm_(c);
+    if (!cidadesMap[chave]) cidadesMap[chave] = tituloCase_(c);
+  }
+  revenda.forEach(function(r) { registrarCidade(r.cidade); });
+  construtora.forEach(function(r) { registrarCidade(r.cidade); });
+  lancamentos.forEach(function(r) { registrarCidade(r.cidade); });
 
-  return { tipos: tipos, bairros: bairros, status: status };
+  // Padrão (Popular/Médio/Alto/Luxo) — REVENDA e LANCAMENTOS têm coluna
+  // "padrao" direto; CONSTRUTORA-APARTAMENTOS guarda o equivalente em "classe"
+  // (mesma coluna usada por constutoraParaImovel_ pra montar o padrao do imóvel).
+  var padroesMap = {};
+  function registrarPadrao(p) {
+    p = String(p || '').trim();
+    if (!p) return;
+    var chave = norm_(p);
+    if (!padroesMap[chave]) padroesMap[chave] = tituloCase_(p);
+  }
+  revenda.forEach(function(r) { registrarPadrao(r.padrao); });
+  construtora.forEach(function(r) { registrarPadrao(r.classe); });
+  lancamentos.forEach(function(r) { registrarPadrao(r.padrao); });
+
+  // Estado (UF) — só existe em LANCAMENTOS hoje (REVENDA/CONSTRUTORA não têm
+  // essa coluna); filtrar por estado naturalmente só retorna Lançamentos.
+  var estadosMap = {};
+  function registrarEstado(e) {
+    e = String(e || '').trim();
+    if (!e) return;
+    var chave = norm_(e);
+    if (!estadosMap[chave]) estadosMap[chave] = e.toUpperCase();
+  }
+  lancamentos.forEach(function(r) { registrarEstado(r.estado); });
+
+  var tipos    = Object.keys(tiposMap).map(function(k) { return tiposMap[k]; }).sort();
+  var bairros  = Object.keys(bairrosMap).map(function(k) { return bairrosMap[k]; }).sort();
+  var status   = Object.keys(statusMap).map(function(k) { return statusMap[k]; }).sort();
+  var cidades  = Object.keys(cidadesMap).map(function(k) { return cidadesMap[k]; }).sort();
+  var padroes  = Object.keys(padroesMap).map(function(k) { return padroesMap[k]; }).sort();
+  var estados  = Object.keys(estadosMap).map(function(k) { return estadosMap[k]; }).sort();
+
+  return { tipos: tipos, bairros: bairros, status: status, cidades: cidades, padroes: padroes, estados: estados };
 }
 
 // d: { tipo, quartos, suites, vagas, precoMax, bairros:[], condPagto:[], extras:[], urgencia, texto }
@@ -999,7 +1040,10 @@ function buscaAberta_(d) {
     observacoes: '',
     produtoOrigem: '',
     nome_bruto: '',
-    padrao: ''
+    // Padrão usa o mesmo scorePadrao_ do motor principal (dá crédito parcial
+    // pra padrão vizinho, ex: Alto x Médio) — diferente de status/cidade/
+    // estado, que são filtro rígido (ou bate ou não bate).
+    padrao: d.padrao || ''
   };
 
   var revenda     = lerAba_('REVENDA').map(function(r) { r.fonte = 'REVENDA'; return r; });
@@ -1013,6 +1057,19 @@ function buscaAberta_(d) {
   var statusFiltro = d.status ? norm_(d.status) : '';
   if (statusFiltro) {
     todos = todos.filter(function(imo) { return norm_(imo.estagio || '') === statusFiltro; });
+  }
+
+  // Cidade — filtro rígido (não faz sentido cliente "quase aceitar" outra cidade).
+  var cidadeFiltro = d.cidade ? norm_(d.cidade) : '';
+  if (cidadeFiltro) {
+    todos = todos.filter(function(imo) { return norm_(imo.cidade || '') === cidadeFiltro; });
+  }
+
+  // Estado (UF) — filtro rígido. Só LANCAMENTOS tem essa coluna hoje, então
+  // filtrar por estado naturalmente restringe a busca só a Lançamentos.
+  var estadoFiltro = d.estado ? norm_(d.estado) : '';
+  if (estadoFiltro) {
+    todos = todos.filter(function(imo) { return norm_(imo.estado || '') === estadoFiltro; });
   }
 
   // Limiar mais permissivo que o rodarMatching (70) — aqui é exploratório,
@@ -1030,7 +1087,10 @@ function buscaAberta_(d) {
       tipo: d.tipo || TIPO_LABEL_BUSCA[extrairTipo_(textoLivre)] || '',
       precoLimite: contatoSintetico.precoLimite,
       bairros: bairros.length ? bairros.join(', ') : '',
-      status: d.status || ''
+      status: d.status || '',
+      cidade: d.cidade || '',
+      padrao: d.padrao || '',
+      estado: d.estado || ''
     },
     resultados: resultados.map(function(r) {
       var imo = r.imo;
