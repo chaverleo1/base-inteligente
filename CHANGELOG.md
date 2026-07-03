@@ -1,5 +1,13 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 17b) — Código da oferta também visível na landing
+
+Ajuste rápido: a parte 17 mostrou o código só no card do BaseImob Total — a landing
+(pré-cadastro) também precisava, já que é o primeiro lugar onde o cliente vê o imóvel. Adicionado
+"Código: LAN-XXXXX-XX" no `icard-top` de `renderCard()` (`baseimob-landing.html`), ao lado do
+título, sem quebrar o layout flex existente. Testado no preview com o card real (Rua 500 175,
+Aparecida de Goiânia) — código aparece corretamente.
+
 ## 2026-07-03 (parte 17) — Código único por oferta (idOferta) — rastreabilidade do interesse
 
 Pedido do usuário: cada oferta específica da base de LANCAMENTOS (uma tipologia dentro de um
