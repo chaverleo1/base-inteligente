@@ -39,7 +39,15 @@ const CABECALHO_LANCAMENTOS = [
   // Estado (UF) — adicionado em 2026-07. Vai no FIM do array (não no meio, perto
   // de cidade) porque migrarCabecalhoLancamentos() só sabe ANEXAR colunas novas
   // no final da planilha — inserir no meio desalinharia os dados já existentes.
-  'estado'
+  'estado',
+  // idOferta — código único por LINHA (uma tipologia específica dentro de um
+  // lançamento), formato "LAN-00011-01". Antes só existia idLancamento (o
+  // empreendimento inteiro, várias linhas) — sem código por oferta, o
+  // BaseImob usava a posição na lista atual como identificador (quebrava toda
+  // vez que o filtro mudava a ordem). Com esse código, o mesmo imóvel que o
+  // cliente marcou interesse consegue ser referenciado depois (email, busca
+  // aberta) de forma estável. Ver salvarLancamento_().
+  'idOferta'
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -615,6 +623,7 @@ function lancamentoParaImovel_(row) {
     tipologiaLabel:tipologiaLabel,
     qtdUnidades:   row.unidade     || '',
     idLancamento:  row.idLancamento|| '',
+    idOferta:      row.idOferta    || '',
     dataTabela:    row.dataTabela  || '',
     statusTabela:  row.statusTabela|| '',
     estado:        row.estado      || '',
@@ -1187,6 +1196,7 @@ function buscaAberta_(d) {
         construtora: imo.construtora || '', entradaPerc: imo.entradaPerc || '',
         precoMin: imo.precoMin || '', precoMax: imo.precoMax || '',
         tipologiaLabel: imo.tipologiaLabel || '', idLancamento: imo.idLancamento || '',
+        idOferta: imo.idOferta || '',
         dataTabela: imo.dataTabela || '', statusTabela: imo.statusTabela || '',
         score: r.score, detalhe: r.det
       };
@@ -1593,6 +1603,43 @@ function migrarCabecalhoLancamentos() {
   Logger.log('Cabeçalho LANCAMENTOS atualizado: ' + nCols + ' colunas.');
 }
 
+// Rode UMA VEZ no editor do Apps Script depois de migrarCabecalhoLancamentos()
+// — preenche idOferta nas linhas que já existiam antes dessa coluna existir
+// (idOferta só é gerado pra linhas NOVAS em salvarLancamento_; sem rodar isso,
+// as ofertas antigas ficam sem código até serem reextraídas/resalvas).
+function preencherIdOfertaFaltantes() {
+  var aba = obterAbaLancamentos_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) { Logger.log('Nenhuma linha em LANCAMENTOS.'); return; }
+
+  var idxIdLanc   = CABECALHO_LANCAMENTOS.indexOf('idLancamento') + 1;
+  var idxIdOferta = CABECALHO_LANCAMENTOS.indexOf('idOferta') + 1;
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LANCAMENTOS.length).getValues();
+
+  var contadores = {}; // idLancamento -> maior sufixo já usado
+  var preenchidos = 0;
+
+  for (var i = 0; i < dados.length; i++) {
+    var idLanc       = dados[i][idxIdLanc - 1];
+    var idOfertaAtual = dados[i][idxIdOferta - 1];
+    if (!idLanc) continue;
+
+    if (idOfertaAtual) {
+      // Já tem código — só atualiza o contador pra próxima linha nova não colidir.
+      var m = String(idOfertaAtual).match(/-(\d+)$/);
+      if (m) contadores[idLanc] = Math.max(contadores[idLanc] || 0, parseInt(m[1], 10));
+      continue;
+    }
+
+    contadores[idLanc] = (contadores[idLanc] || 0) + 1;
+    var novoIdOferta = idLanc + '-' + String(contadores[idLanc]).padStart(2, '0');
+    aba.getRange(i + 2, idxIdOferta).setValue(novoIdOferta);
+    preenchidos++;
+  }
+
+  Logger.log('idOferta preenchido em ' + preenchidos + ' de ' + dados.length + ' linhas.');
+}
+
 function obterAbaLancamentos_() {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('LANCAMENTOS');
@@ -1657,10 +1704,10 @@ function salvarLancamento_(dados) {
 
     // Verificar duplicata pelo nome — apagar antes de reinserir (merge)
     var lr = aba.getLastRow();
+    var idExistente = '';
     if (lr >= 2) {
       var nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
       var nomeNovo = String(dados.nomeEmpreendimento).toLowerCase().trim();
-      var idExistente = '';
       for (var i = nomes.length - 1; i >= 0; i--) {
         if (String(nomes[i] || '').toLowerCase().trim() === nomeNovo) {
           if (!idExistente) idExistente = aba.getRange(i + 2, 1).getValue();
@@ -1669,12 +1716,17 @@ function salvarLancamento_(dados) {
       }
     }
 
-    var id = proximoIdLancamento_();
+    // Reaproveita o idLancamento já existente (mesmo empreendimento, dado
+    // reextraído/atualizado) em vez de gerar um novo toda vez — sem isso o ID
+    // mudava a cada reimportação e quebrava qualquer referência já enviada
+    // pro cliente (interesse registrado, link de email, etc.).
+    var id = idExistente || proximoIdLancamento_();
 
-    var linhas = unidades.map(function(u) {
+    var linhas = unidades.map(function(u, idx) {
       var q  = parseInt(u.quartos)  || 0;
       var s  = parseInt(u.suites)   || 0;
       var vg = parseInt(u.vagas)    || 0;
+      var idOferta = id + '-' + String(idx + 1).padStart(2, '0');
       return [
         id,
         dados.nomeEmpreendimento || '',
@@ -1712,6 +1764,7 @@ function salvarLancamento_(dados) {
         dados.conceito           || '',
         agora,
         dados.estado             || '',
+        idOferta,
       ];
     });
 

@@ -1,5 +1,53 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 17) — Código único por oferta (idOferta) — rastreabilidade do interesse
+
+Pedido do usuário: cada oferta específica da base de LANCAMENTOS (uma tipologia dentro de um
+empreendimento) precisava de um código próprio, pra não "ficar solta" — o cliente se cadastra,
+marca interesse em alguns imóveis, e depois precisa reencontrar exatamente esses mesmos imóveis
+por email ou na busca aberta (quando o link for enviado).
+
+**Problema encontrado**: hoje só existe `idLancamento` (LAN-NNNNN), que identifica o
+**empreendimento inteiro** — um lançamento com 6 tipologias diferentes tem 6 linhas com o MESMO
+`idLancamento`. O BaseImob Total usava a **posição do imóvel na lista filtrada atual**
+(`im.id + '-' + índice`) como identificador de seleção — isso muda toda vez que o filtro/ordem
+muda, então o código salvo em `idsInteresse` (aba INTERESSES) não aponta de volta pra nada estável.
+
+**Bug relacionado encontrado e corrigido**: `salvarLancamento_()` gerava um `idLancamento` **novo**
+toda vez que o mesmo empreendimento era reextraído/resalvo (variável `idExistente` era capturada
+mas nunca usada) — mesmo se nada tivesse mudado, o ID mudava a cada atualização de tabela de
+preço, quebrando qualquer referência já enviada. Corrigido pra reaproveitar o ID existente quando
+o nome do empreendimento já existe na base.
+
+**Fix — `idOferta` (Code.gs.txt)**:
+- Nova coluna `idOferta` em `CABECALHO_LANCAMENTOS` (fim do array, mesmo motivo de sempre — não
+  desalinhar dados existentes), formato `LAN-00011-01`, `LAN-00011-02` etc. Gerado em
+  `salvarLancamento_()` — código único e estável por linha/tipologia, que sobrevive a reimportação
+  (já que o `idLancamento` pai agora também é estável).
+- `lancamentoParaImovel_()` e `buscaAberta_()` passaram a expor `idOferta` no objeto de imóvel.
+- `preencherIdOfertaFaltantes()`: função de migração pontual (mesmo padrão de
+  `preencherIdsFaltantes()` de CONTATOS) pra preencher `idOferta` nas 174 linhas que já existem na
+  base hoje — sem isso, elas ficariam sem código até serem reextraídas manualmente uma a uma.
+
+**Fix no front-end (BaseImob Total)**:
+- `renderLista()`: a chave de seleção agora é `im.idOferta` de verdade (fallback pro esquema antigo
+  só pra dado ainda não migrado) — `selecionados` e `idsInteresse` passam a usar códigos estáveis.
+- Card agora mostra o código visível ("Código: LAN-00016-01"), pra ficar rastreável mesmo pro
+  cliente que olhar de novo depois.
+- De brinde, corrigido o mesmo bug da parte 16 aqui também (linha "Entrega" com data crua →
+  "Status" com o valor real).
+
+Testado em Node: 9 cenários do `salvarLancamento_`/`idOferta` (geração sequencial, reimportação
+mantém o mesmo `idLancamento` e os mesmos `idOferta`, empreendimento diferente não colide) + 5
+cenários da migração `preencherIdOfertaFaltantes` (preenche só o que falta, respeita código já
+existente, não colide entre lançamentos diferentes). Testado no preview: card mostra o código
+certo, seleção usa o código real, `idsInteresse` sai com os códigos estáveis no payload de
+interesse. As 6 suítes anteriores continuam passando sem regressão (57 testes no total).
+
+**Ação pendente do usuário**: colar o `Code.gs.txt` atualizado, reimplantar, e depois rodar
+**`preencherIdOfertaFaltantes()`** uma vez pelo editor do Apps Script (além do
+`migrarCabecalhoLancamentos()` de sempre) pra preencher o código nas linhas já existentes.
+
 ## 2026-07-03 (parte 16) — Cards da landing BaseImob: Bairro/Cidade + fix da data crua
 
 Pedido do usuário: os cards de resultado do pré-cadastro (`baseimob-landing.html`) estavam muito

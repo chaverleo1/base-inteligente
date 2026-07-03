@@ -73,6 +73,7 @@ body{background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif;fon
 .bcard.favoritado .bcard-sel{border-color:var(--verde);background:var(--verde3);color:var(--verde)}
 .bcard-body{padding:14px 14px 12px}
 .bcard-tipo{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.bcard-codigo{font-size:11px;color:var(--ink3);margin-bottom:6px;font-family:'Inter',monospace}
 .bcard-preco{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--verde);margin-bottom:8px}
 .bcard-dados{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
 .bcard-dado{font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:4px}
@@ -343,6 +344,7 @@ async function carregarDadosAPI() {
     if (data.lancamentos && data.lancamentos.length) {
       DADOS = data.lancamentos.map(l => ({
         id:         l.idLancamento,
+        idOferta:   l.idOferta               || '',
         quartos:    parseInt(l.quartos)      || 0,
         suites:     parseInt(l.suites)       || 0,
         vagas:      parseInt(l.vagas)        || 0,
@@ -400,13 +402,18 @@ function renderLista(lista) {
     return;
   }
   wrap.innerHTML = lista.map((im, idx) => {
-    const key   = im.id + '-' + idx;
+    // idOferta é o código único e estável de cada oferta (gerado no
+    // Code.gs) — usado como chave de seleção pra sobreviver a reimportação
+    // e permitir referenciar esse imóvel exato depois (email, busca aberta).
+    // Fallback só existe pra dado antigo que ainda não passou pela migração.
+    const key   = im.idOferta || (im.id + '-' + idx);
     const isSel = selecionados.has(key);
     return `
     <div class="bcard${isSel ? ' favoritado' : ''}" id="card-${key}">
       <div class="bcard-sel" onclick="toggleSel('${key}')">${isSel ? '✓' : '○'}</div>
       <div class="bcard-body">
         <div class="bcard-tipo">Apartamento · ${im.quartos} quartos · ${im.area}m²</div>
+        <div class="bcard-codigo">Código: ${key}</div>
         <div class="bcard-preco">${fmtR(im.precoMin)}</div>
         <div class="bcard-dados">
           <span class="bcard-dado">🛏 ${im.quartos} quartos</span>
@@ -417,7 +424,7 @@ function renderLista(lista) {
         <div class="bcard-div"></div>
         <div class="bcard-tags">${lazerResumido(im.lazer)}</div>
         <div class="bcard-bot">
-          <div class="bcard-entrega">Entrega: <b>${im.entrega}</b></div>
+          <div class="bcard-entrega">Status: <b>${im.status || '—'}</b></div>
           <button class="bcard-fav-btn" onclick="toggleSel('${key}')">
             ${isSel ? '✓ Selecionado' : '+ Tenho interesse'}
           </button>
