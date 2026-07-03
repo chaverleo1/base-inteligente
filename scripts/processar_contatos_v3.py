@@ -639,6 +639,15 @@ def ler_arquivo(entrada: Path) -> tuple[list[str], list[dict]]:
                     reader = csv.DictReader(f)
                     cabecalho = reader.fieldnames or []
                     linhas_raw = list(reader)
+                if enc == "latin-1":
+                    # Arquivo não é UTF-8 válido — sinal comum de que foi salvo
+                    # pelo Excel (que resalva CSV em cp1252/latin-1 sem BOM).
+                    # Acentos podem já ter sido corrompidos de forma irreversível
+                    # antes deste script rodar; avisa em vez de mascarar.
+                    print(f"AVISO: '{entrada}' não é UTF-8 válido — lido como latin-1. "
+                          f"Se o arquivo passou pelo Excel (Salvar Como > CSV comum), "
+                          f"os acentos podem já estar corrompidos. Confira o resultado "
+                          f"e, se precisar reabrir no Excel, use 'CSV UTF-8 (Comma delimited)'.")
                 return cabecalho, linhas_raw
             except UnicodeDecodeError:
                 continue

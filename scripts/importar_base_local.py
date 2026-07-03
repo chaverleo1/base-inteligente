@@ -70,15 +70,26 @@ def main():
         sys.exit(1)
 
     # Detecta encoding
+    enc_usado = None
     for enc in ("utf-8-sig", "utf-8", "latin-1"):
         try:
             with open(entrada, newline="", encoding=enc) as f:
                 reader = csv.DictReader(f)
                 linhas = list(reader)
                 colunas_origem = reader.fieldnames or []
+            enc_usado = enc
             break
         except UnicodeDecodeError:
             continue
+
+    if enc_usado == "latin-1":
+        # Arquivo não é UTF-8 válido — sinal comum de que foi salvo pelo Excel
+        # (que resalva CSV em cp1252/latin-1 sem BOM). Acentos podem já ter
+        # sido corrompidos de forma irreversível antes deste script rodar.
+        print(f"AVISO: '{entrada}' não é UTF-8 válido — lido como latin-1. "
+              f"Se o arquivo passou pelo Excel (Salvar Como > CSV comum), os "
+              f"acentos podem já estar corrompidos. Confira o resultado e, se "
+              f"precisar reabrir no Excel, use 'CSV UTF-8 (Comma delimited)'.")
 
     print(f"Lendo: {entrada}")
     print(f"  -> {len(linhas)} linhas")

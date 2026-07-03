@@ -1,5 +1,34 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 8) — Causa raiz do mojibake (corrupção de acentos): confirmada
+
+Investigação da 3ª ideia de melhoria pendente desta sessão. Revisão completa da cadeia de dados
+(HTMLs, `processar_contatos_v3.py`, `importar_base_local.py`, `Code.gs.txt`, os CSVs reais em
+Downloads) **não encontrou nenhum bug de encoding no código versionado** — `<meta charset="UTF-8">`
+correto nos 5 HTMLs, scripts Python lendo/gravando `utf-8-sig` corretamente, Apps Script sem
+manipulação de bytes/charset em nenhum ponto, `fetch()` nos HTMLs usando serialização UTF-8
+padrão do navegador.
+
+**Causa raiz confirmada pelo usuário**: o fluxo de trabalho real é abrir o `.csv` exportado do
+Google Contacts **no Excel** logo após a exportação, pra organizar colunas manualmente, e só
+depois importar pro Google Sheets. O Excel do Windows, ao salvar de volta como "CSV (Comma
+delimited)" (a opção padrão do "Salvar Como"), resalva o arquivo em `cp1252`/`latin-1` sem BOM —
+corrompendo acentos de forma **irreversível** antes mesmo do arquivo chegar aos scripts Python ou
+ao Sheets. Não é um bug de código; é um problema no formato de exportação do Excel.
+
+**Correção recomendada** (fora do código, mudança de processo):
+- Se precisar reorganizar colunas no Excel, salvar com a opção **"CSV UTF-8 (Comma delimited)
+  (*.csv)"** no menu Salvar Como (Excel 2016+ tem essa opção separada de "CSV (Comma delimited)")
+  — preserva o UTF-8 com BOM.
+- Alternativa mais segura: organizar as colunas direto no Google Sheets (importar o CSV bruto,
+  reorganizar lá, exportar de novo se precisar) e nunca abrir/resalvar CSV intermediário no Excel.
+
+**Fix de código aplicado** (mitigação, não a causa): os dois scripts de migração
+(`scripts/processar_contatos_v3.py`, `scripts/importar_base_local.py`) tinham um fallback
+silencioso pra `latin-1` quando o arquivo não decodifica como UTF-8 — hoje imprime um aviso
+explícito nesse caso, apontando o Excel como suspeito mais provável, em vez de processar e gerar
+uma planilha já corrompida sem avisar ninguém.
+
 ## 2026-07-03 (parte 7) — WEBHOOK_URL centralizado em config.js
 
 Terceira ideia de melhoria proposta nesta sessão, aprovada pelo usuário: toda vez que o Code.gs é
