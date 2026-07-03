@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 — Sincronização com a estação servidor + Code.gs versionado pela primeira vez
+
+Trabalho feito na estação servidor em 2026-07-02 (20 commits) trazido pra este repositório via
+`git pull` (fast-forward limpo, sem conflitos). Resumo do que veio:
+
+- **Módulo Lançamentos** (`lancamentos.html`, novo): ferramenta pra cadastrar empreendimentos em
+  pré-lançamento/construção. Cola um texto (formato do site Orulo) e um parser extrai
+  automaticamente empreendimento, construtora, bairro, endereço, tabela de tipologias
+  (quartos/suítes/vagas/área/preço), lazer e conceito. Detecta a data da tabela de preços com
+  alerta visual de "Atualizada"/"Desatualizada". Nova aba **LANCAMENTOS** na planilha.
+- **Lançamentos integrado como 3ª fonte no motor de matching** (`rodarMatching`, `buscaAberta_`)
+  ao lado de Revenda e Construtora — confirmado ao vivo, uma busca traz resultados dos 3 tipos.
+  Aparece também no drawer do cliente no dashboard com o selo de status da tabela de preços.
+- **Busca Aberta ganhou exportação em PDF**: seleciona vários imóveis com checkbox e gera um PDF
+  de ofertas (usa impressão nativa do navegador em A4 paisagem — sem depender de biblioteca de
+  PDF).
+
+### Code.gs versionado no repositório pela primeira vez
+
+Até agora o Code.gs só existia no editor do Apps Script e em cópias locais de cada estação — as
+duas sessões (aqui e no servidor) divergiram sem se perceber, e só foi descoberto porque o motor
+de matching em produção já lia uma aba (LANCAMENTOS) que minha cópia local nem conhecia.
+
+Adicionado **`Code.gs.txt`** na raiz do repositório com o conteúdo completo e atual (1528 linhas,
+confirmado batendo com a produção via testes diretos na API: `listar_lancamentos`,
+`opcoes_filtro`, `busca_aberta` com as 3 fontes). Esse arquivo agora é a fonte de verdade —
+`lancamentos_code_gs.txt` (commitado antes, na estação servidor) é um rascunho anterior das
+instruções de integração e ficou desatualizado em detalhes (ex: usa `respJson_` em vez de `ok`,
+`CABECALHO_LANCAMENTOS` com campos diferentes do que foi implementado de fato); mantido só como
+histórico, não deve ser usado como referência de código atual.
+
+**A partir de agora**: qualquer edição no Code.gs, de qualquer estação, deve terminar com esse
+arquivo atualizado e commitado — é a única forma de manter as duas estações (e futuras sessões)
+sincronizadas sem precisar descobrir divergências por acidente de novo.
+
 ## 2026-07-01 (parte 14) — Correção: bairros duplicados por grafia diferente
 
 `opcoes_filtro` (parte 13) retornou 220 bairros em produção — inflado porque o mesmo bairro

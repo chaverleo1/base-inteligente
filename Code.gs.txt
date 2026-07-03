@@ -1,0 +1,1528 @@
+// ═══════════════════════════════════════════════════════════════
+// BASE INTELIGENTE — Apps Script Completo
+// Versão 27 — 02/07/2026 — Módulo LANCAMENTOS
+// ═══════════════════════════════════════════════════════════════
+
+const SHEET_ID = '1cr1Qs9o9_4mFXy0fZmVx-54xYiBNF6Vx5fHcIsiAkNI';
+
+const CABECALHO = [
+  'dataCadastro','nome','telefone','email','nascimento','estadoCivil','filhos',
+  'profissao','empresa','bairroMora','cidadeMora','moradia','bairroTrabalha',
+  'raioMaximo','bairroInteresse','segmento',
+  // Características do imóvel (etapa 3 do formulário — adicionado em 2026-07)
+  'quartos','suites','vagas','areaUtil','areaTerreno',
+  'adensavel','andarAlto','aceitaTerreo','churrasqueira',
+  'piscina','homeOffice','condFechado','elevador','acessibilidade',
+  'padrao','precoLimite','margem_preco',
+  'finalidade','fgts','financ','entrada_chip','permuta','entrada','canal',
+  'primeiroContato','ultimoContato','produtoOrigem','naoFechou','urgencia',
+  'indicadoPor','conversa','observacoes','score','prioridade','categoria','nome_bruto',
+  'tipo_contato','tags',
+  // ID permanente do cliente (adicionado em 2026-07) — gerado uma vez, nunca
+  // recalculado por posição de linha. Ver proximoIdCliente_() e
+  // preencherIdsFaltantes(). Substitui gerarCodigo_(linha), que quebrava toda
+  // vez que a planilha era reimportada/reordenada (códigos passavam a apontar
+  // pra pessoas diferentes).
+  'idCliente'
+];
+
+const CABECALHO_LANCAMENTOS = [
+  'idLancamento', 'nomeEmpreendimento', 'construtora',
+  'tipo', 'bairro', 'cidade', 'endereco',
+  'status', 'previsaoEntrega',
+  'quartos', 'suites', 'banheiros', 'vagas', 'areaUtil', 'areaTerr',
+  'unidades', 'escaninho', 'padrao',
+  'precoMedio', 'precoMin', 'precoMax', 'preco', 'dataTabela', 'statusTabela',
+  'urlSite', 'foto',
+  'entrada', 'parcelasObra', 'parcelasEntrega', 'avaliacaoBanco', 'fgts', 'planoLongo',
+  'lazer', 'conceito', 'dataCadastro'
+];
+
+// ═══════════════════════════════════════════════════════════════
+// ROTAS HTTP
+// ═══════════════════════════════════════════════════════════════
+
+function doGet(e) {
+  if (!e || !e.parameter) return ok({ status: 'sem parametros' });
+  var acao = e.parameter.acao;
+
+  if (acao === 'buscar') {
+    var q     = e.parameter.q || '';
+    var aba   = getAba();
+    var dados = aba.getDataRange().getValues();
+    var cab   = dados[0];
+    var res   = [];
+    for (var i = 1; i < dados.length; i++) {
+      var row  = dados[i];
+      var nome = String(row[cab.indexOf('nome')]     || '').toLowerCase();
+      var tel  = String(row[cab.indexOf('telefone')] || '').toLowerCase();
+      if (nome.indexOf(q.toLowerCase()) >= 0 || tel.indexOf(q.toLowerCase()) >= 0) {
+        var obj = { _linha: i + 1 };
+        cab.forEach(function(c, j) { obj[c] = row[j]; });
+        res.push(obj);
+      }
+    }
+    return ok(res);
+  }
+
+  if (acao === 'buscar_linha') {
+    var lin = parseInt(e.parameter.linha);
+    var abaBL = getAba();
+    if (!lin || lin < 2 || lin > abaBL.getLastRow()) return ok(null);
+    var cabBL = abaBL.getRange(1, 1, 1, CABECALHO.length).getValues()[0];
+    var rowBL = abaBL.getRange(lin, 1, 1, CABECALHO.length).getValues()[0];
+    var objBL = { _linha: lin };
+    cabBL.forEach(function(c, j) { objBL[c] = rowBL[j]; });
+    return ok(objBL);
+  }
+
+  if (acao === 'dashboard')        return ok(dadosDashboard());
+  if (acao === 'verificar_senha')  return verificarSenha_(e.parameter.hash);
+  if (acao === 'esqueci_senha')    return esquecerSenha_();
+  if (acao === 'validar_token')    return validarToken_(e.parameter.token);
+  if (acao === 'matches_cliente')  return matchesCliente_(e.parameter.cod);
+  if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
+  if (acao === 'listar_lancamentos') return ok(listarLancamentos_());
+
+  return ok({ status: 'acao desconhecida' });
+}
+
+function doPost(e) {
+  var contents = e.postData ? e.postData.contents : '';
+  var d = parseBody(contents);
+
+  if (d.acao === 'salvar_senha')  return salvarSenhaReset_(d);
+  if (d.acao === 'excluir')       return ok(excluir_(d));
+  if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
+  if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
+  if (d.acao === 'excluir_lancamento')return ok(excluirLancamento_(d));
+  // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
+  // já criou um contato em branco na base por engano com uma ação com typo/nova
+  // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
+  if (d.acao) return ok({ status: 'acao desconhecida' });
+  if (d._linha) return ok(atualizar(d));
+  if (!d.nome || !d.telefone) return ok({ status: 'erro', motivo: 'nome_e_telefone_obrigatorios' });
+  return ok(salvar(d));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTATOS — Salvar / Atualizar / Excluir
+// ═══════════════════════════════════════════════════════════════
+
+// Próximo ID permanente disponível (CLI-NNNNN). Lê a coluna idCliente inteira
+// e pega o maior número já usado + 1 — não depende de posição de linha, então
+// sobrevive a reordenação/reimportação da planilha.
+function proximoIdCliente_() {
+  var aba     = getAba();
+  var lastRow = aba.getLastRow();
+  var idxId   = CABECALHO.indexOf('idCliente') + 1; // 1-based
+  var maxNum  = 10000;
+  if (lastRow >= 2) {
+    var valores = aba.getRange(2, idxId, lastRow - 1, 1).getValues();
+    valores.forEach(function(row) {
+      var m = String(row[0] || '').match(/(\d+)\s*$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    });
+  }
+  return 'CLI-' + (maxNum + 1);
+}
+
+function salvar(d) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba    = getAba();
+    var agora  = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var novoId = proximoIdCliente_();
+    var linha = CABECALHO.map(function(col) {
+      if (col === 'dataCadastro')  return agora;
+      if (col === 'tipo_contato')  return 'LEAD INTERESSADO';
+      if (col === 'idCliente')     return novoId;
+      return d[col] !== undefined ? d[col] : '';
+    });
+    aba.appendRow(linha);
+    return { status: 'salvo', idCliente: novoId };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function excluir_(d) {
+  var lin = parseInt(d._linha);
+  if (!lin || lin < 2) return { status: 'erro', motivo: 'linha invalida' };
+  getAba().deleteRow(lin);
+  return { status: 'excluido', linha: lin };
+}
+
+function atualizar(d) {
+  var aba       = getAba();
+  var lin       = parseInt(d._linha);
+  var existente = aba.getRange(lin, 1, 1, CABECALHO.length).getValues()[0];
+  var dataCad   = existente[CABECALHO.indexOf('dataCadastro')];
+  var tipoAtual = existente[CABECALHO.indexOf('tipo_contato')];
+  var idAtual   = existente[CABECALHO.indexOf('idCliente')];
+  var linha = CABECALHO.map(function(col) {
+    if (col === 'dataCadastro') return dataCad;
+    // Preserva a classificação manual do tipo_contato — o formulário não a edita
+    if (col === 'tipo_contato') return d[col] !== undefined && d[col] !== '' ? d[col] : tipoAtual;
+    // ID permanente nunca muda numa edição
+    if (col === 'idCliente') return idAtual;
+    return d[col] !== undefined ? d[col] : '';
+  });
+  aba.getRange(lin, 1, 1, CABECALHO.length).setValues([linha]);
+  return { status: 'atualizado', linha: lin };
+}
+
+// Roda UMA VEZ (manual, no editor do Apps Script) depois de implantar esta
+// versão — garante o cabeçalho da coluna idCliente e preenche o ID de todo
+// contato que ainda não tem (toda a base atual, migrada antes desta feature).
+function preencherIdsFaltantes() {
+  var aba     = getAba();
+  var lastRow = aba.getLastRow();
+  var idxId   = CABECALHO.indexOf('idCliente') + 1; // 1-based
+  aba.getRange(1, idxId).setValue('idCliente');
+  if (lastRow < 2) { Logger.log('Nenhuma linha de dados.'); return; }
+
+  var valores = aba.getRange(2, idxId, lastRow - 1, 1).getValues();
+  var maxNum  = 10000;
+  var faltando = [];
+  for (var i = 0; i < valores.length; i++) {
+    var v = String(valores[i][0] || '').trim();
+    if (v) {
+      var m = v.match(/(\d+)\s*$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    } else {
+      faltando.push(i + 2); // linha real na planilha (1-based, +1 pro cabeçalho)
+    }
+  }
+  faltando.forEach(function(lin) {
+    maxNum++;
+    aba.getRange(lin, idxId).setValue('CLI-' + maxNum);
+  });
+  Logger.log('IDs preenchidos: ' + faltando.length + ' (ultimo id: CLI-' + maxNum + ')');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+// Pesos por posição no ranking de matches do cliente (1º-4º; 5º em diante usa sempre 1)
+var PESOS_MATCH_RANK = [5, 4, 3, 2, 1];
+function pesoPorRank_(idx) {
+  return idx < PESOS_MATCH_RANK.length ? PESOS_MATCH_RANK[idx] : 1;
+}
+
+// Score Total = combina o score do cadastro (35%) com a média ponderada dos
+// scores dos matches do cliente (65%), dando mais peso aos melhores matches.
+// Sem matches, cai de volta pro score do cadastro puro.
+function calcularScoreTotal_(scoreCliente, scoresMatches) {
+  // Sem nenhum match, o componente de qualidade de produto (65% do peso) é
+  // zero — um cliente sem nada pra oferecer não pode virar morno/quente só
+  // pelo score de cadastro (máximo possível aqui: 100 × 0.35 = 35, sempre frio).
+  if (!scoresMatches || !scoresMatches.length) return scoreCliente * 0.35;
+  var somaPonderada = 0, totalPesos = 0;
+  scoresMatches.forEach(function(sc, idx) {
+    var p = pesoPorRank_(idx);
+    somaPonderada += sc * p;
+    totalPesos += p;
+  });
+  return (scoreCliente * 0.35) + ((somaPonderada / totalPesos) * 0.65);
+}
+
+// Classifica a temperatura pelo Score Total, com regra especial: se existe
+// pelo menos 1 match com score >= 85 (produto ideal), sobe pra QUENTE mesmo
+// que o Score Total não alcance 75.
+function classificarTemperatura_(scoreTotal, scoresMatches) {
+  var temMatchIdeal = (scoresMatches || []).some(function(sc) { return sc >= 85; });
+  if (temMatchIdeal) return 'quente';
+  if (scoreTotal >= 75) return 'quente';
+  if (scoreTotal >= 50) return 'morno';
+  return 'frio';
+}
+
+// Categorias que não representam leads de venda — ficam fora das listas de temperatura
+var CATEGORIAS_FORA_MATCH = ['Corretor', 'Parceiro', 'Descartar', 'Igreja'];
+
+function dadosDashboard() {
+  var ss    = SpreadsheetApp.openById(SHEET_ID);
+  var aba   = ss.getSheetByName('CONTATOS');
+  var dados = aba.getDataRange().getValues();
+  var cab   = dados[0];
+
+  // Lê MATCHES primeiro — precisamos dos scores de cada cliente antes de
+  // classificar a temperatura (Score Total depende dos matches dele).
+  var scoresPorCliente = {}; // cod -> [scoreMatch, ...] ordenado desc
+  var abaMat = ss.getSheetByName('MATCHES');
+  if (abaMat) {
+    var matDados = abaMat.getDataRange().getValues();
+    if (matDados.length > 1) {
+      var matCab = matDados[0];
+      var iCC = matCab.indexOf('cliCodigo');
+      var iSC = matCab.indexOf('scoreMatch');
+      for (var m = 1; m < matDados.length; m++) {
+        var cc = String(matDados[m][iCC] || '');
+        if (!cc) continue;
+        var scMat = parseInt(matDados[m][iSC]) || 0;
+        if (!scoresPorCliente[cc]) scoresPorCliente[cc] = [];
+        scoresPorCliente[cc].push(scMat);
+      }
+      Object.keys(scoresPorCliente).forEach(function(k) {
+        scoresPorCliente[k].sort(function(a, b) { return b - a; });
+      });
+    }
+  }
+
+  var total = 0;
+  var quentes = [], mornos = [], frios = [];
+  var segmentos = {}, padroes = {};
+
+  for (var i = 1; i < dados.length; i++) {
+    var row = dados[i];
+    var obj = {};
+    cab.forEach(function(c, j) { obj[c] = row[j]; });
+    if (!obj.nome) continue;
+    total++;
+
+    var s = obj.segmento || ''; if (s) segmentos[s] = (segmentos[s] || 0) + 1;
+    var p = obj.padrao   || ''; if (p) padroes[p]   = (padroes[p]   || 0) + 1;
+
+    // Corretor/Parceiro/Descartar/Igreja não entram nas listas de temperatura
+    if (CATEGORIAS_FORA_MATCH.indexOf(obj.categoria) >= 0) continue;
+
+    var scoreCliente  = parseInt(obj.score) || 0;
+    var cod           = String(obj.idCliente || '').trim() || gerarCodigo_(i);
+    var scoresMatches = scoresPorCliente[cod] || [];
+    var scoreTotal    = calcularScoreTotal_(scoreCliente, scoresMatches);
+    var temperatura   = classificarTemperatura_(scoreTotal, scoresMatches);
+    var nome          = String(obj.nome || '').trim();
+    var item = {
+      cod: cod, nome: nome,
+      score: scoreCliente,
+      scoreTotal: Math.round(scoreTotal * 10) / 10,
+      seg: obj.segmento || '', pad: obj.padrao || '',
+      urg: obj.urgencia || obj.prioridade || ''
+    };
+    if      (temperatura === 'quente') quentes.push(item);
+    else if (temperatura === 'morno')  mornos.push(item);
+    else                                frios.push(item);
+  }
+
+  // Contagem de matches por cliente: mc80 (score>=80) e mc70 (70-79),
+  // derivada do mesmo scoresPorCliente já lido acima (sem reler a aba).
+  var matchCounts = {};
+  Object.keys(scoresPorCliente).forEach(function(cc) {
+    var counts = { mc80: 0, mc70: 0 };
+    scoresPorCliente[cc].forEach(function(sc) {
+      if (sc >= 80) counts.mc80++;
+      else if (sc >= 70) counts.mc70++;
+    });
+    matchCounts[cc] = counts;
+  });
+
+  [quentes, mornos, frios].forEach(function(lista) {
+    lista.forEach(function(item) {
+      var mc = matchCounts[item.cod] || { mc80: 0, mc70: 0 };
+      item.mc80 = mc.mc80;
+      item.mc70 = mc.mc70;
+    });
+    lista.sort(function(a, b) { return b.scoreTotal - a.scoreTotal; });
+  });
+
+  // Top 20 para rankings do dashboard
+  var top20 = dados.slice(1).map(function(row, i) {
+    var obj = {};
+    cab.forEach(function(c, j) { obj[c] = row[j]; });
+    return {
+      cod: String(obj.idCliente || '').trim() || gerarCodigo_(i + 1),
+      nome: String(obj.nome || '').trim(),
+      score: parseInt(obj.score) || 0,
+      seg: obj.segmento || '', pad: obj.padrao || '',
+      urg: obj.urgencia || obj.prioridade || ''
+    };
+  }).filter(function(x) { return x.nome; })
+    .sort(function(a, b) { return b.score - a.score; })
+    .slice(0, 20);
+
+  // Estatísticas REVENDA
+  var produtos = {
+    total: 0,
+    porTipo:   {},
+    porFaixa:  { 'Ate 300k': 0, '300k-700k': 0, '700k-1.5M': 0, 'Acima 1.5M': 0 },
+    porPadrao: {}
+  };
+  var abaRev = ss.getSheetByName('REVENDA');
+  if (abaRev) {
+    var revDados = abaRev.getDataRange().getValues();
+    var revCab   = revDados[0];
+    var iT = revCab.indexOf('tipo');
+    var iV = revCab.indexOf('valorVenda');
+    var iP = revCab.indexOf('padrao');
+    for (var r = 1; r < revDados.length; r++) {
+      produtos.total++;
+      var tipo = String(revDados[r][iT] || 'Outros');
+      produtos.porTipo[tipo] = (produtos.porTipo[tipo] || 0) + 1;
+      var pad2 = String(revDados[r][iP] || 'Outros');
+      produtos.porPadrao[pad2] = (produtos.porPadrao[pad2] || 0) + 1;
+      var vStr = String(revDados[r][iV] || '0').replace(/[^\d]/g, '');
+      var v    = parseInt(vStr) || 0;
+      if      (v <= 300000)  produtos.porFaixa['Ate 300k']++;
+      else if (v <= 700000)  produtos.porFaixa['300k-700k']++;
+      else if (v <= 1500000) produtos.porFaixa['700k-1.5M']++;
+      else                   produtos.porFaixa['Acima 1.5M']++;
+    }
+  }
+
+  // Estatísticas CONSTRUTORA-APARTAMENTOS
+  var construtora = {
+    total: 0,
+    porConstrutora: {},
+    porStatus: {},
+    porClasse: {},
+    porFaixa: { 'Ate 300k': 0, '300k-700k': 0, '700k-1.5M': 0, 'Acima 1.5M': 0 },
+    porBairro: {},
+    destaques: []
+  };
+  var abaCons = ss.getSheetByName('CONSTRUTORA-APARTAMENTOS');
+  if (abaCons) {
+    var consDados = abaCons.getDataRange().getValues();
+    if (consDados.length > 1) {
+      var consCab  = consDados[0];
+      var iEmp     = consCab.indexOf('empreendimento');
+      var iCons    = consCab.indexOf('construtora');
+      var iStat    = consCab.indexOf('status');
+      var iCls     = consCab.indexOf('classe');
+      var iPreco   = consCab.indexOf('preco');
+      var iBairro  = consCab.indexOf('bairro');
+      var iArea    = consCab.indexOf('areaPrivM2');
+      var iEntrega = consCab.indexOf('dataEntrega');
+      var iEntPc   = consCab.indexOf('entradaPerc');
+      var iQts     = consCab.indexOf('quartos');
+      var empsVistos = {};
+
+      for (var cx = 1; cx < consDados.length; cx++) {
+        var crow   = consDados[cx];
+        var cemp   = String(crow[iEmp]   || '').trim();
+        var ccons  = String(crow[iCons]  || '').trim();
+        var cstat  = String(crow[iStat]  || '').trim();
+        var ccls   = String(crow[iCls]   || '').trim();
+        var cpreco = parseInt(String(crow[iPreco] || '0').replace(/[^\d]/g, '')) || 0;
+        var cbairro= String(crow[iBairro]|| '').trim();
+        if (!cemp) continue;
+        construtora.total++;
+        if (ccons)   construtora.porConstrutora[ccons] = (construtora.porConstrutora[ccons] || 0) + 1;
+        if (cstat)   construtora.porStatus[cstat]      = (construtora.porStatus[cstat]      || 0) + 1;
+        if (ccls)    construtora.porClasse[ccls]        = (construtora.porClasse[ccls]        || 0) + 1;
+        if (cbairro) construtora.porBairro[cbairro]    = (construtora.porBairro[cbairro]    || 0) + 1;
+        if      (cpreco <= 300000)  construtora.porFaixa['Ate 300k']++;
+        else if (cpreco <= 700000)  construtora.porFaixa['300k-700k']++;
+        else if (cpreco <= 1500000) construtora.porFaixa['700k-1.5M']++;
+        else                        construtora.porFaixa['Acima 1.5M']++;
+        if (!empsVistos[cemp]) {
+          empsVistos[cemp] = true;
+          construtora.destaques.push({
+            empreendimento: cemp,
+            construtora: ccons,
+            status: cstat,
+            classe: ccls,
+            preco: cpreco,
+            bairro: cbairro,
+            area: String(crow[iArea]    || ''),
+            entrega: String(crow[iEntrega] || ''),
+            entradaPerc: String(crow[iEntPc]  || ''),
+            quartos: String(crow[iQts]  || '')
+          });
+        }
+      }
+      construtora.destaques.sort(function(a, b) { return a.preco - b.preco; });
+      construtora.destaques = construtora.destaques.slice(0, 6);
+    }
+  }
+
+  return {
+    total: total, segmentos: segmentos, padroes: padroes,
+    top20: top20, quentes: quentes, mornos: mornos, frios: frios,
+    produtos: produtos, construtora: construtora
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MATCHES — Busca por cliente
+// ═══════════════════════════════════════════════════════════════
+
+function matchesCliente_(cod) {
+  if (!cod) return ok([]);
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('MATCHES');
+  if (!aba) return ok([]);
+  var dados = aba.getDataRange().getValues();
+  if (dados.length < 2) return ok([]);
+  var cab  = dados[0];
+  var iCod = cab.indexOf('cliCodigo');
+  var res  = [];
+  for (var i = 1; i < dados.length; i++) {
+    if (String(dados[i][iCod]) === String(cod)) {
+      var obj = {};
+      cab.forEach(function(c, j) { obj[c] = String(dados[i][j]); });
+      res.push(obj);
+    }
+  }
+  res.sort(function(a, b) { return parseInt(b.scoreMatch || 0) - parseInt(a.scoreMatch || 0); });
+  return ok(res.slice(0, 10));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTRUTORA-APARTAMENTOS — Cabeçalho e inicialização
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_CONSTRUTORA = [
+  'codigo','dataAtualizacao','empreendimento','construtora',
+  'dataLancamento','status','dataEntrega','projeto',
+  'unidades','quartos','suites','vagas','torre',
+  'areaTotalM2','areaPrivM2',
+  'classe','segmento','preco','precoPorM2',
+  'bairro','cidade','pontoReferencia','observacoes',
+  'tabela','entradaPerc','entradaValor',
+  'sinalPerc','sinalValor',
+  'comissaoPerc','comissaoValor',
+  'corretorPerc','corretorValor'
+];
+
+function criarAbaConstrutora() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('CONSTRUTORA-APARTAMENTOS');
+  if (!aba) aba = ss.insertSheet('CONSTRUTORA-APARTAMENTOS');
+  aba.clearContents();
+  aba.getRange(1, 1, 1, CABECALHO_CONSTRUTORA.length).setValues([CABECALHO_CONSTRUTORA]);
+  var cab = aba.getRange(1, 1, 1, CABECALHO_CONSTRUTORA.length);
+  cab.setFontWeight('bold').setBackground('#1a0f3c').setFontColor('#ffffff');
+  aba.setFrozenRows(1);
+  Logger.log('Aba CONSTRUTORA-APARTAMENTOS criada com ' + CABECALHO_CONSTRUTORA.length + ' colunas.');
+}
+
+function constutoraParaImovel_(row) {
+  return {
+    codigo:       row.codigo         || '',
+    tipo:         'Apartamento',
+    bairro:       row.bairro         || '',
+    cidade:       row.cidade         || '',
+    condominio:   row.empreendimento || '',
+    quartos:      row.quartos        || '',
+    suites:       row.suites         || '',
+    vagas:        row.vagas          || '',
+    areaUtil:     row.areaPrivM2     || '',
+    valorVenda:   row.preco          || '',
+    padrao:       row.classe         || row.segmento || '',
+    estagio:      row.status         || '',
+    foto:         '',
+    urlSite:      '',
+    construtora:  row.construtora    || '',
+    dataEntrega:  row.dataEntrega    || '',
+    entradaPerc:  row.entradaPerc    || '',
+    entradaValor: row.entradaValor   || '',
+    sinalPerc:    row.sinalPerc      || '',
+    sinalValor:   row.sinalValor     || '',
+    comissaoPerc: row.comissaoPerc   || '',
+    comissaoValor:row.comissaoValor  || '',
+    corretorPerc: row.corretorPerc   || '',
+    corretorValor:row.corretorValor  || '',
+    tabela:       row.tabela         || '',
+    fonte:        'CONSTRUTORA'
+  };
+}
+
+// Converte linha da aba LANCAMENTOS para o formato de produto do motor de matching
+function lancamentoParaImovel_(row) {
+  var q  = parseInt(row.quartos) || 0;
+  var s  = parseInt(row.suites)  || 0;
+  var v  = parseInt(row.vagas)   || 0;
+
+  // Sem quartos e sem vagas → Terreno/Lote; tipo declarado tem prioridade
+  var tipo = row.tipo || ((q === 0 && v === 0) ? 'Terreno' : 'Apartamento');
+
+  // Label de tipologia para exibição (reconstruído dos campos separados)
+  var tipologiaLabel = (q === 0 && v === 0) ? '' : (q === 0 ? 'Studio' : q + 'q' + (s > 0 ? '+' + s + 's' : ''));
+
+  var precoMin = parseFloat(String(row.precoMin  || '').replace(/[^\d]/g, '')) || 0;
+  var precoMed = parseFloat(String(row.precoMedio|| '').replace(/[^\d]/g, '')) || precoMin;
+
+  return {
+    codigo:        String(row.idLancamento || ''),
+    tipo:          tipo,
+    bairro:        row.bairro             || '',
+    cidade:        row.cidade             || '',
+    condominio:    row.nomeEmpreendimento || '',
+    endereco:      row.endereco           || '',
+    quartos:       q || '',
+    suites:        s || '',
+    banheiros:     parseInt(row.banheiros) || '',
+    vagas:         v || '',
+    areaUtil:      row.areaUtil           || '',
+    areaTerr:      row.areaTerr           || '',
+    valorVenda:    precoMed               || '',
+    padrao:        row.padrao             || '',
+    estagio:       row.status             || '',
+    foto:          row.foto               || '',
+    urlSite:       row.urlSite            || '',
+    construtora:   row.construtora        || '',
+    dataEntrega:   row.previsaoEntrega    || '',
+    entradaPerc:   row.entrada            || '',
+    entradaValor:  '',
+    sinalPerc:     '', sinalValor:     '',
+    comissaoPerc:  '', comissaoValor: '',
+    corretorPerc:  '', corretorValor: '',
+    tabela:        '',
+    // Campos extras exclusivos de lançamentos
+    precoMin:      precoMin  || '',
+    precoMax:      parseFloat(String(row.precoMax || '').replace(/[^\d]/g, '')) || '',
+    precoMedio:    precoMed  || '',
+    tipologiaLabel:tipologiaLabel,
+    qtdUnidades:   row.unidades    || '',
+    idLancamento:  row.idLancamento|| '',
+    dataTabela:    row.dataTabela  || '',
+    statusTabela:  row.statusTabela|| '',
+    fonte:         'LANCAMENTO',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MOTOR DE MATCHING — CONTATOS × REVENDA + CONSTRUTORA → MATCHES
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_MATCHES = [
+  'fonte',
+  'cliCodigo','cliNome','cliScore','cliPrioridade',
+  'cliSegmento','cliPadrao','cliPrecoLimite',
+  'cliBairroInteresse','cliConversa',
+  'imoCodigo','imoTipo','imoBairro','imoCondominio',
+  'imoQuartos','imoSuites','imoVagas','imoAreaUtil',
+  'imoValorVenda','imoPadrao','imoEstagio','imoFoto','imoUrl',
+  'imoConstrutora','imoEntrega',
+  'imoEntradaPerc','imoEntradaValor','imoSinalPerc','imoSinalValor',
+  'imoComissaoPerc','imoComissaoValor','imoCorretorPerc','imoCorretorValor',
+  'imoTabela','imoDataTabela','imoStatusTabela',
+  'scoreMatch','detalheMatch','dataMatch'
+];
+
+function lerAba_(nomeAba) {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName(nomeAba);
+  if (!aba) return [];
+  var dados = aba.getDataRange().getValues();
+  if (dados.length < 2) return [];
+  var cab  = dados[0];
+  var rows = [];
+  for (var i = 1; i < dados.length; i++) {
+    var obj = {};
+    cab.forEach(function(c, j) { obj[c] = dados[i][j]; });
+    obj._rowIdx = i; // índice 1-based, mesmo usado em gerarCodigo_
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function gerarCodigo_(linha) {
+  return 'CLI-' + String(linha + 10000).slice(-5);
+}
+
+function norm_(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+function parseMoeda_(s) {
+  if (!s) return 0;
+  return parseInt(String(s).replace(/[^\d]/g, '')) || 0;
+}
+
+// ── Extração de tipo de imóvel ────────────────────────────────
+
+function extrairTipo_(texto) {
+  var t = norm_(texto);
+  if (/\bapto\b|\bapartamento\b/.test(t))        return 'apartamento';
+  if (/casa\s*cond|\bcasa\s*de\s*cond/.test(t))  return 'casa condominio';
+  if (/\bsobrado\b|\bsob\b/.test(t))             return 'sobrado';
+  if (/\bcasa\b|\bcs\b/.test(t))                 return 'casa';
+  if (/\blote\b|\blt\b|\bterreno\b/.test(t))     return 'lote';
+  if (/\bsala\b|\bcomercial\b|\bloja\b/.test(t)) return 'comercial';
+  if (/\bch[aá]cara\b|\bs[ií]tio\b/.test(t))    return 'chacara';
+  return '';
+}
+
+// ── Score de tipo ─────────────────────────────────────────────
+// Grupos separados: apartamento ≠ casa/sobrado (mesma faixa residencial
+// não basta — são produtos completamente diferentes para o comprador)
+
+function scoreTipo_(textoCliente, tipoImovel, segmentoCliente) {
+  // Campo estruturado (segmento, escolhido no formulário) manda mais que texto
+  // livre — conversa/observações podem citar "casa" fora de contexto (ex:
+  // "moramos numa casa alugada") e sequestrar a detecção do tipo desejado.
+  var tipoCli = extrairTipo_(segmentoCliente || '');
+  if (!tipoCli) tipoCli = extrairTipo_(textoCliente);
+
+  // O tipo do imóvel precisa passar pelo mesmo normalizador que o tipo do
+  // cliente — senão "Terreno" (como a Imobzi rotula lotes) nunca bate com
+  // "lote" (como o cliente que escolhe "Lote em cond." é normalizado), e o
+  // match é descartado por engano. Sem correspondência reconhecida, cai para
+  // o texto normalizado bruto (preserva o match exato por nome, ex: "Flat").
+  var tipoImo = extrairTipo_(tipoImovel) || norm_(tipoImovel || '');
+
+  // Sem preferência declarada: pontua neutro
+  if (!tipoCli) return 8;
+
+  // Match exato ou subtipo (ex: "casa condominio" contém "casa")
+  if (tipoImo === tipoCli ||
+      tipoImo.indexOf(tipoCli) >= 0 ||
+      tipoCli.indexOf(tipoImo) >= 0) return 25;
+
+  // Grupos de compatibilidade:
+  // horizontal: casa, casa condominio, sobrado — mutuamente compatíveis
+  // vertical:   apartamento — incompatível com horizontal
+  // terra:      lote, chácara
+  // comercial:  sala, loja, galpão
+  var horizontal = ['casa', 'casa condominio', 'sobrado'];
+  var vertical   = ['apartamento'];
+  var terra      = ['lote', 'chacara'];
+  var comercial  = ['comercial', 'sala', 'loja'];
+
+  function grupo_(tp) {
+    if (horizontal.indexOf(tp) >= 0) return 'horiz';
+    if (vertical.indexOf(tp)   >= 0) return 'vert';
+    if (terra.indexOf(tp)      >= 0) return 'terra';
+    if (comercial.some(function(x) { return tp.indexOf(x) >= 0; })) return 'com';
+    return 'out';
+  }
+
+  var gCli = grupo_(tipoCli);
+  var gImo = grupo_(tipoImo);
+
+  // Mesmo grupo e não capturado acima → compatível parcial
+  if (gCli === gImo && gCli !== 'out') return 12;
+
+  // Grupos diferentes = incompatível = 0
+  return 0;
+}
+
+// ── Score de quartos ──────────────────────────────────────────
+
+function extrairQuartos_(texto) {
+  var t    = norm_(texto);
+  var pats = [/(\d)\s*quarto/, /\b(\d)\s*q\b/, /(\d)\s*dorm/, /\b(\d)\s*suite/];
+  for (var i = 0; i < pats.length; i++) {
+    var m = t.match(pats[i]);
+    if (m) return parseInt(m[1]);
+  }
+  return 0;
+}
+
+function scoreQuartos_(textoCliente, quartosImovel) {
+  var qImo = parseInt(quartosImovel) || 0;
+  if (qImo === 0) return 10; // imóvel sem info de quartos → neutro
+  var qCli = extrairQuartos_(textoCliente);
+  if (qCli === 0) return 12; // cliente sem preferência → aceita qualquer
+  var diff = Math.abs(qCli - qImo);
+  if (diff === 0) return 20;
+  if (diff === 1) return 10;
+  return 0;
+}
+
+// ── Score de preço ────────────────────────────────────────────
+// precoLimite é o teto/referência informado pelo cliente (ex: "quero até 250k").
+// Margem padrão de tolerância: 30% para mais ou para menos, ajustável por
+// cliente via campo margem_preco. Acima da margem, o imóvel é excluído (score 0).
+
+function scorePreco_(valorImo, precoLimite, margemPerc) {
+  var limite = parseMoeda_(precoLimite) || 0;
+  if (!valorImo || !limite) return 15; // sem referência → aceita qualquer preço
+
+  var margem = parseFloat(margemPerc) || 30;
+  var distPerc = Math.abs(valorImo - limite) / limite * 100;
+
+  if (distPerc > margem) return 0;   // fora da margem tolerável → excluído
+  if (distPerc <= 5)  return 100;
+  if (distPerc <= 10) return 95;
+  if (distPerc <= 15) return 85;
+  if (distPerc <= 20) return 75;
+  if (distPerc <= 25) return 70;
+  return 60; // até o limite da margem (26%–30% por padrão)
+}
+
+// ── Score de bairro ───────────────────────────────────────────
+
+function scoreBairro_(bairroInteresse, bairroImo, cidadeImo) {
+  if (!bairroInteresse) return 3;
+  var interesse = norm_(bairroInteresse);
+  var imo       = norm_(bairroImo || '');
+  var cidade    = norm_(cidadeImo || '');
+  var bairros   = interesse.split(/[,;\/]/);
+  for (var i = 0; i < bairros.length; i++) {
+    var b = bairros[i].trim();
+    if (b && (imo.indexOf(b) >= 0 || b.indexOf(imo) >= 0)) return 15;
+  }
+  if (cidade && interesse.indexOf(cidade) >= 0) return 5;
+  return 0;
+}
+
+// ── Score de padrão ───────────────────────────────────────────
+
+function normPadrao_(s) {
+  var t = norm_(s);
+  if (t.indexOf('popular') >= 0 || t.indexOf('econom') >= 0) return 'popular';
+  if (t.indexOf('medio')   >= 0)                             return 'medio';
+  if (t.indexOf('alto')    >= 0)                             return 'alto';
+  if (t.indexOf('luxo')    >= 0 || t.indexOf('premium') >= 0) return 'luxo';
+  if (t === 'master' || t === 'classic' || t === 'prime')    return 'alto';
+  if (t === 'standard' || t === 'essencial')                 return 'medio';
+  return t;
+}
+
+var ORDEM_PADRAO = ['popular', 'medio', 'alto', 'luxo'];
+function scorePadrao_(pCli, pImo) {
+  var a = normPadrao_(pCli), b = normPadrao_(pImo);
+  if (!a || !b) return 5; // sem padrão declarado → aceita qualquer
+  if (a === b)  return 10;
+  var ia = ORDEM_PADRAO.indexOf(a), ib = ORDEM_PADRAO.indexOf(b);
+  if (ia < 0 || ib < 0) return 3;
+  return Math.abs(ia - ib) === 1 ? 5 : 0;
+}
+
+// ── Cálculo de match ──────────────────────────────────────────
+
+function calcularMatch_(contato, imovel) {
+  var valorImo  = parseMoeda_(imovel.valorVenda);
+  var textoFull = [
+    contato.conversa, contato.observacoes,
+    contato.nome_bruto, contato.produtoOrigem
+  ].join(' ');
+
+  var ptTipo    = scoreTipo_(textoFull, imovel.tipo, contato.segmento);
+
+  // Tipo incompatível (ex: cliente quer Apartamento, imóvel é Casa) desqualifica
+  // o match inteiro — preço/bairro perfeitos não compensam um produto
+  // fundamentalmente diferente do que o cliente pediu. scoreTipo_ só retorna 0
+  // quando o cliente declarou um tipo e ele está num grupo incompatível
+  // (vertical × horizontal × terra × comercial); sem preferência declarada
+  // (segmento vazio/Indefinido) o retorno é 8, não desqualifica.
+  if (ptTipo === 0) {
+    return { score: 0, detalhes: 'tipo incompatível' };
+  }
+
+  var ptPreco   = scorePreco_(valorImo, contato.precoLimite, contato.margem_preco);
+  var ptQuartos = scoreQuartos_(textoFull, imovel.quartos);
+  var ptBairro  = scoreBairro_(contato.bairroInteresse, imovel.bairro, imovel.cidade);
+  var ptPadrao  = scorePadrao_(contato.padrao, imovel.padrao);
+
+  var bonus = 0;
+  var t  = norm_(textoFull);
+  var sv = parseInt(imovel.suites) || 0;
+  if (sv > 0 && t.indexOf(sv + ' suite') >= 0) bonus += 3;
+  var vg = parseInt(imovel.vagas) || 0;
+  if (vg > 0 && (t.indexOf(vg + ' vaga') >= 0 || t.indexOf(vg + 'vg') >= 0)) bonus += 2;
+
+  // ptPreco vem em escala 0-100 (bandas da margem de 30%) — pra não "estourar"
+  // o total junto com tipo/quartos/bairro/padrao e mascarar preços ruins atrás
+  // de um score 100 (ex: imóvel 30% abaixo do precoLimite, mas com tipo/quartos
+  // perfeitos, aparecia com nota 100 igual um match perfeito), a contribuição
+  // dele no total volta a ser proporcional (até 30 pontos, como era antes da
+  // margem de 30% existir). O valor de 0-100 continua exposto no detalheMatch.
+  var ptPrecoContrib = ptPreco * 0.3;
+
+  var total = ptTipo + ptPrecoContrib + ptQuartos + ptBairro + ptPadrao + bonus;
+
+  var det = [];
+  if (ptTipo    > 0) det.push('tipo:'    + ptTipo);
+  if (ptPreco   > 0) det.push('preco:'   + ptPreco);
+  if (ptQuartos > 0) det.push('quartos:' + ptQuartos);
+  if (ptBairro  > 0) det.push('bairro:'  + ptBairro);
+  if (ptPadrao  > 0) det.push('padrao:'  + ptPadrao);
+  if (bonus     > 0) det.push('bonus:'   + bonus);
+
+  return { score: Math.round(Math.min(total, 100)), detalhes: det.join(' | ') };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUSCA ABERTA — descrição livre → matches, sem precisar de cadastro
+// ═══════════════════════════════════════════════════════════════
+
+// Extrai um valor de referência (precoLimite) de texto livre — mesma lógica
+// de extrair_valores() do processar_contatos_v3.py, adaptada pra JS.
+function extrairValorTexto_(texto) {
+  var t = norm_(texto);
+  var valores = [];
+  var m;
+
+  var reK = /(\d[\d.,]*)\s*k\b/g;
+  while ((m = reK.exec(t))) {
+    var vK = parseFloat(m[1].replace(/\./g, '').replace(',', '.')) * 1000;
+    if (!isNaN(vK)) valores.push(Math.round(vK));
+  }
+
+  var reMil = /(\d[\d.,]*)\s*mil\b/g;
+  while ((m = reMil.exec(t))) {
+    var vMil = parseFloat(m[1].replace(/\./g, '').replace(',', '.')) * 1000;
+    if (!isNaN(vMil)) valores.push(Math.round(vMil));
+  }
+
+  var reGrande = /\b(\d{1,3}(?:[.,]\d{3})+)\b/g;
+  while ((m = reGrande.exec(t))) {
+    var vG = parseInt(m[1].replace(/[.,]/g, ''), 10);
+    if (!isNaN(vG) && vG >= 100000) valores.push(vG);
+  }
+
+  // "Mi" ambíguo: número pequeno = milhão, número grande = mil (igual à
+  // heurística do script de migração)
+  var reMi = /(\d[\d.,\s]*)\s*mi\b/g;
+  while ((m = reMi.exec(t))) {
+    var numMi = parseFloat(m[1].replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(numMi)) valores.push(Math.round(numMi * (numMi < 100 ? 1000000 : 1000)));
+  }
+
+  var reMilhao = /(\d[\d.,]*)\s*milh(?:ao|oes)\b/g;
+  while ((m = reMilhao.exec(t))) {
+    var vM = parseFloat(m[1].replace(/\./g, '').replace(',', '.')) * 1000000;
+    if (!isNaN(vM)) valores.push(Math.round(vM));
+  }
+
+  if (!valores.length) return '';
+  return String(Math.max.apply(null, valores));
+}
+
+// Roda a descrição livre contra REVENDA + CONSTRUTORA-APARTAMENTOS usando o
+// mesmo motor de match do rodarMatching(), sem gravar nada — puramente uma
+// consulta. Retorna o que foi entendido do texto + os imóveis compatíveis.
+var TIPO_LABEL_BUSCA = {
+  'apartamento': 'Apartamento', 'casa': 'Casa', 'sobrado': 'Sobrado',
+  'casa condominio': 'Casa', 'lote': 'Lote em cond.',
+  'comercial': 'Sala comercial', 'chacara': 'Chácara'
+};
+
+// Tipos e bairros reais existentes em REVENDA + CONSTRUTORA-APARTAMENTOS, pra
+// alimentar os chips da Busca Aberta dinamicamente (em vez de lista fixa que
+// não reflete o estoque de verdade).
+// "AEROVIARIO" (maiúsculo) e "Aeroviário" (com acento) são o mesmo bairro
+// escrito diferente por quem cadastrou — agrupa por texto normalizado
+// (norm_) pra não duplicar o mesmo lugar na lista de chips.
+function tituloCase_(s) {
+  return String(s || '').toLowerCase().replace(/(^|\s)([a-zà-ÿ])/g, function(m, p1, p2) {
+    return p1 + p2.toUpperCase();
+  });
+}
+
+function opcoesFiltro_() {
+  var revenda     = lerAba_('REVENDA');
+  var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS');
+
+  var tiposMap = {};
+  function registrarTipo(t) {
+    t = String(t || '').trim();
+    if (!t) return;
+    var chave = norm_(t);
+    if (!tiposMap[chave]) tiposMap[chave] = tituloCase_(t);
+  }
+  revenda.forEach(function(r) { registrarTipo(r.tipo); });
+  if (construtora.length) registrarTipo('Apartamento');
+
+  var bairrosMap = {};
+  function registrarBairro(b) {
+    b = String(b || '').trim();
+    if (!b) return;
+    var chave = norm_(b);
+    if (!bairrosMap[chave]) bairrosMap[chave] = tituloCase_(b);
+  }
+  revenda.forEach(function(r) { registrarBairro(r.bairro); });
+  construtora.forEach(function(r) { registrarBairro(r.bairro); });
+
+  var tipos = Object.keys(tiposMap).map(function(k) { return tiposMap[k]; }).sort();
+  var bairros = Object.keys(bairrosMap).map(function(k) { return bairrosMap[k]; }).sort();
+
+  return { tipos: tipos, bairros: bairros };
+}
+
+// d: { tipo, quartos, suites, vagas, precoMax, bairros:[], condPagto:[], extras:[], urgencia, texto }
+// Combina os chips estruturados (mais confiáveis) com o texto livre (fallback/contexto),
+// monta um "contato sintético" e roda no mesmo motor de match do rodarMatching().
+// extras/condPagto ainda não afetam o score — REVENDA/CONSTRUTORA não têm essas colunas
+// hoje (só existem como preferência do cliente em CONTATOS).
+function buscaAberta_(d) {
+  d = d || {};
+  var textoLivre = d.texto || '';
+
+  var partesTexto = [textoLivre];
+  if (d.quartos && d.quartos !== 'Indiferente') partesTexto.push(String(d.quartos).replace('+', '') + ' quartos');
+  if (d.suites)  partesTexto.push(String(d.suites).replace('+', '') + ' suites');
+  if (d.vagas)   partesTexto.push(String(d.vagas).replace('+', '') + ' vagas');
+  var textoCompleto = partesTexto.join('. ');
+
+  var bairros = Array.isArray(d.bairros) ? d.bairros.filter(function(b) { return b && b !== 'Qualquer'; }) : [];
+  var bairroInteresse = bairros.length ? bairros.join(', ') : textoLivre;
+
+  var contatoSintetico = {
+    segmento: d.tipo || textoLivre,
+    precoLimite: d.precoMax || extrairValorTexto_(textoLivre),
+    margem_preco: '',
+    bairroInteresse: bairroInteresse,
+    conversa: textoCompleto,
+    observacoes: '',
+    produtoOrigem: '',
+    nome_bruto: '',
+    padrao: ''
+  };
+
+  var revenda     = lerAba_('REVENDA').map(function(r) { r.fonte = 'REVENDA'; return r; });
+  var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS').map(constutoraParaImovel_);
+  var lancamentos = lerAba_('LANCAMENTOS').map(lancamentoParaImovel_);
+  var todos       = revenda.concat(construtora).concat(lancamentos);
+
+  // Limiar mais permissivo que o rodarMatching (70) — aqui é exploratório,
+  // não alimenta o dashboard/MATCHES, então vale mostrar até opções parciais.
+  var resultados = [];
+  todos.forEach(function(imo) {
+    var res = calcularMatch_(contatoSintetico, imo);
+    if (res.score >= 40) resultados.push({ imo: imo, score: res.score, det: res.detalhes });
+  });
+  resultados.sort(function(a, b) { return b.score - a.score; });
+  resultados = resultados.slice(0, 30);
+
+  return {
+    interpretado: {
+      tipo: d.tipo || TIPO_LABEL_BUSCA[extrairTipo_(textoLivre)] || '',
+      precoLimite: contatoSintetico.precoLimite,
+      bairros: bairros.length ? bairros.join(', ') : ''
+    },
+    resultados: resultados.map(function(r) {
+      var imo = r.imo;
+      return {
+        fonte: imo.fonte || 'REVENDA',
+        codigo: imo.codigo || '', endereco: imo.endereco || '',
+        tipo: imo.tipo || '', bairro: imo.bairro || '', condominio: imo.condominio || '',
+        quartos: imo.quartos || '', suites: imo.suites || '', vagas: imo.vagas || '',
+        areaUtil: imo.areaUtil || '', valorVenda: imo.valorVenda || '', padrao: imo.padrao || '',
+        estagio: imo.estagio || '', foto: imo.foto || '', url: imo.urlSite || '',
+        construtora: imo.construtora || '', entradaPerc: imo.entradaPerc || '',
+        precoMin: imo.precoMin || '', precoMax: imo.precoMax || '',
+        tipologiaLabel: imo.tipologiaLabel || '', idLancamento: imo.idLancamento || '',
+        dataTabela: imo.dataTabela || '', statusTabela: imo.statusTabela || '',
+        score: r.score, detalhe: r.det
+      };
+    })
+  };
+}
+
+// ── Persiste matches ──────────────────────────────────────────
+
+function empurrarMatch_(matches, c, par, agora) {
+  var imo = par.imo;
+  matches.push([
+    imo.fonte || 'REVENDA',
+    String(c.idCliente || '').trim() || gerarCodigo_(c._rowIdx), String(c.nome || '').trim(),
+    parseInt(c.score) || 0, c.urgencia || c.prioridade || '',
+    c.segmento || '', c.padrao || '',
+    c.precoLimite || '',
+    c.bairroInteresse || '', String(c.conversa || '').substring(0, 120),
+    imo.codigo || '', imo.tipo || '', imo.bairro || '', imo.condominio || '',
+    imo.quartos || '', imo.suites || '', imo.vagas || '', imo.areaUtil || '',
+    imo.valorVenda || '', imo.padrao || '', imo.estagio || '',
+    imo.foto || '', imo.urlSite || '',
+    imo.construtora || '', imo.dataEntrega || '',
+    imo.entradaPerc || '', imo.entradaValor || '',
+    imo.sinalPerc || '', imo.sinalValor || '',
+    imo.comissaoPerc || '', imo.comissaoValor || '',
+    imo.corretorPerc || '', imo.corretorValor || '',
+    imo.tabela       || '',
+    imo.dataTabela   || '',
+    imo.statusTabela || '',
+    par.score, par.det, agora
+  ]);
+}
+
+// ── Execução do matching ──────────────────────────────────────
+
+function rodarMatching() {
+  Logger.log('Iniciando motor de matching v26...');
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  var contatos    = lerAba_('CONTATOS');
+  var revenda     = lerAba_('REVENDA');
+  var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS');
+  var lancamentos = lerAba_('LANCAMENTOS');
+
+  var imoveisRevenda = revenda.map(function(r) { r.fonte = 'REVENDA'; return r; });
+  var imoveisConst   = construtora.map(function(r) { return constutoraParaImovel_(r); });
+  var imoveisLanc    = lancamentos.map(lancamentoParaImovel_);
+
+  Logger.log('Contatos: ' + contatos.length +
+             ' | Revenda: ' + revenda.length +
+             ' | Construtora: ' + construtora.length +
+             ' | Lançamentos: ' + lancamentos.length);
+
+  if (contatos.length === 0 || (imoveisRevenda.length === 0 && imoveisConst.length === 0 && imoveisLanc.length === 0)) {
+    Logger.log('Dados insuficientes.'); return;
+  }
+
+  // Elegível pra matching: ter alguma preferência declarada (segmento, preço
+  // ou bairro). Não filtra mais por score de cadastro — a base migrada tem
+  // score heurístico baixo mesmo quando o segmento/produto está bem
+  // identificado, e isso excluía a maioria dos contatos migrados do matching.
+  var contataveis = contatos.filter(function(c) {
+    return !!(c.segmento || c.precoLimite || c.bairroInteresse);
+  });
+  Logger.log('Contatos aptos: ' + contataveis.length + ' de ' + contatos.length);
+
+  var matches = [];
+
+  contataveis.forEach(function(c) {
+    var paresRev   = [];
+    var paresConst = [];
+    var paresLanc  = [];
+
+    imoveisRevenda.forEach(function(imo) {
+      var res = calcularMatch_(c, imo);
+      if (res.score >= 70) paresRev.push({ imo: imo, score: res.score, det: res.detalhes });
+    });
+
+    imoveisConst.forEach(function(imo) {
+      var res = calcularMatch_(c, imo);
+      if (res.score >= 70) paresConst.push({ imo: imo, score: res.score, det: res.detalhes });
+    });
+
+    imoveisLanc.forEach(function(imo) {
+      var res = calcularMatch_(c, imo);
+      if (res.score >= 70) paresLanc.push({ imo: imo, score: res.score, det: res.detalhes });
+    });
+
+    paresRev.sort(function(a, b)   { return b.score - a.score; });
+    paresConst.sort(function(a, b) { return b.score - a.score; });
+    paresLanc.sort(function(a, b)  { return b.score - a.score; });
+
+    // Top 5 REVENDA + top 5 CONSTRUTORA + top 5 LANCAMENTO, reordenados por score
+    var pares = paresRev.slice(0, 5).concat(paresConst.slice(0, 5)).concat(paresLanc.slice(0, 5));
+    pares.sort(function(a, b) { return b.score - a.score; });
+
+    pares.forEach(function(par) { empurrarMatch_(matches, c, par, agora); });
+  });
+
+  // Ordena matches globalmente por scoreMatch
+  var idxScore = CABECALHO_MATCHES.indexOf('scoreMatch'); // 0-indexed
+  matches.sort(function(a, b) { return b[idxScore] - a[idxScore]; });
+  Logger.log('Pares gerados: ' + matches.length);
+
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('MATCHES');
+  if (!aba) aba = ss.insertSheet('MATCHES');
+  aba.clearContents();
+
+  var linhas = [CABECALHO_MATCHES].concat(matches);
+  aba.getRange(1, 1, linhas.length, CABECALHO_MATCHES.length).setValues(linhas);
+
+  var colScore = idxScore + 1; // 1-indexed para Range
+  // Força scoreMatch como número — evita auto-format de data pelo Sheets
+  if (matches.length > 0) {
+    aba.getRange(2, colScore, matches.length, 1).setNumberFormat('0');
+  }
+
+  var cabRow = aba.getRange(1, 1, 1, CABECALHO_MATCHES.length);
+  cabRow.setFontWeight('bold').setBackground('#0f3460').setFontColor('#ffffff');
+  aba.setFrozenRows(1);
+
+  for (var i = 2; i <= linhas.length; i++) {
+    var sc  = matches[i - 2] ? matches[i - 2][idxScore] : 0;
+    var cor = sc >= 80 ? '#c8f7c5' : sc >= 70 ? '#fef9c3' : '#fde8e8';
+    aba.getRange(i, colScore).setBackground(cor);
+  }
+
+  Logger.log('MATCHES gerado: ' + matches.length + ' pares em ' + agora);
+}
+
+function criarGatilhoMatching() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'rodarMatching') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('rodarMatching').timeBased().everyHours(12).create();
+  Logger.log('Gatilho matching criado: a cada 12 horas.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REVENDA — Sincronização automática com Imobzi
+// ═══════════════════════════════════════════════════════════════
+
+var IMOBZI_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjcmVhdGVkX2F0IjoiMjAyNi0wNi0yOVQyMjo0MzoxMS44MDYxNDhaIiwiaXNfdGhpcmRfcGFydHlfYWNjZXNzIjp0cnVlLCJ0aGlyZF9wYXJ0eV9hcHBfaWQiOiJlOElOMTVmUXJXIn0.3P5dfUdDOQzFQDqLDjdPAoUhHzJ_qBWlAnJPqWMclio';
+var IMOBZI_BASE  = 'https://api.imobzi.app/v1';
+var IMOBZI_LIMIT = 50;
+
+var CABECALHO_REVENDA = [
+  'codigo','db_id','tipo','finalidade','bairro','cidade','endereco','condominio',
+  'quartos','suites','banheiros','vagas','areaUtil','areaTerr',
+  'valorVenda','padrao','estagio','publicadoSite','urlSite','foto',
+  'dataCadastro','dataAtualizacao','latitude','longitude','ultimaSincronizacao'
+];
+
+function buscarTodosImoveis_() {
+  var headers = { 'X-Imobzi-Secret': IMOBZI_TOKEN };
+  var todos   = [];
+  var cursor  = null;
+  var pagina  = 0;
+
+  do {
+    var url = IMOBZI_BASE + '/properties?limit=' + IMOBZI_LIMIT;
+    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+
+    var resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('Erro Imobzi ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0, 200));
+      break;
+    }
+
+    var dados = JSON.parse(resp.getContentText());
+    var props = dados.properties || [];
+
+    props.forEach(function(p) {
+      var saleValue = p.sale_value || 0;
+      var ativo     = p.active !== false;
+      var status    = p.status || '';
+      if (saleValue > 0 && status === 'available' && ativo) todos.push(p);
+    });
+
+    cursor = dados.cursor || null;
+    pagina++;
+    if (pagina >= 50) break;
+    Utilities.sleep(300);
+
+  } while (cursor && todos.length < (dados.count || 9999));
+
+  return todos;
+}
+
+function formatarMoeda_(v) {
+  if (!v || v === 0) return '';
+  return 'R$ ' + Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function inferirPadrao_(valor) {
+  if (!valor) return '';
+  if (valor >= 1500000) return 'Luxo';
+  if (valor >= 700000)  return 'Alto';
+  if (valor >= 300000)  return 'Medio';
+  return 'Popular';
+}
+
+function traduzFinalidade_(f) {
+  return { residential: 'Residencial', commercial: 'Comercial', rural: 'Rural' }[f] || (f || '');
+}
+
+function traduzEstagio_(s) {
+  return { ready: 'Pronto', plant: 'Planta', building: 'Construcao' }[s] || (s || '');
+}
+
+function imovelParaLinha_(p, agora) {
+  var end  = [p.address, p.address_complement].filter(Boolean).join(', ');
+  var foto = (p.cover_photo && p.cover_photo.url) ? p.cover_photo.url : '';
+  var venda = p.sale_value || 0;
+  return [
+    p.code || '', p.db_id || '', p.property_type || '',
+    traduzFinalidade_(p.finality || ''),
+    p.neighborhood || '', p.city || '', end, p.building_name || '',
+    p.bedroom || '', p.suite || '', p.bathroom || '', p.garage || '',
+    p.useful_area || '', p.lot_area || '',
+    formatarMoeda_(venda), inferirPadrao_(venda),
+    traduzEstagio_(p.stage || ''),
+    p.site_publish ? 'Sim' : 'Nao', p.site_url || '', foto,
+    (p.created_at || '').substring(0, 10),
+    (p.updated_at || '').substring(0, 10),
+    p.latitude || '', p.longitude || '', agora
+  ];
+}
+
+function sincronizarRevenda() {
+  Logger.log('Iniciando sincronizacao Imobzi...');
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  var imoveis = buscarTodosImoveis_();
+  Logger.log('Imoveis para venda: ' + imoveis.length);
+
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('REVENDA');
+  if (!aba) { aba = ss.insertSheet('REVENDA'); Logger.log('Aba REVENDA criada.'); }
+
+  aba.clearContents();
+
+  if (imoveis.length === 0) {
+    aba.getRange(1, 1, 1, CABECALHO_REVENDA.length).setValues([CABECALHO_REVENDA]);
+    Logger.log('Nenhum imovel encontrado.');
+    return;
+  }
+
+  var linhas = [CABECALHO_REVENDA];
+  imoveis.forEach(function(p) { linhas.push(imovelParaLinha_(p, agora)); });
+  aba.getRange(1, 1, linhas.length, CABECALHO_REVENDA.length).setValues(linhas);
+
+  var cabRow = aba.getRange(1, 1, 1, CABECALHO_REVENDA.length);
+  cabRow.setFontWeight('bold').setBackground('#1a1a2e').setFontColor('#ffffff');
+  aba.setFrozenRows(1);
+  aba.setColumnWidth(7, 220);
+  aba.setColumnWidth(8, 180);
+
+  Logger.log('REVENDA atualizada: ' + imoveis.length + ' imoveis em ' + agora);
+}
+
+function criarGatilhoRevenda() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sincronizarRevenda') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('sincronizarRevenda').timeBased().everyHours(6).create();
+  Logger.log('Gatilho criado: sincronizarRevenda a cada 6 horas.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH — Senha segura via PropertiesService + reset por e-mail
+// ═══════════════════════════════════════════════════════════════
+
+var RESET_URL = 'https://chaverleo1.github.io/base-inteligente/reset.html';
+var ADM_EMAIL = 'chaverleo@gmail.com';
+
+function verificarSenha_(hash) {
+  var props     = PropertiesService.getScriptProperties();
+  var hashSalvo = props.getProperty('bi_password_hash');
+  if (!hashSalvo) return ok({ ok: false, motivo: 'sem_senha' });
+  return ok({ ok: hash === hashSalvo });
+}
+
+function esquecerSenha_() {
+  var token  = Utilities.getUuid();
+  var expiry = new Date().getTime() + (60 * 60 * 1000);
+  var props  = PropertiesService.getScriptProperties();
+  props.setProperty('bi_reset_token',  token);
+  props.setProperty('bi_reset_expiry', String(expiry));
+
+  var link = RESET_URL + '?token=' + token;
+  MailApp.sendEmail({
+    to:      ADM_EMAIL,
+    subject: 'Base Inteligente — Redefinição de senha',
+    body:    'Clique no link abaixo para criar uma nova senha (válido por 1 hora):\n\n' + link +
+             '\n\nSe não foi você quem solicitou, ignore este e-mail.'
+  });
+  return ok({ ok: true });
+}
+
+function validarToken_(token) {
+  if (!token) return ok({ ok: false });
+  var props  = PropertiesService.getScriptProperties();
+  var salvo  = props.getProperty('bi_reset_token');
+  var expiry = parseInt(props.getProperty('bi_reset_expiry') || '0');
+  return ok({ ok: token === salvo && new Date().getTime() < expiry });
+}
+
+function salvarSenhaReset_(d) {
+  var token = d.token, hash = d.hash;
+  if (!token || !hash) return ok({ ok: false });
+  var props  = PropertiesService.getScriptProperties();
+  var salvo  = props.getProperty('bi_reset_token');
+  var expiry = parseInt(props.getProperty('bi_reset_expiry') || '0');
+  if (token !== salvo || new Date().getTime() >= expiry) return ok({ ok: false, motivo: 'token_invalido' });
+  props.setProperty('bi_password_hash', hash);
+  props.deleteProperty('bi_reset_token');
+  props.deleteProperty('bi_reset_expiry');
+  return ok({ ok: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITÁRIOS
+// ═══════════════════════════════════════════════════════════════
+
+function getAba() {
+  return SpreadsheetApp.openById(SHEET_ID).getSheetByName('CONTATOS');
+}
+
+function ok(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function parseBody(contents) {
+  if (!contents) return {};
+  // JSON puro (Content-Type: application/json)
+  var trimmed = contents.trim();
+  if (trimmed.charAt(0) === '{') {
+    try { return JSON.parse(trimmed); } catch(e) {}
+  }
+  // form-encoded com chave 'dados'
+  var map = {};
+  contents.split('&').forEach(function(pair) {
+    var idx = pair.indexOf('=');
+    if (idx < 0) return;
+    var k = decodeURIComponent(pair.substring(0, idx).replace(/\+/g, ' '));
+    var v = decodeURIComponent(pair.substring(idx + 1).replace(/\+/g, ' '));
+    map[k] = v;
+  });
+  try { return JSON.parse(map['dados'] || '{}'); } catch(e) { return map; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO LANCAMENTOS
+// ═══════════════════════════════════════════════════════════════
+
+// Rode UMA VEZ no editor do Apps Script após atualizar CABECALHO_LANCAMENTOS.
+// Reescreve apenas a linha 1 da aba preservando todos os dados existentes.
+function migrarCabecalhoLancamentos() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LANCAMENTOS');
+  if (!aba) { Logger.log('Aba LANCAMENTOS não encontrada.'); return; }
+  var cab = CABECALHO_LANCAMENTOS;
+  var nCols = cab.length;
+  var atualCols = aba.getLastColumn();
+  if (atualCols < nCols) aba.insertColumnsAfter(atualCols, nCols - atualCols);
+  aba.getRange(1, 1, 1, nCols).setValues([cab]);
+  aba.getRange(1, 1, 1, nCols)
+     .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+  Logger.log('Cabeçalho LANCAMENTOS atualizado: ' + nCols + ' colunas.');
+}
+
+function obterAbaLancamentos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LANCAMENTOS');
+  if (!aba) {
+    aba = ss.insertSheet('LANCAMENTOS');
+    aba.appendRow(CABECALHO_LANCAMENTOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_LANCAMENTOS.length)
+       .setFontWeight('bold')
+       .setBackground('#1e2335')
+       .setFontColor('#e8ecf4');
+  }
+  return aba;
+}
+
+function proximoIdLancamento_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba    = obterAbaLancamentos_();
+    var lr     = aba.getLastRow();
+    var maxNum = 0;
+    if (lr >= 2) {
+      var vals = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+      vals.forEach(function(v) {
+        var m = String(v || '').match(/(\d+)$/);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+      });
+    }
+    return 'LAN-' + String(maxNum + 1).padStart(5, '0');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listarLancamentos_() {
+  try {
+    var aba = obterAbaLancamentos_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { lancamentos: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LANCAMENTOS.length).getValues();
+    var lancamentos = dados
+      .filter(function(r) { return r[0]; })
+      .map(function(r) {
+        var obj = {};
+        CABECALHO_LANCAMENTOS.forEach(function(col, i) { obj[col] = r[i]; });
+        return obj;
+      });
+    return { lancamentos: lancamentos };
+  } catch(e) {
+    return { lancamentos: [], erro: e.message };
+  }
+}
+
+function salvarLancamento_(dados) {
+  if (!dados || !dados.nomeEmpreendimento) return { ok: false, erro: 'nomeEmpreendimento obrigatorio' };
+  try {
+    var aba     = obterAbaLancamentos_();
+    var agora   = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var unidades = dados.unidades || [];
+    if (!unidades.length) return { ok: false, erro: 'nenhuma unidade informada' };
+
+    // Verificar duplicata pelo nome — apagar antes de reinserir (merge)
+    var lr = aba.getLastRow();
+    if (lr >= 2) {
+      var nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
+      var nomeNovo = String(dados.nomeEmpreendimento).toLowerCase().trim();
+      var idExistente = '';
+      for (var i = nomes.length - 1; i >= 0; i--) {
+        if (String(nomes[i] || '').toLowerCase().trim() === nomeNovo) {
+          if (!idExistente) idExistente = aba.getRange(i + 2, 1).getValue();
+          aba.deleteRow(i + 2);
+        }
+      }
+    }
+
+    var id = proximoIdLancamento_();
+
+    var linhas = unidades.map(function(u) {
+      var q  = parseInt(u.quartos)  || 0;
+      var s  = parseInt(u.suites)   || 0;
+      var vg = parseInt(u.vagas)    || 0;
+      return [
+        id,
+        dados.nomeEmpreendimento || '',
+        dados.construtora        || '',
+        dados.tipo               || '',
+        dados.bairro             || '',
+        dados.cidade             || '',
+        dados.endereco           || '',
+        dados.status             || '',
+        dados.previsaoEntrega    || '',
+        q,
+        s,
+        parseInt(u.banheiros)    || '',
+        vg,
+        u.areaUtil               || '',
+        u.areaTerr               || '',
+        u.unidades               || '',
+        u.escaninho              || '',
+        dados.padrao             || '',
+        u.precoMedio             || '',
+        u.precoMin               || '',
+        u.precoMax               || '',
+        u.preco                  || '',
+        dados.dataTabela         || '',
+        dados.statusTabela       || '',
+        dados.urlSite            || '',
+        dados.foto               || '',
+        dados.entrada            || '',
+        dados.parcelasObra       || '',
+        dados.parcelasEntrega    || '',
+        dados.avaliacaoBanco     || '',
+        dados.fgts               || '',
+        dados.planoLongo         || '',
+        dados.lazer              || '',
+        dados.conceito           || '',
+        agora,
+      ];
+    });
+
+    if (linhas.length) {
+      aba.getRange(aba.getLastRow() + 1, 1, linhas.length, CABECALHO_LANCAMENTOS.length)
+         .setValues(linhas);
+    }
+
+    return { ok: true, idLancamento: id, unidades: linhas.length };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+function excluirLancamento_(dados) {
+  try {
+    var aba = obterAbaLancamentos_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { ok: true };
+
+    var ids = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+    for (var i = ids.length - 1; i >= 0; i--) {
+      var igual = dados.idLancamento
+        ? ids[i] === dados.idLancamento
+        : String(aba.getRange(i + 2, 2).getValue()).toLowerCase().trim() === String(dados.nomeEmpreendimento || '').toLowerCase().trim();
+      if (igual) aba.deleteRow(i + 2);
+    }
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
