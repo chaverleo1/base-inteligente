@@ -1013,7 +1013,31 @@ function opcoesFiltro_() {
   return { tipos: tipos, bairros: bairros, status: status, cidades: cidades, padroes: padroes, estados: estados };
 }
 
-// d: { tipo, quartos, suites, vagas, precoMax, bairros:[], condPagto:[], extras:[], urgencia, texto }
+// Normaliza um filtro de chip pra array — aceita tanto o formato antigo
+// (string única, de quando os chips eram seleção única) quanto o novo
+// (array, seleção múltipla). Remove valores vazios/placeholder.
+function paraArray_(v) {
+  var arr = Array.isArray(v) ? v : (v ? [v] : []);
+  return arr.filter(function(x) { return x && x !== 'Qualquer' && x !== 'Indiferente'; });
+}
+
+// Quartos/suítes/vagas em modo múltipla escolha (ex: cliente aceita 2 OU 3
+// quartos) — filtro rígido de "bate com pelo menos um dos valores marcados",
+// com suporte ao sufixo "+" dos chips (ex: "4+" quartos = 4 ou mais).
+function imovelBateContagem_(valorImo, valoresSelecionados) {
+  if (!valoresSelecionados.length) return true;
+  var n = parseInt(valorImo) || 0;
+  return valoresSelecionados.some(function(v) {
+    v = String(v).trim();
+    if (v.indexOf('+') >= 0) return n >= parseInt(v);
+    return n === parseInt(v);
+  });
+}
+
+// d: { tipo:[], padrao:[], quartos:[], suites:[], vagas:[], precoMax, areaMin,
+//      bairros:[], cidade:[], estado:[], status:[], condPagto:[], extras:[], urgencia, texto }
+// Todos os chips (exceto urgência, que hoje só é exibida, não filtra) aceitam
+// múltipla escolha — cliente pode marcar "2 e 3 quartos", "Alto e Luxo", etc.
 // Combina os chips estruturados (mais confiáveis) com o texto livre (fallback/contexto),
 // monta um "contato sintético" e roda no mesmo motor de match do rodarMatching().
 // extras/condPagto ainda não afetam o score — REVENDA/CONSTRUTORA não têm essas colunas
@@ -1022,54 +1046,84 @@ function buscaAberta_(d) {
   d = d || {};
   var textoLivre = d.texto || '';
 
-  var partesTexto = [textoLivre];
-  if (d.quartos && d.quartos !== 'Indiferente') partesTexto.push(String(d.quartos).replace('+', '') + ' quartos');
-  if (d.suites)  partesTexto.push(String(d.suites).replace('+', '') + ' suites');
-  if (d.vagas)   partesTexto.push(String(d.vagas).replace('+', '') + ' vagas');
-  var textoCompleto = partesTexto.join('. ');
-
-  var bairros = Array.isArray(d.bairros) ? d.bairros.filter(function(b) { return b && b !== 'Qualquer'; }) : [];
+  var bairros = paraArray_(d.bairros);
   var bairroInteresse = bairros.length ? bairros.join(', ') : textoLivre;
 
-  var contatoSintetico = {
-    segmento: d.tipo || textoLivre,
+  var tiposArr   = paraArray_(d.tipo);
+  var padroesArr = paraArray_(d.padrao);
+
+  // Base do "contato sintético" comum a todas as combinações de tipo/padrão
+  // testadas abaixo — só segmento e padrao mudam por combinação.
+  var contatoBase = {
     precoLimite: d.precoMax || extrairValorTexto_(textoLivre),
     margem_preco: '',
     bairroInteresse: bairroInteresse,
-    conversa: textoCompleto,
+    conversa: textoLivre,
     observacoes: '',
     produtoOrigem: '',
-    nome_bruto: '',
-    // Padrão usa o mesmo scorePadrao_ do motor principal (dá crédito parcial
-    // pra padrão vizinho, ex: Alto x Médio) — diferente de status/cidade/
-    // estado, que são filtro rígido (ou bate ou não bate).
-    padrao: d.padrao || ''
+    nome_bruto: ''
   };
+
+  // Tipo e padrão entram no motor de match (scoreTipo_/scorePadrao_), que só
+  // aceita UM valor de cada por chamada. Com múltipla escolha, testamos cada
+  // combinação tipo×padrão marcada e ficamos com a de melhor score pra cada
+  // imóvel — equivalente a "compatível com qualquer um dos marcados".
+  function melhorMatch_(imo) {
+    var candidatosTipo   = tiposArr.length   ? tiposArr   : [''];
+    var candidatosPadrao = padroesArr.length ? padroesArr : [''];
+    var melhor = null;
+    candidatosTipo.forEach(function(tipoCand) {
+      candidatosPadrao.forEach(function(padraoCand) {
+        var contato = {
+          segmento: tipoCand || textoLivre,
+          precoLimite: contatoBase.precoLimite,
+          margem_preco: '',
+          bairroInteresse: contatoBase.bairroInteresse,
+          conversa: contatoBase.conversa,
+          observacoes: '',
+          produtoOrigem: '',
+          nome_bruto: '',
+          padrao: padraoCand
+        };
+        var res = calcularMatch_(contato, imo);
+        if (!melhor || res.score > melhor.score) melhor = res;
+      });
+    });
+    return melhor;
+  }
 
   var revenda     = lerAba_('REVENDA').map(function(r) { r.fonte = 'REVENDA'; return r; });
   var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS').map(constutoraParaImovel_);
   var lancamentos = lerAba_('LANCAMENTOS').map(lancamentoParaImovel_);
   var todos       = revenda.concat(construtora).concat(lancamentos);
 
+  // Quartos/suítes/vagas — filtro rígido de múltipla escolha (ver imovelBateContagem_).
+  var quartosArr = paraArray_(d.quartos);
+  var suitesArr  = paraArray_(d.suites);
+  var vagasArr   = paraArray_(d.vagas);
+  if (quartosArr.length) todos = todos.filter(function(imo) { return imovelBateContagem_(imo.quartos, quartosArr); });
+  if (suitesArr.length)  todos = todos.filter(function(imo) { return imovelBateContagem_(imo.suites,  suitesArr);  });
+  if (vagasArr.length)   todos = todos.filter(function(imo) { return imovelBateContagem_(imo.vagas,   vagasArr);   });
+
   // Status do empreendimento (Em planta/Em obras/Pronto/Pronto novo/Entregue) —
-  // filtro rígido, igual ao de tipo incompatível: não faz sentido "pontuar
-  // parcialmente" um estágio errado, ou é o estágio que o cliente quer ou não é.
-  var statusFiltro = d.status ? norm_(d.status) : '';
-  if (statusFiltro) {
-    todos = todos.filter(function(imo) { return norm_(imo.estagio || '') === statusFiltro; });
+  // filtro rígido de múltipla escolha: não faz sentido "pontuar parcialmente"
+  // um estágio errado, ou é um dos estágios que o cliente quer ou não é.
+  var statusArr = paraArray_(d.status).map(norm_);
+  if (statusArr.length) {
+    todos = todos.filter(function(imo) { return statusArr.indexOf(norm_(imo.estagio || '')) >= 0; });
   }
 
-  // Cidade — filtro rígido (não faz sentido cliente "quase aceitar" outra cidade).
-  var cidadeFiltro = d.cidade ? norm_(d.cidade) : '';
-  if (cidadeFiltro) {
-    todos = todos.filter(function(imo) { return norm_(imo.cidade || '') === cidadeFiltro; });
+  // Cidade — filtro rígido de múltipla escolha (cliente pode aceitar mais de uma cidade).
+  var cidadeArr = paraArray_(d.cidade).map(norm_);
+  if (cidadeArr.length) {
+    todos = todos.filter(function(imo) { return cidadeArr.indexOf(norm_(imo.cidade || '')) >= 0; });
   }
 
-  // Estado (UF) — filtro rígido. Só LANCAMENTOS tem essa coluna hoje, então
-  // filtrar por estado naturalmente restringe a busca só a Lançamentos.
-  var estadoFiltro = d.estado ? norm_(d.estado) : '';
-  if (estadoFiltro) {
-    todos = todos.filter(function(imo) { return norm_(imo.estado || '') === estadoFiltro; });
+  // Estado (UF) — filtro rígido de múltipla escolha. Só LANCAMENTOS tem essa
+  // coluna hoje, então filtrar por estado naturalmente restringe a busca só a Lançamentos.
+  var estadoArr = paraArray_(d.estado).map(norm_);
+  if (estadoArr.length) {
+    todos = todos.filter(function(imo) { return estadoArr.indexOf(norm_(imo.estado || '')) >= 0; });
   }
 
   // Área útil mínima — piso rígido (diferente de preço, que tem margem pra
@@ -1085,7 +1139,7 @@ function buscaAberta_(d) {
   // não alimenta o dashboard/MATCHES, então vale mostrar até opções parciais.
   var resultados = [];
   todos.forEach(function(imo) {
-    var res = calcularMatch_(contatoSintetico, imo);
+    var res = melhorMatch_(imo);
     if (res.score >= 40) resultados.push({ imo: imo, score: res.score, det: res.detalhes });
   });
   resultados.sort(function(a, b) { return b.score - a.score; });
@@ -1093,13 +1147,13 @@ function buscaAberta_(d) {
 
   return {
     interpretado: {
-      tipo: d.tipo || TIPO_LABEL_BUSCA[extrairTipo_(textoLivre)] || '',
-      precoLimite: contatoSintetico.precoLimite,
+      tipo: tiposArr.length ? tiposArr.join(' ou ') : (TIPO_LABEL_BUSCA[extrairTipo_(textoLivre)] || ''),
+      precoLimite: contatoBase.precoLimite,
       bairros: bairros.length ? bairros.join(', ') : '',
-      status: d.status || '',
-      cidade: d.cidade || '',
-      padrao: d.padrao || '',
-      estado: d.estado || '',
+      status: statusArr.length ? paraArray_(d.status).join(' ou ') : '',
+      cidade: cidadeArr.length ? paraArray_(d.cidade).join(' ou ') : '',
+      padrao: padroesArr.length ? padroesArr.join(' ou ') : '',
+      estado: estadoArr.length ? paraArray_(d.estado).join(' ou ') : '',
       areaMin: areaMinFiltro || ''
     },
     resultados: resultados.map(function(r) {

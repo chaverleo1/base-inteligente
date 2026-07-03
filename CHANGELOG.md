@@ -1,5 +1,39 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 14) — Todos os filtros de chip da Busca Aberta viram múltipla escolha
+
+Pedido do usuário: os chips (tags) da Busca Aberta só aceitavam 1 opção marcada por grupo — clicar
+num segundo desmarcava o primeiro. Exemplo dado: cliente que aceita tanto 2 quanto 3 quartos não
+conseguia marcar os dois.
+
+**Fix no front-end** (`busca.html`): `toggleChip()` não desmarca mais os outros chips do mesmo
+grupo — todo grupo (tipo, padrão, quartos, suítes, vagas, cidade, estado, status, urgência) agora
+funciona como bairro/condições/características já funcionavam (múltipla escolha nativa).
+`getChipUnico()` (só retornava o único chip marcado) foi removido — sem uso depois da mudança,
+todo grupo usa `getChips()` (array) agora.
+
+**Fix no back-end** (`Code.gs.txt`, `buscaAberta_()`) — cada tipo de filtro precisou de uma
+estratégia diferente pra aceitar array em vez de valor único:
+- **Quartos/suítes/vagas**: antes viravam texto livre injetado (“2 quartos”) pro motor tentar
+  extrair de volta com regex — não dava pra representar múltiplos valores nesse formato. Viraram
+  filtro rígido de verdade (`imovelBateContagem_`): bate se o imóvel atender **qualquer um** dos
+  valores marcados, com suporte ao sufixo "+" dos chips (ex: "4+" = 4 ou mais).
+- **Status/cidade/estado**: já eram filtro rígido de valor único (`===`) — só trocou pra
+  checagem de array (`.indexOf(...) >= 0`, bate com qualquer um dos marcados).
+- **Tipo/padrão**: são os únicos dois que entram no motor de score (`scoreTipo_`/`scorePadrao_`),
+  que só aceita um valor por chamada. Pra múltipla escolha, `buscaAberta_()` agora testa **cada
+  combinação tipo×padrão marcada** pra cada imóvel e fica com a de melhor nota
+  (`melhorMatch_()`) — equivalente a "compatível com qualquer um dos marcados".
+- **Retrocompatibilidade**: `paraArray_()` aceita tanto o formato novo (array) quanto o antigo
+  (string única), então nada quebra se algum outro chamador ainda mandar valor único.
+
+Testado em Node: 7 cenários novos de múltipla escolha (quartos 2 ou 3, tipo Apartamento ou Casa,
+status Pronto ou Pronto novo, cidade Goiânia ou Anápolis, padrão Alto ou Luxo, retrocompatibilidade
+com string única, chip "4+") — todos corretos. Recontestei as 3 suítes de filtro anteriores
+(status/cidade/padrão/estado, área mínima) sem regressão. Testado no preview: marcar 2 chips do
+mesmo grupo mantém os dois marcados, payload sai como array, resumo mostra "2 ou 3 quartos" /
+"Apartamento ou Casa" etc. `testarMatching()` continua 19/19.
+
 ## 2026-07-03 (parte 13) — Filtro de Área útil mínima na Busca Aberta
 
 Pedido do usuário: filtro pra área útil mínima, no mesmo formato do filtro de preço (barra pra

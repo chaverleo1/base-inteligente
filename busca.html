@@ -941,20 +941,14 @@ carregarOpcoesFiltro();
 atualizarSlider(500000);
 
 // ─── CHIPS ────────────────────────────────────────────────────────────────────
+// Todos os grupos de chip aceitam múltipla escolha (ex: cliente aceita 2 ou 3
+// quartos, Alto ou Luxo) — cada clique só alterna o próprio chip, sem
+// desmarcar os outros do mesmo grupo.
 function toggleChip(el) {
-  const group = el.dataset.group;
-  const multi = ['bairro', 'cond', 'extra'].includes(group);
-  if (!multi) {
-    el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
-  }
   el.classList.toggle('on');
 }
 function getChips(group) {
   return [...document.querySelectorAll(`.chip.on[data-group="${group}"]`)].map(c => c.textContent.trim());
-}
-function getChipUnico(group) {
-  const el = document.querySelector(`.chip.on[data-group="${group}"]`);
-  return el ? el.textContent.trim() : '';
 }
 
 // ─── PREÇO (slider + caixa de texto, sincronizados) ───────────────────────────
@@ -1006,18 +1000,18 @@ function fmt_(v) {
 async function executarBusca() {
   const filtros = {
     acao:      'busca_aberta',
-    tipo:      getChipUnico('tipo'),
-    padrao:    getChipUnico('padrao'),
-    quartos:   getChipUnico('quartos'),
-    suites:    getChipUnico('suites'),
-    vagas:     getChipUnico('vagas'),
+    tipo:      getChips('tipo'),
+    padrao:    getChips('padrao'),
+    quartos:   getChips('quartos'),
+    suites:    getChips('suites'),
+    vagas:     getChips('vagas'),
     bairros:   getChips('bairro'),
-    cidade:    getChipUnico('cidade'),
-    estado:    getChipUnico('estado'),
-    status:    getChipUnico('status'),
+    cidade:    getChips('cidade'),
+    estado:    getChips('estado'),
+    status:    getChips('status'),
     condPagto: getChips('cond'),
     extras:    getChips('extra'),
-    urgencia:  getChipUnico('urgencia'),
+    urgencia:  getChips('urgencia'),
     precoMax:  precoAtual,
     areaMin:   areaMinAtual,
     texto:     document.getElementById('texto-livre').value.trim(),
@@ -1065,7 +1059,7 @@ function renderResultados(resultados, filtros, interpretado) {
   if (interpretado.bairros) partes.push(interpretado.bairros);
   partes.push('preço limite ' + fmt_(interpretado.precoLimite || filtros.precoMax));
   if (filtros.areaMin) partes.push(filtros.areaMin + 'm²+');
-  if (filtros.quartos) partes.push(filtros.quartos + ' quartos');
+  if (filtros.quartos.length) partes.push(filtros.quartos.join(' ou ') + ' quartos');
   if (filtros.extras.length) partes.push(filtros.extras.slice(0, 3).join(', '));
 
   conteudo.innerHTML = `
