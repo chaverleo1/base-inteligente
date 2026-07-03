@@ -35,7 +35,11 @@ const CABECALHO_LANCAMENTOS = [
   'precoMedio', 'precoMin', 'precoMax', 'preco', 'dataTabela', 'statusTabela',
   'urlSite', 'foto',
   'entrada', 'parcelasObra', 'parcelasEntrega', 'avaliacaoBanco', 'fgts', 'planoLongo',
-  'lazer', 'conceito', 'dataCadastro'
+  'lazer', 'conceito', 'dataCadastro',
+  // Estado (UF) — adicionado em 2026-07. Vai no FIM do array (não no meio, perto
+  // de cidade) porque migrarCabecalhoLancamentos() só sabe ANEXAR colunas novas
+  // no final da planilha — inserir no meio desalinharia os dados já existentes.
+  'estado'
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -1501,6 +1505,7 @@ function salvarLancamento_(dados) {
         dados.lazer              || '',
         dados.conceito           || '',
         agora,
+        dados.estado             || '',
       ];
     });
 
@@ -1532,4 +1537,132 @@ function excluirLancamento_(dados) {
   } catch(e) {
     return { ok: false, erro: e.message };
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TESTES — SMOKE TEST DO MOTOR DE MATCHING
+// ═══════════════════════════════════════════════════════════════
+// Rode manualmente pelo editor do Apps Script (selecione testarMatching
+// no dropdown de função e clique Executar) sempre que mexer em qualquer
+// função de score (scoreTipo_, scorePreco_, scoreBairro_, scorePadrao_,
+// calcularMatch_, calcularScoreTotal_, classificarTemperatura_). Não lê
+// nem escreve na planilha — só chama as funções puras com dados fixos e
+// confere o resultado, então é seguro rodar a qualquer momento.
+//
+// Cada caso aqui documenta um bug real já corrigido nesta sessão — se
+// algum passar a falhar, é sinal de regressão numa mudança futura.
+// Resultado sai no Logger (Ver > Registros de execução).
+
+function testarMatching() {
+  var resultados = [];
+  function assertEqual_(nome, atual, esperado, tolerancia) {
+    var tol = tolerancia || 0;
+    var ok = typeof esperado === 'number'
+      ? Math.abs(atual - esperado) <= tol
+      : atual === esperado;
+    resultados.push({ nome: nome, ok: ok, esperado: esperado, atual: atual });
+  }
+
+  // ── calcularScoreTotal_ / classificarTemperatura_ ──
+  // Bug corrigido: cliente com score de cadastro alto mas ZERO matches não
+  // pode virar morno/quente — o componente de produto (65% do peso) tem
+  // que zerar, sobrando só 35% do score de cadastro (máx. 35 = sempre frio).
+  assertEqual_(
+    'scoreTotal sem matches = so 35% do score de cadastro',
+    calcularScoreTotal_(100, []), 35, 0.01
+  );
+  assertEqual_(
+    'sem matches, score de cadastro 100 ainda classifica como frio',
+    classificarTemperatura_(calcularScoreTotal_(100, []), []), 'frio'
+  );
+
+  // Média ponderada por rank (pesos [5,4,3,2,1,...]) — melhor match pesa mais
+  // que os seguintes, então o resultado fica mais perto do 1º match (100) do
+  // que da média simples (75) entre 100 e 50.
+  var stPonderado = calcularScoreTotal_(0, [100, 50]);
+  assertEqual_(
+    'scoreTotal pondera 1o match mais que os seguintes (rank 5,4)',
+    stPonderado, (100 * 5 + 50 * 4) / 9 * 0.65, 0.01
+  );
+
+  assertEqual_(
+    'scoreTotal 76 (sem match ideal) classifica como quente (>=75)',
+    classificarTemperatura_(76, [70, 60]), 'quente'
+  );
+  assertEqual_(
+    'scoreTotal 60 com 1 match >=85 sobe pra quente mesmo abaixo de 75',
+    classificarTemperatura_(60, [88, 40]), 'quente'
+  );
+  assertEqual_(
+    'scoreTotal 60 sem match ideal fica morno (50-74)',
+    classificarTemperatura_(60, [60, 55]), 'morno'
+  );
+  assertEqual_(
+    'scoreTotal 40 fica frio (<50)',
+    classificarTemperatura_(40, [40]), 'frio'
+  );
+
+  // ── scorePreco_ — bandas da margem de 30% ──
+  assertEqual_('preco identico ao limite = 100',         scorePreco_(600000, 600000, 30), 100);
+  assertEqual_('preco 5% acima do limite = 100',         scorePreco_(630000, 600000, 30), 100);
+  assertEqual_('preco 10% abaixo do limite = 95',        scorePreco_(540000, 600000, 30), 95);
+  assertEqual_('preco 30% abaixo do limite (borda) = 60', scorePreco_(420000, 600000, 30), 60);
+  assertEqual_('preco 31% abaixo do limite = excluido (0)', scorePreco_(414000, 600000, 30), 0);
+
+  // ── scoreTipo_ — desqualificação por incompatibilidade de grupo ──
+  // Bug corrigido: Casa aparecendo pra cliente que quer Apartamento.
+  assertEqual_(
+    'apartamento x casa = incompativel (grupos diferentes)',
+    scoreTipo_('', 'Casa', 'Apartamento'), 0
+  );
+  // Bug corrigido: "Terreno" (rótulo da Imobzi) não batia com "Lote em
+  // cond." (opção do formulário) por falta de normalização dos dois lados.
+  assertEqual_(
+    'lote em condominio x Terreno = compativel (mesmo grupo "terra")',
+    scoreTipo_('', 'Terreno', 'Lote em cond.'), 25
+  );
+  assertEqual_(
+    'sem segmento declarado = pontuacao neutra, nao desqualifica',
+    scoreTipo_('', 'Casa', ''), 8
+  );
+
+  // ── calcularMatch_ — desqualificação total por tipo, e contribuição
+  //    limitada do preço (ate 30 pontos, nao os 100 brutos) ──
+  var contatoBase = { precoLimite: 600000, margem_preco: 30, bairroInteresse: '', padrao: '', segmento: 'Casa', conversa: '', observacoes: '', nome_bruto: '', produtoOrigem: '' };
+  var imovelTipoErrado = { tipo: 'Apartamento', valorVenda: 600000, quartos: 3, bairro: '', cidade: '', padrao: '', suites: 0, vagas: 0 };
+  var mResult = calcularMatch_(contatoBase, imovelTipoErrado);
+  assertEqual_('tipo incompativel desqualifica o match inteiro (score 0)', mResult.score, 0);
+  assertEqual_('tipo incompativel registra motivo nos detalhes', mResult.detalhes, 'tipo incompatível');
+
+  // Bug corrigido: preço 30% fora do teto do cliente aparecia com score 100
+  // (a contribuição de preço vinha em escala 0-100 igual as outras, "estourando"
+  // o total e mascarando o preço ruim). Compara preço perfeito x preço na borda
+  // da margem, mantendo tipo/quartos/bairro/padrao idênticos e neutros.
+  var imovelBase = { tipo: 'Casa', quartos: 0, bairro: '', cidade: '', padrao: '', suites: 0, vagas: 0 };
+  var imovelPrecoPerfeito = Object.assign({}, imovelBase, { valorVenda: 600000 });
+  var imovelPrecoRuim     = Object.assign({}, imovelBase, { valorVenda: 420000 }); // 30% abaixo
+  var scorePrecoPerfeito  = calcularMatch_(contatoBase, imovelPrecoPerfeito).score;
+  var scorePrecoRuim      = calcularMatch_(contatoBase, imovelPrecoRuim).score;
+  resultados.push({
+    nome: 'preco 30% fora do teto pontua bem menos que preco exato (nao mascarado atras de 100)',
+    ok: scorePrecoRuim < scorePrecoPerfeito,
+    esperado: '< ' + scorePrecoPerfeito, atual: scorePrecoRuim
+  });
+  resultados.push({
+    nome: 'contribuicao do preco no total e limitada a 30 pontos (nao 100)',
+    ok: scorePrecoPerfeito <= 100 && (scorePrecoPerfeito - scorePrecoRuim) <= 30,
+    esperado: 'diferenca <= 30', atual: scorePrecoPerfeito - scorePrecoRuim
+  });
+
+  // ── Log do resultado ──
+  var falhas = resultados.filter(function(r) { return !r.ok; });
+  Logger.log('════════════════════════════════════════');
+  Logger.log('TESTE DO MOTOR DE MATCHING — ' + resultados.length + ' casos, ' +
+             (resultados.length - falhas.length) + ' passaram, ' + falhas.length + ' falharam');
+  Logger.log('════════════════════════════════════════');
+  resultados.forEach(function(r) {
+    Logger.log((r.ok ? '✅ PASS' : '❌ FAIL') + ' — ' + r.nome +
+               (r.ok ? '' : ' (esperado: ' + r.esperado + ', obtido: ' + r.atual + ')'));
+  });
+  return { total: resultados.length, passou: resultados.length - falhas.length, falhou: falhas.length, falhas: falhas };
 }

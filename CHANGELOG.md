@@ -1,5 +1,32 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 5) — Testes automatizados do matching + campo Estado em Lançamentos
+
+Usuário aprovou 2 das 3 ideias de melhoria detalhadas na parte anterior da sessão.
+
+**1. Smoke test do motor de matching** (`Code.gs.txt`, função `testarMatching()`): suíte de 19
+asserções que roda as funções puras de score (`calcularScoreTotal_`, `classificarTemperatura_`,
+`scorePreco_`, `scoreTipo_`, `calcularMatch_`) com dados fixos e confere o resultado — não lê nem
+escreve na planilha, então é seguro rodar a qualquer momento pelo editor do Apps Script (selecionar
+a função no dropdown e clicar Executar; resultado sai no Logger). Cada caso corresponde a um bug
+real já corrigido nesta sessão (fallback do Score Total sem match, bandas de margem de preço,
+desqualificação por tipo incompatível, normalização Terreno/Lote, limite de 30 pontos da
+contribuição do preço) — se algum passar a falhar depois de uma mudança futura, é sinal de
+regressão. Validado rodando a suíte completa fora do Apps Script (Node) antes de commitar: 19/19
+passaram.
+
+**2. Campo Estado (UF) em Lançamentos**: extraído automaticamente da linha de endereço do Orulo
+(mesma regex que já extraía a cidade, ex: "- Goiânia/GO" → estado="GO") e exibido/editável no
+formulário (`lancamentos.html`, campo `f-estado`, ao lado de Cidade).
+
+Detalhe técnico importante: `estado` foi adicionado no **fim** de `CABECALHO_LANCAMENTOS`, não ao
+lado de `cidade` (onde faria mais sentido visualmente) — porque `migrarCabecalhoLancamentos()`
+só sabe *anexar* colunas novas no final da planilha. Inserir no meio do array teria desalinhado
+todos os dados já cadastrados (a partir da coluna `endereco` em diante, cada valor passaria a
+cair uma coluna adiante da que o cabeçalho diz). Mesmo padrão já usado para `idCliente` em
+`CABECALHO`. **Ação pendente do usuário**: rodar `migrarCabecalhoLancamentos()` uma vez pelo
+editor do Apps Script após atualizar o Code.gs, pra criar a coluna nova na planilha.
+
 ## 2026-07-03 (parte 4) — Faixas de padrão (R$/m²) por tipo de imóvel
 
 Correção do usuário sobre a parte 3: as faixas de R$/m² usadas para classificar o "padrão"

@@ -387,6 +387,10 @@ select.form-input option { background: var(--surface2); }
           <input class="form-input" id="f-cidade" placeholder="Ex: Goiânia">
         </div>
         <div class="form-group">
+          <div class="form-label">Estado (UF)</div>
+          <input class="form-input" id="f-estado" placeholder="Ex: GO" maxlength="2" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
           <div class="form-label">Previsão de entrega</div>
           <input class="form-input" id="f-entrega" placeholder="Ex: Dez/2026">
         </div>
@@ -584,7 +588,7 @@ function classificarPadraoPorM2_(v, tipoTexto) {
 }
 
 function extrairBloco1(txt) {
-  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', tipo:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'' };
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'' };
   const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   // ── Localiza a linha de endereço em QUALQUER posição do texto ──
@@ -669,9 +673,12 @@ function extrairBloco1(txt) {
         b.bairro = ant[ant.length - 1].trim().substring(0, 50);
       }
     }
-    // Cidade: "- Cidade/UF" no final da linha (ex: "- Goiânia/GO")
+    // Cidade/Estado: "- Cidade/UF" no final da linha (ex: "- Goiânia/GO")
     const cidUfM = l.match(/-\s+([^\/]+)\/([A-Z]{2})\s*$/);
-    if (cidUfM) b.cidade = normalizarTexto_(cidUfM[1]);
+    if (cidUfM) {
+      b.cidade = normalizarTexto_(cidUfM[1]);
+      b.estado = cidUfM[2].toUpperCase();
+    }
   }
   // Bairro via keyword se ainda vazio
   if (!b.bairro) {
@@ -1062,6 +1069,7 @@ function renderB1(b) {
   set('f-construtora', b.construtora);
   set('f-bairro', b.bairro);
   set('f-cidade', b.cidade);
+  set('f-estado', b.estado);
   set('f-endereco', b.endereco);
   set('f-entrega', b.previsaoEntrega);
   set('f-lazer', b.lazer);
@@ -1146,7 +1154,7 @@ function limparMotor() {
   document.getElementById('grp-dataTabela').classList.remove('alerta-tabela');
   document.getElementById('lbl-dataTabela').style.display = 'none';
   document.querySelectorAll('input[name="statusTabela"]').forEach(r => r.checked = false);
-  ['f-nome','f-construtora','f-cidade','f-bairro','f-endereco','f-entrega','f-dataTabela',
+  ['f-nome','f-construtora','f-cidade','f-estado','f-bairro','f-endereco','f-entrega','f-dataTabela',
    'f-urlSite','f-lazer','f-conceito',
    'f-entrada','f-parcOb','f-parcEntrega','f-banco','f-planoLongo'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
@@ -1167,6 +1175,7 @@ function lerPreview() {
     tipo:               g('f-tipo'),
     bairro:             g('f-bairro'),
     cidade:             g('f-cidade'),
+    estado:             g('f-estado').toUpperCase(),
     endereco:           g('f-endereco'),
     status:             g('f-status'),
     previsaoEntrega:    g('f-entrega'),
