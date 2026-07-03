@@ -7,3 +7,4 @@
 // URL estável — só "Nova implantação" gera uma URL nova que precisaria ser
 // colada aqui.
 const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxxlKelRh51vwcPq86z8pIWRF4YSwAE6K8b7Gh7Isu1ia8J4xiRAW_8EAOMI6sEmJd5/exec';
+// (touch 2026-07-03 13:xx — forca novo build do GitHub Pages, que travou apos o commit anterior)
