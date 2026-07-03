@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 6) — Coluna "unidades" renomeada para "unidade" em LANCAMENTOS
+
+Pedido do usuário: a coluna guarda um **código de referência de uma unidade específica** (ex:
+"102B"), não uma quantidade — o plural estava incoerente com o dado real.
+
+**Verificação pedida pelo usuário — onde mais essa informação aparecia**:
+- `Code.gs.txt`: `CABECALHO_LANCAMENTOS` (nome da coluna), `lancamentoParaImovel_()` (lia
+  `row.unidades`) e `salvarLancamento_()` (escrevia `u.unidades` na planilha) — todos renomeados
+  para `unidade`.
+- `lancamentos.html`: campo por unidade em 3 pontos — `agruparPorArea()` (valor padrão vazio),
+  a tabela de edição manual (BOX 2, coluna "Unid.") e o payload montado em `lerPreview()` antes
+  de salvar — todos renomeados de `unidades` para `unidade`.
+- **Não precisou mudar**: a aba **CONSTRUTORA-APARTAMENTOS** tem sua própria coluna `unidades`
+  (em `CABECALHO_CONSTRUTORA`) — é um dado diferente (não usado em nenhuma lógica hoje, e é uma
+  aba separada), então ficou como estava. Os usos de "unidades" no `dashboard.html` e o restante
+  das ocorrências em `lancamentos.html` (`unidades-table`, `unidades-tbody`, `dados.unidades`,
+  o array de tipologias de um empreendimento) são coleções/arrays de verdade — plural correto,
+  não fazem parte dessa coluna e não precisaram mudar.
+
+**Bug preexistente encontrado durante a verificação** (não causado por esta mudança, mas achado
+ao rastrear todas as referências): o painel expandido de um lançamento já salvo (clique em "Ver
+unidades" no card) tentava ler um campo `qtdUnidades` que nunca existiu nos dados carregados do
+backend — sempre mostrava "—" nessa coluna, silenciosamente. Corrigido para ler o campo certo
+(`unidade`) e o cabeçalho da coluna, que dizia "Qtd", foi trocado para "Unid." (mesmo rótulo já
+usado na tabela de edição manual), já que o conteúdo é um código, não uma contagem.
+
+Retestado no preview: extração/edição manual (BOX 2), payload de salvamento (`lerPreview()`) e
+o painel expandido (`renderPanel()`) todos exibindo/enviando o código da unidade corretamente.
+Suíte `testarMatching()` continua 19/19 (mudança não afeta o motor de score).
+
+**Ação pendente do usuário**: como o nome da coluna mudou (não é campo novo, é rename no mesmo
+lugar do array — não desalinha dados existentes), rode `migrarCabecalhoLancamentos()` uma vez
+pelo editor do Apps Script após colar o Code.gs atualizado, pra atualizar o texto do cabeçalho
+na planilha.
+
 ## 2026-07-03 (parte 5) — Testes automatizados do matching + campo Estado em Lançamentos
 
 Usuário aprovou 2 das 3 ideias de melhoria detalhadas na parte anterior da sessão.
