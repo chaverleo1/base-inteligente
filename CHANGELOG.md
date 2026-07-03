@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 4) — Faixas de padrão (R$/m²) por tipo de imóvel
+
+Correção do usuário sobre a parte 3: as faixas de R$/m² usadas para classificar o "padrão"
+(Popular/Médio/Alto/Luxo) só valem para **Apartamento** — Casa, Lote, Lote em condomínio,
+Cobertura, Lote comercial e Casa em condomínio têm escalas de mercado bem diferentes (lote
+costuma valer bem menos por m² que apartamento; cobertura costuma valer mais), e o código
+precisava prever isso mesmo sem ainda ter os valores reais de cada tipo.
+
+**Fix em `lancamentos.html`**: `classificarPadraoPorM2_(v)` virou `classificarPadraoPorM2_(v,
+tipoTexto)`, consultando uma tabela `FAIXAS_PADRAO_POR_TIPO` com uma faixa `{medio, alto, luxo}`
+por tipo (chave normalizada: minúsculo, sem acento). Só **apartamento** tem valores confirmados
+pelo usuário (`5000/10000/15000`); os demais tipos usam os mesmos valores como placeholder
+provisório, comentado no código, até o usuário passar a referência real de cada um — não precisa
+mexer em mais nada além da tabela quando esses valores chegarem, a busca já é por tipo.
+
+O texto bruto do tipo (ex: viria "lote em condomínio" se o Orulo informasse isso na seção
+"Tipologias disponíveis", texto mais granular que os 4 valores do seletor
+Apartamento/Casa/Terreno/Comercial) é capturado em `extrairBloco1()` numa variável de escopo de
+função (`tipoTextoBruto`) e passado direto pra classificação — antes ficava preso dentro do bloco
+`if` da extração de tipo e não existia caminho pra chegar até a extração de padrão.
+Retestado com o exemplo real "Ares Marista" (apartamento, R$ 12.888/m² → Alto): resultado
+inalterado, confirmando que não houve regressão pro caso já validado na parte 3.
+
 ## 2026-07-03 (parte 3) — Melhora extração do Bloco 1 em Lançamentos (Orulo)
 
 Usuário mandou um exemplo real de texto colado da página inteira do Orulo (com o menu
