@@ -661,14 +661,24 @@ function lazerIcons(lazer) {
   }).join('');
 }
 
+// Cidade vem normalizada em minúsculo/sem acento (padrão interno do Base
+// Inteligente) — reformata só as 2 que existem na base hoje; cai pra
+// capitalização simples se aparecer uma cidade nova ainda não mapeada.
+const CIDADES_LABEL = { 'goiania': 'Goiânia', 'aparecida de goiania': 'Aparecida de Goiânia' };
+function cidadeLabel(c) {
+  const norm = String(c || '').trim().toLowerCase();
+  return CIDADES_LABEL[norm] || (norm ? norm.replace(/\b\w/g, l => l.toUpperCase()) : '');
+}
+
 function renderCard(im) {
   const score   = scorePreco(im);
   const badgeTxt = score >= 95 ? 'Melhor match' : score >= 85 ? 'Muito próximo' : 'Compatível';
   const badgeCls = score >= 95 ? 'bg-quente' : score >= 85 ? 'bg-lancamento' : 'bg-pronto';
+  const local = [im.bairro, cidadeLabel(im.cidade)].filter(Boolean).join(', ');
   return `
   <div class="icard">
     <div class="icard-top">
-      <div class="icard-tipo">Apartamento · ${im.area}m²</div>
+      <div class="icard-tipo">Apartamento${local ? ' · ' + local : ''} · ${im.area}m²</div>
       <span class="icard-badge ${badgeCls}">${badgeTxt}</span>
     </div>
     <div class="icard-preco">
@@ -684,7 +694,7 @@ function renderCard(im) {
     <div class="icard-divider"></div>
     <div class="icard-tags">${lazerIcons(im.lazer)}</div>
     <div class="icard-bot">
-      <div class="icard-entrega">Entrega: <b>${im.entrega}</b></div>
+      <div class="icard-entrega">Status: <b>${im.status || '—'}</b></div>
       <button class="btn-detail" onclick="ir('t-captura')">Ver detalhes →</button>
     </div>
   </div>`;

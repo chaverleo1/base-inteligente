@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 16) — Cards da landing BaseImob: Bairro/Cidade + fix da data crua
+
+Pedido do usuário: os cards de resultado do pré-cadastro (`baseimob-landing.html`) estavam muito
+resumidos, e a linha "Entrega" mostrava a data sem formatação nenhuma (ex: "Entrega:
+2025-11-30T03:00:00.000Z") — o Apps Script serializa datas de célula do Sheets como ISO string
+completa, e o card exibia esse valor cru direto.
+
+**Fix**: linha "Entrega" removida, substituída por **"Status"** com o valor real da base (ex:
+"Pronto") — sem exigir nenhuma formatação de data. `icard-tipo` (linha "Apartamento · Xm²") passou
+a incluir **Bairro e Cidade** (ex: "Apartamento · Setor Bela Vista, Goiânia · 63m²"). Cidade vem
+normalizada em minúsculo/sem acento no schema interno — criado um pequeno mapa (`CIDADES_LABEL`)
+pras 2 cidades que existem na base hoje (Goiânia/Aparecida de Goiânia), com fallback de
+capitalização simples pra qualquer cidade nova que apareça.
+
+Testado no preview: card renderiza corretamente com bairro+cidade reais, cai graciosamente sem
+vírgulas soltas quando bairro/cidade vêm vazios, cidade desconhecida não quebra (capitalização
+simples), e o fluxo completo (API mockada → `mostrarResultado()` → card) mostra "Status: Pronto"
+sem nenhum resquício de data crua.
+
+**Achado relacionado, não corrigido agora**: `baseimob-total.html` tem a mesma linha "Entrega:
+${im.entrega}" com o mesmo problema em potencial (mesma fonte de dado, `previsaoEntrega` da API) —
+o usuário pediu especificamente sobre a página do pré-cadastro (landing), essa outra fica pendente
+até confirmação.
+
 ## 2026-07-03 (parte 15) — BaseImob: backend do funil de tráfego pago implementado
 
 Primeira implementação real do BaseImob (funil externo de captação de leads pra tráfego pago),
