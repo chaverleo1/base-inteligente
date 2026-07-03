@@ -1,5 +1,32 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 3) — Melhora extração do Bloco 1 em Lançamentos (Orulo)
+
+Usuário mandou um exemplo real de texto colado da página inteira do Orulo (com o menu
+"Orulo / Foto de perfil / WhatsApp / Empreendimentos / ..." antes do título do empreendimento).
+
+**Causa raiz encontrada**: quando se cola a página inteira (não só o bloco a partir do título), o
+nome do empreendimento e o endereço ficam bem mais abaixo no texto (linha 14 no exemplo, não
+linha 1/2) — a extração antiga só olhava as primeiras 6-10 linhas e acabava capturando "Orulo"
+(o próprio cabeçalho do site) como nome do empreendimento.
+
+**Fix**: `extrairBloco1()` agora localiza a linha de endereço (padrão `Rua/Av./Setor/...`) em
+**qualquer posição do texto**, e usa a linha imediatamente anterior a ela como título — no padrão
+Orulo, título e endereço sempre ficam colados um no outro, independente de quanto menu vier
+antes. Testado nos dois formatos (paste limpo desde o título, e paste da página inteira) sem
+regressão.
+
+**Novos campos extraídos automaticamente** (pedido do usuário, com exemplo real "Ares Marista -
+Bambuí" / "Rua 1141 551. Setor Marista - Goiânia/GO" / "(R$ 12.888/m²)" / "Tipologias
+disponíveis Apartamento"):
+- **Cidade**: extraída da linha de endereço (`- Cidade/UF`), normalizada pro mesmo padrão do
+  resto da base (minúsculo, sem acento — ex: "Goiânia" → "goiania"). Estado (UF) só é usado
+  internamente pra achar onde a cidade termina — não tem coluna própria ainda.
+- **Tipo de imóvel**: da seção "Tipologias disponíveis" (Apartamento/Casa/Terreno/Comercial).
+- **Padrão**: calculado a partir do R$/m² informado — `<R$5.000` Popular, `R$5.000–9.999`
+  Médio, `R$10.000–14.999` Alto, `>=R$15.000` Luxo. Adicionada a opção **"Luxo"** no seletor de
+  padrão (só existiam Alto/Médio/Popular antes — faltava o nível mais alto).
+
 ## 2026-07-03 (parte 2) — Segurança: token da Imobzi exposto em repositório público
 
 Ao versionar o `Code.gs.txt` (parte 1, mesmo dia), o `IMOBZI_TOKEN` (credencial de API da Imobzi,

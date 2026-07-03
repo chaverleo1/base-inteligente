@@ -372,6 +372,7 @@ select.form-input option { background: var(--surface2); }
           <div class="form-label">Padrão</div>
           <select class="form-input" id="f-padrao">
             <option value="">Selecione</option>
+            <option value="Luxo">Luxo</option>
             <option value="Alto">Alto</option>
             <option value="Médio">Médio</option>
             <option value="Popular">Popular / Econômico</option>
@@ -547,30 +548,58 @@ function mostrarToast(msg, tipo = 'ok') {
 }
 
 // ─── PARSER — BLOCO 1 ─────────────────────────────────────────────────────────
+// Normaliza cidade pro mesmo padrão usado no resto da base (minúsculo, sem acento)
+function normalizarCidade_(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+// Classifica padrão pela faixa de R$/m²: <5k Popular, 5k-9.999 Médio,
+// 10k-14.999 Alto, >=15k Luxo
+function classificarPadraoPorM2_(v) {
+  if (v >= 15000) return 'Luxo';
+  if (v >= 10000) return 'Alto';
+  if (v >= 5000)  return 'Médio';
+  return 'Popular';
+}
+
 function extrairBloco1(txt) {
-  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'' };
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', tipo:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'' };
   const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  // ── Nome + Construtora ──
-  // Formato Orulo linha 1 pode ter 1 ou mais " - ":
-  //   "Max Buriti - Vega Incorporações"         → nome = Max Buriti,   construtora = Vega Incorporações
-  //   "Citàge Santé - Residencial - City"        → nome = Citàge Santé, construtora = City (último segmento)
-  const linha0 = linhas[0] || '';
-  const partes0 = linha0.split(' - ');
-  if (partes0.length >= 2) {
-    b.nomeEmpreendimento = partes0[0].trim();
-    b.construtora        = partes0[partes0.length - 1].trim(); // sempre o último segmento
-  } else if (linha0.length > 3 && !/^\d/.test(linha0)) {
-    b.nomeEmpreendimento = linha0;
+  // ── Localiza a linha de endereço em QUALQUER posição do texto ──
+  // Quando se cola a página inteira do Orulo (com menu "Orulo / Foto de
+  // perfil / WhatsApp / Empreendimentos / ..." antes do título), o título e o
+  // endereço não ficam mais nas primeiras linhas — por isso a busca varre o
+  // texto inteiro em vez de só as 6 primeiras linhas.
+  const RX_ENDERECO = /^(Rua|Av\.|Avenida|R\.|Alameda|Al\.|Qd\.|Quadra|Setor|St\.|Rodovia|Travessa)\s/i;
+  let idxEndereco = -1;
+  for (let i = 0; i < linhas.length; i++) {
+    if (RX_ENDERECO.test(linhas[i])) { idxEndereco = i; break; }
   }
 
-  // Fallback nome: varredura das primeiras 10 linhas para título óbvio
+  // ── Nome + Construtora ──
+  // Padrão Orulo: o título fica sempre na linha imediatamente anterior ao
+  // endereço — mais confiável que assumir a linha 0 do texto colado, que pode
+  // ter menu/nav quando a página inteira é copiada.
+  //   "Max Buriti - Vega Incorporações"    → nome = Max Buriti,   construtora = Vega Incorporações
+  //   "Ares Marista - Bambuí"              → nome = Ares Marista, construtora = Bambuí
+  const linhaTitulo = idxEndereco > 0 ? linhas[idxEndereco - 1] : (linhas[0] || '');
+  const partesT = linhaTitulo.split(' - ');
+  if (partesT.length >= 2) {
+    b.nomeEmpreendimento = partesT[0].trim();
+    b.construtora        = partesT[partesT.length - 1].trim(); // sempre o último segmento
+  } else if (linhaTitulo.length > 3 && !/^\d/.test(linhaTitulo)) {
+    b.nomeEmpreendimento = linhaTitulo;
+  }
+
+  // Fallback nome: varredura de todas as linhas (não só as 10 primeiras) por título óbvio
   if (!b.nomeEmpreendimento || b.nomeEmpreendimento.length < 3) {
     const SKIP = new Set(['tabela digital','tabela','status','disponível','disponivel',
       'vendido','reservado','filtros','observações','unidades','tipo','quartos',
       'suites','vagas','área','area','valor','preço','apartamento','cobertura',
-      'características','informações','integração','código']);
-    for (let i = 0; i < Math.min(10, linhas.length); i++) {
+      'características','informações','integração','código','orulo','whatsapp',
+      'empreendimentos','compartilhar','indique e ganhe','foto de perfil']);
+    for (let i = 0; i < linhas.length; i++) {
       const l = linhas[i];
       if (l.length < 4 || l.length > 90 || /^\d/.test(l) || SKIP.has(l.toLowerCase())) continue;
       if (/[A-ZÁÉÍÓÚ]{3,}/.test(l) ||
@@ -600,11 +629,12 @@ function extrairBloco1(txt) {
     }
   }
 
-  // ── Endereço e Bairro ──
-  // Orulo linha 2: "Avenida Francisco de Melo 234. Vila Rosa - Goiânia/GO"
-  for (let i = 1; i < Math.min(6, linhas.length); i++) {
-    const l = linhas[i];
-    if (!/^(Rua|Av\.|Avenida|R\.|Alameda|Al\.|Qd\.|Quadra|Setor|St\.|Rodovia|Travessa)\s/i.test(l)) continue;
+  // ── Endereço, Bairro e Cidade ──
+  // Orulo: "Avenida Francisco de Melo 234. Vila Rosa - Goiânia/GO"
+  // Reaproveita o idxEndereco já localizado pra achar o título — evita repetir
+  // a varredura das primeiras linhas.
+  if (idxEndereco >= 0) {
+    const l = linhas[idxEndereco];
     b.endereco = l;
     // Padrão Orulo: "Av. Nome 123. Bairro - Cidade/GO" — bairro após ". "
     const bM = l.match(/\.\s+([^.\-,]+?)(?:\s+-\s+\S+\/[A-Z]{2})?$/);
@@ -618,12 +648,33 @@ function extrairBloco1(txt) {
         b.bairro = ant[ant.length - 1].trim().substring(0, 50);
       }
     }
-    break;
+    // Cidade: "- Cidade/UF" no final da linha (ex: "- Goiânia/GO")
+    const cidUfM = l.match(/-\s+([^\/]+)\/([A-Z]{2})\s*$/);
+    if (cidUfM) b.cidade = normalizarCidade_(cidUfM[1]);
   }
   // Bairro via keyword se ainda vazio
   if (!b.bairro) {
     const bKM = txt.match(/(?:bairro|setor|jardim|parque|vila)\s*[:\-]?\s*([^\n,;]{3,40})/i);
     if (bKM) b.bairro = bKM[1].trim();
+  }
+
+  // ── Tipo de imóvel — seção "Tipologias disponíveis" do Orulo ──
+  const tipoM = txt.match(/Tipologias\s+dispon[íi]veis\s*\n\s*([^\n]+)/i);
+  if (tipoM) {
+    const tCand = tipoM[1].trim().toLowerCase();
+    const TIPO_MAP = { apartamento: 'Apartamento', casa: 'Casa', sobrado: 'Casa',
+                        terreno: 'Terreno', lote: 'Terreno', comercial: 'Comercial',
+                        sala: 'Comercial', loja: 'Comercial' };
+    for (const key in TIPO_MAP) {
+      if (tCand.indexOf(key) >= 0) { b.tipo = TIPO_MAP[key]; break; }
+    }
+  }
+
+  // ── Padrão — a partir do R$/m² (ex: "(R$ 12.888/m²)") ──
+  const m2M = txt.match(/\(?\s*R\$\s*([\d.,]+)\s*\/\s*m[²2]\s*\)?/i);
+  if (m2M) {
+    const valorM2 = parsePrecoBR(m2M[1]);
+    if (valorM2 > 0) b.padrao = classificarPadraoPorM2_(valorM2);
   }
 
   // ── Status ── prioridade: "Estágio: ..." (Orulo)
@@ -990,6 +1041,7 @@ function renderB1(b) {
   set('f-conceito', b.conceito);
   if (b.status) document.getElementById('f-status').value = b.status;
   if (b.tipo)   document.getElementById('f-tipo').value   = b.tipo;
+  if (b.padrao) document.getElementById('f-padrao').value = b.padrao;
   const dtEl  = document.getElementById('f-dataTabela');
   const grpEl = document.getElementById('grp-dataTabela');
   const lblEl = document.getElementById('lbl-dataTabela');
