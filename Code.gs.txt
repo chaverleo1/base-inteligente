@@ -1144,7 +1144,14 @@ function criarGatilhoMatching() {
 // REVENDA — Sincronização automática com Imobzi
 // ═══════════════════════════════════════════════════════════════
 
-var IMOBZI_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjcmVhdGVkX2F0IjoiMjAyNi0wNi0yOVQyMjo0MzoxMS44MDYxNDhaIiwiaXNfdGhpcmRfcGFydHlfYWNjZXNzIjp0cnVlLCJ0aGlyZF9wYXJ0eV9hcHBfaWQiOiJlOElOMTVmUXJXIn0.3P5dfUdDOQzFQDqLDjdPAoUhHzJ_qBWlAnJPqWMclio';
+// O token NUNCA fica hardcoded aqui — este arquivo é público no GitHub.
+// Configure uma vez em: Editor do Apps Script → ⚙️ Configurações do projeto →
+// Propriedades do script → adicionar IMOBZI_TOKEN com o valor do token.
+function obterImobziToken_() {
+  var token = PropertiesService.getScriptProperties().getProperty('IMOBZI_TOKEN');
+  if (!token) throw new Error('IMOBZI_TOKEN não configurado em Propriedades do script.');
+  return token;
+}
 var IMOBZI_BASE  = 'https://api.imobzi.app/v1';
 var IMOBZI_LIMIT = 50;
 
@@ -1156,7 +1163,7 @@ var CABECALHO_REVENDA = [
 ];
 
 function buscarTodosImoveis_() {
-  var headers = { 'X-Imobzi-Secret': IMOBZI_TOKEN };
+  var headers = { 'X-Imobzi-Secret': obterImobziToken_() };
   var todos   = [];
   var cursor  = null;
   var pagina  = 0;

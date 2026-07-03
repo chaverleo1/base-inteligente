@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 2) — Segurança: token da Imobzi exposto em repositório público
+
+Ao versionar o `Code.gs.txt` (parte 1, mesmo dia), o `IMOBZI_TOKEN` (credencial de API da Imobzi,
+hardcoded) foi junto — e o repositório `chaverleo1/base-inteligente` é **público** (obrigatório
+pro GitHub Pages gratuito), então o token ficou exposto publicamente.
+
+**Ação do usuário**: regenerar o token no painel da Imobzi (invalida o antigo, que já esteve
+exposto).
+
+**Fix no código**: `IMOBZI_TOKEN` deixou de ser uma constante no arquivo — `obterImobziToken_()`
+lê de `PropertiesService.getScriptProperties()` (mesmo mecanismo já usado pra `bi_password_hash`
+e `bi_reset_token`, então é um padrão já estabelecido no projeto, não algo novo). **Configuração
+única necessária**: no editor do Apps Script → ⚙️ Configurações do projeto → Propriedades do
+script → adicionar `IMOBZI_TOKEN` com o valor do token novo.
+
+Verificado: nenhum outro segredo hardcoded no `Code.gs.txt` nem no `lancamentos_code_gs.txt`
+(SHEET_ID e e-mails não são credenciais — não concedem acesso por si só).
+
 ## 2026-07-03 — Sincronização com a estação servidor + Code.gs versionado pela primeira vez
 
 Trabalho feito na estação servidor em 2026-07-02 (20 commits) trazido pra este repositório via
