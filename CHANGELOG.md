@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 11) — LANCAMENTOS também alimenta tipos/bairros da Busca Aberta
+
+Usuário zerou a aba CONSTRUTORA-APARTAMENTOS de propósito, pra usar só os dados atualizados de
+LANCAMENTOS. Isso expôs uma lacuna já existente: `opcoesFiltro_()` só coletava "Tipo de imóvel" e
+"Bairros" de REVENDA e CONSTRUTORA-APARTAMENTOS — nunca olhava LANCAMENTOS. Com a Construtora
+vazia, um tipo (ex: Casa) ou bairro que só existisse em Lançamentos não aparecia como opção de
+filtro na Busca Aberta.
+
+**Fix**: `Code.gs.txt` — `opcoesFiltro_()` agora também roda `registrarTipo`/`registrarBairro`
+sobre `lerAba_('LANCAMENTOS')`, junto com REVENDA e CONSTRUTORA (mesmo agrupamento normalizado já
+usado pros outros dois). Testado em Node com CONSTRUTORA-APARTAMENTOS vazia (cenário real atual) e
+um lançamento com tipo "Casa" + bairro exclusivo: ambos passaram a aparecer nas opções. Suíte de
+filtro de status (parte 10) e `testarMatching()` continuam passando, sem regressão.
+
 ## 2026-07-03 (parte 10) — Status "Pronto novo" + filtro de status na Busca Aberta
 
 **1. Fix na extração do Bloco 1 (Lançamentos)**: "Estágio: Pronto novo" (Orulo) estava sendo
