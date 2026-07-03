@@ -1,5 +1,72 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 15) — BaseImob: backend do funil de tráfego pago implementado
+
+Primeira implementação real do BaseImob (funil externo de captação de leads pra tráfego pago),
+depois de uma sessão de estudo do material enviado (2 HTMLs + relatório) e uma análise de dados
+real da base `LANCAMENTOS` (arquivo `lancamentos.txt`, 174 unidades reais em 38 empreendimentos —
+o resto das 872 linhas exportadas eram linha em branco). Essa análise mudou decisões importantes
+do plano original (ver conversa): não existe padrão "Popular" no estoque hoje (100% Médio/Alto), e
+nenhuma das 174 unidades tem condição de pagamento cadastrada (`entrada`/`fgts`/`parcelasObra`
+etc. — todos vazios). O usuário decidiu seguir com público "Médio Padrão" e a comunicação
+"Apartamento novo pronto, a partir de R$269 mil, com condição facilitada".
+
+**Backend (`Code.gs.txt`) — módulo BaseImob, completamente separado do Base Inteligente:**
+- Novas abas `LEADS_LANCAMENTOS` (roxo `#7030A0`) e `INTERESSES` (laranja `#C55A11`), criadas
+  automaticamente no primeiro lead — **nunca gravam em CONTATOS**.
+- `salvarLeadLancamento_()`: grava o lead com ID próprio `LL-NNNNN` (contador isolado, nunca
+  colide com `CLI-` de CONTATOS nem `LAN-` de LANCAMENTOS). Faz **upsert por email** — a mesma
+  pessoa passa pela landing (`LEAD LANDING PAGE`) e depois completa o cadastro no BaseImob Total
+  (`LEAD QUALIFICADO`); a 2ª chamada atualiza a mesma linha em vez de duplicar, preservando a
+  `dataCadastro` original.
+- `salvarInteresse_()`: grava o interesse (imóveis selecionados) em `INTERESSES`, busca o
+  `idCliente` (LL-NNNNN) por email em `LEADS_LANCAMENTOS` (o formulário de "solicitar informações"
+  não manda esse ID direto), e dispara `enviarNotificacaoAtendente_()` — email pro corretor com
+  nome/contato/score/imóveis selecionados. Momento mais quente do funil, não pode passar batido.
+- **Detalhe técnico importante**: os dois HTMLs do BaseImob mandam os dados via **GET** com
+  `?dados=<json>` (não POST) — a ação fica dentro do JSON, não como parâmetro solto. `doGet` agora
+  detecta esse padrão e roteia pra `salvarLeadLancamento_`/`salvarInteresse_` antes de qualquer
+  outra coisa. Suportado também via POST (`d.acao`) para caso o front mude no futuro.
+- **Essas ações são públicas** (sem exigir o token de sessão do fix de segurança da parte 9) —
+  visitante de anúncio nunca faz login. `listar_lancamentos` também virou pública, pelo mesmo
+  motivo (os dois HTMLs do BaseImob leem ela sem sessão).
+
+**Front-end — mensagem, público e segmentação:**
+- `baseimob-landing.html` / `baseimob-total.html`: trazidos pro repositório (antes só existiam em
+  Downloads), `WEBHOOK` renomeado pra `WEBHOOK_URL` e passaram a carregar `config.js` — mesmo
+  padrão das outras 5 páginas, backend único.
+- Headline da landing trocado para a comunicação definida: **"Apartamento novo pronto, a partir
+  de R$269 mil"** + "condição facilitada" no subtítulo — antes falava de "compra na planta" e
+  "investimento", que não correspondiam a nada do estoque real (não existe nenhum lançamento em
+  status "Em planta" hoje, só Pronto novo/Em obras/Pronto).
+- **Correção de reivindicação falsa**: um card dizia "FGTS aceito como entrada na maioria dos
+  lançamentos" sem nenhum dado real por trás (0/174 registros têm esse campo preenchido) —
+  substituído por 2 estatísticas reais e verificadas: "74% das unidades já estão prontas" e
+  "R$269 mil é o valor de entrada mais baixo disponível hoje".
+- **Segmentação geográfica** (`?regiao=vila-rosa` / `?regiao=aparecida`): a landing lê o parâmetro
+  da URL, troca o texto do pill do header e filtra o estoque mostrado no quiz só pra bairros/
+  cidade daquela região — permite rodar 2 campanhas de anúncio separadas (Vila Rosa x Aparecida de
+  Goiânia) sem precisar de 2 páginas diferentes. A região entra no campo `canal` do lead salvo,
+  pra saber de qual campanha cada lead veio.
+- **Ajuste de qualificação (não promessa)**: como não há dado de condição de pagamento por
+  imóvel, a pergunta "Como pretende pagar?" (landing) e as tags financeiras (BaseImob Total) agora
+  só ajustam o **score interno** (prioridade de atendimento) — não aparecem como promessa de
+  produto pro visitante. FGTS/à vista somam +10 ao score de urgência na landing; ter qualquer tag
+  financeira "forte" (FGTS/pré-aprovado/entrada disponível) no cadastro completo eleva o score de
+  50 pra 70.
+
+Testado em Node: 17 cenários novos do módulo BaseImob (criação de lead, upsert por email
+case-insensitive, contador de ID incremental, busca de idCliente por email, disparo de
+notificação, roteamento GET com `?dados=`, roteamento POST, confirmação de que ações do Base
+Inteligente continuam exigindo token) — todos passaram, mais as 5 suítes anteriores (matching,
+auth gate, multi-select, área mínima, status/cidade/padrão/estado) sem regressão. Testado no
+preview: segmentação por região isola corretamente o estoque certo, bônus de pontuação aplica
+certo nos dois formulários, headline/cards renderizam como esperado.
+
+**Ação pendente do usuário**: colar o `Code.gs.txt` atualizado no editor do Apps Script e
+reimplantar — sem isso o BaseImob não tem backend funcionando (o teste no preview contra a URL ao
+vivo confirmou que ainda está bloqueando com `nao_autenticado`, como esperado antes do deploy).
+
 ## 2026-07-03 (parte 14) — Todos os filtros de chip da Busca Aberta viram múltipla escolha
 
 Pedido do usuário: os chips (tags) da Busca Aberta só aceitavam 1 opção marcada por grupo — clicar

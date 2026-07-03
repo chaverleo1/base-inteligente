@@ -48,11 +48,24 @@ const CABECALHO_LANCAMENTOS = [
 
 // Ações que fazem parte do próprio fluxo de login/reset de senha — não
 // exigem uma sessão já validada (senão ninguém conseguiria logar).
-var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token'];
+// 'listar_lancamentos' também é pública: é lida pelo BASEIMOB (visitante
+// anônimo de anúncio, sem login nenhum), além do Base Inteligente.
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos'];
 
 function doGet(e) {
   if (!e || !e.parameter) return ok({ status: 'sem parametros' });
   var acao = e.parameter.acao;
+
+  // BASEIMOB manda os dados via GET com ?dados=<json> (mesmo truque do
+  // no-cors usado no restante do projeto) — a acao fica DENTRO do JSON, não
+  // como parâmetro solto. São ações públicas: visitante de anúncio não tem
+  // sessão, e nunca gravam na aba CONTATOS.
+  if (e.parameter.dados) {
+    var dadosGet = {};
+    try { dadosGet = JSON.parse(e.parameter.dados); } catch(errGet) {}
+    if (dadosGet.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(dadosGet));
+    if (dadosGet.acao === 'interesse_lancamento') return ok(salvarInteresse_(dadosGet));
+  }
 
   if (ACOES_PUBLICAS_GET.indexOf(acao) < 0 && !sessaoValida_(e.parameter.token)) {
     return ok({ status: 'nao_autenticado' });
@@ -107,6 +120,12 @@ function doPost(e) {
   // (protegido pelo próprio token de reset de validarToken_/salvarSenhaReset_,
   // usado justamente por quem ainda não tem uma sessão ativa).
   if (d.acao === 'salvar_senha')  return salvarSenhaReset_(d);
+
+  // BASEIMOB (lead_lancamento/interesse_lancamento) também é pública — o
+  // visitante de anúncio nunca faz login. Suportado aqui também (via POST)
+  // além do GET com ?dados=, caso o front mande assim no futuro.
+  if (d.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(d));
+  if (d.acao === 'interesse_lancamento') return ok(salvarInteresse_(d));
 
   if (!sessaoValida_(d.token)) return ok({ status: 'nao_autenticado' });
 
@@ -1723,6 +1742,196 @@ function excluirLancamento_(dados) {
     return { ok: true };
   } catch(e) {
     return { ok: false, erro: e.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO BASEIMOB — funil externo de captação de leads (tráfego pago)
+// ═══════════════════════════════════════════════════════════════
+// Sistema separado do Base Inteligente: público externo (anúncios), abas
+// próprias (LEADS_LANCAMENTOS/INTERESSES), NUNCA grava em CONTATOS. Só lê
+// LANCAMENTOS (mesma aba do Base Inteligente) pra popular os cards.
+// Ver baseimob-landing.html e baseimob-total.html.
+
+var CABECALHO_LEADS_LANCAMENTOS = [
+  'dataCadastro', 'email', 'nome', 'telefone',
+  'finalidade', 'quartos', 'precoLimite', 'margem',
+  'pagamento', 'diferenciais', 'urgencia',
+  'qtdEncontrados', 'canal', 'tipo_contato', 'score',
+  'tags', 'obs', 'idCliente'
+];
+
+var CABECALHO_INTERESSES = [
+  'dataCadastro', 'idCliente', 'email', 'nome', 'telefone',
+  'qtdInteresse', 'idsInteresse', 'tags',
+  'canal', 'tipo_contato', 'score'
+];
+
+function obterAbaLeadsLancamentos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LEADS_LANCAMENTOS');
+  if (!aba) {
+    aba = ss.insertSheet('LEADS_LANCAMENTOS');
+    aba.setTabColor('#7030A0');
+    aba.appendRow(CABECALHO_LEADS_LANCAMENTOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_LEADS_LANCAMENTOS.length)
+       .setFontWeight('bold').setBackground('#7030A0').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+function obterAbaInteresses_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('INTERESSES');
+  if (!aba) {
+    aba = ss.insertSheet('INTERESSES');
+    aba.setTabColor('#C55A11');
+    aba.appendRow(CABECALHO_INTERESSES);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_INTERESSES.length)
+       .setFontWeight('bold').setBackground('#C55A11').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+// ID permanente do lead BaseImob (LL-NNNNN) — mesmo mecanismo de
+// proximoIdCliente_/proximoIdLancamento_, mas em contador próprio: LL nunca
+// pode colidir com CLI (CONTATOS) nem com LAN (LANCAMENTOS).
+function proximoIdLeadLancamento_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba    = obterAbaLeadsLancamentos_();
+    var lr     = aba.getLastRow();
+    var maxNum = 0;
+    if (lr >= 2) {
+      var idxId = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente') + 1;
+      var vals  = aba.getRange(2, idxId, lr - 1, 1).getValues();
+      vals.forEach(function(row) {
+        var m = String(row[0] || '').match(/(\d+)\s*$/);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+      });
+    }
+    return 'LL-' + String(maxNum + 1).padStart(5, '0');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Grava (ou atualiza) um lead do funil BaseImob. Chamado em 2 momentos da
+// jornada com o MESMO email: 1) landing envia email (LEAD LANDING PAGE) —
+// cria a linha; 2) BaseImob Total completa o cadastro (LEAD QUALIFICADO) —
+// atualiza a MESMA linha (upsert por email) em vez de duplicar, já que é a
+// mesma pessoa avançando no funil. NUNCA toca a aba CONTATOS.
+function salvarLeadLancamento_(d) {
+  d = d || {};
+  var email = String(d.email || '').trim().toLowerCase();
+  if (!email) return { ok: false, erro: 'email obrigatorio' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba   = obterAbaLeadsLancamentos_();
+    var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var idxEmail = CABECALHO_LEADS_LANCAMENTOS.indexOf('email');
+    var idxId    = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+
+    var lr = aba.getLastRow();
+    var linhaExistente = -1, idExistente = '';
+    if (lr >= 2) {
+      var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+      for (var i = 0; i < dados.length; i++) {
+        if (String(dados[i][idxEmail] || '').trim().toLowerCase() === email) {
+          linhaExistente = i + 2;
+          idExistente = dados[i][idxId];
+          break;
+        }
+      }
+    }
+
+    var id = idExistente || proximoIdLeadLancamento_();
+    var linha = CABECALHO_LEADS_LANCAMENTOS.map(function(col) {
+      if (col === 'dataCadastro') return linhaExistente > 0 ? undefined : agora; // preserva data original no upsert
+      if (col === 'idCliente')    return id;
+      return d[col] !== undefined ? d[col] : '';
+    });
+
+    if (linhaExistente > 0) {
+      // Upsert: mantém dataCadastro original, atualiza o resto (nome/telefone/
+      // tags chegam mais completos na 2ª etapa do funil).
+      var dataOriginal = aba.getRange(linhaExistente, CABECALHO_LEADS_LANCAMENTOS.indexOf('dataCadastro') + 1).getValue();
+      linha[CABECALHO_LEADS_LANCAMENTOS.indexOf('dataCadastro')] = dataOriginal;
+      aba.getRange(linhaExistente, 1, 1, CABECALHO_LEADS_LANCAMENTOS.length).setValues([linha]);
+    } else {
+      aba.appendRow(linha);
+    }
+
+    return { ok: true, idCliente: id };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Grava o interesse concreto (imóveis selecionados) do lead BaseImob Total.
+// Busca o idCliente (LL-NNNNN) em LEADS_LANCAMENTOS pelo email — o
+// formulário de "solicitar informações" não manda esse ID diretamente.
+// Dispara notificação pro corretor. NUNCA toca a aba CONTATOS.
+function salvarInteresse_(d) {
+  d = d || {};
+  var email = String(d.email || '').trim().toLowerCase();
+
+  var idCliente = '';
+  if (email) {
+    var abaLeads = obterAbaLeadsLancamentos_();
+    var lr = abaLeads.getLastRow();
+    if (lr >= 2) {
+      var idxEmail = CABECALHO_LEADS_LANCAMENTOS.indexOf('email');
+      var idxId    = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+      var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+      for (var i = 0; i < dados.length; i++) {
+        if (String(dados[i][idxEmail] || '').trim().toLowerCase() === email) {
+          idCliente = dados[i][idxId];
+          break;
+        }
+      }
+    }
+  }
+
+  var aba   = obterAbaInteresses_();
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var linha = CABECALHO_INTERESSES.map(function(col) {
+    if (col === 'dataCadastro') return agora;
+    if (col === 'idCliente')    return idCliente;
+    return d[col] !== undefined ? d[col] : '';
+  });
+  aba.appendRow(linha);
+
+  enviarNotificacaoAtendente_(d);
+  return { ok: true, idCliente: idCliente };
+}
+
+// E-mail pro corretor sempre que um lead pede atendimento — é o momento
+// mais quente do funil BaseImob, não pode passar batido.
+function enviarNotificacaoAtendente_(d) {
+  try {
+    var nome = d.nome || '(sem nome)';
+    var corpo = 'Nome: ' + nome + '\n' +
+                'Email: ' + (d.email || '-') + '\n' +
+                'WhatsApp: ' + (d.telefone || '-') + '\n' +
+                'Score: ' + (d.score || '-') + '\n' +
+                'Qtd. imóveis de interesse: ' + (d.qtdInteresse || '-') + '\n' +
+                'IDs selecionados: ' + (d.idsInteresse || '-') + '\n' +
+                'Tags: ' + (d.tags || '-') + '\n' +
+                'Canal: ' + (d.canal || '-') + '\n' +
+                'Data: ' + Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    MailApp.sendEmail({
+      to: ADM_EMAIL,
+      subject: '🔥 LEAD QUENTE — ' + nome + ' solicitou informações',
+      body: corpo
+    });
+  } catch(e) {
+    Logger.log('Falha ao enviar notificacao de lead quente: ' + e.message);
   }
 }
 

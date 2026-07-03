@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BaseImob — Apartamentos em Goiânia</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600;700&display=swap');
+:root{
+  --ink:#0E1117;--ink2:#3A3F4B;--ink3:#8A909E;
+  --cream:#F5F0E8;--cream2:#EDE7DA;--cream3:#E2D9C8;
+  --verde:#1A3D2B;--verde2:#122B1E;--verde3:#EEF4F0;
+  --ouro:#C8813A;--ouro2:#A06528;--ouro3:#FDF3E7;
+  --branco:#FDFAF6;
+  --r:12px;--rs:8px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif;font-size:15px;line-height:1.55;overflow-x:hidden;min-height:100dvh}
+.df{font-family:'Playfair Display',Georgia,serif;font-weight:900;line-height:1.08;letter-spacing:-.02em}
+.di{font-family:'Playfair Display',Georgia,serif;font-weight:700;font-style:italic;line-height:1.1}
+
+/* ── TELAS ── */
+.tela{display:none;min-height:100dvh;flex-direction:column}
+.tela.ativa{display:flex}
+
+/* ══ HERO ══ */
+#t-hero{background:var(--verde);position:relative;overflow:hidden;justify-content:space-between}
+.hero-bg{position:absolute;inset:0;pointer-events:none}
+.hero-orb1{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(200,129,58,.18) 0%,transparent 65%);top:-180px;right:-200px}
+.hero-orb2{position:absolute;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(200,129,58,.1) 0%,transparent 65%);bottom:40px;left:-100px}
+.hero-noise{position:absolute;inset:0;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+.hero-nav{position:relative;z-index:2;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:14px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ouro)}
+.hero-pill{font-size:12px;padding:6px 14px;border-radius:99px;border:1px solid rgba(253,250,246,.15);color:rgba(253,250,246,.5);font-weight:500}
+
+.hero-body{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;padding:32px 24px 28px;max-width:520px;margin:0 auto;width:100%}
+
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:20px}
+.eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--ouro);animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.eyebrow-txt{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(253,250,246,.5)}
+
+.hero-h1{font-size:clamp(36px,9.5vw,54px);color:var(--branco);margin-bottom:8px}
+.hero-h1 .ouro{color:var(--ouro)}
+.hero-sub{font-size:clamp(15px,4vw,17px);color:rgba(253,250,246,.55);font-weight:300;line-height:1.65;margin-bottom:36px;max-width:400px}
+
+.hero-insight{background:rgba(253,250,246,.05);border:1px solid rgba(253,250,246,.1);border-radius:var(--r);padding:16px 18px;margin-bottom:32px;display:flex;gap:14px;align-items:flex-start}
+.insight-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.insight-txt{font-size:13px;color:rgba(253,250,246,.65);line-height:1.6}
+.insight-txt strong{color:rgba(253,250,246,.9);font-weight:600}
+
+.btn-start{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--ouro);color:var(--branco);font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:18px 28px;border-radius:var(--r);border:none;cursor:pointer;width:100%;max-width:400px;transition:background .2s,transform .2s var(--ease);letter-spacing:.1px}
+.btn-start:hover{background:var(--ouro2);transform:translateY(-2px)}
+.btn-start svg{transition:transform .2s}
+.btn-start:hover svg{transform:translateX(5px)}
+
+.hero-stats{position:relative;z-index:2;padding:20px 24px 32px;display:flex;gap:0;max-width:520px;margin:0 auto;width:100%;border-top:1px solid rgba(253,250,246,.08)}
+.stat{flex:1;text-align:center}
+.stat-n{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--branco)}
+.stat-l{font-size:11px;color:rgba(253,250,246,.35);letter-spacing:.4px;margin-top:2px}
+.stat-sep{width:1px;background:rgba(253,250,246,.1);margin:0 8px}
+
+/* insight visual cards abaixo do hero */
+.insights-strip{background:var(--branco);padding:32px 20px;border-bottom:1px solid var(--cream2)}
+.insights-title{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);text-align:center;margin-bottom:20px}
+.insights-cards{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-ms-overflow-style:none}
+.insights-cards::-webkit-scrollbar{display:none}
+.ins-card{flex-shrink:0;width:200px;background:var(--cream);border-radius:var(--r);padding:18px 16px;border:1px solid var(--cream2)}
+.ins-card-icon{font-size:28px;margin-bottom:10px}
+.ins-card-num{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--verde);margin-bottom:4px}
+.ins-card-txt{font-size:12px;color:var(--ink3);line-height:1.5}
+
+/* ══ QUIZ ══ */
+#t-quiz{background:var(--cream);flex-direction:column}
+.quiz-hdr{background:var(--verde);padding:18px 20px 0}
+.quiz-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.quiz-logo{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ouro)}
+.quiz-counter{font-size:12px;color:rgba(253,250,246,.4)}
+.quiz-counter b{color:rgba(253,250,246,.8)}
+.prog{height:3px;background:rgba(253,250,246,.1);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:var(--ouro);border-radius:99px;transition:width .5s var(--ease)}
+
+.quiz-bdy{flex:1;padding:28px 20px 16px;max-width:500px;margin:0 auto;width:100%;display:flex;flex-direction:column}
+.passo{display:none;flex-direction:column;flex:1;animation:slin .3s ease}
+.passo.ativo{display:flex}
+@keyframes slin{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
+
+.p-eye{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ouro);margin-bottom:8px}
+.p-ttl{font-size:clamp(22px,6vw,30px);margin-bottom:6px;color:var(--ink)}
+.p-sub{font-size:14px;color:var(--ink3);margin-bottom:24px;line-height:1.6}
+
+/* opção card */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.opts.col1{grid-template-columns:1fr}
+.opt{background:var(--branco);border:2px solid var(--cream2);border-radius:var(--r);padding:14px 14px;cursor:pointer;transition:border .18s,background .18s,transform .15s;display:flex;align-items:flex-start;gap:11px;user-select:none;-webkit-tap-highlight-color:transparent}
+.opt:active{transform:scale(.98)}
+.opt-ico{font-size:20px;flex-shrink:0;margin-top:1px}
+.opt-lbl{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
+.opt-desc{font-size:12px;color:var(--ink3);font-weight:400;margin-top:3px}
+.opt:hover{border-color:var(--ouro);background:var(--ouro3)}
+.opt.sel{border-color:var(--verde);background:var(--verde3)}
+.opt.sel .opt-lbl{color:var(--verde)}
+
+/* slider */
+.sldr-val{font-family:'Playfair Display',serif;font-size:38px;font-weight:700;color:var(--verde);margin-bottom:4px;transition:color .2s}
+.sldr-hint{font-size:12px;color:var(--ink3);margin-bottom:18px;line-height:1.5}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:99px;background:var(--cream2);outline:none;margin-bottom:10px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--verde);cursor:pointer;box-shadow:0 2px 10px rgba(26,61,43,.3);border:3px solid var(--branco)}
+.sldr-axis{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);margin-bottom:24px}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.chip{padding:8px 15px;border-radius:99px;border:2px solid var(--cream2);background:var(--branco);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;transition:all .18s;user-select:none;-webkit-tap-highlight-color:transparent}
+.chip:hover{border-color:var(--ouro);color:var(--ink)}
+.chip.sel{border-color:var(--verde);background:var(--verde3);color:var(--verde)}
+
+/* urgência */
+.urg-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.urg-item{background:var(--branco);border:2px solid var(--cream2);border-radius:var(--rs);padding:13px 15px;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:space-between;user-select:none;-webkit-tap-highlight-color:transparent}
+.urg-item:hover{border-color:var(--ouro)}
+.urg-item.sel{border-color:var(--verde);background:var(--verde3)}
+.urg-lbl{font-size:14px;font-weight:600;color:var(--ink)}
+.urg-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
+.b-alta{background:#FDECEA;color:#C0392B}
+.b-media{background:#FEF9E7;color:#9A7D0A}
+.b-baixa{background:var(--verde3);color:var(--verde)}
+
+/* nav quiz */
+.quiz-nav{padding:12px 20px 32px;max-width:500px;margin:0 auto;width:100%;display:flex;gap:10px}
+.btn-back{background:transparent;border:2px solid var(--cream2);color:var(--ink3);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;padding:14px 18px;border-radius:var(--rs);cursor:pointer;transition:all .18s;flex-shrink:0}
+.btn-back:hover{border-color:var(--ink3);color:var(--ink)}
+.btn-next{flex:1;background:var(--verde);color:var(--branco);font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:14px 22px;border-radius:var(--rs);border:none;cursor:pointer;transition:background .18s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-next:hover{background:var(--verde2)}
+.btn-next:disabled{opacity:.4;cursor:not-allowed}
+
+/* ══ RESULTADO ══ */
+#t-resultado{background:var(--cream);flex-direction:column}
+.res-hdr{background:var(--verde);padding:24px 20px 28px;text-align:center}
+.res-eye{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ouro);font-weight:700;margin-bottom:10px}
+.res-ttl{font-size:clamp(22px,6vw,32px);color:var(--branco);margin-bottom:6px}
+.res-sub{font-size:13px;color:rgba(253,250,246,.45)}
+.res-num{color:var(--ouro);font-weight:700}
+
+.cards-wrap{padding:20px 16px;display:flex;flex-direction:column;gap:12px;max-width:500px;margin:0 auto;width:100%}
+.icard{background:var(--branco);border-radius:var(--r);border:1px solid var(--cream2);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.04);transition:transform .2s,box-shadow .2s}
+.icard:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.07)}
+.icard-top{padding:15px 16px 0;display:flex;justify-content:space-between;align-items:flex-start}
+.icard-tipo{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3)}
+.icard-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:4px}
+.bg-pronto{background:var(--verde3);color:var(--verde)}
+.bg-lancamento{background:#FEF9E7;color:#9A7D0A}
+.bg-quente{background:#FDECEA;color:#C0392B}
+.icard-preco{padding:6px 16px 10px;display:flex;align-items:baseline;gap:6px}
+.icard-pfrom{font-size:12px;color:var(--ink3)}
+.icard-pval{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--verde)}
+.icard-dados{padding:0 16px 12px;display:flex;flex-wrap:wrap;gap:12px}
+.icard-dado{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink3)}
+.icard-divider{height:1px;background:var(--cream2);margin:0 16px}
+.icard-tags{padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px}
+.itag{font-size:11px;padding:3px 9px;border-radius:4px;background:var(--cream);color:var(--ink3);font-weight:500}
+.icard-bot{padding:10px 16px 14px;display:flex;align-items:center;justify-content:space-between}
+.icard-entrega{font-size:12px;color:var(--ink3)}
+.icard-entrega b{color:var(--ink)}
+.btn-detail{font-size:13px;font-weight:700;color:var(--ouro);background:none;border:none;cursor:pointer;padding:0;transition:color .18s}
+.btn-detail:hover{color:var(--ouro2)}
+
+.res-cta{padding:8px 16px 36px;max-width:500px;margin:0 auto;width:100%}
+.cta-box{background:var(--verde);border-radius:var(--r);padding:24px 20px;text-align:center}
+.cta-ttl{font-size:22px;color:var(--branco);margin-bottom:8px}
+.cta-sub{font-size:14px;color:rgba(253,250,246,.5);margin-bottom:20px;line-height:1.65}
+.btn-cta{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--ouro);color:var(--branco);font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:16px 24px;border-radius:var(--rs);border:none;cursor:pointer;width:100%;transition:background .18s}
+.btn-cta:hover{background:var(--ouro2)}
+
+/* ══ CAPTURA ══ */
+#t-captura{background:var(--verde);align-items:center;justify-content:center;padding:40px 20px}
+.cap-inner{max-width:400px;width:100%}
+.cap-eye{font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ouro);margin-bottom:14px}
+.cap-ttl{font-size:clamp(28px,8vw,40px);color:var(--branco);margin-bottom:10px}
+.cap-sub{font-size:15px;color:rgba(253,250,246,.5);margin-bottom:28px;line-height:1.65;font-weight:300}
+.cap-alerta{background:rgba(200,129,58,.12);border:1px solid rgba(200,129,58,.28);border-radius:var(--rs);padding:12px 15px;font-size:13px;color:rgba(253,250,246,.65);margin-bottom:22px;display:flex;gap:10px;align-items:center;line-height:1.5}
+.cap-form{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.cap-input{background:rgba(253,250,246,.07);border:1.5px solid rgba(253,250,246,.13);border-radius:var(--rs);padding:15px 17px;color:var(--branco);font-family:'Inter',sans-serif;font-size:16px;outline:none;transition:border .2s;width:100%}
+.cap-input::placeholder{color:rgba(253,250,246,.28)}
+.cap-input:focus{border-color:var(--ouro);background:rgba(253,250,246,.1)}
+.cap-input.erro{border-color:#ff5a5a}
+.match-ico{text-align:center;font-size:14px;color:rgba(253,250,246,.3);margin:-4px 0 6px;letter-spacing:1px}
+.match-ok{color:#4CAF50;font-size:20px}
+.match-err{color:#ff5a5a;font-size:20px}
+.btn-enviar{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--ouro);color:var(--branco);font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:17px 24px;border-radius:var(--rs);border:none;cursor:pointer;width:100%;transition:background .18s,transform .18s}
+.btn-enviar:hover:not(:disabled){background:var(--ouro2);transform:translateY(-2px)}
+.btn-enviar:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.cap-privacidade{font-size:12px;color:rgba(253,250,246,.25);text-align:center;margin-top:14px;line-height:1.6}
+.form-erro{font-size:13px;color:#ff8a7a;text-align:center;margin-top:10px;line-height:1.5}
+
+/* ══ OK ══ */
+#t-ok{background:var(--verde);align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+.ok-check{width:72px;height:72px;border-radius:50%;background:rgba(200,129,58,.18);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 22px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.ok-ttl{font-size:32px;color:var(--branco);margin-bottom:10px}
+.ok-sub{font-size:15px;color:rgba(253,250,246,.5);max-width:300px;margin:0 auto 28px;line-height:1.65;font-weight:300}
+.ok-box{background:rgba(253,250,246,.06);border:1px solid rgba(253,250,246,.1);border-radius:var(--r);padding:16px 20px;max-width:340px;margin:0 auto 20px;font-size:14px;color:rgba(253,250,246,.65);line-height:1.6}
+.ok-box b{color:var(--ouro)}
+.ok-email-sent{background:rgba(200,129,58,.12);border:1px solid rgba(200,129,58,.25);border-radius:var(--rs);padding:12px 16px;max-width:340px;margin:0 auto;font-size:13px;color:rgba(253,250,246,.7);line-height:1.55}
+
+/* spinner */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(253,250,246,.3);border-top-color:var(--branco);border-radius:50%;animation:rot .6s linear infinite;vertical-align:middle}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* utilitários */
+.mt{margin-top:12px}
+</style>
+</head>
+<body>
+
+<!-- ══ TELA 1 — HERO ══ -->
+<section class="tela ativa" id="t-hero">
+  <div class="hero-bg"><div class="hero-orb1"></div><div class="hero-orb2"></div><div class="hero-noise"></div></div>
+
+  <nav class="hero-nav">
+    <div class="logo">BaseImob</div>
+    <div class="hero-pill" id="hero-regiao-pill">Goiânia · 2026</div>
+  </nav>
+
+  <div class="hero-body">
+    <div class="hero-eyebrow">
+      <div class="eyebrow-dot"></div>
+      <span class="eyebrow-txt">Apartamentos · Padrão Médio</span>
+    </div>
+
+    <!-- Comunicação definida pro público Médio Padrão: foco em pronto pra
+         morar + condição facilitada, não em "compra na planta"/investimento
+         (não existe estoque "Em planta" hoje — todo produto de entrada é
+         Pronto novo, e ainda não temos os dados de condição de pagamento
+         cadastrados por imóvel, então a promessa fica genérica por ora). -->
+    <h1 class="hero-h1 df">Apartamento novo<br><span class="ouro di">pronto</span>, a partir de<br>R$ 269 mil.</h1>
+    <p class="hero-sub">Com condição facilitada. Em 3 perguntas rápidas você descobre quais apartamentos prontos pra morar combinam com seu perfil e orçamento.</p>
+
+    <div class="hero-insight">
+      <span class="insight-icon">🔑</span>
+      <div class="insight-txt">
+        <strong>Sem esperar obra.</strong> A maioria das opções já está pronta pra você morar agora — chega de pagar aluguel esperando a planta ficar pronta.
+      </div>
+    </div>
+
+    <button class="btn-start" onclick="ir('t-quiz');iniciarQuiz()">
+      Descobrir meu apartamento
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-n" id="cnt-total">174</div><div class="stat-l">opções na base</div></div>
+    <div class="stat-sep"></div>
+    <div class="stat"><div class="stat-n">38</div><div class="stat-l">lançamentos ativos</div></div>
+    <div class="stat-sep"></div>
+    <div class="stat"><div class="stat-n">3 min</div><div class="stat-l">para descobrir</div></div>
+  </div>
+</section>
+
+<!-- insights separado do hero para não interferir na troca de telas -->
+<div id="insights-strip" class="insights-strip">
+  <div class="insights-title">Por que apartamento?</div>
+  <div class="insights-cards">
+    <div class="ins-card"><div class="ins-card-icon">🔑</div><div class="ins-card-num">3x</div><div class="ins-card-txt">menos burocracia vs comprar casa de terceiro</div></div>
+    <div class="ins-card"><div class="ins-card-icon">🏠</div><div class="ins-card-num">74%</div><div class="ins-card-txt">das unidades já estão prontas — sem esperar obra</div></div>
+    <div class="ins-card"><div class="ins-card-icon">🏋️</div><div class="ins-card-num">100%</div><div class="ins-card-txt">dos lançamentos incluem área de lazer completa</div></div>
+    <div class="ins-card"><div class="ins-card-icon">💸</div><div class="ins-card-num">R$269mil</div><div class="ins-card-txt">é o valor de entrada mais baixo disponível hoje</div></div>
+    <div class="ins-card"><div class="ins-card-icon">🛡️</div><div class="ins-card-num">+seguro</div><div class="ins-card-txt">condomínio com portaria e segurança 24h</div></div>
+  </div>
+</div>
+
+<!-- ══ TELA 2 — QUIZ ══ -->
+<section class="tela" id="t-quiz">
+  <div class="quiz-hdr">
+    <div class="quiz-top">
+      <div class="quiz-logo">BaseImob</div>
+      <div class="quiz-counter">Restam <b id="cnt-restam">847</b> opções</div>
+    </div>
+    <div class="prog"><div class="prog-fill" id="prog" style="width:33%"></div></div>
+  </div>
+
+  <div class="quiz-bdy">
+
+    <!-- P1 — Finalidade + Quartos -->
+    <div class="passo ativo" id="p1">
+      <div class="p-eye">Passo 1 de 3</div>
+      <h2 class="p-ttl df">Qual é o seu objetivo?</h2>
+      <p class="p-sub">Isso define o tipo de apartamento mais adequado para você.</p>
+
+      <div class="opts col1" style="margin-bottom:16px">
+        <div class="opt" onclick="sel(this,'finalidade','morar')">
+          <span class="opt-ico">🏠</span>
+          <div><div class="opt-lbl">Quero morar</div><div class="opt-desc">Busco conforto, localização e qualidade de vida</div></div>
+        </div>
+        <div class="opt" onclick="sel(this,'finalidade','investir')">
+          <span class="opt-ico">📈</span>
+          <div><div class="opt-lbl">Quero investir</div><div class="opt-desc">Foco em valorização e renda de aluguel</div></div>
+        </div>
+        <div class="opt" onclick="sel(this,'finalidade','ambos')">
+          <span class="opt-ico">🎯</span>
+          <div><div class="opt-lbl">Morar e valorizar</div><div class="opt-desc">Quero os dois: conforto agora e patrimônio no futuro</div></div>
+        </div>
+      </div>
+
+      <p class="p-sub" style="margin-bottom:12px">Quantos quartos você precisa?</p>
+      <div class="chips" id="chips-qtos" style="margin-bottom:20px">
+        <div class="chip" onclick="selQtos(this,1)">1 quarto</div>
+        <div class="chip" onclick="selQtos(this,2)">2 quartos</div>
+        <div class="chip" onclick="selQtos(this,3)">3 quartos</div>
+        <div class="chip" onclick="selQtos(this,4)">4 quartos</div>
+        <div class="chip" onclick="selQtos(this,5)">5+ quartos</div>
+      </div>
+    </div>
+
+    <!-- P2 — Preço + Pagamento -->
+    <div class="passo" id="p2">
+      <div class="p-eye">Passo 2 de 3</div>
+      <h2 class="p-ttl df">Qual é o seu limite de investimento?</h2>
+      <p class="p-sub">Vamos mostrar opções dentro de uma margem de 30% acima e abaixo.</p>
+
+      <div class="sldr-val" id="sldr-val">R$ 450.000</div>
+      <div class="sldr-hint" id="sldr-hint">Faixa de busca: R$ 315k a R$ 585k</div>
+      <input type="range" id="sldr" min="300000" max="700000" step="25000" value="450000" oninput="atuSldr(this.value)">
+      <div class="sldr-axis"><span>R$ 300k</span><span>R$ 500k</span><span>R$ 700k</span></div>
+
+      <p class="p-sub" style="margin-bottom:12px">Como pretende pagar?</p>
+      <div class="chips" id="chips-pag">
+        <div class="chip" onclick="togChip(this,'pag')">Financiamento</div>
+        <div class="chip" onclick="togChip(this,'pag')">FGTS como entrada</div>
+        <div class="chip" onclick="togChip(this,'pag')">À vista</div>
+        <div class="chip" onclick="togChip(this,'pag')">Consórcio</div>
+        <div class="chip" onclick="togChip(this,'pag')">Preciso simular</div>
+      </div>
+    </div>
+
+    <!-- P3 — Diferenciais + Urgência -->
+    <div class="passo" id="p3">
+      <div class="p-eye">Passo 3 de 3</div>
+      <h2 class="p-ttl df">O que é essencial para você?</h2>
+      <p class="p-sub">Selecione o que não pode faltar no seu apartamento.</p>
+
+      <div class="chips" id="chips-dif" style="margin-bottom:24px">
+        <div class="chip" onclick="togChip(this,'dif')">🏊 Piscina</div>
+        <div class="chip" onclick="togChip(this,'dif')">🏋️ Academia</div>
+        <div class="chip" onclick="togChip(this,'dif')">🔒 Portaria 24h</div>
+        <div class="chip" onclick="togChip(this,'dif')">🍖 Churrasqueira</div>
+        <div class="chip" onclick="togChip(this,'dif')">💻 Coworking</div>
+        <div class="chip" onclick="togChip(this,'dif')">🐾 Pet place</div>
+        <div class="chip" onclick="togChip(this,'dif')">🚗 2 vagas</div>
+        <div class="chip" onclick="togChip(this,'dif')">🌿 Área verde</div>
+      </div>
+
+      <p class="p-sub" style="margin-bottom:12px">Quando pretende comprar?</p>
+      <div class="urg-list">
+        <div class="urg-item" onclick="selUrg(this,'alta')">
+          <span class="urg-lbl">Nos próximos 3 meses</span>
+          <span class="urg-badge b-alta">Urgente</span>
+        </div>
+        <div class="urg-item" onclick="selUrg(this,'media')">
+          <span class="urg-lbl">Entre 3 e 6 meses</span>
+          <span class="urg-badge b-media">Planejando</span>
+        </div>
+        <div class="urg-item" onclick="selUrg(this,'baixa')">
+          <span class="urg-lbl">Ainda estou pesquisando</span>
+          <span class="urg-badge b-baixa">Explorando</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- fim quiz-bdy -->
+
+  <div class="quiz-nav">
+    <button class="btn-back" id="btn-back" onclick="voltarP()" style="display:none">← Voltar</button>
+    <button class="btn-next" id="btn-next" onclick="avancarP()">
+      Continuar
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- ══ TELA 3 — RESULTADO ══ -->
+<section class="tela" id="t-resultado">
+  <div class="res-hdr">
+    <div class="res-eye">Resultado personalizado</div>
+    <h2 class="res-ttl df">Encontramos <span class="res-num" id="qtd-res">0</span> apartamentos no seu perfil</h2>
+    <p class="res-sub">Prévia resumida — nome e endereço revelados após seu contato</p>
+  </div>
+
+  <div id="res-aproximado" style="display:none;max-width:500px;margin:0 auto;padding:0 16px">
+    <div style="background:var(--ouro3);border:1px solid rgba(200,129,58,.3);border-radius:var(--rs);padding:12px 14px;font-size:13px;color:var(--ink2);line-height:1.5;margin-top:16px">
+      💡 Não encontramos um apartamento com exatamente esse perfil — as opções abaixo são as mais próximas do que você buscou.
+    </div>
+  </div>
+
+  <div class="cards-wrap" id="cards-wrap"></div>
+
+  <div class="res-cta">
+    <div class="cta-box">
+      <h3 class="cta-ttl df">Quer receber todos<br>os detalhes por email?</h3>
+      <p class="cta-sub">Enviaremos uma lista completa com fotos, tabela de preços e condições — diretamente no seu email, em minutos.</p>
+      <button class="btn-cta" onclick="ir('t-captura')">
+        Receber por email →
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ TELA 4 — CAPTURA EMAIL ══ -->
+<section class="tela" id="t-captura">
+  <div class="cap-inner">
+    <div class="cap-eye">Último passo</div>
+    <h2 class="cap-ttl df">Seu email<br>de contato.</h2>
+    <p class="cap-sub">Digite e confirme seu email. Enviaremos os <b id="cap-qtd" style="color:var(--ouro)">0</b> apartamentos encontrados direto na sua caixa de entrada.</p>
+
+    <div class="cap-alerta">
+      <span>🔒</span>
+      <span>Sem spam. Seus dados são usados apenas para envio dos imóveis selecionados.</span>
+    </div>
+
+    <div class="cap-form">
+      <input class="cap-input" type="email" id="email1" placeholder="Digite seu email" oninput="validarEmails()">
+      <div class="match-ico" id="match-ico">· · ·</div>
+      <input class="cap-input" type="email" id="email2" placeholder="Confirme seu email" oninput="validarEmails()">
+    </div>
+
+    <button class="btn-enviar" id="btn-enviar" onclick="enviarLead()" disabled>
+      Receber meus apartamentos →
+    </button>
+    <p class="form-erro" id="cap-erro" style="display:none"></p>
+
+    <p class="cap-privacidade">
+      Ao continuar você concorda em receber informações sobre imóveis por email.<br>
+      Você pode cancelar a qualquer momento.
+    </p>
+  </div>
+</section>
+
+<!-- ══ TELA 5 — CONFIRMAÇÃO ══ -->
+<section class="tela" id="t-ok">
+  <div class="ok-check">✓</div>
+  <h2 class="ok-ttl df">Enviado!</h2>
+  <p class="ok-sub">Verifique sua caixa de entrada. Os detalhes completos estão a caminho.</p>
+  <div class="ok-box">
+    📬 Enviamos um resumo de <b id="ok-qtd">0</b> apartamentos para <b id="ok-email" style="color:var(--branco)">—</b>
+  </div>
+  <div class="ok-email-sent mt">
+    🔗 No email você encontra um link para acessar <b style="color:var(--ouro)">todos os apartamentos</b> disponíveis no seu perfil na plataforma <b style="color:var(--branco)">BaseImob Total</b>.
+  </div>
+</section>
+
+<script src="config.js"></script>
+<script>
+// ── WEBHOOK_URL ──────────────────────────────────────────────────────────────
+// WEBHOOK_URL vem do config.js — mesmo backend do Base Inteligente (o
+// BaseImob usa abas próprias: LEADS_LANCAMENTOS/INTERESSES, nunca CONTATOS).
+
+// ── DADOS (fallback local + preenchidos pela API) ─────────────────────────
+let DADOS = [
+  {id:'LAN-00001',quartos:2,suites:1,vagas:1,area:51.2,precoMin:410602,precoMax:443150,precoMedio:429042,status:'Pronto',entrega:'Nov/2025',lazer:'Bicicletário,Coworking,Churrasqueira condominial,Academia,Piscina adulto,Playground,Salão de festas,Segurança'},
+  {id:'LAN-00001',quartos:3,suites:1,vagas:2,area:63.2,precoMin:470030,precoMax:517417,precoMedio:491874,status:'Pronto',entrega:'Nov/2025',lazer:'Bicicletário,Coworking,Churrasqueira condominial,Academia,Piscina adulto,Playground,Segurança'},
+  {id:'LAN-00002',quartos:2,suites:1,vagas:1,area:51.6,precoMin:429000,precoMax:449000,precoMedio:449000,status:'Pronto',entrega:'Disponível',lazer:'Churrasqueira condominial,Academia,Piscina adulto,Playground,Quadra poliesportiva,Segurança,Terraço'},
+  {id:'LAN-00002',quartos:3,suites:1,vagas:1,area:73.6,precoMin:470000,precoMax:471000,precoMedio:470500,status:'Pronto',entrega:'Disponível',lazer:'Churrasqueira condominial,Academia,Piscina adulto,Playground,Segurança'},
+  {id:'LAN-00003',quartos:2,suites:1,vagas:1,area:56.6,precoMin:353000,precoMax:376500,precoMedio:364750,status:'Pronto',entrega:'Disponível',lazer:'Brinquedoteca,Churrasqueira condominial,Academia,Piscina adulto,Playground,Salão de festas,Sauna,Segurança'},
+  {id:'LAN-00004',quartos:2,suites:0,vagas:1,area:56.5,precoMin:449000,precoMax:459000,precoMedio:454000,status:'Pronto',entrega:'Disponível',lazer:'Brinquedoteca,Churrasqueira condominial,Academia,Piscina adulto,Deck molhado,Salão de festas,Sauna,Segurança'},
+  {id:'LAN-00005',quartos:2,suites:1,vagas:1,area:53.6,precoMin:410863,precoMax:564572,precoMedio:486166,status:'Pronto',entrega:'Out/2025',lazer:'Brinquedoteca,Academia,Academia externa,Pet place,Piscina adulto,Playground,Salão de festas,Sauna,Segurança'},
+  {id:'LAN-00006',quartos:2,suites:1,vagas:1,area:63.2,precoMin:484370,precoMax:533724,precoMedio:526273,status:'Pronto',entrega:'Dez/2025',lazer:'Brinquedoteca,Coworking,Churrasqueira condominial,Academia,Pet place,Piscina adulto,Playground,Segurança,Solarium'},
+  {id:'LAN-00006',quartos:3,suites:1,vagas:1,area:76.9,precoMin:589291,precoMax:693314,precoMedio:633460,status:'Pronto',entrega:'Dez/2025',lazer:'Brinquedoteca,Coworking,Churrasqueira condominial,Academia,Pet place,Piscina adulto,Playground,Segurança,Solarium'},
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+const S = {
+  passo:1, finalidade:null, quartos:null, preco:450000,
+  pag:[], dif:[], urgencia:null,
+  email:'', encontrados:[], total:0,
+  regiao:'',
+};
+
+// ── SEGMENTAÇÃO GEOGRÁFICA ─────────────────────────────────────────────────
+// Duas campanhas separadas por região (não uma genérica "Goiânia") — o
+// anúncio linka pra ?regiao=vila-rosa ou ?regiao=aparecida, e a página
+// filtra o estoque + ajusta o texto sem precisar de 2 páginas diferentes.
+const REGIOES = {
+  'vila-rosa': {
+    pill: 'Vila Rosa · Goiânia',
+    bate: im => /vila rosa/i.test(im.bairro || ''),
+  },
+  'aparecida': {
+    pill: 'Aparecida de Goiânia',
+    bate: im => /aparecida/i.test(im.cidade || ''),
+  },
+};
+
+function aplicarRegiaoDaUrl() {
+  const slug = new URLSearchParams(window.location.search).get('regiao');
+  if (!slug || !REGIOES[slug]) return;
+  S.regiao = slug;
+  const pill = document.getElementById('hero-regiao-pill');
+  if (pill) pill.textContent = REGIOES[slug].pill;
+}
+aplicarRegiaoDaUrl();
+
+// ── NAVEGAÇÃO ─────────────────────────────────────────────────────────────
+function ir(id) {
+  document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+  document.getElementById(id).classList.add('ativa');
+  const strip = document.getElementById('insights-strip');
+  if (strip) strip.style.display = (id === 't-hero') ? 'block' : 'none';
+  window.scrollTo(0, 0);
+}
+
+function iniciarQuiz() {
+  S.passo = 1;
+  atualizarCnt();
+  ir('t-quiz');
+}
+
+// ── BUSCA EM TEMPO REAL ───────────────────────────────────────────────────
+async function carregarLancamentos() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    if (data.lancamentos && data.lancamentos.length) {
+      DADOS = data.lancamentos.map(l => ({
+        id:         l.idLancamento,
+        quartos:    parseInt(l.quartos)      || 0,
+        suites:     parseInt(l.suites)       || 0,
+        vagas:      parseInt(l.vagas)        || 0,
+        area:       parseFloat(l.areaUtil)   || 0,
+        precoMin:   parseFloat(l.precoMin)   || 0,
+        precoMax:   parseFloat(l.precoMax)   || 0,
+        precoMedio: parseFloat(l.precoMedio) || 0,
+        status:     l.status                 || '',
+        entrega:    l.previsaoEntrega        || '',
+        lazer:      l.lazer                  || '',
+        bairro:     l.bairro                 || '',
+        cidade:     l.cidade                 || '',
+      }));
+      animN('cnt-total',  DADOS.length);
+      animN('cnt-restam', DADOS.length);
+    }
+  } catch(e) {
+    console.warn('API indisponível — usando dados locais:', e.message);
+  }
+}
+carregarLancamentos();
+
+// ── QUIZ ──────────────────────────────────────────────────────────────────
+function sel(el, campo, val) {
+  el.closest('.opts').querySelectorAll('.opt').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+  S[campo] = val;
+  atualizarCnt();
+}
+
+function selQtos(el, val) {
+  document.querySelectorAll('#chips-qtos .chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  S.quartos = val;
+  atualizarCnt();
+}
+
+function togChip(el, campo) {
+  el.classList.toggle('sel');
+  const v = el.textContent.replace(/^[^\w]+\s/, '').trim();
+  if (!S[campo]) S[campo] = [];
+  if (el.classList.contains('sel')) S[campo].push(v);
+  else S[campo] = S[campo].filter(x => x !== v);
+  atualizarCnt();
+}
+
+function selUrg(el, val) {
+  document.querySelectorAll('.urg-item').forEach(i => i.classList.remove('sel'));
+  el.classList.add('sel');
+  S.urgencia = val;
+}
+
+function atuSldr(v) {
+  S.preco = parseInt(v);
+  const fmt = n => 'R$ ' + new Intl.NumberFormat('pt-BR').format(Math.round(n / 1000)) + 'k';
+  document.getElementById('sldr-val').textContent = 'R$ ' + new Intl.NumberFormat('pt-BR').format(S.preco);
+  document.getElementById('sldr-hint').textContent = `Faixa de busca: ${fmt(S.preco * .7)} a ${fmt(S.preco * 1.3)}`;
+  atualizarCnt();
+}
+
+function filtrar() {
+  const mg = 0.30;
+  return DADOS.filter(im => {
+    if (S.regiao && REGIOES[S.regiao] && !REGIOES[S.regiao].bate(im)) return false;
+    if (S.quartos && im.quartos !== S.quartos) return false;
+    if (im.precoMedio < S.preco * (1 - mg) || im.precoMedio > S.preco * (1 + mg)) return false;
+    return true;
+  }).sort((a, b) => scorePreco(b) - scorePreco(a));
+}
+
+function scorePreco(im) {
+  const d = Math.abs(im.precoMedio - S.preco) / S.preco * 100;
+  if (d <= 5)  return 100;
+  if (d <= 10) return 95;
+  if (d <= 15) return 85;
+  if (d <= 20) return 75;
+  if (d <= 25) return 70;
+  return 60;
+}
+
+function atualizarCnt() {
+  const f = filtrar();
+  animN('cnt-restam', Math.max(f.length, 1));
+  S.total = f.length;
+}
+
+function animN(id, alvo) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const atual = parseInt(el.textContent) || 0;
+  const diff  = alvo - atual;
+  const steps = 18;
+  let i = 0;
+  const iv = setInterval(() => {
+    i++;
+    el.textContent = Math.round(atual + diff * (i / steps));
+    if (i >= steps) clearInterval(iv);
+  }, 18);
+}
+
+function avancarP() {
+  if (S.passo === 1 && (!S.finalidade || !S.quartos)) return;
+  if (S.passo < 3) {
+    document.getElementById('p' + S.passo).classList.remove('ativo');
+    S.passo++;
+    document.getElementById('p' + S.passo).classList.add('ativo');
+    document.getElementById('prog').style.width = (S.passo / 3 * 100) + '%';
+    document.getElementById('btn-back').style.display = 'block';
+    if (S.passo === 3) document.getElementById('btn-next').textContent = 'Ver meus apartamentos →';
+  } else {
+    mostrarResultado();
+  }
+}
+
+function voltarP() {
+  if (S.passo > 1) {
+    document.getElementById('p' + S.passo).classList.remove('ativo');
+    S.passo--;
+    document.getElementById('p' + S.passo).classList.add('ativo');
+    document.getElementById('prog').style.width = (S.passo / 3 * 100) + '%';
+    if (S.passo === 1) document.getElementById('btn-back').style.display = 'none';
+    document.getElementById('btn-next').textContent = 'Continuar →';
+  }
+}
+
+// ── RESULTADO ─────────────────────────────────────────────────────────────
+function fmtR(n) { return 'R$ ' + new Intl.NumberFormat('pt-BR').format(n); }
+
+function lazerIcons(lazer) {
+  const map = {'Piscina':'🏊','Academia':'🏋️','Churrasqueira':'🍖','Coworking':'💻','Pet place':'🐾','Playground':'🎠','Salão de festas':'🎉','Sauna':'🧖','Segurança':'🔒','Portaria':'🔒','Quadra':'⚽','Brinquedoteca':'🧸','Solarium':'☀️','Deck':'🏖️','Espaço gourmet':'🍽️'};
+  return lazer.split(',').slice(0, 5).map(t => {
+    const k = Object.keys(map).find(k => t.includes(k));
+    return `<span class="itag">${k ? map[k] + ' ' : ''}${t.trim().split(' ').slice(0, 2).join(' ')}</span>`;
+  }).join('');
+}
+
+function renderCard(im) {
+  const score   = scorePreco(im);
+  const badgeTxt = score >= 95 ? 'Melhor match' : score >= 85 ? 'Muito próximo' : 'Compatível';
+  const badgeCls = score >= 95 ? 'bg-quente' : score >= 85 ? 'bg-lancamento' : 'bg-pronto';
+  return `
+  <div class="icard">
+    <div class="icard-top">
+      <div class="icard-tipo">Apartamento · ${im.area}m²</div>
+      <span class="icard-badge ${badgeCls}">${badgeTxt}</span>
+    </div>
+    <div class="icard-preco">
+      <span class="icard-pfrom">A partir de</span>
+      <span class="icard-pval">${fmtR(im.precoMin)}</span>
+    </div>
+    <div class="icard-dados">
+      <span class="icard-dado">🛏 ${im.quartos} quartos</span>
+      ${im.suites ? `<span class="icard-dado">🚿 ${im.suites} suíte</span>` : ''}
+      ${im.vagas  ? `<span class="icard-dado">🚗 ${im.vagas} vaga${im.vagas > 1 ? 's' : ''}</span>` : ''}
+      <span class="icard-dado">📐 ${im.area}m²</span>
+    </div>
+    <div class="icard-divider"></div>
+    <div class="icard-tags">${lazerIcons(im.lazer)}</div>
+    <div class="icard-bot">
+      <div class="icard-entrega">Entrega: <b>${im.entrega}</b></div>
+      <button class="btn-detail" onclick="ir('t-captura')">Ver detalhes →</button>
+    </div>
+  </div>`;
+}
+
+function mostrarResultado() {
+  const imoveis = filtrar();
+  // Nenhum imóvel bate exatamente os critérios (ex: pediu 5 quartos e não
+  // temos) — antes caía silenciosamente pra base toda sem avisar, fazendo
+  // parecer que tudo tinha sido filtrado pro perfil do cliente. Agora relaxa
+  // pra "mais próximos por preço" e avisa que não foi um match exato.
+  const aproximado = !imoveis.length;
+  const lista = aproximado ? [...DADOS].sort((a, b) => scorePreco(b) - scorePreco(a)) : imoveis;
+  const qtd   = lista.length;
+  document.getElementById('qtd-res').textContent  = qtd;
+  document.getElementById('cap-qtd').textContent  = qtd;
+  document.getElementById('ok-qtd').textContent   = qtd;
+  document.getElementById('res-aproximado').style.display = aproximado ? 'block' : 'none';
+  S.encontrados = lista;
+
+  const wrap = document.getElementById('cards-wrap');
+  wrap.innerHTML = lista.slice(0, 4).map(renderCard).join('');
+  if (lista.length > 4) {
+    wrap.innerHTML += `<div style="text-align:center;padding:8px 0 4px;font-size:13px;color:var(--ink3)">+${lista.length - 4} apartamentos disponíveis no email →</div>`;
+  }
+  ir('t-resultado');
+}
+
+// ── CAPTURA ───────────────────────────────────────────────────────────────
+function validarEmails() {
+  const e1  = document.getElementById('email1').value.trim();
+  const e2  = document.getElementById('email2').value.trim();
+  const ico = document.getElementById('match-ico');
+  const btn = document.getElementById('btn-enviar');
+  const re  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!e1 || !e2) { ico.innerHTML = '· · ·'; btn.disabled = true; return; }
+  if (e1 === e2 && re.test(e1)) {
+    ico.innerHTML  = '<span class="match-ok">✓ Emails confirmados</span>';
+    btn.disabled   = false;
+    S.email        = e1;
+  } else {
+    ico.innerHTML  = '<span class="match-err">✗ Emails não coincidem</span>';
+    btn.disabled   = true;
+  }
+}
+
+async function enviarLead() {
+  const btn = document.getElementById('btn-enviar');
+  const err = document.getElementById('cap-erro');
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spin"></span> Enviando...';
+  err.style.display = 'none';
+
+  // Condição de pagamento ainda não tem dado por imóvel na base (nenhum
+  // lançamento tem entrada/fgts/parcelamento cadastrado hoje) — então FGTS/
+  // à vista aqui não prometem produto nenhum, só sobem a prioridade de
+  // atendimento de quem já tem capacidade de compra mais concreta.
+  const pagArr = S.pag || [];
+  const bonusPagamento = (pagArr.includes('FGTS como entrada') || pagArr.includes('À vista')) ? 10 : 0;
+  const scoreUrg = Math.min((S.urgencia === 'alta' ? 80 : S.urgencia === 'media' ? 55 : 30) + bonusPagamento, 100);
+  const payload  = {
+    acao:           'lead_lancamento',
+    email:          S.email,
+    finalidade:     S.finalidade   || '',
+    quartos:        S.quartos      || '',
+    precoLimite:    S.preco,
+    margem:         '30%',
+    pagamento:      (S.pag || []).join(', '),
+    diferenciais:   (S.dif || []).join(', '),
+    urgencia:       S.urgencia     || '',
+    qtdEncontrados: S.encontrados.length || DADOS.length,
+    // Região entra no canal (não em coluna própria — LEADS_LANCAMENTOS não
+    // tem esse campo) pra saber de qual campanha o lead veio, já que agora
+    // são 2 campanhas separadas por região, não uma genérica "Goiânia".
+    canal:          'Landing Page Apartamentos' + (S.regiao && REGIOES[S.regiao] ? ' — ' + REGIOES[S.regiao].pill : ''),
+    tipo_contato:   'LEAD LANDING PAGE',
+    score:          scoreUrg,
+  };
+
+  // É o primeiro (e mais barato) ponto de captura do funil de tráfego pago —
+  // se a rede falhar aqui, avisa e deixa tentar de novo em vez de mostrar
+  // sucesso falso e perder o lead sem ninguém perceber.
+  try {
+    await fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)));
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = 'Receber meus apartamentos →';
+    err.textContent = 'Erro de conexão — verifique sua internet e tente novamente.';
+    err.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('ok-email').textContent = S.email;
+  ir('t-ok');
+}
+</script>
+</body>
+</html>

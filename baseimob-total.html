@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BaseImob Total — Sua busca personalizada</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+:root{
+  --ink:#0E1117;--ink2:#3A3F4B;--ink3:#8A909E;
+  --cream:#F5F0E8;--cream2:#EDE7DA;
+  --verde:#1A3D2B;--verde2:#122B1E;--verde3:#EEF4F0;
+  --ouro:#C8813A;--ouro2:#A06528;--ouro3:#FDF3E7;
+  --branco:#FDFAF6;--danger:#E74C3C;
+  --r:12px;--rs:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif;font-size:15px;line-height:1.55;overflow-x:hidden;min-height:100dvh}
+.df{font-family:'Playfair Display',Georgia,serif;font-weight:900;line-height:1.1;letter-spacing:-.02em}
+
+/* ── TELAS ── */
+.tela{display:none;min-height:100dvh;flex-direction:column}
+.tela.ativa{display:flex}
+
+/* ══ CADASTRO ══ */
+#t-cad{background:var(--verde);align-items:center;justify-content:center;padding:40px 20px}
+.cad-inner{max-width:420px;width:100%}
+.cad-logo{font-size:12px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ouro);margin-bottom:20px}
+.cad-ttl{font-size:clamp(26px,7vw,36px);color:var(--branco);margin-bottom:8px}
+.cad-sub{font-size:14px;color:rgba(253,250,246,.5);margin-bottom:28px;line-height:1.65;font-weight:300}
+.cad-form{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.cad-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:380px){.cad-row{grid-template-columns:1fr}}
+.cad-input{background:rgba(253,250,246,.07);border:1.5px solid rgba(253,250,246,.13);border-radius:var(--rs);padding:14px 16px;color:var(--branco);font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border .2s;width:100%}
+.cad-input::placeholder{color:rgba(253,250,246,.28)}
+.cad-input:focus{border-color:var(--ouro);background:rgba(253,250,246,.1)}
+.cad-section{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(253,250,246,.35);margin:14px 0 10px}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.tag-btn{padding:8px 14px;border-radius:99px;border:1.5px solid rgba(253,250,246,.18);background:transparent;color:rgba(253,250,246,.55);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .18s;user-select:none;-webkit-tap-highlight-color:transparent}
+.tag-btn:hover{border-color:var(--ouro);color:var(--branco)}
+.tag-btn.sel{border-color:var(--ouro);background:rgba(200,129,58,.18);color:var(--branco)}
+.btn-cad{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--ouro);color:var(--branco);font-family:'Inter',sans-serif;font-size:16px;font-weight:700;padding:16px 24px;border-radius:var(--rs);border:none;cursor:pointer;width:100%;transition:background .18s;margin-top:4px}
+.btn-cad:hover{background:var(--ouro2)}
+.btn-cad:disabled{opacity:.45;cursor:not-allowed}
+.cad-priv{font-size:12px;color:rgba(253,250,246,.22);text-align:center;margin-top:12px;line-height:1.6}
+.form-erro{font-size:13px;color:#ff8a7a;text-align:center;margin-top:10px;line-height:1.5}
+
+/* ══ BUSCA ══ */
+#t-busca{background:var(--cream);flex-direction:column}
+.busca-hdr{background:var(--verde);padding:16px 18px}
+.busca-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.busca-logo{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ouro)}
+.busca-user{font-size:12px;color:rgba(253,250,246,.4);display:flex;align-items:center;gap:6px}
+.busca-user b{color:rgba(253,250,246,.75)}
+.busca-ttl{font-size:clamp(16px,4vw,20px);color:var(--branco);margin-bottom:6px}
+.busca-sub{font-size:13px;color:rgba(253,250,246,.4);line-height:1.5}
+.busca-num{color:var(--ouro);font-weight:700}
+
+/* filtros */
+.filtros{background:var(--branco);border-bottom:1px solid var(--cream2);padding:14px 16px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.filtros::-webkit-scrollbar{display:none}
+.fchip{flex-shrink:0;padding:7px 13px;border-radius:99px;border:1.5px solid var(--cream2);background:var(--cream);font-size:12px;font-weight:600;color:var(--ink3);cursor:pointer;transition:all .18s;user-select:none;white-space:nowrap}
+.fchip:hover{border-color:var(--ouro);color:var(--ink)}
+.fchip.ativo{border-color:var(--verde);background:var(--verde3);color:var(--verde)}
+
+/* lista */
+.busca-lista{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;max-width:560px;margin:0 auto;width:100%;padding-bottom:100px}
+
+/* card busca */
+.bcard{background:var(--branco);border-radius:var(--r);border:1px solid var(--cream2);overflow:hidden;transition:all .2s;position:relative}
+.bcard.favoritado{border-color:var(--verde);box-shadow:0 0 0 2px rgba(26,61,43,.12)}
+.bcard-sel{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;border:2px solid var(--cream2);background:var(--branco);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;font-size:13px;z-index:2}
+.bcard.favoritado .bcard-sel{border-color:var(--verde);background:var(--verde3);color:var(--verde)}
+.bcard-body{padding:14px 14px 12px}
+.bcard-tipo{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.bcard-preco{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--verde);margin-bottom:8px}
+.bcard-dados{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.bcard-dado{font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:4px}
+.bcard-div{height:1px;background:var(--cream2);margin:0 0 10px}
+.bcard-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.btag{font-size:11px;padding:3px 8px;border-radius:4px;background:var(--cream);color:var(--ink3);font-weight:500}
+.bcard-bot{display:flex;align-items:center;justify-content:space-between}
+.bcard-entrega{font-size:12px;color:var(--ink3)}
+.bcard-entrega b{color:var(--ink)}
+.bcard-fav-btn{font-size:13px;font-weight:600;color:var(--verde);background:var(--verde3);border:none;padding:7px 14px;border-radius:99px;cursor:pointer;transition:all .18s}
+.bcard.favoritado .bcard-fav-btn{background:var(--verde);color:var(--branco)}
+
+/* barra inferior fixa */
+.barra-inferior{position:fixed;bottom:0;left:0;right:0;background:var(--branco);border-top:1px solid var(--cream2);padding:12px 16px 20px;z-index:100}
+.bi-inner{max-width:560px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.bi-count{font-size:13px;color:var(--ink3);flex-shrink:0;font-weight:600;min-width:90px}
+.bi-count b{color:var(--verde)}
+.btn-solicitar{flex:1;background:var(--ouro);color:var(--branco);font-family:'Inter',sans-serif;font-size:15px;font-weight:700;padding:14px 20px;border-radius:var(--rs);border:none;cursor:pointer;transition:background .18s,opacity .18s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-solicitar:hover:not(:disabled){background:var(--ouro2)}
+.btn-solicitar:disabled{opacity:.4;cursor:not-allowed}
+
+/* ══ CONFIRMAÇÃO ══ */
+#t-solicitado{background:var(--verde);align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+.sol-check{width:68px;height:68px;border-radius:50%;background:rgba(200,129,58,.18);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.sol-ttl{font-size:30px;color:var(--branco);margin-bottom:10px}
+.sol-sub{font-size:15px;color:rgba(253,250,246,.5);max-width:300px;margin:0 auto 24px;line-height:1.65;font-weight:300}
+.sol-box{background:rgba(253,250,246,.06);border:1px solid rgba(253,250,246,.1);border-radius:var(--r);padding:16px 20px;max-width:340px;margin:0 auto;font-size:14px;color:rgba(253,250,246,.65);line-height:1.65}
+.sol-box b{color:var(--ouro)}
+
+/* spinner */
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(253,250,246,.3);border-top-color:var(--branco);border-radius:50%;animation:rot .6s linear infinite;vertical-align:middle}
+@keyframes rot{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ══ TELA 1 — CADASTRO COMPLETO ══ -->
+<section class="tela ativa" id="t-cad">
+  <div class="cad-inner">
+    <div class="cad-logo">BaseImob Total</div>
+    <h1 class="cad-ttl df">Acesse sua busca<br>personalizada.</h1>
+    <p class="cad-sub">Complete seu cadastro para ver todos os apartamentos disponíveis no seu perfil e fazer novas pesquisas.</p>
+
+    <div class="cad-form">
+      <div class="cad-row">
+        <input class="cad-input" type="text" id="nome" placeholder="Nome" oninput="validarCad()">
+        <input class="cad-input" type="text" id="sobrenome" placeholder="Sobrenome" oninput="validarCad()">
+      </div>
+      <input class="cad-input" type="tel" id="whatsapp" placeholder="WhatsApp: (62) 9 9000-0000" oninput="validarCad()">
+    </div>
+
+    <div class="cad-section">Perfil — selecione tudo que se aplica</div>
+
+    <div class="cad-section" style="margin-top:0;margin-bottom:8px;font-size:10px;opacity:.6">FINALIDADE</div>
+    <div class="tags-wrap">
+      <div class="tag-btn" onclick="togTag(this,'final')">🏠 Quero morar</div>
+      <div class="tag-btn" onclick="togTag(this,'final')">📈 Quero investir</div>
+      <div class="tag-btn" onclick="togTag(this,'final')">🎯 Morar e valorizar</div>
+    </div>
+
+    <div class="cad-section" style="margin-top:4px;margin-bottom:8px;font-size:10px;opacity:.6">SITUAÇÃO ATUAL</div>
+    <div class="tags-wrap">
+      <div class="tag-btn" onclick="togTag(this,'situacao')">Alugando</div>
+      <div class="tag-btn" onclick="togTag(this,'situacao')">Casa própria</div>
+      <div class="tag-btn" onclick="togTag(this,'situacao')">Com família</div>
+      <div class="tag-btn" onclick="togTag(this,'situacao')">Financiando</div>
+    </div>
+
+    <div class="cad-section" style="margin-top:4px;margin-bottom:8px;font-size:10px;opacity:.6">PERFIL FAMILIAR</div>
+    <div class="tags-wrap">
+      <div class="tag-btn" onclick="togTag(this,'familia')">Solteiro(a)</div>
+      <div class="tag-btn" onclick="togTag(this,'familia')">Casal</div>
+      <div class="tag-btn" onclick="togTag(this,'familia')">Casal com filhos</div>
+      <div class="tag-btn" onclick="togTag(this,'familia')">55+</div>
+    </div>
+
+    <div class="cad-section" style="margin-top:4px;margin-bottom:8px;font-size:10px;opacity:.6">FINANCEIRO</div>
+    <div class="tags-wrap">
+      <div class="tag-btn" onclick="togTag(this,'fin')">Tenho FGTS</div>
+      <div class="tag-btn" onclick="togTag(this,'fin')">Pré-aprovado no banco</div>
+      <div class="tag-btn" onclick="togTag(this,'fin')">Preciso simular</div>
+      <div class="tag-btn" onclick="togTag(this,'fin')">Tenho entrada disponível</div>
+    </div>
+
+    <div class="cad-section" style="margin-top:4px;margin-bottom:8px;font-size:10px;opacity:.6">O QUE NÃO PODE FALTAR</div>
+    <div class="tags-wrap">
+      <div class="tag-btn" onclick="togTag(this,'must')">🏊 Piscina</div>
+      <div class="tag-btn" onclick="togTag(this,'must')">🏋️ Academia</div>
+      <div class="tag-btn" onclick="togTag(this,'must')">🔒 Portaria 24h</div>
+      <div class="tag-btn" onclick="togTag(this,'must')">🍖 Churrasqueira</div>
+      <div class="tag-btn" onclick="togTag(this,'must')">💻 Coworking</div>
+      <div class="tag-btn" onclick="togTag(this,'must')">🐾 Pet place</div>
+      <div class="tag-btn" onclick="togTag(this,'must')">🌿 Área verde</div>
+      <div class="tag-btn" onclick="togTag(this,'must')">🚗 2+ vagas</div>
+    </div>
+
+    <button class="btn-cad" id="btn-cad" onclick="entrar()" disabled>
+      Acessar minha busca →
+    </button>
+    <p class="form-erro" id="cad-erro" style="display:none"></p>
+    <p class="cad-priv">Seus dados ficam seguros e são usados apenas para personalizar sua busca.</p>
+  </div>
+</section>
+
+<!-- ══ TELA 2 — BUSCA ABERTA ══ -->
+<section class="tela" id="t-busca">
+  <div class="busca-hdr">
+    <div class="busca-top">
+      <div class="busca-logo">BaseImob Total</div>
+      <div class="busca-user">Olá, <b id="user-nome">—</b></div>
+    </div>
+    <div class="busca-ttl df">Apartamentos no seu perfil</div>
+    <div class="busca-sub"><span class="busca-num" id="busca-qtd">0</span> opções encontradas · Marque as de interesse e solicite informações</div>
+  </div>
+
+  <div class="filtros" id="filtros">
+    <div class="fchip ativo" onclick="filtrar(this,'todos')">Todos</div>
+    <div class="fchip" onclick="filtrar(this,'2q')">2 quartos</div>
+    <div class="fchip" onclick="filtrar(this,'3q')">3 quartos</div>
+    <div class="fchip" onclick="filtrar(this,'ate400')">Até R$ 400k</div>
+    <div class="fchip" onclick="filtrar(this,'400a550')">R$ 400k–550k</div>
+    <div class="fchip" onclick="filtrar(this,'acima550')">Acima R$ 550k</div>
+    <div class="fchip" onclick="filtrar(this,'pronto')">Pronto</div>
+    <div class="fchip" onclick="filtrar(this,'piscina')">🏊 Piscina</div>
+    <div class="fchip" onclick="filtrar(this,'academia')">🏋️ Academia</div>
+    <div class="fchip" onclick="filtrar(this,'cowork')">💻 Coworking</div>
+    <div class="fchip" onclick="filtrar(this,'pet')">🐾 Pet place</div>
+  </div>
+
+  <div class="busca-lista" id="busca-lista"></div>
+
+  <div class="barra-inferior">
+    <div class="bi-inner">
+      <div class="bi-count"><b id="sel-count">0</b> selecionados</div>
+      <button class="btn-solicitar" id="btn-solicitar" onclick="solicitarInfo()" disabled>
+        Solicitar informações →
+      </button>
+    </div>
+    <p class="form-erro" id="solicitar-erro" style="display:none;margin-top:8px"></p>
+  </div>
+</section>
+
+<!-- ══ TELA 3 — SOLICITADO ══ -->
+<section class="tela" id="t-solicitado">
+  <div class="sol-check">✓</div>
+  <h2 class="sol-ttl df">Solicitação enviada!</h2>
+  <p class="sol-sub">Um especialista vai entrar em contato com você em breve com todos os detalhes.</p>
+  <div class="sol-box">
+    📋 Você selecionou <b id="sol-qtd">0</b> apartamentos.<br><br>
+    Nossa equipe receberá seu perfil completo e as opções de interesse para preparar um atendimento personalizado.
+  </div>
+</section>
+
+<script src="config.js"></script>
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────
+// WEBHOOK_URL vem do config.js — mesmo backend do Base Inteligente (o
+// BaseImob usa abas próprias: LEADS_LANCAMENTOS/INTERESSES, nunca CONTATOS).
+
+// ── DADOS (fallback local — substituído pela API após login) ──────────────
+let DADOS = [
+  {id:'LAN-00001',quartos:2,suites:1,vagas:1,area:51.2,precoMin:410602,precoMedio:429042,status:'Pronto',entrega:'Nov/2025',lazer:'Bicicletário,Coworking,Churrasqueira condominial,Academia,Piscina adulto,Playground,Salão de festas,Segurança'},
+  {id:'LAN-00001',quartos:3,suites:1,vagas:2,area:63.2,precoMin:470030,precoMedio:491874,status:'Pronto',entrega:'Nov/2025',lazer:'Bicicletário,Coworking,Churrasqueira condominial,Academia,Piscina adulto,Playground,Segurança'},
+  {id:'LAN-00002',quartos:2,suites:1,vagas:1,area:51.6,precoMin:429000,precoMedio:449000,status:'Pronto',entrega:'Disponível',lazer:'Churrasqueira condominial,Academia,Piscina adulto,Playground,Quadra poliesportiva,Segurança,Terraço'},
+  {id:'LAN-00002',quartos:3,suites:1,vagas:1,area:73.6,precoMin:470000,precoMedio:470500,status:'Pronto',entrega:'Disponível',lazer:'Churrasqueira condominial,Academia,Piscina adulto,Playground,Quadra poliesportiva,Segurança,Terraço'},
+  {id:'LAN-00003',quartos:2,suites:1,vagas:1,area:56.6,precoMin:353000,precoMedio:364750,status:'Pronto',entrega:'Disponível',lazer:'Brinquedoteca,Churrasqueira condominial,Academia,Piscina adulto,Piscina infantil,Playground,Salão de festas,Sauna,Segurança'},
+  {id:'LAN-00004',quartos:2,suites:0,vagas:1,area:56.5,precoMin:449000,precoMedio:454000,status:'Pronto',entrega:'Disponível',lazer:'Brinquedoteca,Churrasqueira condominial,Academia,Piscina adulto,Deck molhado,Salão de festas,Sauna,Segurança'},
+  {id:'LAN-00005',quartos:2,suites:1,vagas:1,area:53.6,precoMin:410863,precoMedio:486166,status:'Pronto',entrega:'Out/2025',lazer:'Brinquedoteca,Academia,Academia externa,Pet place,Piscina adulto,Playground,Salão de festas,Sauna,Segurança'},
+  {id:'LAN-00005',quartos:2,suites:1,vagas:1,area:55.1,precoMin:467701,precoMedio:505360,status:'Pronto',entrega:'Out/2025',lazer:'Brinquedoteca,Academia,Academia externa,Pet place,Piscina adulto,Playground,Salão de festas,Sauna,Segurança'},
+  {id:'LAN-00006',quartos:2,suites:1,vagas:1,area:63.2,precoMin:484370,precoMedio:526273,status:'Pronto',entrega:'Dez/2025',lazer:'Brinquedoteca,Coworking,Churrasqueira condominial,Academia,Academia externa,Pet place,Piscina adulto,Playground,Quadra poliesportiva,Sala de reuniões,Segurança,Solarium'},
+  {id:'LAN-00006',quartos:3,suites:1,vagas:1,area:76.9,precoMin:589291,precoMedio:633460,status:'Pronto',entrega:'Dez/2025',lazer:'Brinquedoteca,Coworking,Churrasqueira condominial,Academia,Academia externa,Pet place,Piscina adulto,Playground,Quadra poliesportiva,Sala de reuniões,Segurança,Solarium'},
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+const U = { nome:'', sobrenome:'', whatsapp:'', tags:{}, email:'' };
+const selecionados = new Set();
+let listaAtual = [];
+let filtroAtivo = 'todos';
+
+// ── NAVEGAÇÃO ─────────────────────────────────────────────────────────────
+function ir(id) {
+  document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+  document.getElementById(id).classList.add('ativa');
+  window.scrollTo(0, 0);
+}
+
+// ── CADASTRO ─────────────────────────────────────────────────────────────
+function togTag(el, grupo) {
+  el.classList.toggle('sel');
+  // Emojis (🏊, 🏋️ etc.) ocupam 2+ unidades UTF-16 — um "." só casa 1, então
+  // nunca batia e o emoji ficava colado na tag salva. [^\w]+ consome a
+  // sequência toda (emoji + variation selector) independente do tamanho.
+  const v = el.textContent.trim().replace(/^[^\w]+\s*/, '');
+  if (!U.tags[grupo]) U.tags[grupo] = [];
+  if (el.classList.contains('sel')) U.tags[grupo].push(v);
+  else U.tags[grupo] = U.tags[grupo].filter(x => x !== v);
+  validarCad();
+}
+
+function validarCad() {
+  // Conta só os dígitos do WhatsApp (aceita qualquer formatação de máscara) —
+  // celular BR com DDD tem 10-11 dígitos; exigir 10+ evita "12345678" passar
+  // como número válido só por ter 8+ caracteres.
+  const digitosWhats = document.getElementById('whatsapp').value.replace(/\D/g, '');
+  const ok = document.getElementById('nome').value.trim().length >= 2 &&
+             document.getElementById('sobrenome').value.trim().length >= 2 &&
+             digitosWhats.length >= 10;
+  document.getElementById('btn-cad').disabled = !ok;
+}
+
+async function entrar() {
+  U.nome      = document.getElementById('nome').value.trim();
+  U.sobrenome = document.getElementById('sobrenome').value.trim();
+  U.whatsapp  = document.getElementById('whatsapp').value.trim();
+  U.email     = new URLSearchParams(window.location.search).get('email') || '';
+
+  const btn = document.getElementById('btn-cad');
+  const err = document.getElementById('cad-erro');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Entrando...';
+  err.style.display = 'none';
+
+  // Condição de pagamento ainda não tem dado por imóvel na base — então
+  // "Tenho FGTS"/"Pré-aprovado"/"Tenho entrada" aqui não prometem produto
+  // nenhum, só sobem a prioridade de atendimento de quem já tem capacidade
+  // de compra mais concreta (score é só pro corretor, não aparece pro lead).
+  const tagsFin = (U.tags && U.tags.fin) || [];
+  const scoreFin = tagsFin.some(t => ['Tenho FGTS', 'Pré-aprovado no banco', 'Tenho entrada disponível'].includes(t)) ? 70 : 50;
+
+  const payload = {
+    acao:         'lead_lancamento',
+    nome:         U.nome,
+    sobrenome:    U.sobrenome,
+    telefone:     U.whatsapp,
+    email:        U.email,
+    tags:         JSON.stringify(U.tags),
+    canal:        'BaseImob Total — Cadastro',
+    tipo_contato: 'LEAD QUALIFICADO',
+    score:        scoreFin,
+  };
+
+  // Um lead de tráfego pago que falha em salvar silenciosamente é dinheiro
+  // perdido — se a rede falhar, avisa e deixa tentar de novo em vez de seguir
+  // como se tivesse dado certo.
+  try {
+    await fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)));
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = 'Acessar minha busca →';
+    err.textContent = 'Erro de conexão — verifique sua internet e tente novamente.';
+    err.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('user-nome').textContent = U.nome;
+  listaAtual = [...DADOS];
+  renderLista(listaAtual);
+  ir('t-busca');
+  carregarDadosAPI(); // atualiza com dados reais após mostrar a tela
+}
+
+// ── BUSCA EM TEMPO REAL ───────────────────────────────────────────────────
+async function carregarDadosAPI() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    if (data.lancamentos && data.lancamentos.length) {
+      DADOS = data.lancamentos.map(l => ({
+        id:         l.idLancamento,
+        quartos:    parseInt(l.quartos)      || 0,
+        suites:     parseInt(l.suites)       || 0,
+        vagas:      parseInt(l.vagas)        || 0,
+        area:       parseFloat(l.areaUtil)   || 0,
+        precoMin:   parseFloat(l.precoMin)   || 0,
+        precoMedio: parseFloat(l.precoMedio) || 0,
+        status:     l.status                 || '',
+        entrega:    l.previsaoEntrega        || '',
+        lazer:      l.lazer                  || '',
+      }));
+      listaAtual = [...DADOS];
+      renderLista(listaAtual);
+    }
+  } catch(e) {
+    console.warn('API indisponível — mantendo dados locais:', e.message);
+  }
+}
+
+// ── FILTROS ───────────────────────────────────────────────────────────────
+function filtrar(el, tipo) {
+  document.querySelectorAll('.fchip').forEach(f => f.classList.remove('ativo'));
+  el.classList.add('ativo');
+  filtroAtivo = tipo;
+
+  let lista = [...DADOS];
+  if      (tipo === '2q')       lista = lista.filter(i => i.quartos === 2);
+  else if (tipo === '3q')       lista = lista.filter(i => i.quartos === 3);
+  else if (tipo === 'ate400')   lista = lista.filter(i => i.precoMedio <= 400000);
+  else if (tipo === '400a550')  lista = lista.filter(i => i.precoMedio > 400000 && i.precoMedio <= 550000);
+  else if (tipo === 'acima550') lista = lista.filter(i => i.precoMedio > 550000);
+  else if (tipo === 'pronto')   lista = lista.filter(i => i.status === 'Pronto');
+  else if (tipo === 'piscina')  lista = lista.filter(i => i.lazer.toLowerCase().includes('piscina'));
+  else if (tipo === 'academia') lista = lista.filter(i => i.lazer.toLowerCase().includes('academia'));
+  else if (tipo === 'cowork')   lista = lista.filter(i => i.lazer.toLowerCase().includes('cowork'));
+  else if (tipo === 'pet')      lista = lista.filter(i => i.lazer.toLowerCase().includes('pet'));
+
+  listaAtual = lista;
+  renderLista(lista);
+}
+
+// ── RENDER LISTA ──────────────────────────────────────────────────────────
+function fmtR(n) { return 'R$ ' + new Intl.NumberFormat('pt-BR').format(n); }
+
+function lazerResumido(lazer) {
+  return lazer.split(',').slice(0, 4)
+    .map(t => `<span class="btag">${t.trim().split(' ').slice(0, 2).join(' ')}</span>`)
+    .join('');
+}
+
+function renderLista(lista) {
+  document.getElementById('busca-qtd').textContent = lista.length;
+  const wrap = document.getElementById('busca-lista');
+  if (!lista.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:14px">Nenhum apartamento encontrado com esse filtro.</div>';
+    return;
+  }
+  wrap.innerHTML = lista.map((im, idx) => {
+    const key   = im.id + '-' + idx;
+    const isSel = selecionados.has(key);
+    return `
+    <div class="bcard${isSel ? ' favoritado' : ''}" id="card-${key}">
+      <div class="bcard-sel" onclick="toggleSel('${key}')">${isSel ? '✓' : '○'}</div>
+      <div class="bcard-body">
+        <div class="bcard-tipo">Apartamento · ${im.quartos} quartos · ${im.area}m²</div>
+        <div class="bcard-preco">${fmtR(im.precoMin)}</div>
+        <div class="bcard-dados">
+          <span class="bcard-dado">🛏 ${im.quartos} quartos</span>
+          ${im.suites ? `<span class="bcard-dado">🚿 ${im.suites} suíte</span>` : ''}
+          <span class="bcard-dado">🚗 ${im.vagas || 0} vaga${im.vagas > 1 ? 's' : ''}</span>
+          <span class="bcard-dado">📐 ${im.area}m²</span>
+        </div>
+        <div class="bcard-div"></div>
+        <div class="bcard-tags">${lazerResumido(im.lazer)}</div>
+        <div class="bcard-bot">
+          <div class="bcard-entrega">Entrega: <b>${im.entrega}</b></div>
+          <button class="bcard-fav-btn" onclick="toggleSel('${key}')">
+            ${isSel ? '✓ Selecionado' : '+ Tenho interesse'}
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSel(key) {
+  if (selecionados.has(key)) selecionados.delete(key);
+  else selecionados.add(key);
+  atualizarBarra();
+  renderLista(listaAtual);
+}
+
+function atualizarBarra() {
+  const n = selecionados.size;
+  document.getElementById('sel-count').textContent  = n;
+  document.getElementById('btn-solicitar').disabled = n === 0;
+}
+
+// ── SOLICITAR INFORMAÇÕES ─────────────────────────────────────────────────
+async function solicitarInfo() {
+  const btn = document.getElementById('btn-solicitar');
+  const err = document.getElementById('solicitar-erro');
+  btn.disabled  = true;
+  btn.innerHTML = '<span class="spin"></span> Enviando...';
+  err.style.display = 'none';
+
+  const payload = {
+    acao:         'interesse_lancamento',
+    nome:         U.nome + ' ' + U.sobrenome,
+    telefone:     U.whatsapp,
+    email:        U.email,
+    qtdInteresse: selecionados.size,
+    idsInteresse: Array.from(selecionados).join(', '),
+    tags:         JSON.stringify(U.tags),
+    canal:        'BaseImob Total — Solicitação',
+    tipo_contato: 'LEAD QUENTE',
+    score:        90,
+  };
+
+  // Esse é o momento mais quente do funil (cliente pediu contato) — se a
+  // rede falhar aqui, avisa e deixa tentar de novo em vez de mostrar sucesso
+  // falso e perder o lead sem o corretor nunca saber que ele existiu.
+  try {
+    await fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)));
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = 'Solicitar informações →';
+    err.textContent = 'Erro de conexão — verifique sua internet e tente novamente.';
+    err.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('sol-qtd').textContent = selecionados.size;
+  ir('t-solicitado');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+// Recupera email da URL caso tenha vindo do link do email de pré-cadastro
+U.email = new URLSearchParams(window.location.search).get('email') || '';
+</script>
+</body>
+</html>
