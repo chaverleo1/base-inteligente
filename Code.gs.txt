@@ -928,6 +928,7 @@ function tituloCase_(s) {
 function opcoesFiltro_() {
   var revenda     = lerAba_('REVENDA');
   var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS');
+  var lancamentos = lerAba_('LANCAMENTOS');
 
   var tiposMap = {};
   function registrarTipo(t) {
@@ -949,10 +950,24 @@ function opcoesFiltro_() {
   revenda.forEach(function(r) { registrarBairro(r.bairro); });
   construtora.forEach(function(r) { registrarBairro(r.bairro); });
 
-  var tipos = Object.keys(tiposMap).map(function(k) { return tiposMap[k]; }).sort();
-  var bairros = Object.keys(bairrosMap).map(function(k) { return bairrosMap[k]; }).sort();
+  // Status do empreendimento — só existe de forma estruturada em LANCAMENTOS
+  // e CONSTRUTORA-APARTAMENTOS (Em planta/Em obras/Pronto/Pronto novo/Entregue);
+  // REVENDA é sempre pronto/usado, não tem esse conceito.
+  var statusMap = {};
+  function registrarStatus(s) {
+    s = String(s || '').trim();
+    if (!s) return;
+    var chave = norm_(s);
+    if (!statusMap[chave]) statusMap[chave] = s; // preserva a grafia original (ex: "Pronto novo")
+  }
+  lancamentos.forEach(function(r) { registrarStatus(r.status); });
+  construtora.forEach(function(r) { registrarStatus(r.status); });
 
-  return { tipos: tipos, bairros: bairros };
+  var tipos  = Object.keys(tiposMap).map(function(k) { return tiposMap[k]; }).sort();
+  var bairros = Object.keys(bairrosMap).map(function(k) { return bairrosMap[k]; }).sort();
+  var status  = Object.keys(statusMap).map(function(k) { return statusMap[k]; }).sort();
+
+  return { tipos: tipos, bairros: bairros, status: status };
 }
 
 // d: { tipo, quartos, suites, vagas, precoMax, bairros:[], condPagto:[], extras:[], urgencia, texto }
@@ -990,6 +1005,14 @@ function buscaAberta_(d) {
   var lancamentos = lerAba_('LANCAMENTOS').map(lancamentoParaImovel_);
   var todos       = revenda.concat(construtora).concat(lancamentos);
 
+  // Status do empreendimento (Em planta/Em obras/Pronto/Pronto novo/Entregue) —
+  // filtro rígido, igual ao de tipo incompatível: não faz sentido "pontuar
+  // parcialmente" um estágio errado, ou é o estágio que o cliente quer ou não é.
+  var statusFiltro = d.status ? norm_(d.status) : '';
+  if (statusFiltro) {
+    todos = todos.filter(function(imo) { return norm_(imo.estagio || '') === statusFiltro; });
+  }
+
   // Limiar mais permissivo que o rodarMatching (70) — aqui é exploratório,
   // não alimenta o dashboard/MATCHES, então vale mostrar até opções parciais.
   var resultados = [];
@@ -1004,7 +1027,8 @@ function buscaAberta_(d) {
     interpretado: {
       tipo: d.tipo || TIPO_LABEL_BUSCA[extrairTipo_(textoLivre)] || '',
       precoLimite: contatoSintetico.precoLimite,
-      bairros: bairros.length ? bairros.join(', ') : ''
+      bairros: bairros.length ? bairros.join(', ') : '',
+      status: d.status || ''
     },
     resultados: resultados.map(function(r) {
       var imo = r.imo;

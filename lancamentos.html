@@ -365,6 +365,7 @@ select.form-input option { background: var(--surface2); }
             <option value="Em planta">Em planta</option>
             <option value="Em obras">Em obras</option>
             <option value="Pronto">Pronto para entregar</option>
+            <option value="Pronto novo">Pronto novo</option>
             <option value="Entregue">Entregue</option>
           </select>
         </div>
@@ -727,7 +728,10 @@ function extrairBloco1(txt) {
     const es = estagioM[1].trim().toLowerCase();
     if      (es.includes('planta') || es.includes('lança') || es.includes('pré'))       b.status = 'Em planta';
     else if (es.includes('obra')   || es.includes('constru'))                            b.status = 'Em obras';
-    else if (es.includes('pronto') || es.includes('pronto novo'))                        b.status = 'Pronto';
+    // "Pronto novo" tem que ser checado ANTES do "pronto" genérico — senão a
+    // palavra "novo" nunca sobrevive, já que "pronto novo" também contém "pronto".
+    else if (es.includes('pronto novo'))                                                 b.status = 'Pronto novo';
+    else if (es.includes('pronto'))                                                      b.status = 'Pronto';
     else if (es.includes('entregue') || es.includes('conclu'))                           b.status = 'Entregue';
     else                                                                                  b.status = estagioM[1].trim().substring(0, 40);
   } else {

@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 10) — Status "Pronto novo" + filtro de status na Busca Aberta
+
+**1. Fix na extração do Bloco 1 (Lançamentos)**: "Estágio: Pronto novo" (Orulo) estava sendo
+simplificado pra "Pronto" — a classificação `es.includes('pronto')` batia antes de checar o caso
+mais específico "pronto novo". `lancamentos.html`: adicionado um `else if` checando "pronto novo"
+**antes** do "pronto" genérico, e a opção "Pronto novo" no `<select id="f-status">` (antes só
+tinha Em planta/Em obras/Pronto/Entregue). Testado com o exemplo real da Ares Marista (Node +
+preview): status extraído corretamente como "Pronto novo"; reconfirmado que "Estágio: Pronto para
+entregar" continua virando "Pronto" normalmente, sem regressão.
+
+**2. Filtro "Status do empreendimento" na Busca Aberta**: pedido do usuário pra poder filtrar
+resultados por estágio da obra (Em planta/Em obras/Pronto/Pronto novo/Entregue), já que isso só
+existe pra Lançamentos e Construtora (Revenda é sempre pronto/usado).
+- `Code.gs.txt`: `opcoesFiltro_()` agora também coleta os valores distintos de `status` de
+  LANCAMENTOS e CONSTRUTORA-APARTAMENTOS (mesmo padrão de agrupamento normalizado já usado pra
+  tipo/bairro), devolvidos como `status: [...]`. `buscaAberta_()` passa a aceitar `d.status` e
+  aplica um **filtro rígido** (exclui da busca em vez de só pontuar) — status é categórico
+  (é o estágio certo ou não é), igual à desqualificação por tipo incompatível, diferente do
+  bairro/preço que dão pontuação parcial.
+- `busca.html`: nova seção de filtro "Status do empreendimento" (chips single-select, populados
+  dinamicamente via `opcoes_filtro`, igual ao padrão de "Tipo de imóvel"), incluída no payload de
+  `executarBusca()` e exibida no resumo do resultado (`renderResultados`).
+
+Testado em Node (mock do `SpreadsheetApp`): `opcoesFiltro_()` traz os 3 status de exemplo, filtro
+por "Pronto novo" isola corretamente só o lançamento certo, sem filtro retorna todos. Testado no
+preview: chips renderizam, seleção envia `status` no payload de busca. `testarMatching()` e o
+teste de extração do Bloco 1 continuam passando (sem regressão).
+
 ## 2026-07-03 (parte 9) — Segurança: backend passa a exigir sessão válida
 
 **Achado**: a tela de senha nas 5 páginas era só cosmética. `doGet`/`doPost` no `Code.gs.txt` não
