@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 7) — WEBHOOK_URL centralizado em config.js
+
+Terceira ideia de melhoria proposta nesta sessão, aprovada pelo usuário: toda vez que o Code.gs é
+reimplantado gerando uma URL nova, ela precisava ser copiada manualmente em 5 arquivos
+(`index.html`, `dashboard.html`, `busca.html`, `lancamentos.html`, `reset.html`) — fácil esquecer
+um e deixar uma página órfã apontando pra URL antiga.
+
+**Fix**: criado `config.js` na raiz do repositório com a constante `WEBHOOK_URL`. As 5 páginas
+agora carregam `<script src="config.js"></script>` logo antes do próprio `<script>` que usa a
+constante, em vez de declará-la localmente. Daqui pra frente, uma reimplantação com URL nova
+exige editar **1 arquivo**, não 5.
+
+Retestado no preview: as 5 páginas carregam `config.js` sem erro de console, `WEBHOOK_URL` fica
+definida globalmente antes de qualquer chamada de rede, e nenhuma delas ficou com declaração
+duplicada da constante.
+
+**Lembrete do usuário, sem precisar de código**: usar sempre "Editar implantação → Nova versão"
+no Apps Script (em vez de "Nova implantação") já evita a URL mudar — o `config.js` cobre o caso
+em que ela muda mesmo assim.
+
 ## 2026-07-03 (parte 6) — Coluna "unidades" renomeada para "unidade" em LANCAMENTOS
 
 Pedido do usuário: a coluna guarda um **código de referência de uma unidade específica** (ex:
