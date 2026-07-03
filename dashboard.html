@@ -344,8 +344,14 @@
 
 <script src="config.js"></script>
 <script>
-const SESS_KEY     = 'bi_session';
+const SESS_KEY       = 'bi_session';
+const SESS_TOKEN_KEY = 'bi_session_token';
 const USER_EMAIL   = 'chaverleo@gmail.com';
+
+// Token de sessão emitido pelo servidor no login — exigido pelo backend em
+// toda ação sensível (ver Code.gs). Sem token válido, o servidor responde
+// {status:'nao_autenticado'} mesmo que o navegador "ache" que está logado.
+function tokenSessao() { return sessionStorage.getItem(SESS_TOKEN_KEY) || ''; }
 
 async function sha256(texto) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
@@ -353,7 +359,7 @@ async function sha256(texto) {
 }
 
 async function verificarAuth() {
-  if (sessionStorage.getItem(SESS_KEY) === 'ok') { fecharLogin(); carregarDados(); return; }
+  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) { fecharLogin(); carregarDados(); return; }
 }
 
 async function entrar() {
@@ -367,6 +373,7 @@ async function entrar() {
     const data = await resp.json();
     if (data.ok) {
       sessionStorage.setItem(SESS_KEY, 'ok');
+      sessionStorage.setItem(SESS_TOKEN_KEY, data.token);
       fecharLogin();
       carregarDados();
     } else {
@@ -382,8 +389,17 @@ function fecharLogin() {
   document.getElementById('loginOverlay').style.display = 'none';
 }
 
+// Sessão expira depois de 6h (ver SESSAO_TTL_SEGUNDOS no Code.gs) — quando o
+// backend responde 'nao_autenticado', volta pra tela de login em vez de
+// mostrar erro genérico ou falhar silenciosamente.
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { sair(); return true; }
+  return false;
+}
+
 function sair() {
   sessionStorage.removeItem(SESS_KEY);
+  sessionStorage.removeItem(SESS_TOKEN_KEY);
   document.getElementById('loginOverlay').style.display = 'flex';
   document.getElementById('inputSenha').value = '';
   document.getElementById('loginErr').textContent = '';
@@ -402,8 +418,9 @@ let chartConsFaixa  = null;
 
 async function carregarDados() {
   try {
-    const res  = await fetch(WEBHOOK_URL + '?acao=dashboard');
+    const res  = await fetch(WEBHOOK_URL + '?acao=dashboard&token=' + encodeURIComponent(tokenSessao()));
     const json = await res.json();
+    if (trataNaoAutenticado(json)) return;
     renderDados(json);
   } catch(err) {
     document.getElementById('cardsRow').innerHTML =
@@ -663,7 +680,7 @@ async function carregarMatchesDrawer(cod, cliente) {
   const el = document.getElementById('drawerImoveis');
   if (!el) return;
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=matches_cliente&cod=' + encodeURIComponent(cod));
+    const resp = await fetch(WEBHOOK_URL + '?acao=matches_cliente&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao()));
     const lista = await resp.json();
     if (!Array.isArray(lista) || !lista.length) {
       el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>';
@@ -778,7 +795,7 @@ async function abrirCliente(nome, score, cod) {
   abrirDrawer();
 
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(nome));
+    const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(nome) + '&token=' + encodeURIComponent(tokenSessao()));
     const text = await resp.text();
     let lista;
     try { lista = JSON.parse(text); } catch(pe) {
@@ -945,9 +962,10 @@ async function excluirCliente_(linha, nome) {
   if (!confirm(`Excluir o cadastro de "${nome}" permanentemente?\n\nEssa ação não pode ser desfeita.`)) return;
   try {
     const fd = new FormData();
-    fd.append('dados', JSON.stringify({ acao: 'excluir', _linha: linha }));
+    fd.append('dados', JSON.stringify({ acao: 'excluir', _linha: linha, token: tokenSessao() }));
     const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
     const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
     if (r.status === 'excluido') {
       fecharDrawer();
       alert(`Cadastro de "${nome}" excluído com sucesso.`);

@@ -1,5 +1,54 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 9) — Segurança: backend passa a exigir sessão válida
+
+**Achado**: a tela de senha nas 5 páginas era só cosmética. `doGet`/`doPost` no `Code.gs.txt` não
+checavam nenhuma credencial antes de executar ações — `verificar_senha` só devolvia `true/false`
+pro navegador guardar num `sessionStorage`, mas `dashboard`, `buscar`, `buscar_linha`,
+`matches_cliente`, `opcoes_filtro`, `listar_lancamentos`, `excluir`, `salvar`/`atualizar`,
+`busca_aberta`, `salvar_lancamento` e `excluir_lancamento` executavam pra **qualquer chamada**,
+sem verificar login algum. Como o repositório é público e agora até `config.js` deixa a URL do
+Web App mais fácil de achar, qualquer pessoa com essa URL conseguia ler (e até apagar) a base
+inteira de ~5700 contatos direto pela URL, sem senha nenhuma.
+
+**Fix — sessão de servidor via `CacheService`**:
+- `Code.gs.txt`: `verificarSenha_()` agora, ao validar a senha, gera um token de sessão
+  (`criarSessao_()`, UUID guardado no `CacheService` com validade de 6h — o máximo permitido) e
+  devolve ele na resposta. `doGet`/`doPost` passaram a checar `sessaoValida_(token)` antes de
+  executar qualquer ação, **exceto** as do próprio fluxo de login/reset de senha
+  (`verificar_senha`, `esqueci_senha`, `validar_token`, `salvar_senha` — essa última já é
+  protegida pelo seu próprio token de reset, de uso único e validade de 1h).
+- As 5 páginas HTML: guardam o token recebido no login em `sessionStorage` (`bi_session_token`,
+  ao lado do `bi_session` já existente) e passam a mandar esse token em toda chamada sensível —
+  como parâmetro `token` na URL (GET) ou dentro do JSON do corpo (POST). Se o servidor responder
+  `{status:'nao_autenticado'}` (token ausente/expirado), a página volta pra tela de login em vez
+  de falhar silenciosamente ou mostrar um erro genérico.
+- `index.html`: o carregamento de cliente via `?linha=N` (link "Editar" do dashboard) foi movido
+  pra só disparar **depois** do login confirmado (antes disparava imediatamente ao carregar a
+  página, o que agora falharia com sessão ainda não validada).
+
+**Trade-off consciente**: não é uma segurança "perfeita" — quem inspecionar o tráfego de rede
+durante uma sessão ativa ainda veria o token válido por até 6h. Mas fecha a brecha atual de
+"totalmente aberto, sem senha nenhuma", que é o problema real e presente.
+
+**Validado sem tocar produção**: toda a lógica de gate (`sessaoValida_`, `doGet`, `doPost`) e a
+emissão de token foram testadas em Node com `CacheService`/`PropertiesService` mockados (8/8
+cenários: bloqueia sem token, bloqueia com token errado, libera com token válido, ações públicas
+do fluxo de login continuam acessíveis). No lado do cliente, os 5 fluxos de login e as chamadas
+sensíveis de cada página foram testados no preview com `fetch` mockado, confirmando que o token é
+armazenado e enviado no formato certo em cada uma. `testarMatching()` continua 19/19 (mudança não
+toca no motor de score).
+
+**Achado à parte, não corrigido agora** (fora do escopo desta mudança): `lancamentos.html`
+calcula o hash da senha como `sha256(senha)`, enquanto as outras 4 páginas usam
+`sha256(senha + email)` — são fórmulas diferentes, então login feito diretamente nessa página
+provavelmente sempre falharia com "Senha incorreta". Na prática isso não trava ninguém, porque
+`sessionStorage` é compartilhado entre páginas da mesma aba, e o usuário sempre chega em
+Lançamentos já autenticado por outra página. Vale corrigir num momento oportuno.
+
+**Ação pendente do usuário**: colar o `Code.gs.txt` atualizado no editor do Apps Script e
+reimplantar ("Editar implantação → Nova versão").
+
 ## 2026-07-03 (parte 8) — Causa raiz do mojibake (corrupção de acentos): confirmada
 
 Investigação da 3ª ideia de melhoria pendente desta sessão. Revisão completa da cadeia de dados

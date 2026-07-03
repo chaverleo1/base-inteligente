@@ -457,8 +457,19 @@
 
 <script>
   // ── AUTH ───────────────────────────────────────────────────────────────────
-  const SESS_KEY   = 'bi_session';
+  const SESS_KEY       = 'bi_session';
+  const SESS_TOKEN_KEY = 'bi_session_token';
   const USER_EMAIL = 'chaverleo@gmail.com';
+
+  // Token de sessão emitido pelo servidor no login — exigido pelo backend em
+  // toda ação sensível (ver Code.gs). Sem token válido, o servidor responde
+  // {status:'nao_autenticado'} mesmo que o navegador "ache" que está logado.
+  function tokenSessao() { return sessionStorage.getItem(SESS_TOKEN_KEY) || ''; }
+
+  function trataNaoAutenticado(json) {
+    if (json && json.status === 'nao_autenticado') { sair(); return true; }
+    return false;
+  }
 
   async function sha256(texto) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
@@ -466,7 +477,7 @@
   }
 
   async function verificarAuth() {
-    if (sessionStorage.getItem(SESS_KEY) === 'ok') { fecharLogin(); return; }
+    if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) { fecharLogin(); carregarClienteDaUrl(); return; }
     // Overlay fica visível — usuário precisa digitar senha
   }
 
@@ -484,7 +495,9 @@
       const data = await resp.json();
       if (data.ok) {
         sessionStorage.setItem(SESS_KEY, 'ok');
+        sessionStorage.setItem(SESS_TOKEN_KEY, data.token);
         fecharLogin();
+        carregarClienteDaUrl();
       } else if (data.motivo === 'sem_senha') {
         err.style.color = 'var(--accent)';
         err.textContent = 'Nenhuma senha cadastrada. Use "Esqueci a senha".';
@@ -552,6 +565,7 @@
 
   function sair() {
     sessionStorage.removeItem(SESS_KEY);
+    sessionStorage.removeItem(SESS_TOKEN_KEY);
     document.getElementById('loginOverlay').style.display = 'flex';
     document.getElementById('inputSenha').value = '';
     document.getElementById('loginErr').textContent = '';
@@ -814,6 +828,7 @@
       conversa:        g('conversa'),
       observacoes:     g('observacoes'),
       score,
+      token: tokenSessao(),
       ...(linhaAtual ? { _linha: linhaAtual } : {}),
     };
 
@@ -882,7 +897,7 @@
 
   async function buscarNoSheets(q) {
     try {
-      const url = WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(q);
+      const url = WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(q) + '&token=' + encodeURIComponent(tokenSessao());
       const res = await fetch(url);
       const json = await res.json();
       const lista = Array.isArray(json) ? json : (json.status ? [] : []);
@@ -997,7 +1012,7 @@
     const linha = new URLSearchParams(window.location.search).get('linha');
     if (!linha) return;
     try {
-      const resp = await fetch(WEBHOOK_URL + '?acao=buscar_linha&linha=' + encodeURIComponent(linha));
+      const resp = await fetch(WEBHOOK_URL + '?acao=buscar_linha&linha=' + encodeURIComponent(linha) + '&token=' + encodeURIComponent(tokenSessao()));
       const c = await resp.json();
       if (!c || c.status || !c.nome) {
         showToast('Não foi possível carregar o cliente (Code.gs desatualizado?)', 'erro');
@@ -1011,7 +1026,6 @@
   }
 
   init();
-  carregarClienteDaUrl();
 </script>
 </body>
 </html>

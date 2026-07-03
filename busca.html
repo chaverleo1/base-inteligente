@@ -637,8 +637,18 @@ input[type=range]::-webkit-slider-thumb {
 
 <script src="config.js"></script>
 <script>
-const SESS_KEY   = 'bi_session';
+const SESS_KEY       = 'bi_session';
+const SESS_TOKEN_KEY = 'bi_session_token';
 const USER_EMAIL = 'chaverleo@gmail.com';
+
+// Token de sessão emitido pelo servidor no login — exigido pelo backend em
+// toda ação sensível (ver Code.gs). Sem token válido, o servidor responde
+// {status:'nao_autenticado'} mesmo que o navegador "ache" que está logado.
+function tokenSessao() { return sessionStorage.getItem(SESS_TOKEN_KEY) || ''; }
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { sair(); return true; }
+  return false;
+}
 
 // ─── AUTH ───────────────────────────────────────────────────────────────────
 async function sha256(texto) {
@@ -646,7 +656,7 @@ async function sha256(texto) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 async function verificarAuth() {
-  if (sessionStorage.getItem(SESS_KEY) === 'ok') fecharLogin();
+  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) fecharLogin();
 }
 async function entrar() {
   const senha = document.getElementById('inputSenha').value;
@@ -657,13 +667,14 @@ async function entrar() {
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=verificar_senha&hash=' + encodeURIComponent(hash));
     const data = await resp.json();
-    if (data.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); fecharLogin(); }
+    if (data.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); sessionStorage.setItem(SESS_TOKEN_KEY, data.token); fecharLogin(); }
     else { err.textContent = 'Senha incorreta.'; document.getElementById('inputSenha').value = ''; }
   } catch(e) { err.textContent = 'Erro de conexão.'; }
 }
 function fecharLogin() { document.getElementById('loginOverlay').style.display = 'none'; }
 function sair() {
   sessionStorage.removeItem(SESS_KEY);
+  sessionStorage.removeItem(SESS_TOKEN_KEY);
   document.getElementById('loginOverlay').style.display = 'flex';
 }
 verificarAuth();
@@ -832,7 +843,7 @@ async function carregarOpcoesFiltro() {
   const chipsTipo   = document.getElementById('chips-tipo');
   const chipsBairro = document.getElementById('chips-bairro');
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=opcoes_filtro');
+    const resp = await fetch(WEBHOOK_URL + '?acao=opcoes_filtro&token=' + encodeURIComponent(tokenSessao()));
     const json = await resp.json();
     const tipos   = json.tipos   || [];
     const bairros = json.bairros || [];
@@ -909,6 +920,7 @@ async function executarBusca() {
     urgencia:  getChipUnico('urgencia'),
     precoMax:  precoAtual,
     texto:     document.getElementById('texto-livre').value.trim(),
+    token:     tokenSessao(),
   };
 
   const btn = document.getElementById('btnBuscar');
@@ -920,6 +932,7 @@ async function executarBusca() {
     const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
     const json = await resp.json();
 
+    if (trataNaoAutenticado(json)) return;
     if (json.status) { // erro/acao desconhecida — Code.gs ainda nao tem busca_aberta implantado
       mostrarToast('Erro: ' + (json.motivo || json.status), 'erro');
       return;
@@ -1147,6 +1160,7 @@ async function cadastrarCliente() {
     conversa: state.ultimoTexto || '',
     canal: 'Busca aberta',
     score: 0,
+    token: tokenSessao(),
   };
 
   try {

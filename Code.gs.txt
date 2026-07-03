@@ -46,9 +46,17 @@ const CABECALHO_LANCAMENTOS = [
 // ROTAS HTTP
 // ═══════════════════════════════════════════════════════════════
 
+// Ações que fazem parte do próprio fluxo de login/reset de senha — não
+// exigem uma sessão já validada (senão ninguém conseguiria logar).
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token'];
+
 function doGet(e) {
   if (!e || !e.parameter) return ok({ status: 'sem parametros' });
   var acao = e.parameter.acao;
+
+  if (ACOES_PUBLICAS_GET.indexOf(acao) < 0 && !sessaoValida_(e.parameter.token)) {
+    return ok({ status: 'nao_autenticado' });
+  }
 
   if (acao === 'buscar') {
     var q     = e.parameter.q || '';
@@ -95,7 +103,13 @@ function doPost(e) {
   var contents = e.postData ? e.postData.contents : '';
   var d = parseBody(contents);
 
+  // 'salvar_senha' fica de fora — pertence ao fluxo de redefinição de senha
+  // (protegido pelo próprio token de reset de validarToken_/salvarSenhaReset_,
+  // usado justamente por quem ainda não tem uma sessão ativa).
   if (d.acao === 'salvar_senha')  return salvarSenhaReset_(d);
+
+  if (!sessaoValida_(d.token)) return ok({ status: 'nao_autenticado' });
+
   if (d.acao === 'excluir')       return ok(excluir_(d));
   if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
@@ -1293,7 +1307,8 @@ function verificarSenha_(hash) {
   var props     = PropertiesService.getScriptProperties();
   var hashSalvo = props.getProperty('bi_password_hash');
   if (!hashSalvo) return ok({ ok: false, motivo: 'sem_senha' });
-  return ok({ ok: hash === hashSalvo });
+  if (hash !== hashSalvo) return ok({ ok: false });
+  return ok({ ok: true, token: criarSessao_() });
 }
 
 function esquecerSenha_() {
@@ -1340,6 +1355,28 @@ function salvarSenhaReset_(d) {
 
 function getAba() {
   return SpreadsheetApp.openById(SHEET_ID).getSheetByName('CONTATOS');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SESSÃO — a tela de senha nas 5 páginas era só cosmética: o front-end
+// guardava "logado = true" no sessionStorage, mas nenhuma ação do backend
+// checava isso, então qualquer um com a URL do Web App (pública, já que o
+// repositório é público) conseguia ler/apagar a base inteira sem senha
+// nenhuma, direto pela URL. Agora o login gera um token de sessão guardado
+// no CacheService (servidor), e toda ação sensível exige esse token válido.
+// ═══════════════════════════════════════════════════════════════
+
+var SESSAO_TTL_SEGUNDOS = 6 * 60 * 60; // 6h — máximo permitido pelo CacheService
+
+function criarSessao_() {
+  var token = Utilities.getUuid();
+  CacheService.getScriptCache().put('sessao_' + token, '1', SESSAO_TTL_SEGUNDOS);
+  return token;
+}
+
+function sessaoValida_(token) {
+  if (!token) return false;
+  return CacheService.getScriptCache().get('sessao_' + token) === '1';
 }
 
 function ok(data) {

@@ -511,8 +511,18 @@ select.form-input option { background: var(--surface2); }
 
 <script src="config.js"></script>
 <script>
-const SESS_KEY   = 'bi_session';
+const SESS_KEY       = 'bi_session';
+const SESS_TOKEN_KEY = 'bi_session_token';
 const USER_EMAIL = 'chaverleo@gmail.com';
+
+// Token de sessão emitido pelo servidor no login — exigido pelo backend em
+// toda ação sensível (ver Code.gs). Sem token válido, o servidor responde
+// {status:'nao_autenticado'} mesmo que o navegador "ache" que está logado.
+function tokenSessao() { return sessionStorage.getItem(SESS_TOKEN_KEY) || ''; }
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { sessionStorage.removeItem(SESS_KEY); sessionStorage.removeItem(SESS_TOKEN_KEY); document.getElementById('login-overlay').style.display = 'flex'; return true; }
+  return false;
+}
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 async function sha256(txt) {
@@ -520,7 +530,7 @@ async function sha256(txt) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 async function verificarAuth() {
-  if (sessionStorage.getItem(SESS_KEY) === 'ok') fecharLogin();
+  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) fecharLogin();
 }
 async function entrar() {
   const senha = document.getElementById('login-senha').value.trim();
@@ -533,7 +543,7 @@ async function entrar() {
     const hash = await sha256(senha);
     const r = await fetch(`${WEBHOOK_URL}?acao=verificar_senha&email=${encodeURIComponent(USER_EMAIL)}&hash=${hash}`);
     const j = await r.json();
-    if (j.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); fecharLogin(); carregarLancamentos(); }
+    if (j.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); sessionStorage.setItem(SESS_TOKEN_KEY, j.token); fecharLogin(); carregarLancamentos(); }
     else { erro.textContent = 'Senha incorreta.'; btn.textContent = 'Entrar'; btn.disabled = false; }
   } catch { erro.textContent = 'Erro de conexão.'; btn.textContent = 'Entrar'; btn.disabled = false; }
 }
@@ -1221,11 +1231,12 @@ async function salvarLancamento() {
   try {
     const resp = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_lancamento', dados }) })
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_lancamento', dados, token: tokenSessao() }) })
     });
     const texto = await resp.text();
     let json;
     try { json = JSON.parse(texto); } catch { json = {}; }
+    if (trataNaoAutenticado(json)) return;
     if (json.ok) {
       mostrarToast(`"${dados.nomeEmpreendimento}" salvo com sucesso!`, 'ok');
       limparMotor();
@@ -1242,8 +1253,9 @@ let _todos = [], _filtroStatus = '';
 
 async function carregarLancamentos() {
   try {
-    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos`);
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos&token=${encodeURIComponent(tokenSessao())}`);
     const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
     _todos = json.lancamentos || [];
     renderFiltros();
     renderLista(_todos);
@@ -1376,9 +1388,10 @@ async function excluirEmp(id, nome) {
   try {
     const resp = await fetch(WEBHOOK_URL, {
       method: 'POST',
-      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_lancamento', idLancamento: id, nomeEmpreendimento: nome }) })
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_lancamento', idLancamento: id, nomeEmpreendimento: nome, token: tokenSessao() }) })
     });
     const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
     if (json.ok) { mostrarToast('Empreendimento excluído.', 'ok'); carregarLancamentos(); }
     else mostrarToast(json.erro || 'Erro ao excluir.', 'erro');
   } catch { mostrarToast('Erro de conexão ao excluir.', 'erro'); }
