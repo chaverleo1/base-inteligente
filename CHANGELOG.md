@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 13) — Filtro de Área útil mínima na Busca Aberta
+
+Pedido do usuário: filtro pra área útil mínima, no mesmo formato do filtro de preço (barra pra
+arrastar + valor digitável, sincronizados).
+
+**Diferença de design em relação ao preço**: preço é um alvo com margem pra ambos os lados (o
+motor aceita imóveis um pouco acima/abaixo, com pontuação decrescente via `scorePreco_`). Área
+útil mínima é só um **piso rígido** — "quero pelo menos X m²", sem teto e sem pontuação parcial.
+Por isso virou filtro rígido em `buscaAberta_()` (`Code.gs.txt`), igual a status/cidade/estado, em
+vez de entrar no motor de score: imóvel com área abaixo do mínimo é excluído dos resultados, e
+imóvel sem área cadastrada também fica de fora quando o filtro está ativo (não dá pra saber se
+atende um mínimo que não está informado).
+
+`busca.html`: nova seção "Área útil mínima" reaproveitando as mesmas classes CSS do filtro de
+preço (`.preco-input-row`/`.preco-prefixo`/`.preco-input`/`.slider-wrap`, já genéricas o
+suficiente), com slider 0–1.000m² e campo digitável sincronizados (`atualizarSliderArea`/
+`atualizarAreaDigitada`, mesmo padrão de `atualizarSlider`/`atualizarPrecoDigitado`). Incluído no
+payload de `executarBusca()`, no resumo dos resultados ("300m²+") e zerado em `novaBusca()`.
+
+Testado em Node (4 cenários: filtro isola só o imóvel grande o suficiente, inclui os que atendem
+o mínimo de fontes diferentes, área=0 não filtra nada, `interpretado.areaMin` reflete o valor
+usado) e no preview (digitar sincroniza com o slider e vice-versa, payload correto, resumo exibe
+"300m²+", reset zera tudo). `testarMatching()` e as suítes de status/cidade/padrão/estado
+continuam passando, sem regressão.
+
 ## 2026-07-03 (parte 12) — Filtros de Cidade, Padrão e Estado na Busca Aberta
 
 Pedido do usuário: mais colunas de LANCAMENTOS viravam filtro importante na Busca Aberta. Além de

@@ -1072,6 +1072,15 @@ function buscaAberta_(d) {
     todos = todos.filter(function(imo) { return norm_(imo.estado || '') === estadoFiltro; });
   }
 
+  // Área útil mínima — piso rígido (diferente de preço, que tem margem pra
+  // ambos os lados de um alvo: aqui é só "pelo menos X m²", sem teto).
+  // Imóvel sem área cadastrada fica de fora quando o filtro está ativo — não
+  // dá pra saber se atende um mínimo que não está informado.
+  var areaMinFiltro = parseFloat(d.areaMin) || 0;
+  if (areaMinFiltro > 0) {
+    todos = todos.filter(function(imo) { return (parseFloat(imo.areaUtil) || 0) >= areaMinFiltro; });
+  }
+
   // Limiar mais permissivo que o rodarMatching (70) — aqui é exploratório,
   // não alimenta o dashboard/MATCHES, então vale mostrar até opções parciais.
   var resultados = [];
@@ -1090,7 +1099,8 @@ function buscaAberta_(d) {
       status: d.status || '',
       cidade: d.cidade || '',
       padrao: d.padrao || '',
-      estado: d.estado || ''
+      estado: d.estado || '',
+      areaMin: areaMinFiltro || ''
     },
     resultados: resultados.map(function(r) {
       var imo = r.imo;

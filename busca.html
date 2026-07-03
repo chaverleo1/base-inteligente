@@ -534,6 +534,21 @@ input[type=range]::-webkit-slider-thumb {
       </div>
     </div>
 
+    <!-- Área útil mínima -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Área útil mínima</div>
+      <div class="preco-input-row">
+        <input type="text" class="preco-input" id="area-digitado" placeholder="0"
+               oninput="atualizarAreaDigitada(this.value)">
+        <span class="preco-prefixo">m²</span>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="slider-area" min="0" max="1000" step="5" value="0"
+               oninput="atualizarSliderArea(this.value)">
+        <div class="slider-labels"><span>0 m²</span><span>1.000+ m²</span></div>
+      </div>
+    </div>
+
     <!-- Cidade + Estado -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="filtro-secao">
@@ -721,6 +736,7 @@ const state = {
   resultadosAtuais: []
 };
 let precoAtual = 500000;
+let areaMinAtual = 0;
 
 // ─── SELEÇÃO / PDF ────────────────────────────────────────────────────────────
 function toggleSelecionado(idx, el) {
@@ -961,6 +977,25 @@ function atualizarPrecoDigitado(val) {
   slider.value = Math.min(Math.max(precoAtual || min, min), max);
 }
 
+// ─── ÁREA ÚTIL MÍNIMA (slider + caixa de texto, sincronizados) ────────────────
+function atualizarSliderArea(val) {
+  areaMinAtual = parseInt(val) || 0;
+  document.getElementById('area-digitado').value = areaMinAtual ? areaMinAtual.toLocaleString('pt-BR') : '';
+}
+
+function atualizarAreaDigitada(val) {
+  const digitos = val.replace(/\D/g, '');
+  areaMinAtual = parseInt(digitos) || 0;
+  const input = document.getElementById('area-digitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+  input.value = digitos ? areaMinAtual.toLocaleString('pt-BR') : '';
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
+
+  const slider = document.getElementById('slider-area');
+  const min = parseInt(slider.min), max = parseInt(slider.max);
+  slider.value = Math.min(Math.max(areaMinAtual || min, min), max);
+}
+
 function fmt_(v) {
   const n = parseInt(String(v || '').replace(/\D/g, '')) || 0;
   if (!n) return '—';
@@ -984,6 +1019,7 @@ async function executarBusca() {
     extras:    getChips('extra'),
     urgencia:  getChipUnico('urgencia'),
     precoMax:  precoAtual,
+    areaMin:   areaMinAtual,
     texto:     document.getElementById('texto-livre').value.trim(),
     token:     tokenSessao(),
   };
@@ -1028,6 +1064,7 @@ function renderResultados(resultados, filtros, interpretado) {
   if (interpretado.cidade) partes.push(interpretado.cidade + (interpretado.estado ? '/' + interpretado.estado : ''));
   if (interpretado.bairros) partes.push(interpretado.bairros);
   partes.push('preço limite ' + fmt_(interpretado.precoLimite || filtros.precoMax));
+  if (filtros.areaMin) partes.push(filtros.areaMin + 'm²+');
   if (filtros.quartos) partes.push(filtros.quartos + ' quartos');
   if (filtros.extras.length) partes.push(filtros.extras.slice(0, 3).join(', '));
 
@@ -1207,6 +1244,8 @@ function novaBusca() {
   document.getElementById('cadTelefone').value = '';
   document.getElementById('slider-preco').value = 500000;
   atualizarSlider(500000);
+  document.getElementById('slider-area').value = 0;
+  atualizarSliderArea(0);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
