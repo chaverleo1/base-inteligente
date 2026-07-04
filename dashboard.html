@@ -1007,37 +1007,25 @@ async function excluirCliente_(linha, nome) {
 async function rodarEAtualizar() {
   const btn = document.getElementById('btnAtualizar');
   btn.disabled = true;
-  btn.textContent = '⏳ Aguardando...';
+  btn.textContent = '⏳ Calculando...';
   try {
-    const _tok = tokenSessao();
-    const resp = await fetch(WEBHOOK_URL + '?acao=rodar_matching&token=' + encodeURIComponent(_tok));
-    const rawText = await resp.text();
-    alert('DEBUG token=' + (_tok ? _tok.substring(0,8)+'…' : 'VAZIO') + '\nResposta: ' + rawText.substring(0,300));
-    btn.disabled = false; btn.textContent = '↻ Atualizar'; return;
-    const r    = JSON.parse(rawText);
-    if (trataNaoAutenticado(r)) { btn.disabled = false; btn.textContent = '↻ Atualizar'; return; }
-    if (r.status !== 'matching_agendado' && r.status !== 'matching_concluido') {
-      btn.textContent = '⚠️ Erro';
-      setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2500);
-      return;
+    const resp = await fetch(WEBHOOK_URL + '?acao=rodar_matching&token=' + encodeURIComponent(tokenSessao()));
+    const r    = await resp.json();
+    if (r.status === 'matching_concluido') {
+      btn.textContent = '✅ Concluído';
+      setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2000);
+      carregarDados();
+    } else {
+      // erro do servidor (sem logout — sessão não é afetada pelo matching)
+      btn.textContent = '⚠️ ' + (r.motivo || r.status || 'erro');
+      setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 3000);
     }
-    // Matching foi agendado no servidor — mostra countdown de 25s e recarrega
-    let secs = 25;
-    const tick = setInterval(() => {
-      secs--;
-      if (secs > 0) {
-        btn.textContent = `⏳ ${secs}s`;
-      } else {
-        clearInterval(tick);
-        btn.textContent = '✅ Concluído';
-        setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 1500);
-        carregarDados();
-      }
-    }, 1000);
   } catch(e) {
-    btn.textContent = '⚠️ Erro';
-    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2500);
-    alert('Erro ao agendar matching: ' + e.message);
+    // Apps Script pode encerrar a execução por timeout sem resposta JSON;
+    // recarrega os dados mesmo assim, pois o matching pode ter concluído
+    btn.textContent = '⚠️ Timeout';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 3000);
+    carregarDados();
   }
 }
 
