@@ -265,12 +265,30 @@
   .adm-rel-table td{padding:9px 12px;font-size:13px;vertical-align:middle}
   .adm-rel-table tr.ok td{background:rgba(0,212,170,.04)}
   .adm-rel-table tr.err td{background:rgba(255,90,90,.04)}
-  @keyframes notifSlide{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
-  .header-notif{background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:8px;
-                padding:5px 12px;font-size:12px;font-weight:600;color:var(--accent2);white-space:nowrap;
-                animation:notifSlide .35s ease forwards}
-  .header-notif-warn{background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.4);color:#f5a623}
-  @keyframes notifFade{to{opacity:0}}
+  /* ── INIT OVERLAY (tela de inicialização pós-login) ── */
+  .init-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+            padding:36px 40px;width:460px;max-width:92vw}
+  .init-title{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--accent);
+              letter-spacing:-.3px;text-align:center;margin-bottom:4px}
+  .init-title span{color:var(--text2);font-weight:400}
+  .init-sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:28px}
+  .init-steps{display:flex;flex-direction:column;gap:9px;margin-bottom:22px}
+  .init-step{display:flex;align-items:center;gap:12px}
+  .init-step-icon{width:22px;text-align:center;font-size:14px;flex-shrink:0;color:var(--text3)}
+  .init-step-icon.running{animation:pulse 1s ease infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .init-step-name{flex:1;font-size:13px;color:var(--text3);transition:color .2s}
+  .init-step-name.running{color:var(--accent);font-weight:500}
+  .init-step-name.done{color:var(--text)}
+  .init-step-msg{font-size:11px;color:var(--text3);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+  .init-progress-track{background:var(--surface2);border-radius:99px;height:3px;margin-bottom:7px;overflow:hidden}
+  .init-progress-fill{background:linear-gradient(90deg,var(--accent),var(--accent2));height:100%;
+                      border-radius:99px;width:0%;transition:width .5s ease}
+  .init-progress-txt{font-size:11px;color:var(--text3);text-align:right;margin-bottom:0}
+  .init-done{text-align:center;margin-top:22px;padding-top:20px;border-top:1px solid var(--border);
+             font-size:14px;font-weight:600}
+  .init-done.ok{color:var(--accent2)}
+  .init-done.warn{color:#f5a623}
 </style>
 </head>
 <body>
@@ -297,6 +315,19 @@
   </div>
 </div>
 
+<!-- INIT OVERLAY (tela de atualização pós-login) -->
+<div class="login-overlay" id="initOverlay" style="display:none">
+  <div class="init-box">
+    <div class="init-title">BASE <span>INTELIGENTE</span></div>
+    <div class="init-sub" id="initSubtitle">Atualizando o sistema...</div>
+    <div id="initSteps" class="init-steps"></div>
+    <div class="init-progress-track">
+      <div class="init-progress-fill" id="initProgressFill"></div>
+    </div>
+    <div class="init-progress-txt" id="initProgressTxt">0 / 7</div>
+  </div>
+</div>
+
 <div class="header">
   <div class="logo">BASE <span>INTELIGENTE</span></div>
   <div class="nav-tabs">
@@ -308,7 +339,6 @@
     <button class="nav-tab" id="btnTabAdm" onclick="mostrarAdm()">ADM</button>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <div id="headerNotif" style="display:none"></div>
     <button class="refresh-btn" id="btnAtualizar" onclick="rodarEAtualizar()">↻ Atualizar</button>
     <button class="refresh-btn" onclick="sair()"
       style="border-color:transparent;color:var(--text3)"
@@ -545,9 +575,7 @@ async function entrar() {
     if (data.ok) {
       sessionStorage.setItem(SESS_KEY, 'ok');
       sessionStorage.setItem(SESS_TOKEN_KEY, data.token);
-      fecharLogin();
-      carregarDados();
-      admAtivarTodosSilencioso();
+      admInicializarSistema();
     } else {
       err.textContent = 'Senha incorreta.';
       document.getElementById('inputSenha').value = '';
@@ -1408,57 +1436,81 @@ function admRenderRelatorio(resultados) {
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-async function admAtivarTodosSilencioso() {
-  const ORDEM = [
-    'migrar_cabecalho_lancamentos',
-    'preencher_ids_faltantes',
-    'sincronizar_revenda',
-    'criar_gatilho_revenda',
-    'criar_gatilho_matching',
-    'rodar_matching',
-    'testar_matching'
+async function admInicializarSistema() {
+  const FUNCOES = [
+    { acao: 'migrar_cabecalho_lancamentos', nome: 'Migrar Cabeçalho' },
+    { acao: 'preencher_ids_faltantes',      nome: 'Preencher IDs' },
+    { acao: 'sincronizar_revenda',          nome: 'Sincronizar Revenda' },
+    { acao: 'criar_gatilho_revenda',        nome: 'Gatilho Revenda (6h)' },
+    { acao: 'criar_gatilho_matching',       nome: 'Gatilho Matching (12h)' },
+    { acao: 'rodar_matching',               nome: 'Rodar Matching' },
+    { acao: 'testar_matching',              nome: 'Testar Motor' }
   ];
+  const total = FUNCOES.length;
 
-  const resultados = [];
-  for (const acao of ORDEM) {
-    let status = 'err', detalhe = 'timeout';
+  // Mostra o overlay de inicialização
+  document.getElementById('initOverlay').style.display = 'flex';
+
+  // Pré-renderiza todos os steps como pendentes
+  document.getElementById('initSteps').innerHTML = FUNCOES.map((f, i) => `
+    <div class="init-step">
+      <span class="init-step-icon" id="initIcon_${i}">○</span>
+      <span class="init-step-name" id="initName_${i}">${f.nome}</span>
+      <span class="init-step-msg"  id="initMsg_${i}"></span>
+    </div>`).join('');
+
+  let nOk = 0;
+
+  for (let i = 0; i < total; i++) {
+    const { acao, nome } = FUNCOES[i];
+
+    // Marca como "executando"
+    const iconEl = document.getElementById('initIcon_' + i);
+    const nameEl = document.getElementById('initName_' + i);
+    iconEl.textContent = '⏳';
+    iconEl.className   = 'init-step-icon running';
+    nameEl.className   = 'init-step-name running';
+
+    let status = 'err', msg = '';
     try {
       const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
       const r    = await resp.json();
       const isTest = r.total !== undefined;
       const isOk   = r.status === 'ok' || r.status === 'matching_concluido';
-      if      (isTest) { status = r.falhou === 0 ? 'ok' : 'err'; detalhe = r.falhou + ' falha(s)'; }
-      else if (isOk)   { status = 'ok'; detalhe = r.msg || 'ok'; }
-      else             { detalhe = r.motivo || r.status || 'erro'; }
-    } catch(e) { detalhe = e.message || 'timeout'; }
+      if      (isTest) { status = r.falhou === 0 ? 'ok' : 'err'; msg = r.passou + '/' + r.total + ' testes'; }
+      else if (isOk)   { status = 'ok';  msg = r.msg || ''; }
+      else             { msg = r.motivo || r.status || 'erro'; }
+    } catch(e) { msg = 'timeout'; }
 
-    if (status === 'err') console.error('[ADM auto] ' + acao + ': ' + detalhe);
-    resultados.push(status);
+    // Atualiza ícone e texto
+    iconEl.textContent = status === 'ok' ? '✅' : '❌';
+    iconEl.className   = 'init-step-icon';
+    nameEl.className   = 'init-step-name done';
+    document.getElementById('initMsg_' + i).textContent = msg;
+    if (status === 'ok') nOk++;
+
+    // Atualiza barra de progresso
+    document.getElementById('initProgressFill').style.width = Math.round(((i + 1) / total) * 100) + '%';
+    document.getElementById('initProgressTxt').textContent  = (i + 1) + ' / ' + total;
   }
 
-  const notif = document.getElementById('headerNotif');
-  const hora  = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  // Mensagem final
+  const hora    = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const allOk   = nOk === total;
+  const subtitle = document.getElementById('initSubtitle');
+  subtitle.textContent = allOk
+    ? '✅ Sistema pronto · ' + hora
+    : '⚠️ ' + (total - nOk) + ' erro(s) — verifique a aba ADM';
+  subtitle.style.color = allOk ? 'var(--accent2)' : '#f5a623';
+  subtitle.style.fontWeight = '600';
 
-  if (resultados.every(s => s === 'ok')) {
-    // Tudo ok — aviso verde, some após 8s
-    notif.className   = 'header-notif';
-    notif.textContent = '✅ Sistema atualizado · ' + hora;
-    notif.onclick     = null;
-    notif.style.cursor = '';
-    notif.style.display = '';
-    setTimeout(() => {
-      notif.style.animation = 'notifFade .6s ease forwards';
-      setTimeout(() => { notif.style.display = 'none'; notif.style.animation = ''; }, 650);
-    }, 8000);
-  } else {
-    // Alguma função falhou — aviso laranja, fica até o usuário verificar
-    const nErr = resultados.filter(s => s === 'err').length;
-    notif.className   = 'header-notif header-notif-warn';
-    notif.textContent = '⚠️ ' + nErr + ' função(ões) com erro · verificar ADM';
-    notif.style.cursor = 'pointer';
-    notif.style.display = '';
-    notif.onclick = () => { mostrarAdm(); notif.style.display = 'none'; };
-  }
+  // Aguarda 2s e vai para o dashboard
+  setTimeout(() => {
+    document.getElementById('initOverlay').style.display = 'none';
+    fecharLogin();
+    carregarDados();
+    if (!allOk) mostrarAdm();
+  }, 2000);
 }
 
 async function carregarLeadsBaseimob() {
