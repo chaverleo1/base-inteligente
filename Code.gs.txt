@@ -115,7 +115,8 @@ function doGet(e) {
   if (acao === 'validar_token')    return validarToken_(e.parameter.token);
   if (acao === 'matches_cliente')  return matchesCliente_(e.parameter.cod);
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
-  if (acao === 'listar_lancamentos') return ok(listarLancamentos_());
+  if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
+  if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
 
   return ok({ status: 'acao desconhecida' });
 }
@@ -140,7 +141,8 @@ function doPost(e) {
   if (d.acao === 'excluir')       return ok(excluir_(d));
   if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
-  if (d.acao === 'excluir_lancamento')return ok(excluirLancamento_(d));
+  if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
+  if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -1986,6 +1988,155 @@ function enviarNotificacaoAtendente_(d) {
   } catch(e) {
     Logger.log('Falha ao enviar notificacao de lead quente: ' + e.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRAÇÃO BASE INTELIGENTE ↔ BASE IMOB
+// ═══════════════════════════════════════════════════════════════
+// Funções que conectam os dois sistemas: listar leads capturados pelo
+// funil externo e migrá-los para CONTATOS quando o corretor decidir
+// qualificá-los. O corretor vê os leads no dashboard e escolhe quais
+// valem cadastrar — sem contaminar CONTATOS com leads ainda frios.
+
+// Lista todos os leads de LEADS_LANCAMENTOS cruzados com INTERESSES,
+// para exibição na aba "BaseImob" do dashboard.
+function listarLeadsBaseimob_() {
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { leads: [] };
+
+  var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+  var leads = [];
+  dados.forEach(function(r) {
+    var obj = {};
+    CABECALHO_LEADS_LANCAMENTOS.forEach(function(col, i) { obj[col] = r[i]; });
+    if (obj.email || obj.telefone) leads.push(obj);
+  });
+
+  // Coleta idOfertas de interesse para cada lead
+  var interesses = {};
+  var abaInt = obterAbaInteresses_();
+  var lrInt  = abaInt.getLastRow();
+  if (lrInt >= 2) {
+    var idxIdInt  = CABECALHO_INTERESSES.indexOf('idCliente');
+    var idxIdsInt = CABECALHO_INTERESSES.indexOf('idsInteresse');
+    var idxQtd    = CABECALHO_INTERESSES.indexOf('qtdInteresse');
+    var dadosInt  = abaInt.getRange(2, 1, lrInt - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosInt.forEach(function(r) {
+      var id  = String(r[idxIdInt]  || '').trim();
+      var ids = String(r[idxIdsInt] || '').trim();
+      if (!id) return;
+      if (!interesses[id]) interesses[id] = { ids: [], qtd: 0 };
+      if (ids) ids.split(',').forEach(function(x) {
+        x = x.trim();
+        if (x && interesses[id].ids.indexOf(x) < 0) interesses[id].ids.push(x);
+      });
+      interesses[id].qtd += parseInt(r[idxQtd]) || 0;
+    });
+  }
+
+  leads.forEach(function(lead) {
+    var inter = interesses[lead.idCliente] || { ids: [], qtd: 0 };
+    lead.idsInteresse = inter.ids.join(', ');
+    lead.qtdInteresse = inter.qtd || inter.ids.length;
+  });
+
+  // Mais recentes primeiro
+  leads.sort(function(a, b) {
+    return String(b.dataCadastro) > String(a.dataCadastro) ? 1 : -1;
+  });
+
+  return { leads: leads };
+}
+
+// Migra um lead do BaseImob para CONTATOS.
+// — Verifica duplicidade por email antes de criar.
+// — Pré-preenche produtoOrigem com os idOfertas que o lead marcou em
+//   INTERESSES, para o motor de matching já ter uma pista do produto certo.
+// — Marca o lead em LEADS_LANCAMENTOS como "MIGRADO CONTATOS".
+function migrarLeadBaseimob_(d) {
+  var idCliente = String(d.idCliente || '').trim();
+  if (!idCliente) return { ok: false, erro: 'idCliente obrigatorio' };
+
+  // Localiza o lead em LEADS_LANCAMENTOS
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'lead nao encontrado' };
+
+  var idxId   = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+  var idxTipo = CABECALHO_LEADS_LANCAMENTOS.indexOf('tipo_contato');
+  var dados   = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+  var lead = null;
+  var linhaLead = -1;
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][idxId]) === idCliente) {
+      lead = {};
+      CABECALHO_LEADS_LANCAMENTOS.forEach(function(col, j) { lead[col] = dados[i][j]; });
+      linhaLead = i + 2;
+      break;
+    }
+  }
+  if (!lead) return { ok: false, erro: 'lead nao encontrado' };
+
+  // Verifica duplicidade por email em CONTATOS
+  var email = String(lead.email || '').trim().toLowerCase();
+  if (email) {
+    var aba   = getAba();
+    var lrC   = aba.getLastRow();
+    var idxEM = CABECALHO.indexOf('email') + 1;
+    if (lrC >= 2) {
+      var emails = aba.getRange(2, idxEM, lrC - 1, 1).getValues().flat();
+      for (var j = 0; j < emails.length; j++) {
+        if (String(emails[j] || '').trim().toLowerCase() === email) {
+          return { ok: false, erro: 'email_ja_existe', msg: 'Este e-mail já existe em CONTATOS.' };
+        }
+      }
+    }
+  }
+
+  // Coleta idOfertas de INTERESSES para pré-preencher produtoOrigem
+  var abaInt = obterAbaInteresses_();
+  var lrInt  = abaInt.getLastRow();
+  var idsInteresse = [];
+  if (lrInt >= 2) {
+    var idxIdInt  = CABECALHO_INTERESSES.indexOf('idCliente');
+    var idxIdsInt = CABECALHO_INTERESSES.indexOf('idsInteresse');
+    var dadosInt  = abaInt.getRange(2, 1, lrInt - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosInt.forEach(function(r) {
+      if (String(r[idxIdInt]) !== idCliente || !r[idxIdsInt]) return;
+      String(r[idxIdsInt]).split(',').forEach(function(x) {
+        x = x.trim();
+        if (x && idsInteresse.indexOf(x) < 0) idsInteresse.push(x);
+      });
+    });
+  }
+
+  // Monta o registro para CONTATOS mapeando campos do BaseImob
+  var contatoData = {
+    nome:          String(lead.nome         || ''),
+    telefone:      String(lead.telefone     || ''),
+    email:         String(lead.email        || ''),
+    segmento:      String(lead.finalidade   || ''),
+    quartos:       String(lead.quartos      || ''),
+    precoLimite:   String(lead.precoLimite  || ''),
+    canal:         String(lead.canal        || 'BaseImob'),
+    urgencia:      String(lead.urgencia     || ''),
+    tags:          String(lead.tags         || ''),
+    observacoes:   String(lead.obs          || ''),
+    // idOfertas de interesse entram aqui — o motor de matching já usa esse
+    // campo pra dar pontuação de bairro/tipo quando o texto menciona o produto.
+    produtoOrigem: idsInteresse.join(', '),
+    tipo_contato:  'LEAD BASEIMOB'
+  };
+
+  var result = salvar(contatoData);
+
+  // Marca o lead como migrado para não aparecer em "pendentes" no dashboard
+  if (linhaLead > 0) {
+    abaLeads.getRange(linhaLead, idxTipo + 1).setValue('MIGRADO CONTATOS');
+  }
+
+  return { ok: true, idClienteNovo: result.idCliente, produtoOrigem: contatoData.produtoOrigem };
 }
 
 // ═══════════════════════════════════════════════════════════════

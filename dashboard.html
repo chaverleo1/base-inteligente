@@ -204,6 +204,23 @@
   .login-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:background .2s}
   .login-btn:hover{background:#3d6aee}
   .login-err{color:#ff5a5a;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
+
+  /* ── BASEIMOB LEAD CARDS ── */
+  .bi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;align-items:flex-start;gap:16px;transition:border-color .2s}
+  .bi-card:hover{border-color:var(--accent)}
+  .bi-card+.bi-card{margin-top:10px}
+  .bi-avatar{width:40px;height:40px;border-radius:50%;background:rgba(79,124,255,.2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--accent);flex-shrink:0}
+  .bi-info{flex:1;min-width:0}
+  .bi-name{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text)}
+  .bi-sub{font-size:12px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+  .bi-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .bi-ofertas{margin-top:6px;font-size:12px;color:var(--accent2);font-weight:600}
+  .bi-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+  .bi-btn{padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .2s;text-decoration:none;display:inline-block;text-align:center}
+  .bi-btn-migrar{background:var(--accent);color:#fff}
+  .bi-btn-migrar:hover{background:#3d6aee}
+  .bi-btn-migrar:disabled{background:var(--border);color:var(--text3);cursor:default}
+  .bi-empty{text-align:center;padding:48px;color:var(--text3);font-size:14px}
 </style>
 </head>
 <body>
@@ -234,9 +251,10 @@
   <div class="logo">BASE <span>INTELIGENTE</span></div>
   <div class="nav-tabs">
     <a href="index.html" class="nav-tab">Formulário</a>
-    <a href="dashboard.html" class="nav-tab active">Dashboard</a>
+    <button class="nav-tab active" id="btnTabDash" onclick="mostrarDashboard()">Dashboard</button>
     <a href="busca.html" class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <button class="nav-tab" id="btnTabBaseimob" onclick="mostrarBaseImob()">BaseImob <span id="badgeBaseimob" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
   </div>
   <div style="display:flex;gap:8px">
     <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
@@ -247,7 +265,7 @@
   </div>
 </div>
 
-<div class="page">
+<div class="page" id="secao-dashboard">
 
   <!-- TOTAIS -->
   <div class="section-title">Visão geral</div>
@@ -323,6 +341,12 @@
 
   <div class="dashboard-footer" id="dashboardFooter"></div>
 
+</div>
+
+<!-- BASEIMOB SECTION -->
+<div class="page" id="secao-baseimob" style="display:none">
+  <div class="section-title">Leads BaseImob — pendentes de qualificação</div>
+  <div id="bi-lista"><div class="loading dot-anim">Carregando leads</div></div>
 </div>
 
 <!-- DRAWER CLIENTE -->
@@ -978,8 +1002,135 @@ async function excluirCliente_(linha, nome) {
   }
 }
 
+// ── BASEIMOB ──────────────────────────────────────────────────────────────────
+
+function mostrarDashboard() {
+  document.getElementById('secao-dashboard').style.display = '';
+  document.getElementById('secao-baseimob').style.display  = 'none';
+  document.getElementById('btnTabDash').classList.add('active');
+  document.getElementById('btnTabBaseimob').classList.remove('active');
+}
+
+function mostrarBaseImob() {
+  document.getElementById('secao-dashboard').style.display = 'none';
+  document.getElementById('secao-baseimob').style.display  = '';
+  document.getElementById('btnTabDash').classList.remove('active');
+  document.getElementById('btnTabBaseimob').classList.add('active');
+  carregarLeadsBaseimob();
+}
+
+async function carregarLeadsBaseimob() {
+  document.getElementById('bi-lista').innerHTML = '<div class="loading dot-anim">Carregando leads BaseImob</div>';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_leads_baseimob&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    renderLeadsBaseimob(json.leads || []);
+  } catch(e) {
+    document.getElementById('bi-lista').innerHTML = `<div class="bi-empty">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function renderLeadsBaseimob(leads) {
+  const pendentes = leads.filter(l => l.tipo_contato !== 'MIGRADO CONTATOS');
+
+  const badge = document.getElementById('badgeBaseimob');
+  if (pendentes.length > 0) {
+    badge.textContent = pendentes.length;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  if (!pendentes.length) {
+    document.getElementById('bi-lista').innerHTML =
+      '<div class="bi-empty">Nenhum lead pendente.<br><small>Todos já foram migrados ou a base está vazia.</small></div>';
+    return;
+  }
+
+  document.getElementById('bi-lista').innerHTML = pendentes.map(l => {
+    const score    = parseInt(l.score) || 0;
+    const scoreCls = score >= 70 ? 'score-hot' : score >= 50 ? 'score-warm' : 'score-cold';
+    const tags     = (l.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+    const tagsHtml = tags.map(t => `<span class="tag-chip tag-default">${t}</span>`).join('');
+    const wppTel   = String(l.telefone || '').replace(/\D/g, '');
+    const partes   = [
+      l.canal       ? `📡 ${l.canal}` : '',
+      l.quartos     ? `${l.quartos} qtos` : '',
+      l.precoLimite ? `até R$ ${l.precoLimite}` : ''
+    ].filter(Boolean);
+
+    return `
+    <div class="bi-card" id="bicard_${l.idCliente}">
+      <div class="bi-avatar">${(l.nome || '?')[0].toUpperCase()}</div>
+      <div class="bi-info">
+        <div class="bi-name">${l.nome || 'Sem nome'}${score ? `<span class="match-score ${scoreCls}" style="float:none;margin-left:8px">${score}</span>` : ''}</div>
+        <div class="bi-sub">${partes.join(' · ') || 'Sem detalhes'}</div>
+        ${l.email    ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">✉️ ${l.email}</div>` : ''}
+        ${l.telefone ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📞 ${l.telefone}</div>` : ''}
+        ${l.idsInteresse ? `<div class="bi-ofertas">🔖 Interesses: ${l.idsInteresse}</div>` : ''}
+        ${tagsHtml ? `<div class="bi-tags">${tagsHtml}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">📅 ${l.dataCadastro || '—'}</div>
+      </div>
+      <div class="bi-actions">
+        ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬 WPP</a>` : ''}
+        <button class="bi-btn bi-btn-migrar" onclick="migrarLead('${l.idCliente}', this)">Migrar →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function migrarLead(idCliente, btn) {
+  if (!confirm('Migrar este lead para CONTATOS?\n\nEle entrará no motor de matching com os imóveis de interesse já pré-preenchidos em produtoOrigem.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Migrando...';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'migrar_lead_baseimob', idCliente, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      const card = document.getElementById('bicard_' + idCliente);
+      if (card) {
+        card.style.opacity = '0.45';
+        card.style.pointerEvents = 'none';
+        btn.textContent = '✅ Migrado';
+        if (r.idClienteNovo) {
+          card.querySelector('.bi-info').insertAdjacentHTML('beforeend',
+            `<div style="font-size:12px;color:var(--accent2);margin-top:6px;font-weight:600">✅ Cadastrado como ${r.idClienteNovo}</div>`);
+        }
+      }
+    } else if (r.erro === 'email_ja_existe') {
+      alert('Este e-mail já existe em CONTATOS. Verifique antes de migrar.');
+      btn.disabled = false;
+      btn.textContent = 'Migrar →';
+    } else {
+      alert('Erro: ' + (r.msg || r.erro || JSON.stringify(r)));
+      btn.disabled = false;
+      btn.textContent = 'Migrar →';
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Migrar →';
+  }
+}
+
+async function verificarLeadsPendentes() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_leads_baseimob&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (!json.leads) return;
+    const n = json.leads.filter(l => l.tipo_contato !== 'MIGRADO CONTATOS').length;
+    const badge = document.getElementById('badgeBaseimob');
+    if (n > 0) { badge.textContent = n; badge.style.display = 'inline'; }
+  } catch(e) {}
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 carregarDados();
+verificarLeadsPendentes();
 </script>
 </body>
 </html>
