@@ -310,12 +310,10 @@
 <div class="login-overlay" id="initOverlay" style="display:none">
   <div class="init-box">
     <div class="init-logo">BASE <span>INTELIGENTE</span></div>
-    <div class="init-status" id="initStatus">Atualizando a base...</div>
-    <div class="init-funcao" id="initFuncao">&nbsp;</div>
     <div class="init-track">
       <div class="init-fill" id="initProgressFill"></div>
     </div>
-    <div class="init-counter" id="initCounter">0 / 7</div>
+    <div class="init-status" id="initStatus" style="display:none"></div>
   </div>
 </div>
 
@@ -1438,22 +1436,13 @@ async function admInicializarSistema() {
     { acao: 'testar_matching',              nome: 'Verificando motor...' }
   ];
   const total = FUNCOES.length;
-  const statusEl  = document.getElementById('initStatus');
-  const funcaoEl  = document.getElementById('initFuncao');
-  const fillEl    = document.getElementById('initProgressFill');
-  const counterEl = document.getElementById('initCounter');
-
-  statusEl.textContent = 'Atualizando a base...';
-  statusEl.style.color = '';
+  const fillEl = document.getElementById('initProgressFill');
   fillEl.style.width = '0%';
-  counterEl.textContent = '0 / ' + total;
   document.getElementById('initOverlay').style.display = 'flex';
 
   let nOk = 0;
   for (let i = 0; i < total; i++) {
-    const { acao, nome } = FUNCOES[i];
-    funcaoEl.textContent = nome;
-    counterEl.textContent = i + ' / ' + total;
+    const { acao } = FUNCOES[i];
     try {
       const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
       const r    = await resp.json();
@@ -1461,14 +1450,8 @@ async function admInicializarSistema() {
       const isOk = r.status === 'ok' || r.status === 'matching_concluido' || (r.total !== undefined && r.falhou === 0);
       if (isOk) nOk++;
     } catch(e) { /* silent */ }
-    fillEl.style.width    = Math.round(((i + 1) / total) * 100) + '%';
-    counterEl.textContent = (i + 1) + ' / ' + total;
+    fillEl.style.width = Math.round(((i + 1) / total) * 100) + '%';
   }
-
-  const allOk = nOk === total;
-  funcaoEl.textContent  = '';
-  statusEl.textContent  = allOk ? '✅ Base 100% atualizada' : '⚠️ Base atualizada com ' + (total - nOk) + ' erro(s)';
-  statusEl.style.color  = allOk ? 'var(--accent2)' : '#f5a623';
 
   setTimeout(() => {
     document.getElementById('initOverlay').style.display = 'none';
