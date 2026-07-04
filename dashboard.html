@@ -380,19 +380,19 @@
     </div>
   </div>
 
-  <!-- CONSTRUTORA-APARTAMENTOS -->
-  <div class="section-title">🏗️ Construtora — Apartamentos novos</div>
-  <div class="cards-row" id="cardsConstrutora">
+  <!-- LANÇAMENTOS -->
+  <div class="section-title">🚀 Lançamentos</div>
+  <div class="cards-row" id="cardsLancamentos">
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
   </div>
   <div class="charts-row" style="margin-bottom:32px">
     <div class="chart-card">
-      <div class="chart-title">Empreendimentos por status</div>
-      <div class="chart-wrap"><canvas id="chartConsStatus"></canvas></div>
+      <div class="chart-title">Por status</div>
+      <div class="chart-wrap"><canvas id="chartLancStatus"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-title">Unidades por faixa de preço</div>
-      <div class="chart-wrap"><canvas id="chartConsFaixa"></canvas></div>
+      <div class="chart-title">Por padrão</div>
+      <div class="chart-wrap"><canvas id="chartLancPadrao"></canvas></div>
     </div>
   </div>
 
@@ -602,8 +602,8 @@ let chartSeg = null;
 let chartPad = null;
 let chartTipo  = null;
 let chartFaixa = null;
-let chartConsStatus = null;
-let chartConsFaixa  = null;
+let chartLancStatus = null;
+let chartLancPadrao = null;
 
 // ── CARREGAR DADOS DO SHEETS ──────────────────────────────────────────────────
 
@@ -619,6 +619,73 @@ async function carregarDados() {
         Erro ao carregar dados: ${err.message}
       </div>`;
     console.error(err);
+  }
+  carregarLancamentosDash();
+}
+
+async function carregarLancamentosDash() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    const lista = data.lancamentos || [];
+
+    const empIds = new Set(lista.map(l => l.idLancamento).filter(Boolean));
+    const total  = lista.length;
+
+    const precos = lista.map(l => {
+      const v = (l.precoMedio || l.preco || '').toString().replace(/[^\d]/g, '');
+      return v ? parseInt(v) : 0;
+    }).filter(p => p > 0);
+    const ticketMedio = precos.length ? Math.round(precos.reduce((a,b) => a+b,0) / precos.length) : 0;
+
+    const porStatus = {}, porPadrao = {};
+    lista.forEach(l => {
+      const s = l.status || 'Não informado';
+      const p = l.padrao || 'Não informado';
+      porStatus[s] = (porStatus[s]||0) + 1;
+      porPadrao[p] = (porPadrao[p]||0) + 1;
+    });
+
+    const fmtPreco = v => v >= 1000000
+      ? 'R$ ' + (v/1000000).toFixed(1).replace('.',',') + 'M'
+      : 'R$ ' + Math.round(v/1000) + 'k';
+
+    const statusTop = Object.entries(porStatus).sort((a,b)=>b[1]-a[1]);
+    const s1 = statusTop[0] || ['—', 0];
+    const s2 = statusTop[1] || ['—', 0];
+
+    document.getElementById('cardsLancamentos').innerHTML = `
+      <div class="card">
+        <div class="card-label">Empreendimentos</div>
+        <div class="card-value" style="color:var(--accent2)">${empIds.size}</div>
+        <div class="card-sub">${total} tipologias cadastradas</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Ticket médio</div>
+        <div class="card-value" style="color:var(--accent)">${ticketMedio ? fmtPreco(ticketMedio) : '—'}</div>
+        <div class="card-sub">${precos.length} com preço informado</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s1[0]}</div>
+        <div class="card-value warm">${s1[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s2[0]}</div>
+        <div class="card-value cold">${s2[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>`;
+
+    renderGrafico('chartLancStatus', chartLancStatus,
+      Object.entries(porStatus).sort((a,b)=>b[1]-a[1]),
+      c => { chartLancStatus = c; }, 'tipologias');
+    renderGrafico('chartLancPadrao', chartLancPadrao,
+      Object.entries(porPadrao).sort((a,b)=>b[1]-a[1]),
+      c => { chartLancPadrao = c; }, 'tipologias');
+
+  } catch(e) {
+    document.getElementById('cardsLancamentos').innerHTML =
+      '<div style="color:var(--text3);font-size:13px;padding:16px">Erro ao carregar lançamentos.</div>';
   }
 }
 
@@ -692,39 +759,6 @@ function renderDados(json) {
   renderGrafico('chartFaixa', chartFaixa, Object.entries(porFaixa),
                 c => { chartFaixa = c; }, 'imóveis');
 
-  // ── CONSTRUTORA
-  const cs     = json.construtora || {};
-  const cFaixa = cs.porFaixa    || {};
-  const cStat  = cs.porStatus   || {};
-  const cCls   = cs.porClasse   || {};
-  const nEmps  = Object.keys(cs.porConstrutora || {}).length;
-
-  document.getElementById('cardsConstrutora').innerHTML = `
-    <div class="card">
-      <div class="card-label">Unidades cadastradas</div>
-      <div class="card-value" style="color:var(--accent2)">${cs.total||0}</div>
-      <div class="card-sub">${nEmps} empreendimentos</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Até R$ 300k</div>
-      <div class="card-value cold">${cFaixa['Ate 300k']||0}</div>
-      <div class="card-sub">faixa popular</div>
-    </div>
-    <div class="card">
-      <div class="card-label">R$ 300k – 700k</div>
-      <div class="card-value" style="color:var(--accent2)">${cFaixa['300k-700k']||0}</div>
-      <div class="card-sub">faixa média</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Acima de R$ 700k</div>
-      <div class="card-value warm">${(cFaixa['700k-1.5M']||0)+(cFaixa['Acima 1.5M']||0)}</div>
-      <div class="card-sub">alto padrão e luxo</div>
-    </div>`;
-
-  renderGrafico('chartConsStatus', chartConsStatus, Object.entries(cStat).sort((a,b)=>b[1]-a[1]),
-                c => { chartConsStatus = c; }, 'unidades');
-  renderGrafico('chartConsFaixa', chartConsFaixa, Object.entries(cFaixa),
-                c => { chartConsFaixa = c; }, 'unidades');
 
   // ── Gráficos clientes (objeto → entries)
   renderGrafico('chartSegmento', chartSeg,
