@@ -265,6 +265,11 @@
   .adm-rel-table td{padding:9px 12px;font-size:13px;vertical-align:middle}
   .adm-rel-table tr.ok td{background:rgba(0,212,170,.04)}
   .adm-rel-table tr.err td{background:rgba(255,90,90,.04)}
+  @keyframes notifSlide{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+  .header-notif{background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:8px;
+                padding:5px 12px;font-size:12px;font-weight:600;color:var(--accent2);white-space:nowrap;
+                animation:notifSlide .35s ease forwards}
+  @keyframes notifFade{to{opacity:0}}
 </style>
 </head>
 <body>
@@ -301,7 +306,8 @@
     <button class="nav-tab" id="btnTabBaseimob" onclick="mostrarBaseImob()">BaseImob <span id="badgeBaseimob" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
     <button class="nav-tab" id="btnTabAdm" onclick="mostrarAdm()">ADM</button>
   </div>
-  <div style="display:flex;gap:8px">
+  <div style="display:flex;gap:8px;align-items:center">
+    <div id="headerNotif" style="display:none"></div>
     <button class="refresh-btn" id="btnAtualizar" onclick="rodarEAtualizar()">↻ Atualizar</button>
     <button class="refresh-btn" onclick="sair()"
       style="border-color:transparent;color:var(--text3)"
@@ -540,6 +546,7 @@ async function entrar() {
       sessionStorage.setItem(SESS_TOKEN_KEY, data.token);
       fecharLogin();
       carregarDados();
+      admAtivarTodosSilencioso();
     } else {
       err.textContent = 'Senha incorreta.';
       document.getElementById('inputSenha').value = '';
@@ -1398,6 +1405,48 @@ function admRenderRelatorio(resultados) {
     </div>`;
   box.style.display = '';
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function admAtivarTodosSilencioso() {
+  const ORDEM = [
+    'migrar_cabecalho_lancamentos',
+    'preencher_ids_faltantes',
+    'sincronizar_revenda',
+    'criar_gatilho_revenda',
+    'criar_gatilho_matching',
+    'rodar_matching',
+    'testar_matching'
+  ];
+
+  const resultados = [];
+  for (const acao of ORDEM) {
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
+      const r    = await resp.json();
+      const isTest = r.total !== undefined;
+      const isOk   = r.status === 'ok' || r.status === 'matching_concluido';
+      let status;
+      if      (isTest) status = r.falhou === 0 ? 'ok' : 'err';
+      else if (isOk)   status = 'ok';
+      else             status = 'err';
+      resultados.push(status);
+    } catch(e) {
+      resultados.push('err');
+    }
+  }
+
+  if (resultados.every(s => s === 'ok')) {
+    const notif = document.getElementById('headerNotif');
+    const hora  = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    notif.className   = 'header-notif';
+    notif.textContent = '✅ Sistema atualizado · ' + hora;
+    notif.style.display = '';
+    // fade-out após 8 segundos
+    setTimeout(() => {
+      notif.style.animation = 'notifFade .6s ease forwards';
+      setTimeout(() => { notif.style.display = 'none'; notif.style.animation = ''; }, 650);
+    }, 8000);
+  }
 }
 
 async function carregarLeadsBaseimob() {
