@@ -1007,20 +1007,35 @@ async function excluirCliente_(linha, nome) {
 async function rodarEAtualizar() {
   const btn = document.getElementById('btnAtualizar');
   btn.disabled = true;
-  btn.textContent = '⏳ Calculando...';
+  btn.textContent = '⏳ Aguardando...';
   try {
     const fd = new FormData();
     fd.append('dados', JSON.stringify({ acao: 'rodar_matching', token: tokenSessao() }));
     const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
     const r    = await resp.json();
     if (trataNaoAutenticado(r)) { btn.disabled = false; btn.textContent = '↻ Atualizar'; return; }
-    btn.textContent = '✅ Concluído';
-    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2000);
-    carregarDados();
+    if (r.status !== 'matching_agendado' && r.status !== 'matching_concluido') {
+      btn.textContent = '⚠️ Erro';
+      setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2500);
+      return;
+    }
+    // Matching foi agendado no servidor — mostra countdown de 25s e recarrega
+    let secs = 25;
+    const tick = setInterval(() => {
+      secs--;
+      if (secs > 0) {
+        btn.textContent = `⏳ ${secs}s`;
+      } else {
+        clearInterval(tick);
+        btn.textContent = '✅ Concluído';
+        setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 1500);
+        carregarDados();
+      }
+    }, 1000);
   } catch(e) {
     btn.textContent = '⚠️ Erro';
-    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2000);
-    alert('Erro ao rodar matching: ' + e.message);
+    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2500);
+    alert('Erro ao agendar matching: ' + e.message);
   }
 }
 

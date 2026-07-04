@@ -144,8 +144,13 @@ function doPost(e) {
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'rodar_matching') {
-    rodarMatching();
-    return ok({ status: 'matching_concluido' });
+    // Agenda via trigger para não bloquear o request — rodarMatching pode
+    // levar vários minutos e causaria timeout na requisição web.
+    ScriptApp.getProjectTriggers()
+      .filter(function(t) { return t.getHandlerFunction() === 'rodarMatching'; })
+      .forEach(function(t) { ScriptApp.deleteTrigger(t); });
+    ScriptApp.newTrigger('rodarMatching').timeBased().after(3000).create();
+    return ok({ status: 'matching_agendado' });
   }
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
