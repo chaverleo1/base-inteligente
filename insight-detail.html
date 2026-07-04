@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insight — BASE INTELIGENTE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg:#0f1117; --surface:#181c27; --surface2:#1e2335; --surface3:#242840;
+  --border:#2a3050; --border2:#343d60; --accent:#4f7cff; --accent2:#00d4aa;
+  --text:#e8ecf4; --text2:#8892aa; --text3:#4a5470;
+  --radius:12px; --radius-sm:8px; --radius-xs:6px;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; min-height:100vh; }
+a { text-decoration:none; color:inherit; }
+
+.header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.logo { font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:var(--accent); letter-spacing:-.3px; }
+.logo span { color:var(--text2); font-weight:400; }
+.nav-tabs { display:flex; background:var(--bg); border-radius:8px; padding:3px; gap:2px; }
+.nav-tab { padding:6px 16px; border-radius:6px; border:none; background:transparent; color:var(--text2);
+           font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif;
+           text-decoration:none; display:inline-block; }
+.nav-tab:hover { color:var(--text); }
+.nav-tab.active { background:var(--accent); color:#fff; }
+.refresh-btn { background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--text2);
+               padding:6px 14px; font-size:13px; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
+.refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.container { max-width:1100px; margin:0 auto; padding:28px 24px; }
+
+.back-btn {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+  color:var(--text2); padding:7px 16px; font-size:13px; cursor:pointer;
+  font-family:'Inter',sans-serif; margin-bottom:20px; display:inline-flex; align-items:center; gap:6px;
+  transition:all .2s;
+}
+.back-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.insight-banner {
+  border-left:4px solid var(--ic, var(--accent));
+  background:var(--surface); border-radius:var(--radius);
+  padding:20px 24px; margin-bottom:24px;
+  display:flex; align-items:center; gap:16px;
+  position:relative; overflow:hidden;
+}
+.insight-banner::before { content:''; position:absolute; inset:0; background:var(--ic,var(--accent)); opacity:.04; pointer-events:none; }
+.insight-banner-icon { font-size:36px; }
+.insight-banner-title { font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; }
+.insight-banner-count { font-size:13px; color:var(--text3); margin-top:5px; }
+
+.detail-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:auto; }
+.detail-table { width:100%; border-collapse:collapse; min-width:540px; }
+.detail-table th {
+  padding:10px 16px; text-align:left; font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.8px; color:var(--text3);
+  background:var(--surface2); border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+.detail-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+.detail-table tr:last-child td { border-bottom:none; }
+.detail-table tr:hover td { background:rgba(255,255,255,.02); }
+
+.td-nome { font-weight:600; }
+.td-tel { color:var(--text2); font-size:12px; }
+.wpp { display:inline-block; margin-left:8px; color:#25d366; font-size:11px; font-weight:600; }
+.wpp:hover { text-decoration:underline; }
+
+.badge {
+  display:inline-block; padding:2px 9px; border-radius:99px;
+  font-size:11px; font-weight:600; border:1px solid;
+}
+.badge-blue   { background:rgba(79,124,255,.12); color:var(--accent); border-color:rgba(79,124,255,.2); }
+.badge-green  { background:rgba(0,212,170,.12); color:#00d4aa; border-color:rgba(0,212,170,.2); }
+.badge-amber  { background:rgba(245,166,35,.12); color:#f5a623; border-color:rgba(245,166,35,.2); }
+.badge-red    { background:rgba(255,90,90,.12);  color:#ff5a5a; border-color:rgba(255,90,90,.2); }
+.badge-purple { background:rgba(167,139,250,.12); color:#a78bfa; border-color:rgba(167,139,250,.2); }
+.badge-muted  { background:rgba(74,84,112,.1); color:var(--text3); border-color:var(--border); }
+
+.score-num { font-family:'Space Grotesk',sans-serif; font-weight:700; }
+.score-hot  { color:#ff5a5a; }
+.score-warm { color:#f5a623; }
+.score-cold { color:var(--accent); }
+
+.mc-wrap { display:inline-flex; gap:4px; }
+.mc-hot  { background:rgba(255,90,90,.2);  color:#ff5a5a; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:700; }
+.mc-warm { background:rgba(245,166,35,.2); color:#f5a623; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:700; }
+
+.empty { text-align:center; padding:48px; color:var(--text3); }
+.dias-chip { font-size:11px; color:var(--text3); margin-left:6px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="formulario.html"  class="nav-tab">Formulário</a>
+    <a href="dashboard.html"   class="nav-tab">Dashboard</a>
+    <a href="busca.html"       class="nav-tab">Busca Aberta</a>
+    <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <a href="dashboard.html"   class="nav-tab">BaseImob</a>
+    <a href="dashboard.html"   class="nav-tab">ADM</a>
+  </div>
+  <button class="refresh-btn" onclick="history.back()">← Voltar</button>
+</div>
+
+<div class="container">
+  <div id="root">Carregando...</div>
+</div>
+
+<script>
+const SESS_KEY  = 'bi_session';
+const TOKEN_KEY = 'bi_session_token';
+
+(function init() {
+  if (sessionStorage.getItem(SESS_KEY) !== 'ok') { window.location.href = 'index.html'; return; }
+  const raw = sessionStorage.getItem('bi_insight_detail');
+  if (!raw) {
+    document.getElementById('root').innerHTML =
+      '<div class="empty">Nenhum insight selecionado. <a href="dashboard.html" style="color:var(--accent)">← Voltar ao Dashboard</a></div>';
+    return;
+  }
+  let d;
+  try { d = JSON.parse(raw); } catch(e) { document.getElementById('root').innerHTML='<div class="empty">Dados inválidos.</div>'; return; }
+  renderDetail(d);
+})();
+
+function renderDetail(d) {
+  const items = d.items || [];
+  const color = d.color || 'var(--accent)';
+  let tableHtml;
+  switch (d.type) {
+    case 'clientes':    tableHtml = tableClientes(items); break;
+    case 'lancamentos': tableHtml = tableLancamentos(items); break;
+    case 'leads':       tableHtml = tableLeads(items); break;
+    case 'pads':        tableHtml = tablePads(items); break;
+    default: tableHtml = '<div class="empty">Tipo desconhecido.</div>';
+  }
+  document.getElementById('root').innerHTML = `
+    <button class="back-btn" onclick="history.back()">← Voltar ao Dashboard</button>
+    <div class="insight-banner" style="--ic:${color}">
+      <div class="insight-banner-icon">${d.icon||'💡'}</div>
+      <div>
+        <div class="insight-banner-title">${d.title||'Insight'}</div>
+        <div class="insight-banner-count">${items.length} registro${items.length!==1?'s':''} encontrado${items.length!==1?'s':''}</div>
+      </div>
+    </div>
+    ${tableHtml}`;
+}
+
+/* ── helpers ── */
+function wpp(tel) {
+  const t = String(tel||'').replace(/\D/g,'');
+  return t ? `<a class="wpp" href="https://wa.me/55${t}" target="_blank">💬 WhatsApp</a>` : '';
+}
+function scoreEl(sc) {
+  const n = parseInt(sc)||0;
+  if (!n) return '<span style="color:var(--text3)">—</span>';
+  const cls = n>=75?'score-hot':n>=50?'score-warm':'score-cold';
+  return `<span class="score-num ${cls}">${n}</span>`;
+}
+function mcEl(mc80, mc70) {
+  const a=parseInt(mc80)||0, b=parseInt(mc70)||0;
+  if (!a&&!b) return '<span style="color:var(--text3)">0</span>';
+  return `<span class="mc-wrap">${a?`<span class="mc-hot">${a}</span>`:''}`
+        +`${b?`<span class="mc-warm">${b}</span>`:''}</span>`;
+}
+function urgBadge(urg) {
+  if (!urg||urg==='—') return '<span style="color:var(--text3)">—</span>';
+  const cls = /Imediata|Alta/i.test(urg)?'badge-red':/[Mm][eé]dia/i.test(urg)?'badge-amber':'badge-muted';
+  return `<span class="badge ${cls}">${urg}</span>`;
+}
+
+/* ── tables ── */
+function tableClientes(items) {
+  if (!items.length) return '<div class="empty">Nenhum cliente encontrado.</div>';
+  const rows = items.map(c => {
+    const tel = c.telefone||c.tel||'—';
+    const dias = c.dias ? `<span class="dias-chip">${c.dias}d atrás</span>` : '';
+    return `<tr>
+      <td class="td-nome">${c.nome||'—'}</td>
+      <td class="td-tel">${tel}${wpp(tel)}</td>
+      <td>${c.segmento||c.seg||'—'}</td>
+      <td>${c.padrao||c.pad||'—'}</td>
+      <td>${urgBadge(c.urgencia||c.urg)}</td>
+      <td>${scoreEl(c.score)}</td>
+      <td>${mcEl(c.mc80,c.mc70)}</td>
+      <td>${c.ultimoContato||'—'}${dias}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="detail-wrap"><table class="detail-table">
+    <thead><tr>
+      <th>Nome</th><th>Telefone</th><th>Segmento</th><th>Padrão</th>
+      <th>Urgência</th><th>Score</th><th>Matches</th><th>Último contato</th>
+    </tr></thead><tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function tableLancamentos(items) {
+  if (!items.length) return '<div class="empty">Nenhum lançamento encontrado.</div>';
+  const fmt = v => { const n=parseInt(String(v||'').replace(/\D/g,'')); if(!n)return'—'; return n>=1e6?'R$'+(n/1e6).toFixed(1)+'M':'R$'+(n/1e3).toFixed(0)+'k'; };
+  const rows = items.map(l => `<tr>
+    <td class="td-nome">${l.nomeEmpreendimento||l.nome||'—'}</td>
+    <td><span class="badge badge-blue">${l.padrao||'—'}</span></td>
+    <td><span class="badge badge-muted">${l.status||'—'}</span></td>
+    <td>${l.previsaoEntrega||'—'}</td>
+    <td>${fmt(l.precoMedio||l.preco)}</td>
+    <td>${l.construtora||'—'}</td>
+  </tr>`).join('');
+  return `<div class="detail-wrap"><table class="detail-table">
+    <thead><tr><th>Empreendimento</th><th>Padrão</th><th>Status</th><th>Previsão Entrega</th><th>Preço Médio</th><th>Construtora</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function tableLeads(items) {
+  if (!items.length) return '<div class="empty">Nenhum lead encontrado.</div>';
+  const rows = items.map(l => `<tr>
+    <td class="td-nome">${l.nome||'—'}</td>
+    <td class="td-tel">${l.telefone||'—'}${wpp(l.telefone)}</td>
+    <td><span class="badge badge-purple">${l.tipo_contato||'—'}</span></td>
+    <td>${l.canal||'—'}</td>
+    <td>${scoreEl(l.score)}</td>
+  </tr>`).join('');
+  return `<div class="detail-wrap"><table class="detail-table">
+    <thead><tr><th>Nome</th><th>Telefone</th><th>Tipo Contato</th><th>Canal</th><th>Score</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function tablePads(items) {
+  if (!items.length) return '<div class="empty">Nenhum padrão sem demanda encontrado.</div>';
+  const rows = items.map(p => `<tr>
+    <td class="td-nome">${p.padrao||p.pad||'—'}</td>
+    <td><span class="badge badge-red">Sem clientes cadastrados</span></td>
+  </tr>`).join('');
+  return `<div class="detail-wrap"><table class="detail-table">
+    <thead><tr><th>Padrão no lançamento</th><th>Situação</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+</script>
+</body>
+</html>

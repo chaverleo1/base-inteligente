@@ -164,6 +164,128 @@ function doGet(e) {
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
 
+  if (acao === 'adm_dados_insights') {
+    try {
+      var ss_ = SpreadsheetApp.getActiveSpreadsheet();
+      var hoje_ = new Date();
+      var tz_   = Session.getScriptTimeZone();
+      var semContato90_ = 0, bairros_ = {}, canais_ = {};
+      var dormentes_ = [], bairroMap_ = {}, canalMap_ = {};
+
+      var abaC_ = ss_.getSheetByName('CONTATOS');
+      if (abaC_ && abaC_.getLastRow() > 1) {
+        var nC_ = abaC_.getLastRow() - 1;
+        var dadosC_ = abaC_.getRange(2, 1, nC_, CABECALHO.length).getValues();
+        var iNome_ = CABECALHO.indexOf('nome');
+        var iTel_  = CABECALHO.indexOf('telefone');
+        var iUC_   = CABECALHO.indexOf('ultimoContato');
+        var iBI_   = CABECALHO.indexOf('bairroInteresse');
+        var iCan_  = CABECALHO.indexOf('canal');
+        var iSc_   = CABECALHO.indexOf('score');
+        var iCat_  = CABECALHO.indexOf('categoria');
+        var iSeg_  = CABECALHO.indexOf('segmento');
+        var iPad_  = CABECALHO.indexOf('padrao');
+        var iUrg_  = CABECALHO.indexOf('urgencia');
+        var iId_   = CABECALHO.indexOf('idCliente');
+        var FORA_  = ['Corretor','Parceiro','Descartar','Igreja'];
+
+        dadosC_.forEach(function(r_) {
+          if (!r_[iNome_]) return;
+          var nome_ = String(r_[iNome_]||'');
+          var tel_  = String(r_[iTel_]||'');
+          var sc_   = parseInt(r_[iSc_])||0;
+          var seg_  = String(r_[iSeg_]||'');
+          var pad_  = String(r_[iPad_]||'');
+          var urg_  = String(r_[iUrg_]||'');
+          var id_   = String(r_[iId_]||'');
+          var can_  = (String(r_[iCan_]||'').trim()) || 'Não informado';
+          var cat_  = String(r_[iCat_]||'').trim();
+          var bais_ = String(r_[iBI_]||'');
+
+          var uc_   = r_[iUC_];
+          var d_    = uc_ instanceof Date ? uc_ : (uc_ ? new Date(String(uc_)) : null);
+          var dias_ = (d_ && !isNaN(d_.getTime())) ? Math.round((hoje_ - d_) / 86400000) : 9999;
+          var ucStr_= (d_ && !isNaN(d_.getTime())) ? Utilities.formatDate(d_, tz_, 'dd/MM/yyyy') : '—';
+
+          if (dias_ > 90) {
+            semContato90_++;
+            if (dormentes_.length < 100)
+              dormentes_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_,dias:dias_});
+          }
+
+          bais_.split(',').forEach(function(b_) {
+            b_ = b_.trim();
+            if (b_.length <= 2) return;
+            bairros_[b_] = (bairros_[b_]||0) + 1;
+            if (!bairroMap_[b_]) bairroMap_[b_] = [];
+            if (bairroMap_[b_].length < 50)
+              bairroMap_[b_].push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_});
+          });
+
+          if (FORA_.indexOf(cat_) < 0) {
+            if (!canais_[can_]) canais_[can_] = {soma:0, n:0, clientes:[]};
+            canais_[can_].soma += sc_;
+            canais_[can_].n++;
+            if (canais_[can_].clientes.length < 50)
+              canais_[can_].clientes.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_});
+          }
+        });
+      }
+
+      dormentes_.sort(function(a,b){ return b.dias - a.dias; });
+
+      var topBairros_ = Object.entries(bairros_)
+        .sort(function(a,b){return b[1]-a[1]}).slice(0,5)
+        .map(function(e_){return {bairro:e_[0], n:e_[1]};});
+      var bairroTopClientes_ = topBairros_.length ? (bairroMap_[topBairros_[0].bairro]||[]) : [];
+
+      var canalTop_ = {nome:'—', media:0, total:0};
+      var canalTopClientes_ = [];
+      Object.keys(canais_).forEach(function(c_) {
+        if (canais_[c_].n < 3) return;
+        var med_ = Math.round(canais_[c_].soma / canais_[c_].n);
+        if (med_ > canalTop_.media) {
+          canalTop_ = {nome:c_, media:med_, total:canais_[c_].n};
+          canalTopClientes_ = canais_[c_].clientes;
+        }
+      });
+
+      var abaLL_ = ss_.getSheetByName('LEADS_LANCAMENTOS');
+      var leadsPendentes_ = 0, leadsTotal_ = 0, leadsList_ = [];
+      if (abaLL_ && abaLL_.getLastRow() > 1) {
+        var nLL_   = abaLL_.getLastRow() - 1;
+        var dadosLL_ = abaLL_.getRange(2, 1, nLL_, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+        var iTipo_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('tipo_contato');
+        var iNLL_   = CABECALHO_LEADS_LANCAMENTOS.indexOf('nome');
+        var iTelLL_ = CABECALHO_LEADS_LANCAMENTOS.indexOf('telefone');
+        var iCanLL_ = CABECALHO_LEADS_LANCAMENTOS.indexOf('canal');
+        var iScLL_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('score');
+        var iIdLL_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+        dadosLL_.forEach(function(r_) {
+          if (!r_[0]) return;
+          leadsTotal_++;
+          if (String(r_[iTipo_]||'') !== 'MIGRADO CONTATOS') {
+            leadsPendentes_++;
+            if (leadsList_.length < 100)
+              leadsList_.push({nome:String(r_[iNLL_]||''),telefone:String(r_[iTelLL_]||''),tipo_contato:String(r_[iTipo_]||''),canal:String(r_[iCanLL_]||''),score:parseInt(r_[iScLL_])||0,idCliente:String(r_[iIdLL_]||'')});
+          }
+        });
+      }
+
+      return ok({
+        semContato90: semContato90_,
+        topBairros: topBairros_,
+        canalTop: canalTop_,
+        leadsPendentes: leadsPendentes_,
+        leadsTotal: leadsTotal_,
+        dormentes: dormentes_,
+        bairroTopClientes: bairroTopClientes_,
+        canalTopClientes: canalTopClientes_,
+        leadsList: leadsList_
+      });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+
   return ok({ status: 'acao desconhecida' });
 }
 
