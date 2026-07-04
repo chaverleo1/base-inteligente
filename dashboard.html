@@ -257,7 +257,7 @@
     <button class="nav-tab" id="btnTabBaseimob" onclick="mostrarBaseImob()">BaseImob <span id="badgeBaseimob" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
   </div>
   <div style="display:flex;gap:8px">
-    <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
+    <button class="refresh-btn" id="btnAtualizar" onclick="rodarEAtualizar()">↻ Atualizar</button>
     <button class="refresh-btn" onclick="sair()"
       style="border-color:transparent;color:var(--text3)"
       onmouseover="this.style.borderColor='#ff5a5a';this.style.color='#ff5a5a'"
@@ -999,6 +999,28 @@ async function excluirCliente_(linha, nome) {
     }
   } catch(e) {
     alert('Erro de conexão: ' + e.message);
+  }
+}
+
+// ── RODAR MATCHING ───────────────────────────────────────────────────────────
+
+async function rodarEAtualizar() {
+  const btn = document.getElementById('btnAtualizar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Calculando...';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'rodar_matching', token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) { btn.disabled = false; btn.textContent = '↻ Atualizar'; return; }
+    btn.textContent = '✅ Concluído';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2000);
+    carregarDados();
+  } catch(e) {
+    btn.textContent = '⚠️ Erro';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2000);
+    alert('Erro ao rodar matching: ' + e.message);
   }
 }
 

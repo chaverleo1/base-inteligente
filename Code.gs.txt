@@ -143,6 +143,10 @@ function doPost(e) {
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
+  if (d.acao === 'rodar_matching') {
+    rodarMatching();
+    return ok({ status: 'matching_concluido' });
+  }
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
