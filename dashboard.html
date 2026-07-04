@@ -86,6 +86,20 @@
   .score-cold{background:rgba(79,124,255,.15);color:var(--cold)}
   .empty-state{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
 
+  /* ── INSIGHTS ── */
+  .insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px}
+  @media(max-width:900px){.insight-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:500px){.insight-grid{grid-template-columns:1fr}}
+  .insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+                padding:18px 20px;border-left:3px solid var(--ic,var(--accent));position:relative;overflow:hidden}
+  .insight-card::before{content:'';position:absolute;inset:0;background:var(--ic,var(--accent));opacity:.04;pointer-events:none}
+  .insight-icon{font-size:18px;margin-bottom:10px;display:block}
+  .insight-num{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;
+               color:var(--ic,var(--accent));line-height:1;margin-bottom:6px}
+  .insight-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .insight-action{font-size:11px;color:var(--text3);line-height:1.5;padding-top:8px;
+                  border-top:1px solid var(--border);margin-top:8px}
+
   /* ── GRÁFICOS ── */
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
   @media(max-width:700px){.charts-row{grid-template-columns:1fr}}
@@ -396,6 +410,12 @@
     </div>
   </div>
 
+  <!-- INSIGHTS -->
+  <div class="section-title">💡 Insights</div>
+  <div class="insight-grid" id="insightGrid">
+    <div class="loading dot-anim" style="grid-column:1/-1">Calculando insights</div>
+  </div>
+
   <!-- GRÁFICOS -->
   <div class="section-title">Composição da base de clientes</div>
   <div class="charts-row">
@@ -599,6 +619,7 @@ function sair() {
 verificarAuth();
 
 let chartSeg = null;
+let _dashData = null;
 let chartPad = null;
 let chartTipo  = null;
 let chartFaixa = null;
@@ -682,6 +703,8 @@ async function carregarLancamentosDash() {
     renderGrafico('chartLancPadrao', chartLancPadrao,
       Object.entries(porPadrao).sort((a,b)=>b[1]-a[1]),
       c => { chartLancPadrao = c; }, 'tipologias');
+
+    if (_dashData) renderInsights(_dashData, lista);
 
   } catch(e) {
     document.getElementById('cardsLancamentos').innerHTML =
@@ -772,6 +795,75 @@ function renderDados(json) {
   const agora = new Date();
   document.getElementById('dashboardFooter').textContent =
     'Última atualização: ' + agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
+
+  _dashData = json;
+  renderInsights(json, null);
+}
+
+function renderInsights(json, lancamentos) {
+  const quentes = json.quentes || [];
+  const mornos  = json.mornos  || [];
+  const frios   = json.frios   || [];
+  const todos   = [...quentes, ...mornos];
+
+  // 1 — Urgentes sem nenhum match
+  const urgentes = todos.filter(c =>
+    (c.urg||'').match(/Imediata|Curto/i) && c.mc80 === 0 && c.mc70 === 0
+  ).length;
+
+  // 2 — Quentes sem match forte
+  const quentesSemMatch = quentes.filter(c => c.mc80 === 0 && c.mc70 === 0).length;
+
+  // 3 — Frios com potencial de reativação (score ≥ 50)
+  const friosReativos = frios.filter(c => c.score >= 50).length;
+
+  // 4 — % quentes com pelo menos 1 match forte
+  const qComMatch = quentes.filter(c => c.mc80 > 0).length;
+  const pctMatch  = quentes.length ? Math.round(qComMatch / quentes.length * 100) : 0;
+
+  // 5 — Segmento mais demandado
+  const segs = Object.entries(json.segmentos || {}).sort((a,b) => b[1]-a[1]);
+  const topSeg = segs[0] || ['—', 0];
+
+  // 6 — Clientes alinhados com lançamentos (atualizado quando LANCAMENTOS carrega)
+  let lancAlinhados = null;
+  if (lancamentos && lancamentos.length) {
+    const padrLanc = new Set(lancamentos.map(l => (l.padrao||'').toLowerCase()).filter(Boolean));
+    lancAlinhados = todos.filter(c => padrLanc.has((c.pad||'').toLowerCase())).length;
+  }
+
+  const card = (ic, icon, num, label, action) => `
+    <div class="insight-card" style="--ic:${ic}">
+      <span class="insight-icon">${icon}</span>
+      <div class="insight-num">${num}</div>
+      <div class="insight-label">${label}</div>
+      <div class="insight-action">→ ${action}</div>
+    </div>`;
+
+  document.getElementById('insightGrid').innerHTML =
+    card('#ff5a5a', '⏱️', urgentes,
+         'urgentes sem produto no estoque',
+         'Buscar ativamente imóveis para esses perfis agora') +
+
+    card('#f5a623', '🔥', quentesSemMatch,
+         'clientes quentes aguardam estoque',
+         'Ampliar inventário ou revisar critérios de matching') +
+
+    card('#4f7cff', '💤', friosReativos,
+         'frios com score ≥ 50 prontos para reativar',
+         'Retomar contato com lançamentos e novas ofertas') +
+
+    card('#00d4aa', '🎯', pctMatch + '%',
+         'dos clientes quentes têm match forte (≥80)',
+         pctMatch < 50 ? 'Abaixo de 50% — gap crítico no inventário' : 'Boa cobertura — manter estoque atualizado') +
+
+    card('#a78bfa', '🏆', topSeg[1],
+         `clientes buscam "${topSeg[0]}" — tipo mais demandado`,
+         'Priorizar captação desse segmento no inventário') +
+
+    card('#00d4aa', '🚀', lancAlinhados !== null ? lancAlinhados : '—',
+         'clientes alinhados com o perfil dos lançamentos',
+         lancAlinhados !== null ? 'Apresentar tabelas de preço e condições de pagamento' : 'Carregando lançamentos...');
 }
 
 function renderMatchCol(elId, lista, tipo) {
