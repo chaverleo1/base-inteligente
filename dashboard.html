@@ -642,6 +642,7 @@ async function carregarDados() {
     console.error(err);
   }
   carregarLancamentosDash();
+  carregarInsightsExtended();
 }
 
 async function carregarLancamentosDash() {
@@ -804,66 +805,139 @@ function renderInsights(json, lancamentos) {
   const quentes = json.quentes || [];
   const mornos  = json.mornos  || [];
   const frios   = json.frios   || [];
-  const todos   = [...quentes, ...mornos];
+  const todos   = [...quentes, ...mornos, ...frios];
+  const ativos  = [...quentes, ...mornos];
 
-  // 1 — Urgentes sem nenhum match
-  const urgentes = todos.filter(c =>
-    (c.urg||'').match(/Imediata|Curto/i) && c.mc80 === 0 && c.mc70 === 0
-  ).length;
-
-  // 2 — Quentes sem match forte
-  const quentesSemMatch = quentes.filter(c => c.mc80 === 0 && c.mc70 === 0).length;
-
-  // 3 — Frios com potencial de reativação (score ≥ 50)
-  const friosReativos = frios.filter(c => c.score >= 50).length;
-
-  // 4 — % quentes com pelo menos 1 match forte
-  const qComMatch = quentes.filter(c => c.mc80 > 0).length;
-  const pctMatch  = quentes.length ? Math.round(qComMatch / quentes.length * 100) : 0;
-
-  // 5 — Segmento mais demandado
-  const segs = Object.entries(json.segmentos || {}).sort((a,b) => b[1]-a[1]);
-  const topSeg = segs[0] || ['—', 0];
-
-  // 6 — Clientes alinhados com lançamentos (atualizado quando LANCAMENTOS carrega)
-  let lancAlinhados = null;
-  if (lancamentos && lancamentos.length) {
-    const padrLanc = new Set(lancamentos.map(l => (l.padrao||'').toLowerCase()).filter(Boolean));
-    lancAlinhados = todos.filter(c => padrLanc.has((c.pad||'').toLowerCase())).length;
+  function ic(color, icon, num, label, action, id) {
+    return `<div class="insight-card${id?' insight-pending':''}" style="--ic:${color}"${id?` id="${id}"`:''}>`
+      + `<span class="insight-icon">${icon}</span>`
+      + `<div class="insight-num">${num}</div>`
+      + `<div class="insight-label">${label}</div>`
+      + `<div class="insight-action">→ ${action}</div></div>`;
   }
 
-  const card = (ic, icon, num, label, action) => `
-    <div class="insight-card" style="--ic:${ic}">
-      <span class="insight-icon">${icon}</span>
-      <div class="insight-num">${num}</div>
-      <div class="insight-label">${label}</div>
-      <div class="insight-action">→ ${action}</div>
-    </div>`;
+  // 1 — Pipeline de fechamento imediato
+  const fechamento = quentes.filter(c => (c.urg||'').match(/Imediata/i) && c.mc80 > 0).length;
+
+  // 2 — Mornos com chave na mão
+  const mornosComMatch = mornos.filter(c => c.mc80 > 0).length;
+
+  // 3 — Teto real de conversão (% sem nenhum match)
+  const semMatch   = todos.filter(c => c.mc80 === 0 && c.mc70 === 0).length;
+  const pctSemMat  = todos.length ? Math.round(semMatch / todos.length * 100) : 0;
+
+  // 4 — Perfis quebrados (ativos sem seg ou pad)
+  const perfisSemId = ativos.filter(c => !c.seg || !c.pad).length;
+
+  // 5 — Concentração do pipeline quente (pad dominante)
+  const padQ = {};
+  quentes.forEach(c => { const p = c.pad||'Não def.'; padQ[p] = (padQ[p]||0)+1; });
+  const topPad    = Object.entries(padQ).sort((a,b)=>b[1]-a[1])[0] || ['—',0];
+  const pctTopPad = quentes.length ? Math.round(topPad[1]/quentes.length*100) : 0;
+
+  // 6 — Lançamentos com entrega ≤ 180 dias (cross com LANCAMENTOS)
+  let lancExp = lancamentos
+    ? lancamentos.filter(l => {
+        if (!l.previsaoEntrega) return false;
+        const diff = (new Date(l.previsaoEntrega) - new Date()) / 86400000;
+        return diff >= 0 && diff <= 180;
+      }).length
+    : null;
+
+  // 7 — Lançamentos sem demanda cadastrada
+  let lancSemDem = null;
+  if (lancamentos) {
+    const demPads = new Set(ativos.map(c=>(c.pad||'').toLowerCase()).filter(Boolean));
+    const lancPads = [...new Set(lancamentos.map(l=>(l.padrao||'').toLowerCase()).filter(Boolean))];
+    lancSemDem = lancPads.filter(p => !demPads.has(p)).length;
+  }
+
+  const pendente = (id, icon, label) =>
+    `<div class="insight-card insight-pending" id="${id}" style="--ic:#4a5470">`
+    +`<span class="insight-icon">${icon}</span>`
+    +`<div class="insight-num" style="font-size:20px;color:var(--text3)">—</div>`
+    +`<div class="insight-label">${label}</div>`
+    +`<div class="insight-action" style="color:var(--text3)">→ Aguardando dados...</div></div>`;
 
   document.getElementById('insightGrid').innerHTML =
-    card('#ff5a5a', '⏱️', urgentes,
-         'urgentes sem produto no estoque',
-         'Buscar ativamente imóveis para esses perfis agora') +
+    ic('#00d4aa','🎯', fechamento,
+       'clientes para fechar hoje — urgência imediata + match forte',
+       fechamento > 0 ? 'Ligar agora — comprador ativo com produto compatível' : 'Nenhum no momento — acompanhar urgentes') +
 
-    card('#f5a623', '🔥', quentesSemMatch,
-         'clientes quentes aguardam estoque',
-         'Ampliar inventário ou revisar critérios de matching') +
+    ic('#f5a623','🔑', mornosComMatch,
+       'clientes mornos com match ≥80 aguardando apresentação',
+       mornosComMatch > 0 ? 'Uma reunião pode fechar — não deixe esfriar' : 'Ampliar inventário para os mornos') +
 
-    card('#4f7cff', '💤', friosReativos,
-         'frios com score ≥ 50 prontos para reativar',
-         'Retomar contato com lançamentos e novas ofertas') +
+    ic('#ff5a5a','📉', pctSemMat+'%',
+       'da base inteira nunca será atendida com o estoque atual',
+       pctSemMat > 50 ? 'Gap crítico — esse é o teto real de conversão' : 'Cobertura razoável — manter estoque ativo') +
 
-    card('#00d4aa', '🎯', pctMatch + '%',
-         'dos clientes quentes têm match forte (≥80)',
-         pctMatch < 50 ? 'Abaixo de 50% — gap crítico no inventário' : 'Boa cobertura — manter estoque atualizado') +
+    ic('#a78bfa','🧩', perfisSemId,
+       'clientes ativos sem tipo ou padrão definido',
+       perfisSemId > 0 ? 'Cadastro incompleto = matching impossível. Qualificar agora' : 'Todos os ativos estão bem qualificados') +
 
-    card('#a78bfa', '🏆', topSeg[1],
-         `clientes buscam "${topSeg[0]}" — tipo mais demandado`,
-         'Priorizar captação desse segmento no inventário') +
+    ic('#4f7cff','📊', pctTopPad+'%',
+       `dos clientes quentes buscam "${topPad[0]}" — padrão dominante`,
+       'Concentre captação de imóveis nesse padrão. Pipeline concentrado aqui') +
 
-    card('#00d4aa', '🚀', lancAlinhados !== null ? lancAlinhados : '—',
-         'clientes alinhados com o perfil dos lançamentos',
-         lancAlinhados !== null ? 'Apresentar tabelas de preço e condições de pagamento' : 'Carregando lançamentos...');
+    (lancamentos !== null
+      ? ic('#f5a623','⏱️', lancExp??'—',
+           'tipologias em lançamentos com entrega em até 180 dias',
+           (lancExp??0) > 0 ? 'Janela de vendas fecha em breve — cruzar com clientes compatíveis' : 'Nenhum com entrega próxima no momento')
+      : pendente('insLancExp','⏱️','Lançamentos com entrega próxima')) +
+
+    (lancamentos !== null
+      ? ic('#ff5a5a','👻', lancSemDem??'—',
+           'padrões nos lançamentos sem clientes cadastrados para o perfil',
+           (lancSemDem??0) > 0 ? 'Captar leads para esses perfis ou reavaliar o produto' : 'Todos os lançamentos têm demanda cadastrada')
+      : pendente('insLancSem','👻','Lançamentos sem demanda cadastrada')) +
+
+    pendente('insDormentes','😴','clientes sem contato há mais de 90 dias') +
+    pendente('insBairro',   '📍','bairro mais procurado pelos clientes') +
+    pendente('insCanal',    '📡','canal de origem que traz clientes de maior valor') +
+    pendente('insLeads',    '🎪','leads BaseImob pendentes de qualificação');
+}
+
+async function carregarInsightsExtended() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_dados_insights&token=' + encodeURIComponent(tokenSessao()));
+    const data = await resp.json();
+    if (data.status === 'nao_autenticado') return;
+    atualizarInsightsExtended(data);
+  } catch(e) { /* silent */ }
+}
+
+function atualizarInsightsExtended(data) {
+  function upd(id, color, icon, num, label, action) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.setProperty('--ic', color);
+    el.classList.remove('insight-pending');
+    el.innerHTML = `<span class="insight-icon">${icon}</span>`
+      + `<div class="insight-num">${num}</div>`
+      + `<div class="insight-label">${label}</div>`
+      + `<div class="insight-action">→ ${action}</div>`;
+  }
+
+  const dorm = data.semContato90 || 0;
+  upd('insDormentes','#ff5a5a','😴', dorm,
+    'clientes sem contato há mais de 90 dias',
+    dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');
+
+  const topB = (data.topBairros||[])[0] || {bairro:'—', n:0};
+  upd('insBairro','#4f7cff','📍', topB.n,
+    `clientes buscam "${topB.bairro}" — bairro mais procurado`,
+    'Captar imóveis nesse bairro. Maior concentração de demanda');
+
+  const canal = data.canalTop || {nome:'—', media:0};
+  upd('insCanal','#00d4aa','📡', canal.media > 0 ? canal.media : '—',
+    `score médio via "${canal.nome}" — canal mais lucrativo`,
+    canal.media > 0 ? `Investir mais nesse canal. Traz clientes com score ${canal.media}` : 'Dados insuficientes para análise');
+
+  const leads = data.leadsPendentes || 0;
+  upd('insLeads','#a78bfa','🎪', leads,
+    `leads BaseImob ainda não qualificados como contatos (${data.leadsTotal||0} total)`,
+    leads > 0 ? 'Leads pagos esquecidos na fila. Qualificar e migrar para base' : 'Todos os leads foram qualificados');
 }
 
 function renderMatchCol(elId, lista, tipo) {
