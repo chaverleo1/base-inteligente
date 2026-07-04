@@ -549,7 +549,10 @@ async function sha256(texto) {
 }
 
 async function verificarAuth() {
-  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) { admInicializarSistema(); return; }
+  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) {
+    if (sessionStorage.getItem('bi_init_done') === '1') { fecharLogin(); carregarDados(); return; }
+    admInicializarSistema();
+  }
 }
 
 async function entrar() {
@@ -1454,6 +1457,7 @@ async function admInicializarSistema() {
   }
 
   setTimeout(() => {
+    sessionStorage.setItem('bi_init_done', '1');
     document.getElementById('initOverlay').style.display = 'none';
     fecharLogin();
     carregarDados();
