@@ -221,6 +221,36 @@
   .bi-btn-migrar:hover{background:#3d6aee}
   .bi-btn-migrar:disabled{background:var(--border);color:var(--text3);cursor:default}
   .bi-empty{text-align:center;padding:48px;color:var(--text3);font-size:14px}
+
+  /* ── ADM ── */
+  .adm-table{width:100%;border-collapse:collapse}
+  .adm-table thead tr{background:var(--surface2);border-bottom:2px solid var(--border)}
+  .adm-table th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
+  .adm-table td{padding:14px 16px;border-bottom:1px solid var(--border);vertical-align:top}
+  .adm-table tr:last-child td{border-bottom:none}
+  .adm-table tr:hover td{background:rgba(255,255,255,.015)}
+  .adm-td-btn{width:210px}
+  .adm-td-desc{font-size:13px;color:var(--text2);line-height:1.55}
+  .adm-td-desc b{color:var(--text)}
+  .adm-td-desc code{font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--accent2)}
+  .adm-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;width:100%;text-align:left;white-space:nowrap}
+  .adm-btn.secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
+  .adm-btn:hover:not(:disabled){filter:brightness(1.12)}
+  .adm-btn:disabled{opacity:.55;cursor:not-allowed}
+  .adm-code{display:block;margin-top:6px;font-size:11px;color:var(--text3);font-family:monospace;background:var(--surface2);padding:3px 7px;border-radius:4px;letter-spacing:.2px}
+  .adm-status{display:block;min-height:0;margin-top:6px;font-size:12px;padding:0;border-radius:4px;transition:all .2s}
+  .adm-status.ok{padding:4px 8px;background:rgba(0,212,170,.1);color:var(--accent2)}
+  .adm-status.err{padding:4px 8px;background:rgba(255,90,90,.1);color:var(--danger)}
+  .adm-btn-verify{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;white-space:nowrap}
+  .adm-btn-verify:hover{border-color:var(--accent);color:var(--accent)}
+  .adm-gatilho-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:3px 10px;font-size:12px;color:var(--text3);margin:2px 3px}
+  .adm-gatilho-chip.ativo{border-color:var(--accent2);color:var(--accent2);background:rgba(0,212,170,.08)}
+  .adm-teste-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-top:20px}
+  .adm-teste-header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+  .adm-teste-stat{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700}
+  .adm-teste-stat.ok{color:var(--accent2)}
+  .adm-teste-stat.err{color:var(--danger)}
+  .adm-teste-fail-item{font-size:12px;color:var(--danger);padding:6px 10px;background:rgba(255,90,90,.06);border-radius:4px;margin-top:6px;border-left:3px solid var(--danger);line-height:1.5}
 </style>
 </head>
 <body>
@@ -255,6 +285,7 @@
     <a href="busca.html" class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
     <button class="nav-tab" id="btnTabBaseimob" onclick="mostrarBaseImob()">BaseImob <span id="badgeBaseimob" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
+    <button class="nav-tab" id="btnTabAdm" onclick="mostrarAdm()">ADM</button>
   </div>
   <div style="display:flex;gap:8px">
     <button class="refresh-btn" id="btnAtualizar" onclick="rodarEAtualizar()">↻ Atualizar</button>
@@ -347,6 +378,83 @@
 <div class="page" id="secao-baseimob" style="display:none">
   <div class="section-title">Leads BaseImob — pendentes de qualificação</div>
   <div id="bi-lista"><div class="loading dot-anim">Carregando leads</div></div>
+</div>
+
+<!-- ADM SECTION -->
+<div class="page" id="secao-adm" style="display:none">
+  <div class="section-title">Administração — Funções manuais</div>
+
+  <!-- Gatilhos automáticos -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;margin-bottom:20px;display:flex;align-items:center;flex-wrap:wrap;gap:10px">
+    <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap">Gatilhos ativos:</span>
+    <span id="adm-gatilhos-txt" style="flex:1;font-size:13px;color:var(--text3)">— clique em Verificar</span>
+    <button class="adm-btn-verify" onclick="admVerificarGatilhos()">↻ Verificar</button>
+  </div>
+
+  <!-- Tabela de funções -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th style="width:210px">Função</th>
+          <th>Quando usar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" onclick="admExecutar('sincronizar_revenda',this)">▶ Sincronizar Revenda</button>
+            <code class="adm-code">sincronizarRevenda()</code>
+            <span class="adm-status" id="admStatus_sincronizar_revenda"></span>
+          </td>
+          <td class="adm-td-desc">Busca todos os imóveis à venda na <b>API Imobzi</b> e substitui a aba <b>REVENDA</b>. Executar quando quiser forçar atualização imediata, fora do ciclo automático de 6 horas.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" onclick="admExecutar('criar_gatilho_matching',this)">▶ Gatilho Matching</button>
+            <code class="adm-code">criarGatilhoMatching()</code>
+            <span class="adm-status" id="admStatus_criar_gatilho_matching"></span>
+          </td>
+          <td class="adm-td-desc">Cria (ou recria) o <b>trigger automático de 12 horas</b> para <code>rodarMatching</code>. Executar uma vez no setup inicial, ou se o gatilho tiver sido removido manualmente pelo editor do Apps Script.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" onclick="admExecutar('criar_gatilho_revenda',this)">▶ Gatilho Revenda</button>
+            <code class="adm-code">criarGatilhoRevenda()</code>
+            <span class="adm-status" id="admStatus_criar_gatilho_revenda"></span>
+          </td>
+          <td class="adm-td-desc">Cria (ou recria) o <b>trigger automático de 6 horas</b> para <code>sincronizarRevenda</code>. Executar uma vez no setup inicial, ou se o gatilho tiver sido removido manualmente.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" onclick="admExecutar('preencher_ids_faltantes',this)">▶ Preencher IDs</button>
+            <code class="adm-code">preencherIdOfertaFaltantes()</code>
+            <span class="adm-status" id="admStatus_preencher_ids_faltantes"></span>
+          </td>
+          <td class="adm-td-desc">Gera <b>idOferta</b> (ex: <code>LAN-10001-01</code>) para tipologias de lançamentos que ainda não têm código. Executar quando novas tipologias forem adicionadas diretamente na planilha sem passar pelo formulário.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" onclick="admExecutar('migrar_cabecalho_lancamentos',this)">▶ Migrar Cabeçalho</button>
+            <code class="adm-code">migrarCabecalhoLancamentos()</code>
+            <span class="adm-status" id="admStatus_migrar_cabecalho_lancamentos"></span>
+          </td>
+          <td class="adm-td-desc">Atualiza o cabeçalho da aba <b>LANCAMENTOS</b> no Sheets para incluir novas colunas. Executar toda vez que a estrutura de colunas for alterada no código.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn secondary" onclick="admExecutar('testar_matching',this)">▶ Testar Motor</button>
+            <code class="adm-code">testarMatching()</code>
+            <span class="adm-status" id="admStatus_testar_matching"></span>
+          </td>
+          <td class="adm-td-desc">Roda os <b>testes unitários</b> do motor de matching e exibe quantos casos passaram ou falharam. Usar para diagnóstico quando os resultados do matching parecerem incorretos ou inconsistentes.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Resultado dos testes -->
+  <div id="adm-teste-resultado" style="display:none"></div>
 </div>
 
 <!-- DRAWER CLIENTE -->
@@ -1034,16 +1142,105 @@ async function rodarEAtualizar() {
 function mostrarDashboard() {
   document.getElementById('secao-dashboard').style.display = '';
   document.getElementById('secao-baseimob').style.display  = 'none';
+  document.getElementById('secao-adm').style.display       = 'none';
   document.getElementById('btnTabDash').classList.add('active');
   document.getElementById('btnTabBaseimob').classList.remove('active');
+  document.getElementById('btnTabAdm').classList.remove('active');
 }
 
 function mostrarBaseImob() {
   document.getElementById('secao-dashboard').style.display = 'none';
   document.getElementById('secao-baseimob').style.display  = '';
+  document.getElementById('secao-adm').style.display       = 'none';
   document.getElementById('btnTabDash').classList.remove('active');
   document.getElementById('btnTabBaseimob').classList.add('active');
+  document.getElementById('btnTabAdm').classList.remove('active');
   carregarLeadsBaseimob();
+}
+
+function mostrarAdm() {
+  document.getElementById('secao-dashboard').style.display = 'none';
+  document.getElementById('secao-baseimob').style.display  = 'none';
+  document.getElementById('secao-adm').style.display       = '';
+  document.getElementById('btnTabDash').classList.remove('active');
+  document.getElementById('btnTabBaseimob').classList.remove('active');
+  document.getElementById('btnTabAdm').classList.add('active');
+}
+
+async function admVerificarGatilhos() {
+  const el = document.getElementById('adm-gatilhos-txt');
+  el.innerHTML = '⏳ Verificando...';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_verificar_gatilhos&token=' + encodeURIComponent(tokenSessao()));
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const CONHECIDOS = ['rodarMatching', 'sincronizarRevenda'];
+    const ativos = (r.gatilhos || []).map(g => g.funcao);
+    el.innerHTML = CONHECIDOS.map(nome => {
+      const ativo = ativos.includes(nome);
+      return `<span class="adm-gatilho-chip${ativo ? ' ativo' : ''}">${ativo ? '✔' : '✗'} ${nome}</span>`;
+    }).join('');
+  } catch(e) {
+    el.textContent = 'Erro ao verificar.';
+    el.style.color = 'var(--danger)';
+  }
+}
+
+async function admExecutar(acao, btn) {
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Executando...';
+  const statusEl = document.getElementById('admStatus_' + acao);
+  if (statusEl) { statusEl.textContent = ''; statusEl.className = 'adm-status'; }
+  if (acao !== 'testar_matching') document.getElementById('adm-teste-resultado').style.display = 'none';
+
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+
+    const isTest = r.total !== undefined;
+    if (isTest) {
+      admRenderTeste(r);
+      const testOk = r.falhou === 0;
+      if (statusEl) {
+        statusEl.textContent = `${r.passou}/${r.total} testes passaram`;
+        statusEl.className = 'adm-status ' + (testOk ? 'ok' : 'err');
+      }
+      btn.textContent = testOk ? '✅ Tudo passou' : `⚠️ ${r.falhou} falha(s)`;
+    } else if (r.status === 'ok') {
+      if (statusEl) { statusEl.textContent = r.msg || 'Concluído.'; statusEl.className = 'adm-status ok'; }
+      btn.textContent = '✅ Concluído';
+      if (acao === 'criar_gatilho_matching' || acao === 'criar_gatilho_revenda') admVerificarGatilhos();
+    } else {
+      if (statusEl) { statusEl.textContent = r.motivo || r.status || 'Erro desconhecido.'; statusEl.className = 'adm-status err'; }
+      btn.textContent = '⚠️ Erro';
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = 'Timeout ou erro de rede.'; statusEl.className = 'adm-status err'; }
+    btn.textContent = '⚠️ Timeout';
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 4000);
+}
+
+function admRenderTeste(r) {
+  const box   = document.getElementById('adm-teste-resultado');
+  const total = r.total || 0;
+  const ok    = r.passou || 0;
+  const err   = r.falhou || 0;
+  const falhasHtml = (r.falhas || []).map(f =>
+    `<div class="adm-teste-fail-item">❌ ${f.nome}<br><small style="color:var(--text3)">esperado: <b>${f.esperado}</b> &nbsp;|&nbsp; obtido: <b>${f.atual}</b></small></div>`
+  ).join('');
+  box.innerHTML = `
+    <div class="adm-teste-box">
+      <div class="adm-teste-header">
+        <span class="adm-teste-stat ${err === 0 ? 'ok' : 'err'}">${ok}/${total}</span>
+        <span style="font-size:14px;color:var(--text2)">${err === 0 ? 'Todos os testes passaram.' : err + ' falha(s) encontrada(s).'}</span>
+        <code class="adm-code" style="margin:0">testarMatching()</code>
+      </div>
+      ${falhasHtml || '<div style="font-size:13px;color:var(--accent2)">Motor funcionando corretamente.</div>'}
+    </div>`;
+  box.style.display = '';
 }
 
 async function carregarLeadsBaseimob() {

@@ -126,6 +126,40 @@ function doGet(e) {
     }
   }
 
+  // ── ADM — rotas protegidas por sessão (não estão em ACOES_PUBLICAS_GET) ──
+  if (acao === 'adm_sincronizar_revenda') {
+    try { sincronizarRevenda(); return ok({ status: 'ok', msg: 'REVENDA sincronizada com Imobzi.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_criar_gatilho_matching') {
+    try { criarGatilhoMatching(); return ok({ status: 'ok', msg: 'Gatilho rodarMatching (12h) criado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_criar_gatilho_revenda') {
+    try { criarGatilhoRevenda(); return ok({ status: 'ok', msg: 'Gatilho sincronizarRevenda (6h) criado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_preencher_ids_faltantes') {
+    try { preencherIdOfertaFaltantes(); return ok({ status: 'ok', msg: 'idOfertas preenchidos.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_migrar_cabecalho_lancamentos') {
+    try { migrarCabecalhoLancamentos(); return ok({ status: 'ok', msg: 'Cabeçalho LANCAMENTOS atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_testar_matching') {
+    try { return ok(testarMatching()); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_verificar_gatilhos') {
+    try {
+      var gatilhos = ScriptApp.getProjectTriggers().map(function(t) {
+        return { funcao: t.getHandlerFunction() };
+      });
+      return ok({ gatilhos: gatilhos });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+
   return ok({ status: 'acao desconhecida' });
 }
 
