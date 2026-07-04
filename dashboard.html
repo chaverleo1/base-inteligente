@@ -269,6 +269,7 @@
   .header-notif{background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.3);border-radius:8px;
                 padding:5px 12px;font-size:12px;font-weight:600;color:var(--accent2);white-space:nowrap;
                 animation:notifSlide .35s ease forwards}
+  .header-notif-warn{background:rgba(245,166,35,.1);border-color:rgba(245,166,35,.4);color:#f5a623}
   @keyframes notifFade{to{opacity:0}}
 </style>
 </head>
@@ -1420,32 +1421,43 @@ async function admAtivarTodosSilencioso() {
 
   const resultados = [];
   for (const acao of ORDEM) {
+    let status = 'err', detalhe = 'timeout';
     try {
       const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
       const r    = await resp.json();
       const isTest = r.total !== undefined;
       const isOk   = r.status === 'ok' || r.status === 'matching_concluido';
-      let status;
-      if      (isTest) status = r.falhou === 0 ? 'ok' : 'err';
-      else if (isOk)   status = 'ok';
-      else             status = 'err';
-      resultados.push(status);
-    } catch(e) {
-      resultados.push('err');
-    }
+      if      (isTest) { status = r.falhou === 0 ? 'ok' : 'err'; detalhe = r.falhou + ' falha(s)'; }
+      else if (isOk)   { status = 'ok'; detalhe = r.msg || 'ok'; }
+      else             { detalhe = r.motivo || r.status || 'erro'; }
+    } catch(e) { detalhe = e.message || 'timeout'; }
+
+    if (status === 'err') console.error('[ADM auto] ' + acao + ': ' + detalhe);
+    resultados.push(status);
   }
 
+  const notif = document.getElementById('headerNotif');
+  const hora  = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
   if (resultados.every(s => s === 'ok')) {
-    const notif = document.getElementById('headerNotif');
-    const hora  = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    // Tudo ok — aviso verde, some após 8s
     notif.className   = 'header-notif';
     notif.textContent = '✅ Sistema atualizado · ' + hora;
+    notif.onclick     = null;
+    notif.style.cursor = '';
     notif.style.display = '';
-    // fade-out após 8 segundos
     setTimeout(() => {
       notif.style.animation = 'notifFade .6s ease forwards';
       setTimeout(() => { notif.style.display = 'none'; notif.style.animation = ''; }, 650);
     }, 8000);
+  } else {
+    // Alguma função falhou — aviso laranja, fica até o usuário verificar
+    const nErr = resultados.filter(s => s === 'err').length;
+    notif.className   = 'header-notif header-notif-warn';
+    notif.textContent = '⚠️ ' + nErr + ' função(ões) com erro · verificar ADM';
+    notif.style.cursor = 'pointer';
+    notif.style.display = '';
+    notif.onclick = () => { mostrarAdm(); notif.style.display = 'none'; };
   }
 }
 
