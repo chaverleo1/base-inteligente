@@ -875,6 +875,30 @@ function renderInsights(json, lancamentos) {
   const lancExp    = listLancExp  ? listLancExp.length  : null;
   const lancSemDem = listLancSem  ? listLancSem.length  : null;
 
+  // ── Insights v1 (originais) ────────────────────────────────────
+  const listUrgSemMatch    = todos.filter(c => (c.urg||'').match(/Imediata|Curto/i) && c.mc80 === 0 && c.mc70 === 0);
+  const listQuentesSemMat  = quentes.filter(c => c.mc80 === 0 && c.mc70 === 0);
+  const listFriosReativos  = frios.filter(c => (parseInt(c.score)||0) >= 50);
+  const listQuentesComMat  = quentes.filter(c => c.mc80 > 0);
+  const pctComMatch        = quentes.length ? Math.round(listQuentesComMat.length / quentes.length * 100) : 0;
+  const segs               = Object.entries(json.segmentos || {}).sort((a,b) => b[1]-a[1]);
+  const topSeg             = segs[0] || ['—', 0];
+  let   listAlinhados      = null;
+  if (lancamentos) {
+    const padrLanc = new Set(lancamentos.map(l => (l.padrao||'').toLowerCase()).filter(Boolean));
+    listAlinhados  = ativos.filter(c => padrLanc.has((c.pad||'').toLowerCase()));
+  }
+
+  window._insightDetails['insUrgSemMatch']   = {title:'Urgentes sem produto disponível', icon:'⏱️', color:'#ff5a5a', type:'clientes', items:listUrgSemMatch};
+  window._insightDetails['insQuentesSemMat'] = {title:'Clientes quentes sem match no estoque', icon:'🔥', color:'#f5a623', type:'clientes', items:listQuentesSemMat};
+  window._insightDetails['insFriosReativos'] = {title:'Frios com potencial de reativação', icon:'💤', color:'#4f7cff', type:'clientes', items:listFriosReativos};
+  window._insightDetails['insQuentesComMat'] = {title:'Clientes quentes com match forte', icon:'🎯', color:'#00d4aa', type:'clientes', items:listQuentesComMat};
+  if (listAlinhados) window._insightDetails['insAlinhados'] = {title:'Clientes alinhados ao perfil dos lançamentos', icon:'🚀', color:'#00d4aa', type:'clientes', items:listAlinhados};
+
+  const divider = txt =>
+    `<div style="grid-column:1/-1;padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px;
+                 font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase">${txt}</div>`;
+
   document.getElementById('insightGrid').innerHTML =
     ic('#00d4aa','🎯', listPipeline.length,
        'clientes para fechar hoje — urgência imediata + match forte',
@@ -918,7 +942,40 @@ function renderInsights(json, lancamentos) {
     pendente('insDormentes','😴','clientes sem contato há mais de 90 dias') +
     pendente('insBairro',   '📍','bairro mais procurado pelos clientes') +
     pendente('insCanal',    '📡','canal de origem que traz clientes de maior valor') +
-    pendente('insLeads',    '🎪','leads BaseImob pendentes de qualificação');
+    pendente('insLeads',    '🎪','leads BaseImob pendentes de qualificação') +
+
+    divider('Insights v1') +
+
+    ic('#ff5a5a','⏱️', listUrgSemMatch.length,
+       'urgentes sem nenhum match — perda de venda iminente',
+       listUrgSemMatch.length > 0 ? 'Buscar ativamente imóveis para esses perfis agora' : 'Todos os urgentes têm pelo menos um match',
+       'insUrgSemMatch') +
+
+    ic('#f5a623','🔥', listQuentesSemMat.length,
+       'clientes quentes aguardam estoque — pipeline parado',
+       listQuentesSemMat.length > 0 ? 'Ampliar inventário ou revisar critérios de matching' : 'Todos os quentes têm match disponível',
+       'insQuentesSemMat') +
+
+    ic('#4f7cff','💤', listFriosReativos.length,
+       'frios com score ≥ 50 prontos para reativar',
+       listFriosReativos.length > 0 ? 'Retomar contato com lançamentos e novas ofertas' : 'Nenhum frio com score relevante no momento',
+       'insFriosReativos') +
+
+    ic('#00d4aa','🎯', pctComMatch+'%',
+       'dos clientes quentes têm match forte (≥80)',
+       pctComMatch < 50 ? 'Abaixo de 50% — gap crítico no inventário' : 'Boa cobertura — manter estoque atualizado',
+       'insQuentesComMat') +
+
+    ic('#a78bfa','🏆', topSeg[1],
+       `clientes buscam "${topSeg[0]}" — segmento mais demandado`,
+       'Priorizar captação desse segmento no inventário') +
+
+    (lancamentos !== null
+      ? ic('#00d4aa','🚀', listAlinhados ? listAlinhados.length : '—',
+           'clientes ativos alinhados com o perfil dos lançamentos',
+           listAlinhados && listAlinhados.length > 0 ? 'Apresentar tabelas de preço e condições de pagamento' : 'Nenhum cliente compatível com os lançamentos atuais',
+           'insAlinhados')
+      : ic('#00d4aa','🚀','—','clientes alinhados com o perfil dos lançamentos','Carregando lançamentos...'));
 }
 
 async function carregarInsightsExtended() {
