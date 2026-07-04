@@ -1009,8 +1009,12 @@ async function rodarEAtualizar() {
   btn.disabled = true;
   btn.textContent = '⏳ Aguardando...';
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=rodar_matching&token=' + encodeURIComponent(tokenSessao()));
-    const r    = await resp.json();
+    const _tok = tokenSessao();
+    const resp = await fetch(WEBHOOK_URL + '?acao=rodar_matching&token=' + encodeURIComponent(_tok));
+    const rawText = await resp.text();
+    alert('DEBUG token=' + (_tok ? _tok.substring(0,8)+'…' : 'VAZIO') + '\nResposta: ' + rawText.substring(0,300));
+    btn.disabled = false; btn.textContent = '↻ Atualizar'; return;
+    const r    = JSON.parse(rawText);
     if (trataNaoAutenticado(r)) { btn.disabled = false; btn.textContent = '↻ Atualizar'; return; }
     if (r.status !== 'matching_agendado' && r.status !== 'matching_concluido') {
       btn.textContent = '⚠️ Erro';
