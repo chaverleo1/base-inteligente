@@ -117,6 +117,13 @@ function doGet(e) {
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
+  if (acao === 'rodar_matching') {
+    ScriptApp.getProjectTriggers()
+      .filter(function(t) { return t.getHandlerFunction() === 'rodarMatching'; })
+      .forEach(function(t) { ScriptApp.deleteTrigger(t); });
+    ScriptApp.newTrigger('rodarMatching').timeBased().after(3000).create();
+    return ok({ status: 'matching_agendado' });
+  }
 
   return ok({ status: 'acao desconhecida' });
 }
@@ -143,15 +150,6 @@ function doPost(e) {
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
-  if (d.acao === 'rodar_matching') {
-    // Agenda via trigger para não bloquear o request — rodarMatching pode
-    // levar vários minutos e causaria timeout na requisição web.
-    ScriptApp.getProjectTriggers()
-      .filter(function(t) { return t.getHandlerFunction() === 'rodarMatching'; })
-      .forEach(function(t) { ScriptApp.deleteTrigger(t); });
-    ScriptApp.newTrigger('rodarMatching').timeBased().after(3000).create();
-    return ok({ status: 'matching_agendado' });
-  }
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
