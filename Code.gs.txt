@@ -127,6 +127,10 @@ function doGet(e) {
   }
 
   // ── ADM — rotas protegidas por sessão (não estão em ACOES_PUBLICAS_GET) ──
+  if (acao === 'adm_rodar_matching') {
+    try { rodarMatching(); return ok({ status: 'ok', msg: 'Matching recalculado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
   if (acao === 'adm_sincronizar_revenda') {
     try { sincronizarRevenda(); return ok({ status: 'ok', msg: 'REVENDA sincronizada com Imobzi.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
