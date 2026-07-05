@@ -220,6 +220,8 @@ select.form-input option { background: var(--surface2); }
 .btn-toggle:hover { text-decoration: underline; }
 .btn-del-emp { font-size: 11px; color: var(--text3); background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; }
 .btn-del-emp:hover { color: var(--danger); }
+.btn-editar-emp { font-size: 11px; color: var(--accent); background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; }
+.btn-editar-emp:hover { text-decoration: underline; }
 
 /* ── PANEL UNIDADES ── */
 .emp-panel { display: none; border-top: 1px solid var(--border); background: var(--surface2); padding: 14px 16px; overflow-x: auto; }
@@ -1348,6 +1350,7 @@ function renderLista(lista) {
       </div>
       <div class="emp-card-footer">
         <button class="btn-toggle" onclick="togglePanel(${i})">▶ Ver unidades</button>
+        <button class="btn-editar-emp" onclick="editarEmp(${i})">✏️ Editar</button>
         <button class="btn-del-emp" onclick="excluirEmp('${e.idLancamento||''}','${(e.nomeEmpreendimento||'').replace(/'/g,'\\&apos;')}')">🗑 Excluir</button>
       </div>
       <div class="emp-panel" id="ep-${i}">${renderPanel(e.unidades)}</div>
@@ -1395,6 +1398,22 @@ function togglePanel(i) {
   const btn   = document.querySelector(`#ec-${i} .btn-toggle`);
   const open  = panel.classList.toggle('open');
   btn.textContent = open ? '▼ Ocultar unidades' : '▶ Ver unidades';
+}
+
+function editarEmp(idx) {
+  const emps = Object.values((() => {
+    const mapa = {};
+    for (const l of _todos) {
+      const key = l.idLancamento || l.nomeEmpreendimento;
+      if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
+      mapa[key].unidades.push(l);
+    }
+    return mapa;
+  })());
+  const e = emps[idx];
+  if (!e) return;
+  sessionStorage.setItem('bi_edit_lancamento', JSON.stringify(e));
+  window.location.href = 'lancamentos-editar.html';
 }
 
 async function excluirEmp(id, nome) {
