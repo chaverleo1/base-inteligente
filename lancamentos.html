@@ -1265,7 +1265,7 @@ async function salvarLancamento() {
 }
 
 // ─── CARREGAR LISTA ───────────────────────────────────────────────────────────
-let _todos = [], _filtroStatus = '';
+let _todos = [], _filtroStatus = '', _emps = [];
 
 async function carregarLancamentos() {
   try {
@@ -1321,7 +1321,8 @@ function renderLista(lista) {
     if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
     mapa[key].unidades.push(l);
   }
-  const emps = Object.values(mapa);
+  _emps = Object.values(mapa);
+  const emps = _emps;
   cnt.innerHTML = `<b>${emps.length}</b> empreendimento${emps.length !== 1 ? 's' : ''}`;
 
   grid.innerHTML = emps.map((e, i) => {
@@ -1401,16 +1402,7 @@ function togglePanel(i) {
 }
 
 function editarEmp(idx) {
-  const emps = Object.values((() => {
-    const mapa = {};
-    for (const l of _todos) {
-      const key = l.idLancamento || l.nomeEmpreendimento;
-      if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
-      mapa[key].unidades.push(l);
-    }
-    return mapa;
-  })());
-  const e = emps[idx];
+  const e = _emps[idx];
   if (!e) return;
   sessionStorage.setItem('bi_edit_lancamento', JSON.stringify(e));
   window.location.href = 'lancamentos-editar.html';
