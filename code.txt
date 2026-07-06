@@ -132,6 +132,7 @@ function doGet(e) {
   if (acao === 'esqueci_senha')    return esquecerSenha_();
   if (acao === 'validar_token')    return validarToken_(e.parameter.token);
   if (acao === 'matches_cliente')  return matchesCliente_(e.parameter.cod);
+  if (acao === 'listar_favoritos') return ok(listarFavoritos_(e.parameter.cod));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
@@ -366,6 +367,7 @@ function doPost(e) {
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
+  if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -2231,6 +2233,95 @@ var CABECALHO_INTERESSES = [
   'qtdInteresse', 'idsInteresse', 'tags',
   'canal', 'tipo_contato', 'score'
 ];
+
+// FAVORITOS — imóveis que o corretor marcou como favorito pra um cliente
+// específico, na página de ofertas (drawer do dashboard). Dados do imóvel
+// vêm denormalizados (mesmos campos imo* de MATCHES) porque a aba MATCHES é
+// TOTALMENTE reescrita a cada rodarMatching() — guardar só uma referência
+// (idCliente + imoCodigo) perderia a foto/preço/local assim que o matching
+// rodasse de novo. Cada linha é auto-contida, sobrevive independente do
+// recálculo de matching.
+var CABECALHO_FAVORITOS = [
+  'idCliente', 'cliNome',
+  'imoCodigo', 'fonte', 'imoTipo', 'imoBairro', 'imoCondominio', 'imoEndereco',
+  'imoQuartos', 'imoSuites', 'imoVagas', 'imoAreaUtil',
+  'imoValorVenda', 'imoPadrao', 'imoEstagio', 'imoFoto', 'imoUrl',
+  'imoConstrutora', 'imoEntrega',
+  'dataFavoritado'
+];
+
+function obterAbaFavoritos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('FAVORITOS');
+  if (!aba) {
+    aba = ss.insertSheet('FAVORITOS');
+    aba.setTabColor('#f5a623');
+    aba.appendRow(CABECALHO_FAVORITOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_FAVORITOS.length)
+       .setFontWeight('bold').setBackground('#f5a623').setFontColor('#1a1a2e');
+  }
+  return aba;
+}
+
+// Toggle: se o par (idCliente + imoCodigo + fonte) já existe, remove
+// (desfavoritar); senão, adiciona (favoritar). d traz os campos imo* já
+// carregados no drawer (vindos de matches_cliente) — evita ter que rebuscar
+// o imóvel em REVENDA/LANCAMENTOS/CONSTRUTORA só pra favoritar.
+function toggleFavorito_(d) {
+  d = d || {};
+  var idCliente = String(d.idCliente || '').trim();
+  var imoCodigo = String(d.imoCodigo || '').trim();
+  var fonte     = String(d.fonte || '').trim();
+  if (!idCliente || !imoCodigo) return { status: 'erro', motivo: 'idCliente e imoCodigo obrigatorios' };
+
+  var aba = obterAbaFavoritos_();
+  var lr  = aba.getLastRow();
+  var idxId  = CABECALHO_FAVORITOS.indexOf('idCliente');
+  var idxCod = CABECALHO_FAVORITOS.indexOf('imoCodigo');
+  var idxFon = CABECALHO_FAVORITOS.indexOf('fonte');
+
+  if (lr >= 2) {
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FAVORITOS.length).getValues();
+    for (var i = 0; i < dados.length; i++) {
+      if (String(dados[i][idxId]) === idCliente &&
+          String(dados[i][idxCod]) === imoCodigo &&
+          String(dados[i][idxFon]) === fonte) {
+        aba.deleteRow(i + 2);
+        return { status: 'removido' };
+      }
+    }
+  }
+
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var linha = CABECALHO_FAVORITOS.map(function(col) {
+    if (col === 'idCliente') return idCliente;
+    if (col === 'fonte')     return fonte;
+    if (col === 'dataFavoritado') return agora;
+    return d[col] !== undefined ? d[col] : '';
+  });
+  aba.appendRow(linha);
+  return { status: 'adicionado' };
+}
+
+function listarFavoritos_(idCliente) {
+  idCliente = String(idCliente || '').trim();
+  if (!idCliente) return [];
+  var aba = obterAbaFavoritos_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return [];
+  var idxId = CABECALHO_FAVORITOS.indexOf('idCliente');
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FAVORITOS.length).getValues();
+  var res = [];
+  dados.forEach(function(row, i) {
+    if (String(row[idxId]) === idCliente) {
+      var obj = { _linha: i + 2 };
+      CABECALHO_FAVORITOS.forEach(function(col, j) { obj[col] = row[j]; });
+      res.push(obj);
+    }
+  });
+  return res;
+}
 
 function obterAbaLeadsLancamentos_() {
   var ss  = SpreadsheetApp.openById(SHEET_ID);

@@ -165,6 +165,8 @@
   .d-btn-tel:hover{border-color:var(--accent);color:var(--accent)}
   .d-btn-edit{background:var(--accent);color:#fff}
   .d-btn-edit:hover{background:#3d6aee}
+  .d-btn-fav{background:rgba(245,166,35,.12);color:#f5a623;border:1px solid rgba(245,166,35,.3)}
+  .d-btn-fav:hover{background:rgba(245,166,35,.22)}
   .d-steps{display:flex;flex-direction:column;gap:8px}
   .d-step{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px}
   .d-step-icon{font-size:16px;flex-shrink:0;margin-top:1px}
@@ -185,6 +187,11 @@
   .imovel-codigo{font-size:13px;font-weight:600;color:var(--text2);margin-top:2px;font-family:monospace}
   .imovel-valor{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px}
   .imovel-score-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;align-self:flex-start;flex-shrink:0}
+  .imovel-top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+  .imovel-btn-fav{background:var(--surface);border:1px solid var(--border);color:var(--text3);width:26px;height:26px;border-radius:50%;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+  .imovel-btn-fav:hover{border-color:#f5a623;color:#f5a623}
+  .imovel-btn-fav.ativo{background:rgba(245,166,35,.15);border-color:#f5a623;color:#f5a623}
+  .imovel-btn-fav:disabled{opacity:.5;cursor:default}
   .imovel-attrs{display:flex;gap:8px;padding:0 12px 10px;flex-wrap:wrap}
   .imovel-attr{font-size:11px;color:var(--text3);background:var(--surface);padding:2px 7px;border-radius:4px}
   .imovel-det{font-size:11px;color:var(--text3);padding:0 12px 10px;line-height:1.5}
@@ -625,6 +632,7 @@ verificarAuth();
 
 let chartSeg = null;
 let _dashData = null;
+let _matchesAtuais = [];
 let chartPad = null;
 let chartTipo  = null;
 let chartFaixa = null;
@@ -1178,19 +1186,32 @@ function fmt_(v) {
   return 'R$ ' + n.toLocaleString('pt-BR');
 }
 
+// Chave que identifica um imóvel de forma estável entre MATCHES e FAVORITOS
+// (imoCodigo sozinho não basta — fontes diferentes podem colidir em teoria).
+function chaveFavorito_(imoCodigo, fonte) { return (imoCodigo||'') + '::' + (fonte||''); }
+
 async function carregarMatchesDrawer(cod, cliente) {
   const el = document.getElementById('drawerImoveis');
   if (!el) return;
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=matches_cliente&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao()));
-    const lista = await resp.json();
+    const [respMatches, respFav] = await Promise.all([
+      fetch(WEBHOOK_URL + '?acao=matches_cliente&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao())),
+      fetch(WEBHOOK_URL + '?acao=listar_favoritos&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao()))
+    ]);
+    const lista = await respMatches.json();
+    let favoritos = [];
+    try { favoritos = await respFav.json(); } catch(eFav) { /* silent — favoritar continua funcionando mesmo sem a lista prévia */ }
+    const favKeys = new Set((Array.isArray(favoritos) ? favoritos : []).map(f => chaveFavorito_(f.imoCodigo, f.fonte)));
     if (!Array.isArray(lista) || !lista.length) {
       el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>';
       return;
     }
+    _matchesAtuais = lista;
     const tel = String((cliente && cliente.telefone) || '').replace(/\D/g,'');
     // debug removido
     el.innerHTML = `<div class="imovel-cards">${lista.map((m, idx) => {
+      const favId = `fav_${idx}`;
+      const jaFavoritado = favKeys.has(chaveFavorito_(m.imoCodigo, m.fonte));
       const sc      = parseInt(m.scoreMatch || m.score || m.cliScore) || 0;
       const cls     = sc >= 80 ? 'd-badge-hot' : sc >= 70 ? 'd-badge-warm' : 'd-badge-cold';
       const isConst = m.fonte === 'CONSTRUTORA';
@@ -1246,7 +1267,12 @@ async function carregarMatchesDrawer(cod, cliente) {
             ${m.imoCodigo ? `<div class="imovel-codigo">Código: ${m.imoCodigo}</div>` : ''}
             <div class="imovel-valor">${fmt_(m.imoValorVenda)||'—'}</div>
           </div>
-          <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
+          <div class="imovel-top-actions">
+            <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
+            <button type="button" class="imovel-btn-fav${jaFavoritado?' ativo':''}" id="${favId}"
+                    onclick="toggleFavoritoClick(${idx}, ${JSON.stringify(cod)}, ${JSON.stringify((cliente&&cliente.nome)||'')}, this)"
+                    title="${jaFavoritado?'Remover dos favoritos':'Marcar como favorito'}">${jaFavoritado?'★':'☆'}</button>
+          </div>
         </div>
         ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
         ${condPag.length ? `<div class="imovel-condpag">${condPag.map(p=>`<div class="imovel-condpag-item">${p}</div>`).join('')}</div>` : ''}
@@ -1265,6 +1291,36 @@ async function carregarMatchesDrawer(cod, cliente) {
     }).join('')}</div>`;
   } catch(e) {
     el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Erro ao buscar matches.</div>';
+  }
+}
+
+async function toggleFavoritoClick(idx, cod, cliNome, btnEl) {
+  const m = _matchesAtuais[idx];
+  if (!m) return;
+  btnEl.disabled = true;
+  try {
+    const payload = {
+      acao: 'toggle_favorito', token: tokenSessao(),
+      idCliente: cod, cliNome: cliNome,
+      imoCodigo: m.imoCodigo || '', fonte: m.fonte || '',
+      imoTipo: m.imoTipo || '', imoBairro: m.imoBairro || '', imoCondominio: m.imoCondominio || '',
+      imoEndereco: m.imoEndereco || '',
+      imoQuartos: m.imoQuartos || '', imoSuites: m.imoSuites || '', imoVagas: m.imoVagas || '', imoAreaUtil: m.imoAreaUtil || '',
+      imoValorVenda: m.imoValorVenda || '', imoPadrao: m.imoPadrao || '', imoEstagio: m.imoEstagio || '',
+      imoFoto: m.imoFoto || '', imoUrl: m.imoUrl || '',
+      imoConstrutora: m.imoConstrutora || '', imoEntrega: m.imoEntrega || ''
+    };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const agora = r.status === 'adicionado';
+    btnEl.textContent = agora ? '★' : '☆';
+    btnEl.classList.toggle('ativo', agora);
+    btnEl.title = agora ? 'Remover dos favoritos' : 'Marcar como favorito';
+  } catch(e) {
+    console.error('Erro ao favoritar:', e);
+  } finally {
+    btnEl.disabled = false;
   }
 }
 
@@ -1387,6 +1443,7 @@ function renderDrawer(c, score) {
       ${wppUrl ? `<a class="d-btn d-btn-wpp" href="${wppUrl}" target="_blank">💬 WhatsApp</a>` : ''}
       ${telUrl ? `<a class="d-btn d-btn-tel" href="${telUrl}">📞 ${c.telefone}</a>` : ''}
       <a class="d-btn d-btn-edit" href="formulario.html?linha=${encodeURIComponent(c._linha||'')}">✏️ Editar</a>
+      ${c.idCliente ? `<a class="d-btn d-btn-fav" href="favoritos.html?cod=${encodeURIComponent(c.idCliente)}">⭐ Favoritos</a>` : ''}
     </div>
     ${tagsHtml ? `<div style="padding:0 0 8px 0;display:flex;flex-wrap:wrap;gap:6px">${tagsHtml}</div>` : ''}
 

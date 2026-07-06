@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Favoritos — BASE INTELIGENTE</title>
+<script src="config.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg:#0f1117; --surface:#181c27; --surface2:#1e2335; --surface3:#242840;
+  --border:#2a3050; --border2:#343d60; --accent:#4f7cff; --accent2:#00d4aa;
+  --text:#e8ecf4; --text2:#8892aa; --text3:#4a5470; --danger:#ff5a5a;
+  --radius:12px; --radius-sm:8px; --radius-xs:6px;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; min-height:100vh; }
+a { text-decoration:none; color:inherit; }
+
+.header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.logo { font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:var(--accent); letter-spacing:-.3px; }
+.logo span { color:var(--text2); font-weight:400; }
+.nav-tabs { display:flex; background:var(--bg); border-radius:8px; padding:3px; gap:2px; }
+.nav-tab { padding:6px 16px; border-radius:6px; border:none; background:transparent; color:var(--text2);
+           font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif;
+           text-decoration:none; display:inline-block; }
+.nav-tab:hover { color:var(--text); }
+.refresh-btn { background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--text2);
+               padding:6px 14px; font-size:13px; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
+.refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.container { max-width:900px; margin:0 auto; padding:28px 24px 120px; }
+
+.back-btn {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+  color:var(--text2); padding:7px 16px; font-size:13px; cursor:pointer;
+  font-family:'Inter',sans-serif; margin-bottom:20px; display:inline-flex; align-items:center; gap:6px;
+  transition:all .2s;
+}
+.back-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.page-banner {
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px 22px; margin-bottom:24px; display:flex; align-items:center; gap:14px;
+  border-left:4px solid #f5a623;
+}
+.page-banner-icon { font-size:30px; }
+.page-title { font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; }
+.page-sub { font-size:13px; color:var(--text3); margin-top:3px; font-family:monospace; }
+
+.empty { text-align:center; padding:48px; color:var(--text3); }
+
+/* ── CARDS (mesmo estilo do drawer do dashboard) ── */
+.imovel-cards{display:flex;flex-direction:column;gap:10px}
+.imovel-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:border-color .2s}
+.imovel-card.selecionado{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(0,212,170,.25)}
+.imovel-card-top{display:flex;gap:12px;padding:12px}
+.imovel-check{display:flex;align-items:center}
+.imovel-check input{width:18px;height:18px;cursor:pointer;accent-color:var(--accent2)}
+.imovel-foto{width:72px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--border)}
+.imovel-foto-placeholder{width:72px;height:56px;border-radius:6px;flex-shrink:0;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:20px}
+.imovel-info{flex:1;min-width:0}
+.imovel-tipo{font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imovel-local{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imovel-codigo{font-size:13px;font-weight:600;color:var(--text2);margin-top:2px;font-family:monospace}
+.imovel-valor{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px}
+.imovel-fonte-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
+.fonte-rev{background:rgba(79,124,255,.12);color:var(--accent)}
+.fonte-const{background:rgba(0,212,170,.12);color:var(--accent2)}
+.fonte-lanc{background:rgba(245,166,35,.12);color:#f5a623}
+.imovel-attrs{display:flex;gap:8px;padding:0 12px 10px;flex-wrap:wrap}
+.imovel-attr{font-size:11px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:4px}
+.imovel-actions{display:flex;justify-content:flex-end;padding:0 12px 10px;gap:8px}
+.btn-remover-fav{background:rgba(255,90,90,.1);border:1px solid rgba(255,90,90,.25);color:var(--danger);
+                  border-radius:var(--radius-xs);padding:5px 12px;font-size:12px;font-weight:600;
+                  cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.btn-remover-fav:hover{background:rgba(255,90,90,.2)}
+.imovel-link{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--accent);padding:7px;border-top:1px solid var(--border);transition:background .15s}
+.imovel-link:hover{background:rgba(79,124,255,.08)}
+
+/* ── BARRA DE SELEÇÃO / PDF (mesmo padrão de busca.html) ── */
+.barra-sel {
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--surface); border-top:1px solid var(--border);
+  padding:12px 24px; display:flex; align-items:center; justify-content:space-between;
+  gap:12px; z-index:50; flex-wrap:wrap;
+}
+.barra-sel-info { font-size:13px; color:var(--accent2); font-weight:700; }
+.barra-btns { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn-pdf {
+  padding:9px 18px; border-radius:var(--radius-xs);
+  background:var(--accent2); color:#0f1117;
+  font-size:13px; font-weight:700; border:none; cursor:pointer;
+  font-family:'Inter',sans-serif; transition:all .18s;
+  display:flex; align-items:center; gap:6px;
+}
+.btn-pdf:hover { background:#00bfa0; transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,212,170,.35); }
+.btn-pdf:disabled { opacity:.6; cursor:default; transform:none; box-shadow:none; }
+.btn-sel-all {
+  padding:6px 12px; border-radius:var(--radius-xs);
+  background:transparent; color:var(--text3);
+  font-size:12px; border:1px solid var(--border); cursor:pointer;
+  font-family:'Inter',sans-serif; transition:all .15s;
+}
+.btn-sel-all:hover { color:var(--accent2); border-color:var(--accent2); }
+
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-20px);padding:12px 24px;border-radius:99px;font-weight:600;font-size:14px;opacity:0;transition:all .3s;z-index:200;white-space:nowrap}
+.toast.ok{background:var(--accent2);color:#0f1117}
+.toast.erro{background:var(--danger);color:#fff}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="formulario.html"  class="nav-tab">Formulário</a>
+    <a href="dashboard.html"   class="nav-tab">Dashboard</a>
+    <a href="busca.html"       class="nav-tab">Busca Aberta</a>
+    <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <a href="dashboard.html"   class="nav-tab">BaseImob</a>
+    <a href="dashboard.html"   class="nav-tab">ADM</a>
+  </div>
+  <button class="refresh-btn" onclick="history.back()">← Voltar</button>
+</div>
+
+<div class="container">
+  <div class="page-banner">
+    <div class="page-banner-icon">⭐</div>
+    <div>
+      <div class="page-title" id="clienteNome">Favoritos</div>
+      <div class="page-sub" id="clienteCod"></div>
+    </div>
+  </div>
+  <div id="root"><div class="empty">Carregando favoritos...</div></div>
+</div>
+
+<div class="barra-sel" id="barraSel" style="display:none">
+  <span class="barra-sel-info">📋 <b id="selCount">0</b> selecionados</span>
+  <div class="barra-btns">
+    <button class="btn-sel-all" id="btnSelAll" onclick="selecionarTodos()">☑ Todos</button>
+    <button class="btn-sel-all" onclick="limparSelecao()" style="color:var(--danger);border-color:var(--danger)">✕ Limpar</button>
+    <button class="btn-pdf" id="btnPDF" onclick="gerarPDF()">📄 Gerar PDF de Ofertas</button>
+  </div>
+</div>
+
+<script>
+const SESS_KEY  = 'bi_session';
+const TOKEN_KEY = 'bi_session_token';
+function tokenSessao() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { window.location.href = 'index.html'; return true; }
+  return false;
+}
+
+const cod = new URLSearchParams(window.location.search).get('cod') || '';
+let _favoritos = [];
+const selecionados = new Map(); // idx -> favorito
+
+(function init() {
+  if (sessionStorage.getItem(SESS_KEY) !== 'ok') { window.location.href = 'index.html'; return; }
+  if (!cod) {
+    document.getElementById('root').innerHTML = '<div class="empty">Nenhum cliente informado. <a href="dashboard.html" style="color:var(--accent)">← Voltar ao Dashboard</a></div>';
+    return;
+  }
+  document.getElementById('clienteCod').textContent = cod;
+  carregar();
+})();
+
+function showToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + (tipo||'ok'); t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function carregar() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_favoritos&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    _favoritos = Array.isArray(json) ? json : [];
+    if (_favoritos.length) document.getElementById('clienteNome').textContent = _favoritos[0].cliNome || 'Favoritos';
+    render();
+  } catch (e) {
+    document.getElementById('root').innerHTML = '<div class="empty">Erro ao carregar favoritos: ' + e.message + '</div>';
+  }
+}
+
+function fmt_(v) {
+  const n = parseInt(String(v||'').replace(/\D/g,'')) || 0;
+  return n ? 'R$ ' + n.toLocaleString('pt-BR') : '';
+}
+
+function render() {
+  if (!_favoritos.length) {
+    document.getElementById('root').innerHTML = '<div class="empty">Nenhum imóvel favoritado ainda pra esse cliente.</div>';
+    document.getElementById('barraSel').style.display = 'none';
+    return;
+  }
+  const cards = _favoritos.map((f, idx) => {
+    const isConst = f.fonte === 'CONSTRUTORA';
+    const isLanc  = f.fonte === 'LANCAMENTO';
+    const local   = [f.imoCondominio, f.imoBairro].filter(Boolean).join(' — ');
+    const attrs = [
+      f.imoQuartos  ? f.imoQuartos  + ' qtos'  : '',
+      f.imoSuites   ? f.imoSuites   + ' suítes' : '',
+      f.imoVagas    ? f.imoVagas    + ' vagas'  : '',
+      f.imoAreaUtil ? f.imoAreaUtil + ' m²'     : '',
+      f.imoPadrao   || ''
+    ].filter(Boolean);
+    const foto = f.imoFoto && f.imoFoto.startsWith('http')
+      ? `<img class="imovel-foto" src="${f.imoFoto}" onerror="this.style.display='none'">`
+      : `<div class="imovel-foto-placeholder">${isLanc ? '🚀' : isConst ? '🏗️' : '🏠'}</div>`;
+    return `<div class="imovel-card" id="fcard_${idx}">
+      <div class="imovel-card-top">
+        <div class="imovel-check"><input type="checkbox" title="Selecionar para PDF" onclick="toggleSelecionado(${idx}, this)"></div>
+        ${foto}
+        <div class="imovel-info">
+          <span class="imovel-fonte-badge ${isLanc?'fonte-lanc':isConst?'fonte-const':'fonte-rev'}">${isLanc?'🚀 Lançamento':isConst?'🏗️ Construtora':'🔑 Revenda'}</span>
+          <div class="imovel-tipo">${f.imoTipo||'Imóvel'}</div>
+          <div class="imovel-local">${local||'—'}</div>
+          ${f.imoCodigo ? `<div class="imovel-codigo">Código: ${f.imoCodigo}</div>` : ''}
+          <div class="imovel-valor">${fmt_(f.imoValorVenda)||'—'}</div>
+        </div>
+      </div>
+      ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+      <div class="imovel-actions">
+        <button class="btn-remover-fav" onclick="removerFavorito(${idx})">🗑️ Remover dos favoritos</button>
+      </div>
+      ${f.imoUrl && f.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${f.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('root').innerHTML = `<div class="imovel-cards">${cards}</div>`;
+  atualizarBarraSel();
+}
+
+async function removerFavorito(idx) {
+  const f = _favoritos[idx];
+  if (!f) return;
+  try {
+    const payload = { acao: 'toggle_favorito', token: tokenSessao(), idCliente: cod, imoCodigo: f.imoCodigo, fonte: f.fonte };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    showToast('Removido dos favoritos', 'ok');
+    selecionados.delete(idx);
+    await carregar();
+  } catch (e) {
+    showToast('Erro ao remover: ' + e.message, 'erro');
+  }
+}
+
+// ─── SELEÇÃO / PDF (mesmo mecanismo de busca.html: janela + window.print()) ──
+function toggleSelecionado(idx, el) {
+  const f = _favoritos[idx];
+  if (!f) return;
+  const card = document.getElementById('fcard_' + idx);
+  if (el.checked) { selecionados.set(idx, f); card.classList.add('selecionado'); }
+  else            { selecionados.delete(idx); card.classList.remove('selecionado'); }
+  atualizarBarraSel();
+}
+
+function atualizarBarraSel() {
+  const n = selecionados.size;
+  document.getElementById('selCount').textContent = n;
+  document.getElementById('barraSel').style.display = _favoritos.length ? 'flex' : 'none';
+  document.getElementById('btnSelAll').textContent = n === _favoritos.length ? '☐ Desmarcar' : '☑ Todos';
+}
+
+function selecionarTodos() {
+  const jaEstaoTodos = selecionados.size === _favoritos.length;
+  document.querySelectorAll('.imovel-check input[type=checkbox]').forEach((chk, idx) => {
+    chk.checked = !jaEstaoTodos;
+    const card = document.getElementById('fcard_' + idx);
+    if (!jaEstaoTodos) { selecionados.set(idx, _favoritos[idx]); card.classList.add('selecionado'); }
+    else               { selecionados.delete(idx); card.classList.remove('selecionado'); }
+  });
+  atualizarBarraSel();
+}
+
+function limparSelecao() {
+  selecionados.clear();
+  document.querySelectorAll('.imovel-check input[type=checkbox]').forEach(chk => { chk.checked = false; });
+  document.querySelectorAll('.imovel-card.selecionado').forEach(c => c.classList.remove('selecionado'));
+  atualizarBarraSel();
+}
+
+function gerarPDF() {
+  const lista = [...selecionados.values()];
+  if (!lista.length) { showToast('Selecione ao menos um imóvel', 'erro'); return; }
+  const btn = document.getElementById('btnPDF');
+  btn.disabled = true; btn.textContent = '⏳ Gerando...';
+  try {
+    const html = gerarHtmlPDF(lista);
+    const win = window.open('', '_blank');
+    if (!win) { showToast('Permita popups para gerar o PDF', 'erro'); return; }
+    win.document.write(html);
+    win.document.close();
+  } finally {
+    setTimeout(() => { btn.disabled = false; btn.innerHTML = '📄 Gerar PDF de Ofertas'; }, 800);
+  }
+}
+
+function gerarHtmlPDF(lista) {
+  const data = new Date().toLocaleDateString('pt-BR');
+  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const nomeCliente = (_favoritos[0] && _favoritos[0].cliNome) || '';
+
+  const linhas = lista.map((f, i) => {
+    const local = [f.imoCondominio, f.imoBairro].filter(Boolean).join(' · ');
+    const specs = [
+      f.imoQuartos  ? `${f.imoQuartos}q`   : '',
+      f.imoSuites   ? `${f.imoSuites}s`    : '',
+      f.imoVagas    ? `${f.imoVagas}v`     : '',
+      f.imoAreaUtil ? `${f.imoAreaUtil}m²` : '',
+      f.imoPadrao   || '',
+    ].filter(Boolean).join(' · ');
+    const isConst = f.fonte === 'CONSTRUTORA';
+    const isLancT = f.fonte === 'LANCAMENTO';
+    const bg = i % 2 === 1 ? 'background:#f9fafc' : '';
+    const localL1 = [f.imoCodigo, f.imoCondominio, f.imoBairro].filter(Boolean).join(' — ');
+    const localL2 = f.imoEndereco || '';
+
+    return `<tr style="${bg}">
+      <td style="padding:6px 6px;text-align:center;color:#bbb;font-size:11px;font-weight:700;width:26px">${i + 1}</td>
+      <td style="padding:6px 8px;font-size:12px;font-weight:700;white-space:nowrap;color:#1a1a2e;width:110px">${f.imoTipo || '—'}</td>
+      <td style="padding:5px 8px;max-width:0;width:99%;overflow:hidden">
+        <div style="font-size:12px;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${localL1 || '—'}</div>
+        ${localL2 ? `<div style="font-size:10px;color:#888;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${localL2}</div>` : ''}
+      </td>
+      <td style="padding:6px 8px;font-size:11px;color:#666;white-space:nowrap;width:130px">${specs || '—'}</td>
+      <td style="padding:6px 10px;text-align:right;width:120px">
+        <div style="font-size:13px;font-weight:800;color:#00b894;white-space:nowrap">${fmt_(f.imoValorVenda) || '—'}</div>
+      </td>
+      <td style="padding:6px 7px;text-align:center;width:52px">
+        <span style="background:${isLancT ? '#e67e001a' : isConst ? '#4f7cff1a' : '#00b8941a'};color:${isLancT ? '#e67e00' : isConst ? '#4f7cff' : '#00b894'};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${isLancT ? 'LANÇ' : isConst ? 'CONST' : 'REV'}</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Favoritos — ${nomeCliente || 'Base Inteligente'}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a2e; background: #fff; padding: 22px 26px; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  thead th { background: #fff3e0; color: #f5a623; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 7px 8px; border-bottom: 2px solid #f5a62344; text-align: left; }
+  thead th.r { text-align: right; }
+  thead th.c { text-align: center; }
+  tbody tr { border-bottom: 1px solid #eee; }
+  tbody tr:last-child { border-bottom: none; }
+  @media print { body { padding: 0; } @page { margin: 10mm; size: A4 landscape; } }
+</style>
+</head>
+<body>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:3px solid #f5a623">
+    <div>
+      <div style="font-size:18px;font-weight:800;color:#f5a623;letter-spacing:-.5px">⭐ FAVORITOS — BASE INTELIGENTE</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">${nomeCliente ? nomeCliente + ' (' + cod + ')' : cod} · ${data} às ${hora}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:26px;font-weight:800;color:#1a1a2e;line-height:1">${lista.length}</div>
+      <div style="font-size:10px;color:#888">${lista.length === 1 ? 'imóvel' : 'imóveis'}</div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26px" class="c">#</th>
+        <th style="width:110px">Tipo</th>
+        <th>Local / Condomínio</th>
+        <th style="width:130px">Quartos · Vagas · Área</th>
+        <th style="width:120px" class="r">Preço</th>
+        <th style="width:52px" class="c">Fonte</th>
+      </tr>
+    </thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <div style="margin-top:16px;text-align:center;font-size:10px;color:#bbb;border-top:1px solid #eee;padding-top:10px">
+    Gerado em ${data} às ${hora} · Base Inteligente — Favoritos do cliente
+  </div>
+  <script>window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });<\/script>
+</body>
+</html>`;
+}
+</script>
+</body>
+</html>

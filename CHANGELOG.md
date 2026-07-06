@@ -1,5 +1,42 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 13) — Favoritar imóveis na página de ofertas do cliente + página de Favoritos com PDF
+
+Item 15 pedido pelo usuário: em cada card de match do drawer do cliente, opção de marcar como
+favorito; botão "Favoritos" no topo abrindo uma lista dos imóveis favoritados desse cliente
+(identificado por nome + código no topo), com a mesma opção de selecionar imóveis e gerar PDF que
+já existe em `busca.html`.
+
+**Backend (`code.txt`)**: nova aba `FAVORITOS`, com os dados do imóvel **denormalizados** (mesmos
+campos `imo*` de MATCHES) em vez de só uma referência — porque `rodarMatching()` reescreve a aba
+MATCHES inteira a cada execução, então guardar só `idCliente + imoCodigo` perderia foto/preço/local
+assim que o matching rodasse de novo. Cada linha de favorito é auto-contida.
+
+- `toggleFavorito_(d)`: se o par (idCliente + imoCodigo + fonte) já existe, remove; senão,
+  adiciona. Rota `toggle_favorito` (POST, protegida por sessão).
+- `listarFavoritos_(idCliente)`: retorna todos os favoritos de um cliente. Rota `listar_favoritos`
+  (GET).
+- Validado com teste unitário mockando a aba (favoritar, favoritar de novo = remove, dois
+  favoritos pro mesmo cliente, isolamento entre clientes diferentes).
+
+**Drawer do cliente (`dashboard.html`)**: cada card de match ganhou um botão ★/☆ (`toggleFavoritoClick`)
+que chama `toggle_favorito` e atualiza o ícone na hora — o estado inicial (favoritado ou não) vem
+de uma chamada paralela a `listar_favoritos` feita junto com `matches_cliente` ao abrir o drawer.
+Botão "⭐ Favoritos" adicionado na barra de ações (ao lado de "✏️ Editar"), levando pra
+`favoritos.html?cod=<idCliente>`.
+
+**Nova página `favoritos.html`**: lista os imóveis favoritados do cliente (nome + código no topo,
+extraídos do próprio registro de favorito), com os mesmos cards visuais do drawer, botão de
+remover favorito por card, e o mesmo mecanismo de seleção + "Gerar PDF" de `busca.html` (checkbox
+por card → janela nova com tabela impressa → `window.print()` — não é uma lib de PDF, é a
+funcionalidade de impressão do navegador). Validado com teste de renderização e teste de seleção
+confirmando que o PDF gerado inclui só os imóveis marcados.
+
+**Gotcha de teste registrado**: reatribuir uma variável `let`/`const` declarada num `eval()` a
+partir de um SEGUNDO `eval()` separado não alcança o binding original — cada `eval()` direto ganha
+seu próprio Lexical Environment pra declarações lexicais. A injeção de dados mockados e a chamada
+da função que os lê precisam estar na mesma string de `eval()`.
+
 ## 2026-07-06 (parte 12) — Código do imóvel no card de match: letra pequena demais
 
 Usuário reportou de novo que o código não aparecia no card de "Revenda" (item 7 da sessão) —
