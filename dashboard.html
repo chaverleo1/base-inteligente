@@ -743,6 +743,19 @@ function renderDados(json) {
   const mornos  = json.mornos  || [];
   const frios   = json.frios   || [];
 
+  // "Ver →" das colunas Quentes/Mornos/Frios reaproveita o mesmo mecanismo
+  // dos cards de Insight (window._insightDetails + verInsight() +
+  // insight-detail.html) em vez de criar 3 páginas novas do zero — já é
+  // exatamente uma página de "listagem de nomes qualificados" genérica.
+  window._insightDetails = window._insightDetails || {};
+  window._insightDetails['cardQuentes'] = {title:'Clientes Quentes (score ≥ 80)', icon:'🔴', color:'#ff5a5a', type:'clientes', items:quentes};
+  window._insightDetails['cardMornos']  = {title:'Clientes Mornos (score 70–79)', icon:'🟡', color:'#f5a623', type:'clientes', items:mornos};
+  window._insightDetails['cardFrios']   = {title:'Clientes Frios (score 60–69)',  icon:'🔵', color:'#4f7cff', type:'clientes', items:frios};
+
+  const verBtn_ = (id) => `<span onclick="verInsight('${id}')" style="cursor:pointer;position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+     color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+     border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</span>`;
+
   // ── Cards totais
   document.getElementById('cardsRow').innerHTML = `
     <div class="card" style="position:relative">
@@ -753,20 +766,23 @@ function renderDados(json) {
          color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
          border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
     </div>
-    <div class="card">
+    <div class="card" style="position:relative">
       <div class="card-label">Quentes (score ≥80)</div>
       <div class="card-value hot">${quentes.length}</div>
       <div class="card-sub">prioridade máxima</div>
+      ${verBtn_('cardQuentes')}
     </div>
-    <div class="card">
+    <div class="card" style="position:relative">
       <div class="card-label">Mornos (70–79)</div>
       <div class="card-value warm">${mornos.length}</div>
       <div class="card-sub">potencial de conversão</div>
+      ${verBtn_('cardMornos')}
     </div>
-    <div class="card">
+    <div class="card" style="position:relative">
       <div class="card-label">Frios (60–69)</div>
       <div class="card-value cold">${frios.length}</div>
       <div class="card-sub">nurturing / aguardar</div>
+      ${verBtn_('cardFrios')}
     </div>`;
 
   // ── Matches

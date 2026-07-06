@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 19) — Botão "Ver" em todos os cards de "Visão geral"
+
+Pedido do usuário: os cards Quentes/Mornos/Frios (só "Total de contatos" já tinha) ganharem botão
+"Ver", abrindo uma página com a listagem dos nomes qualificados.
+
+Em vez de criar 3 páginas novas do zero, reaproveitado o mecanismo já existente dos cards de
+Insight: `window._insightDetails['cardQuentes'|'cardMornos'|'cardFrios']` (populado em
+`renderDados()`, com os mesmos arrays `quentes`/`mornos`/`frios` que já alimentam as colunas do
+"Matches do momento") + `verInsight(id)` + `insight-detail.html` — que já é exatamente uma página
+genérica de "listagem de clientes qualificados" (`tableClientes()`), usada em vários outros
+insights.
+
+Os itens desses arrays trazem `cod/nome/score/scoreTotal/seg/pad/urg` (sem telefone/último
+contato — dado não computado nessa etapa do backend); `tableClientes()` já mostra "—" nesses casos
+graciosamente.
+
+Validado no preview: os 4 cards mostram "Ver →", `verInsight('cardQuentes')` grava os dados certos
+no sessionStorage, e `insight-detail.html` renderiza a tabela corretamente com o item de teste.
+
 ## 2026-07-06 (parte 18) — Botão "Favoritos" do drawer mostra a contagem de imóveis marcados
 
 Pedido do usuário: no botão de Favoritos da página do cliente, informar quantos imóveis já estão
