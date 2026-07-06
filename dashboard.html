@@ -947,6 +947,7 @@ function renderInsights(json, lancamentos) {
       : pendente('insLancSem','👻','Lançamentos sem demanda cadastrada')) +
 
     pendente('insDormentes','😴','clientes sem contato há mais de 90 dias') +
+    pendente('insEsfriando','🥶','cadastros sem atualização há mais de 15 dias') +
     pendente('insBairro',   '📍','bairro mais procurado pelos clientes') +
     pendente('insCanal',    '📡','canal de origem que traz clientes de maior valor') +
     pendente('insLeads',    '🎪','leads BaseImob pendentes de qualificação') +
@@ -1000,6 +1001,7 @@ function atualizarInsightsExtended(data) {
   const canal = data.canalTop || {nome:'—', media:0};
 
   window._insightDetails['insDormentes'] = {title:'Clientes dormentes (>90 dias sem contato)', icon:'😴', color:'#ff5a5a', type:'clientes', items:data.dormentes||[]};
+  window._insightDetails['insEsfriando'] = {title:'Cadastros esfriando (>15 dias sem atualização)', icon:'🥶', color:'#f5a623', type:'clientes', items:data.esfriandoList||[]};
   window._insightDetails['insBairro']    = {title:`Clientes buscando "${topB.bairro}"`, icon:'📍', color:'#4f7cff', type:'clientes', items:data.bairroTopClientes||[]};
   window._insightDetails['insCanal']     = {title:`Clientes via "${canal.nome}" — canal top`, icon:'📡', color:'#00d4aa', type:'clientes', items:data.canalTopClientes||[]};
   window._insightDetails['insLeads']     = {title:'Leads BaseImob pendentes', icon:'🎪', color:'#a78bfa', type:'leads', items:data.leadsList||[]};
@@ -1024,10 +1026,14 @@ function atualizarInsightsExtended(data) {
   }
 
   const dorm  = data.semContato90 || 0;
+  const esfriando = data.esfriando15 || 0;
   const leads = data.leadsPendentes || 0;
   upd('insDormentes','#ff5a5a','😴', dorm,
     'clientes sem contato há mais de 90 dias',
     dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');
+  upd('insEsfriando','#f5a623','🥶', esfriando,
+    'cadastros sem atualização há mais de 15 dias — score efetivo caindo',
+    esfriando > 0 ? 'Revisar e reatualizar o cadastro pra não perder prioridade no matching' : 'Todos os cadastros estão em dia');
   upd('insBairro','#4f7cff','📍', topB.n,
     `clientes buscam "${topB.bairro}" — bairro mais procurado`,
     'Captar imóveis nesse bairro. Maior concentração de demanda');

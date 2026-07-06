@@ -32,7 +32,14 @@ const CABECALHO = [
   'comodidadesOutras', 'canalOutro',
   // Mais 3 tags em "Situação financeira" (adicionado em 2026-07) — cada uma é
   // uma flag independente, mesmo padrão de fgts/financ/entrada_chip/permuta.
-  'financiamento', 'avista', 'permutaCarro'
+  'financiamento', 'avista', 'permutaCarro',
+  // Data/hora da última EDIÇÃO do cadastro (adicionado em 2026-07) — diferente
+  // de dataCadastro (nunca muda, é a criação) e de ultimoContato (é sobre a
+  // conversa com o cliente, preenchido manualmente). dataAtualizacao é
+  // automática: salvar()/atualizar() gravam "agora" toda vez. Usada pra medir
+  // frescor do cadastro (scoreComFrescor_) e pro alerta de "esfriando" no
+  // dashboard (contatos.html, adm_dados_insights).
+  'dataAtualizacao'
 ];
 
 const CABECALHO_LANCAMENTOS = [
@@ -101,6 +108,7 @@ function doGet(e) {
       if (nome.indexOf(q.toLowerCase()) >= 0 || tel.indexOf(q.toLowerCase()) >= 0) {
         var obj = { _linha: i + 1 };
         cab.forEach(function(c, j) { obj[c] = row[j]; });
+        obj.scoreEfetivo = scoreComFrescor_(obj.score, obj.dataAtualizacao);
         res.push(obj);
       }
     }
@@ -115,6 +123,7 @@ function doGet(e) {
     var rowBL = abaBL.getRange(lin, 1, 1, CABECALHO.length).getValues()[0];
     var objBL = { _linha: lin };
     cabBL.forEach(function(c, j) { objBL[c] = rowBL[j]; });
+    objBL.scoreEfetivo = scoreComFrescor_(objBL.score, objBL.dataAtualizacao);
     return ok(objBL);
   }
 
@@ -192,6 +201,7 @@ function doGet(e) {
       var tz_   = Session.getScriptTimeZone();
       var semContato90_ = 0, bairros_ = {}, canais_ = {};
       var dormentes_ = [], bairroMap_ = {}, canalMap_ = {};
+      var esfriando15_ = 0, esfriandoList_ = [];
 
       var abaC_ = ss_.getSheetByName('CONTATOS');
       if (abaC_ && abaC_.getLastRow() > 1) {
@@ -208,6 +218,7 @@ function doGet(e) {
         var iPad_  = CABECALHO.indexOf('padrao');
         var iUrg_  = CABECALHO.indexOf('urgencia');
         var iId_   = CABECALHO.indexOf('idCliente');
+        var iDA_   = CABECALHO.indexOf('dataAtualizacao');
         var FORA_  = ['Corretor','Parceiro','Descartar','Igreja'];
 
         dadosC_.forEach(function(r_) {
@@ -234,6 +245,18 @@ function doGet(e) {
               dormentes_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_,dias:dias_});
           }
 
+          // "Esfriando": cadastro (não a conversa) sem edição há mais de 15
+          // dias — mesmo limiar usado em fatorFrescor_() pro Score do Cliente.
+          // Só conta leads de verdade (fora Corretor/Parceiro/Descartar/Igreja).
+          if (FORA_.indexOf(cat_) < 0) {
+            var diasDA_ = diasDesdeData_(r_[iDA_]);
+            if (diasDA_ !== null && diasDA_ > 15) {
+              esfriando15_++;
+              if (esfriandoList_.length < 100)
+                esfriandoList_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,idCliente:id_,dias:diasDA_});
+            }
+          }
+
           bais_.split(',').forEach(function(b_) {
             b_ = b_.trim();
             if (b_.length <= 2) return;
@@ -254,6 +277,7 @@ function doGet(e) {
       }
 
       dormentes_.sort(function(a,b){ return b.dias - a.dias; });
+      esfriandoList_.sort(function(a,b){ return b.dias - a.dias; });
 
       var topBairros_ = Object.entries(bairros_)
         .sort(function(a,b){return b[1]-a[1]}).slice(0,5)
@@ -302,7 +326,9 @@ function doGet(e) {
         dormentes: dormentes_,
         bairroTopClientes: bairroTopClientes_,
         canalTopClientes: canalTopClientes_,
-        leadsList: leadsList_
+        leadsList: leadsList_,
+        esfriando15: esfriando15_,
+        esfriandoList: esfriandoList_
       });
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
@@ -371,9 +397,10 @@ function salvar(d) {
     var agora  = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
     var novoId = proximoIdCliente_();
     var linha = CABECALHO.map(function(col) {
-      if (col === 'dataCadastro')  return agora;
-      if (col === 'tipo_contato')  return 'LEAD INTERESSADO';
-      if (col === 'idCliente')     return novoId;
+      if (col === 'dataCadastro')     return agora;
+      if (col === 'dataAtualizacao')  return agora;
+      if (col === 'tipo_contato')     return 'LEAD INTERESSADO';
+      if (col === 'idCliente')        return novoId;
       return d[col] !== undefined ? d[col] : '';
     });
     aba.appendRow(linha);
@@ -397,8 +424,12 @@ function atualizar(d) {
   var dataCad   = existente[CABECALHO.indexOf('dataCadastro')];
   var tipoAtual = existente[CABECALHO.indexOf('tipo_contato')];
   var idAtual   = existente[CABECALHO.indexOf('idCliente')];
+  var agora     = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
   var linha = CABECALHO.map(function(col) {
     if (col === 'dataCadastro') return dataCad;
+    // Toda edição conta como atualização "fresca" — diferente de dataCadastro,
+    // este campo NÃO é preservado (ver scoreComFrescor_/fatorFrescor_).
+    if (col === 'dataAtualizacao') return agora;
     // Preserva a classificação manual do tipo_contato — o formulário não a edita
     if (col === 'tipo_contato') return d[col] !== undefined && d[col] !== '' ? d[col] : tipoAtual;
     // ID permanente nunca muda numa edição
@@ -446,6 +477,44 @@ function preencherIdsFaltantes() {
 var PESOS_MATCH_RANK = [5, 4, 3, 2, 1];
 function pesoPorRank_(idx) {
   return idx < PESOS_MATCH_RANK.length ? PESOS_MATCH_RANK[idx] : 1;
+}
+
+// ── Frescor do cadastro (2026-07) ──────────────────────────────
+// Cadastro atualizado recentemente pesa mais no Score do Cliente — um lead
+// que ninguém mexe há semanas está "esfriando", mesmo que o perfil declarado
+// seja bom. Fator multiplicativo, não pontos fixos: assim o efeito é
+// proporcional pra qualquer nível de score, não só pra quem tem sobra.
+function diasDesdeData_(dataStr) {
+  if (!dataStr) return null;
+  var d;
+  if (dataStr instanceof Date) {
+    d = dataStr;
+  } else {
+    // dataAtualizacao é gravado como "dd/MM/yyyy HH:mm" (Utilities.formatDate).
+    // new Date(string) NÃO pode ser usado aqui: o parser nativo do JS trata
+    // strings não-ISO como MM/DD/YYYY (padrão americano), trocando dia e mês
+    // silenciosamente sempre que o dia é <= 12 (ex: "06/07/2026" viraria 7 de
+    // junho em vez de 6 de julho). Regex explícito evita essa ambiguidade.
+    var m = String(dataStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (!m) return null;
+    d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10),
+                 parseInt(m[4] || 0, 10), parseInt(m[5] || 0, 10));
+  }
+  if (isNaN(d.getTime())) return null;
+  return Math.round((new Date() - d) / 86400000);
+}
+
+function fatorFrescor_(dataAtualizacaoStr) {
+  var dias = diasDesdeData_(dataAtualizacaoStr);
+  if (dias === null) return 1; // sem data (cadastro legado) → não penaliza
+  if (dias <= 15) return 1;    // até 15 dias: mais alto (sem penalidade)
+  if (dias <= 30) return 0.85; // 15–30 dias: valor médio
+  return 0.65;                 // mais de 30 dias: valor baixo
+}
+
+function scoreComFrescor_(scoreBase, dataAtualizacaoStr) {
+  var base = parseInt(scoreBase) || 0;
+  return Math.round(base * fatorFrescor_(dataAtualizacaoStr));
 }
 
 // Score Total = combina o score do cadastro (35%) com a média ponderada dos
@@ -526,14 +595,20 @@ function dadosDashboard() {
     if (CATEGORIAS_FORA_MATCH.indexOf(obj.categoria) >= 0) continue;
 
     var scoreCliente  = parseInt(obj.score) || 0;
+    // Score com frescor entra na classificação de temperatura (cadastro
+    // desatualizado "esfria" mesmo com perfil declarado bom) — o score BRUTO
+    // continua exposto em item.score pra não confundir o corretor sobre o
+    // que ele realmente cadastrou.
+    var scoreClienteFresco = scoreComFrescor_(scoreCliente, obj.dataAtualizacao);
     var cod           = String(obj.idCliente || '').trim() || gerarCodigo_(i);
     var scoresMatches = scoresPorCliente[cod] || [];
-    var scoreTotal    = calcularScoreTotal_(scoreCliente, scoresMatches);
+    var scoreTotal    = calcularScoreTotal_(scoreClienteFresco, scoresMatches);
     var temperatura   = classificarTemperatura_(scoreTotal, scoresMatches);
     var nome          = String(obj.nome || '').trim();
     var item = {
       cod: cod, nome: nome,
       score: scoreCliente,
+      scoreEfetivo: scoreClienteFresco,
       scoreTotal: Math.round(scoreTotal * 10) / 10,
       seg: obj.segmento || '', pad: obj.padrao || '',
       urg: obj.urgencia || obj.prioridade || ''

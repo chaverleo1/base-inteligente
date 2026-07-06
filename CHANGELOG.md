@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 6) — Score do Cliente com frescor de cadastro + alerta de "esfriando"
+
+Itens 11 e 12 pedidos pelo usuário.
+
+**Nova coluna `dataAtualizacao`** no CABECALHO — diferente de `dataCadastro` (nunca muda, é a
+criação) e de `ultimoContato` (sobre a conversa com o cliente, preenchido manualmente):
+`dataAtualizacao` é automática, gravada pelo próprio backend toda vez que `salvar()`/`atualizar()`
+rodam.
+
+**11. `contatos.html`**: nova coluna "Atualizado em" com `dataAtualizacao`; lista ordenada do mais
+recente pro mais antigo (antes não tinha ordenação explícita). Score do Cliente passou a
+incorporar o tempo desde a última atualização do cadastro: `scoreComFrescor_()` aplica um fator
+multiplicativo sobre o score bruto — até 15 dias, fator 1 (mais alto, sem penalidade); 15–30 dias,
+fator 0.85 (médio); mais de 30 dias, fator 0.65 (baixo). Cadastros sem `dataAtualizacao` (legado,
+nunca editado desde essa feature existir) não são penalizados. O valor decaído (`scoreEfetivo`) é
+o que aparece na coluna Score de `contatos.html` — o score bruto continua intacto na planilha.
+
+O mesmo fator entra na classificação de temperatura do dashboard (`dadosDashboard()`): o score do
+cadastro (35% do peso do Score Total, que decide Quente/Morno/Frio) agora é o valor com frescor
+aplicado, não o bruto — um cadastro parado por muito tempo esfria mesmo com perfil declarado bom.
+
+**⚠️ Bug de parsing de data pego durante a implementação**: a primeira versão calculava dias desde
+`dataAtualizacao` com `new Date(string)` em cima do formato `"dd/MM/yyyy HH:mm"` — o parser nativo
+do JS trata strings não-ISO como padrão americano (MM/DD/YYYY), trocando dia e mês silenciosamente
+sempre que o dia é ≤ 12 (ex: "06/07/2026" virava 7 de junho em vez de 6 de julho). Testes
+unitários (`fatorFrescor_` com datas conhecidas) pegaram o erro antes de ir pro ar. Corrigido com
+parse explícito via regex (`diasDesdeData_()`) em vez de confiar no parser nativo — mesmo cuidado
+que o resto do código já tomava com `dataCadastro` (só comparado como string, nunca parseado).
+
+**12. Novo card de insight "🥶 Esfriando"** no dashboard — conta cadastros (excluindo
+Corretor/Parceiro/Descartar/Igreja) com mais de 15 dias sem atualização, com drill-down (mesmo
+padrão dos outros cards de insight: "Ver →" abre a lista em `insight-detail.html`). Backend:
+`adm_dados_insights` ganhou `esfriando15`/`esfriandoList`, computados no mesmo loop que já lia a
+aba CONTATOS (sem reler a planilha).
+
 ## 2026-07-06 (parte 5) — Matching por texto ignorava chips de quartos/suítes, reorganização do dashboard e mais tags
 
 Itens 5 a 10 pedidos pelo usuário nesta sessão.
