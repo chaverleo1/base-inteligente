@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 18) — Botão "Favoritos" do drawer mostra a contagem de imóveis marcados
+
+Pedido do usuário: no botão de Favoritos da página do cliente, informar quantos imóveis já estão
+marcados como favorito.
+
+Botão ganhou `id="btnFavoritos"` (em `dashboard.html` e `contatos.html`, já que o drawer foi
+duplicado nos dois). `carregarMatchesDrawer()` já busca a lista de favoritos em paralelo com os
+matches — só precisou usar esse número (`favoritos.length`) pra atualizar o texto do botão pra
+"⭐ Favoritos (N)" assim que a busca termina. Favoritar/desfavoritar um card no próprio drawer
+ajusta a contagem na hora (+1/-1), sem precisar rebuscar a lista inteira.
+
+Validado com testes em Node em ambos os arquivos: contagem inicial correta ao abrir o drawer, e
+ajuste correto após desfavoritar um item.
+
 ## 2026-07-06 (parte 17) — Drawer do cliente portado inteiro pra dentro de contatos.html
 
 Usuário confirmou (depois do "Ver Matchs" ainda não abrir nada): quer a aba lateral abrindo direto

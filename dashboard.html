@@ -1196,6 +1196,24 @@ function fmt_(v) {
 // (imoCodigo sozinho não basta — fontes diferentes podem colidir em teoria).
 function chaveFavorito_(imoCodigo, fonte) { return (imoCodigo||'') + '::' + (fonte||''); }
 
+// Mostra quantos imóveis o cliente já tem favoritados direto no botão do
+// drawer, sem precisar abrir a página de Favoritos só pra saber a contagem.
+function atualizarBotaoFavoritos_(qtd) {
+  const btn = document.getElementById('btnFavoritos');
+  if (!btn) return;
+  btn.textContent = qtd > 0 ? `⭐ Favoritos (${qtd})` : '⭐ Favoritos';
+}
+
+// +1/-1 na contagem já exibida, sem precisar rebuscar a lista inteira —
+// usado logo depois de favoritar/desfavoritar um card no próprio drawer.
+function ajustarContagemFavoritos_(delta) {
+  const btn = document.getElementById('btnFavoritos');
+  if (!btn) return;
+  const m = btn.textContent.match(/\((\d+)\)/);
+  const atual = m ? parseInt(m[1]) : 0;
+  atualizarBotaoFavoritos_(Math.max(0, atual + delta));
+}
+
 // Mesma dualidade de formato já vista em contatos.html: a célula do Sheets
 // pode ter sido auto-convertida pro tipo Data (a string "dd/MM/yyyy HH:mm"
 // tem "cara de data"), e nesse caso o backend serializa como ISO 8601 antes
@@ -1232,7 +1250,9 @@ async function carregarMatchesDrawer(cod, cliente) {
     const lista = await respMatches.json();
     let favoritos = [];
     try { favoritos = await respFav.json(); } catch(eFav) { /* silent — favoritar continua funcionando mesmo sem a lista prévia */ }
-    const favKeys = new Set((Array.isArray(favoritos) ? favoritos : []).map(f => chaveFavorito_(f.imoCodigo, f.fonte)));
+    if (!Array.isArray(favoritos)) favoritos = [];
+    const favKeys = new Set(favoritos.map(f => chaveFavorito_(f.imoCodigo, f.fonte)));
+    atualizarBotaoFavoritos_(favoritos.length);
     if (!Array.isArray(lista) || !lista.length) {
       el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>'
         + rodapeDrawerCliente_(cliente);
@@ -1360,6 +1380,7 @@ async function toggleFavoritoClick(idx, cod, cliNome, btnEl) {
     btnEl.textContent = agora ? '★' : '☆';
     btnEl.classList.toggle('ativo', agora);
     btnEl.title = agora ? 'Remover dos favoritos' : 'Marcar como favorito';
+    ajustarContagemFavoritos_(agora ? 1 : -1);
     showToast(agora ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos', 'ok');
   } catch(e) {
     showToast('Erro de conexão ao favoritar: ' + e.message, 'erro');
@@ -1497,7 +1518,7 @@ function renderDrawer(c, score) {
       ${wppUrl ? `<a class="d-btn d-btn-wpp" href="${wppUrl}" target="_blank">💬 WhatsApp</a>` : ''}
       ${telUrl ? `<a class="d-btn d-btn-tel" href="${telUrl}">📞 ${c.telefone}</a>` : ''}
       <a class="d-btn d-btn-edit" href="formulario.html?linha=${encodeURIComponent(c._linha||'')}">✏️ Editar</a>
-      ${c.idCliente ? `<a class="d-btn d-btn-fav" href="favoritos.html?cod=${encodeURIComponent(c.idCliente)}">⭐ Favoritos</a>` : ''}
+      ${c.idCliente ? `<a class="d-btn d-btn-fav" id="btnFavoritos" href="favoritos.html?cod=${encodeURIComponent(c.idCliente)}">⭐ Favoritos</a>` : ''}
     </div>
     ${tagsHtml ? `<div style="padding:0 0 8px 0;display:flex;flex-wrap:wrap;gap:6px">${tagsHtml}</div>` : ''}
 
