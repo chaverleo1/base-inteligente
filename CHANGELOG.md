@@ -1,5 +1,17 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 9) — Salvar edição de contato redireciona pra contatos.html
+
+Pedido do usuário: depois de salvar as edições de um contato, voltar pra `contatos.html` em vez de
+limpar o formulário. Aplicado só ao fluxo de **edição** (`linhaAtual` setado, botão "Atualizar
+contato") — cadastrar um cliente **novo** continua limpando o formulário e voltando à etapa 1, pra
+não atrapalhar quem está cadastrando vários contatos em sequência.
+
+Validado no preview: capturado o log de rede mostrando `formulario.html → contatos.html →
+index.html` — o último salto é só a própria `contatos.html` rejeitando o token de teste falso (sem
+tocar no backend real não dá pra confirmar a chegada com sessão válida), mas confirma que o
+redirecionamento pós-edição está indo pro lugar certo.
+
 ## 2026-07-06 (parte 8) — Coluna "Status" (tempo de cadastro) em contatos.html
 
 Item 14 pedido pelo usuário: coluna nova ao lado de "Cadastrado em" com um selo de

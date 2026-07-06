@@ -912,10 +912,17 @@
         console.warn('Matching não pôde ser recalculado agora:', errMatch);
       }
 
-      const msg = linhaAtual ? '✓ Contato atualizado e matches recalculados!' : '✓ Cliente salvo e matches recalculados!';
+      const eraAtualizacao = !!linhaAtual;
+      const msg = eraAtualizacao ? '✓ Contato atualizado e matches recalculados!' : '✓ Cliente salvo e matches recalculados!';
       linhaAtual = null;
       showToast(msg, 'ok');
-      setTimeout(() => resetForm(), 2500);
+      // Editar um contato existente volta pra lista de contatos — só o
+      // cadastro de um cliente NOVO limpa o formulário pra continuar
+      // cadastrando em sequência.
+      setTimeout(() => {
+        if (eraAtualizacao) window.location.href = 'contatos.html';
+        else resetForm();
+      }, 2500);
     } catch (err) {
       console.error('Erro fetch:', err);
       showToast('Erro: ' + err.message, 'erro');
