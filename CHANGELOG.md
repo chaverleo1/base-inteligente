@@ -1,5 +1,13 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 12) — Código do imóvel no card de match: letra pequena demais
+
+Usuário reportou de novo que o código não aparecia no card de "Revenda" (item 7 da sessão) —
+investigado e confirmado que o dado e a exibição já estavam corretos (fix da parte 5), só que
+`.imovel-codigo` estava em `font-size:11px` com `color:var(--text3)` (cinza bem apagado), quase
+imperceptível ao lado do resto do card. Aumentado pra `13px`, `font-weight:600`, `color:var(--text2)`
+(mais contraste). Validado via `preview_inspect`.
+
 ## 2026-07-06 (parte 11) — Fix: badge Status e ordenação continuavam quebrados mesmo após editar
 
 Usuário reportou que, mesmo depois de editar um contato, a coluna Status continuava mostrando só
