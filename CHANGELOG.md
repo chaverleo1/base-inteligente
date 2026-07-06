@@ -57,6 +57,8 @@ anterior do cadastro dele (antes do segmento ser preenchido) e nunca recalculado
 confirmar qual dos dois é o caso da Priscila (CLI-10002) sem acesso à planilha ao vivo — o fix de
 múltipla escolha em `scoreTipo_()` deixa o motor mais robusto de qualquer forma, mas vale conferir o
 campo `segmento` dela na aba CONTATOS e, se necessário, rodar `adm_rodar_matching` de novo.
+`scorePadrao_()` recebeu o mesmo tratamento de múltipla escolha (pontua pelo melhor padrão declarado),
+já que "Padrão" também virou multi-select.
 
 **6. Lista de todos os contatos no Dashboard**
 

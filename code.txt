@@ -1023,12 +1023,24 @@ function normPadrao_(s) {
 
 var ORDEM_PADRAO = ['popular', 'medio', 'alto', 'luxo'];
 function scorePadrao_(pCli, pImo) {
-  var a = normPadrao_(pCli), b = normPadrao_(pImo);
-  if (!a || !b) return 5; // sem padrão declarado → aceita qualquer
-  if (a === b)  return 10;
-  var ia = ORDEM_PADRAO.indexOf(a), ib = ORDEM_PADRAO.indexOf(b);
-  if (ia < 0 || ib < 0) return 3;
-  return Math.abs(ia - ib) === 1 ? 5 : 0;
+  var b = normPadrao_(pImo);
+  // Múltipla escolha (2026-07): pCli pode trazer vários padrões separados por
+  // vírgula — pontua pelo melhor entre os declarados, mesma lógica de scoreTipo_.
+  var padroesCli = String(pCli || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  if (!padroesCli.length || !b) return 5; // sem padrão declarado → aceita qualquer
+  var melhor = 0;
+  padroesCli.forEach(function(p) {
+    var a = normPadrao_(p);
+    if (!a) return;
+    var pontos;
+    if (a === b) { pontos = 10; }
+    else {
+      var ia = ORDEM_PADRAO.indexOf(a), ib = ORDEM_PADRAO.indexOf(b);
+      pontos = (ia < 0 || ib < 0) ? 3 : (Math.abs(ia - ib) === 1 ? 5 : 0);
+    }
+    if (pontos > melhor) melhor = pontos;
+  });
+  return melhor;
 }
 
 // ── Cálculo de match ──────────────────────────────────────────
