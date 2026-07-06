@@ -181,6 +181,10 @@ function doGet(e) {
     try { migrarCabecalhoContatos(); return ok({ status: 'ok', msg: 'Cabeçalho CONTATOS atualizado.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
+  if (acao === 'adm_preencher_data_atualizacao') {
+    try { preencherDataAtualizacaoFaltantes(); return ok({ status: 'ok', msg: 'dataAtualizacao preenchida.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
   if (acao === 'adm_testar_matching') {
     try { return ok(testarMatching()); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
@@ -471,6 +475,33 @@ function preencherIdsFaltantes() {
     aba.getRange(lin, idxId).setValue('CLI-' + maxNum);
   });
   Logger.log('IDs preenchidos: ' + faltando.length + ' (ultimo id: CLI-' + maxNum + ')');
+}
+
+// Roda a cada login (ver FUNCOES em index.html) — mesmo problema que
+// preencherIdsFaltantes() resolvia pro idCliente: dataAtualizacao só é
+// gravado quando salvar()/atualizar() rodam, então todo contato criado antes
+// dessa coluna existir fica com o campo vazio, e a coluna "Status" em
+// contatos.html (e o desconto de fatorFrescor_ no score) não tem o que
+// mostrar. Usa dataCadastro como aproximação razoável — não sabemos quando
+// foi editado de verdade, mas sabemos desde quando existe, e um cadastro
+// nunca tocado desde a criação DEVE aparecer frio se for antigo. Idempotente:
+// só preenche onde está vazio.
+function preencherDataAtualizacaoFaltantes() {
+  var aba     = getAba();
+  var lastRow = aba.getLastRow();
+  if (lastRow < 2) { Logger.log('Nenhuma linha de dados.'); return; }
+  var idxDA = CABECALHO.indexOf('dataAtualizacao') + 1; // 1-based
+  var idxDC = CABECALHO.indexOf('dataCadastro') + 1;
+  var valoresDA = aba.getRange(2, idxDA, lastRow - 1, 1).getValues();
+  var valoresDC = aba.getRange(2, idxDC, lastRow - 1, 1).getValues();
+  var preenchidos = 0;
+  for (var i = 0; i < valoresDA.length; i++) {
+    if (!valoresDA[i][0] && valoresDC[i][0]) {
+      aba.getRange(i + 2, idxDA).setValue(valoresDC[i][0]);
+      preenchidos++;
+    }
+  }
+  Logger.log('dataAtualizacao preenchida em ' + preenchidos + ' linhas (usando dataCadastro).');
 }
 
 // ═══════════════════════════════════════════════════════════════

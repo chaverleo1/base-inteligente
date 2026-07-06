@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 10) — Fix: coluna Status vazia pra contatos antigos (dataAtualizacao nunca preenchida)
+
+Usuário reportou que a coluna "Status" (parte 8) não mostrava os badges de Quente/Morno/Frio.
+Mesma classe de bug do `idCliente` (parte 4 desta sessão): `dataAtualizacao` só é gravado quando
+`salvar()`/`atualizar()` rodam — todo contato criado ANTES dessa coluna existir fica com o campo
+vazio pra sempre, a menos que alguém edite e salve de novo. Sem `dataAtualizacao`,
+`statusFrescorEl()` cai no caso "sem data" e mostra só "—" em vez do badge colorido — por isso a
+coluna parecia "não aparecer" pra praticamente toda a base (só contatos editados manualmente hoje
+tinham o campo preenchido).
+
+Nova função `preencherDataAtualizacaoFaltantes()` (idempotente, só preenche onde está vazio) usa
+`dataCadastro` como aproximação — não sabemos quando um contato antigo foi editado de verdade, mas
+sabemos desde quando ele existe, e um cadastro nunca tocado desde a criação DEVE aparecer frio se
+for antigo (é literalmente o comportamento que a feature quer sinalizar). Rota
+`adm_preencher_data_atualizacao`, adicionada ao `FUNCOES` do `index.html` — roda sozinha no
+próximo login. Validado com teste unitário mockando a planilha (contatos com/sem
+`dataAtualizacao`, e um caso sem nenhuma data pra confirmar que não quebra).
+
 ## 2026-07-06 (parte 9) — Salvar edição de contato redireciona pra contatos.html
 
 Pedido do usuário: depois de salvar as edições de um contato, voltar pra `contatos.html` em vez de
