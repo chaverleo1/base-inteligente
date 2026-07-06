@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 16) — Nome deixa de ser link em contatos.html; botão "Ver Matchs" no lugar
+
+Usuário reportou que clicar no nome (parte 15, item 19) não abria o drawer do cliente. Em vez de
+depurar mais a fundo o link no nome, pediu pra trocar a abordagem: tirar o link do nome e colocar
+um botão "Ver Matchs" ao lado de "Editar".
+
+- Nome volta a ser texto simples (`<td class="td-nome">`, sem `onclick`/`<a>`).
+- Nova coluna "Ações" na tabela, com os dois botões lado a lado: "✏️ Editar" e "📊 Ver Matchs".
+- "Ver Matchs" chama a mesma `abrirClienteDash()` (mesmo mecanismo de query string pro
+  `dashboard.html`, mesmo `abrirCliente()` das colunas Quentes/Mornos/Frios da home) — só mudou o
+  elemento que dispara, de um link no nome pra um botão dedicado.
+- `.link-nome` (CSS agora sem uso) removida; `.td-acoes`/`.btn-ver-matches` adicionadas.
+
+**Nota**: como o mecanismo de navegação (`abrirClienteDash` → `dashboard.html?abrirCliente=1&...` →
+`verificarDeepLinkCliente_()` → `abrirCliente()`) continua o mesmo por baixo, só mudou o gatilho
+visual — se o botão "Ver Matchs" também não abrir o drawer, o problema não é o link em si, e sim
+algo nesse mecanismo de query string que vale investigar mais a fundo (ex: timing real de
+carregamento do `dashboard.html`, que não reproduzi localmente do mesmo jeito que acontece pro
+usuário).
+
 ## 2026-07-06 (parte 15) — Área útil = 0 por padrão, setas no topo, drawer do cliente a partir de contatos.html
 
 Itens 17 a 20 pedidos pelo usuário.
