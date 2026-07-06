@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 4) — Fix: código do cliente não aparecia ao editar cliente existente
+
+Usuário reportou que o código do cliente (adicionado na parte 2 desta sessão) não aparecia na
+etapa "Identificação" ao editar um cliente já cadastrado. O front-end estava certo (confirmado —
+o campo já estava até publicado no GitHub Pages) e o teste no preview com dado simulado funcionava;
+o problema era a ORIGEM do dado: `preencherIdsFaltantes()` — a função que preenche `idCliente` pra
+contatos antigos que nunca tiveram esse campo (toda a base migrada antes da feature existir) —
+**nunca tinha rota nem rodava automaticamente**. Só existia pra ser chamada manualmente no editor do
+Apps Script, e aparentemente nunca foi rodada (ou só rodou uma vez, há tempo, sem cobrir contatos
+editados/criados depois). Sem o `idCliente` preenchido na planilha, o campo simplesmente fica oculto
+(comportamento correto do front-end — só não tinha dado pra mostrar).
+
+Corrigido com uma rota nova, `adm_preencher_ids_faltantes_contatos` (nome diferente de
+`adm_preencher_ids_faltantes`, que já é usada pro `idOferta` de LANCAMENTOS — são funções
+diferentes apesar do nome parecido), adicionada à lista `FUNCOES` do `index.html` — roda sozinha a
+partir do próximo login e preenche o `idCliente` de qualquer contato que ainda esteja sem.
+
+**Ação necessária**: reimplantar o Apps Script (colar `code.gs.txt` atualizado, "Nova versão") e
+depois fazer login de novo no Base Inteligente — a próxima tela de carregamento já roda o
+preenchimento. Se quiser confirmar mais rápido sem esperar o redeploy propagar, dá pra rodar
+`preencherIdsFaltantes()` direto pelo menu Executar do editor do Apps Script.
+
 ## 2026-07-06 (parte 3) — Salvar cliente recalcula matches antes de avisar sucesso
 
 Pedido do usuário: "sempre que houver uma atualização de dados de clientes, ao clicar no botão da

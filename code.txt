@@ -153,6 +153,14 @@ function doGet(e) {
     try { preencherIdOfertaFaltantes(); return ok({ status: 'ok', msg: 'idOfertas preenchidos.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
+  // Nome diferente de 'adm_preencher_ids_faltantes' de propósito — aquela rota
+  // já é usada pro idOferta de LANCAMENTOS; esta é o idCliente de CONTATOS
+  // (preencherIdsFaltantes() nunca tinha rota nem rodava sozinha, então
+  // contatos antigos ficavam pra sempre sem código visível no formulário).
+  if (acao === 'adm_preencher_ids_faltantes_contatos') {
+    try { preencherIdsFaltantes(); return ok({ status: 'ok', msg: 'idClientes preenchidos.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
   if (acao === 'adm_migrar_cabecalho_lancamentos') {
     try { migrarCabecalhoLancamentos(); return ok({ status: 'ok', msg: 'Cabeçalho LANCAMENTOS atualizado.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
