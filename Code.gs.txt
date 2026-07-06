@@ -58,7 +58,7 @@ const CABECALHO_LANCAMENTOS = [
 // exigem uma sessão já validada (senão ninguém conseguiria logar).
 // 'listar_lancamentos' também é pública: é lida pelo BASEIMOB (visitante
 // anônimo de anúncio, sem login nenhum), além do Base Inteligente.
-var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos'];
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'rodar_matching'];
 
 function doGet(e) {
   if (!e || !e.parameter) return ok({ status: 'sem parametros' });
@@ -115,7 +115,176 @@ function doGet(e) {
   if (acao === 'validar_token')    return validarToken_(e.parameter.token);
   if (acao === 'matches_cliente')  return matchesCliente_(e.parameter.cod);
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
-  if (acao === 'listar_lancamentos') return ok(listarLancamentos_());
+  if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
+  if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
+  if (acao === 'rodar_matching') {
+    try {
+      rodarMatching();
+      return ok({ status: 'matching_concluido' });
+    } catch(err) {
+      return ok({ status: 'erro', motivo: String(err) });
+    }
+  }
+
+  // ── ADM — rotas protegidas por sessão (não estão em ACOES_PUBLICAS_GET) ──
+  if (acao === 'adm_rodar_matching') {
+    try { rodarMatching(); return ok({ status: 'ok', msg: 'Matching recalculado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_sincronizar_revenda') {
+    try { sincronizarRevenda(); return ok({ status: 'ok', msg: 'REVENDA sincronizada com Imobzi.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_criar_gatilho_matching') {
+    try { criarGatilhoMatching(); return ok({ status: 'ok', msg: 'Gatilho rodarMatching (12h) criado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_criar_gatilho_revenda') {
+    try { criarGatilhoRevenda(); return ok({ status: 'ok', msg: 'Gatilho sincronizarRevenda (6h) criado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_preencher_ids_faltantes') {
+    try { preencherIdOfertaFaltantes(); return ok({ status: 'ok', msg: 'idOfertas preenchidos.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_migrar_cabecalho_lancamentos') {
+    try { migrarCabecalhoLancamentos(); return ok({ status: 'ok', msg: 'Cabeçalho LANCAMENTOS atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_testar_matching') {
+    try { return ok(testarMatching()); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_verificar_gatilhos') {
+    try {
+      var gatilhos = ScriptApp.getProjectTriggers().map(function(t) {
+        return { funcao: t.getHandlerFunction() };
+      });
+      return ok({ gatilhos: gatilhos });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+
+  if (acao === 'adm_dados_insights') {
+    try {
+      var ss_ = SpreadsheetApp.getActiveSpreadsheet();
+      var hoje_ = new Date();
+      var tz_   = Session.getScriptTimeZone();
+      var semContato90_ = 0, bairros_ = {}, canais_ = {};
+      var dormentes_ = [], bairroMap_ = {}, canalMap_ = {};
+
+      var abaC_ = ss_.getSheetByName('CONTATOS');
+      if (abaC_ && abaC_.getLastRow() > 1) {
+        var nC_ = abaC_.getLastRow() - 1;
+        var dadosC_ = abaC_.getRange(2, 1, nC_, CABECALHO.length).getValues();
+        var iNome_ = CABECALHO.indexOf('nome');
+        var iTel_  = CABECALHO.indexOf('telefone');
+        var iUC_   = CABECALHO.indexOf('ultimoContato');
+        var iBI_   = CABECALHO.indexOf('bairroInteresse');
+        var iCan_  = CABECALHO.indexOf('canal');
+        var iSc_   = CABECALHO.indexOf('score');
+        var iCat_  = CABECALHO.indexOf('categoria');
+        var iSeg_  = CABECALHO.indexOf('segmento');
+        var iPad_  = CABECALHO.indexOf('padrao');
+        var iUrg_  = CABECALHO.indexOf('urgencia');
+        var iId_   = CABECALHO.indexOf('idCliente');
+        var FORA_  = ['Corretor','Parceiro','Descartar','Igreja'];
+
+        dadosC_.forEach(function(r_) {
+          if (!r_[iNome_]) return;
+          var nome_ = String(r_[iNome_]||'');
+          var tel_  = String(r_[iTel_]||'');
+          var sc_   = parseInt(r_[iSc_])||0;
+          var seg_  = String(r_[iSeg_]||'');
+          var pad_  = String(r_[iPad_]||'');
+          var urg_  = String(r_[iUrg_]||'');
+          var id_   = String(r_[iId_]||'');
+          var can_  = (String(r_[iCan_]||'').trim()) || 'Não informado';
+          var cat_  = String(r_[iCat_]||'').trim();
+          var bais_ = String(r_[iBI_]||'');
+
+          var uc_   = r_[iUC_];
+          var d_    = uc_ instanceof Date ? uc_ : (uc_ ? new Date(String(uc_)) : null);
+          var dias_ = (d_ && !isNaN(d_.getTime())) ? Math.round((hoje_ - d_) / 86400000) : 9999;
+          var ucStr_= (d_ && !isNaN(d_.getTime())) ? Utilities.formatDate(d_, tz_, 'dd/MM/yyyy') : '—';
+
+          if (dias_ > 90) {
+            semContato90_++;
+            if (dormentes_.length < 100)
+              dormentes_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_,dias:dias_});
+          }
+
+          bais_.split(',').forEach(function(b_) {
+            b_ = b_.trim();
+            if (b_.length <= 2) return;
+            bairros_[b_] = (bairros_[b_]||0) + 1;
+            if (!bairroMap_[b_]) bairroMap_[b_] = [];
+            if (bairroMap_[b_].length < 50)
+              bairroMap_[b_].push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_});
+          });
+
+          if (FORA_.indexOf(cat_) < 0) {
+            if (!canais_[can_]) canais_[can_] = {soma:0, n:0, clientes:[]};
+            canais_[can_].soma += sc_;
+            canais_[can_].n++;
+            if (canais_[can_].clientes.length < 50)
+              canais_[can_].clientes.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_});
+          }
+        });
+      }
+
+      dormentes_.sort(function(a,b){ return b.dias - a.dias; });
+
+      var topBairros_ = Object.entries(bairros_)
+        .sort(function(a,b){return b[1]-a[1]}).slice(0,5)
+        .map(function(e_){return {bairro:e_[0], n:e_[1]};});
+      var bairroTopClientes_ = topBairros_.length ? (bairroMap_[topBairros_[0].bairro]||[]) : [];
+
+      var canalTop_ = {nome:'—', media:0, total:0};
+      var canalTopClientes_ = [];
+      Object.keys(canais_).forEach(function(c_) {
+        if (canais_[c_].n < 3) return;
+        var med_ = Math.round(canais_[c_].soma / canais_[c_].n);
+        if (med_ > canalTop_.media) {
+          canalTop_ = {nome:c_, media:med_, total:canais_[c_].n};
+          canalTopClientes_ = canais_[c_].clientes;
+        }
+      });
+
+      var abaLL_ = ss_.getSheetByName('LEADS_LANCAMENTOS');
+      var leadsPendentes_ = 0, leadsTotal_ = 0, leadsList_ = [];
+      if (abaLL_ && abaLL_.getLastRow() > 1) {
+        var nLL_   = abaLL_.getLastRow() - 1;
+        var dadosLL_ = abaLL_.getRange(2, 1, nLL_, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+        var iTipo_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('tipo_contato');
+        var iNLL_   = CABECALHO_LEADS_LANCAMENTOS.indexOf('nome');
+        var iTelLL_ = CABECALHO_LEADS_LANCAMENTOS.indexOf('telefone');
+        var iCanLL_ = CABECALHO_LEADS_LANCAMENTOS.indexOf('canal');
+        var iScLL_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('score');
+        var iIdLL_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+        dadosLL_.forEach(function(r_) {
+          if (!r_[0]) return;
+          leadsTotal_++;
+          if (String(r_[iTipo_]||'') !== 'MIGRADO CONTATOS') {
+            leadsPendentes_++;
+            if (leadsList_.length < 100)
+              leadsList_.push({nome:String(r_[iNLL_]||''),telefone:String(r_[iTelLL_]||''),tipo_contato:String(r_[iTipo_]||''),canal:String(r_[iCanLL_]||''),score:parseInt(r_[iScLL_])||0,idCliente:String(r_[iIdLL_]||'')});
+          }
+        });
+      }
+
+      return ok({
+        semContato90: semContato90_,
+        topBairros: topBairros_,
+        canalTop: canalTop_,
+        leadsPendentes: leadsPendentes_,
+        leadsTotal: leadsTotal_,
+        dormentes: dormentes_,
+        bairroTopClientes: bairroTopClientes_,
+        canalTopClientes: canalTopClientes_,
+        leadsList: leadsList_
+      });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
 
   return ok({ status: 'acao desconhecida' });
 }
@@ -140,7 +309,8 @@ function doPost(e) {
   if (d.acao === 'excluir')       return ok(excluir_(d));
   if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
-  if (d.acao === 'excluir_lancamento')return ok(excluirLancamento_(d));
+  if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
+  if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -2016,6 +2186,155 @@ function enviarNotificacaoAtendente_(d) {
   } catch(e) {
     Logger.log('Falha ao enviar notificacao de lead quente: ' + e.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRAÇÃO BASE INTELIGENTE ↔ BASE IMOB
+// ═══════════════════════════════════════════════════════════════
+// Funções que conectam os dois sistemas: listar leads capturados pelo
+// funil externo e migrá-los para CONTATOS quando o corretor decidir
+// qualificá-los. O corretor vê os leads no dashboard e escolhe quais
+// valem cadastrar — sem contaminar CONTATOS com leads ainda frios.
+
+// Lista todos os leads de LEADS_LANCAMENTOS cruzados com INTERESSES,
+// para exibição na aba "BaseImob" do dashboard.
+function listarLeadsBaseimob_() {
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { leads: [] };
+
+  var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+  var leads = [];
+  dados.forEach(function(r) {
+    var obj = {};
+    CABECALHO_LEADS_LANCAMENTOS.forEach(function(col, i) { obj[col] = r[i]; });
+    if (obj.email || obj.telefone) leads.push(obj);
+  });
+
+  // Coleta idOfertas de interesse para cada lead
+  var interesses = {};
+  var abaInt = obterAbaInteresses_();
+  var lrInt  = abaInt.getLastRow();
+  if (lrInt >= 2) {
+    var idxIdInt  = CABECALHO_INTERESSES.indexOf('idCliente');
+    var idxIdsInt = CABECALHO_INTERESSES.indexOf('idsInteresse');
+    var idxQtd    = CABECALHO_INTERESSES.indexOf('qtdInteresse');
+    var dadosInt  = abaInt.getRange(2, 1, lrInt - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosInt.forEach(function(r) {
+      var id  = String(r[idxIdInt]  || '').trim();
+      var ids = String(r[idxIdsInt] || '').trim();
+      if (!id) return;
+      if (!interesses[id]) interesses[id] = { ids: [], qtd: 0 };
+      if (ids) ids.split(',').forEach(function(x) {
+        x = x.trim();
+        if (x && interesses[id].ids.indexOf(x) < 0) interesses[id].ids.push(x);
+      });
+      interesses[id].qtd += parseInt(r[idxQtd]) || 0;
+    });
+  }
+
+  leads.forEach(function(lead) {
+    var inter = interesses[lead.idCliente] || { ids: [], qtd: 0 };
+    lead.idsInteresse = inter.ids.join(', ');
+    lead.qtdInteresse = inter.qtd || inter.ids.length;
+  });
+
+  // Mais recentes primeiro
+  leads.sort(function(a, b) {
+    return String(b.dataCadastro) > String(a.dataCadastro) ? 1 : -1;
+  });
+
+  return { leads: leads };
+}
+
+// Migra um lead do BaseImob para CONTATOS.
+// — Verifica duplicidade por email antes de criar.
+// — Pré-preenche produtoOrigem com os idOfertas que o lead marcou em
+//   INTERESSES, para o motor de matching já ter uma pista do produto certo.
+// — Marca o lead em LEADS_LANCAMENTOS como "MIGRADO CONTATOS".
+function migrarLeadBaseimob_(d) {
+  var idCliente = String(d.idCliente || '').trim();
+  if (!idCliente) return { ok: false, erro: 'idCliente obrigatorio' };
+
+  // Localiza o lead em LEADS_LANCAMENTOS
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'lead nao encontrado' };
+
+  var idxId   = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+  var idxTipo = CABECALHO_LEADS_LANCAMENTOS.indexOf('tipo_contato');
+  var dados   = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+  var lead = null;
+  var linhaLead = -1;
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][idxId]) === idCliente) {
+      lead = {};
+      CABECALHO_LEADS_LANCAMENTOS.forEach(function(col, j) { lead[col] = dados[i][j]; });
+      linhaLead = i + 2;
+      break;
+    }
+  }
+  if (!lead) return { ok: false, erro: 'lead nao encontrado' };
+
+  // Verifica duplicidade por email em CONTATOS
+  var email = String(lead.email || '').trim().toLowerCase();
+  if (email) {
+    var aba   = getAba();
+    var lrC   = aba.getLastRow();
+    var idxEM = CABECALHO.indexOf('email') + 1;
+    if (lrC >= 2) {
+      var emails = aba.getRange(2, idxEM, lrC - 1, 1).getValues().flat();
+      for (var j = 0; j < emails.length; j++) {
+        if (String(emails[j] || '').trim().toLowerCase() === email) {
+          return { ok: false, erro: 'email_ja_existe', msg: 'Este e-mail já existe em CONTATOS.' };
+        }
+      }
+    }
+  }
+
+  // Coleta idOfertas de INTERESSES para pré-preencher produtoOrigem
+  var abaInt = obterAbaInteresses_();
+  var lrInt  = abaInt.getLastRow();
+  var idsInteresse = [];
+  if (lrInt >= 2) {
+    var idxIdInt  = CABECALHO_INTERESSES.indexOf('idCliente');
+    var idxIdsInt = CABECALHO_INTERESSES.indexOf('idsInteresse');
+    var dadosInt  = abaInt.getRange(2, 1, lrInt - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosInt.forEach(function(r) {
+      if (String(r[idxIdInt]) !== idCliente || !r[idxIdsInt]) return;
+      String(r[idxIdsInt]).split(',').forEach(function(x) {
+        x = x.trim();
+        if (x && idsInteresse.indexOf(x) < 0) idsInteresse.push(x);
+      });
+    });
+  }
+
+  // Monta o registro para CONTATOS mapeando campos do BaseImob
+  var contatoData = {
+    nome:          String(lead.nome         || ''),
+    telefone:      String(lead.telefone     || ''),
+    email:         String(lead.email        || ''),
+    segmento:      String(lead.finalidade   || ''),
+    quartos:       String(lead.quartos      || ''),
+    precoLimite:   String(lead.precoLimite  || ''),
+    canal:         String(lead.canal        || 'BaseImob'),
+    urgencia:      String(lead.urgencia     || ''),
+    tags:          String(lead.tags         || ''),
+    observacoes:   String(lead.obs          || ''),
+    // idOfertas de interesse entram aqui — o motor de matching já usa esse
+    // campo pra dar pontuação de bairro/tipo quando o texto menciona o produto.
+    produtoOrigem: idsInteresse.join(', '),
+    tipo_contato:  'LEAD BASEIMOB'
+  };
+
+  var result = salvar(contatoData);
+
+  // Marca o lead como migrado para não aparecer em "pendentes" no dashboard
+  if (linhaLead > 0) {
+    abaLeads.getRange(linhaLead, idxTipo + 1).setValue('MIGRADO CONTATOS');
+  }
+
+  return { ok: true, idClienteNovo: result.idCliente, produtoOrigem: contatoData.produtoOrigem };
 }
 
 // ═══════════════════════════════════════════════════════════════

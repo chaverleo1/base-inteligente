@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Base Inteligente — Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -82,6 +85,24 @@
   .score-warm{background:rgba(245,166,35,.15);color:var(--warm)}
   .score-cold{background:rgba(79,124,255,.15);color:var(--cold)}
   .empty-state{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
+
+  /* ── INSIGHTS ── */
+  .insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px}
+  @media(max-width:900px){.insight-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:500px){.insight-grid{grid-template-columns:1fr}}
+  .insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+                padding:18px 20px;border-left:3px solid var(--ic,var(--accent));position:relative;overflow:hidden}
+  .insight-card::before{content:'';position:absolute;inset:0;background:var(--ic,var(--accent));opacity:.04;pointer-events:none}
+  .insight-icon{font-size:18px;margin-bottom:10px;display:block}
+  .insight-num{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;
+               color:var(--ic,var(--accent));line-height:1;margin-bottom:6px}
+  .insight-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+  .insight-action{font-size:11px;color:var(--text3);line-height:1.5;padding-top:8px;
+                  border-top:1px solid var(--border);margin-top:8px}
+  .insight-ver-num{cursor:pointer;text-decoration:underline dotted;text-underline-offset:4px}
+  .insight-ver-num:hover{opacity:.75}
+  .insight-ver-btn{cursor:pointer;color:var(--ic,var(--accent));font-weight:700;margin-left:8px;white-space:nowrap}
+  .insight-ver-btn:hover{opacity:.75}
 
   /* ── GRÁFICOS ── */
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
@@ -204,6 +225,79 @@
   .login-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:background .2s}
   .login-btn:hover{background:#3d6aee}
   .login-err{color:#ff5a5a;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
+
+  /* ── BASEIMOB LEAD CARDS ── */
+  .bi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;align-items:flex-start;gap:16px;transition:border-color .2s}
+  .bi-card:hover{border-color:var(--accent)}
+  .bi-card+.bi-card{margin-top:10px}
+  .bi-avatar{width:40px;height:40px;border-radius:50%;background:rgba(79,124,255,.2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--accent);flex-shrink:0}
+  .bi-info{flex:1;min-width:0}
+  .bi-name{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text)}
+  .bi-sub{font-size:12px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+  .bi-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .bi-ofertas{margin-top:6px;font-size:12px;color:var(--accent2);font-weight:600}
+  .bi-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+  .bi-btn{padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .2s;text-decoration:none;display:inline-block;text-align:center}
+  .bi-btn-migrar{background:var(--accent);color:#fff}
+  .bi-btn-migrar:hover{background:#3d6aee}
+  .bi-btn-migrar:disabled{background:var(--border);color:var(--text3);cursor:default}
+  .bi-empty{text-align:center;padding:48px;color:var(--text3);font-size:14px}
+
+  /* ── ADM ── */
+  .adm-table{width:100%;border-collapse:collapse}
+  .adm-table thead tr{background:var(--surface2);border-bottom:2px solid var(--border)}
+  .adm-table th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
+  .adm-table td{padding:14px 16px;border-bottom:1px solid var(--border);vertical-align:top}
+  .adm-table tr:last-child td{border-bottom:none}
+  .adm-table tr:hover td{background:rgba(255,255,255,.015)}
+  .adm-td-btn{width:210px}
+  .adm-td-desc{font-size:13px;color:var(--text2);line-height:1.55}
+  .adm-td-desc b{color:var(--text)}
+  .adm-td-desc code{font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--accent2)}
+  .adm-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;width:100%;text-align:left;white-space:nowrap}
+  .adm-btn.secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
+  .adm-btn:hover:not(:disabled){filter:brightness(1.12)}
+  .adm-btn:disabled{opacity:.55;cursor:not-allowed}
+  .adm-code{display:block;margin-top:6px;font-size:11px;color:var(--text3);font-family:monospace;background:var(--surface2);padding:3px 7px;border-radius:4px;letter-spacing:.2px}
+  .adm-status{display:block;min-height:0;margin-top:6px;font-size:12px;padding:0;border-radius:4px;transition:all .2s}
+  .adm-status.ok{padding:4px 8px;background:rgba(0,212,170,.1);color:var(--accent2)}
+  .adm-status.err{padding:4px 8px;background:rgba(255,90,90,.1);color:var(--danger)}
+  .adm-btn-verify{background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;white-space:nowrap}
+  .adm-btn-verify:hover{border-color:var(--accent);color:var(--accent)}
+  .adm-gatilho-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:3px 10px;font-size:12px;color:var(--text3);margin:2px 3px}
+  .adm-gatilho-chip.ativo{border-color:var(--accent2);color:var(--accent2);background:rgba(0,212,170,.08)}
+  .adm-teste-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-top:20px}
+  .adm-teste-header{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+  .adm-teste-stat{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700}
+  .adm-teste-stat.ok{color:var(--accent2)}
+  .adm-teste-stat.err{color:var(--danger)}
+  .adm-teste-fail-item{font-size:12px;color:var(--danger);padding:6px 10px;background:rgba(255,90,90,.06);border-radius:4px;margin-top:6px;border-left:3px solid var(--danger);line-height:1.5}
+  .adm-btn-todos{width:100%;padding:16px 24px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);color:#fff;border:none;border-radius:var(--radius);font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
+  .adm-btn-todos:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 4px 20px rgba(79,124,255,.35)}
+  .adm-btn-todos:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+  .adm-rel-box{background:var(--surface);border-radius:var(--radius);padding:20px 22px;margin-top:22px}
+  .adm-rel-header{display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+  .adm-rel-stat{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700}
+  .adm-rel-stat.ok{color:var(--accent2)}
+  .adm-rel-stat.err{color:var(--danger)}
+  .adm-rel-table{width:100%;border-collapse:collapse}
+  .adm-rel-table tr{border-bottom:1px solid var(--border)}
+  .adm-rel-table tr:last-child{border-bottom:none}
+  .adm-rel-table td{padding:9px 12px;font-size:13px;vertical-align:middle}
+  .adm-rel-table tr.ok td{background:rgba(0,212,170,.04)}
+  .adm-rel-table tr.err td{background:rgba(255,90,90,.04)}
+  /* ── INIT OVERLAY ── */
+  .init-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+            padding:44px 48px;width:360px;max-width:90vw;text-align:center}
+  .init-logo{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--accent);
+             letter-spacing:-.3px;margin-bottom:32px}
+  .init-logo span{color:var(--text2);font-weight:400}
+  .init-status{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;min-height:24px;transition:color .3s}
+  .init-funcao{font-size:12px;color:var(--text3);min-height:18px;margin-bottom:24px}
+  .init-track{background:var(--surface2);border-radius:99px;height:4px;overflow:hidden;margin-bottom:10px}
+  .init-fill{background:linear-gradient(90deg,var(--accent),var(--accent2));height:100%;width:0%;
+             border-radius:99px;transition:width .5s ease}
+  .init-counter{font-size:12px;color:var(--text3);text-align:right}
 </style>
 </head>
 <body>
@@ -230,16 +324,28 @@
   </div>
 </div>
 
+<!-- INIT OVERLAY -->
+<div class="login-overlay" id="initOverlay" style="display:none">
+  <div class="init-box">
+    <div class="init-logo">BASE <span>INTELIGENTE</span></div>
+    <div class="init-track">
+      <div class="init-fill" id="initProgressFill"></div>
+    </div>
+    <div class="init-status" id="initStatus" style="display:none"></div>
+  </div>
+</div>
+
 <div class="header">
   <div class="logo">BASE <span>INTELIGENTE</span></div>
   <div class="nav-tabs">
-    <a href="index.html" class="nav-tab">Formulário</a>
-    <a href="dashboard.html" class="nav-tab active">Dashboard</a>
+    <a href="formulario.html" class="nav-tab">Formulário</a>
+    <button class="nav-tab active" id="btnTabDash" onclick="mostrarDashboard()">Dashboard</button>
     <a href="busca.html" class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <button class="nav-tab" id="btnTabBaseimob" onclick="mostrarBaseImob()">BaseImob <span id="badgeBaseimob" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
+    <button class="nav-tab" id="btnTabAdm" onclick="mostrarAdm()">ADM</button>
   </div>
-  <div style="display:flex;gap:8px">
-    <button class="refresh-btn" onclick="carregarDados()">↻ Atualizar</button>
+  <div style="display:flex;gap:8px;align-items:center">
     <button class="refresh-btn" onclick="sair()"
       style="border-color:transparent;color:var(--text3)"
       onmouseover="this.style.borderColor='#ff5a5a';this.style.color='#ff5a5a'"
@@ -247,7 +353,7 @@
   </div>
 </div>
 
-<div class="page">
+<div class="page" id="secao-dashboard">
 
   <!-- TOTAIS -->
   <div class="section-title">Visão geral</div>
@@ -292,20 +398,26 @@
     </div>
   </div>
 
-  <!-- CONSTRUTORA-APARTAMENTOS -->
-  <div class="section-title">🏗️ Construtora — Apartamentos novos</div>
-  <div class="cards-row" id="cardsConstrutora">
+  <!-- LANÇAMENTOS -->
+  <div class="section-title">🚀 Lançamentos</div>
+  <div class="cards-row" id="cardsLancamentos">
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
   </div>
   <div class="charts-row" style="margin-bottom:32px">
     <div class="chart-card">
-      <div class="chart-title">Empreendimentos por status</div>
-      <div class="chart-wrap"><canvas id="chartConsStatus"></canvas></div>
+      <div class="chart-title">Por status</div>
+      <div class="chart-wrap"><canvas id="chartLancStatus"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-title">Unidades por faixa de preço</div>
-      <div class="chart-wrap"><canvas id="chartConsFaixa"></canvas></div>
+      <div class="chart-title">Por padrão</div>
+      <div class="chart-wrap"><canvas id="chartLancPadrao"></canvas></div>
     </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="section-title">💡 Insights</div>
+  <div class="insight-grid" id="insightGrid">
+    <div class="loading dot-anim" style="grid-column:1/-1">Calculando insights</div>
   </div>
 
   <!-- GRÁFICOS -->
@@ -323,6 +435,107 @@
 
   <div class="dashboard-footer" id="dashboardFooter"></div>
 
+</div>
+
+<!-- BASEIMOB SECTION -->
+<div class="page" id="secao-baseimob" style="display:none">
+  <div class="section-title">Leads BaseImob — pendentes de qualificação</div>
+  <div id="bi-lista"><div class="loading dot-anim">Carregando leads</div></div>
+</div>
+
+<!-- ADM SECTION -->
+<div class="page" id="secao-adm" style="display:none">
+  <div class="section-title">Administração — Funções manuais</div>
+
+  <!-- Gatilhos automáticos -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;margin-bottom:20px;display:flex;align-items:center;flex-wrap:wrap;gap:10px">
+    <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap">Gatilhos ativos:</span>
+    <span id="adm-gatilhos-txt" style="flex:1;font-size:13px;color:var(--text3)">— clique em Verificar</span>
+    <button class="adm-btn-verify" onclick="admVerificarGatilhos()">↻ Verificar</button>
+  </div>
+
+  <!-- Tabela de funções -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th style="width:210px">Função</th>
+          <th>Quando usar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" data-orig="▶ Migrar Cabeçalho" onclick="admExecutar('migrar_cabecalho_lancamentos',this)">▶ Migrar Cabeçalho</button>
+            <code class="adm-code">migrarCabecalhoLancamentos()</code>
+            <span class="adm-status" id="admStatus_migrar_cabecalho_lancamentos"></span>
+          </td>
+          <td class="adm-td-desc">Atualiza o cabeçalho da aba <b>LANCAMENTOS</b> no Sheets para incluir novas colunas. Executar toda vez que a estrutura de colunas for alterada no código.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" data-orig="▶ Preencher IDs" onclick="admExecutar('preencher_ids_faltantes',this)">▶ Preencher IDs</button>
+            <code class="adm-code">preencherIdOfertaFaltantes()</code>
+            <span class="adm-status" id="admStatus_preencher_ids_faltantes"></span>
+          </td>
+          <td class="adm-td-desc">Gera <b>idOferta</b> (ex: <code>LAN-10001-01</code>) para tipologias de lançamentos que ainda não têm código. Executar quando novas tipologias forem adicionadas diretamente na planilha sem passar pelo formulário.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" data-orig="▶ Sincronizar Revenda" onclick="admExecutar('sincronizar_revenda',this)">▶ Sincronizar Revenda</button>
+            <code class="adm-code">sincronizarRevenda()</code>
+            <span class="adm-status" id="admStatus_sincronizar_revenda"></span>
+          </td>
+          <td class="adm-td-desc">Busca todos os imóveis à venda na <b>API Imobzi</b> e substitui a aba <b>REVENDA</b>. Executar quando quiser forçar atualização imediata, fora do ciclo automático de 6 horas.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" data-orig="▶ Gatilho Revenda" onclick="admExecutar('criar_gatilho_revenda',this)">▶ Gatilho Revenda</button>
+            <code class="adm-code">criarGatilhoRevenda()</code>
+            <span class="adm-status" id="admStatus_criar_gatilho_revenda"></span>
+          </td>
+          <td class="adm-td-desc">Cria (ou recria) o <b>trigger automático de 6 horas</b> para <code>sincronizarRevenda</code>. Executar uma vez no setup inicial, ou se o gatilho tiver sido removido manualmente.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" data-orig="▶ Gatilho Matching" onclick="admExecutar('criar_gatilho_matching',this)">▶ Gatilho Matching</button>
+            <code class="adm-code">criarGatilhoMatching()</code>
+            <span class="adm-status" id="admStatus_criar_gatilho_matching"></span>
+          </td>
+          <td class="adm-td-desc">Cria (ou recria) o <b>trigger automático de 12 horas</b> para <code>rodarMatching</code>. Executar uma vez no setup inicial, ou se o gatilho tiver sido removido manualmente pelo editor do Apps Script.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" data-orig="▶ Rodar Matching" onclick="admExecutar('rodar_matching',this)">▶ Rodar Matching</button>
+            <code class="adm-code">rodarMatching()</code>
+            <span class="adm-status" id="admStatus_rodar_matching"></span>
+          </td>
+          <td class="adm-td-desc">Recalcula todos os scores de compatibilidade entre clientes e imóveis e grava os resultados na aba <b>MATCHES</b>. Mesmo função do botão <b>↻ Atualizar</b> no cabeçalho.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn secondary" data-orig="▶ Testar Motor" onclick="admExecutar('testar_matching',this)">▶ Testar Motor</button>
+            <code class="adm-code">testarMatching()</code>
+            <span class="adm-status" id="admStatus_testar_matching"></span>
+          </td>
+          <td class="adm-td-desc">Roda os <b>testes unitários</b> do motor de matching e exibe quantos casos passaram ou falharam. Usar para diagnóstico quando os resultados do matching parecerem incorretos ou inconsistentes.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Ativar TODOS -->
+  <div style="margin-top:24px">
+    <button id="btnAtivarTodos" class="adm-btn-todos" onclick="admAtivarTodos()">
+      ▶▶ &nbsp;Ativar TODOS — executa todas as funções em sequência
+    </button>
+  </div>
+
+  <!-- Resultado dos testes (individual) -->
+  <div id="adm-teste-resultado" style="display:none"></div>
+
+  <!-- Relatório final (Ativar TODOS) -->
+  <div id="adm-relatorio-final" style="display:none"></div>
 </div>
 
 <!-- DRAWER CLIENTE -->
@@ -359,7 +572,10 @@ async function sha256(texto) {
 }
 
 async function verificarAuth() {
-  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) { fecharLogin(); carregarDados(); return; }
+  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) {
+    if (sessionStorage.getItem('bi_init_done') === '1') { fecharLogin(); carregarDados(); return; }
+    admInicializarSistema();
+  }
 }
 
 async function entrar() {
@@ -374,8 +590,7 @@ async function entrar() {
     if (data.ok) {
       sessionStorage.setItem(SESS_KEY, 'ok');
       sessionStorage.setItem(SESS_TOKEN_KEY, data.token);
-      fecharLogin();
-      carregarDados();
+      admInicializarSistema();
     } else {
       err.textContent = 'Senha incorreta.';
       document.getElementById('inputSenha').value = '';
@@ -408,11 +623,12 @@ function sair() {
 verificarAuth();
 
 let chartSeg = null;
+let _dashData = null;
 let chartPad = null;
 let chartTipo  = null;
 let chartFaixa = null;
-let chartConsStatus = null;
-let chartConsFaixa  = null;
+let chartLancStatus = null;
+let chartLancPadrao = null;
 
 // ── CARREGAR DADOS DO SHEETS ──────────────────────────────────────────────────
 
@@ -428,6 +644,79 @@ async function carregarDados() {
         Erro ao carregar dados: ${err.message}
       </div>`;
     console.error(err);
+  }
+  carregarLancamentosDash();
+  carregarInsightsExtended();
+}
+
+async function carregarLancamentosDash() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    const lista = data.lancamentos || [];
+
+    const empIds = new Set(lista.map(l => l.idLancamento).filter(Boolean));
+    const total  = lista.length;
+
+    const precos = lista.map(l => {
+      const v = (l.precoMedio || l.preco || '').toString().replace(/[^\d]/g, '');
+      return v ? parseInt(v) : 0;
+    }).filter(p => p > 0);
+    const ticketMedio = precos.length ? Math.round(precos.reduce((a,b) => a+b,0) / precos.length) : 0;
+
+    const porStatus = {}, porPadrao = {};
+    lista.forEach(l => {
+      const s = l.status || 'Não informado';
+      const p = l.padrao || 'Não informado';
+      porStatus[s] = (porStatus[s]||0) + 1;
+      porPadrao[p] = (porPadrao[p]||0) + 1;
+    });
+
+    const fmtPreco = v => v >= 1000000
+      ? 'R$ ' + (v/1000000).toFixed(1).replace('.',',') + 'M'
+      : 'R$ ' + Math.round(v/1000) + 'k';
+
+    const statusTop = Object.entries(porStatus).sort((a,b)=>b[1]-a[1]);
+    const s1 = statusTop[0] || ['—', 0];
+    const s2 = statusTop[1] || ['—', 0];
+
+    document.getElementById('cardsLancamentos').innerHTML = `
+      <div class="card" style="position:relative">
+        <div class="card-label">Empreendimentos</div>
+        <div class="card-value" style="color:var(--accent2)">${empIds.size}</div>
+        <div class="card-sub">${total} tipologias cadastradas</div>
+        <a href="lancamentos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+           color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+           border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+      </div>
+      <div class="card">
+        <div class="card-label">Ticket médio</div>
+        <div class="card-value" style="color:var(--accent)">${ticketMedio ? fmtPreco(ticketMedio) : '—'}</div>
+        <div class="card-sub">${precos.length} com preço informado</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s1[0]}</div>
+        <div class="card-value warm">${s1[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s2[0]}</div>
+        <div class="card-value cold">${s2[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>`;
+
+    renderGrafico('chartLancStatus', chartLancStatus,
+      Object.entries(porStatus).sort((a,b)=>b[1]-a[1]),
+      c => { chartLancStatus = c; }, 'tipologias');
+    renderGrafico('chartLancPadrao', chartLancPadrao,
+      Object.entries(porPadrao).sort((a,b)=>b[1]-a[1]),
+      c => { chartLancPadrao = c; }, 'tipologias');
+
+    if (_dashData) renderInsights(_dashData, lista);
+
+  } catch(e) {
+    document.getElementById('cardsLancamentos').innerHTML =
+      '<div style="color:var(--text3);font-size:13px;padding:16px">Erro ao carregar lançamentos.</div>';
   }
 }
 
@@ -501,39 +790,6 @@ function renderDados(json) {
   renderGrafico('chartFaixa', chartFaixa, Object.entries(porFaixa),
                 c => { chartFaixa = c; }, 'imóveis');
 
-  // ── CONSTRUTORA
-  const cs     = json.construtora || {};
-  const cFaixa = cs.porFaixa    || {};
-  const cStat  = cs.porStatus   || {};
-  const cCls   = cs.porClasse   || {};
-  const nEmps  = Object.keys(cs.porConstrutora || {}).length;
-
-  document.getElementById('cardsConstrutora').innerHTML = `
-    <div class="card">
-      <div class="card-label">Unidades cadastradas</div>
-      <div class="card-value" style="color:var(--accent2)">${cs.total||0}</div>
-      <div class="card-sub">${nEmps} empreendimentos</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Até R$ 300k</div>
-      <div class="card-value cold">${cFaixa['Ate 300k']||0}</div>
-      <div class="card-sub">faixa popular</div>
-    </div>
-    <div class="card">
-      <div class="card-label">R$ 300k – 700k</div>
-      <div class="card-value" style="color:var(--accent2)">${cFaixa['300k-700k']||0}</div>
-      <div class="card-sub">faixa média</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Acima de R$ 700k</div>
-      <div class="card-value warm">${(cFaixa['700k-1.5M']||0)+(cFaixa['Acima 1.5M']||0)}</div>
-      <div class="card-sub">alto padrão e luxo</div>
-    </div>`;
-
-  renderGrafico('chartConsStatus', chartConsStatus, Object.entries(cStat).sort((a,b)=>b[1]-a[1]),
-                c => { chartConsStatus = c; }, 'unidades');
-  renderGrafico('chartConsFaixa', chartConsFaixa, Object.entries(cFaixa),
-                c => { chartConsFaixa = c; }, 'unidades');
 
   // ── Gráficos clientes (objeto → entries)
   renderGrafico('chartSegmento', chartSeg,
@@ -547,6 +803,242 @@ function renderDados(json) {
   const agora = new Date();
   document.getElementById('dashboardFooter').textContent =
     'Última atualização: ' + agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
+
+  _dashData = json;
+  renderInsights(json, null);
+}
+
+function renderInsights(json, lancamentos) {
+  window._insightDetails = window._insightDetails || {};
+  const quentes = json.quentes || [];
+  const mornos  = json.mornos  || [];
+  const frios   = json.frios   || [];
+  const todos   = [...quentes, ...mornos, ...frios];
+  const ativos  = [...quentes, ...mornos];
+
+  // Compute arrays for each insight
+  const listPipeline  = quentes.filter(c => (c.urg||'').match(/Imediata/i) && c.mc80 > 0);
+  const listMornos    = mornos.filter(c => c.mc80 > 0);
+  const listSemMatch  = todos.filter(c => c.mc80 === 0 && c.mc70 === 0);
+  const listQuebrados = ativos.filter(c => !c.seg || !c.pad);
+
+  const padQ = {};
+  quentes.forEach(c => { const p = c.pad||'Não def.'; padQ[p] = (padQ[p]||0)+1; });
+  const topPad     = Object.entries(padQ).sort((a,b)=>b[1]-a[1])[0] || ['—',0];
+  const listTopPad = quentes.filter(c => (c.pad||'Não def.') === topPad[0]);
+  const pctTopPad  = quentes.length ? Math.round(topPad[1]/quentes.length*100) : 0;
+
+  let listLancExp = null, listLancSem = null;
+  if (lancamentos !== null) {
+    listLancExp = lancamentos.filter(l => {
+      if (!l.previsaoEntrega) return false;
+      const diff = (new Date(l.previsaoEntrega) - new Date()) / 86400000;
+      return diff >= 0 && diff <= 180;
+    });
+    const demPads = new Set(ativos.map(c=>(c.pad||'').toLowerCase()).filter(Boolean));
+    const lancPads = [...new Set(lancamentos.map(l=>(l.padrao||'').toLowerCase()).filter(Boolean))];
+    listLancSem = lancPads.filter(p => !demPads.has(p)).map(p => ({padrao: p}));
+  }
+
+  const pctSemMat = todos.length ? Math.round(listSemMatch.length / todos.length * 100) : 0;
+
+  // Store detail data
+  window._insightDetails['insPipeline']  = {title:'Pipeline de fechamento hoje', icon:'🎯', color:'#00d4aa', type:'clientes', items:listPipeline};
+  window._insightDetails['insMornos']    = {title:'Mornos com match forte', icon:'🔑', color:'#f5a623', type:'clientes', items:listMornos};
+  window._insightDetails['insSemMatch']  = {title:'Base sem cobertura de estoque', icon:'📉', color:'#ff5a5a', type:'clientes', items:listSemMatch};
+  window._insightDetails['insQuebrados'] = {title:'Perfis incompletos (sem tipo/padrão)', icon:'🧩', color:'#a78bfa', type:'clientes', items:listQuebrados};
+  window._insightDetails['insTopPad']    = {title:`Pipeline quente — padrão "${topPad[0]}"`, icon:'📊', color:'#4f7cff', type:'clientes', items:listTopPad};
+  if (listLancExp)  window._insightDetails['insLancExp'] = {title:'Lançamentos com entrega ≤ 180 dias', icon:'⏱️', color:'#f5a623', type:'lancamentos', items:listLancExp};
+  if (listLancSem)  window._insightDetails['insLancSem'] = {title:'Padrões em lançamentos sem demanda', icon:'👻', color:'#ff5a5a', type:'pads', items:listLancSem};
+
+  // Card builder — adds clickable "Ver" when there are items
+  function ic(color, icon, num, label, action, detId) {
+    const d = detId && window._insightDetails[detId];
+    const hasItems = d && d.items && d.items.length > 0;
+    const numHtml = hasItems
+      ? `<div class="insight-num insight-ver-num" onclick="verInsight('${detId}')">${num}</div>`
+      : `<div class="insight-num">${num}</div>`;
+    const verBtn = hasItems
+      ? ` <span class="insight-ver-btn" onclick="verInsight('${detId}')">Ver →</span>`
+      : '';
+    return `<div class="insight-card" style="--ic:${color}">`
+      + `<span class="insight-icon">${icon}</span>`
+      + numHtml
+      + `<div class="insight-label">${label}</div>`
+      + `<div class="insight-action">→ ${action}${verBtn}</div></div>`;
+  }
+
+  const pendente = (id, icon, label) =>
+    `<div class="insight-card insight-pending" id="${id}" style="--ic:#4a5470">`
+    +`<span class="insight-icon">${icon}</span>`
+    +`<div class="insight-num" style="font-size:20px;color:var(--text3)">—</div>`
+    +`<div class="insight-label">${label}</div>`
+    +`<div class="insight-action" style="color:var(--text3)">→ Aguardando dados...</div></div>`;
+
+  const lancExp    = listLancExp  ? listLancExp.length  : null;
+  const lancSemDem = listLancSem  ? listLancSem.length  : null;
+
+  // ── Insights v1 (originais) ────────────────────────────────────
+  const listUrgSemMatch    = todos.filter(c => (c.urg||'').match(/Imediata|Curto/i) && c.mc80 === 0 && c.mc70 === 0);
+  const listQuentesSemMat  = quentes.filter(c => c.mc80 === 0 && c.mc70 === 0);
+  const listFriosReativos  = frios.filter(c => (parseInt(c.score)||0) >= 50);
+  const listQuentesComMat  = quentes.filter(c => c.mc80 > 0);
+  const pctComMatch        = quentes.length ? Math.round(listQuentesComMat.length / quentes.length * 100) : 0;
+  const segs               = Object.entries(json.segmentos || {}).sort((a,b) => b[1]-a[1]);
+  const topSeg             = segs[0] || ['—', 0];
+  let   listAlinhados      = null;
+  if (lancamentos) {
+    const padrLanc = new Set(lancamentos.map(l => (l.padrao||'').toLowerCase()).filter(Boolean));
+    listAlinhados  = ativos.filter(c => padrLanc.has((c.pad||'').toLowerCase()));
+  }
+
+  window._insightDetails['insUrgSemMatch']   = {title:'Urgentes sem produto disponível', icon:'⏱️', color:'#ff5a5a', type:'clientes', items:listUrgSemMatch};
+  window._insightDetails['insQuentesSemMat'] = {title:'Clientes quentes sem match no estoque', icon:'🔥', color:'#f5a623', type:'clientes', items:listQuentesSemMat};
+  window._insightDetails['insFriosReativos'] = {title:'Frios com potencial de reativação', icon:'💤', color:'#4f7cff', type:'clientes', items:listFriosReativos};
+  window._insightDetails['insQuentesComMat'] = {title:'Clientes quentes com match forte', icon:'🎯', color:'#00d4aa', type:'clientes', items:listQuentesComMat};
+  if (listAlinhados) window._insightDetails['insAlinhados'] = {title:'Clientes alinhados ao perfil dos lançamentos', icon:'🚀', color:'#00d4aa', type:'clientes', items:listAlinhados};
+
+  const divider = txt =>
+    `<div style="grid-column:1/-1;padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px;
+                 font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase">${txt}</div>`;
+
+  document.getElementById('insightGrid').innerHTML =
+    ic('#00d4aa','🎯', listPipeline.length,
+       'clientes para fechar hoje — urgência imediata + match forte',
+       listPipeline.length > 0 ? 'Ligar agora — comprador ativo com produto compatível' : 'Nenhum no momento — acompanhar urgentes',
+       'insPipeline') +
+
+    ic('#f5a623','🔑', listMornos.length,
+       'clientes mornos com match ≥80 aguardando apresentação',
+       listMornos.length > 0 ? 'Uma reunião pode fechar — não deixe esfriar' : 'Ampliar inventário para os mornos',
+       'insMornos') +
+
+    ic('#ff5a5a','📉', pctSemMat+'%',
+       'da base inteira nunca será atendida com o estoque atual',
+       pctSemMat > 50 ? 'Gap crítico — esse é o teto real de conversão' : 'Cobertura razoável — manter estoque ativo',
+       'insSemMatch') +
+
+    ic('#a78bfa','🧩', listQuebrados.length,
+       'clientes ativos sem tipo ou padrão definido',
+       listQuebrados.length > 0 ? 'Cadastro incompleto = matching impossível. Qualificar agora' : 'Todos os ativos estão bem qualificados',
+       'insQuebrados') +
+
+    ic('#4f7cff','📊', pctTopPad+'%',
+       `dos clientes quentes buscam "${topPad[0]}" — padrão dominante`,
+       'Concentre captação de imóveis nesse padrão. Pipeline concentrado aqui',
+       'insTopPad') +
+
+    (lancamentos !== null
+      ? ic('#f5a623','⏱️', lancExp??'—',
+           'tipologias em lançamentos com entrega em até 180 dias',
+           (lancExp??0) > 0 ? 'Janela de vendas fecha em breve — cruzar com clientes compatíveis' : 'Nenhum com entrega próxima no momento',
+           'insLancExp')
+      : pendente('insLancExp','⏱️','Lançamentos com entrega próxima')) +
+
+    (lancamentos !== null
+      ? ic('#ff5a5a','👻', lancSemDem??'—',
+           'padrões nos lançamentos sem clientes cadastrados para o perfil',
+           (lancSemDem??0) > 0 ? 'Captar leads para esses perfis ou reavaliar o produto' : 'Todos os lançamentos têm demanda cadastrada',
+           'insLancSem')
+      : pendente('insLancSem','👻','Lançamentos sem demanda cadastrada')) +
+
+    pendente('insDormentes','😴','clientes sem contato há mais de 90 dias') +
+    pendente('insBairro',   '📍','bairro mais procurado pelos clientes') +
+    pendente('insCanal',    '📡','canal de origem que traz clientes de maior valor') +
+    pendente('insLeads',    '🎪','leads BaseImob pendentes de qualificação') +
+
+    divider('Insights v1') +
+
+    ic('#ff5a5a','⏱️', listUrgSemMatch.length,
+       'urgentes sem nenhum match — perda de venda iminente',
+       listUrgSemMatch.length > 0 ? 'Buscar ativamente imóveis para esses perfis agora' : 'Todos os urgentes têm pelo menos um match',
+       'insUrgSemMatch') +
+
+    ic('#f5a623','🔥', listQuentesSemMat.length,
+       'clientes quentes aguardam estoque — pipeline parado',
+       listQuentesSemMat.length > 0 ? 'Ampliar inventário ou revisar critérios de matching' : 'Todos os quentes têm match disponível',
+       'insQuentesSemMat') +
+
+    ic('#4f7cff','💤', listFriosReativos.length,
+       'frios com score ≥ 50 prontos para reativar',
+       listFriosReativos.length > 0 ? 'Retomar contato com lançamentos e novas ofertas' : 'Nenhum frio com score relevante no momento',
+       'insFriosReativos') +
+
+    ic('#00d4aa','🎯', pctComMatch+'%',
+       'dos clientes quentes têm match forte (≥80)',
+       pctComMatch < 50 ? 'Abaixo de 50% — gap crítico no inventário' : 'Boa cobertura — manter estoque atualizado',
+       'insQuentesComMat') +
+
+    ic('#a78bfa','🏆', topSeg[1],
+       `clientes buscam "${topSeg[0]}" — segmento mais demandado`,
+       'Priorizar captação desse segmento no inventário') +
+
+    (lancamentos !== null
+      ? ic('#00d4aa','🚀', listAlinhados ? listAlinhados.length : '—',
+           'clientes ativos alinhados com o perfil dos lançamentos',
+           listAlinhados && listAlinhados.length > 0 ? 'Apresentar tabelas de preço e condições de pagamento' : 'Nenhum cliente compatível com os lançamentos atuais',
+           'insAlinhados')
+      : ic('#00d4aa','🚀','—','clientes alinhados com o perfil dos lançamentos','Carregando lançamentos...'));
+}
+
+async function carregarInsightsExtended() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_dados_insights&token=' + encodeURIComponent(tokenSessao()));
+    const data = await resp.json();
+    if (data.status === 'nao_autenticado') return;
+    atualizarInsightsExtended(data);
+  } catch(e) { /* silent */ }
+}
+
+function atualizarInsightsExtended(data) {
+  window._insightDetails = window._insightDetails || {};
+  const topB  = (data.topBairros||[])[0] || {bairro:'—', n:0};
+  const canal = data.canalTop || {nome:'—', media:0};
+
+  window._insightDetails['insDormentes'] = {title:'Clientes dormentes (>90 dias sem contato)', icon:'😴', color:'#ff5a5a', type:'clientes', items:data.dormentes||[]};
+  window._insightDetails['insBairro']    = {title:`Clientes buscando "${topB.bairro}"`, icon:'📍', color:'#4f7cff', type:'clientes', items:data.bairroTopClientes||[]};
+  window._insightDetails['insCanal']     = {title:`Clientes via "${canal.nome}" — canal top`, icon:'📡', color:'#00d4aa', type:'clientes', items:data.canalTopClientes||[]};
+  window._insightDetails['insLeads']     = {title:'Leads BaseImob pendentes', icon:'🎪', color:'#a78bfa', type:'leads', items:data.leadsList||[]};
+
+  function upd(id, color, icon, num, label, action) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.setProperty('--ic', color);
+    el.classList.remove('insight-pending');
+    const d = window._insightDetails[id];
+    const hasItems = d && d.items && d.items.length > 0;
+    const numHtml = hasItems
+      ? `<div class="insight-num insight-ver-num" onclick="verInsight('${id}')">${num}</div>`
+      : `<div class="insight-num">${num}</div>`;
+    const verBtn = hasItems
+      ? ` <span class="insight-ver-btn" onclick="verInsight('${id}')">Ver →</span>`
+      : '';
+    el.innerHTML = `<span class="insight-icon">${icon}</span>`
+      + numHtml
+      + `<div class="insight-label">${label}</div>`
+      + `<div class="insight-action">→ ${action}${verBtn}</div>`;
+  }
+
+  const dorm  = data.semContato90 || 0;
+  const leads = data.leadsPendentes || 0;
+  upd('insDormentes','#ff5a5a','😴', dorm,
+    'clientes sem contato há mais de 90 dias',
+    dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');
+  upd('insBairro','#4f7cff','📍', topB.n,
+    `clientes buscam "${topB.bairro}" — bairro mais procurado`,
+    'Captar imóveis nesse bairro. Maior concentração de demanda');
+  upd('insCanal','#00d4aa','📡', canal.media > 0 ? canal.media : '—',
+    `score médio via "${canal.nome}" — canal mais lucrativo`,
+    canal.media > 0 ? `Investir mais nesse canal. Traz clientes com score ${canal.media}` : 'Dados insuficientes para análise');
+  upd('insLeads','#a78bfa','🎪', leads,
+    `leads BaseImob ainda não qualificados como contatos (${data.leadsTotal||0} total)`,
+    leads > 0 ? 'Leads pagos esquecidos na fila. Qualificar e migrar para base' : 'Todos os leads foram qualificados');
+}
+
+function verInsight(id) {
+  if (!window._insightDetails || !window._insightDetails[id]) return;
+  sessionStorage.setItem('bi_insight_detail', JSON.stringify(window._insightDetails[id]));
+  window.location.href = 'insight-detail.html';
 }
 
 function renderMatchCol(elId, lista, tipo) {
@@ -883,7 +1375,7 @@ function renderDrawer(c, score) {
     <div class="d-actions">
       ${wppUrl ? `<a class="d-btn d-btn-wpp" href="${wppUrl}" target="_blank">💬 WhatsApp</a>` : ''}
       ${telUrl ? `<a class="d-btn d-btn-tel" href="${telUrl}">📞 ${c.telefone}</a>` : ''}
-      <a class="d-btn d-btn-edit" href="index.html?linha=${encodeURIComponent(c._linha||'')}">✏️ Editar</a>
+      <a class="d-btn d-btn-edit" href="formulario.html?linha=${encodeURIComponent(c._linha||'')}">✏️ Editar</a>
     </div>
     ${tagsHtml ? `<div style="padding:0 0 8px 0;display:flex;flex-wrap:wrap;gap:6px">${tagsHtml}</div>` : ''}
 
@@ -978,8 +1470,412 @@ async function excluirCliente_(linha, nome) {
   }
 }
 
+// ── RODAR MATCHING ───────────────────────────────────────────────────────────
+
+async function rodarEAtualizar() {
+  const btn = document.getElementById('btnAtualizar');
+  btn.disabled = true;
+  btn.textContent = '⏳ Calculando...';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=rodar_matching&token=' + encodeURIComponent(tokenSessao()));
+    const r    = await resp.json();
+    if (r.status === 'matching_concluido') {
+      btn.textContent = '✅ Concluído';
+      setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 2000);
+      carregarDados();
+    } else {
+      // erro do servidor (sem logout — sessão não é afetada pelo matching)
+      btn.textContent = '⚠️ ' + (r.motivo || r.status || 'erro');
+      setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 3000);
+    }
+  } catch(e) {
+    // Apps Script pode encerrar a execução por timeout sem resposta JSON;
+    // recarrega os dados mesmo assim, pois o matching pode ter concluído
+    btn.textContent = '⚠️ Timeout';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '↻ Atualizar'; }, 3000);
+    carregarDados();
+  }
+}
+
+// ── BASEIMOB ──────────────────────────────────────────────────────────────────
+
+function mostrarDashboard() {
+  document.getElementById('secao-dashboard').style.display = '';
+  document.getElementById('secao-baseimob').style.display  = 'none';
+  document.getElementById('secao-adm').style.display       = 'none';
+  document.getElementById('btnTabDash').classList.add('active');
+  document.getElementById('btnTabBaseimob').classList.remove('active');
+  document.getElementById('btnTabAdm').classList.remove('active');
+}
+
+function mostrarBaseImob() {
+  document.getElementById('secao-dashboard').style.display = 'none';
+  document.getElementById('secao-baseimob').style.display  = '';
+  document.getElementById('secao-adm').style.display       = 'none';
+  document.getElementById('btnTabDash').classList.remove('active');
+  document.getElementById('btnTabBaseimob').classList.add('active');
+  document.getElementById('btnTabAdm').classList.remove('active');
+  carregarLeadsBaseimob();
+}
+
+function mostrarAdm() {
+  document.getElementById('secao-dashboard').style.display = 'none';
+  document.getElementById('secao-baseimob').style.display  = 'none';
+  document.getElementById('secao-adm').style.display       = '';
+  document.getElementById('btnTabDash').classList.remove('active');
+  document.getElementById('btnTabBaseimob').classList.remove('active');
+  document.getElementById('btnTabAdm').classList.add('active');
+}
+
+async function admVerificarGatilhos() {
+  const el = document.getElementById('adm-gatilhos-txt');
+  el.innerHTML = '⏳ Verificando...';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_verificar_gatilhos&token=' + encodeURIComponent(tokenSessao()));
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const CONHECIDOS = ['rodarMatching', 'sincronizarRevenda'];
+    const ativos = (r.gatilhos || []).map(g => g.funcao);
+    el.innerHTML = CONHECIDOS.map(nome => {
+      const ativo = ativos.includes(nome);
+      return `<span class="adm-gatilho-chip${ativo ? ' ativo' : ''}">${ativo ? '✔' : '✗'} ${nome}</span>`;
+    }).join('');
+  } catch(e) {
+    el.textContent = 'Erro ao verificar.';
+    el.style.color = 'var(--danger)';
+  }
+}
+
+async function admExecutar(acao, btn) {
+  const orig = btn.dataset.orig || btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Executando...';
+  const statusEl = document.getElementById('admStatus_' + acao);
+  if (statusEl) { statusEl.textContent = ''; statusEl.className = 'adm-status'; }
+  if (acao !== 'testar_matching') document.getElementById('adm-teste-resultado').style.display = 'none';
+  document.getElementById('adm-relatorio-final').style.display = 'none';
+
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+
+    const isTest = r.total !== undefined;
+    const isOk   = r.status === 'ok' || r.status === 'matching_concluido';
+    if (isTest) {
+      admRenderTeste(r);
+      const testOk = r.falhou === 0;
+      if (statusEl) {
+        statusEl.textContent = `${r.passou}/${r.total} testes passaram`;
+        statusEl.className = 'adm-status ' + (testOk ? 'ok' : 'err');
+      }
+      btn.textContent = testOk ? '✅ Tudo passou' : `⚠️ ${r.falhou} falha(s)`;
+    } else if (isOk) {
+      if (statusEl) { statusEl.textContent = r.msg || 'Concluído.'; statusEl.className = 'adm-status ok'; }
+      btn.textContent = '✅ Concluído';
+      if (acao === 'criar_gatilho_matching' || acao === 'criar_gatilho_revenda') admVerificarGatilhos();
+    } else {
+      if (statusEl) { statusEl.textContent = r.motivo || r.status || 'Erro desconhecido.'; statusEl.className = 'adm-status err'; }
+      btn.textContent = '⚠️ Erro';
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = 'Timeout ou erro de rede.'; statusEl.className = 'adm-status err'; }
+    btn.textContent = '⚠️ Timeout';
+  }
+  setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 4000);
+}
+
+function admRenderTeste(r) {
+  const box   = document.getElementById('adm-teste-resultado');
+  const total = r.total || 0;
+  const ok    = r.passou || 0;
+  const err   = r.falhou || 0;
+  const falhasHtml = (r.falhas || []).map(f =>
+    `<div class="adm-teste-fail-item">❌ ${f.nome}<br><small style="color:var(--text3)">esperado: <b>${f.esperado}</b> &nbsp;|&nbsp; obtido: <b>${f.atual}</b></small></div>`
+  ).join('');
+  box.innerHTML = `
+    <div class="adm-teste-box">
+      <div class="adm-teste-header">
+        <span class="adm-teste-stat ${err === 0 ? 'ok' : 'err'}">${ok}/${total}</span>
+        <span style="font-size:14px;color:var(--text2)">${err === 0 ? 'Todos os testes passaram.' : err + ' falha(s) encontrada(s).'}</span>
+        <code class="adm-code" style="margin:0">testarMatching()</code>
+      </div>
+      ${falhasHtml || '<div style="font-size:13px;color:var(--accent2)">Motor funcionando corretamente.</div>'}
+    </div>`;
+  box.style.display = '';
+}
+
+async function admAtivarTodos() {
+  const ORDEM = [
+    'migrar_cabecalho_lancamentos',
+    'preencher_ids_faltantes',
+    'sincronizar_revenda',
+    'criar_gatilho_revenda',
+    'criar_gatilho_matching',
+    'rodar_matching',
+    'testar_matching'
+  ];
+  const NOMES = {
+    migrar_cabecalho_lancamentos: 'Migrar Cabeçalho',
+    preencher_ids_faltantes:      'Preencher IDs',
+    sincronizar_revenda:          'Sincronizar Revenda',
+    criar_gatilho_revenda:        'Gatilho Revenda (6h)',
+    criar_gatilho_matching:       'Gatilho Matching (12h)',
+    rodar_matching:               'Rodar Matching',
+    testar_matching:              'Testar Motor'
+  };
+
+  const btnTodos = document.getElementById('btnAtivarTodos');
+  btnTodos.disabled = true;
+  btnTodos.innerHTML = '⏳&nbsp; Executando todas as funções — aguarde...';
+
+  // Limpa estado anterior
+  document.getElementById('adm-teste-resultado').style.display   = 'none';
+  document.getElementById('adm-relatorio-final').style.display = 'none';
+  ORDEM.forEach(a => {
+    const s = document.getElementById('admStatus_' + a);
+    if (s) { s.textContent = ''; s.className = 'adm-status'; }
+    const b = document.querySelector(`.adm-btn[data-orig][onclick*="'${a}'"]`);
+    if (b) b.disabled = true;
+  });
+
+  const resultados = [];
+
+  for (const acao of ORDEM) {
+    const statusEl = document.getElementById('admStatus_' + acao);
+    const btn = document.querySelector(`.adm-btn[data-orig][onclick*="'${acao}'"]`);
+
+    // Marca como "em execução" com destaque visual
+    if (statusEl) {
+      statusEl.innerHTML  = '⏳ executando...';
+      statusEl.className  = 'adm-status';
+      statusEl.style.cssText = 'padding:4px 8px;background:rgba(79,124,255,.12);color:var(--accent);display:block';
+    }
+    if (btn) { btn.textContent = '⏳'; }
+
+    let status = 'err';
+    let msg    = 'Erro desconhecido.';
+
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
+      const r    = await resp.json();
+      if (trataNaoAutenticado(r)) return;
+
+      const isTest = r.total !== undefined;
+      const isOk   = r.status === 'ok' || r.status === 'matching_concluido';
+
+      if (isTest) {
+        admRenderTeste(r);
+        status = r.falhou === 0 ? 'ok' : 'err';
+        msg    = `${r.passou}/${r.total} testes ${r.falhou === 0 ? 'passaram' : 'com ' + r.falhou + ' falha(s)'}`;
+      } else if (isOk) {
+        status = 'ok';
+        msg    = r.msg || 'Concluído.';
+      } else {
+        msg = r.motivo || r.status || 'Erro desconhecido.';
+      }
+    } catch(e) {
+      msg = 'Timeout ou erro de rede.';
+    }
+
+    resultados.push({ acao, nome: NOMES[acao] || acao, status, msg });
+
+    if (statusEl) {
+      statusEl.style.cssText = '';
+      statusEl.textContent   = msg;
+      statusEl.className     = 'adm-status ' + status;
+    }
+    if (btn) {
+      btn.disabled    = false;
+      btn.textContent = btn.dataset.orig;
+    }
+  }
+
+  btnTodos.disabled = false;
+  btnTodos.innerHTML = '▶▶ &nbsp;Ativar TODOS — executa todas as funções em sequência';
+
+  admRenderRelatorio(resultados);
+  admVerificarGatilhos();
+}
+
+function admRenderRelatorio(resultados) {
+  const total  = resultados.length;
+  const nOk    = resultados.filter(r => r.status === 'ok').length;
+  const nErr   = total - nOk;
+  const tudo   = nErr === 0;
+  const agora  = new Date().toLocaleString('pt-BR');
+
+  const linhas = resultados.map((r, i) => `
+    <tr class="${r.status}">
+      <td style="width:28px;text-align:center;font-size:14px">${r.status === 'ok' ? '✅' : '❌'}</td>
+      <td style="color:var(--text);font-weight:600;white-space:nowrap">${i + 1}. ${r.nome}</td>
+      <td style="color:var(--text2)">${r.msg}</td>
+    </tr>`).join('');
+
+  const box = document.getElementById('adm-relatorio-final');
+  box.innerHTML = `
+    <div class="adm-rel-box" style="border:1px solid ${tudo ? 'var(--accent2)' : 'var(--danger)'}">
+      <div class="adm-rel-header">
+        <span class="adm-rel-stat ${tudo ? 'ok' : 'err'}">${nOk}/${total}</span>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text)">${tudo ? 'Todas as funções executadas com sucesso.' : nErr + ' função(ões) com erro.'}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">${agora}</div>
+        </div>
+      </div>
+      <table class="adm-rel-table">${linhas}</table>
+    </div>`;
+  box.style.display = '';
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function admInicializarSistema() {
+  const FUNCOES = [
+    { acao: 'migrar_cabecalho_lancamentos', nome: 'Migrando cabeçalho...' },
+    { acao: 'preencher_ids_faltantes',      nome: 'Preenchendo IDs...' },
+    { acao: 'sincronizar_revenda',          nome: 'Sincronizando Revenda...' },
+    { acao: 'criar_gatilho_revenda',        nome: 'Configurando gatilho Revenda...' },
+    { acao: 'criar_gatilho_matching',       nome: 'Configurando gatilho Matching...' },
+    { acao: 'rodar_matching',               nome: 'Calculando matches...' },
+    { acao: 'testar_matching',              nome: 'Verificando motor...' }
+  ];
+  const total = FUNCOES.length;
+  const fillEl = document.getElementById('initProgressFill');
+  fillEl.style.width = '0%';
+  document.getElementById('initOverlay').style.display = 'flex';
+
+  let nOk = 0;
+  for (let i = 0; i < total; i++) {
+    const { acao } = FUNCOES[i];
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
+      const r    = await resp.json();
+      if (r.status === 'nao_autenticado') { document.getElementById('initOverlay').style.display = 'none'; sair(); return; }
+      const isOk = r.status === 'ok' || r.status === 'matching_concluido' || (r.total !== undefined && r.falhou === 0);
+      if (isOk) nOk++;
+    } catch(e) { /* silent */ }
+    fillEl.style.width = Math.round(((i + 1) / total) * 100) + '%';
+  }
+
+  setTimeout(() => {
+    sessionStorage.setItem('bi_init_done', '1');
+    document.getElementById('initOverlay').style.display = 'none';
+    fecharLogin();
+    carregarDados();
+  }, 2000);
+}
+
+async function carregarLeadsBaseimob() {
+  document.getElementById('bi-lista').innerHTML = '<div class="loading dot-anim">Carregando leads BaseImob</div>';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_leads_baseimob&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    renderLeadsBaseimob(json.leads || []);
+  } catch(e) {
+    document.getElementById('bi-lista').innerHTML = `<div class="bi-empty">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+function renderLeadsBaseimob(leads) {
+  const pendentes = leads.filter(l => l.tipo_contato !== 'MIGRADO CONTATOS');
+
+  const badge = document.getElementById('badgeBaseimob');
+  if (pendentes.length > 0) {
+    badge.textContent = pendentes.length;
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  if (!pendentes.length) {
+    document.getElementById('bi-lista').innerHTML =
+      '<div class="bi-empty">Nenhum lead pendente.<br><small>Todos já foram migrados ou a base está vazia.</small></div>';
+    return;
+  }
+
+  document.getElementById('bi-lista').innerHTML = pendentes.map(l => {
+    const score    = parseInt(l.score) || 0;
+    const scoreCls = score >= 70 ? 'score-hot' : score >= 50 ? 'score-warm' : 'score-cold';
+    const tags     = (l.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+    const tagsHtml = tags.map(t => `<span class="tag-chip tag-default">${t}</span>`).join('');
+    const wppTel   = String(l.telefone || '').replace(/\D/g, '');
+    const partes   = [
+      l.canal       ? `📡 ${l.canal}` : '',
+      l.quartos     ? `${l.quartos} qtos` : '',
+      l.precoLimite ? `até R$ ${l.precoLimite}` : ''
+    ].filter(Boolean);
+
+    return `
+    <div class="bi-card" id="bicard_${l.idCliente}">
+      <div class="bi-avatar">${(l.nome || '?')[0].toUpperCase()}</div>
+      <div class="bi-info">
+        <div class="bi-name">${l.nome || 'Sem nome'}${score ? `<span class="match-score ${scoreCls}" style="float:none;margin-left:8px">${score}</span>` : ''}</div>
+        <div class="bi-sub">${partes.join(' · ') || 'Sem detalhes'}</div>
+        ${l.email    ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">✉️ ${l.email}</div>` : ''}
+        ${l.telefone ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📞 ${l.telefone}</div>` : ''}
+        ${l.idsInteresse ? `<div class="bi-ofertas">🔖 Interesses: ${l.idsInteresse}</div>` : ''}
+        ${tagsHtml ? `<div class="bi-tags">${tagsHtml}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">📅 ${l.dataCadastro || '—'}</div>
+      </div>
+      <div class="bi-actions">
+        ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬 WPP</a>` : ''}
+        <button class="bi-btn bi-btn-migrar" onclick="migrarLead('${l.idCliente}', this)">Migrar →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function migrarLead(idCliente, btn) {
+  if (!confirm('Migrar este lead para CONTATOS?\n\nEle entrará no motor de matching com os imóveis de interesse já pré-preenchidos em produtoOrigem.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Migrando...';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'migrar_lead_baseimob', idCliente, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      const card = document.getElementById('bicard_' + idCliente);
+      if (card) {
+        card.style.opacity = '0.45';
+        card.style.pointerEvents = 'none';
+        btn.textContent = '✅ Migrado';
+        if (r.idClienteNovo) {
+          card.querySelector('.bi-info').insertAdjacentHTML('beforeend',
+            `<div style="font-size:12px;color:var(--accent2);margin-top:6px;font-weight:600">✅ Cadastrado como ${r.idClienteNovo}</div>`);
+        }
+      }
+    } else if (r.erro === 'email_ja_existe') {
+      alert('Este e-mail já existe em CONTATOS. Verifique antes de migrar.');
+      btn.disabled = false;
+      btn.textContent = 'Migrar →';
+    } else {
+      alert('Erro: ' + (r.msg || r.erro || JSON.stringify(r)));
+      btn.disabled = false;
+      btn.textContent = 'Migrar →';
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Migrar →';
+  }
+}
+
+async function verificarLeadsPendentes() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_leads_baseimob&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (!json.leads) return;
+    const n = json.leads.filter(l => l.tipo_contato !== 'MIGRADO CONTATOS').length;
+    const badge = document.getElementById('badgeBaseimob');
+    if (n > 0) { badge.textContent = n; badge.style.display = 'inline'; }
+  } catch(e) {}
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 carregarDados();
+verificarLeadsPendentes();
 </script>
 </body>
 </html>
