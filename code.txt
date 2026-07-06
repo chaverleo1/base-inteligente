@@ -245,12 +245,16 @@ function doGet(e) {
               dormentes_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_,dias:dias_});
           }
 
-          // "Esfriando": cadastro (não a conversa) sem edição há mais de 15
-          // dias — mesmo limiar usado em fatorFrescor_() pro Score do Cliente.
-          // Só conta leads de verdade (fora Corretor/Parceiro/Descartar/Igreja).
+          // "Esfriando": janela de aviso ENTRE 15 e 30 dias sem edição do
+          // cadastro — mesmos limiares de fatorFrescor_() pro Score do
+          // Cliente. Acima de 30 dias o cadastro já é "Frio" (fator 0.65,
+          // caso encerrado) e não entra mais aqui — o alerta é sobre quem
+          // ainda dá pra reverter antes de esfriar de vez, não sobre quem já
+          // esfriou. Só conta leads de verdade (fora Corretor/Parceiro/
+          // Descartar/Igreja).
           if (FORA_.indexOf(cat_) < 0) {
             var diasDA_ = diasDesdeData_(r_[iDA_]);
-            if (diasDA_ !== null && diasDA_ > 15) {
+            if (diasDA_ !== null && diasDA_ > 15 && diasDA_ <= 30) {
               esfriando15_++;
               if (esfriandoList_.length < 100)
                 esfriandoList_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,idCliente:id_,dias:diasDA_});

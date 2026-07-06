@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 7) — Card "Esfriando" não deve contar cadastros já "Frios" (>30 dias)
+
+Ajuste no item 12 da parte anterior: o card contava TODO cadastro com mais de 15 dias sem
+atualização, inclusive quem já passou dos 30 dias (ponto em que `fatorFrescor_()` já classifica
+como "Frio", fator 0.65). Usuário pediu pra excluir esses — o alerta é sobre quem ainda está na
+janela de reverter antes de esfriar de vez, não sobre quem já esfriou.
+
+Condição em `adm_dados_insights` mudou de `diasDA_ > 15` para `diasDA_ > 15 && diasDA_ <= 30`.
+Textos do card e do título do drill-down atualizados pra "entre 15 e 30 dias". Validado com teste
+unitário cobrindo os limites (15, 16, 30, 31 dias) e visualmente no preview.
+
 ## 2026-07-06 (parte 6) — Score do Cliente com frescor de cadastro + alerta de "esfriando"
 
 Itens 11 e 12 pedidos pelo usuário.
