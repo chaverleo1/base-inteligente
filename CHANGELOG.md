@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 — Fix: botão "Editar" em Lançamentos não abria a página do empreendimento
+
+Bug reportado pelo usuário: o botão "✏️ Editar" (criado pela estação server) na lista de
+empreendimentos não abria `lancamentos-editar.html`.
+
+**Causa raiz**: em `lancamentos-editar.html`, o IIFE `(function init(){...})()` era executado
+imediatamente durante o parse do script (linha ~301) e chamava `preencherForm()` →
+`addUnidade()` de forma síncrona. Só que `addUnidade()` referencia `_uniCount`, declarada mais
+abaixo no arquivo com `let _uniCount = 0;` (linha 331) — como `let` não sofre hoisting de valor
+(fica na temporal dead zone até a linha de declaração ser executada), a chamada síncrona a
+`addUnidade()` disparava `ReferenceError: Cannot access '_uniCount' before initialization`
+*antes* dessa linha rodar. O erro era engolido pelo `try/catch` do próprio `init()`, que
+silenciosamente redirecionava de volta para `lancamentos.html` — dando a impressão de que o
+botão "não fazia nada".
+
+Confirmado isolando o erro real via `localStorage` (o `console.error` normal não sobrevive ao
+redirect síncrono): `ReferenceError: Cannot access '_uniCount' before initialization at
+addUnidade (lancamentos-editar.html:337:3)`.
+
+**Fix**: `init()` deixou de ser uma IIFE disparada no meio do arquivo e virou uma função nomeada,
+chamada explicitamente (`init();`) só no final do `<script>`, depois que todas as declarações
+top-level (`let _uniCount = 0`, funções, etc.) já rodaram. Validado no preview: navegação direta
+para `lancamentos-editar.html` com dados de sessão simulados agora renderiza o formulário
+corretamente preenchido, sem erros no console.
+
 ## 2026-07-05/06 — Merge com a estação server (26 commits)
 
 Duas estações trabalharam em paralelo sem sincronizar: enquanto esta sessão seguia em 03/07, a
