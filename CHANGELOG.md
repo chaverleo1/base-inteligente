@@ -1,5 +1,43 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 15) — Área útil = 0 por padrão, setas no topo, drawer do cliente a partir de contatos.html
+
+Itens 17 a 20 pedidos pelo usuário.
+
+**17. Área útil = 0 por padrão** — o campo de texto (`id="areaUtil"`, o valor "de verdade" desde a
+parte 8) começava vazio; agora tem `value="0"` desde o carregamento, e `resetForm()` volta pra "0"
+em vez de deixar em branco (era o único campo, além de `cidadeMora`, com uma regra especial na
+limpeza genérica).
+
+**18. Setas de navegação também no topo** — `btnBackTop`/`btnNextTop` adicionados no
+`progress-header`, ao lado do rótulo da etapa. `updateNav()` passou a espelhar o estado
+habilitado/desabilitado dessas setas junto com as de baixo (`btnBack`/`btnNext`), já que fazem
+exatamente a mesma coisa (`prevStep()`/`nextStep()`).
+
+**19. Clicar no nome do cliente em `contatos.html` abre o drawer do Dashboard** — em vez de duplicar
+todo o HTML/CSS/JS do drawer (~300 linhas) dentro de `contatos.html`, o nome agora é um link que
+navega pra `dashboard.html?abrirCliente=1&nome=...&score=...&cod=...`; o dashboard detecta esses
+parâmetros (`verificarDeepLinkCliente_()`) e chama `abrirCliente(nome, score, cod)` — a mesma
+função já usada ao clicar num nome nas colunas Quentes/Mornos/Frios da home, que já faz sua própria
+busca independente dos dados do dashboard.
+
+**⚠️ Bug pego durante a implementação**: a primeira versão chamava `verificarDeepLinkCliente_()` de
+dentro de `carregarDados()`, depois do fetch principal do dashboard — mas esse fetch tem um
+`if (trataNaoAutenticado(json)) return;` que sai mais cedo (e desloga) se a sessão falhar,
+nunca chegando na checagem do deep link mesmo com uma sessão válida em casos de erro/latência.
+Corrigido chamando `verificarDeepLinkCliente_()` direto nos dois pontos onde a autenticação é
+confirmada (`verificarAuth()` e o fim de `admInicializarSistema()`), independente do resultado do
+carregamento principal — `abrirCliente()` já faz sua própria busca, não precisa dessa dependência.
+
+**20. `contatos.html`: colunas Telefone e Cadastrado em removidas** — "Cadastrado em" passou a
+aparecer no rodapé do drawer do cliente (`rodapeDrawerCliente_()`), logo após a lista de matches,
+puxando `dataCadastro` do próprio cliente. `wpp()`/`.td-tel`/`.wpp` (só usados pela coluna de
+telefone) removidos por ficarem mortos.
+
+Validado com testes de renderização (Node) pra `contatos.html` confirmando colunas removidas e
+onclick com aspas escapadas corretamente (aprendendo com o bug da parte 14), e no preview pra
+`formulario.html` (setas/área útil) e `dashboard.html` (deep link + rodapé).
+
 ## 2026-07-06 (parte 14) — Fix: botão de favoritar não fazia nada (onclick quebrado por aspas)
 
 Usuário reportou, mesmo depois de reimplantar o Apps Script, que a estrela de favoritos não

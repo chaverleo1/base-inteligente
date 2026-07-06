@@ -100,6 +100,7 @@
   .btn-arrow{width:48px;height:48px;border-radius:50%;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:20px;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
   .btn-arrow:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,124,255,.08)}
   .btn-arrow:disabled{opacity:0.25;cursor:default;pointer-events:none}
+  .btn-arrow-sm{width:32px;height:32px;font-size:15px}
   .nav-step-label{flex:1;text-align:center;font-size:13px;color:var(--text2);font-weight:500}
   .btn-secondary:hover{color:var(--text);border-color:var(--text3)}
   .btn-success{background:var(--accent2);color:#0f1117}.btn-success:hover{background:#00bfa0}
@@ -197,8 +198,12 @@
 <!-- PROGRESS -->
 <div class="progress-wrap">
   <div class="progress-header">
-    <div class="step-label" id="stepLabel">Identificação</div>
-    <div class="step-counter" id="stepCounter">1 de 5</div>
+    <button class="btn-arrow btn-arrow-sm" id="btnBackTop" onclick="prevStep()" title="Etapa anterior">&#8592;</button>
+    <div style="flex:1;text-align:center">
+      <div class="step-label" id="stepLabel">Identificação</div>
+      <div class="step-counter" id="stepCounter">1 de 5</div>
+    </div>
+    <button class="btn-arrow btn-arrow-sm" id="btnNextTop" onclick="nextStep()" title="Próxima etapa">&#8594;</button>
   </div>
   <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:20%"></div></div>
   <div class="step-dots" id="stepDots"></div>
@@ -333,7 +338,7 @@
       <div class="field">
         <label>Área útil aproximada <span class="range-label" id="areaUtilVal">0m²</span></label>
         <input type="range" id="areaUtilRange" min="0" max="500" step="10" value="0" oninput="sincronizarAreaUtilRange()">
-        <input type="text" id="areaUtil" inputmode="numeric" placeholder="Ou digite o valor exato em m²" style="margin-top:8px" oninput="this.value=this.value.replace(/\D/g,'');updateAreaUtilLabel()">
+        <input type="text" id="areaUtil" inputmode="numeric" value="0" placeholder="Ou digite o valor exato em m²" style="margin-top:8px" oninput="this.value=this.value.replace(/\D/g,'');updateAreaUtilLabel()">
       </div>
       <div class="field campo-casa" id="campoTerreno">
         <label>Área de terreno (m²) <span class="opt">casas e lotes</span></label>
@@ -648,6 +653,12 @@
     btnSave.style.display   = isLast && !isEdit ? 'inline-flex' : 'none';
     btnUpdate.style.display = isLast && isEdit  ? 'inline-flex' : 'none';
 
+    // Setas no topo espelham exatamente o estado das de baixo
+    const btnBackTop = document.getElementById('btnBackTop');
+    const btnNextTop = document.getElementById('btnNextTop');
+    if (btnBackTop) btnBackTop.disabled = currentStep === 1;
+    if (btnNextTop) btnNextTop.disabled = isLast;
+
     if (navLabel) navLabel.textContent = 'Etapa ' + currentStep + ' de ' + totalSteps;
   }
 
@@ -937,7 +948,8 @@
     document.querySelectorAll('input,select,textarea').forEach(el => {
       if (el.type === 'text' || el.type === 'tel' || el.type === 'email' ||
           el.type === 'date' || el.type === 'month' || el.tagName === 'TEXTAREA') {
-        if (el.id !== 'cidadeMora') el.value = '';
+        if (el.id === 'areaUtil') el.value = '0';
+        else if (el.id !== 'cidadeMora') el.value = '';
       }
       if (el.tagName === 'SELECT') el.selectedIndex = 0;
     });

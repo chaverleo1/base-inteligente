@@ -587,7 +587,7 @@ async function sha256(texto) {
 
 async function verificarAuth() {
   if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) {
-    if (sessionStorage.getItem('bi_init_done') === '1') { fecharLogin(); carregarDados(); return; }
+    if (sessionStorage.getItem('bi_init_done') === '1') { fecharLogin(); carregarDados(); verificarDeepLinkCliente_(); return; }
     admInicializarSistema();
   }
 }
@@ -662,6 +662,24 @@ async function carregarDados() {
   }
   carregarLancamentosDash();
   carregarInsightsExtended();
+}
+
+// Abre o drawer do cliente direto ao carregar a página, se veio de um link
+// externo (contatos.html clicando no nome) com ?abrirCliente=1&nome=...&
+// cod=.... abrirCliente() já é independente dos dados do dashboard (faz sua
+// própria busca), então não precisa esperar nada além do login. _deepLinkOk
+// evita reabrir o drawer toda vez que carregarDados() rodar de novo (ex:
+// botão de atualizar).
+let _deepLinkOk = false;
+function verificarDeepLinkCliente_() {
+  if (_deepLinkOk) return;
+  _deepLinkOk = true;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('abrirCliente') !== '1') return;
+  const nome  = params.get('nome')  || '';
+  const score = params.get('score') || '0';
+  const cod   = params.get('cod')   || '';
+  if (nome && cod) abrirCliente(nome, score, cod);
 }
 
 async function carregarLancamentosDash() {
@@ -1196,6 +1214,31 @@ function fmt_(v) {
 // (imoCodigo sozinho não basta — fontes diferentes podem colidir em teoria).
 function chaveFavorito_(imoCodigo, fonte) { return (imoCodigo||'') + '::' + (fonte||''); }
 
+// Mesma dualidade de formato já vista em contatos.html: a célula do Sheets
+// pode ter sido auto-convertida pro tipo Data (a string "dd/MM/yyyy HH:mm"
+// tem "cara de data"), e nesse caso o backend serializa como ISO 8601 antes
+// de mandar pro navegador. Formata de volta pro padrão brasileiro nesse caso.
+function formatarDataDisplay_(s) {
+  const str = String(s||'').trim();
+  if (!str) return '';
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(str)) return str;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }).format(d).replace(',', '');
+}
+
+// Rodapé do drawer com a data de cadastro do cliente — tirado da lista de
+// contatos.html (que não mostra mais essa coluna) e colocado aqui, ao final
+// da lista de matches.
+function rodapeDrawerCliente_(cliente) {
+  const data = formatarDataDisplay_(cliente && cliente.dataCadastro);
+  if (!data) return '';
+  return `<div style="text-align:center;font-size:11px;color:var(--text3);padding:14px 0 4px;border-top:1px solid var(--border);margin-top:14px">Cadastrado em ${data}</div>`;
+}
+
 async function carregarMatchesDrawer(cod, cliente) {
   const el = document.getElementById('drawerImoveis');
   if (!el) return;
@@ -1209,7 +1252,8 @@ async function carregarMatchesDrawer(cod, cliente) {
     try { favoritos = await respFav.json(); } catch(eFav) { /* silent — favoritar continua funcionando mesmo sem a lista prévia */ }
     const favKeys = new Set((Array.isArray(favoritos) ? favoritos : []).map(f => chaveFavorito_(f.imoCodigo, f.fonte)));
     if (!Array.isArray(lista) || !lista.length) {
-      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>';
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>'
+        + rodapeDrawerCliente_(cliente);
       return;
     }
     _matchesAtuais = lista;
@@ -1294,7 +1338,7 @@ async function carregarMatchesDrawer(cod, cliente) {
         </div>` : ''}
         ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>`;
-    }).join('')}</div>`;
+    }).join('')}</div>${rodapeDrawerCliente_(cliente)}`;
   } catch(e) {
     el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Erro ao buscar matches.</div>';
   }
@@ -1857,6 +1901,7 @@ async function admInicializarSistema() {
     document.getElementById('initOverlay').style.display = 'none';
     fecharLogin();
     carregarDados();
+    verificarDeepLinkCliente_();
   }, 2000);
 }
 

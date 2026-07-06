@@ -69,10 +69,9 @@ a { text-decoration:none; color:inherit; }
 .detail-table tr:hover td { background:rgba(255,255,255,.02); }
 
 .td-nome { font-weight:600; }
-.td-tel { color:var(--text2); font-size:12px; }
 .td-cod { font-family:monospace; color:var(--text2); font-size:12px; }
-.wpp { display:inline-block; margin-left:8px; color:#25d366; font-size:11px; font-weight:600; }
-.wpp:hover { text-decoration:underline; }
+.link-nome { cursor:pointer; color:var(--text); transition:color .15s; }
+.link-nome:hover { color:var(--accent); text-decoration:underline; }
 
 .badge {
   display:inline-block; padding:2px 9px; border-radius:99px;
@@ -164,10 +163,6 @@ function filtrar() {
   render(filtrados);
 }
 
-function wpp(tel) {
-  const t = String(tel||'').replace(/\D/g,'');
-  return t ? `<a class="wpp" href="https://wa.me/55${t}" target="_blank">💬</a>` : '';
-}
 function scoreEl(sc) {
   const n = parseInt(sc)||0;
   if (!n) return '<span style="color:var(--text3)">—</span>';
@@ -241,20 +236,22 @@ function render(lista) {
 
 function tabela(items) {
   if (!items.length) return '<div class="empty">Nenhum contato encontrado.</div>';
-  const rows = items.map(c => `<tr>
+  const rows = items.map(c => {
+    const score = c.scoreEfetivo != null ? c.scoreEfetivo : c.score;
+    const abrirArgs = [c.nome||'', score||0, c.idCliente||''].map(v => JSON.stringify(v).replace(/"/g,'&quot;'));
+    return `<tr>
     <td class="td-cod">${c.idCliente || '—'}</td>
-    <td class="td-nome">${c.nome || '—'}</td>
-    <td class="td-tel">${c.telefone || '—'}${wpp(c.telefone)}</td>
+    <td class="td-nome"><a class="link-nome" onclick="abrirClienteDash(${abrirArgs.join(', ')})" title="Ver ficha completa">${c.nome || '—'}</a></td>
     <td>${c.segmento ? `<span class="badge badge-blue">${c.segmento}</span>` : '<span class="badge badge-muted">—</span>'}</td>
-    <td>${scoreEl(c.scoreEfetivo != null ? c.scoreEfetivo : c.score)}</td>
-    <td>${formatarDataDisplay_(c.dataCadastro)}</td>
+    <td>${scoreEl(score)}</td>
     <td>${statusFrescorEl(c.dataAtualizacao)}</td>
     <td>${formatarDataDisplay_(c.dataAtualizacao)}</td>
     <td><button class="btn-editar" onclick="editar(${c._linha})">✏️ Editar</button></td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr>
-      <th>Código</th><th>Nome</th><th>Telefone</th><th>Segmento</th><th>Score</th><th>Cadastrado em</th>
+      <th>Código</th><th>Nome</th><th>Segmento</th><th>Score</th>
       <th title="Status por tempo de cadastro — diferente do Quente/Morno/Frio da home, que é sobre qualidade de match">Status</th>
       <th>Atualizado em</th><th></th>
     </tr></thead><tbody>${rows}</tbody>
@@ -263,6 +260,15 @@ function tabela(items) {
 
 function editar(linha) {
   window.location.href = 'formulario.html?linha=' + encodeURIComponent(linha);
+}
+
+// Abre o drawer do cliente no Dashboard — mesma ficha (dados + lista de
+// matches) que abre lá ao clicar num nome nas colunas Quentes/Mornos/Frios.
+// Passa por query string em vez de duplicar todo o HTML/CSS/JS do drawer
+// aqui dentro.
+function abrirClienteDash(nome, score, cod) {
+  const params = new URLSearchParams({ abrirCliente: '1', nome, score, cod });
+  window.location.href = 'dashboard.html?' + params.toString();
 }
 
 carregar();
