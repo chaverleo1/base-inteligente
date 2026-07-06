@@ -182,6 +182,7 @@
   .imovel-info{flex:1;min-width:0}
   .imovel-tipo{font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .imovel-local{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .imovel-codigo{font-size:11px;color:var(--text3);margin-top:2px;font-family:monospace}
   .imovel-valor{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px}
   .imovel-score-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;align-self:flex-start;flex-shrink:0}
   .imovel-attrs{display:flex;gap:8px;padding:0 12px 10px;flex-wrap:wrap}
@@ -382,6 +383,19 @@
     </div>
   </div>
 
+  <!-- GRÁFICOS -->
+  <div class="section-title">Composição da base de clientes</div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Por segmento</div>
+      <div class="chart-wrap"><canvas id="chartSegmento"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Por padrão</div>
+      <div class="chart-wrap"><canvas id="chartPadrao"></canvas></div>
+    </div>
+  </div>
+
   <!-- PRODUTOS -->
   <div class="section-title">Portfólio de revendas</div>
   <div class="cards-row" id="cardsRevenda">
@@ -418,19 +432,6 @@
   <div class="section-title">💡 Insights</div>
   <div class="insight-grid" id="insightGrid">
     <div class="loading dot-anim" style="grid-column:1/-1">Calculando insights</div>
-  </div>
-
-  <!-- GRÁFICOS -->
-  <div class="section-title">Composição da base de clientes</div>
-  <div class="charts-row">
-    <div class="chart-card">
-      <div class="chart-title">Por segmento</div>
-      <div class="chart-wrap"><canvas id="chartSegmento"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Por padrão</div>
-      <div class="chart-wrap"><canvas id="chartPadrao"></canvas></div>
-    </div>
   </div>
 
   <div class="dashboard-footer" id="dashboardFooter"></div>
@@ -1236,6 +1237,7 @@ async function carregarMatchesDrawer(cod, cliente) {
             </div>
             <div class="imovel-tipo">${m.imoTipo||'Imóvel'}</div>
             <div class="imovel-local">${local||'—'}</div>
+            ${m.imoCodigo ? `<div class="imovel-codigo">Código: ${m.imoCodigo}</div>` : ''}
             <div class="imovel-valor">${fmt_(m.imoValorVenda)||'—'}</div>
           </div>
           <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>

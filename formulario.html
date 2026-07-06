@@ -331,8 +331,9 @@
         </div>
       </div>
       <div class="field">
-        <label>Área útil aproximada <span class="range-label" id="areaUtilVal">50m²</span></label>
-        <input type="range" id="areaUtil" min="50" max="500" step="10" value="50" oninput="updateAreaUtilLabel()">
+        <label>Área útil aproximada <span class="range-label" id="areaUtilVal">0m²</span></label>
+        <input type="range" id="areaUtilRange" min="0" max="500" step="10" value="0" oninput="sincronizarAreaUtilRange()">
+        <input type="text" id="areaUtil" inputmode="numeric" placeholder="Ou digite o valor exato em m²" style="margin-top:8px" oninput="this.value=this.value.replace(/\D/g,'');updateAreaUtilLabel()">
       </div>
       <div class="field campo-casa" id="campoTerreno">
         <label>Área de terreno (m²) <span class="opt">casas e lotes</span></label>
@@ -370,6 +371,7 @@
           <div class="chip" onclick="toggleChip(this,'finalidade')">Reserva de valor</div>
           <div class="chip" onclick="toggleChip(this,'finalidade')">Para filho(a)</div>
           <div class="chip" onclick="toggleChip(this,'finalidade')">Permuta</div>
+          <div class="chip" onclick="toggleChip(this,'finalidade')">Montar Empresa</div>
         </div>
       </div>
       <hr class="divider">
@@ -377,8 +379,11 @@
         <div class="chip-group">
           <div class="chip" onclick="toggleChip(this,'fgts')">Tem FGTS</div>
           <div class="chip" onclick="toggleChip(this,'financ')">Pré-aprovado no banco</div>
+          <div class="chip" onclick="toggleChip(this,'financiamento')">Financiamento</div>
           <div class="chip" onclick="toggleChip(this,'entrada_chip')">Tem entrada disponível</div>
+          <div class="chip" onclick="toggleChip(this,'avista')">À vista</div>
           <div class="chip" onclick="toggleChip(this,'permuta')">Tem imóvel para permutar</div>
+          <div class="chip" onclick="toggleChip(this,'permutaCarro')">Permuta com Carro</div>
         </div>
       </div>
       <div class="field"><label>Valor de entrada disponível <span class="opt">opcional</span></label><input type="text" id="entrada" placeholder="Ex: 150.000" oninput="formatMoney(this)"></div>
@@ -700,12 +705,25 @@
     document.querySelectorAll('.campo-casa').forEach(el => el.style.display = isCasaLote ? '' : 'none');
   }
 
+  // "areaUtil" (texto) é o campo com o valor de verdade — aceita qualquer
+  // número digitado, sem limite. "areaUtilRange" é só um atalho visual (0 a
+  // 500m²) que fica sincronizado com o texto, sem travar o valor máximo real.
   function updateAreaUtilLabel() {
-    const el = document.getElementById('areaUtil');
+    const txt = document.getElementById('areaUtil');
     const span = document.getElementById('areaUtilVal');
-    if (!el || !span) return;
-    const v = parseInt(el.value) || 50;
-    span.textContent = v >= 500 ? '500m²+' : v + 'm²';
+    const range = document.getElementById('areaUtilRange');
+    if (!txt || !span) return;
+    const v = parseInt(txt.value) || 0;
+    span.textContent = v + 'm²';
+    if (range) range.value = Math.min(v, 500);
+  }
+
+  function sincronizarAreaUtilRange() {
+    const range = document.getElementById('areaUtilRange');
+    const txt   = document.getElementById('areaUtil');
+    if (!range || !txt) return;
+    txt.value = range.value;
+    updateAreaUtilLabel();
   }
 
   // ── SCORE ──────────────────────────────────────────────────────────────────
@@ -777,7 +795,7 @@
       { key: 'Quartos',         val: chipState['quartos'] },
       { key: 'Suítes',          val: chipState['suites'] },
       { key: 'Vagas de garagem',val: chipState['vagas'] },
-      { key: 'Área útil',       val: g('areaUtil') ? (parseInt(g('areaUtil'))>=500 ? '500m²+' : g('areaUtil')+'m²') : '' },
+      { key: 'Área útil',       val: g('areaUtil') ? g('areaUtil') + 'm²' : '' },
       { key: 'Área de terreno', val: g('areaTerreno') ? g('areaTerreno') + 'm²' : '' },
       { key: 'Comodidades',     val: comodidadesSelecionadas() },
       { key: 'Padrão',          val: chipState['padrao'] },
@@ -853,8 +871,11 @@
       finalidade:      chipState['finalidade']    || '',
       fgts:            chipState['fgts']          || '',
       financ:          chipState['financ']        || '',
+      financiamento:   chipState['financiamento'] || '',
       entrada_chip:    chipState['entrada_chip']  || '',
+      avista:          chipState['avista']        || '',
       permuta:         chipState['permuta']       || '',
+      permutaCarro:    chipState['permutaCarro']  || '',
       entrada:         g('entrada'),
       canal:           chipState['canal']         || '',
       canalOutro:      g('canalOutro'),
@@ -915,8 +936,7 @@
     });
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected','selected-green'));
     Object.keys(chipState).forEach(k => delete chipState[k]);
-    const areaUtilEl = document.getElementById('areaUtil');
-    if (areaUtilEl) { areaUtilEl.value = 50; updateAreaUtilLabel(); }
+    updateAreaUtilLabel();
     document.getElementById('campoCodigoCliente').style.display = 'none';
     document.getElementById('idClienteView').value = '';
     updateCamposImovel();
@@ -1063,8 +1083,11 @@
     ativarChip('finalidade',  c.finalidade);
     ativarChip('fgts',        c.fgts);
     ativarChip('financ',      c.financ);
+    ativarChip('financiamento', c.financiamento);
     ativarChip('entrada_chip',c.entrada_chip);
+    ativarChip('avista',      c.avista);
     ativarChip('permuta',     c.permuta);
+    ativarChip('permutaCarro',c.permutaCarro);
     ativarChip('canal',       c.canal);
     ativarChip('naoFechou',   c.naoFechou);
     ativarChip('urgencia',    c.urgencia);

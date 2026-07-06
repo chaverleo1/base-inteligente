@@ -29,7 +29,10 @@ const CABECALHO = [
   // está na lista fixa, sem forçar a criação de uma tag nova pra cada caso
   // único. Vão no FIM do array pelo mesmo motivo de sempre: migrarCabecalhoContatos()
   // só sabe ANEXAR colunas novas, nunca inserir no meio.
-  'comodidadesOutras', 'canalOutro'
+  'comodidadesOutras', 'canalOutro',
+  // Mais 3 tags em "Situação financeira" (adicionado em 2026-07) — cada uma é
+  // uma flag independente, mesmo padrão de fgts/financ/entrada_chip/permuta.
+  'financiamento', 'avista', 'permutaCarro'
 ];
 
 const CABECALHO_LANCAMENTOS = [
@@ -968,15 +971,50 @@ function extrairQuartos_(texto) {
   return 0;
 }
 
-function scoreQuartos_(textoCliente, quartosImovel) {
+// quartosCliente é o campo estruturado do formulário (chip "Quartos", múltipla
+// escolha desde 2026-07 — pode vir "2, 3"). Prioridade igual scoreTipo_/
+// scorePadrao_: campo estruturado manda, texto livre só entra se o cliente
+// nunca declarou nada ali (senão editar o cadastro pra tirar uma preferência
+// não teria efeito nenhum no matching, porque o texto antigo continuaria
+// "puxando" o mesmo resultado de antes).
+function scoreQuartos_(textoCliente, quartosImovel, quartosCliente) {
   var qImo = parseInt(quartosImovel) || 0;
   if (qImo === 0) return 10; // imóvel sem info de quartos → neutro
-  var qCli = extrairQuartos_(textoCliente);
-  if (qCli === 0) return 12; // cliente sem preferência → aceita qualquer
-  var diff = Math.abs(qCli - qImo);
-  if (diff === 0) return 20;
-  if (diff === 1) return 10;
-  return 0;
+
+  var declarados = String(quartosCliente || '').split(',')
+    .map(function(s) { return s.trim(); }).filter(Boolean);
+  var qsCli = declarados.map(function(v) { return parseInt(v); })
+    .filter(function(n) { return !isNaN(n); });
+  if (!qsCli.length) {
+    var doTexto = extrairQuartos_(textoCliente);
+    if (doTexto) qsCli = [doTexto];
+  }
+  if (!qsCli.length) return 12; // cliente sem preferência → aceita qualquer
+
+  var melhor = 0;
+  qsCli.forEach(function(qCli) {
+    var diff = Math.abs(qCli - qImo);
+    var pontos = diff === 0 ? 20 : diff === 1 ? 10 : 0;
+    if (pontos > melhor) melhor = pontos;
+  });
+  return melhor;
+}
+
+// suitesCliente é o campo estruturado do formulário — mesma prioridade de
+// scoreQuartos_: estruturado manda, texto livre é só fallback pra quem nunca
+// teve esse campo preenchido.
+function scoreSuites_(textoCliente, suitesImovel, suitesCliente) {
+  var svImo = parseInt(suitesImovel) || 0;
+  if (svImo === 0) return 0;
+
+  var declarados = String(suitesCliente || '').split(',')
+    .map(function(s) { return s.trim(); }).filter(Boolean);
+  var svsCli = declarados.map(function(v) { return parseInt(v); })
+    .filter(function(n) { return !isNaN(n); });
+  if (svsCli.length) return svsCli.indexOf(svImo) >= 0 ? 3 : 0;
+
+  var t = norm_(textoCliente);
+  return t.indexOf(svImo + ' suite') >= 0 ? 3 : 0;
 }
 
 // ── Score de preço ────────────────────────────────────────────
@@ -1073,14 +1111,13 @@ function calcularMatch_(contato, imovel) {
   }
 
   var ptPreco   = scorePreco_(valorImo, contato.precoLimite, contato.margem_preco);
-  var ptQuartos = scoreQuartos_(textoFull, imovel.quartos);
+  var ptQuartos = scoreQuartos_(textoFull, imovel.quartos, contato.quartos);
   var ptBairro  = scoreBairro_(contato.bairroInteresse, imovel.bairro, imovel.cidade);
   var ptPadrao  = scorePadrao_(contato.padrao, imovel.padrao);
 
   var bonus = 0;
   var t  = norm_(textoFull);
-  var sv = parseInt(imovel.suites) || 0;
-  if (sv > 0 && t.indexOf(sv + ' suite') >= 0) bonus += 3;
+  bonus += scoreSuites_(textoFull, imovel.suites, contato.suites);
   var vg = parseInt(imovel.vagas) || 0;
   if (vg > 0 && (t.indexOf(vg + ' vaga') >= 0 || t.indexOf(vg + 'vg') >= 0)) bonus += 2;
 

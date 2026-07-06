@@ -1,5 +1,61 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 5) — Matching por texto ignorava chips de quartos/suítes, reorganização do dashboard e mais tags
+
+Itens 5 a 10 pedidos pelo usuário nesta sessão.
+
+**5. Bug: cliente removeu preferência de quartos/suítes e continuava recebendo os mesmos matches**
+
+Caso relatado: Raimundo Barros (CLI-10001) tinha "2 quartos"/"1 suíte" marcados, o usuário desmarcou
+os dois chips, rodou o matching de novo e ele continuou aparecendo como "QUENTE" com os mesmos
+matches de apartamento 2 quartos. Causa raiz: `scoreQuartos_()` e o bônus de suítes em
+`calcularMatch_()` **nunca liam o campo estruturado do formulário** (`contato.quartos`/
+`contato.suites`) — só extraíam número de quartos/suítes via regex em cima do texto livre
+(conversa/observações/nome_bruto/produtoOrigem). Ou seja, marcar ou desmarcar os chips de
+quartos/suítes no cadastro **nunca teve efeito nenhum no matching**, desde sempre.
+
+Corrigido seguindo o mesmo padrão já usado em `scoreTipo_`/`scorePadrao_` nesta sessão: campo
+estruturado manda (com suporte a múltipla escolha, ex: "2, 3"), texto livre vira fallback só
+quando o campo estruturado está vazio. `scoreSuites_()` é uma função nova (o bônus de suíte
+antes só existia embutido, sem considerar o campo estruturado).
+
+**Importante — limite conhecido**: se a conversa/observações do cliente também mencionar
+"2 quartos" como texto solto, esse texto ainda entra como fallback quando o campo estruturado fica
+vazio (mesma lógica de tipo/padrão — não dá pra distinguir "nunca declarou" de "removeu a
+preferência" só pelos dados). Isso só importa se o texto livre do cadastro tiver essa menção; não
+foi possível confirmar se é o caso do Raimundo sem acesso à planilha ao vivo.
+
+**6. Dashboard: "Composição da base de clientes" movida pra logo abaixo de "Matches do momento"**
+
+Reordenação simples de blocos HTML — sem mudança de lógica, os gráficos continuam os mesmos
+(`chartSegmento`/`chartPadrao`).
+
+**7. Cards de match tipo "Revenda" sem código do imóvel**
+
+`imoCodigo` já existia na aba MATCHES (vem de `imo.codigo` do REVENDA, sincronizado da Imobzi) e já
+era devolvido pela rota `matches_cliente` — só faltava exibir no card (`carregarMatchesDrawer` em
+`dashboard.html`). Adicionado `<div class="imovel-codigo">Código: ...</div>`, condicionado a
+`m.imoCodigo` existir (lançamentos não têm esse campo, então não aparece nada pra eles — sem
+"Código: undefined").
+
+**8. Área útil: slider travado no mínimo de 50 + campo de texto pra digitar**
+
+O slider (`<input type="range">`) tinha `min="50"`, então nunca dava pra registrar uma área abaixo
+disso. Trocado `min` pra `0`. Além disso, como o slider tem um teto fixo (500m²) por natureza,
+adicionado um campo de texto ao lado (`id="areaUtil"`, o texto virou o campo com o valor "de
+verdade" que é salvo — o slider virou um atalho visual que sincroniza com ele, sem limitar o valor
+real). Testado no preview: digitar 620 no texto mantém "620m²" no rótulo mesmo com o slider
+travado visualmente em 500 (seu teto); arrastar o slider sincroniza o texto normalmente.
+
+**9. Tag "Montar Empresa" em Finalidade**
+
+**10. Tags "Financiamento", "À vista" e "Permuta com Carro" em Situação financeira**
+
+Cada uma é uma flag independente (mesmo padrão de fgts/financ/entrada_chip/permuta) — 3 colunas
+novas no `CABECALHO` (`financiamento`, `avista`, `permutaCarro`), no fim do array de sempre.
+`migrarCabecalhoContatos()` (já existente, roda a cada login) cobre a criação dessas colunas na
+planilha automaticamente.
+
 ## 2026-07-06 (parte 4) — Fix: código do cliente não aparecia ao editar cliente existente
 
 Usuário reportou que o código do cliente (adicionado na parte 2 desta sessão) não aparecia na
