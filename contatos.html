@@ -175,14 +175,46 @@ function scoreEl(sc) {
   return `<span class="score-num ${cls}">${n}</span>`;
 }
 
-// Parse de "dd/MM/yyyy HH:mm" (formato gravado por Utilities.formatDate no
-// Apps Script) pra um timestamp ordenável. new Date(string) não serve aqui —
-// o parser nativo do JS trata strings não-ISO como MM/DD/YYYY, trocando dia e
-// mês silenciosamente pra qualquer dia <= 12.
+// Parse de data pra timestamp ordenável — precisa lidar com DOIS formatos
+// possíveis pro mesmo campo:
+// 1. "dd/MM/yyyy HH:mm" — o que Utilities.formatDate grava no Apps Script.
+// 2. ISO 8601 ("2026-07-06T21:30:00.000Z") — o que a própria célula do Sheets
+//    pode virar: gravar uma string com "cara de data" faz o Sheets
+//    auto-converter a célula pro tipo Data (dependendo do locale da
+//    planilha), e quando o Apps Script lê essa célula de volta ela já vem
+//    como objeto Date — que o JSON.stringify() do backend serializa como ISO
+//    antes de mandar pro navegador. Sem tratar os dois formatos, a coluna
+//    Status e a ordenação por "Atualizado em" ficavam quebradas pra qualquer
+//    contato cuja célula tivesse sido convertida.
+// new Date(string) sozinho não serve pro formato 1 — o parser nativo do JS
+// trata strings não-ISO como MM/DD/YYYY, trocando dia e mês silenciosamente
+// pra qualquer dia <= 12. Por isso o formato brasileiro precisa de regex
+// explícito, e só usamos new Date() quando já é claramente ISO.
 function parseDataBr_(s) {
-  const m = String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  const str = String(s||'').trim();
+  if (!str) return 0;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+    const t = new Date(str).getTime();
+    return isNaN(t) ? 0 : t;
+  }
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
   if (!m) return 0;
   return new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0)).getTime();
+}
+
+// Mesma dualidade de formato de parseDataBr_ (dd/MM/yyyy HH:mm OU ISO),
+// mas pra EXIBIÇÃO — converte ISO de volta pro formato brasileiro em vez de
+// mostrar a string crua (ex: "2026-07-06T21:30:00.000Z") nas colunas de data.
+function formatarDataDisplay_(s) {
+  const str = String(s||'').trim();
+  if (!str) return '—';
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(str)) return str;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }).format(d).replace(',', '');
 }
 
 // Status por TEMPO DE CADASTRO (dataAtualizacao) — mesmos limiares de
@@ -215,9 +247,9 @@ function tabela(items) {
     <td class="td-tel">${c.telefone || '—'}${wpp(c.telefone)}</td>
     <td>${c.segmento ? `<span class="badge badge-blue">${c.segmento}</span>` : '<span class="badge badge-muted">—</span>'}</td>
     <td>${scoreEl(c.scoreEfetivo != null ? c.scoreEfetivo : c.score)}</td>
-    <td>${c.dataCadastro || '—'}</td>
+    <td>${formatarDataDisplay_(c.dataCadastro)}</td>
     <td>${statusFrescorEl(c.dataAtualizacao)}</td>
-    <td>${c.dataAtualizacao || '—'}</td>
+    <td>${formatarDataDisplay_(c.dataAtualizacao)}</td>
     <td><button class="btn-editar" onclick="editar(${c._linha})">✏️ Editar</button></td>
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">

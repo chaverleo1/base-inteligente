@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 11) — Fix: badge Status e ordenação continuavam quebrados mesmo após editar
+
+Usuário reportou que, mesmo depois de editar um contato, a coluna Status continuava mostrando só
+"—" (nunca virava bolinha colorida), e a lista não estava ordenando pela data de atualização mais
+recente.
+
+**Causa raiz**: gravar uma string com "cara de data" (`"06/07/2026 18:30"`, formato de
+`Utilities.formatDate`) numa célula do Sheets faz o próprio Google Sheets **auto-converter a
+célula pro tipo Data nativo** (mesmo comportamento de quando alguém digita uma data direto na
+planilha). Quando o Apps Script lê essa célula de volta, ela já vem como objeto `Date` — e o
+`JSON.stringify()` do backend serializa isso automaticamente como ISO 8601
+(`"2026-07-06T21:30:00.000Z"`) antes de mandar pro navegador. `parseDataBr_()` em `contatos.html`
+só reconhecia o formato `"dd/MM/yyyy HH:mm"` — contra uma string ISO, o regex não casava, retornava
+0, e tanto `statusFrescorEl()` (badge sempre "—") quanto a ordenação (todo mundo com a mesma chave
+0, ordem não mudava) quebravam do mesmo jeito. Os dois sintomas eram a mesma causa.
+
+`parseDataBr_()` agora detecta o prefixo ISO (`/^\d{4}-\d{2}-\d{2}T/`) e usa `new Date()` direto
+nesse caso (seguro pra ISO — a ambiguidade de "não confiar no parser nativo" só existe pro formato
+brasileiro no formulário). Adicionado também `formatarDataDisplay_()` pra exibir uma data ISO
+formatada como `dd/MM/yyyy HH:mm` nas colunas "Cadastrado em"/"Atualizado em" em vez da string ISO
+crua. Validado com teste cobrindo os dois formatos isoladamente e uma lista com formatos
+misturados, confirmando badge correto e ordenação certa em ambos os casos.
+
 ## 2026-07-06 (parte 10) — Fix: coluna Status vazia pra contatos antigos (dataAtualizacao nunca preenchida)
 
 Usuário reportou que a coluna "Status" (parte 8) não mostrava os badges de Quente/Morno/Frio.
