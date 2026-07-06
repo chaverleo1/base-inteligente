@@ -587,7 +587,7 @@ async function sha256(texto) {
 
 async function verificarAuth() {
   if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) {
-    if (sessionStorage.getItem('bi_init_done') === '1') { fecharLogin(); carregarDados(); verificarDeepLinkCliente_(); return; }
+    if (sessionStorage.getItem('bi_init_done') === '1') { fecharLogin(); carregarDados(); return; }
     admInicializarSistema();
   }
 }
@@ -662,24 +662,6 @@ async function carregarDados() {
   }
   carregarLancamentosDash();
   carregarInsightsExtended();
-}
-
-// Abre o drawer do cliente direto ao carregar a página, se veio de um link
-// externo (contatos.html clicando no nome) com ?abrirCliente=1&nome=...&
-// cod=.... abrirCliente() já é independente dos dados do dashboard (faz sua
-// própria busca), então não precisa esperar nada além do login. _deepLinkOk
-// evita reabrir o drawer toda vez que carregarDados() rodar de novo (ex:
-// botão de atualizar).
-let _deepLinkOk = false;
-function verificarDeepLinkCliente_() {
-  if (_deepLinkOk) return;
-  _deepLinkOk = true;
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('abrirCliente') !== '1') return;
-  const nome  = params.get('nome')  || '';
-  const score = params.get('score') || '0';
-  const cod   = params.get('cod')   || '';
-  if (nome && cod) abrirCliente(nome, score, cod);
 }
 
 async function carregarLancamentosDash() {
@@ -1901,7 +1883,6 @@ async function admInicializarSistema() {
     document.getElementById('initOverlay').style.display = 'none';
     fecharLogin();
     carregarDados();
-    verificarDeepLinkCliente_();
   }, 2000);
 }
 

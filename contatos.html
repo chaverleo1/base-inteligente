@@ -13,6 +13,7 @@
   --border:#2a3050; --border2:#343d60; --accent:#4f7cff; --accent2:#00d4aa;
   --text:#e8ecf4; --text2:#8892aa; --text3:#4a5470;
   --radius:12px; --radius-sm:8px; --radius-xs:6px;
+  --hot:#ff5a5a; --warm:#f5a623; --cold:#4f7cff; --danger:#ff5a5a;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; min-height:100vh; }
@@ -97,9 +98,137 @@ a { text-decoration:none; color:inherit; }
 
 .empty { text-align:center; padding:48px; color:var(--text3); }
 .count-info { font-size:12px; color:var(--text3); margin-bottom:14px; }
+
+/* ── DRAWER CLIENTE (portado de dashboard.html — ver item 19 do pedido do
+   usuário: abrir a ficha do cliente direto em contatos.html, sem navegar) ── */
+.dot-anim::after{content:'...';animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%,20%{content:'.'}40%{content:'..'}60%,100%{content:'...'}}
+
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .25s}
+.drawer-overlay.open{opacity:1;pointer-events:all}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:480px;max-width:100vw;background:var(--surface);
+        border-left:1px solid var(--border);z-index:501;overflow-y:auto;transform:translateX(100%);
+        transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer::-webkit-scrollbar{width:5px}
+.drawer::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.drawer-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;position:sticky;top:0;background:var(--surface);z-index:1}
+.drawer-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0}
+.drawer-nome{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--text);line-height:1.2}
+.drawer-cod{font-size:12px;color:var(--text3);margin-top:2px}
+.drawer-close{margin-left:auto;background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.drawer-close:hover{color:var(--text)}
+.drawer-score-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.d-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px}
+.d-badge-hot{background:rgba(255,90,90,.15);color:var(--hot)}
+.d-badge-warm{background:rgba(245,166,35,.15);color:var(--warm)}
+.d-badge-cold{background:rgba(79,124,255,.15);color:var(--cold)}
+.d-badge-green{background:rgba(0,212,170,.15);color:var(--accent2)}
+.tag-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid;cursor:default;white-space:nowrap}
+.tag-carteira{background:rgba(245,166,35,.15);color:#f5a623;border-color:#f5a623}
+.tag-urgencia{background:rgba(255,90,90,.2);color:#ff5a5a;border-color:#ff5a5a}
+.tag-default{background:var(--surface2);color:var(--text2);border-color:var(--border)}
+.tipo-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;border:1px solid var(--accent);background:rgba(79,124,255,.12);color:var(--accent)}
+.tipo-comprador{border-color:var(--accent2);background:rgba(0,212,170,.12);color:var(--accent2)}
+.tipo-prop-vend{border-color:#a78bfa;background:rgba(167,139,250,.12);color:#a78bfa}
+.tipo-prop-comp{border-color:#fb923c;background:rgba(251,146,60,.12);color:#fb923c}
+.d-btn-danger{background:rgba(255,90,90,.1);color:var(--hot);border:1px solid rgba(255,90,90,.3)}
+.d-btn-danger:hover{background:rgba(255,90,90,.25)}
+.d-badge-neutral{background:var(--surface2);color:var(--text2)}
+.drawer-body{padding:20px 24px;flex:1}
+.d-section{margin-bottom:22px}
+.d-section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.d-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.d-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.d-field{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px}
+.d-field-label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.d-field-value{font-size:14px;color:var(--text);font-weight:500;word-break:break-word}
+.d-field.full{grid-column:1/-1}
+.d-text{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.d-actions{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+.d-btn{flex:1;min-width:120px;padding:11px 14px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.d-btn-wpp{background:#25d366;color:#fff}
+.d-btn-wpp:hover{background:#1ebe5d}
+.d-btn-tel{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.d-btn-tel:hover{border-color:var(--accent);color:var(--accent)}
+.d-btn-edit{background:var(--accent);color:#fff}
+.d-btn-edit:hover{background:#3d6aee}
+.d-btn-fav{background:rgba(245,166,35,.12);color:#f5a623;border:1px solid rgba(245,166,35,.3)}
+.d-btn-fav:hover{background:rgba(245,166,35,.22)}
+.d-steps{display:flex;flex-direction:column;gap:8px}
+.d-step{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px}
+.d-step-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.d-step-text{font-size:13px;color:var(--text2);line-height:1.5}
+.d-step-text b{color:var(--text)}
+.drawer-loading{padding:60px 24px;text-align:center;color:var(--text3)}
+
+/* ── CARDS IMÓVEIS NO DRAWER ── */
+.imovel-cards{display:flex;flex-direction:column;gap:10px}
+.imovel-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:border-color .2s}
+.imovel-card:hover{border-color:var(--accent)}
+.imovel-card-top{display:flex;gap:12px;padding:12px}
+.imovel-foto{width:72px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;background:var(--border)}
+.imovel-foto-placeholder{width:72px;height:56px;border-radius:6px;flex-shrink:0;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:20px}
+.imovel-info{flex:1;min-width:0}
+.imovel-tipo{font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imovel-local{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imovel-codigo{font-size:13px;font-weight:600;color:var(--text2);margin-top:2px;font-family:monospace}
+.imovel-valor{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--accent2);margin-top:4px}
+.imovel-score-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;align-self:flex-start;flex-shrink:0}
+.imovel-top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.imovel-btn-fav{background:var(--surface);border:1px solid var(--border);color:var(--text3);width:26px;height:26px;border-radius:50%;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+.imovel-btn-fav:hover{border-color:#f5a623;color:#f5a623}
+.imovel-btn-fav.ativo{background:rgba(245,166,35,.15);border-color:#f5a623;color:#f5a623}
+.imovel-btn-fav:disabled{opacity:.5;cursor:default}
+.imovel-attrs{display:flex;gap:8px;padding:0 12px 10px;flex-wrap:wrap}
+.imovel-attr{font-size:11px;color:var(--text3);background:var(--surface);padding:2px 7px;border-radius:4px}
+.imovel-det{font-size:11px;color:var(--text3);padding:0 12px 10px;line-height:1.5}
+.imovel-link{display:block;text-align:center;font-size:12px;font-weight:600;color:var(--accent);padding:7px;border-top:1px solid var(--border);transition:background .15s}
+.imovel-link:hover{background:rgba(79,124,255,.08)}
+.imovel-card-const{border-color:rgba(0,212,170,.3)}
+.imovel-card-const:hover{border-color:var(--accent2)}
+.imovel-fonte-row{margin-bottom:4px}
+.imovel-fonte-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em}
+.fonte-rev{background:rgba(79,124,255,.12);color:var(--accent)}
+.fonte-const{background:rgba(0,212,170,.12);color:var(--accent2)}
+.fonte-lanc{background:rgba(255,165,0,.15);color:#e67e00}
+.imovel-card-lanc{border-color:rgba(255,165,0,.3)}
+.imovel-card-lanc:hover{border-color:#e67e00}
+.imovel-condpag{padding:0 12px 10px;display:flex;flex-direction:column;gap:4px;border-top:1px dashed var(--border);padding-top:8px;margin-top:2px}
+.imovel-condpag-item{font-size:12px;color:var(--text2);line-height:1.4}
+.imovel-gatilho{margin:0 12px 10px;padding:10px;background:var(--surface);border:1px dashed var(--border);border-radius:8px}
+.imovel-gatilho-label{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em}
+.imovel-gatilho-texto{font-size:12.5px;color:var(--text2);line-height:1.5;white-space:pre-wrap}
+.imovel-gatilho-actions{display:flex;gap:8px;margin-top:8px}
+.imovel-gatilho-actions .d-btn{font-size:12px;padding:6px 10px}
+.imovel-btn-copiar{background:var(--surface2);color:var(--text2);border:1px solid var(--border);cursor:pointer}
+.imovel-btn-copiar:hover{background:var(--border)}
+
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-20px);padding:12px 24px;border-radius:99px;font-weight:600;font-size:14px;opacity:0;transition:all .3s;z-index:9999;white-space:nowrap}
+.toast.ok{background:var(--accent2);color:#0f1117}
+.toast.erro{background:var(--danger);color:#fff}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
+
+<div class="toast" id="toast"></div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="fecharDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header" id="drawerHeader">
+    <div class="drawer-avatar" id="drawerAvatar">?</div>
+    <div style="flex:1;min-width:0">
+      <div class="drawer-nome" id="drawerNome">Carregando...</div>
+      <div class="drawer-cod"  id="drawerCod"></div>
+      <div class="drawer-score-row" id="drawerBadges"></div>
+    </div>
+    <button class="drawer-close" onclick="fecharDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody">
+    <div class="drawer-loading dot-anim">Carregando dados</div>
+  </div>
+</div>
 
 <div class="header">
   <div class="logo">BASE <span>INTELIGENTE</span></div>
@@ -135,7 +264,22 @@ const SESS_KEY  = 'bi_session';
 const TOKEN_KEY = 'bi_session_token';
 function tokenSessao() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
 
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { window.location.href = 'index.html'; return true; }
+  return false;
+}
+
+function showToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + (tipo || 'ok');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
 let _contatos = [];
+let _matchesAtuais = [];
 
 (function init() {
   if (sessionStorage.getItem(SESS_KEY) !== 'ok') { window.location.href = 'index.html'; return; }
@@ -145,7 +289,7 @@ async function carregar() {
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=&token=' + encodeURIComponent(tokenSessao()));
     const json = await resp.json();
-    if (json && json.status === 'nao_autenticado') { window.location.href = 'index.html'; return; }
+    if (trataNaoAutenticado(json)) return;
     _contatos = Array.isArray(json) ? json : [];
     // Mais recentes primeiro (aproximação: ordem inversa da planilha)
     _contatos.reverse();
@@ -251,7 +395,7 @@ function tabela(items) {
     <td>${formatarDataDisplay_(c.dataAtualizacao)}</td>
     <td class="td-acoes">
       <button class="btn-editar" onclick="editar(${c._linha})">✏️ Editar</button>
-      <button class="btn-ver-matches" onclick="abrirClienteDash(${abrirArgs.join(', ')})">📊 Ver Matchs</button>
+      <button class="btn-ver-matches" onclick="abrirCliente(${abrirArgs.join(', ')})">📊 Ver Matchs</button>
     </td>
   </tr>`;
   }).join('');
@@ -268,13 +412,428 @@ function editar(linha) {
   window.location.href = 'formulario.html?linha=' + encodeURIComponent(linha);
 }
 
-// Abre o drawer do cliente no Dashboard — mesma ficha (dados + lista de
-// matches) que abre lá ao clicar num nome nas colunas Quentes/Mornos/Frios.
-// Passa por query string em vez de duplicar todo o HTML/CSS/JS do drawer
-// aqui dentro.
-function abrirClienteDash(nome, score, cod) {
-  const params = new URLSearchParams({ abrirCliente: '1', nome, score, cod });
-  window.location.href = 'dashboard.html?' + params.toString();
+// ── DRAWER DO CLIENTE (portado de dashboard.html) ──────────────────────────
+// Usuário pediu a ficha completa (dados + matches) abrindo direto em
+// contatos.html, sem navegar pra outra página — por isso duplica aqui em vez
+// de só redirecionar com query string (abordagem anterior, que o usuário
+// pediu pra trocar).
+
+function abrirDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function primeiroNome_(nome) { return String(nome||'').trim().split(' ')[0] || 'tudo bem'; }
+function norm_(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim(); }
+function fmtValor_(v) {
+  const n = parseInt(String(v || '').replace(/\D/g, '')) || 0;
+  if (!n) return '';
+  return 'R$ ' + n.toLocaleString('pt-BR');
+}
+function val(v) { return v && v !== '—' && v !== '' ? v : null; }
+function campo(label, value, full) {
+  if (!val(value)) return '';
+  return `<div class="d-field${full?' full':''}"><div class="d-field-label">${label}</div><div class="d-field-value">${value}</div></div>`;
+}
+
+// Chave que identifica um imóvel de forma estável entre MATCHES e FAVORITOS
+// (imoCodigo sozinho não basta — fontes diferentes podem colidir em teoria).
+function chaveFavorito_(imoCodigo, fonte) { return (imoCodigo||'') + '::' + (fonte||''); }
+
+// Rodapé do drawer com a data de cadastro do cliente (item 20 do pedido:
+// "Cadastrado em" saiu da tabela e foi pro final da lista de matches).
+function rodapeDrawerCliente_(cliente) {
+  if (!cliente || !cliente.dataCadastro) return '';
+  return `<div style="text-align:center;font-size:11px;color:var(--text3);padding:14px 0 4px;border-top:1px solid var(--border);margin-top:14px">Cadastrado em ${formatarDataDisplay_(cliente.dataCadastro)}</div>`;
+}
+
+// Gera texto de oferta humanizado, conectando o perfil do cliente ao imóvel
+function gerarMensagemOferta_(c, m) {
+  const nome = primeiroNome_(c.nome);
+
+  const urg = (c.urgencia || c.prioridade || '').toLowerCase();
+  let abertura;
+  if (urg.indexOf('imediat') >= 0 || urg.indexOf('alta') >= 0) {
+    abertura = `Oi ${nome}! Lembrei de você porque apareceu uma oportunidade...`;
+  } else if (val(c.naoFechou)) {
+    abertura = `Oi ${nome}! Surgiu uma oportunidade que pode resolver justamente aquele ponto que tinha travado da última vez.`;
+  } else {
+    abertura = `Oi ${nome}, tudo bem? Apareceu uma opção que eu acho que vale a pena você conhecer.`;
+  }
+
+  const tipo  = (m.imoTipo || 'imóvel').toLowerCase();
+  const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(', em ');
+  const localTxt = local ? ` no ${local}` : '';
+
+  const detalhes = [];
+  if (m.imoQuartos) detalhes.push(`${m.imoQuartos} quartos`);
+  if (m.imoSuites && parseInt(m.imoSuites) > 0) detalhes.push(`${m.imoSuites} suíte${parseInt(m.imoSuites)>1?'s':''}`);
+  if (m.imoVagas && parseInt(m.imoVagas) > 0) detalhes.push(`${m.imoVagas} vaga${parseInt(m.imoVagas)>1?'s':''} de garagem`);
+  if (m.imoAreaUtil) detalhes.push(`${m.imoAreaUtil} m²`);
+  const detalhesTxt = detalhes.length ? ` É um ${tipo} com ${detalhes.join(', ')}.` : ` É um ${tipo}.`;
+
+  let conexao = '';
+  if (val(c.bairroInteresse) && local && norm_(local).indexOf(norm_(String(c.bairroInteresse).split(/[,;]/)[0])) >= 0) {
+    conexao = ` Você tinha falado que tinha interesse nessa região, então pensei logo em você.`;
+  } else if (val(c.padrao)) {
+    conexao = ` O padrão do imóvel está bem alinhado com o que você busca.`;
+  }
+
+  const valor = m.imoValorVenda ? ` O valor é ${fmtValor_(m.imoValorVenda)}.` : '';
+
+  let fechamento = ' Posso te mandar fotos e mais detalhes?';
+  if (c.fgts === 'Sim' || c.fgts === 'sim') fechamento = ' Dá até pra usar o FGTS na entrada. Quer que eu te mande mais informações?';
+  else if (c.financ === 'Sim' || c.financ === 'sim') fechamento = ' Posso já verificar simulação de financiamento pra você, se quiser.';
+
+  return `${abertura}${localTxt ? ' Fica' + localTxt + '.' : ''}${detalhesTxt}${conexao}${valor}${fechamento}`;
+}
+
+async function abrirCliente(nome, score, cod) {
+  document.getElementById('drawerNome').textContent = nome || '—';
+  document.getElementById('drawerCod').textContent  = cod  || '';
+  document.getElementById('drawerAvatar').textContent = (nome||'?')[0].toUpperCase();
+  const sc = parseInt(score) || 0;
+  const badgeCls = sc >= 75 ? 'd-badge-hot' : sc >= 50 ? 'd-badge-warm' : 'd-badge-cold';
+  const badgeTxt = sc >= 75 ? '🔴 Quente' : sc >= 50 ? '🟡 Morno' : '🔵 Frio';
+  document.getElementById('drawerBadges').innerHTML =
+    `<span class="d-badge ${badgeCls}">Score ${sc}</span>
+     <span class="d-badge d-badge-neutral">${badgeTxt}</span>`;
+  document.getElementById('drawerBody').innerHTML =
+    '<div class="drawer-loading dot-anim">Buscando dados do cliente</div>';
+  abrirDrawer();
+
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(nome) + '&token=' + encodeURIComponent(tokenSessao()));
+    const text = await resp.text();
+    let lista;
+    try { lista = JSON.parse(text); } catch(pe) {
+      document.getElementById('drawerBody').innerHTML =
+        `<div class="drawer-loading">Erro de resposta do servidor.<br><small style="font-size:11px;color:var(--text3)">${text.substring(0,200)}</small></div>`;
+      return;
+    }
+    const c = Array.isArray(lista)
+      ? lista.find(x => x.idCliente === cod) || lista.find(x => x.nome === nome) || lista[0]
+      : null;
+    if (!c) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Cliente não encontrado na base.</div>'; return; }
+    renderDrawer(c, sc);
+    carregarMatchesDrawer(cod, c);
+  } catch(e) {
+    document.getElementById('drawerBody').innerHTML =
+      `<div class="drawer-loading">Erro: ${e.message}</div>`;
+  }
+}
+
+function renderDrawer(c, score) {
+  const tel    = String(c.telefone||'').replace(/\D/g,'');
+  const wppUrl = tel ? `https://wa.me/55${tel}` : null;
+  const telUrl = tel ? `tel:+55${tel}` : null;
+
+  const urg = c.urgencia || c.prioridade || '';
+  let diasUlt = '';
+  if (c.ultimoContato) {
+    const parts = String(c.ultimoContato).split('/');
+    if (parts.length === 3) {
+      const d = new Date(parts[2], parts[1]-1, parts[0]);
+      const diff = Math.round((new Date() - d) / 86400000);
+      diasUlt = isNaN(diff) ? '' : `${diff} dias atrás`;
+    }
+  }
+
+  const steps = [];
+  const sc = parseInt(score) || 0;
+  if (sc >= 75) steps.push({icon:'🔴', text:'<b>Contato imediato.</b> Cliente quente — priorize agora.'});
+  else if (sc >= 50) steps.push({icon:'🟡', text:'<b>Aquecer o lead.</b> Entre em contato para entender o momento de compra.'});
+  else steps.push({icon:'⚪', text:'<b>Base fria.</b> Mantenha em lista para campanhas futuras.'});
+  if (diasUlt) steps.push({icon:'📅', text:`Último contato: <b>${c.ultimoContato}</b> (${diasUlt}). Boa hora para retomar.`});
+  if (c.fgts === 'Sim' || c.fgts === 'sim') steps.push({icon:'🏦', text:'Cliente tem <b>FGTS</b> disponível — verificar saldo e elegibilidade.'});
+  if (c.financ === 'Sim' || c.financ === 'sim') steps.push({icon:'💳', text:'Pretende <b>financiar</b> — verificar análise de crédito ou pré-aprovação.'});
+  if (c.permuta === 'Sim' || c.permuta === 'sim') steps.push({icon:'🔄', text:'Interesse em <b>permuta</b> — avaliar imóvel atual como parte do negócio.'});
+  if (val(c.naoFechou)) steps.push({icon:'⚠️', text:`Não fechou antes por: <b>${c.naoFechou}</b>.`});
+  if (val(c.bairroInteresse)) steps.push({icon:'📍', text:`Foco no(s) bairro(s): <b>${c.bairroInteresse}</b>.`});
+
+  const precoLimiteTxt = val(c.precoLimite) ? 'R$ ' + c.precoLimite : '—';
+
+  const urgBadge = urg ? `<span class="d-badge ${urg==='Alta'?'d-badge-hot':urg==='Media'||urg==='Média'?'d-badge-warm':'d-badge-cold'}">${urg}</span>` : '';
+  const segBadge = val(c.segmento) ? `<span class="d-badge d-badge-neutral">${c.segmento}</span>` : '';
+  const padBadge = val(c.padrao)   ? `<span class="d-badge d-badge-green">${c.padrao}</span>` : '';
+
+  const tipo = c.tipo_contato || '';
+  function tipoCls_(t) {
+    if (t.indexOf('COMPRADOR') >= 0 && t.indexOf('PROPRIETÁRIO') < 0) return 'tipo-comprador';
+    if (t.indexOf('VENDEDOR') >= 0) return 'tipo-prop-vend';
+    if (t.indexOf('PROPRIETÁRIO COMPRADOR') >= 0) return 'tipo-prop-comp';
+    return '';
+  }
+  const tipoBadge = tipo ? `<span class="tipo-badge ${tipoCls_(tipo)}">${tipo}</span>` : '';
+
+  const tags = (c.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+  const tagsCls = t => t === 'CARTEIRA' ? 'tag-carteira' : t === 'URGENCIA' ? 'tag-urgencia' : 'tag-default';
+  const tagsHtml = tags.map(t => `<span class="tag-chip ${tagsCls(t)}">${t === 'CARTEIRA' ? '⭐ ' : t === 'URGENCIA' ? '🚨 ' : ''}${t}</span>`).join('');
+
+  document.getElementById('drawerBadges').innerHTML =
+    `<span class="d-badge ${sc>=80?'d-badge-hot':sc>=70?'d-badge-warm':'d-badge-cold'}">Score ${sc}</span>
+     ${tipoBadge}${urgBadge}${segBadge}${padBadge}${tagsHtml}`;
+
+  document.getElementById('drawerBody').innerHTML = `
+
+    <div class="d-actions">
+      ${wppUrl ? `<a class="d-btn d-btn-wpp" href="${wppUrl}" target="_blank">💬 WhatsApp</a>` : ''}
+      ${telUrl ? `<a class="d-btn d-btn-tel" href="${telUrl}">📞 ${c.telefone}</a>` : ''}
+      <a class="d-btn d-btn-edit" href="formulario.html?linha=${encodeURIComponent(c._linha||'')}">✏️ Editar</a>
+      ${c.idCliente ? `<a class="d-btn d-btn-fav" href="favoritos.html?cod=${encodeURIComponent(c.idCliente)}">⭐ Favoritos</a>` : ''}
+    </div>
+    ${tagsHtml ? `<div style="padding:0 0 8px 0;display:flex;flex-wrap:wrap;gap:6px">${tagsHtml}</div>` : ''}
+
+    <div class="d-section">
+      <div class="d-section-title">Contato</div>
+      <div class="d-grid">
+        ${campo('Nome completo', c.nome, true)}
+        ${campo('Telefone', c.telefone)}
+        ${campo('E-mail', c.email)}
+        ${campo('Nascimento', c.nascimento)}
+        ${campo('Estado civil', c.estadoCivil)}
+        ${campo('Filhos', c.filhos)}
+        ${campo('Profissão', c.profissao)}
+        ${campo('Empresa', c.empresa)}
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Perfil de busca</div>
+      <div class="d-grid">
+        ${campo('Segmento', c.segmento)}
+        ${campo('Padrão', c.padrao)}
+        ${campo('Preço limite', precoLimiteTxt, true)}
+        ${campo('Bairro de interesse', c.bairroInteresse, true)}
+        ${campo('Bairro que mora', c.bairroMora)}
+        ${campo('Cidade', c.cidadeMora)}
+        ${campo('FGTS', c.fgts)}
+        ${campo('Financiamento', c.financ)}
+        ${campo('Entrada/chip', c.entrada_chip)}
+        ${campo('Permuta', c.permuta)}
+        ${campo('Entrada', c.entrada)}
+        ${campo('Finalidade', c.finalidade)}
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Origem e histórico</div>
+      <div class="d-grid">
+        ${campo('Tipo de contato', c.tipo_contato)}
+        ${campo('Tags', c.tags)}
+        ${campo('Canal', c.canal)}
+        ${campo('Indicado por', c.indicadoPor)}
+        ${campo('Primeiro contato', c.primeiroContato)}
+        ${campo('Último contato', c.ultimoContato ? `${c.ultimoContato}${diasUlt?' ('+diasUlt+')':''}` : null)}
+        ${campo('Produto origem', c.produtoOrigem, true)}
+        ${campo('Urgência', c.urgencia || c.prioridade)}
+        ${campo('Não fechou por', c.naoFechou, true)}
+      </div>
+    </div>
+
+    ${val(c.conversa) ? `<div class="d-section">
+      <div class="d-section-title">Conversa / observações</div>
+      <div class="d-text">${(c.conversa||'').replace(/</g,'&lt;')}${val(c.observacoes)?'\n\n'+c.observacoes.replace(/</g,'&lt;'):''}</div>
+    </div>` : ''}
+
+    <div class="d-section">
+      <div class="d-section-title">Próximos passos</div>
+      <div class="d-steps">
+        ${steps.map(s=>`<div class="d-step"><div class="d-step-icon">${s.icon}</div><div class="d-step-text">${s.text}</div></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Imóveis compatíveis</div>
+      <div id="drawerImoveis"><div class="drawer-loading dot-anim" style="padding:20px 0">Buscando matches</div></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;display:flex;justify-content:flex-end">
+      <button class="d-btn d-btn-danger" onclick="excluirCliente_('${c._linha}','${(c.nome||'').replace(/'/g,"\\'")}')">🗑️ Excluir cadastro</button>
+    </div>
+  `;
+}
+
+async function excluirCliente_(linha, nome) {
+  if (!linha || linha === 'undefined') return;
+  if (!confirm(`Excluir o cadastro de "${nome}" permanentemente?\n\nEssa ação não pode ser desfeita.`)) return;
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'excluir', _linha: linha, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.status === 'excluido') {
+      fecharDrawer();
+      showToast(`Cadastro de "${nome}" excluído com sucesso.`, 'ok');
+      carregar();
+    } else {
+      showToast('Erro ao excluir: ' + JSON.stringify(r), 'erro');
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+  }
+}
+
+async function carregarMatchesDrawer(cod, cliente) {
+  const el = document.getElementById('drawerImoveis');
+  if (!el) return;
+  try {
+    const [respMatches, respFav] = await Promise.all([
+      fetch(WEBHOOK_URL + '?acao=matches_cliente&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao())),
+      fetch(WEBHOOK_URL + '?acao=listar_favoritos&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao()))
+    ]);
+    const lista = await respMatches.json();
+    let favoritos = [];
+    try { favoritos = await respFav.json(); } catch(eFav) { /* silent — favoritar continua funcionando mesmo sem a lista prévia */ }
+    const favKeys = new Set((Array.isArray(favoritos) ? favoritos : []).map(f => chaveFavorito_(f.imoCodigo, f.fonte)));
+    if (!Array.isArray(lista) || !lista.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum match encontrado. Execute <b>rodarMatching</b> no Apps Script.</div>'
+        + rodapeDrawerCliente_(cliente);
+      return;
+    }
+    _matchesAtuais = lista;
+    const tel = String((cliente && cliente.telefone) || '').replace(/\D/g,'');
+    el.innerHTML = `<div class="imovel-cards">${lista.map((m, idx) => {
+      const favId = `fav_${idx}`;
+      const jaFavoritado = favKeys.has(chaveFavorito_(m.imoCodigo, m.fonte));
+      const sc      = parseInt(m.scoreMatch || m.score || m.cliScore) || 0;
+      const cls     = sc >= 80 ? 'd-badge-hot' : sc >= 70 ? 'd-badge-warm' : 'd-badge-cold';
+      const isConst = m.fonte === 'CONSTRUTORA';
+      const isLanc  = m.fonte === 'LANCAMENTO';
+      const attrs = [
+        m.imoQuartos  ? m.imoQuartos  + ' qtos'   : '',
+        m.imoSuites   ? m.imoSuites   + ' suítes'  : '',
+        m.imoVagas    ? m.imoVagas    + ' vagas'   : '',
+        m.imoAreaUtil ? m.imoAreaUtil + ' m²'      : '',
+        m.imoPadrao   || '',
+        m.imoEstagio  || ''
+      ].filter(Boolean);
+      const det   = (m.detalheMatch||'').replace(/\|/g,'·');
+      const foto  = m.imoFoto && m.imoFoto.startsWith('http')
+        ? `<img class="imovel-foto" src="${m.imoFoto}" onerror="this.style.display='none'">`
+        : `<div class="imovel-foto-placeholder">${isLanc ? '🚀' : isConst ? '🏗️' : '🏠'}</div>`;
+      const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(' — ');
+      const msgId = `msgOferta_${idx}`;
+
+      const condPag = [];
+      if (m.imoConstrutora)  condPag.push(`🏢 ${m.imoConstrutora}`);
+      if (m.imoEntrega)      condPag.push(`📅 Entrega: ${m.imoEntrega}`);
+      if (isLanc && m.imoDataTabela) {
+        const stOk = m.imoStatusTabela === 'Atualizada';
+        const stDes = m.imoStatusTabela === 'Desatualizada';
+        const stIcon = stDes ? '⚠️' : stOk ? '✅' : '📋';
+        const stColor = stDes ? 'color:#c98000;font-weight:700' : stOk ? 'color:#00a884;font-weight:700' : '';
+        condPag.push(`<span style="${stColor}">${stIcon} Tabela ${m.imoDataTabela}${m.imoStatusTabela ? ' — ' + m.imoStatusTabela : ''}</span>`);
+      }
+      if (m.imoEntradaPerc)  condPag.push(`💰 Entrada: ${m.imoEntradaPerc}%${m.imoEntradaValor?' (R$ '+m.imoEntradaValor+')':''}`);
+      if (m.imoSinalPerc)    condPag.push(`🤝 Sinal: ${m.imoSinalPerc}%${m.imoSinalValor?' (R$ '+m.imoSinalValor+')':''}`);
+      if (m.imoCorretorPerc) condPag.push(`📊 Comissão corretor: ${m.imoCorretorPerc}%`);
+      if (m.imoTabela)       condPag.push(`📋 Tabela: ${m.imoTabela}`);
+
+      let mensagem = cliente ? gerarMensagemOferta_(cliente, m) : '';
+      if (isConst && m.imoEntradaPerc && mensagem) {
+        mensagem = mensagem.replace(' Posso te mandar fotos e mais detalhes?',
+          ` A entrada é de apenas ${m.imoEntradaPerc}% — e as condições de pagamento são bem facilitadas. Posso te mandar a tabela completa?`);
+      }
+      const wppHref = tel && mensagem ? `https://wa.me/55${tel}?text=${encodeURIComponent(mensagem)}` : null;
+
+      return `<div class="imovel-card${isLanc ? ' imovel-card-lanc' : isConst ? ' imovel-card-const' : ''}">
+        <div class="imovel-card-top">
+          ${foto}
+          <div class="imovel-info">
+            <div class="imovel-fonte-row">
+              <span class="imovel-fonte-badge ${isLanc ? 'fonte-lanc' : isConst ? 'fonte-const' : 'fonte-rev'}">${isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
+            </div>
+            <div class="imovel-tipo">${m.imoTipo||'Imóvel'}</div>
+            <div class="imovel-local">${local||'—'}</div>
+            ${m.imoCodigo ? `<div class="imovel-codigo">Código: ${m.imoCodigo}</div>` : ''}
+            <div class="imovel-valor">${fmtValor_(m.imoValorVenda)||'—'}</div>
+          </div>
+          <div class="imovel-top-actions">
+            <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
+            <button type="button" class="imovel-btn-fav${jaFavoritado?' ativo':''}" id="${favId}"
+                    onclick="toggleFavoritoClick(${idx}, ${JSON.stringify(cod).replace(/"/g,'&quot;')}, ${JSON.stringify((cliente&&cliente.nome)||'').replace(/"/g,'&quot;')}, this)"
+                    title="${jaFavoritado?'Remover dos favoritos':'Marcar como favorito'}">${jaFavoritado?'★':'☆'}</button>
+          </div>
+        </div>
+        ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+        ${condPag.length ? `<div class="imovel-condpag">${condPag.map(p=>`<div class="imovel-condpag-item">${p}</div>`).join('')}</div>` : ''}
+        ${det ? `<div class="imovel-det">${det}</div>` : ''}
+        ${mensagem ? `
+        <div class="imovel-gatilho">
+          <div class="imovel-gatilho-label">💬 Sugestão de mensagem</div>
+          <div class="imovel-gatilho-texto" id="${msgId}">${mensagem}</div>
+          <div class="imovel-gatilho-actions">
+            ${wppHref ? `<a class="d-btn d-btn-wpp" href="${wppHref}" target="_blank">📤 Enviar via WhatsApp</a>` : ''}
+            <button type="button" class="d-btn imovel-btn-copiar" onclick="copiarTexto_('${msgId}', this)">📋 Copiar</button>
+          </div>
+        </div>` : ''}
+        ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
+      </div>`;
+    }).join('')}</div>${rodapeDrawerCliente_(cliente)}`;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Erro ao buscar matches.</div>';
+  }
+}
+
+async function toggleFavoritoClick(idx, cod, cliNome, btnEl) {
+  const m = _matchesAtuais[idx];
+  if (!m) return;
+  btnEl.disabled = true;
+  try {
+    const payload = {
+      acao: 'toggle_favorito', token: tokenSessao(),
+      idCliente: cod, cliNome: cliNome,
+      imoCodigo: m.imoCodigo || '', fonte: m.fonte || '',
+      imoTipo: m.imoTipo || '', imoBairro: m.imoBairro || '', imoCondominio: m.imoCondominio || '',
+      imoEndereco: m.imoEndereco || '',
+      imoQuartos: m.imoQuartos || '', imoSuites: m.imoSuites || '', imoVagas: m.imoVagas || '', imoAreaUtil: m.imoAreaUtil || '',
+      imoValorVenda: m.imoValorVenda || '', imoPadrao: m.imoPadrao || '', imoEstagio: m.imoEstagio || '',
+      imoFoto: m.imoFoto || '', imoUrl: m.imoUrl || '',
+      imoConstrutora: m.imoConstrutora || '', imoEntrega: m.imoEntrega || ''
+    };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const texto = await resp.text();
+    let r;
+    try { r = JSON.parse(texto); } catch(pe) {
+      showToast('Resposta inesperada do servidor ao favoritar — veja o console (F12)', 'erro');
+      console.error('Resposta nao-JSON de toggle_favorito:', texto.substring(0, 300));
+      return;
+    }
+    if (trataNaoAutenticado(r)) return;
+    if (r.status !== 'adicionado' && r.status !== 'removido') {
+      showToast('Erro ao favoritar: ' + (r.motivo || r.status || 'desconhecido'), 'erro');
+      console.error('toggle_favorito nao reconhecido:', r);
+      return;
+    }
+    const agora = r.status === 'adicionado';
+    btnEl.textContent = agora ? '★' : '☆';
+    btnEl.classList.toggle('ativo', agora);
+    btnEl.title = agora ? 'Remover dos favoritos' : 'Marcar como favorito';
+    showToast(agora ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos', 'ok');
+  } catch(e) {
+    showToast('Erro de conexão ao favoritar: ' + e.message, 'erro');
+    console.error('Erro ao favoritar:', e);
+  } finally {
+    btnEl.disabled = false;
+  }
+}
+
+function copiarTexto_(id, btn) {
+  const texto = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(texto).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
 }
 
 carregar();

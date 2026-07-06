@@ -1,5 +1,34 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 17) — Drawer do cliente portado inteiro pra dentro de contatos.html
+
+Usuário confirmou (depois do "Ver Matchs" ainda não abrir nada): quer a aba lateral abrindo direto
+em `contatos.html`, sem navegar pra outra página. A abordagem da parte 15/16 (redirecionar pra
+`dashboard.html?abrirCliente=1&...`) foi abandonada.
+
+**O que mudou**: todo o mecanismo do drawer (~450 linhas de CSS/HTML/JS) foi duplicado de
+`dashboard.html` pra dentro de `contatos.html` — `abrirDrawer()`, `fecharDrawer()`,
+`abrirCliente()`, `renderDrawer()`, `carregarMatchesDrawer()`, `gerarMensagemOferta_()`,
+`toggleFavoritoClick()`, `chaveFavorito_()`, `copiarTexto_()`, `excluirCliente_()`, `val()`,
+`campo()`, `norm_()`, mais o CSS de `.drawer*`, `.d-*`, `.imovel-*`, `.tag-chip`, `.tipo-badge`,
+`.dot-anim`. Botão "Ver Matchs" agora chama `abrirCliente()` local em vez de redirecionar.
+
+Duas adaptações na cópia (não são só copiar-colar):
+- `fmt_()` (formata R$) renomeado pra `fmtValor_()` pra não colidir com o `formatarDataDisplay_`/
+  outras funções já existentes em `contatos.html`.
+- `excluirCliente_()` chama `carregar()` (a função de recarregar a lista já existente em
+  `contatos.html`) em vez de `carregarDados()` (específica do dashboard, não existe aqui).
+- `rodapeDrawerCliente_()` reaproveita o `formatarDataDisplay_()` já existente em `contatos.html`
+  em vez de duplicá-lo — só ajustada a checagem de "sem data", já que a versão local desse helper
+  retorna `'—'` (não `''`) pra string vazia.
+
+Como consequência, `verificarDeepLinkCliente_()` e as duas chamadas a ela em `dashboard.html`
+(adicionadas na parte 15 especificamente pra esse redirecionamento) ficaram órfãs — removidas.
+
+Validado com testes em Node cobrindo o fluxo completo: abrir cliente → busca → render dos dados →
+matches → rodapé com data de cadastro → fechar; e separadamente favoritar (toggle) e excluir
+cadastro (confirmando que chama `carregar()`, não `carregarDados()`).
+
 ## 2026-07-06 (parte 16) — Nome deixa de ser link em contatos.html; botão "Ver Matchs" no lugar
 
 Usuário reportou que clicar no nome (parte 15, item 19) não abria o drawer do cliente. Em vez de
