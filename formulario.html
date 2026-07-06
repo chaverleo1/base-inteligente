@@ -806,7 +806,11 @@
       return;
     }
 
-    const btn = document.getElementById('btnSave');
+    // Usa o botão realmente visível — em modo edição é o btnUpdate, não o
+    // btnSave (fica escondido); atualizar o botão errado deixava o clique em
+    // "Atualizar contato" sem nenhum feedback visual de carregamento.
+    const btn = document.getElementById(linhaAtual ? 'btnUpdate' : 'btnSave');
+    const labelOriginal = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Salvando...';
 
@@ -871,11 +875,23 @@
       console.log('Enviando para:', WEBHOOK_URL.substring(0, 80) + '...');
 
       // POST via form-urlencoded + no-cors contorna CORS do Apps Script
-      // (resposta opaca — não lemos o body, mas os dados chegam)
+      // (resposta opaca — não lemos o body, mas o await só resolve depois do
+      // doPost terminar no servidor, então os dados já estão gravados aqui)
       const body = new URLSearchParams({ dados: JSON.stringify(payload) });
       await fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body });
 
-      const msg = linhaAtual ? '✓ Contato atualizado no Sheets!' : '✓ Cliente salvo no Google Sheets!';
+      // Dado salvo → recalcula os matches antes de avisar que terminou, pra
+      // essa mudança de cadastro já refletir nos matches do cliente sem
+      // precisar esperar o próximo login/gatilho agendado.
+      btn.innerHTML = '<span class="spinner"></span>Atualizando matches...';
+      try {
+        const respMatch = await fetch(WEBHOOK_URL + '?acao=rodar_matching&token=' + encodeURIComponent(tokenSessao()));
+        await respMatch.json();
+      } catch (errMatch) {
+        console.warn('Matching não pôde ser recalculado agora:', errMatch);
+      }
+
+      const msg = linhaAtual ? '✓ Contato atualizado e matches recalculados!' : '✓ Cliente salvo e matches recalculados!';
       linhaAtual = null;
       showToast(msg, 'ok');
       setTimeout(() => resetForm(), 2500);
@@ -884,7 +900,7 @@
       showToast('Erro: ' + err.message, 'erro');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '✓ Salvar no Sheets';
+      btn.innerHTML = labelOriginal;
     }
   }
 

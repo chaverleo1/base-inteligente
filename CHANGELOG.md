@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 3) — Salvar cliente recalcula matches antes de avisar sucesso
+
+Pedido do usuário: "sempre que houver uma atualização de dados de clientes, ao clicar no botão da
+última página para salvar os dados, gravar os dados na tabela e em seguida acionar a função 'rodar
+matching' antes de mostrar que os dados foram salvos."
+
+`saveClient()` (`formulario.html`) agora, depois do POST de salvar (aguardado via `await` — mesmo
+sendo `no-cors`/resposta opaca, o `await` só resolve depois do `doPost` terminar no servidor, então
+o dado já está gravado), faz uma segunda chamada `acao=rodar_matching` e só then mostra o toast de
+sucesso. Erro no recálculo de matching é logado no console mas não impede o aviso de sucesso — o
+cadastro em si foi salvo de qualquer forma, matching é um recálculo derivado.
+
+De brinde, corrigido um bug lateral que essa mudança deixaria mais visível: o spinner/estado de
+carregamento do botão sempre atualizava `btnSave`, mesmo em modo edição — onde o botão realmente
+visível é `btnUpdate` (`btnSave` fica `display:none`). Clicar em "Atualizar contato" não mostrava
+nenhum feedback de carregamento antes; agora o botão certo é identificado dinamicamente
+(`linhaAtual ? 'btnUpdate' : 'btnSave'`) e mostra as duas fases: "Salvando..." → "Atualizando
+matches...". Validado no preview mockando `fetch` — chamadas saem na ordem SALVAR → MATCHING, toast
+só aparece depois das duas, e o botão `btnUpdate` mostra as duas fases corretamente em modo edição.
+
 ## 2026-07-06 (parte 2) — Chips de múltipla escolha, campos livres, código do cliente e lista de contatos
 
 Pedido do usuário ("Alterações 06/07"): três frentes no formulário de cadastro do cliente e no
