@@ -232,6 +232,10 @@
           <select id="estadoCivil"><option value="">Selecionar...</option><option>Solteiro(a)</option><option>Casado(a)</option><option>União estável</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select>
         </div>
       </div>
+      <div class="field" id="campoCodigoCliente" style="display:none">
+        <label>Código do cliente</label>
+        <input type="text" id="idClienteView" disabled style="opacity:.7;font-weight:600">
+      </div>
       <div class="field"><label>Tem filhos?</label>
         <div class="chip-group">
           <div class="chip" onclick="toggleChip(this,'filhos')">Não</div>
@@ -346,6 +350,7 @@
           <div class="chip campo-apto" onclick="toggleBool(this,'elevador')">Elevador</div>
           <div class="chip" onclick="toggleBool(this,'acessibilidade')">Acessibilidade</div>
         </div>
+        <input type="text" id="comodidadesOutras" placeholder="Outra comodidade... (separe por vírgula)" style="margin-top:8px">
       </div>
 
       <hr class="divider">
@@ -395,7 +400,10 @@
           <div class="chip" onclick="toggleChip(this,'canal')">Indicação</div>
           <div class="chip" onclick="toggleChip(this,'canal')">Imobzi / CRM</div>
           <div class="chip" onclick="toggleChip(this,'canal')">Visita decorado</div>
+          <div class="chip" onclick="toggleChip(this,'canal')">Placa no Imóvel</div>
+          <div class="chip" onclick="toggleChip(this,'canal')">Faixas</div>
         </div>
+        <input type="text" id="canalOutro" placeholder="Outro canal... (separe por vírgula)" style="margin-top:8px">
       </div>
       <div class="field-row">
         <div class="field"><label>Primeiro contato</label><input type="month" id="primeiroContato"></div>
@@ -651,15 +659,28 @@
   }
 
   // ── CHIPS ──────────────────────────────────────────────────────────────────
+  // Múltipla escolha em todas as etapas (2026-07): cada chip alterna
+  // independente, sem desmarcar os "irmãos" — chipState[group] guarda uma
+  // string com os valores selecionados separados por ", ".
   function toggleChip(el, group) {
-    const siblings = el.parentElement.querySelectorAll('.chip');
-    siblings.forEach(s => s.classList.remove('selected', 'selected-green'));
-    if (chipState[group] === el.textContent.trim()) {
-      delete chipState[group];
+    const valor = el.textContent.trim();
+    const atuais = (chipState[group] || '').split(',').map(s => s.trim()).filter(Boolean);
+    const idx = atuais.indexOf(valor);
+    if (idx >= 0) {
+      atuais.splice(idx, 1);
+      el.classList.remove('selected');
     } else {
+      atuais.push(valor);
       el.classList.add('selected');
-      chipState[group] = el.textContent.trim();
     }
+    if (atuais.length) chipState[group] = atuais.join(', ');
+    else delete chipState[group];
+  }
+
+  // Verifica se um valor específico está entre os selecionados de um grupo
+  // múltiplo-escolha (usado em updateCamposImovel/updateScore).
+  function temValor_(group, valor) {
+    return (chipState[group] || '').split(',').map(s => s.trim()).indexOf(valor) >= 0;
   }
 
   // Toggle independente (não desmarca os "irmãos" — várias comodidades podem ficar ativas ao mesmo tempo)
@@ -673,9 +694,8 @@
 
   // ── CARACTERÍSTICAS DO IMÓVEL (condicional por segmento) ────────────────────
   function updateCamposImovel() {
-    const seg = chipState['segmento'] || '';
-    const isApto     = seg === 'Apartamento';
-    const isCasaLote = seg === 'Casa' || seg === 'Sobrado' || seg === 'Lote em cond.';
+    const isApto     = temValor_('segmento', 'Apartamento');
+    const isCasaLote = temValor_('segmento', 'Casa') || temValor_('segmento', 'Sobrado') || temValor_('segmento', 'Lote em cond.');
     document.querySelectorAll('.campo-apto').forEach(el => el.style.display = isApto ? '' : 'none');
     document.querySelectorAll('.campo-casa').forEach(el => el.style.display = isCasaLote ? '' : 'none');
   }
@@ -694,15 +714,19 @@
     const tags = [];
     if (document.getElementById('nome')?.value)     score += 10;
     if (document.getElementById('telefone')?.value) score += 10;
-    const seg = chipState['segmento'];
-    if (seg && seg !== 'Indefinido') { score += 20; tags.push({ label: seg, cls: 'tag-blue' }); }
-    const pad = chipState['padrao'];
-    if (pad === 'Alto padrão' || pad === 'Luxo') { score += 25; tags.push({ label: pad, cls: 'tag-green' }); }
-    else if (pad) { score += 15; tags.push({ label: pad, cls: 'tag-gray' }); }
-    const urg = chipState['urgencia'];
-    if (urg === 'Imediata (até 30 dias)') score += 25;
-    else if (urg === 'Curto prazo (3 meses)') score += 15;
-    else if (urg === 'Médio prazo (6 meses)') score += 8;
+    const segArr = (chipState['segmento'] || '').split(',').map(s => s.trim()).filter(Boolean);
+    const segReal = segArr.filter(s => s !== 'Indefinido');
+    if (segReal.length) { score += 20; tags.push({ label: segArr.join(', '), cls: 'tag-blue' }); }
+    const padArr = (chipState['padrao'] || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (padArr.length) {
+      const alto = padArr.some(p => p === 'Alto padrão' || p === 'Luxo');
+      tags.push({ label: padArr.join(', '), cls: alto ? 'tag-green' : 'tag-gray' });
+      score += alto ? 25 : 15;
+    }
+    const urgArr = (chipState['urgencia'] || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (urgArr.includes('Imediata (até 30 dias)')) score += 25;
+    else if (urgArr.includes('Curto prazo (3 meses)')) score += 15;
+    else if (urgArr.includes('Médio prazo (6 meses)')) score += 8;
     if (document.getElementById('bairroMora')?.value) score += 5;
     if (document.getElementById('precoLimite')?.value) score += 5;
     score = Math.min(score, 100);
@@ -723,15 +747,20 @@
   }
 
   function comodidadesSelecionadas() {
-    return ['adensavel','andarAlto','aceitaTerreo','churrasqueira','piscina','homeOffice','condFechado','elevador','acessibilidade']
-      .map(k => chipState[k]).filter(Boolean).join(', ');
+    const fixas = ['adensavel','andarAlto','aceitaTerreo','churrasqueira','piscina','homeOffice','condFechado','elevador','acessibilidade']
+      .map(k => chipState[k]).filter(Boolean);
+    const outras = (document.getElementById('comodidadesOutras')?.value || '').trim();
+    if (outras) fixas.push(outras);
+    return fixas.join(', ');
   }
 
   // ── SUMMARY ────────────────────────────────────────────────────────────────
   function buildSummary() {
     updateScore();
     const g = id => document.getElementById(id)?.value || '';
+    const canalTodos = [chipState['canal'], g('canalOutro')].filter(Boolean).join(', ');
     const fields = [
+      { key: 'Código do cliente', val: linhaAtual ? (document.getElementById('idClienteView')?.value || '') : '' },
       { key: 'Nome',            val: g('nome') },
       { key: 'Telefone',        val: g('telefone') },
       { key: 'Email',           val: g('email') },
@@ -755,7 +784,7 @@
       { key: 'Preço limite',    val: g('precoLimite') ? 'R$ ' + g('precoLimite') : '' },
       { key: 'Finalidade',      val: chipState['finalidade'] },
       { key: 'Urgência',        val: chipState['urgencia'] },
-      { key: 'Canal origem',    val: chipState['canal'] },
+      { key: 'Canal origem',    val: canalTodos },
       { key: 'Produto origem',  val: g('produtoOrigem') },
       { key: 'Por que não fechou', val: chipState['naoFechou'] },
       { key: 'Score',           val: document.getElementById('scoreNum')?.textContent },
@@ -814,6 +843,7 @@
       condFechado:     chipState['condFechado']   || '',
       elevador:        chipState['elevador']      || '',
       acessibilidade:  chipState['acessibilidade']|| '',
+      comodidadesOutras: g('comodidadesOutras'),
       padrao:          chipState['padrao']        || '',
       precoLimite:     g('precoLimite'),
       finalidade:      chipState['finalidade']    || '',
@@ -823,6 +853,7 @@
       permuta:         chipState['permuta']       || '',
       entrada:         g('entrada'),
       canal:           chipState['canal']         || '',
+      canalOutro:      g('canalOutro'),
       primeiroContato: g('primeiroContato'),
       ultimoContato:   g('ultimoContato'),
       produtoOrigem:   g('produtoOrigem'),
@@ -870,6 +901,8 @@
     Object.keys(chipState).forEach(k => delete chipState[k]);
     const areaUtilEl = document.getElementById('areaUtil');
     if (areaUtilEl) { areaUtilEl.value = 50; updateAreaUtilLabel(); }
+    document.getElementById('campoCodigoCliente').style.display = 'none';
+    document.getElementById('idClienteView').value = '';
     updateCamposImovel();
     goToStep(1);
   }
@@ -963,16 +996,37 @@
     set('indicadoPor',    c.indicadoPor);
     set('conversa',       c.conversa);
     set('observacoes',    c.observacoes);
+    set('comodidadesOutras', c.comodidadesOutras);
+    set('canalOutro',     c.canalOutro);
 
-    // Ativa chips
+    // Código do cliente (só existe em contatos já salvos)
+    const campoCod = document.getElementById('campoCodigoCliente');
+    if (c.idCliente) {
+      document.getElementById('idClienteView').value = c.idCliente;
+      campoCod.style.display = '';
+    } else {
+      campoCod.style.display = 'none';
+    }
+
+    // Ativa chips — múltipla escolha (2026-07): o valor salvo pode trazer
+    // vários itens separados por vírgula. Além do match exato, tenta casar
+    // pela primeira palavra (ex: valor legado "3 quartos" ativa o chip "3")
+    // porque dados antigos guardavam o rótulo completo em vez do valor puro
+    // que os chips atuais usam — sem isso, o chip fica marcado como salvo na
+    // planilha mas nunca aparece "ativo" ao reabrir o cadastro.
     const ativarChip = (grupo, valor) => {
       if (!valor) return;
-      document.querySelectorAll(`[onclick*="'${grupo}'"]`).forEach(chip => {
-        if (chip.textContent.trim() === valor) {
-          chip.classList.add('selected');
-          chipState[grupo] = valor;
-        }
+      const valores = String(valor).split(',').map(s => s.trim()).filter(Boolean);
+      if (!valores.length) return;
+      const chips = document.querySelectorAll(`[onclick*="'${grupo}'"]`);
+      valores.forEach(v => {
+        const primeiraPalavra = v.split(/\s+/)[0];
+        chips.forEach(chip => {
+          const label = chip.textContent.trim();
+          if (label === v || label === primeiraPalavra) chip.classList.add('selected');
+        });
       });
+      chipState[grupo] = valores.join(', ');
     };
     ativarChip('filhos',      c.filhos);
     ativarChip('moradia',     c.moradia);

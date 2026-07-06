@@ -1,5 +1,70 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 2) — Chips de múltipla escolha, campos livres, código do cliente e lista de contatos
+
+Pedido do usuário ("Alterações 06/07"): três frentes no formulário de cadastro do cliente e no
+dashboard.
+
+**1. Chips viram múltipla escolha em todas as etapas do `formulario.html`**
+
+`toggleChip()` desmarcava todos os "irmãos" ao clicar (single-choice) — reescrita pra alternar
+cada chip de forma independente, guardando os valores selecionados em `chipState[group]` como
+string separada por `, ` (mesmo formato que `toggleBool()` já usava pras comodidades). Isso corrige
+de brinde um problema latente na seção "Situação financeira": FGTS/Pré-aprovado/Entrada
+disponível/Permuta são 4 grupos diferentes dentro do mesmo `.chip-group`, e o `toggleChip()` antigo
+limpava visualmente TODOS os chips do container ao clicar em qualquer um deles (mesmo os de outro
+grupo), então marcar "Tem FGTS" e depois "Pré-aprovado" fazia o primeiro sumir da tela mesmo
+continuando salvo internamente.
+
+`updateCamposImovel()` e `updateScore()` foram ajustados pra ler múltiplos valores (via novo
+helper `temValor_()`) em vez de comparar `===` com uma string única. `scoreTipo_()` no `code.txt`
+também passou a aceitar `segmento` com vários tipos separados por vírgula, pontuando pelo melhor
+match entre eles — cliente que marca "Casa, Apartamento" não é mais incompatibilizado com um
+apartamento só porque também marcou casa.
+
+**2. Comodidades desejadas / Canal de origem ganham campo de texto livre**
+
+Adicionado `<input id="comodidadesOutras">` e `<input id="canalOutro">`, mais duas tags novas em
+Canal de origem ("Placa no Imóvel", "Faixas"). Duas colunas novas no `CABECALHO` do `code.txt`
+(`comodidadesOutras`, `canalOutro`, no fim do array — convenção de sempre). Nova função
+`migrarCabecalhoContatos()` (idempotente, mesmo padrão de `migrarCabecalhoLancamentos()`) registrada
+como rota `adm_migrar_cabecalho_contatos` e adicionada à lista `FUNCOES` do `index.html` — roda
+sozinha no próximo login, sem precisar abrir o editor do Apps Script.
+
+**3. Código do cliente visível na 1ª etapa do formulário**
+
+Novo campo (desabilitado, só leitura) em "Identificação" que aparece preenchido com o `idCliente`
+quando o formulário é aberto em modo edição (`carregarContato()`/`carregarClienteDaUrl()`); fica
+oculto ao cadastrar um cliente novo (o ID só existe depois de salvar).
+
+**4. Bug: cliente com "3 quartos" marcado não aparecia com o chip ativo ao reabrir**
+
+`ativarChip()` comparava `chip.textContent.trim() === valor` com igualdade exata — funciona pra
+dados salvos pelo formulário atual (que só grava o dígito puro, ex: `"3"`), mas falha silenciosamente
+pra registros com valor no formato descritivo antigo (ex: `"3 quartos"`, de importação/migração
+anterior): a informação está certinha na planilha, só não reflete visualmente no chip. Corrigido pra
+também tentar casar pela primeira palavra do valor salvo (`"3 quartos".split(' ')[0] === "3"`), além
+do match exato — e agora lida com múltiplos valores (`split(',')`) já que os chips viraram múltipla
+escolha. Validado simulando um contato com `quartos: "3 quartos"` no preview: o chip "3" ativa
+corretamente.
+
+**5. Cliente com interesse em "Casa" recebendo match de "Lote"**
+
+`scoreTipo_()` já desqualifica (score 0) um imóvel de grupo incompatível quando o cliente declara um
+tipo — o comportamento reportado só acontece se `segmento` estiver vazio na planilha (cai pro score
+neutro 8, que não desqualifica nada) ou se os MATCHES daquele cliente foram calculados numa versão
+anterior do cadastro dele (antes do segmento ser preenchido) e nunca recalculados depois. Não deu pra
+confirmar qual dos dois é o caso da Priscila (CLI-10002) sem acesso à planilha ao vivo — o fix de
+múltipla escolha em `scoreTipo_()` deixa o motor mais robusto de qualquer forma, mas vale conferir o
+campo `segmento` dela na aba CONTATOS e, se necessário, rodar `adm_rodar_matching` de novo.
+
+**6. Lista de todos os contatos no Dashboard**
+
+Botão "Ver →" no card "Total de contatos" (seção Visão geral) leva para `contatos.html` — página
+nova (mesmo estilo visual de `insight-detail.html`) com busca por nome/telefone/código e um botão
+"✏️ Editar" por linha que abre `formulario.html?linha=X` com o cadastro completo (rota `buscar` já
+existente; sem `q`, ela devolve todos os contatos — sem endpoint novo no backend).
+
 ## 2026-07-06 — Fix: botão "Editar" em Lançamentos não abria a página do empreendimento
 
 Bug reportado pelo usuário: o botão "✏️ Editar" (criado pela estação server) na lista de

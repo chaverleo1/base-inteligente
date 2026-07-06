@@ -23,7 +23,13 @@ const CABECALHO = [
   // preencherIdsFaltantes(). Substitui gerarCodigo_(linha), que quebrava toda
   // vez que a planilha era reimportada/reordenada (códigos passavam a apontar
   // pra pessoas diferentes).
-  'idCliente'
+  'idCliente',
+  // Campos de texto livre (adicionado em 2026-07) — complementam os chips de
+  // "Comodidades desejadas" e "Canal de origem" pra registrar algo que não
+  // está na lista fixa, sem forçar a criação de uma tag nova pra cada caso
+  // único. Vão no FIM do array pelo mesmo motivo de sempre: migrarCabecalhoContatos()
+  // só sabe ANEXAR colunas novas, nunca inserir no meio.
+  'comodidadesOutras', 'canalOutro'
 ];
 
 const CABECALHO_LANCAMENTOS = [
@@ -149,6 +155,10 @@ function doGet(e) {
   }
   if (acao === 'adm_migrar_cabecalho_lancamentos') {
     try { migrarCabecalhoLancamentos(); return ok({ status: 'ok', msg: 'Cabeçalho LANCAMENTOS atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_migrar_cabecalho_contatos') {
+    try { migrarCabecalhoContatos(); return ok({ status: 'ok', msg: 'Cabeçalho CONTATOS atualizado.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
   if (acao === 'adm_testar_matching') {
@@ -873,8 +883,17 @@ function scoreTipo_(textoCliente, tipoImovel, segmentoCliente) {
   // Campo estruturado (segmento, escolhido no formulário) manda mais que texto
   // livre — conversa/observações podem citar "casa" fora de contexto (ex:
   // "moramos numa casa alugada") e sequestrar a detecção do tipo desejado.
-  var tipoCli = extrairTipo_(segmentoCliente || '');
-  if (!tipoCli) tipoCli = extrairTipo_(textoCliente);
+  // Desde que os chips de "Tipo de imóvel" viraram múltipla escolha (2026-07),
+  // segmentoCliente pode trazer vários tipos separados por vírgula (ex: "Casa,
+  // Apartamento") — cada um é testado e o cliente é compatível se o imóvel
+  // bater com QUALQUER um dos tipos que ele marcou.
+  var segmentos = String(segmentoCliente || '').split(',')
+    .map(function(s) { return s.trim(); }).filter(Boolean);
+  var tiposCli = segmentos.map(extrairTipo_).filter(Boolean);
+  if (!tiposCli.length) {
+    var doTexto = extrairTipo_(textoCliente);
+    if (doTexto) tiposCli = [doTexto];
+  }
 
   // O tipo do imóvel precisa passar pelo mesmo normalizador que o tipo do
   // cliente — senão "Terreno" (como a Imobzi rotula lotes) nunca bate com
@@ -884,12 +903,7 @@ function scoreTipo_(textoCliente, tipoImovel, segmentoCliente) {
   var tipoImo = extrairTipo_(tipoImovel) || norm_(tipoImovel || '');
 
   // Sem preferência declarada: pontua neutro
-  if (!tipoCli) return 8;
-
-  // Match exato ou subtipo (ex: "casa condominio" contém "casa")
-  if (tipoImo === tipoCli ||
-      tipoImo.indexOf(tipoCli) >= 0 ||
-      tipoCli.indexOf(tipoImo) >= 0) return 25;
+  if (!tiposCli.length) return 8;
 
   // Grupos de compatibilidade:
   // horizontal: casa, casa condominio, sobrado — mutuamente compatíveis
@@ -909,14 +923,29 @@ function scoreTipo_(textoCliente, tipoImovel, segmentoCliente) {
     return 'out';
   }
 
-  var gCli = grupo_(tipoCli);
   var gImo = grupo_(tipoImo);
 
-  // Mesmo grupo e não capturado acima → compatível parcial
-  if (gCli === gImo && gCli !== 'out') return 12;
+  // Com múltiplos tipos declarados, o cliente é compatível pelo MELHOR deles
+  // — se marcou "Casa" e "Apartamento", um imóvel do tipo Apartamento não deve
+  // ser descartado só porque também marcou Casa.
+  var melhor = 0;
+  tiposCli.forEach(function(tipoCli) {
+    var pontos;
+    // Match exato ou subtipo (ex: "casa condominio" contém "casa")
+    if (tipoImo === tipoCli ||
+        tipoImo.indexOf(tipoCli) >= 0 ||
+        tipoCli.indexOf(tipoImo) >= 0) {
+      pontos = 25;
+    } else {
+      var gCli = grupo_(tipoCli);
+      // Mesmo grupo e não capturado acima → compatível parcial
+      pontos = (gCli === gImo && gCli !== 'out') ? 12 : 0;
+    }
+    if (pontos > melhor) melhor = pontos;
+  });
 
-  // Grupos diferentes = incompatível = 0
-  return 0;
+  // Grupos diferentes de TODOS os tipos declarados = incompatível = 0
+  return melhor;
 }
 
 // ── Score de quartos ──────────────────────────────────────────
@@ -1751,6 +1780,22 @@ function parseBody(contents) {
     map[k] = v;
   });
   try { return JSON.parse(map['dados'] || '{}'); } catch(e) { return map; }
+}
+
+// Roda a cada login (ver FUNCOES em index.html), igual migrarCabecalhoLancamentos()
+// — idempotente: se as colunas novas já existem, só reescreve a linha 1 com o
+// mesmo conteúdo. Reescreve apenas o cabeçalho, preservando todos os dados.
+function migrarCabecalhoContatos() {
+  var aba = getAba();
+  if (!aba) { Logger.log('Aba CONTATOS não encontrada.'); return; }
+  var cab = CABECALHO;
+  var nCols = cab.length;
+  var atualCols = aba.getLastColumn();
+  if (atualCols < nCols) aba.insertColumnsAfter(atualCols, nCols - atualCols);
+  aba.getRange(1, 1, 1, nCols).setValues([cab]);
+  aba.getRange(1, 1, 1, nCols)
+     .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+  Logger.log('Cabeçalho CONTATOS atualizado: ' + nCols + ' colunas.');
 }
 
 // ═══════════════════════════════════════════════════════════════
