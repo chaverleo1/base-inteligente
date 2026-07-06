@@ -1,5 +1,44 @@
 # Changelog — Base Inteligente
 
+## 2026-07-03 (parte 18) — Bug real: bairro salvando o endereço inteiro
+
+Usuário reportou que o card do BaseImob mostrava "Rua 500 175. Cidade Vera Cruz, Aparecida de
+Goiânia" em vez de só "Cidade Vera Cruz, Aparecida de Goiânia" — não era bug de exibição, era o
+dado errado na base: o campo `bairro` desse lançamento (Max Cidade) tinha o endereço inteiro
+salvo, não só o bairro.
+
+**Causa raiz**: a regex de extração de bairro em `lancamentos.html` usava `\S+` pra "pular" até
+a cidade e confirmar onde o bairro terminava — `\S+` não atravessa espaço, então funcionava pra
+cidades de uma palavra ("Goiânia") mas **falhava silenciosamente pra cidades com mais de uma
+palavra** ("Aparecida de Goiânia"), a regex principal não casava, e o código caía num fallback
+mais grosseiro que pegava o endereço inteiro como bairro.
+
+**Quem foi afetado**: todo lançamento na cidade "Aparecida de Goiânia" (a única cidade de mais de
+uma palavra na base hoje) — confirmado direto na planilha ao vivo, exatamente 6 empreendimentos:
+Max Cidade, Max Serra Dourada, Park Residence, Parque América Cancún, Link Clube House e
+Residencial Máximo Clube.
+
+**Fix no parser** (`lancamentos.html`): reescrita a extração de bairro/cidade/estado pra
+reaproveitar o mesmo match de cidade (que já usava `[^\/]+`, correto) em vez de tentar casar a
+cidade de novo com `\S+` dentro da regex de bairro. Bairro agora é "tudo entre o primeiro '.' do
+logradouro e a cidade já identificada" — também blindado contra abreviação de rua com ponto
+próprio (ex: "R." de "Rua"), que antes cortaria no lugar errado.
+
+**Fix nos dados existentes** (`Code.gs.txt`): `corrigirBairroComEnderecoJunto()` — função de
+correção pontual (rodar uma vez): bairro de verdade nunca tem ".", então qualquer linha com "."
+no bairro pega só o trecho depois do **último** ponto. Aplicada e confirmada nos 6 casos reais
+achados na base, sem mexer em nenhum bairro já correto.
+
+Testado em Node: 6 cenários do parser (caso real quebrado, 2 regressões — cidade de 1 palavra e
+prefixo abreviado "R./Av." não quebram) + 6 cenários da correção pontual com os valores reais dos
+6 empreendimentos afetados, mais um bairro já correto que não deveria ser tocado. Testado no
+preview: extração real do texto da Max Cidade preenche os campos certos. As 8 suítes anteriores
+continuam passando sem regressão (63 testes no total).
+
+**Ação pendente do usuário**: colar o `Code.gs.txt` atualizado, reimplantar, e rodar
+**`corrigirBairroComEnderecoJunto()`** uma vez pelo editor do Apps Script pra corrigir as 6 linhas
+já existentes com o bug.
+
 ## 2026-07-03 (parte 17b) — Código da oferta também visível na landing
 
 Ajuste rápido: a parte 17 mostrou o código só no card do BaseImob Total — a landing

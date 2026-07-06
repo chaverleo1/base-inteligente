@@ -1640,6 +1640,36 @@ function preencherIdOfertaFaltantes() {
   Logger.log('idOferta preenchido em ' + preenchidos + ' de ' + dados.length + ' linhas.');
 }
 
+// Rode UMA VEZ pelo editor do Apps Script. Corrige um bug do parser (já
+// consertado em lancamentos.html) que salvava o endereço inteiro no campo
+// bairro em vez de só o bairro — acontecia especificamente em cidades com
+// mais de uma palavra (ex: "Aparecida de Goiânia"; "Goiânia" sozinha nunca
+// deu problema). Sinal do bug: bairro de verdade nunca tem ".", então
+// qualquer linha com "." no bairro pega só o trecho depois do ÚLTIMO ponto.
+function corrigirBairroComEnderecoJunto() {
+  var aba = obterAbaLancamentos_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) { Logger.log('Nenhuma linha em LANCAMENTOS.'); return; }
+
+  var idxBairro = CABECALHO_LANCAMENTOS.indexOf('bairro') + 1;
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LANCAMENTOS.length).getValues();
+  var corrigidos = 0;
+
+  for (var i = 0; i < dados.length; i++) {
+    var bairroAtual = String(dados[i][idxBairro - 1] || '');
+    if (bairroAtual.indexOf('.') < 0) continue; // bairro normal, sem sinal do bug
+
+    var partes    = bairroAtual.split('.');
+    var corrigido = partes[partes.length - 1].trim();
+    if (corrigido && corrigido !== bairroAtual) {
+      aba.getRange(i + 2, idxBairro).setValue(corrigido);
+      corrigidos++;
+    }
+  }
+
+  Logger.log('Bairro corrigido em ' + corrigidos + ' linhas.');
+}
+
 function obterAbaLancamentos_() {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('LANCAMENTOS');

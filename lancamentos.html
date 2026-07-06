@@ -672,23 +672,37 @@ function extrairBloco1(txt) {
   if (idxEndereco >= 0) {
     const l = linhas[idxEndereco];
     b.endereco = l;
-    // Padrão Orulo: "Av. Nome 123. Bairro - Cidade/GO" — bairro após ". "
-    const bM = l.match(/\.\s+([^.\-,]+?)(?:\s+-\s+\S+\/[A-Z]{2})?$/);
-    if (bM) {
-      b.bairro = bM[1].trim();
-    } else {
-      // Fallback: parte antes de " - Cidade"
+
+    // Cidade/Estado primeiro: "- Cidade/UF" no final da linha. Usa [^\/]+
+    // (não \S+) porque cidade pode ter mais de uma palavra, ex "Aparecida de
+    // Goiânia" — \S+ pararia em "Aparecida" e quebraria o match inteiro.
+    const cidUfM = l.match(/-\s+([^\/]+)\/([A-Z]{2})\s*$/);
+    if (cidUfM) {
+      b.cidade = normalizarTexto_(cidUfM[1]);
+      b.estado = cidUfM[2].toUpperCase();
+    }
+
+    // Bairro: tudo entre o "." que fecha o logradouro e o "- Cidade/UF" já
+    // localizado acima (reaproveita cidUfM em vez de tentar casar a cidade
+    // de novo com \S+, que era a causa do bug: cidade com espaço virava
+    // "bairro = endereço inteiro" via fallback). Busca o "." só DEPOIS do
+    // prefixo do logradouro (RX_ENDERECO) — "R." abreviado já tem ponto
+    // próprio, senão o corte cairia no lugar errado.
+    const prefixoM = l.match(RX_ENDERECO);
+    const buscaApartir = prefixoM ? prefixoM[0].length : 0;
+    const pontoIdx = l.indexOf('.', buscaApartir);
+    if (pontoIdx >= 0) {
+      let trecho = l.substring(pontoIdx + 1);
+      if (cidUfM) trecho = trecho.substring(0, trecho.length - cidUfM[0].length);
+      b.bairro = trecho.trim();
+    }
+    if (!b.bairro) {
+      // Fallback: endereço sem "." separando rua/bairro — usa a parte antes de " - Cidade"
       const pts = l.split(/\s+-\s+/);
       if (pts.length > 1) {
         const ant = pts[pts.length - 2].split(/[,;]/);
         b.bairro = ant[ant.length - 1].trim().substring(0, 50);
       }
-    }
-    // Cidade/Estado: "- Cidade/UF" no final da linha (ex: "- Goiânia/GO")
-    const cidUfM = l.match(/-\s+([^\/]+)\/([A-Z]{2})\s*$/);
-    if (cidUfM) {
-      b.cidade = normalizarTexto_(cidUfM[1]);
-      b.estado = cidUfM[2].toUpperCase();
     }
   }
   // Bairro via keyword se ainda vazio
