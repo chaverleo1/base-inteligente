@@ -18,6 +18,10 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;min-height:100vh}
+  .toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-20px);padding:12px 24px;border-radius:99px;font-weight:600;font-size:14px;opacity:0;transition:all .3s;z-index:9999;white-space:nowrap}
+  .toast.ok{background:var(--accent2);color:#0f1117}
+  .toast.erro{background:var(--danger);color:#fff}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   a{text-decoration:none;color:inherit}
 
   /* ── HEADER ── */
@@ -309,6 +313,8 @@
 </style>
 </head>
 <body>
+
+<div class="toast" id="toast"></div>
 
 <!-- LOGIN OVERLAY -->
 <div class="login-overlay" id="loginOverlay">
@@ -1270,7 +1276,7 @@ async function carregarMatchesDrawer(cod, cliente) {
           <div class="imovel-top-actions">
             <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
             <button type="button" class="imovel-btn-fav${jaFavoritado?' ativo':''}" id="${favId}"
-                    onclick="toggleFavoritoClick(${idx}, ${JSON.stringify(cod)}, ${JSON.stringify((cliente&&cliente.nome)||'')}, this)"
+                    onclick="toggleFavoritoClick(${idx}, ${JSON.stringify(cod).replace(/"/g,'&quot;')}, ${JSON.stringify((cliente&&cliente.nome)||'').replace(/"/g,'&quot;')}, this)"
                     title="${jaFavoritado?'Remover dos favoritos':'Marcar como favorito'}">${jaFavoritado?'★':'☆'}</button>
           </div>
         </div>
@@ -1311,17 +1317,39 @@ async function toggleFavoritoClick(idx, cod, cliNome, btnEl) {
       imoConstrutora: m.imoConstrutora || '', imoEntrega: m.imoEntrega || ''
     };
     const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
-    const r = await resp.json();
+    const texto = await resp.text();
+    let r;
+    try { r = JSON.parse(texto); } catch(pe) {
+      showToast('Resposta inesperada do servidor ao favoritar — veja o console (F12)', 'erro');
+      console.error('Resposta nao-JSON de toggle_favorito:', texto.substring(0, 300));
+      return;
+    }
     if (trataNaoAutenticado(r)) return;
+    if (r.status !== 'adicionado' && r.status !== 'removido') {
+      showToast('Erro ao favoritar: ' + (r.motivo || r.status || 'desconhecido'), 'erro');
+      console.error('toggle_favorito nao reconhecido:', r);
+      return;
+    }
     const agora = r.status === 'adicionado';
     btnEl.textContent = agora ? '★' : '☆';
     btnEl.classList.toggle('ativo', agora);
     btnEl.title = agora ? 'Remover dos favoritos' : 'Marcar como favorito';
+    showToast(agora ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos', 'ok');
   } catch(e) {
+    showToast('Erro de conexão ao favoritar: ' + e.message, 'erro');
     console.error('Erro ao favoritar:', e);
   } finally {
     btnEl.disabled = false;
   }
+}
+
+function showToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + (tipo || 'ok');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
 function copiarTexto_(id, btn) {

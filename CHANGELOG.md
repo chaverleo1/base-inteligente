@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 14) — Fix: botão de favoritar não fazia nada (onclick quebrado por aspas)
+
+Usuário reportou, mesmo depois de reimplantar o Apps Script, que a estrela de favoritos não
+marcava e a página de Favoritos só mostrava o código do cliente (nunca o nome) — os dois sintomas
+eram a mesma causa.
+
+**Causa raiz**: o atributo `onclick` do botão de favoritar era montado com
+`${JSON.stringify(cod)}` direto dentro de uma string `onclick="..."` (que já usa aspas duplas).
+`JSON.stringify("CLI-10001")` produz `"CLI-10001"` — as aspas duplas do JSON fecham o atributo
+HTML **no meio da string**, quebrando o `onclick` inteiro. Renderizando o botão de verdade e
+inspecionando o `outerHTML`, o atributo saía como
+`onclick="toggleFavoritoClick(0, " cli-10001",="" "raimundo="" barros",="" this)"=""` — uma
+sopa de pseudo-atributos, sem nenhum handler de clique válido. Clicar na estrela literalmente não
+fazia nada (nenhum POST era disparado), então nenhum favorito nunca tinha sido salvo de verdade —
+por isso `favoritos.html` sempre mostrava a lista vazia (só o código da URL no topo, nunca o nome,
+que só é preenchido a partir do primeiro item da lista).
+
+Corrigido escapando as aspas do JSON antes de embutir no atributo
+(`.replace(/"/g,'&quot;')`), mesma técnica já usada em `formulario.html` pra esse tipo de caso
+(`carregarContato` já fazia isso corretamente — não copiei o padrão ao escrever o botão novo).
+Validado inspecionando o `outerHTML` real do botão antes/depois do fix, e chamando
+`toggleFavoritoClick` de ponta a ponta confirmando payload correto e toast de sucesso.
+
+De brinde: `toggleFavoritoClick` deixou de falhar silenciosamente (só `console.error`) — agora
+mostra um toast visível de erro com o motivo real, e um toast de sucesso ("⭐ Adicionado aos
+favoritos" / "Removido dos favoritos") quando dá certo. Isso teria revelado o bug real de cara em
+vez do sintoma ambíguo "não está marcando".
+
 ## 2026-07-06 (parte 13) — Favoritar imóveis na página de ofertas do cliente + página de Favoritos com PDF
 
 Item 15 pedido pelo usuário: em cada card de match do drawer do cliente, opção de marcar como
