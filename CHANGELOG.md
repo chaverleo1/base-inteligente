@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-05/06 — Merge com a estação server (26 commits)
+
+Duas estações trabalharam em paralelo sem sincronizar: enquanto esta sessão seguia em 03/07, a
+outra estação avançou 04–05/07 direto no GitHub, sem passar pelo fluxo desta conversa. Antes de
+enviar o fix do bairro (parte 18), foi necessário estudar e mesclar esse trabalho.
+
+**O que a outra estação construiu:**
+- **Integração BaseImob → CONTATOS**: `listarLeadsBaseimob_()`/`migrarLeadBaseimob_()` — o
+  corretor vê os leads do funil externo numa aba nova do dashboard e promove os qualificados pra
+  CONTATOS (com checagem de duplicidade por email). A migração usa o `idOferta` (implementado na
+  parte 17 desta sessão) pra pré-preencher `produtoOrigem` com os imóveis de interesse.
+- **Painel ADM** (dashboard.html): botões manuais pra rodar matching, sincronizar Revenda,
+  criar gatilhos agendados, rodar `testarMatching()`, checar gatilhos ativos — rotas `adm_*`
+  novas no Code.gs, protegidas por sessão.
+- **Insights do dashboard**: 11 indicadores cruzados substituindo a seção Construtora (clientes
+  sem contato 90+ dias, bairros mais procurados, canal com melhor score médio, leads BaseImob
+  pendentes), com página de detalhe (`insight-detail.html`).
+- **Reestruturação**: `index.html` virou só login+init (redireciona pra `busca.html`, nova home
+  pós-login); formulário de cliente saiu pra `formulario.html`; Lançamentos ganhou botão "Editar"
+  por empreendimento (`lancamentos-editar.html`).
+
+**Merge**: `git merge origin/main` trouxe os 26 commits sem nenhum conflito — as mudanças da
+outra estação em `Code.gs.txt`/`lancamentos.html` ficaram em funções/seções diferentes das que
+esta sessão tocou hoje (nenhum dos 4 esquemas de coluna mudou dos dois lados). Confirmado
+comparando o `Code.gs.txt` resultante do merge contra o arquivo realmente implantado (que o
+usuário exportou) — **única diferença: a função `corrigirBairroComEnderecoJunto()` de hoje**,
+que ainda não existia lá.
+
+Revalidado após o merge: as 9 suítes de teste desta sessão (63 casos) continuam passando no
+`Code.gs.txt` final combinado, e os 7 arquivos HTML do projeto (incluindo os 3 novos da outra
+estação) passam checagem de sintaxe e carregam sem erro no preview.
+
 ## 2026-07-03 (parte 18) — Bug real: bairro salvando o endereço inteiro
 
 Usuário reportou que o card do BaseImob mostrava "Rua 500 175. Cidade Vera Cruz, Aparecida de
