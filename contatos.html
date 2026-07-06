@@ -79,6 +79,8 @@ a { text-decoration:none; color:inherit; }
   font-size:11px; font-weight:600; border:1px solid;
 }
 .badge-blue   { background:rgba(79,124,255,.12); color:var(--accent); border-color:rgba(79,124,255,.2); }
+.badge-red    { background:rgba(255,90,90,.12);  color:#ff5a5a; border-color:rgba(255,90,90,.2); }
+.badge-amber  { background:rgba(245,166,35,.12); color:#f5a623; border-color:rgba(245,166,35,.2); }
 .badge-muted  { background:rgba(74,84,112,.1); color:var(--text3); border-color:var(--border); }
 
 .score-num { font-family:'Space Grotesk',sans-serif; font-weight:700; }
@@ -183,6 +185,21 @@ function parseDataBr_(s) {
   return new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0)).getTime();
 }
 
+// Status por TEMPO DE CADASTRO (dataAtualizacao) — mesmos limiares de
+// fatorFrescor_() no backend (≤15 dias / 15-30 / >30). Isto NÃO é o mesmo
+// "Quente/Morno/Frio" da home do dashboard, que combina o score do cliente
+// com a qualidade dos matches dele; aqui é só há quanto tempo o cadastro foi
+// editado pela última vez.
+function statusFrescorEl(dataAtualizacao) {
+  const ts = parseDataBr_(dataAtualizacao);
+  if (!ts) return '<span class="badge badge-muted" title="Sem data de atualização registrada">—</span>';
+  const dias = Math.round((Date.now() - ts) / 86400000);
+  const titulo = `Cadastro atualizado há ${dias} dia${dias!==1?'s':''} — status de tempo, não de match`;
+  if (dias <= 15) return `<span class="badge badge-red"   title="${titulo}">🔴 Quente</span>`;
+  if (dias <= 30) return `<span class="badge badge-amber" title="${titulo}">🟡 Morno</span>`;
+  return `<span class="badge badge-blue" title="${titulo}">🔵 Frio</span>`;
+}
+
 function render(lista) {
   const ordenada = [...lista].sort((a,b) => parseDataBr_(b.dataAtualizacao) - parseDataBr_(a.dataAtualizacao));
   document.getElementById('root').innerHTML = `
@@ -199,12 +216,15 @@ function tabela(items) {
     <td>${c.segmento ? `<span class="badge badge-blue">${c.segmento}</span>` : '<span class="badge badge-muted">—</span>'}</td>
     <td>${scoreEl(c.scoreEfetivo != null ? c.scoreEfetivo : c.score)}</td>
     <td>${c.dataCadastro || '—'}</td>
+    <td>${statusFrescorEl(c.dataAtualizacao)}</td>
     <td>${c.dataAtualizacao || '—'}</td>
     <td><button class="btn-editar" onclick="editar(${c._linha})">✏️ Editar</button></td>
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr>
-      <th>Código</th><th>Nome</th><th>Telefone</th><th>Segmento</th><th>Score</th><th>Cadastrado em</th><th>Atualizado em</th><th></th>
+      <th>Código</th><th>Nome</th><th>Telefone</th><th>Segmento</th><th>Score</th><th>Cadastrado em</th>
+      <th title="Status por tempo de cadastro — diferente do Quente/Morno/Frio da home, que é sobre qualidade de match">Status</th>
+      <th>Atualizado em</th><th></th>
     </tr></thead><tbody>${rows}</tbody>
   </table></div>`;
 }

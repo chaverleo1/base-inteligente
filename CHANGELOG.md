@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 8) — Coluna "Status" (tempo de cadastro) em contatos.html
+
+Item 14 pedido pelo usuário: coluna nova ao lado de "Cadastrado em" com um selo de
+Quente/Morno/Frio — mas baseado em **tempo desde a última atualização do cadastro**
+(`dataAtualizacao`), não na qualidade de match (que é o critério da home do dashboard). Usuário
+fez questão de deixar essa distinção clara, então:
+
+- Mesmos limiares de `fatorFrescor_()` (≤15 dias / 15–30 / >30), só que calculado no front-end
+  (`statusFrescorEl()`, 100% client-side — não precisa de rota nova no backend, já tem
+  `dataAtualizacao` disponível via `buscar`).
+- Mesmos emojis do badge de temperatura já usado no drawer do dashboard (🔴/🟡/🔵), pra manter o
+  vocabulário visual consistente mesmo o critério sendo diferente.
+- `title` (tooltip) em cada badge e no cabeçalho da coluna explicando que é "status de tempo, não
+  de match" — évita confundir com o Quente/Morno/Frio da home.
+- Validado via teste de renderização em Node com datas conhecidas (5/20/40 dias) cobrindo as 3
+  faixas.
+
 ## 2026-07-06 (parte 7) — Card "Esfriando" não deve contar cadastros já "Frios" (>30 dias)
 
 Ajuste no item 12 da parte anterior: o card contava TODO cadastro com mais de 15 dias sem
