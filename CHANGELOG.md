@@ -1,5 +1,13 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Remove caixa de diagnóstico do painel de atualização do portfólio
+
+A caixa "🔍 Consultar na Imobzi" (campo de código + resultado JSON) era uma ferramenta temporária de
+diagnóstico, adicionada só pra investigar o imóvel Cód. 3468 sem precisar de F12/Console. O problema
+já foi identificado e corrigido (retry em `buscarPaginaImobzi_`), então ela não tinha mais função —
+removida do painel "Atualização do portfólio" (HTML, CSS e a função `consultarImovelDiag`). A rota
+de backend `adm_debug_imovel_revenda` foi mantida (não afeta a UI, pode ser útil de novo no futuro).
+
 ## 2026-07-07 — "Próxima ação planejada" + card de lembretes (Etapa 7 · Relacionamento)
 
 Campo simples na ficha do cliente — sem estrutura complexa de propósito: `proximaAcao` (texto livre)
