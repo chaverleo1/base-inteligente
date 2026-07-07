@@ -87,6 +87,10 @@
   .match-score{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;float:right;margin-top:1px}
   .score-hot{background:rgba(255,90,90,.15);color:var(--hot)}
   .score-warm{background:rgba(245,166,35,.15);color:var(--warm)}
+  .match-fav{flex-shrink:0;height:28px;border-radius:6px;display:flex;align-items:center;gap:4px;
+             font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);
+             color:var(--text3);padding:0 8px;min-width:36px;white-space:nowrap}
+  .match-fav.has-fav{border-color:rgba(245,166,35,.45);background:rgba(245,166,35,.08);color:#f5a623}
   .score-cold{background:rgba(79,124,255,.15);color:var(--cold)}
   .empty-state{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
 
@@ -107,6 +111,40 @@
   .insight-ver-num:hover{opacity:.75}
   .insight-ver-btn{cursor:pointer;color:var(--ic,var(--accent));font-weight:700;margin-left:8px;white-space:nowrap}
   .insight-ver-btn:hover{opacity:.75}
+
+  /* ── REVENDA DIFF ── */
+  .revenda-diff{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px}
+  .revenda-diff-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+  .revenda-diff-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+  .revenda-diff-meta{font-size:12px;color:var(--text3)}
+  .revenda-diff-tbl{width:100%;border-collapse:collapse}
+  .revenda-diff-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);padding:4px 12px 8px;text-align:left;border-bottom:1px solid var(--border)}
+  .revenda-diff-tbl th:not(:first-child){text-align:center}
+  .revenda-diff-tbl td{padding:7px 12px;border-bottom:1px solid rgba(42,48,80,.4);color:var(--text2);font-size:13px}
+  .revenda-diff-tbl td:not(:first-child){text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:600}
+  .revenda-diff-tbl tr:last-child td{border-bottom:none}
+  .revenda-diff-tbl .td-tipo{color:var(--text);font-weight:500}
+  .diff-pos{color:var(--accent2)}.diff-neg{color:var(--danger)}.diff-zero{color:var(--text3)}
+  .revenda-diff-tbl .total-row td{color:var(--text);font-weight:700;border-top:1px solid var(--border);border-bottom:none;padding-top:10px}
+
+  /* ── PIPELINE ── */
+  .pipeline-funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:32px;
+                   border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+  .pip-col{display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06)}
+  .pip-col:last-child{border-right:none}
+  .pip-header{padding:10px 12px;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;
+              text-transform:uppercase;letter-spacing:.7px;text-align:center;
+              border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;gap:4px}
+  .pip-count{font-size:20px;font-weight:700;font-family:'Space Grotesk',sans-serif;line-height:1;margin-top:2px}
+  .pip-body{padding:8px 7px;min-height:90px;max-height:260px;overflow-y:auto;flex:1}
+  .pip-body::-webkit-scrollbar{width:3px}
+  .pip-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+  .pip-name{font-size:12px;padding:5px 8px;border-radius:5px;margin-bottom:3px;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            background:rgba(255,255,255,.04);color:var(--text2);cursor:default}
+  .pip-name:hover{background:rgba(255,255,255,.08);color:var(--text)}
+  .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
+  @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
 
   /* ── GRÁFICOS ── */
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
@@ -375,6 +413,12 @@
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando dados</div>
   </div>
 
+  <!-- PIPELINE -->
+  <div class="section-title">🔥 Pipeline de Negociações</div>
+  <div class="pipeline-funnel" id="pipelineFunnel">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando pipeline</div>
+  </div>
+
   <!-- MATCHES -->
   <div class="section-title">Matches do momento</div>
   <div class="matches-grid">
@@ -414,6 +458,7 @@
   <div class="cards-row" id="cardsRevenda">
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
   </div>
+  <div id="revendaDiffPanel" style="display:none"></div>
   <div class="charts-row" style="margin-bottom:32px">
     <div class="chart-card">
       <div class="chart-title">Imóveis por tipo</div>
@@ -662,6 +707,100 @@ async function carregarDados() {
   }
   carregarLancamentosDash();
   carregarInsightsExtended();
+  carregarPipeline();
+  carregarRevendaDiff();
+}
+
+// ── REVENDA DIFF ──────────────────────────────────────────────────────────────
+
+async function carregarRevendaDiff() {
+  try {
+    const res  = await fetch(WEBHOOK_URL + '?acao=revenda_diff&token=' + encodeURIComponent(tokenSessao()));
+    const json = await res.json();
+    if (trataNaoAutenticado(json)) return;
+    renderRevendaDiff(json);
+  } catch(e) { /* painel é suplementar — falha silenciosa */ }
+}
+
+function renderRevendaDiff(d) {
+  const panel = document.getElementById('revendaDiffPanel');
+  if (!panel || !d.delta || !d.ultimaSync || d.ultimaSync === '—') return;
+
+  const totalDiff = (d.totalDepois || 0) - (d.totalAntes || 0);
+  const totalCls  = totalDiff > 0 ? 'diff-pos' : totalDiff < 0 ? 'diff-neg' : 'diff-zero';
+  const totalStr  = totalDiff > 0 ? '+' + totalDiff : totalDiff === 0 ? '—' : String(totalDiff);
+
+  const rows = d.delta.map(r => {
+    const df  = r.diff;
+    const cls = df > 0 ? 'diff-pos' : df < 0 ? 'diff-neg' : 'diff-zero';
+    const dStr = df > 0 ? '+' + df : df === 0 ? '—' : String(df);
+    return `<tr>
+      <td class="td-tipo">${r.tipo}</td>
+      <td>${r.antes}</td>
+      <td>${r.depois}</td>
+      <td class="${cls}">${dStr}</td>
+    </tr>`;
+  }).join('');
+
+  panel.style.display = '';
+  panel.innerHTML = `<div class="revenda-diff">
+    <div class="revenda-diff-header">
+      <span class="revenda-diff-title">📋 Atualização do portfólio</span>
+      <span class="revenda-diff-meta">Última sincronização: <b style="color:var(--text)">${d.ultimaSync}</b>
+        &nbsp;·&nbsp; <span class="${totalCls}" style="font-weight:700">${totalStr !== '—' ? totalStr + ' imóveis' : 'sem variação'}</span>
+      </span>
+    </div>
+    <table class="revenda-diff-tbl">
+      <thead><tr><th>Tipo</th><th>Antes</th><th>Depois</th><th>Variação</th></tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="total-row">
+          <td>Total</td>
+          <td>${d.totalAntes || 0}</td>
+          <td>${d.totalDepois || 0}</td>
+          <td class="${totalCls}">${totalStr}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ── PIPELINE ──────────────────────────────────────────────────────────────────
+
+async function carregarPipeline() {
+  try {
+    const res  = await fetch(WEBHOOK_URL + '?acao=pipeline_dados&token=' + encodeURIComponent(tokenSessao()));
+    const json = await res.json();
+    if (trataNaoAutenticado(json)) return;
+    renderPipeline(json);
+  } catch(e) {
+    document.getElementById('pipelineFunnel').innerHTML =
+      `<div style="grid-column:1/-1;color:var(--danger);padding:16px">Erro ao carregar pipeline: ${e.message}</div>`;
+  }
+}
+
+function renderPipeline(json) {
+  const stages = json.stages || {};
+  const cfg = [
+    {key:'urgentes',       label:'Urgentes',        icon:'🔥', bg:'rgba(255,59,48,.15)',   text:'#ff4a3f'},
+    {key:'posVisita',      label:'Pós-Visita',       icon:'👁',  bg:'rgba(255,107,53,.11)',  text:'#ff7844'},
+    {key:'agendarVisita',  label:'Agendar Visita',   icon:'📅', bg:'rgba(255,184,0,.09)',   text:'#ffc107'},
+    {key:'preAtendimento', label:'Pré-Atendimento',  icon:'📋', bg:'rgba(63,201,224,.08)',  text:'#3fc9e0'},
+    {key:'ganhos',         label:'Ganhos',           icon:'✅', bg:'rgba(10,126,164,.13)',  text:'#1a9ed4'},
+  ];
+  document.getElementById('pipelineFunnel').innerHTML = cfg.map(s => {
+    const list  = stages[s.key] || [];
+    const names = list.length
+      ? list.map(c => `<div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}</div>`).join('')
+      : `<div class="pip-empty">—</div>`;
+    return `<div class="pip-col" style="background:${s.bg}">
+      <div class="pip-header" style="color:${s.text}">
+        <span>${s.icon} ${s.label}</span>
+        <span class="pip-count" style="color:${s.text}">${list.length}</span>
+      </div>
+      <div class="pip-body">${names}</div>
+    </div>`;
+  }).join('');
 }
 
 async function carregarLancamentosDash() {
@@ -1100,9 +1239,13 @@ function renderMatchCol(elId, lista, tipo) {
           ? `<span class="match-mc-hot match-mc-only">${mc80}</span>`
           : `<span class="match-mc-warm match-mc-only">${mc70}</span>`;
     const scoreTotal = d.scoreTotal != null ? d.scoreTotal : d.score;
+    const favs    = parseInt(d.favs) || 0;
+    const favCls  = favs > 0 ? 'match-fav has-fav' : 'match-fav';
+    const favTip  = favs > 0 ? `${favs} favorito${favs !== 1 ? 's' : ''}` : 'Sem favoritos';
     return `
     <div class="match-item" data-nome="${(d.nome||'').replace(/"/g,'&quot;')}" data-score="${scoreTotal||0}" data-cod="${d.cod||''}">
       <div class="${mcCls}" title="${mc80} acima de 80 · ${mc70} entre 70 e 79">${mcHtml}</div>
+      <div class="${favCls}" title="${favTip}">⭐ ${favs}</div>
       <div class="match-body">
         <span class="match-score score-${tipo}" title="Score cadastro: ${d.score}">${scoreTotal}</span>
         <div class="match-name">${d.nome||'—'}</div>

@@ -89,6 +89,11 @@
   .section-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
   .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
   .search-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:10px;margin-bottom:20px}
+  .pip-select{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text2);
+              font-size:11px;font-weight:600;padding:3px 7px;font-family:'Inter',sans-serif;cursor:pointer;
+              transition:border-color .2s;outline:none;max-width:140px}
+  .pip-select:hover{border-color:var(--accent)}
+  .pip-select:focus{border-color:var(--accent)}
   .search-bar input{background:transparent;border:none;padding:0;font-size:15px;box-shadow:none}
   .search-bar input:focus{box-shadow:none;border:none}
   .search-icon{color:var(--text3);font-size:16px}
@@ -1000,24 +1005,84 @@
     }
   }
 
+  const PIP_STAGES = ['Urgentes','Pós-Visita','Agendar Visita','Pré-Atendimento','Ganhos'];
+  const PIP_COLORS = {
+    'Urgentes':'#ff4a3f','Pós-Visita':'#ff7844','Agendar Visita':'#ffc107',
+    'Pré-Atendimento':'#3fc9e0','Ganhos':'#1a9ed4'
+  };
+
+  function pipSelectHtml(c) {
+    const cur  = c.pipeline || '';
+    const opts = ['', ...PIP_STAGES].map(s =>
+      `<option value="${s}" ${s === cur ? 'selected' : ''}>${s || 'Selecione'}</option>`
+    ).join('');
+    return `<select class="pip-select" data-id="${c.idCliente||''}" data-linha="${c._linha||''}"
+              onclick="event.stopPropagation()"
+              onchange="salvarPipelineRapido(this)">${opts}</select>`;
+  }
+
   function renderResultados(lista) {
     const el = document.getElementById('searchResults');
     if (!lista.length) {
       el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Nenhum resultado encontrado.</div>';
       return;
     }
-    el.innerHTML = lista.map(c => `
-      <div onclick="carregarContato(${JSON.stringify(c).replace(/"/g,'&quot;')})"
+    el.innerHTML = lista.map(c => {
+      const pip = c.pipeline || '';
+      const pipColor = pip ? (PIP_COLORS[pip] || 'var(--text3)') : 'var(--text3)';
+      const cJson = JSON.stringify(c).replace(/"/g,'&quot;');
+      return `
+      <div onclick="carregarContato(${cJson})"
            style="padding:12px 14px;background:var(--surface2);border:1px solid var(--border);
                   border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:border .2s"
            onmouseover="this.style.borderColor='var(--accent)'"
            onmouseout="this.style.borderColor='var(--border)'">
-        <div style="font-weight:600;color:var(--text)">${c.nome || '—'}</div>
-        <div style="font-size:13px;color:var(--text2);margin-top:3px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-weight:600;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nome || '—'}</span>
+          <span style="font-size:11px;font-weight:700;color:${pipColor};background:rgba(255,255,255,.04);
+                border:1px solid ${pipColor}44;border-radius:99px;padding:2px 8px;white-space:nowrap;flex-shrink:0;
+                display:${pip ? 'inline' : 'none'}">${pip}</span>
+          ${pipSelectHtml(c)}
+        </div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">
           ${c.telefone || ''} ${c.email ? '· '+c.email : ''} ${c.categoria ? '· '+c.categoria : ''}
           ${c.score ? '· Score '+c.score : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
+  }
+
+  async function salvarPipelineRapido(sel) {
+    const idCliente = sel.dataset.id;
+    const linha     = sel.dataset.linha;
+    const pipeline  = sel.value;
+    try {
+      const body = new URLSearchParams();
+      body.set('dados', JSON.stringify({acao:'salvar_pipeline', token:tokenSessao(), idCliente, _linha:linha, pipeline}));
+      const res  = await fetch(WEBHOOK_URL, {method:'POST', body});
+      const json = await res.json();
+      if (json.ok) {
+        sel.style.borderColor = 'var(--accent2)';
+        setTimeout(() => { sel.style.borderColor = ''; }, 1800);
+        // atualiza badge ao lado do nome
+        const row   = sel.closest('[onclick]');
+        const badge = row ? row.querySelector('span[style*="border-radius:99px"]') : null;
+        if (badge) {
+          if (pipeline) {
+            const c = PIP_COLORS[pipeline] || 'var(--text3)';
+            badge.textContent = pipeline;
+            badge.style.color = c;
+            badge.style.borderColor = c + '44';
+            badge.style.display = 'inline';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      }
+    } catch(e) {
+      sel.style.borderColor = 'var(--danger)';
+      setTimeout(() => { sel.style.borderColor = ''; }, 1800);
+    }
   }
 
   function carregarContato(c) {
