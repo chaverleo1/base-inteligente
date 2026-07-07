@@ -1,5 +1,11 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 — `code.txt` confirmado como arquivo canônico único; `Code.gs.txt` removido de novo
+
+Usuário confirmou: `code.txt` é o arquivo oficial do backend daqui pra frente. `Code.gs.txt`
+(recriado pela outra estação durante o merge desta sessão) removido de novo, já confirmado idêntico
+via `diff` antes de apagar.
+
 ## 2026-07-06 — Merge com trabalho em paralelo (Pipeline, revenda_diff, contagem de favoritos)
 
 Outra estação pushou 5 commits enquanto a parte 20 estava sendo feita: Pipeline de Negociações
