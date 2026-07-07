@@ -138,6 +138,8 @@
   .diff-box.diff-neg{background:rgba(255,90,90,.14);border-color:rgba(255,90,90,.35)}
   .diff-box.diff-zero{background:rgba(74,84,112,.12);border-color:var(--border);cursor:default}
   .diff-box.diff-zero:hover{transform:none;filter:none}
+  .diff-mod{color:#f5a623}
+  .diff-box.diff-mod{background:rgba(245,166,35,.14);border-color:rgba(245,166,35,.35)}
   .revenda-diff-tbl .total-row td{color:var(--text);font-weight:700;border-top:1px solid var(--border);border-bottom:none;padding-top:10px}
 
   /* ── PIPELINE ── */
@@ -753,32 +755,40 @@ function renderRevendaDiff(d) {
   const totalCls  = totalDiff > 0 ? 'diff-pos' : totalDiff < 0 ? 'diff-neg' : 'diff-zero';
   const totalStr  = totalDiff > 0 ? '+' + totalDiff : totalDiff === 0 ? '—' : String(totalDiff);
 
+  const totalNovo = temSync ? (d.adicionados || []).length : 0;
+  const totalMod  = temSync ? (d.modificados || []).length : 0;
+
   const corpo = temSync ? `
     <div class="revenda-diff-meta">Última sincronização: <b style="color:var(--text)">${d.ultimaSync}</b>
       &nbsp;·&nbsp; <span class="${totalCls}" style="font-weight:700">${totalStr !== '—' ? totalStr + ' imóveis' : 'sem variação'}</span>
     </div>
     ${d.antesDesde && d.antesDesde !== '—' ? `<div class="revenda-diff-meta" style="margin-top:2px">
-      Registro "Antes" congelado desde <b style="color:var(--text)">${d.antesDesde}</b> (renova a cada 12h)
+      Registro "Último" congelado desde <b style="color:var(--text)">${d.antesDesde}</b> (renova a cada 12h)
     </div>` : ''}
     <table class="revenda-diff-tbl">
-      <thead><tr><th>Tipo</th><th>Antes</th><th>Depois</th><th>Variação</th></tr></thead>
+      <thead><tr><th>Tipo</th><th>Último</th><th>Modificado</th><th>Novo</th><th>Variação</th></tr></thead>
       <tbody>
         ${d.delta.map(r => {
-          const df  = r.diff;
-          const cls = df > 0 ? 'diff-pos' : df < 0 ? 'diff-neg' : 'diff-zero';
-          const dStr = df > 0 ? '+' + df : df === 0 ? '—' : String(df);
+          const escTipo = String(r.tipo).replace(/'/g,"\\'");
+          const df    = r.variacao;
+          const cls   = df > 0 ? 'diff-pos' : df < 0 ? 'diff-neg' : 'diff-zero';
+          const dStr  = df > 0 ? '+' + df : df === 0 ? '—' : String(df);
+          const modCls  = r.modificado > 0 ? 'diff-mod' : 'diff-zero';
+          const novoCls = r.novo > 0 ? 'diff-pos' : 'diff-zero';
           return `<tr>
             <td class="td-tipo">${r.tipo}</td>
-            <td>${r.antes}</td>
-            <td>${r.depois}</td>
-            <td><span class="diff-box ${cls}" ${df !== 0 ? `onclick="verRevendaDiffTipo('${String(r.tipo).replace(/'/g,"\\'")}')"` : ''}>${dStr}</span></td>
+            <td>${r.ultimo}</td>
+            <td><span class="diff-box ${modCls}" ${r.modificado > 0 ? `onclick="verRevendaDiffTipo('${escTipo}','modificado')"` : ''}>${r.modificado}</span></td>
+            <td><span class="diff-box ${novoCls}" ${r.novo > 0 ? `onclick="verRevendaDiffTipo('${escTipo}','novo')"` : ''}>${r.novo}</span></td>
+            <td><span class="diff-box ${cls}" ${df !== 0 ? `onclick="verRevendaDiffTipo('${escTipo}','variacao')"` : ''}>${dStr}</span></td>
           </tr>`;
         }).join('')}
         <tr class="total-row">
           <td>Total</td>
           <td>${d.totalAntes || 0}</td>
-          <td>${d.totalDepois || 0}</td>
-          <td><span class="diff-box ${totalCls}" ${totalDiff !== 0 ? `onclick="verRevendaDiffTipo('__total__')"` : ''}>${totalStr}</span></td>
+          <td><span class="diff-box ${totalMod > 0 ? 'diff-mod' : 'diff-zero'}" ${totalMod > 0 ? `onclick="verRevendaDiffTipo('__total__','modificado')"` : ''}>${totalMod}</span></td>
+          <td><span class="diff-box ${totalNovo > 0 ? 'diff-pos' : 'diff-zero'}" ${totalNovo > 0 ? `onclick="verRevendaDiffTipo('__total__','novo')"` : ''}>${totalNovo}</span></td>
+          <td><span class="diff-box ${totalCls}" ${totalDiff !== 0 ? `onclick="verRevendaDiffTipo('__total__','variacao')"` : ''}>${totalStr}</span></td>
         </tr>
       </tbody>
     </table>` : `<div class="revenda-diff-meta">Nenhuma sincronização registrada ainda — clique em "Sincronizar revenda" para gerar o primeiro comparativo.</div>`;
@@ -811,14 +821,14 @@ async function sincronizarRevendaClick() {
   }
 }
 
-// Card "Novidades" da Visão geral: total de imóveis novos identificados na
-// coluna Variação (hoje só REVENDA — quando o mesmo diff existir para
-// LANÇAMENTOS, basta somar os adicionados de lá aqui também).
+// Card "Novidades" da Visão geral: total de imóveis novos OU modificados
+// (preço, endereço, etc.) identificados na última janela — hoje só REVENDA
+// (quando o mesmo diff existir para LANÇAMENTOS, basta somar aqui também).
 function atualizarCardNovidades_(d) {
   const valorEl = document.getElementById('cardNovidadesValue');
   const cardEl  = document.getElementById('cardNovidades');
   if (!valorEl || !cardEl) return;
-  const novos = (d.adicionados || []).length;
+  const novos = (d.adicionados || []).length + (d.modificados || []).length;
   valorEl.textContent = novos.toLocaleString('pt-BR');
   if (novos > 0) {
     cardEl.style.cursor = 'pointer';
@@ -833,25 +843,35 @@ function atualizarCardNovidades_(d) {
 
 function verNovidades() {
   const d = window._revendaDiffData || {};
-  const itens = (d.adicionados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Adicionado'}));
+  const itens = [
+    ...(d.adicionados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Novo'})),
+    ...(d.modificados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Modificado'}))
+  ];
   sessionStorage.setItem('bi_insight_detail', JSON.stringify({
-    title: 'Novidades — imóveis novos identificados', icon: '🆕', color: 'var(--accent2)', type: 'imoveis', items: itens
+    title: 'Novidades — imóveis novos ou modificados', icon: '🆕', color: 'var(--accent2)', type: 'imoveis', items: itens
   }));
   window.location.href = 'insight-detail.html';
 }
 
-// Abre insight-detail.html com os imóveis que entraram/saíram do portfólio
-// desde a última sincronização — '__total__' mostra todos os tipos, senão
-// filtra só o tipo daquela linha da tabela.
-function verRevendaDiffTipo(tipo) {
+// Abre insight-detail.html com os imóveis por trás de uma célula da tabela
+// "Último/Modificado/Novo/Variação" — '__total__' mostra todos os tipos,
+// senão filtra pelo tipo daquela linha. categoria escolhe qual lista mostrar:
+// 'novo' (só adicionados), 'modificado' (só alterados) ou 'variacao'/omitido
+// (os dois + removidos, o comparativo completo daquele tipo).
+function verRevendaDiffTipo(tipo, categoria) {
   const d = window._revendaDiffData || {};
   const porTipo = o => tipo === '__total__' || (o.tipo || 'Outros') === tipo;
-  const itens = [
-    ...(d.adicionados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Adicionado' })),
-    ...(d.removidos   || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Removido'   }))
-  ];
+  const novos      = () => (d.adicionados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Novo' }));
+  const modificados = () => (d.modificados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Modificado' }));
+  const removidos   = () => (d.removidos   || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Removido' }));
+
+  let itens, rotulo;
+  if (categoria === 'novo')             { itens = novos();       rotulo = 'Novos imóveis'; }
+  else if (categoria === 'modificado')  { itens = modificados(); rotulo = 'Imóveis modificados'; }
+  else                                   { itens = [...novos(), ...modificados(), ...removidos()]; rotulo = 'Variação do portfólio'; }
+
   sessionStorage.setItem('bi_insight_detail', JSON.stringify({
-    title: tipo === '__total__' ? 'Variação do portfólio — Total' : `Variação do portfólio — ${tipo}`,
+    title: tipo === '__total__' ? `${rotulo} — Total` : `${rotulo} — ${tipo}`,
     icon: '📋', color: 'var(--accent2)', type: 'imoveis', items: itens
   }));
   window.location.href = 'insight-detail.html';
@@ -1018,7 +1038,7 @@ function renderDados(json) {
     <div class="card" style="position:relative" id="cardNovidades">
       <div class="card-label">🆕 Novidades</div>
       <div class="card-value" id="cardNovidadesValue" style="color:var(--accent2)">—</div>
-      <div class="card-sub">imóveis novos identificados (revenda)</div>
+      <div class="card-sub">novos ou modificados (revenda)</div>
     </div>`;
 
   // ── Matches

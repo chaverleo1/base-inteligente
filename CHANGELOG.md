@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Detecção de imóveis modificados + colunas Último/Modificado/Novo/Variação
+
+Até aqui, `revenda_diff` só comparava por presença/ausência do `codigo` — um imóvel que teve o
+preço (ou qualquer outro campo) alterado, mas continuou na base, não aparecia em lugar nenhum do
+painel: não era "novo" nem "removido". Agora existe uma terceira categoria, "Modificado": mesmo
+código presente no registro "Último" e no atual, mas com pelo menos um campo de conteúdo diferente
+(`imovelMudou_`, comparando `tipo/finalidade/bairro/cidade/endereco/condominio/quartos/suites/
+banheiros/vagas/areaUtil/areaTerr/valorVenda/padrao/estagio/publicadoSite/urlSite/foto/latitude/
+longitude` — de propósito SEM `dataAtualizacao`/`ultimaSincronizacao`, que mudam em toda sincronização
+e fariam tudo parecer "modificado" sempre).
+
+Colunas da tabela renomeadas/reorganizadas: **Tipo | Último | Modificado | Novo | Variação**
+(antes era Tipo/Antes/Depois/Variação). "Último" é o mesmo registro congelado por 12h já existente;
+"Modificado" e "Novo" são caixas clicáveis como a "Variação" já era, cada uma abrindo a lista
+filtrada daquela categoria específica em `insight-detail.html` (`verRevendaDiffTipo(tipo, categoria)`).
+O card "Novidades" da Visão geral passou a somar `adicionados + modificados`, e não só os novos.
+
+Testado via Node (cenário com imóvel modificado, removido, novo e um sem alteração — cada um cai na
+categoria certa e o `delta` por tipo bate) e via preview (tabela com as 5 colunas certas, cliques
+abrindo a lista filtrada por categoria, card de Novidades somando novo+modificado, badge "Modificado"
+em âmbar em `insight-detail.html`).
+
 ## 2026-07-07 — Registro "Antes" congelado por 12h
 
 Mudança de comportamento pedida pelo usuário: antes, cada `sincronizarRevenda()` (gatilho de 6h ou

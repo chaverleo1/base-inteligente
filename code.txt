@@ -360,23 +360,35 @@ function doGet(e) {
       var antesObjs_rd  = linhasComoObjetos_(ss_rd.getSheetByName('REVENDA_ANTERIOR'));
       var depoisObjs_rd = linhasComoObjetos_(ss_rd.getSheetByName('REVENDA'));
 
-      var antesPorCod_rd  = {}; antesObjs_rd.forEach(function(o)  { if (o.codigo) antesPorCod_rd[o.codigo]  = true; });
-      var depoisPorCod_rd = {}; depoisObjs_rd.forEach(function(o) { if (o.codigo) depoisPorCod_rd[o.codigo] = true; });
-      var adicionados_rd = depoisObjs_rd.filter(function(o) { return o.codigo && !antesPorCod_rd[o.codigo]; });
-      var removidos_rd   = antesObjs_rd.filter(function(o)  { return o.codigo && !depoisPorCod_rd[o.codigo]; });
+      var antesPorCodObj_rd  = {}; antesObjs_rd.forEach(function(o)  { if (o.codigo) antesPorCodObj_rd[o.codigo]  = o; });
+      var depoisPorCodObj_rd = {}; depoisObjs_rd.forEach(function(o) { if (o.codigo) depoisPorCodObj_rd[o.codigo] = o; });
+      var adicionados_rd = depoisObjs_rd.filter(function(o) { return o.codigo && !antesPorCodObj_rd[o.codigo]; });
+      var removidos_rd   = antesObjs_rd.filter(function(o)  { return o.codigo && !depoisPorCodObj_rd[o.codigo]; });
+      // "Modificado": mesmo código presente nos dois lados, mas algum campo de
+      // conteúdo mudou (preço, endereço, etc.) — ver imovelMudou_. Sem isso, um
+      // imóvel que só teve o preço atualizado não aparecia em lugar nenhum do
+      // painel (não é novo, não foi removido).
+      var modificados_rd = depoisObjs_rd.filter(function(o) {
+        var ant = o.codigo && antesPorCodObj_rd[o.codigo];
+        return !!ant && imovelMudou_(ant, o);
+      });
 
-      // contagem por tipo (o que a tabela "Antes/Depois/Variação" exibe)
-      var snapAntes_rd = {}, snapDepois_rd = {};
-      antesObjs_rd.forEach(function(o)  { var t = o.tipo || 'Outros'; snapAntes_rd[t]  = (snapAntes_rd[t]  || 0) + 1; });
-      depoisObjs_rd.forEach(function(o) { var t = o.tipo || 'Outros'; snapDepois_rd[t] = (snapDepois_rd[t] || 0) + 1; });
-      var allT_rd = {};
-      Object.keys(snapAntes_rd).forEach(function(t)  { allT_rd[t] = true; });
-      Object.keys(snapDepois_rd).forEach(function(t) { allT_rd[t] = true; });
-      var delta_rd = Object.keys(allT_rd).map(function(t) {
-        var a = snapAntes_rd[t]  || 0;
-        var d = snapDepois_rd[t] || 0;
-        return {tipo: t, antes: a, depois: d, diff: d - a};
-      }).sort(function(a, b) { return b.depois - a.depois; });
+      // contagem por tipo (o que a tabela "Último/Modificado/Novo/Variação" exibe)
+      var ultimoPorTipo_rd = {}, depoisPorTipo_rd = {}, novoPorTipo_rd = {}, modPorTipo_rd = {};
+      var incTipo_rd = function(mapa, tipo) { mapa[tipo] = (mapa[tipo] || 0) + 1; };
+      antesObjs_rd.forEach(function(o)   { incTipo_rd(ultimoPorTipo_rd,  o.tipo || 'Outros'); });
+      depoisObjs_rd.forEach(function(o)  { incTipo_rd(depoisPorTipo_rd,  o.tipo || 'Outros'); });
+      adicionados_rd.forEach(function(o) { incTipo_rd(novoPorTipo_rd,    o.tipo || 'Outros'); });
+      modificados_rd.forEach(function(o) { incTipo_rd(modPorTipo_rd,     o.tipo || 'Outros'); });
+
+      var todosTipos_rd = {};
+      Object.keys(ultimoPorTipo_rd).forEach(function(t)  { todosTipos_rd[t] = true; });
+      Object.keys(depoisPorTipo_rd).forEach(function(t) { todosTipos_rd[t] = true; });
+      var delta_rd = Object.keys(todosTipos_rd).map(function(t) {
+        var ultimo = ultimoPorTipo_rd[t] || 0;
+        var depois = depoisPorTipo_rd[t] || 0;
+        return {tipo: t, ultimo: ultimo, modificado: modPorTipo_rd[t] || 0, novo: novoPorTipo_rd[t] || 0, variacao: depois - ultimo};
+      }).sort(function(a, b) { return (depoisPorTipo_rd[b.tipo] || 0) - (depoisPorTipo_rd[a.tipo] || 0); });
 
       return ok({
         ultimaSync: sync_rd,
@@ -385,9 +397,10 @@ function doGet(e) {
         totalDepois: depoisObjs_rd.length,
         delta: delta_rd,
         adicionados: adicionados_rd,
-        removidos: removidos_rd
+        removidos: removidos_rd,
+        modificados: modificados_rd
       });
-    } catch(err) { return ok({ultimaSync:'—', antesDesde:'—', totalAntes:0, totalDepois:0, delta:[], adicionados:[], removidos:[]}); }
+    } catch(err) { return ok({ultimaSync:'—', antesDesde:'—', totalAntes:0, totalDepois:0, delta:[], adicionados:[], removidos:[], modificados:[]}); }
   }
 
   if (acao === 'pipeline_dados') {
@@ -1919,6 +1932,23 @@ function imovelParaLinha_(p, agora) {
     (p.updated_at || '').substring(0, 10),
     p.latitude || '', p.longitude || '', agora
   ];
+}
+
+// Campos de conteúdo comparados por imovelMudou_ para detectar imóvel
+// "Modificado" no revenda_diff — de propósito NÃO inclui codigo/db_id
+// (identidade, não conteúdo) nem dataCadastro/dataAtualizacao/
+// ultimaSincronizacao (timestamps que mudam em toda sincronização, o que
+// faria TODO imóvel aparecer como modificado sempre).
+var CAMPOS_COMPARAVEIS_REVENDA = [
+  'tipo', 'finalidade', 'bairro', 'cidade', 'endereco', 'condominio',
+  'quartos', 'suites', 'banheiros', 'vagas', 'areaUtil', 'areaTerr',
+  'valorVenda', 'padrao', 'estagio', 'publicadoSite', 'urlSite', 'foto',
+  'latitude', 'longitude'
+];
+function imovelMudou_(antes, depois) {
+  return CAMPOS_COMPARAVEIS_REVENDA.some(function(campo) {
+    return String(antes[campo] || '') !== String(depois[campo] || '');
+  });
 }
 
 // Converte as linhas de uma aba (cabeçalho na linha 1) em objetos {coluna: valor}.
