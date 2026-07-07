@@ -207,6 +207,19 @@ function doGet(e) {
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
 
+  // Diagnóstico pontual: investigar por que um imóvel específico da Imobzi
+  // não aparece na REVENDA (ex: ativo no CRM mas não marcado "publicar no
+  // site") sem precisar adivinhar os nomes/valores dos campos da API.
+  if (acao === 'adm_debug_imovel_revenda') {
+    try {
+      var codigoBusca_dbg = String(e.parameter.codigo || '').trim();
+      if (!codigoBusca_dbg) return ok({ status: 'erro', motivo: 'informe ?codigo=' });
+      var achado_dbg = debugImovelRevenda_(codigoBusca_dbg);
+      if (!achado_dbg) return ok({ status: 'nao_encontrado_na_imobzi', codigo: codigoBusca_dbg });
+      return ok({ status: 'ok', imovel: achado_dbg });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+
   if (acao === 'adm_dados_insights') {
     try {
       var ss_ = SpreadsheetApp.getActiveSpreadsheet();
@@ -1894,6 +1907,32 @@ function buscarTodosImoveis_() {
   } while (cursor && todos.length < (dados.count || 9999));
 
   return todos;
+}
+
+// Busca um imóvel específico direto na API da Imobzi por código (sem aplicar
+// o filtro de saleValue/status/active de buscarTodosImoveis_) — usado pela
+// rota adm_debug_imovel_revenda pra inspecionar por que um imóvel não está
+// entrando na sincronização (ex: status/active/site_publish reais na Imobzi).
+function debugImovelRevenda_(codigo) {
+  var headers = { 'X-Imobzi-Secret': obterImobziToken_() };
+  var cursor = null, pagina = 0, achado = null;
+  do {
+    var url = IMOBZI_BASE + '/properties?limit=' + IMOBZI_LIMIT;
+    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+    var resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) break;
+    var dados = JSON.parse(resp.getContentText());
+    var props = dados.properties || [];
+    for (var i = 0; i < props.length; i++) {
+      if (String(props[i].code) === String(codigo)) { achado = props[i]; break; }
+    }
+    if (achado) break;
+    cursor = dados.cursor || null;
+    pagina++;
+    if (pagina >= 50) break;
+    Utilities.sleep(300);
+  } while (cursor);
+  return achado;
 }
 
 function formatarMoeda_(v) {

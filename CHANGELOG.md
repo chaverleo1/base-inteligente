@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Rota de diagnóstico para imóvel ausente na sincronização (ex: Cód. 3468)
+
+Usuário relatou que imóveis ativos na Imobzi mas não marcados "publicar no site" também deveriam
+entrar como disponíveis (ex: código 3468). Conferindo o código: `publicadoSite` NUNCA é usado como
+filtro em `buscarTodosImoveis_()` — o filtro atual é só `saleValue > 0 && status === 'available' &&
+active !== false`. Ou seja, a causa real provavelmente não é `site_publish` diretamente, e sim algum
+valor de `status` da Imobzi que não é `'available'` para esses imóveis (a API da Imobzi não foi
+inspecionada ao vivo pra confirmar).
+
+Antes de alterar o filtro "no escuro" e arriscar incluir imóvel vendido/reservado por engano,
+adicionei uma rota de diagnóstico: `adm_debug_imovel_revenda&codigo=XXXX` — busca o imóvel direto na
+API da Imobzi (sem aplicar o filtro) e retorna os campos crus (`status`, `active`, `site_publish`,
+`sale_value`, etc.) pra decidir o fix certo com base no dado real, não em suposição.
+
 ## 2026-07-07 — "obs:" com o que mudou em cada imóvel modificado
 
 Complementa a detecção de "Modificado" desta mesma sessão: agora `revenda_diff` também descreve
