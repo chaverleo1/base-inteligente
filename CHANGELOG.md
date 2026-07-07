@@ -1,5 +1,21 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Estágio do pipeline na Etapa 1 do formulário
+
+Adicionado um select "Estágio no pipeline" na Etapa 1 (Identificação) do `formulario.html`, antes
+do campo Nome, com as mesmas 5 opções já usadas no funil do Dashboard (Urgentes, Pós-Visita,
+Agendar Visita, Pré-Atendimento, Ganhos). Nenhuma mudança de backend foi necessária: a coluna
+`pipeline` já existe em `CABECALHO` e `salvar()`/`atualizar()` já gravam qualquer campo presente no
+payload genericamente — bastou incluir `pipeline` no payload de `saveClient()` e preencher o select
+ao editar um contato existente (`carregarContato()`).
+
+Isso complementa o select rápido de pipeline que já existia nos resultados de busca da Etapa 1
+(usado para mudar o estágio sem abrir o cadastro completo) — agora também é possível definir/editar
+o estágio dentro do próprio formulário de cadastro.
+
+Testado via preview: select aparece antes do campo Nome com as opções certas, o valor escolhido vai
+no payload salvo, e reabrir um contato existente preenche o select com o estágio salvo.
+
 ## 2026-07-07 — Card "Novidades" na Visão geral
 
 Novo card na seção "Visão geral" do Dashboard, ao lado de Quentes/Mornos/Frios: mostra o total de
