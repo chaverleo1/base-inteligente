@@ -87,6 +87,17 @@ a { text-decoration:none; color:inherit; }
 .score-warm { color:#f5a623; }
 .score-cold { color:var(--accent); }
 
+/* ── PIPELINE SELECT ── */
+.pip-select {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text2); font-size: 11px; font-weight: 600; padding: 4px 8px;
+  font-family: 'Inter', sans-serif; cursor: pointer; outline: none;
+  transition: border-color .2s; min-width: 130px; width: 100%;
+}
+.pip-select:hover  { border-color: var(--accent); }
+.pip-select:focus  { border-color: var(--accent); }
+.pip-select.saved  { border-color: var(--accent2) !important; }
+
 .btn-editar { background:rgba(79,124,255,.1); border:1px solid rgba(79,124,255,.25); color:var(--accent);
               border-radius:var(--radius-xs); padding:5px 12px; font-size:12px; font-weight:600;
               cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap; }
@@ -374,6 +385,45 @@ function statusFrescorEl(dataAtualizacao) {
   return `<span class="badge badge-blue" title="${titulo}">🔵 Frio</span>`;
 }
 
+const PIP_STAGES = ['Urgentes','Pós-Visita','Agendar Visita','Pré-Atendimento','Ganhos'];
+const PIP_COLORS = {
+  'Urgentes':'#ff4a3f','Pós-Visita':'#ff7844','Agendar Visita':'#ffc107',
+  'Pré-Atendimento':'#3fc9e0','Ganhos':'#1a9ed4'
+};
+
+function pipSelectHtml(c) {
+  const cur  = String(c.pipeline || '');
+  const opts = ['', ...PIP_STAGES].map(s =>
+    `<option value="${s}" ${s === cur ? 'selected' : ''}>${s || 'Selecione'}</option>`
+  ).join('');
+  return `<select class="pip-select" data-id="${c.idCliente||''}" data-linha="${c._linha||''}"
+    onchange="salvarPipelineRapido(this)">${opts}</select>`;
+}
+
+async function salvarPipelineRapido(sel) {
+  const idCliente = sel.dataset.id;
+  const linha     = sel.dataset.linha;
+  const pipeline  = sel.value;
+  try {
+    const body = new URLSearchParams();
+    body.set('dados', JSON.stringify({
+      acao: 'salvar_pipeline', token: tokenSessao(),
+      idCliente, _linha: linha, pipeline
+    }));
+    const res  = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const json = await res.json();
+    if (json.ok) {
+      sel.classList.add('saved');
+      setTimeout(() => sel.classList.remove('saved'), 1800);
+      showToast('Pipeline atualizado', 'ok');
+    } else {
+      showToast('Erro: ' + (json.motivo || 'falha ao salvar'), 'erro');
+    }
+  } catch (e) {
+    showToast('Erro de conexão', 'erro');
+  }
+}
+
 function render(lista) {
   const ordenada = [...lista].sort((a,b) => parseDataBr_(b.dataAtualizacao) - parseDataBr_(a.dataAtualizacao));
   document.getElementById('root').innerHTML = `
@@ -389,6 +439,7 @@ function tabela(items) {
     return `<tr>
     <td class="td-cod">${c.idCliente || '—'}</td>
     <td class="td-nome">${c.nome || '—'}</td>
+    <td>${pipSelectHtml(c)}</td>
     <td>${c.segmento ? `<span class="badge badge-blue">${c.segmento}</span>` : '<span class="badge badge-muted">—</span>'}</td>
     <td>${scoreEl(score)}</td>
     <td>${statusFrescorEl(c.dataAtualizacao)}</td>
@@ -401,7 +452,7 @@ function tabela(items) {
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr>
-      <th>Código</th><th>Nome</th><th>Segmento</th><th>Score</th>
+      <th>Código</th><th>Nome</th><th>Pipeline</th><th>Segmento</th><th>Score</th>
       <th title="Status por tempo de cadastro — diferente do Quente/Morno/Frio da home, que é sobre qualidade de match">Status</th>
       <th>Atualizado em</th><th>Ações</th>
     </tr></thead><tbody>${rows}</tbody>
