@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Card só considera a ação Ativa mais recente por cliente
+
+Com o histórico permanente, um cliente pode acumular mais de uma entrada com `status='Ativa'` (se o
+corretor cadastrar uma nova ação sem desativar a anterior). O card do Dashboard agora considera só a
+**mais recente** por cliente — as demais, mesmo ativas, não aparecem mais (evita duplicar/confundir
+com uma ação já superada). Se a mais recente estiver desativada mas existir uma mais antiga ainda
+Ativa, essa mais antiga aparece (é a única Ativa que sobrou); se não houver nenhuma Ativa, o cliente
+simplesmente não aparece no card.
+
+Implementado com um map idCliente→linha em `adm_dados_insights`: como a aba é sempre preenchida em
+ordem cronológica (`appendRow`), a última ocorrência Ativa lida pra um cliente já é a mais recente,
+sobrescrevendo qualquer anterior no map antes do filtro de janela (vencida/hoje/próximos 7 dias) ser
+aplicado.
+
+Testado via Node: cliente com 2 Ativas mostra só a mais nova; cliente cuja mais nova foi desativada
+mas tem uma mais antiga Ativa mostra essa antiga; cliente só com Inativa não aparece em lugar nenhum.
+
 ## 2026-07-07 — Fix: backfill das ações planejadas que existiam antes do histórico
 
 Causa raiz do card sumir de novo: quando o histórico (`ACOES_PLANEJADAS`) foi introduzido, as ações

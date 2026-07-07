@@ -337,6 +337,11 @@ function doGet(e) {
       // na ficha do cliente marca status='Inativa' e some daqui, sem apagar o
       // histórico. diasAteVencimento_ devolve negativo pra data futura, positivo
       // pra vencida, 0 pra hoje; traz vencidas + hoje + próximos 7 dias (>= -7).
+      // O card só considera a ação ATIVA mais recente de cada cliente — se o
+      // corretor cadastrar uma nova sem desativar a anterior, a antiga não
+      // deve mais aparecer (a ordem das linhas na aba já é cronológica via
+      // appendRow, então a última ocorrência Ativa de um idCliente É a mais
+      // recente, sobrescrevendo qualquer uma anterior no map abaixo).
       var abaAP_ = ss_.getSheetByName('ACOES_PLANEJADAS');
       if (abaAP_ && abaAP_.getLastRow() > 1) {
         var iAPId_     = CABECALHO_ACOES_PLANEJADAS.indexOf('idCliente');
@@ -346,15 +351,22 @@ function doGet(e) {
         var iAPData_   = CABECALHO_ACOES_PLANEJADAS.indexOf('dataPlanejada');
         var iAPStatus_ = CABECALHO_ACOES_PLANEJADAS.indexOf('status');
         var dadosAP_ = abaAP_.getRange(2, 1, abaAP_.getLastRow() - 1, CABECALHO_ACOES_PLANEJADAS.length).getValues();
+        var maisRecentePorCliente_ = {};
         dadosAP_.forEach(function(r_) {
           if (String(r_[iAPStatus_] || '').trim() !== 'Ativa') return;
+          var idc_ = String(r_[iAPId_] || '').trim();
+          if (!idc_) return;
+          maisRecentePorCliente_[idc_] = r_;
+        });
+        Object.keys(maisRecentePorCliente_).forEach(function(idc_) {
+          var r_ = maisRecentePorCliente_[idc_];
           var dataPlan_ = r_[iAPData_];
           if (!dataPlan_) return;
           var diasAcao_ = diasAteVencimento_(dataPlan_);
           if (diasAcao_ === null || diasAcao_ < -7) return;
           acoesPlanejadas_.push({
             nome: String(r_[iAPNome_] || ''), telefone: String(r_[iAPTel_] || ''),
-            idCliente: String(r_[iAPId_] || ''),
+            idCliente: idc_,
             proximaAcao: String(r_[iAPAcao_] || ''),
             proximaAcaoData: (dataPlan_ instanceof Date) ? Utilities.formatDate(dataPlan_, tz_, 'dd/MM/yyyy') : String(dataPlan_),
             dias: diasAcao_
