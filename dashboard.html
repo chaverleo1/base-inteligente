@@ -108,6 +108,25 @@
   .insight-ver-btn{cursor:pointer;color:var(--ic,var(--accent));font-weight:700;margin-left:8px;white-space:nowrap}
   .insight-ver-btn:hover{opacity:.75}
 
+  /* ── PIPELINE ── */
+  .pipeline-funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:32px;
+                   border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+  .pip-col{display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06)}
+  .pip-col:last-child{border-right:none}
+  .pip-header{padding:10px 12px;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;
+              text-transform:uppercase;letter-spacing:.7px;text-align:center;
+              border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;gap:4px}
+  .pip-count{font-size:20px;font-weight:700;font-family:'Space Grotesk',sans-serif;line-height:1;margin-top:2px}
+  .pip-body{padding:8px 7px;min-height:90px;max-height:260px;overflow-y:auto;flex:1}
+  .pip-body::-webkit-scrollbar{width:3px}
+  .pip-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+  .pip-name{font-size:12px;padding:5px 8px;border-radius:5px;margin-bottom:3px;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            background:rgba(255,255,255,.04);color:var(--text2);cursor:default}
+  .pip-name:hover{background:rgba(255,255,255,.08);color:var(--text)}
+  .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
+  @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
+
   /* ── GRÁFICOS ── */
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
   @media(max-width:700px){.charts-row{grid-template-columns:1fr}}
@@ -373,6 +392,12 @@
   <div class="section-title">Visão geral</div>
   <div class="cards-row" id="cardsRow">
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando dados</div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="section-title">🔥 Pipeline de Negociações</div>
+  <div class="pipeline-funnel" id="pipelineFunnel">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando pipeline</div>
   </div>
 
   <!-- MATCHES -->
@@ -662,6 +687,45 @@ async function carregarDados() {
   }
   carregarLancamentosDash();
   carregarInsightsExtended();
+  carregarPipeline();
+}
+
+// ── PIPELINE ──────────────────────────────────────────────────────────────────
+
+async function carregarPipeline() {
+  try {
+    const res  = await fetch(WEBHOOK_URL + '?acao=pipeline_dados&token=' + encodeURIComponent(tokenSessao()));
+    const json = await res.json();
+    if (trataNaoAutenticado(json)) return;
+    renderPipeline(json);
+  } catch(e) {
+    document.getElementById('pipelineFunnel').innerHTML =
+      `<div style="grid-column:1/-1;color:var(--danger);padding:16px">Erro ao carregar pipeline: ${e.message}</div>`;
+  }
+}
+
+function renderPipeline(json) {
+  const stages = json.stages || {};
+  const cfg = [
+    {key:'urgentes',       label:'Urgentes',        icon:'🔥', bg:'rgba(255,59,48,.15)',   text:'#ff4a3f'},
+    {key:'posVisita',      label:'Pós-Visita',       icon:'👁',  bg:'rgba(255,107,53,.11)',  text:'#ff7844'},
+    {key:'agendarVisita',  label:'Agendar Visita',   icon:'📅', bg:'rgba(255,184,0,.09)',   text:'#ffc107'},
+    {key:'preAtendimento', label:'Pré-Atendimento',  icon:'📋', bg:'rgba(63,201,224,.08)',  text:'#3fc9e0'},
+    {key:'ganhos',         label:'Ganhos',           icon:'✅', bg:'rgba(10,126,164,.13)',  text:'#1a9ed4'},
+  ];
+  document.getElementById('pipelineFunnel').innerHTML = cfg.map(s => {
+    const list  = stages[s.key] || [];
+    const names = list.length
+      ? list.map(c => `<div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}</div>`).join('')
+      : `<div class="pip-empty">—</div>`;
+    return `<div class="pip-col" style="background:${s.bg}">
+      <div class="pip-header" style="color:${s.text}">
+        <span>${s.icon} ${s.label}</span>
+        <span class="pip-count" style="color:${s.text}">${list.length}</span>
+      </div>
+      <div class="pip-body">${names}</div>
+    </div>`;
+  }).join('');
 }
 
 async function carregarLancamentosDash() {

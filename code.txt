@@ -39,7 +39,10 @@ const CABECALHO = [
   // automática: salvar()/atualizar() gravam "agora" toda vez. Usada pra medir
   // frescor do cadastro (scoreComFrescor_) e pro alerta de "esfriando" no
   // dashboard (contatos.html, adm_dados_insights).
-  'dataAtualizacao'
+  'dataAtualizacao',
+  // Estágio do cliente no funil de vendas (adicionado em 2026-07) — valores:
+  // Urgentes, Pós-Visita, Agendar Visita, Pré-Atendimento, Ganhos. Vazio = sem estágio.
+  'pipeline'
 ];
 
 const CABECALHO_LANCAMENTOS = [
@@ -342,6 +345,33 @@ function doGet(e) {
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
 
+  if (acao === 'pipeline_dados') {
+    try {
+      var ss_ = SpreadsheetApp.openById(SHEET_ID);
+      var aba_ = ss_.getSheetByName('CONTATOS');
+      var dados_ = aba_.getDataRange().getValues();
+      var cab_ = dados_[0];
+      var iNome_ = cab_.indexOf('nome');
+      var iId_   = cab_.indexOf('idCliente');
+      var iPip_  = cab_.indexOf('pipeline');
+      var stages_ = {urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]};
+      var keyMap_ = {'Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
+      if (iPip_ >= 0) {
+        for (var pi_ = 1; pi_ < dados_.length; pi_++) {
+          var pip_  = String(dados_[pi_][iPip_] || '').trim();
+          var nome_ = String(dados_[pi_][iNome_] || '').trim();
+          var id_   = String(dados_[pi_][iId_]   || '').trim();
+          if (!pip_ || !nome_) continue;
+          var sk_ = keyMap_[pip_];
+          if (!sk_) continue;
+          var primeiroNome_ = nome_.split(' ')[0];
+          stages_[sk_].push({nome: primeiroNome_, nomeCompleto: nome_, idCliente: id_});
+        }
+      }
+      return ok({stages: stages_});
+    } catch(err) { return ok({stages:{urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]}}); }
+  }
+
   return ok({ status: 'acao desconhecida' });
 }
 
@@ -368,6 +398,7 @@ function doPost(e) {
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
+  if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -425,6 +456,28 @@ function excluir_(d) {
   if (!lin || lin < 2) return { status: 'erro', motivo: 'linha invalida' };
   getAba().deleteRow(lin);
   return { status: 'excluido', linha: lin };
+}
+
+function salvarPipeline_(d) {
+  if (!d.idCliente && !d._linha) return {ok: false, motivo: 'sem identificador'};
+  var aba   = getAba();
+  var dados = aba.getDataRange().getValues();
+  var cab   = dados[0];
+  var iPip  = cab.indexOf('pipeline');
+  if (iPip < 0) {
+    // coluna ainda não existe: adiciona ao cabeçalho
+    iPip = cab.length;
+    aba.getRange(1, iPip + 1).setValue('pipeline');
+  }
+  var iId = cab.indexOf('idCliente');
+  for (var i = 1; i < dados.length; i++) {
+    var match = d.idCliente ? String(dados[i][iId] || '') === String(d.idCliente) : (i + 1 === parseInt(d._linha));
+    if (match) {
+      aba.getRange(i + 1, iPip + 1).setValue(d.pipeline || '');
+      return {ok: true};
+    }
+  }
+  return {ok: false, motivo: 'cliente nao encontrado'};
 }
 
 function atualizar(d) {
