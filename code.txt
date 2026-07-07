@@ -1873,6 +1873,27 @@ var CABECALHO_REVENDA = [
   'dataCadastro','dataAtualizacao','latitude','longitude','ultimaSincronizacao'
 ];
 
+// Busca uma página de /properties na Imobzi, com retry — um erro de rede
+// passageiro (timeout, 5xx) não pode mais truncar a sincronização inteira em
+// silêncio (era exatamente isso que a versão anterior fazia: um único erro
+// de página e o buscarTodosImoveis_ desistia ali, sem avisar, potencialmente
+// deixando de fora qualquer imóvel que estivesse nas páginas seguintes).
+function buscarPaginaImobzi_(url, headers) {
+  var resp = null;
+  for (var tentativa = 1; tentativa <= 3; tentativa++) {
+    resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true });
+    if (resp.getResponseCode() === 200) return resp;
+    Logger.log('Erro Imobzi (tentativa ' + tentativa + '/3) ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0, 200));
+    if (tentativa < 3) Utilities.sleep(1000 * tentativa);
+  }
+  return resp; // ainda com erro após 3 tentativas — chamador decide o que fazer
+}
+
+// Nota: "publicar no site" (site_publish) NÃO é usado como filtro aqui de
+// propósito — investigado em 2026-07 (imóvel Cód. 3468): a API já devolve o
+// imóvel com status/active/sale_value corretos mesmo com site_publish=false,
+// então o portfólio interno (Base Inteligente) não deve depender desse flag,
+// que só controla a publicação no site público da imobiliária.
 function buscarTodosImoveis_() {
   var headers = { 'X-Imobzi-Secret': obterImobziToken_() };
   var todos   = [];
@@ -1883,9 +1904,9 @@ function buscarTodosImoveis_() {
     var url = IMOBZI_BASE + '/properties?limit=' + IMOBZI_LIMIT;
     if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
 
-    var resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true });
+    var resp = buscarPaginaImobzi_(url, headers);
     if (resp.getResponseCode() !== 200) {
-      Logger.log('Erro Imobzi ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0, 200));
+      Logger.log('Falha definitiva ao buscar página ' + (pagina + 1) + ' da Imobzi após 3 tentativas — sincronização pode estar incompleta.');
       break;
     }
 
@@ -1919,7 +1940,7 @@ function debugImovelRevenda_(codigo) {
   do {
     var url = IMOBZI_BASE + '/properties?limit=' + IMOBZI_LIMIT;
     if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
-    var resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true });
+    var resp = buscarPaginaImobzi_(url, headers);
     if (resp.getResponseCode() !== 200) break;
     var dados = JSON.parse(resp.getContentText());
     var props = dados.properties || [];

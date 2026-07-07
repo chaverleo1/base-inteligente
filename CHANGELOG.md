@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Causa raiz do imóvel Cód. 3468 ausente: retry na busca da Imobzi + painel de diagnóstico no Dashboard
+
+Investigação concluída: `adm_debug_imovel_revenda&codigo=3468` mostrou o imóvel com `status:
+"available"`, `active: true`, `sale_value: 7400000` — passa no filtro atual sem problema.
+`site_publish: false`, mas isso nunca bloqueou nada no nosso código (nem deveria — controla só a
+publicação no site público da imobiliária, não o portfólio interno). A causa real era outra:
+`buscarTodosImoveis_()` desistia da sincronização inteira (silenciosamente, só com `Logger.log`) no
+primeiro erro de rede/timeout numa página da API da Imobzi — o que podia deixar de fora qualquer
+imóvel que estivesse nas páginas seguintes, sem avisar ninguém.
+
+Fix: nova função `buscarPaginaImobzi_(url, headers)` com até 3 tentativas (backoff de 1s/2s) antes
+de desistir de uma página, usada tanto em `buscarTodosImoveis_()` quanto em `debugImovelRevenda_()`.
+Comentário adicionado explicando por que `site_publish` é intencionalmente ignorado no filtro.
+
+Também adicionado um painel de diagnóstico direto no Dashboard (dentro de "Atualização do
+portfólio"): campo pra digitar o código do imóvel + botão "🔍 Consultar na Imobzi", mostrando o JSON
+cru na própria tela — evita precisar usar F12/Console do navegador pra rodar `adm_debug_imovel_revenda`
+manualmente.
+
+Testado via Node (retry com falha-depois-sucesso e com 3 falhas seguidas, sem travar) e via preview
+(painel de diagnóstico exibindo o JSON formatado na tela).
+
 ## 2026-07-07 — Rota de diagnóstico para imóvel ausente na sincronização (ex: Cód. 3468)
 
 Usuário relatou que imóveis ativos na Imobzi mas não marcados "publicar no site" também deveriam
