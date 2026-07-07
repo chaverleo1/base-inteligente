@@ -172,23 +172,32 @@
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
   @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
 
-  /* ── AÇÕES PLANEJADAS (card único, etapa 7, 3 colunas) ── */
+  /* ── AÇÕES PLANEJADAS (card único, etapa 7) — "Hoje" em destaque à
+     esquerda com lista embutida, "Próximos dias" no meio, "Atrasadas" à
+     direita ── */
   .acoes-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent2);
     border-radius:var(--radius);padding:16px 20px;margin-bottom:32px}
   .acoes-card-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px}
   .acoes-card-icon{font-size:15px;margin-right:2px}
-  .acoes-card-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .acoes-card-cols{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:16px;align-items:start}
   .acoes-col{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
   .acoes-col-num{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;line-height:1}
   .acoes-col-atrasadas .acoes-col-num{color:var(--danger)}
-  .acoes-col-hoje .acoes-col-num{color:#f5a623}
+  .acoes-col-hoje .acoes-col-num{color:#f5a623;font-size:34px}
   .acoes-col-futuras .acoes-col-num{color:var(--accent2)}
   .acoes-col-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
   .acoes-col-ver{margin-top:5px;font-size:11px;font-weight:700;color:var(--accent2);cursor:pointer;
     background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);border-radius:6px;padding:3px 10px}
   .acoes-col-ver:hover{filter:brightness(1.15)}
   .acoes-col-ver.disabled{color:var(--text3);background:rgba(74,84,112,.12);border-color:var(--border);cursor:default}
-  @media(max-width:640px){.acoes-card{padding:14px 16px}.acoes-card-cols{grid-template-columns:1fr;gap:12px}}
+  .acoes-col-destaque{background:rgba(245,166,35,.07);border:1px solid rgba(245,166,35,.25);
+    border-radius:var(--radius-sm,8px);padding:12px 14px;margin:-4px 0}
+  .acoes-hoje-lista{display:flex;flex-direction:column;gap:5px;margin-top:8px;width:100%}
+  .acoes-hoje-item{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acoes-hoje-item b{color:var(--text)}
+  .acoes-hoje-mais{font-size:11px;font-weight:700;color:#f5a623;cursor:pointer;margin-top:2px}
+  .acoes-hoje-mais:hover{text-decoration:underline}
+  @media(max-width:640px){.acoes-card{padding:14px 16px}.acoes-card-cols{grid-template-columns:1fr;gap:14px}.acoes-col-destaque{margin:0}}
 
   /* ── GRÁFICOS ── */
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
@@ -465,25 +474,26 @@
 
   <!-- AÇÕES PLANEJADAS — card único, logo abaixo do pipeline (etapa 7:
        relacionamento). Fica escondido até ter dado, pra não aparecer um
-       card vazio "0" antes da primeira carga. 3 colunas independentes
-       (atrasadas / hoje / próximos 7 dias), cada uma com seu próprio "Ver". -->
+       card vazio "0" antes da primeira carga. "Hoje" em destaque à esquerda
+       (com lista resumida nome/ação embutida), "Próximos dias" no meio,
+       "Atrasadas" à direita. -->
   <div class="acoes-card" id="acoesPlanejadasCard" style="display:none">
     <div class="acoes-card-title"><span class="acoes-card-icon">📅</span> Ações de relacionamento planejadas</div>
     <div class="acoes-card-cols">
+      <div class="acoes-col acoes-col-hoje acoes-col-destaque">
+        <div class="acoes-col-num" id="acoesNumHoje">0</div>
+        <div class="acoes-col-label">hoje</div>
+        <div class="acoes-hoje-lista" id="acoesHojeLista"></div>
+      </div>
+      <div class="acoes-col acoes-col-futuras">
+        <div class="acoes-col-num" id="acoesNumFuturas">0</div>
+        <div class="acoes-col-label">próximos dias</div>
+        <span class="acoes-col-ver" id="acoesVerFuturas">Ver →</span>
+      </div>
       <div class="acoes-col acoes-col-atrasadas">
         <div class="acoes-col-num" id="acoesNumAtrasadas">0</div>
         <div class="acoes-col-label">atrasadas</div>
         <span class="acoes-col-ver" id="acoesVerAtrasadas">Ver →</span>
-      </div>
-      <div class="acoes-col acoes-col-hoje">
-        <div class="acoes-col-num" id="acoesNumHoje">0</div>
-        <div class="acoes-col-label">hoje</div>
-        <span class="acoes-col-ver" id="acoesVerHoje">Ver →</span>
-      </div>
-      <div class="acoes-col acoes-col-futuras">
-        <div class="acoes-col-num" id="acoesNumFuturas">0</div>
-        <div class="acoes-col-label">próximos 7 dias</div>
-        <span class="acoes-col-ver" id="acoesVerFuturas">Ver →</span>
       </div>
     </div>
   </div>
@@ -1409,11 +1419,20 @@ function atualizarCardAcoesPlanejadas_() {
   const card = document.getElementById('acoesPlanejadasCard');
   if (!card) return;
   const itens = (window._insightDetails && window._insightDetails['insAcoes'] && window._insightDetails['insAcoes'].items) || [];
+  const itensHoje = itens.filter(a => a.dias === 0);
   const atrasadas = itens.filter(a => a.dias > 0).length;
-  const hoje      = itens.filter(a => a.dias === 0).length;
   const futuras   = itens.filter(a => a.dias < 0).length;
-  if (atrasadas === 0 && hoje === 0 && futuras === 0) { card.style.display = 'none'; return; }
+  if (atrasadas === 0 && itensHoje.length === 0 && futuras === 0) { card.style.display = 'none'; return; }
   card.style.display = '';
+
+  document.getElementById('acoesNumHoje').textContent = itensHoje.length;
+  const MAX_HOJE = 4;
+  const listaEl = document.getElementById('acoesHojeLista');
+  listaEl.innerHTML = itensHoje.slice(0, MAX_HOJE).map(a =>
+    `<div class="acoes-hoje-item"><b>${a.nome || '—'}</b> — ${a.proximaAcao || '—'}</div>`
+  ).join('') + (itensHoje.length > MAX_HOJE
+    ? `<div class="acoes-hoje-mais" onclick="verAcoesPlanejadas_('hoje')">+${itensHoje.length - MAX_HOJE} mais →</div>`
+    : '');
 
   const setColuna = (numId, verId, count, categoria) => {
     document.getElementById(numId).textContent = count;
@@ -1427,7 +1446,6 @@ function atualizarCardAcoesPlanejadas_() {
     }
   };
   setColuna('acoesNumAtrasadas', 'acoesVerAtrasadas', atrasadas, 'atrasadas');
-  setColuna('acoesNumHoje',      'acoesVerHoje',      hoje,      'hoje');
   setColuna('acoesNumFuturas',   'acoesVerFuturas',   futuras,   'futuras');
 }
 

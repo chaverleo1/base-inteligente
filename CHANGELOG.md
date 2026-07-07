@@ -1,5 +1,18 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Reorganização visual do card "Ações Planejadas": "Hoje" em destaque
+
+Reordenado e redesenhado: **Hoje** (esquerda, em destaque — número maior, caixa com fundo/contorno
+próprio) com uma **lista embutida** mostrando nome do cliente + ação cadastrada direto no card (até
+4 itens, "+N mais →" se houver mais); **Próximos dias** no meio; **Atrasadas** à direita. Antes as 3
+colunas tinham o mesmo peso visual e nenhuma mostrava conteúdo sem clicar em "Ver" — agora o que
+precisa de atenção imediata (hoje) já aparece resumido sem precisar navegar pra outra tela.
+
+Só mudança de frontend (`dashboard.html`) — não precisa reimplantar o Apps Script.
+
+Testado no preview: contagens corretas, lista embutida de "hoje" limitada a 4 itens com "+N mais"
+levando à lista completa, ordem das colunas confirmada no DOM (hoje → próximos dias → atrasadas).
+
 ## 2026-07-07 — Histórico de "Ações Planejadas" na ficha do cliente + desativação sem perder o registro
 
 Mudança de modelo de dados: até aqui `proximaAcao`/`proximaAcaoData` em CONTATOS guardavam só "a
