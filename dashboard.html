@@ -172,21 +172,23 @@
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
   @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
 
-  /* ── AÇÕES PLANEJADAS (card único, etapa 7) ── */
-  .acoes-card{display:flex;align-items:center;gap:16px;background:var(--surface);
-    border:1px solid var(--border);border-left:4px solid var(--accent2);
-    border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;
-    cursor:pointer;transition:border-color .2s,transform .15s}
-  .acoes-card:hover{border-color:var(--accent2);transform:translateY(-1px)}
-  .acoes-card-icon{font-size:28px;flex-shrink:0}
-  .acoes-card-body{flex:1;min-width:0}
-  .acoes-card-num{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--accent2);line-height:1}
-  .acoes-card-label{font-size:13px;color:var(--text2);margin-top:2px}
-  .acoes-card-sub{color:var(--text3)}
-  .acoes-card-btn{flex-shrink:0;font-size:12px;font-weight:700;color:var(--accent2);
-    background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-    border-radius:6px;padding:6px 14px;white-space:nowrap}
-  @media(max-width:640px){.acoes-card{padding:14px 16px;gap:12px}.acoes-card-icon{font-size:22px}.acoes-card-num{font-size:22px}}
+  /* ── AÇÕES PLANEJADAS (card único, etapa 7, 3 colunas) ── */
+  .acoes-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent2);
+    border-radius:var(--radius);padding:16px 20px;margin-bottom:32px}
+  .acoes-card-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px}
+  .acoes-card-icon{font-size:15px;margin-right:2px}
+  .acoes-card-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .acoes-col{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+  .acoes-col-num{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;line-height:1}
+  .acoes-col-atrasadas .acoes-col-num{color:var(--danger)}
+  .acoes-col-hoje .acoes-col-num{color:#f5a623}
+  .acoes-col-futuras .acoes-col-num{color:var(--accent2)}
+  .acoes-col-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+  .acoes-col-ver{margin-top:5px;font-size:11px;font-weight:700;color:var(--accent2);cursor:pointer;
+    background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);border-radius:6px;padding:3px 10px}
+  .acoes-col-ver:hover{filter:brightness(1.15)}
+  .acoes-col-ver.disabled{color:var(--text3);background:rgba(74,84,112,.12);border-color:var(--border);cursor:default}
+  @media(max-width:640px){.acoes-card{padding:14px 16px}.acoes-card-cols{grid-template-columns:1fr;gap:12px}}
 
   /* ── GRÁFICOS ── */
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
@@ -463,14 +465,27 @@
 
   <!-- AÇÕES PLANEJADAS — card único, logo abaixo do pipeline (etapa 7:
        relacionamento). Fica escondido até ter dado, pra não aparecer um
-       card vazio "0" antes da primeira carga. -->
-  <div class="acoes-card" id="acoesPlanejadasCard" style="display:none" onclick="verInsight('insAcoes')">
-    <div class="acoes-card-icon">📅</div>
-    <div class="acoes-card-body">
-      <div class="acoes-card-num" id="acoesPlanejadasNum">0</div>
-      <div class="acoes-card-label" id="acoesPlanejadasLabel">ações de relacionamento planejadas</div>
+       card vazio "0" antes da primeira carga. 3 colunas independentes
+       (atrasadas / hoje / próximos 7 dias), cada uma com seu próprio "Ver". -->
+  <div class="acoes-card" id="acoesPlanejadasCard" style="display:none">
+    <div class="acoes-card-title"><span class="acoes-card-icon">📅</span> Ações de relacionamento planejadas</div>
+    <div class="acoes-card-cols">
+      <div class="acoes-col acoes-col-atrasadas">
+        <div class="acoes-col-num" id="acoesNumAtrasadas">0</div>
+        <div class="acoes-col-label">atrasadas</div>
+        <span class="acoes-col-ver" id="acoesVerAtrasadas">Ver →</span>
+      </div>
+      <div class="acoes-col acoes-col-hoje">
+        <div class="acoes-col-num" id="acoesNumHoje">0</div>
+        <div class="acoes-col-label">hoje</div>
+        <span class="acoes-col-ver" id="acoesVerHoje">Ver →</span>
+      </div>
+      <div class="acoes-col acoes-col-futuras">
+        <div class="acoes-col-num" id="acoesNumFuturas">0</div>
+        <div class="acoes-col-label">próximos 7 dias</div>
+        <span class="acoes-col-ver" id="acoesVerFuturas">Ver →</span>
+      </div>
     </div>
-    <span class="acoes-card-btn">Ver →</span>
   </div>
 
   <!-- MATCHES -->
@@ -1363,10 +1378,7 @@ function atualizarInsightsExtended(data) {
   const dorm  = data.semContato90 || 0;
   const esfriando = data.esfriando15 || 0;
   const leads = data.leadsPendentes || 0;
-  const listaAcoes = data.acoesPlanejadas || [];
-  const acoesUrgentes = listaAcoes.filter(a => a.dias >= 0).length;
-  const acoesFuturas  = listaAcoes.filter(a => a.dias < 0).length;
-  atualizarCardAcoesPlanejadas_(acoesUrgentes, acoesFuturas);
+  atualizarCardAcoesPlanejadas_();
   upd('insDormentes','#ff5a5a','😴', dorm,
     'clientes sem contato há mais de 90 dias',
     dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');
@@ -1393,14 +1405,50 @@ function verInsight(id) {
 // Card único de "Ações planejadas", logo abaixo do Pipeline de Negociações —
 // ficava perdido dentro da grade genérica de Insights, subiu pra virar
 // destaque próprio (etapa 7: relacionamento).
-function atualizarCardAcoesPlanejadas_(urgentes, futuras) {
+function atualizarCardAcoesPlanejadas_() {
   const card = document.getElementById('acoesPlanejadasCard');
   if (!card) return;
-  if (urgentes === 0 && futuras === 0) { card.style.display = 'none'; return; }
+  const itens = (window._insightDetails && window._insightDetails['insAcoes'] && window._insightDetails['insAcoes'].items) || [];
+  const atrasadas = itens.filter(a => a.dias > 0).length;
+  const hoje      = itens.filter(a => a.dias === 0).length;
+  const futuras   = itens.filter(a => a.dias < 0).length;
+  if (atrasadas === 0 && hoje === 0 && futuras === 0) { card.style.display = 'none'; return; }
   card.style.display = '';
-  document.getElementById('acoesPlanejadasNum').textContent = urgentes;
-  document.getElementById('acoesPlanejadasLabel').innerHTML = 'ações de relacionamento planejadas — hoje ou atrasadas'
-    + (futuras > 0 ? ` <span class="acoes-card-sub">· +${futuras} nos próximos 7 dias</span>` : '');
+
+  const setColuna = (numId, verId, count, categoria) => {
+    document.getElementById(numId).textContent = count;
+    const verEl = document.getElementById(verId);
+    if (count > 0) {
+      verEl.classList.remove('disabled');
+      verEl.onclick = () => verAcoesPlanejadas_(categoria);
+    } else {
+      verEl.classList.add('disabled');
+      verEl.onclick = null;
+    }
+  };
+  setColuna('acoesNumAtrasadas', 'acoesVerAtrasadas', atrasadas, 'atrasadas');
+  setColuna('acoesNumHoje',      'acoesVerHoje',      hoje,      'hoje');
+  setColuna('acoesNumFuturas',   'acoesVerFuturas',   futuras,   'futuras');
+}
+
+// "Ver" de cada coluna do card de Ações planejadas — filtra o mesmo conjunto
+// de dados já carregado (window._insightDetails['insAcoes']) por categoria,
+// sem precisar de uma nova chamada ao backend.
+function verAcoesPlanejadas_(categoria) {
+  const d = window._insightDetails && window._insightDetails['insAcoes'];
+  if (!d) return;
+  const itens = d.items.filter(a =>
+    categoria === 'atrasadas' ? a.dias > 0 :
+    categoria === 'hoje'      ? a.dias === 0 :
+    a.dias < 0
+  );
+  const rotulo = categoria === 'atrasadas' ? 'Ações atrasadas'
+    : categoria === 'hoje' ? 'Ações planejadas para hoje'
+    : 'Ações planejadas — próximos 7 dias';
+  sessionStorage.setItem('bi_insight_detail', JSON.stringify({
+    title: rotulo, icon: '📅', color: '#00d4aa', type: 'acoes', items: itens
+  }));
+  window.location.href = 'insight-detail.html';
 }
 
 function renderMatchCol(elId, lista, tipo) {

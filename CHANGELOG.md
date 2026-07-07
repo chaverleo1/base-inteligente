@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Card "Ações planejadas" ganha 3 colunas (atrasadas / hoje / próximos 7 dias)
+
+Reformulado de um número único ("urgentes" + texto mencionando futuras) pra 3 colunas
+independentes, cada uma com sua contagem e seu próprio "Ver →": **Atrasadas** (vermelho),
+**Hoje** (âmbar) e **Próximos 7 dias** (verde-água). Clicar em qualquer "Ver" filtra a mesma lista já
+carregada (sem nova chamada ao backend) e abre `insight-detail.html` só com aquela categoria. Coluna
+com contagem 0 fica com o "Ver" desabilitado (cinza, sem clique). O card inteiro continua oculto
+quando as 3 contagens são zero.
+
+Só mudança de frontend (`dashboard.html`) — não precisa reimplantar o Apps Script.
+
+Testado no preview: contagens corretas por categoria, cada "Ver" filtra exatamente o subconjunto
+certo, colunas zeradas ficam desabilitadas, card oculto quando não há nenhuma ação nas 3 categorias.
+
 ## 2026-07-07 — Fix crítico: `adm_dados_insights` quebrado em produção (afetava todos os cards de Insights, não só "Ações planejadas")
 
 Causa raiz do card "Ações planejadas" nunca aparecer: a rota `adm_dados_insights` usava
