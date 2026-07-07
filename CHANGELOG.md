@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Fix crítico: `adm_dados_insights` quebrado em produção (afetava todos os cards de Insights, não só "Ações planejadas")
+
+Causa raiz do card "Ações planejadas" nunca aparecer: a rota `adm_dados_insights` usava
+`SpreadsheetApp.getActiveSpreadsheet()`, que devolve `null` quando o script roda como Web App (fora
+do contexto de "planilha aberta" no navegador). Isso derrubava a rota inteira logo na primeira linha
+(`ss_.getSheetByName('CONTATOS')` em cima de `null`), capturado silenciosamente pelo `catch` — sem
+nenhum aviso visível. **Isso significa que os cards de Insights v2 (Dormentes, Esfriando, bairro top,
+canal top, leads) também estavam quebrados**, não só o novo card de Ações planejadas — só não tinha
+sido notado ainda.
+
+Fix: trocado por `SpreadsheetApp.openById(SHEET_ID)`, o mesmo padrão usado em todo o resto do projeto
+(`getAba()` e as demais rotas). Diagnosticado com a ajuda do usuário chamando `adm_dados_insights`
+direto pela URL e vendo o erro cru: `TypeError: Cannot read properties of null (reading
+'getSheetByName')`.
+
+Testado via Node (mock de `SpreadsheetApp.openById` no lugar de `getActiveSpreadsheet`, mesma
+suíte de testes de `acoesPlanejadas` já existente, todos passando).
+
 ## 2026-07-07 — Bloco de destaque para pipeline/relacionamento na Etapa 1 do formulário
 
 Os campos "Estágio no pipeline", "Próxima ação planejada" e "Data planejada" ganharam um bloco

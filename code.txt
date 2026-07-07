@@ -237,7 +237,12 @@ function doGet(e) {
 
   if (acao === 'adm_dados_insights') {
     try {
-      var ss_ = SpreadsheetApp.getActiveSpreadsheet();
+      // getActiveSpreadsheet() devolve null quando o script roda como Web App
+      // (fora do contexto de "planilha aberta" no navegador) — foi assim que
+      // essa rota inteira quebrou em silêncio (capturado pelo catch abaixo,
+      // sem nenhum aviso visível). openById(SHEET_ID) é o padrão usado em
+      // todo o resto do projeto (ver getAba()) e funciona em qualquer contexto.
+      var ss_ = SpreadsheetApp.openById(SHEET_ID);
       var hoje_ = new Date();
       var tz_   = Session.getScriptTimeZone();
       var semContato90_ = 0, bairros_ = {}, canais_ = {};
