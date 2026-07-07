@@ -38,15 +38,22 @@ a { text-decoration: none; color: inherit; }
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 100;
 }
-.logo { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -.3px; }
+.logo { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -.3px; flex-shrink:0; }
 .logo span { color: var(--text2); font-weight: 400; }
-.nav-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px}
+.nav-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px;
+          overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;min-width:0}
+.nav-tabs::-webkit-scrollbar{display:none}
 .nav-tab{padding:6px 16px;border-radius:6px;border:none;background:transparent;color:var(--text2);
-          font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;text-decoration:none;display:inline-block}
+          font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;text-decoration:none;display:inline-block;flex-shrink:0}
 .nav-tab.active{background:var(--accent);color:#fff}
 .refresh-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);
-              padding:6px 14px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+              padding:6px 14px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;flex-shrink:0}
 .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+@media (max-width:640px) {
+  .header{padding:12px 14px;gap:8px}
+  .logo{font-size:13px}
+  .nav-tab{padding:6px 11px;font-size:12px}
+}
 
 /* ── LAYOUT ── */
 .app { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 53px); }
@@ -60,6 +67,14 @@ a { text-decoration: none; color: inherit; }
   overflow-y: auto;
   max-height: calc(100vh - 53px);
   position: sticky; top: 53px;
+}
+/* .painel é sticky no layout desktop (coluna lateral que acompanha o scroll
+   independente da coluna de resultados) — empilhado numa coluna só no
+   mobile, isso faz o painel "flutuar" e cobrir os resultados ao rolar.
+   Vira bloco normal, sem sticky nem limite de altura. Regra precisa vir
+   DEPOIS da declaração base de .painel pra vencer no cascade. */
+@media (max-width: 900px) {
+  .painel { position: static; max-height: none; overflow-y: visible; border-right: none; border-bottom: 1px solid var(--border); }
 }
 .painel-title {
   font-family: 'Space Grotesk', sans-serif;
@@ -532,7 +547,7 @@ input[type=range]::-webkit-slider-thumb {
     <a href="dashboard.html" class="nav-tab">BaseImob</a>
     <a href="dashboard.html" class="nav-tab">ADM</a>
   </div>
-  <div style="display:flex;gap:8px;align-items:center">
+  <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
     <button class="refresh-btn" onclick="sair()"
       onmouseover="this.style.borderColor='#ff5a5a';this.style.color='#ff5a5a'"
       onmouseout="this.style.borderColor='transparent';this.style.color='var(--text3)'"

@@ -1,5 +1,46 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Responsividade mobile em todas as páginas internas
+
+Passada completa de responsividade, testada em viewport 375×812 (mobile) em todas as 12 páginas do
+projeto. Duas classes de problema apareciam repetidas em quase toda página (o header é copiado em
+cada arquivo, não existe CSS compartilhado):
+
+1. **Cabeçalho cortado**: `.nav-tabs` (Formulário/Dashboard/Busca Aberta/Lançamentos/BaseImob/ADM)
+   não cabia ao lado da logo + botões da direita, cortando abas sem nenhum jeito de alcançá-las.
+   Fix aplicado em `dashboard.html`, `contatos.html`, `busca.html`, `formulario.html`,
+   `insight-detail.html`, `favoritos.html`, `lancamentos.html` e `lancamentos-editar.html`:
+   `.nav-tabs` ganhou `overflow-x:auto` + scroll suave (rola por dentro, sem quebrar a página),
+   `.logo`/botões da direita ganharam `flex-shrink:0` (não encolhem, sobra espaço garantido pro
+   nav-tabs). Em `formulario.html`, que tem um terceiro bloco concorrendo no header (toggle
+   Novo/Atualizar), isso ainda deixava o nav-tabs com ~10px de largura — cabeçalho passou a quebrar
+   em 2 linhas nesse caso (`flex-wrap` + nav-tabs em `flex-basis:100%`).
+
+2. **Tabelas largas**: `dashboard.html` (tabela Último/Modificado/Novo/Variação) ganhou um wrapper
+   com `overflow-x:auto` — as demais (`contatos.html`, `insight-detail.html`, `lancamentos.html`) já
+   tinham esse padrão implementado corretamente.
+
+Bug real encontrado e corrigido em `busca.html`: `.painel` (coluna de filtros) usa `position:sticky`
+pensado pro layout desktop de 2 colunas — empilhado numa coluna só no mobile (breakpoint já existente
+`max-width:900px`), isso fazia o painel "flutuar" por cima dos resultados ao rolar a página. Vira
+bloco estático nesse breakpoint.
+
+Cards (`.cards-row` no Dashboard) ganharam breakpoint extra em telas muito estreitas (1 coluna abaixo
+de 420px) e `.card-label` ganhou `padding-right` pra não ficar embaixo do badge "Ver →" quando o
+texto quebra em 2 linhas.
+
+`busca.html`, `formulario.html`, `insight-detail.html`, `favoritos.html`, `lancamentos.html` e
+`lancamentos-editar.html` já tinham a maior parte do layout preparado pra mobile (grids com
+`auto-fill`/breakpoints, painéis com `max-width:100%`, tabelas com wrapper de scroll) — só faltava o
+cabeçalho. `index.html`, `reset.html`, `baseimob-landing.html` e `baseimob-total.html` já estavam
+bem construídas pra mobile e não precisaram de nenhuma mudança.
+
+Testado via preview em 375×812 em todas as páginas (sem overflow horizontal de página em nenhuma,
+confirmado por `document.documentElement.scrollWidth === clientWidth`), incluindo fluxos com dados
+reais/simulados: cards do Dashboard, funil do pipeline, tabela de variação, drawer de cliente,
+resultados e painel de favoritar da Busca Aberta, todas as 5 etapas do formulário, lista de
+favoritos, cards e tabela de unidades de lançamentos.
+
 ## 2026-07-07 — Causa raiz do imóvel Cód. 3468 ausente: retry na busca da Imobzi + painel de diagnóstico no Dashboard
 
 Investigação concluída: `adm_debug_imovel_revenda&codigo=3468` mostrou o imóvel com `status:
