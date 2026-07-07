@@ -142,6 +142,7 @@ function renderDetail(d) {
     case 'lancamentos': tableHtml = tableLancamentos(items); break;
     case 'leads':       tableHtml = tableLeads(items); break;
     case 'pads':        tableHtml = tablePads(items); break;
+    case 'imoveis':     tableHtml = tableImoveis(items); break;
     default: tableHtml = '<div class="empty">Tipo desconhecido.</div>';
   }
   document.getElementById('root').innerHTML = `
@@ -232,6 +233,33 @@ function tableLeads(items) {
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr><th>Nome</th><th>Telefone</th><th>Tipo Contato</th><th>Canal</th><th>Score</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function tableImoveis(items) {
+  if (!items.length) return '<div class="empty">Nenhum imóvel encontrado.</div>';
+  const fmt = v => { const n = parseInt(String(v||'').replace(/\D/g,'')); if (!n) return '—'; return 'R$ ' + n.toLocaleString('pt-BR'); };
+  const rows = items.map(im => {
+    const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
+    const specs = [
+      im.quartos  ? `${im.quartos}q`   : '',
+      im.suites   ? `${im.suites}s`    : '',
+      im.vagas    ? `${im.vagas}v`     : '',
+      im.areaUtil ? `${im.areaUtil}m²` : '',
+    ].filter(Boolean).join(' · ');
+    const movCls = im._movimento === 'Removido' ? 'badge-red' : 'badge-green';
+    return `<tr>
+      <td class="td-nome">${im.codigo || '—'}</td>
+      <td>${im.tipo || '—'}</td>
+      <td>${local || '—'}</td>
+      <td>${specs || '—'}</td>
+      <td>${fmt(im.valorVenda)}</td>
+      <td><span class="badge ${movCls}">${im._movimento || '—'}</span></td>
+    </tr>`;
+  }).join('');
+  return `<div class="detail-wrap"><table class="detail-table">
+    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Movimento</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }

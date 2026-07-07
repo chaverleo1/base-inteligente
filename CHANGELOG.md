@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Caixa clicável de variação no painel "Atualização do portfólio"
+
+Na seção "Atualização do portfólio" do Dashboard, a coluna "Variação" agora mostra o número dentro
+de uma caixa destacada (`.diff-box`, verde/vermelha conforme sinal) — tanto nas linhas por tipo
+quanto na linha Total. Clicar na caixa abre `insight-detail.html` com a lista dos imóveis
+específicos que entraram (Adicionado) ou saíram (Removido) do portfólio desde a última
+sincronização, filtrada pelo tipo daquela linha (ou todos os tipos, na linha Total).
+
+Backend: `sincronizarRevenda()` passou a copiar a aba REVENDA inteira (linhas completas, não só a
+contagem por tipo) para uma aba espelho `REVENDA_ANTERIOR` antes de sobrescrever, substituindo o
+snapshot agregado que ficava em `PropertiesService`. A rota `revenda_diff` agora compara
+REVENDA_ANTERIOR × REVENDA por `codigo` (nova função `linhasComoObjetos_`) e retorna `adicionados`/
+`removidos` com os registros completos, além de manter `delta`/`totalAntes`/`totalDepois` como
+antes (compatibilidade com a tabela existente).
+
+Testado via Node (diff por código com casos de imóvel que permanece, sai e entra) e via preview do
+navegador (renderização das caixas com onclick correto, filtragem por tipo ao clicar, e exibição da
+lista em `insight-detail.html` com o novo tipo `imoveis`).
+
 ## 2026-07-07 — Favoritar em lote na Busca Aberta
 
 Novo botão "⭐ Favoritar" na barra de seleção de `busca.html` (ao lado de "Gerar PDF"), habilitado
