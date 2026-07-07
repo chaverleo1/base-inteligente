@@ -1,5 +1,15 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Bloco de destaque para pipeline/relacionamento na Etapa 1 do formulário
+
+Os campos "Estágio no pipeline", "Próxima ação planejada" e "Data planejada" ganharam um bloco
+visual próprio (`.bloco-relacionamento`) no topo da Etapa 1 — fundo e contorno em âmbar, separado
+dos dados básicos do cliente (Nome, Telefone, etc.) logo abaixo. Objetivo: deixar claro que esses
+campos são sobre gestão do relacionamento/funil, não sobre a identificação do cliente em si — visual
+consistente com a cor já usada pra "Modificado"/"Perda" em outras partes do app.
+
+Só mudança de frontend (`formulario.html`) — não precisa reimplantar o Apps Script.
+
 ## 2026-07-07 — Fix: "Data planejada" não aparecia ao reabrir o cliente
 
 Causa raiz: mesmo problema de auto-conversão do Sheets já visto antes neste projeto
