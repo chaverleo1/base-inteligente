@@ -1,5 +1,21 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — "obs:" com o que mudou em cada imóvel modificado
+
+Complementa a detecção de "Modificado" desta mesma sessão: agora `revenda_diff` também descreve
+QUAIS campos mudaram e os valores antes/depois (`descreverMudancas_`, usando os rótulos de
+`CAMPOS_LABEL_REVENDA`) — anexado como `_mudancas` em cada item de `modificados`. Ex: "Preço alterou
+de R$ 500.000 para R$ 550.000". Campos cujo valor bruto não ajuda a leitura (`urlSite`, `foto`,
+`latitude`, `longitude`) só avisam que mudaram, sem despejar a URL/coordenada na tela.
+
+Em `insight-detail.html`, a lista de imóveis (`tableImoveis`) ganhou uma linha "obs: ..." abaixo de
+cada imóvel com `_mudancas`, juntando todas as mudanças daquele imóvel numa linha só, em itálico
+âmbar — sem quebrar o alinhamento das colunas (usa `colspan`).
+
+Testado via Node (`descreverMudancas_` com bairro+preço alterados e um campo "somente aviso")
+e via preview (linha "obs:" renderizando corretamente só nos itens modificados, itens novos sem a
+linha extra).
+
 ## 2026-07-07 — Detecção de imóveis modificados + colunas Último/Modificado/Novo/Variação
 
 Até aqui, `revenda_diff` só comparava por presença/ausência do `codigo` — um imóvel que teve o

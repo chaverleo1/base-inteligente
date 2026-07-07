@@ -371,6 +371,8 @@ function doGet(e) {
       var modificados_rd = depoisObjs_rd.filter(function(o) {
         var ant = o.codigo && antesPorCodObj_rd[o.codigo];
         return !!ant && imovelMudou_(ant, o);
+      }).map(function(o) {
+        return Object.assign({}, o, { _mudancas: descreverMudancas_(antesPorCodObj_rd[o.codigo], o) });
       });
 
       // contagem por tipo (o que a tabela "Último/Modificado/Novo/Variação" exibe)
@@ -1949,6 +1951,41 @@ function imovelMudou_(antes, depois) {
   return CAMPOS_COMPARAVEIS_REVENDA.some(function(campo) {
     return String(antes[campo] || '') !== String(depois[campo] || '');
   });
+}
+
+// Rótulos legíveis por campo, usados por descreverMudancas_ pra montar o
+// "obs:" que aparece na lista de imóveis modificados (ex: "Preço alterou de
+// R$ 500.000 para R$ 550.000").
+var CAMPOS_LABEL_REVENDA = {
+  tipo: 'Tipo', finalidade: 'Finalidade', bairro: 'Bairro', cidade: 'Cidade',
+  endereco: 'Endereço', condominio: 'Condomínio', quartos: 'Quartos', suites: 'Suítes',
+  banheiros: 'Banheiros', vagas: 'Vagas', areaUtil: 'Área útil', areaTerr: 'Área do terreno',
+  valorVenda: 'Preço', padrao: 'Padrão', estagio: 'Estágio', publicadoSite: 'Publicado no site',
+  urlSite: 'Link do anúncio', foto: 'Foto', latitude: 'Latitude', longitude: 'Longitude'
+};
+// m²/vazio depois do número — valorVenda já vem formatado ("R$ 500.000") na
+// própria planilha (ver formatarMoeda_ em imovelParaLinha_), não precisa
+// reformatar aqui.
+var CAMPOS_SUFIXO_REVENDA = { areaUtil: ' m²', areaTerr: ' m²' };
+// Campos cujo valor bruto não ajuda a leitura (URL longa, coordenada) — só
+// avisa QUE mudou, sem despejar o valor na tela.
+var CAMPOS_SOMENTE_AVISO_REVENDA = ['urlSite', 'foto', 'latitude', 'longitude'];
+
+function descreverMudancas_(antes, depois) {
+  var mudancas = [];
+  CAMPOS_COMPARAVEIS_REVENDA.forEach(function(campo) {
+    var vAntes  = String(antes[campo]  || '');
+    var vDepois = String(depois[campo] || '');
+    if (vAntes === vDepois) return;
+    var label = CAMPOS_LABEL_REVENDA[campo] || campo;
+    if (CAMPOS_SOMENTE_AVISO_REVENDA.indexOf(campo) >= 0) {
+      mudancas.push(label + ' foi atualizado(a)');
+      return;
+    }
+    var sufixo = CAMPOS_SUFIXO_REVENDA[campo] || '';
+    mudancas.push(label + ' alterou de ' + (vAntes || '—') + sufixo + ' para ' + (vDepois || '—') + sufixo);
+  });
+  return mudancas;
 }
 
 // Converte as linhas de uma aba (cabeçalho na linha 1) em objetos {coluna: valor}.

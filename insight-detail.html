@@ -93,6 +93,11 @@ a { text-decoration:none; color:inherit; }
 .mc-hot  { background:rgba(255,90,90,.2);  color:#ff5a5a; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:700; }
 .mc-warm { background:rgba(245,166,35,.2); color:#f5a623; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:700; }
 
+.detail-table tr.has-obs td { border-bottom:none; padding-bottom:4px; }
+.obs-row .td-obs {
+  padding:0 16px 10px; border-bottom:1px solid var(--border);
+  font-size:12px; font-style:italic; color:#f5a623; background:rgba(245,166,35,.06);
+}
 .empty { text-align:center; padding:48px; color:var(--text3); }
 .dias-chip { font-size:11px; color:var(--text3); margin-left:6px; }
 </style>
@@ -250,7 +255,9 @@ function tableImoveis(items) {
     ].filter(Boolean).join(' · ');
     const movCls = im._movimento === 'Removido' ? 'badge-red' : im._movimento === 'Modificado' ? 'badge-amber' : 'badge-green';
     const fonteCls = im.fonte === 'LANCAMENTO' ? 'badge-amber' : 'badge-blue';
-    return `<tr>
+    const temObs = im._mudancas && im._mudancas.length;
+    const obsRow = temObs ? `<tr class="obs-row"><td colspan="7" class="td-obs">obs: ${im._mudancas.join('; ')}</td></tr>` : '';
+    return `<tr${temObs ? ' class="has-obs"' : ''}>
       <td class="td-nome">${im.codigo || '—'}</td>
       <td>${im.tipo || '—'}</td>
       <td>${local || '—'}</td>
@@ -258,7 +265,7 @@ function tableImoveis(items) {
       <td>${fmt(im.valorVenda)}</td>
       <td><span class="badge ${fonteCls}">${im.fonte || '—'}</span></td>
       <td><span class="badge ${movCls}">${im._movimento || '—'}</span></td>
-    </tr>`;
+    </tr>${obsRow}`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th></tr></thead>
