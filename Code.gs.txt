@@ -741,11 +741,27 @@ function dadosDashboard() {
     matchCounts[cc] = counts;
   });
 
+  // Contagem de favoritos por idCliente
+  var favCounts = {};
+  var abaFav = ss.getSheetByName('FAVORITOS');
+  if (abaFav && abaFav.getLastRow() > 1) {
+    var favDados = abaFav.getDataRange().getValues();
+    var favCab_  = favDados[0];
+    var iFavId   = favCab_.indexOf('idCliente');
+    if (iFavId >= 0) {
+      for (var fi = 1; fi < favDados.length; fi++) {
+        var fid = String(favDados[fi][iFavId] || '').trim();
+        if (fid) favCounts[fid] = (favCounts[fid] || 0) + 1;
+      }
+    }
+  }
+
   [quentes, mornos, frios].forEach(function(lista) {
     lista.forEach(function(item) {
       var mc = matchCounts[item.cod] || { mc80: 0, mc70: 0 };
-      item.mc80 = mc.mc80;
-      item.mc70 = mc.mc70;
+      item.mc80  = mc.mc80;
+      item.mc70  = mc.mc70;
+      item.favs  = favCounts[item.cod] || 0;
     });
     lista.sort(function(a, b) { return b.scoreTotal - a.scoreTotal; });
   });
