@@ -1,5 +1,17 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Card "Ações planejadas" ganha destaque próprio abaixo do Pipeline
+
+Usuário achou o card difícil de achar — estava misturado na grade genérica de "Insights" (mesmo
+nível visual de Dormentes/Esfriando/canal top/etc, bem abaixo na página). Virou um card único, de
+largura cheia, direto abaixo de "🔥 Pipeline de Negociações": ícone + número + rótulo + "Ver →",
+borda de destaque, clicável. Fica oculto quando não há nenhuma ação vencida/hoje/próximos 7 dias
+(não aparece um card vazio "0"). A entrada correspondente na grade genérica de Insights foi removida
+(não fica duplicado em dois lugares).
+
+Só mudança de frontend (`dashboard.html`) — não precisa reimplantar o Apps Script, só aguardar o
+GitHub Pages.
+
 ## 2026-07-07 — Card "Ações planejadas" também mostra prévia dos próximos 7 dias
 
 Usuário agendou 2 ações pra semana seguinte e o card não mudou — comportamento esperado (só contava

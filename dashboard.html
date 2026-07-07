@@ -172,6 +172,22 @@
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
   @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
 
+  /* ── AÇÕES PLANEJADAS (card único, etapa 7) ── */
+  .acoes-card{display:flex;align-items:center;gap:16px;background:var(--surface);
+    border:1px solid var(--border);border-left:4px solid var(--accent2);
+    border-radius:var(--radius);padding:16px 20px;margin-bottom:32px;
+    cursor:pointer;transition:border-color .2s,transform .15s}
+  .acoes-card:hover{border-color:var(--accent2);transform:translateY(-1px)}
+  .acoes-card-icon{font-size:28px;flex-shrink:0}
+  .acoes-card-body{flex:1;min-width:0}
+  .acoes-card-num{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--accent2);line-height:1}
+  .acoes-card-label{font-size:13px;color:var(--text2);margin-top:2px}
+  .acoes-card-sub{color:var(--text3)}
+  .acoes-card-btn{flex-shrink:0;font-size:12px;font-weight:700;color:var(--accent2);
+    background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+    border-radius:6px;padding:6px 14px;white-space:nowrap}
+  @media(max-width:640px){.acoes-card{padding:14px 16px;gap:12px}.acoes-card-icon{font-size:22px}.acoes-card-num{font-size:22px}}
+
   /* ── GRÁFICOS ── */
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
   @media(max-width:700px){.charts-row{grid-template-columns:1fr}}
@@ -443,6 +459,18 @@
   <div class="section-title">🔥 Pipeline de Negociações</div>
   <div class="pipeline-funnel" id="pipelineFunnel">
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando pipeline</div>
+  </div>
+
+  <!-- AÇÕES PLANEJADAS — card único, logo abaixo do pipeline (etapa 7:
+       relacionamento). Fica escondido até ter dado, pra não aparecer um
+       card vazio "0" antes da primeira carga. -->
+  <div class="acoes-card" id="acoesPlanejadasCard" style="display:none" onclick="verInsight('insAcoes')">
+    <div class="acoes-card-icon">📅</div>
+    <div class="acoes-card-body">
+      <div class="acoes-card-num" id="acoesPlanejadasNum">0</div>
+      <div class="acoes-card-label" id="acoesPlanejadasLabel">ações de relacionamento planejadas</div>
+    </div>
+    <span class="acoes-card-btn">Ver →</span>
   </div>
 
   <!-- MATCHES -->
@@ -1252,7 +1280,6 @@ function renderInsights(json, lancamentos) {
            'insLancSem')
       : pendente('insLancSem','👻','Lançamentos sem demanda cadastrada')) +
 
-    pendente('insAcoes',     '📅','ações de relacionamento planejadas — hoje ou atrasadas') +
     pendente('insDormentes','😴','clientes sem contato há mais de 90 dias') +
     pendente('insEsfriando','🥶','cadastros entre 15 e 30 dias sem atualização') +
     pendente('insBairro',   '📍','bairro mais procurado pelos clientes') +
@@ -1339,10 +1366,7 @@ function atualizarInsightsExtended(data) {
   const listaAcoes = data.acoesPlanejadas || [];
   const acoesUrgentes = listaAcoes.filter(a => a.dias >= 0).length;
   const acoesFuturas  = listaAcoes.filter(a => a.dias < 0).length;
-  upd('insAcoes','#00d4aa','📅', acoesUrgentes,
-    'ações de relacionamento planejadas — hoje ou atrasadas'
-      + (acoesFuturas > 0 ? ` · +${acoesFuturas} nos próximos 7 dias` : ''),
-    acoesUrgentes > 0 ? 'Fazer esse follow-up hoje — é o que o cliente está esperando' : 'Nenhuma ação vencida no momento');
+  atualizarCardAcoesPlanejadas_(acoesUrgentes, acoesFuturas);
   upd('insDormentes','#ff5a5a','😴', dorm,
     'clientes sem contato há mais de 90 dias',
     dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');
@@ -1364,6 +1388,19 @@ function verInsight(id) {
   if (!window._insightDetails || !window._insightDetails[id]) return;
   sessionStorage.setItem('bi_insight_detail', JSON.stringify(window._insightDetails[id]));
   window.location.href = 'insight-detail.html';
+}
+
+// Card único de "Ações planejadas", logo abaixo do Pipeline de Negociações —
+// ficava perdido dentro da grade genérica de Insights, subiu pra virar
+// destaque próprio (etapa 7: relacionamento).
+function atualizarCardAcoesPlanejadas_(urgentes, futuras) {
+  const card = document.getElementById('acoesPlanejadasCard');
+  if (!card) return;
+  if (urgentes === 0 && futuras === 0) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  document.getElementById('acoesPlanejadasNum').textContent = urgentes;
+  document.getElementById('acoesPlanejadasLabel').innerHTML = 'ações de relacionamento planejadas — hoje ou atrasadas'
+    + (futuras > 0 ? ` <span class="acoes-card-sub">· +${futuras} nos próximos 7 dias</span>` : '');
 }
 
 function renderMatchCol(elId, lista, tipo) {
