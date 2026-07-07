@@ -345,6 +345,27 @@ function doGet(e) {
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
 
+  if (acao === 'revenda_diff') {
+    try {
+      var props_rd = PropertiesService.getScriptProperties();
+      var antes_rd  = JSON.parse(props_rd.getProperty('bi_revenda_snap_antes')   || '{}');
+      var depois_rd = JSON.parse(props_rd.getProperty('bi_revenda_snap_depois')  || '{}');
+      var sync_rd   = props_rd.getProperty('bi_revenda_ultima_sync') || '—';
+      var totA_rd   = parseInt(props_rd.getProperty('bi_revenda_total_antes')  || '0');
+      var totD_rd   = parseInt(props_rd.getProperty('bi_revenda_total_depois') || '0');
+      // união de todos os tipos
+      var allT_rd = {};
+      Object.keys(antes_rd).forEach(function(t)  { allT_rd[t] = true; });
+      Object.keys(depois_rd).forEach(function(t) { allT_rd[t] = true; });
+      var delta_rd = Object.keys(allT_rd).map(function(t) {
+        var a = antes_rd[t]  || 0;
+        var d = depois_rd[t] || 0;
+        return {tipo: t, antes: a, depois: d, diff: d - a};
+      }).sort(function(a, b) { return b.depois - a.depois; });
+      return ok({ultimaSync: sync_rd, totalAntes: totA_rd, totalDepois: totD_rd, delta: delta_rd});
+    } catch(err) { return ok({ultimaSync:'—', totalAntes:0, totalDepois:0, delta:[]}); }
+  }
+
   if (acao === 'pipeline_dados') {
     try {
       var ss_ = SpreadsheetApp.openById(SHEET_ID);
@@ -720,11 +741,27 @@ function dadosDashboard() {
     matchCounts[cc] = counts;
   });
 
+  // Contagem de favoritos por idCliente
+  var favCounts = {};
+  var abaFav = ss.getSheetByName('FAVORITOS');
+  if (abaFav && abaFav.getLastRow() > 1) {
+    var favDados = abaFav.getDataRange().getValues();
+    var favCab_  = favDados[0];
+    var iFavId   = favCab_.indexOf('idCliente');
+    if (iFavId >= 0) {
+      for (var fi = 1; fi < favDados.length; fi++) {
+        var fid = String(favDados[fi][iFavId] || '').trim();
+        if (fid) favCounts[fid] = (favCounts[fid] || 0) + 1;
+      }
+    }
+  }
+
   [quentes, mornos, frios].forEach(function(lista) {
     lista.forEach(function(item) {
       var mc = matchCounts[item.cod] || { mc80: 0, mc70: 0 };
-      item.mc80 = mc.mc80;
-      item.mc70 = mc.mc70;
+      item.mc80  = mc.mc80;
+      item.mc70  = mc.mc70;
+      item.favs  = favCounts[item.cod] || 0;
     });
     lista.sort(function(a, b) { return b.scoreTotal - a.scoreTotal; });
   });
@@ -1867,6 +1904,21 @@ function sincronizarRevenda() {
   var aba = ss.getSheetByName('REVENDA');
   if (!aba) { aba = ss.insertSheet('REVENDA'); Logger.log('Aba REVENDA criada.'); }
 
+  // ── Snapshot ANTES (lê a aba atual antes de apagar) ──────────────────────
+  var snapAntes = {}, totalAntes = 0;
+  if (aba.getLastRow() > 1) {
+    var dadosAnt = aba.getDataRange().getValues();
+    var cabAnt   = dadosAnt[0];
+    var iTAnt    = cabAnt.indexOf('tipo');
+    if (iTAnt >= 0) {
+      for (var ai = 1; ai < dadosAnt.length; ai++) {
+        var tipoAnt = String(dadosAnt[ai][iTAnt] || 'Outros').trim() || 'Outros';
+        snapAntes[tipoAnt] = (snapAntes[tipoAnt] || 0) + 1;
+        totalAntes++;
+      }
+    }
+  }
+
   aba.clearContents();
 
   if (imoveis.length === 0) {
@@ -1884,6 +1936,25 @@ function sincronizarRevenda() {
   aba.setFrozenRows(1);
   aba.setColumnWidth(7, 220);
   aba.setColumnWidth(8, 180);
+
+  // ── Snapshot DEPOIS (conta tipos das linhas gravadas) ────────────────────
+  var snapDepois = {}, totalDepois = 0;
+  var iTipoRev = CABECALHO_REVENDA.indexOf('tipo');
+  if (iTipoRev >= 0) {
+    linhas.slice(1).forEach(function(l) {
+      var tipoNovo = String(l[iTipoRev] || 'Outros').trim() || 'Outros';
+      snapDepois[tipoNovo] = (snapDepois[tipoNovo] || 0) + 1;
+      totalDepois++;
+    });
+  }
+
+  // ── Persiste snapshots no PropertiesService ───────────────────────────────
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('bi_revenda_snap_antes',   JSON.stringify(snapAntes));
+  props.setProperty('bi_revenda_snap_depois',  JSON.stringify(snapDepois));
+  props.setProperty('bi_revenda_total_antes',  String(totalAntes));
+  props.setProperty('bi_revenda_total_depois', String(totalDepois));
+  props.setProperty('bi_revenda_ultima_sync',  agora);
 
   Logger.log('REVENDA atualizada: ' + imoveis.length + ' imoveis em ' + agora);
 }
