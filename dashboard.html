@@ -108,6 +108,21 @@
   .insight-ver-btn{cursor:pointer;color:var(--ic,var(--accent));font-weight:700;margin-left:8px;white-space:nowrap}
   .insight-ver-btn:hover{opacity:.75}
 
+  /* ── REVENDA DIFF ── */
+  .revenda-diff{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px}
+  .revenda-diff-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+  .revenda-diff-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
+  .revenda-diff-meta{font-size:12px;color:var(--text3)}
+  .revenda-diff-tbl{width:100%;border-collapse:collapse}
+  .revenda-diff-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);padding:4px 12px 8px;text-align:left;border-bottom:1px solid var(--border)}
+  .revenda-diff-tbl th:not(:first-child){text-align:center}
+  .revenda-diff-tbl td{padding:7px 12px;border-bottom:1px solid rgba(42,48,80,.4);color:var(--text2);font-size:13px}
+  .revenda-diff-tbl td:not(:first-child){text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:600}
+  .revenda-diff-tbl tr:last-child td{border-bottom:none}
+  .revenda-diff-tbl .td-tipo{color:var(--text);font-weight:500}
+  .diff-pos{color:var(--accent2)}.diff-neg{color:var(--danger)}.diff-zero{color:var(--text3)}
+  .revenda-diff-tbl .total-row td{color:var(--text);font-weight:700;border-top:1px solid var(--border);border-bottom:none;padding-top:10px}
+
   /* ── PIPELINE ── */
   .pipeline-funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:32px;
                    border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
@@ -439,6 +454,7 @@
   <div class="cards-row" id="cardsRevenda">
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
   </div>
+  <div id="revendaDiffPanel" style="display:none"></div>
   <div class="charts-row" style="margin-bottom:32px">
     <div class="chart-card">
       <div class="chart-title">Imóveis por tipo</div>
@@ -688,6 +704,61 @@ async function carregarDados() {
   carregarLancamentosDash();
   carregarInsightsExtended();
   carregarPipeline();
+  carregarRevendaDiff();
+}
+
+// ── REVENDA DIFF ──────────────────────────────────────────────────────────────
+
+async function carregarRevendaDiff() {
+  try {
+    const res  = await fetch(WEBHOOK_URL + '?acao=revenda_diff&token=' + encodeURIComponent(tokenSessao()));
+    const json = await res.json();
+    if (trataNaoAutenticado(json)) return;
+    renderRevendaDiff(json);
+  } catch(e) { /* painel é suplementar — falha silenciosa */ }
+}
+
+function renderRevendaDiff(d) {
+  const panel = document.getElementById('revendaDiffPanel');
+  if (!panel || !d.delta || !d.ultimaSync || d.ultimaSync === '—') return;
+
+  const totalDiff = (d.totalDepois || 0) - (d.totalAntes || 0);
+  const totalCls  = totalDiff > 0 ? 'diff-pos' : totalDiff < 0 ? 'diff-neg' : 'diff-zero';
+  const totalStr  = totalDiff > 0 ? '+' + totalDiff : totalDiff === 0 ? '—' : String(totalDiff);
+
+  const rows = d.delta.map(r => {
+    const df  = r.diff;
+    const cls = df > 0 ? 'diff-pos' : df < 0 ? 'diff-neg' : 'diff-zero';
+    const dStr = df > 0 ? '+' + df : df === 0 ? '—' : String(df);
+    return `<tr>
+      <td class="td-tipo">${r.tipo}</td>
+      <td>${r.antes}</td>
+      <td>${r.depois}</td>
+      <td class="${cls}">${dStr}</td>
+    </tr>`;
+  }).join('');
+
+  panel.style.display = '';
+  panel.innerHTML = `<div class="revenda-diff">
+    <div class="revenda-diff-header">
+      <span class="revenda-diff-title">📋 Atualização do portfólio</span>
+      <span class="revenda-diff-meta">Última sincronização: <b style="color:var(--text)">${d.ultimaSync}</b>
+        &nbsp;·&nbsp; <span class="${totalCls}" style="font-weight:700">${totalStr !== '—' ? totalStr + ' imóveis' : 'sem variação'}</span>
+      </span>
+    </div>
+    <table class="revenda-diff-tbl">
+      <thead><tr><th>Tipo</th><th>Antes</th><th>Depois</th><th>Variação</th></tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="total-row">
+          <td>Total</td>
+          <td>${d.totalAntes || 0}</td>
+          <td>${d.totalDepois || 0}</td>
+          <td class="${totalCls}">${totalStr}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
 }
 
 // ── PIPELINE ──────────────────────────────────────────────────────────────────

@@ -1,0 +1,2877 @@
+// ═══════════════════════════════════════════════════════════════
+// BASE INTELIGENTE — Apps Script Completo
+// Versão 27 — 02/07/2026 — Módulo LANCAMENTOS
+// ═══════════════════════════════════════════════════════════════
+
+const SHEET_ID = '1cr1Qs9o9_4mFXy0fZmVx-54xYiBNF6Vx5fHcIsiAkNI';
+
+const CABECALHO = [
+  'dataCadastro','nome','telefone','email','nascimento','estadoCivil','filhos',
+  'profissao','empresa','bairroMora','cidadeMora','moradia','bairroTrabalha',
+  'raioMaximo','bairroInteresse','segmento',
+  // Características do imóvel (etapa 3 do formulário — adicionado em 2026-07)
+  'quartos','suites','vagas','areaUtil','areaTerreno',
+  'adensavel','andarAlto','aceitaTerreo','churrasqueira',
+  'piscina','homeOffice','condFechado','elevador','acessibilidade',
+  'padrao','precoLimite','margem_preco',
+  'finalidade','fgts','financ','entrada_chip','permuta','entrada','canal',
+  'primeiroContato','ultimoContato','produtoOrigem','naoFechou','urgencia',
+  'indicadoPor','conversa','observacoes','score','prioridade','categoria','nome_bruto',
+  'tipo_contato','tags',
+  // ID permanente do cliente (adicionado em 2026-07) — gerado uma vez, nunca
+  // recalculado por posição de linha. Ver proximoIdCliente_() e
+  // preencherIdsFaltantes(). Substitui gerarCodigo_(linha), que quebrava toda
+  // vez que a planilha era reimportada/reordenada (códigos passavam a apontar
+  // pra pessoas diferentes).
+  'idCliente',
+  // Campos de texto livre (adicionado em 2026-07) — complementam os chips de
+  // "Comodidades desejadas" e "Canal de origem" pra registrar algo que não
+  // está na lista fixa, sem forçar a criação de uma tag nova pra cada caso
+  // único. Vão no FIM do array pelo mesmo motivo de sempre: migrarCabecalhoContatos()
+  // só sabe ANEXAR colunas novas, nunca inserir no meio.
+  'comodidadesOutras', 'canalOutro',
+  // Mais 3 tags em "Situação financeira" (adicionado em 2026-07) — cada uma é
+  // uma flag independente, mesmo padrão de fgts/financ/entrada_chip/permuta.
+  'financiamento', 'avista', 'permutaCarro',
+  // Data/hora da última EDIÇÃO do cadastro (adicionado em 2026-07) — diferente
+  // de dataCadastro (nunca muda, é a criação) e de ultimoContato (é sobre a
+  // conversa com o cliente, preenchido manualmente). dataAtualizacao é
+  // automática: salvar()/atualizar() gravam "agora" toda vez. Usada pra medir
+  // frescor do cadastro (scoreComFrescor_) e pro alerta de "esfriando" no
+  // dashboard (contatos.html, adm_dados_insights).
+  'dataAtualizacao',
+  // Estágio do cliente no funil de vendas (adicionado em 2026-07) — valores:
+  // Urgentes, Pós-Visita, Agendar Visita, Pré-Atendimento, Ganhos. Vazio = sem estágio.
+  'pipeline'
+];
+
+const CABECALHO_LANCAMENTOS = [
+  'idLancamento', 'nomeEmpreendimento', 'construtora',
+  'tipo', 'bairro', 'cidade', 'endereco',
+  'status', 'previsaoEntrega',
+  'quartos', 'suites', 'banheiros', 'vagas', 'areaUtil', 'areaTerr',
+  'unidade', 'escaninho', 'padrao',
+  'precoMedio', 'precoMin', 'precoMax', 'preco', 'dataTabela', 'statusTabela',
+  'urlSite', 'foto',
+  'entrada', 'parcelasObra', 'parcelasEntrega', 'avaliacaoBanco', 'fgts', 'planoLongo',
+  'lazer', 'conceito', 'dataCadastro',
+  // Estado (UF) — adicionado em 2026-07. Vai no FIM do array (não no meio, perto
+  // de cidade) porque migrarCabecalhoLancamentos() só sabe ANEXAR colunas novas
+  // no final da planilha — inserir no meio desalinharia os dados já existentes.
+  'estado',
+  // idOferta — código único por LINHA (uma tipologia específica dentro de um
+  // lançamento), formato "LAN-00011-01". Antes só existia idLancamento (o
+  // empreendimento inteiro, várias linhas) — sem código por oferta, o
+  // BaseImob usava a posição na lista atual como identificador (quebrava toda
+  // vez que o filtro mudava a ordem). Com esse código, o mesmo imóvel que o
+  // cliente marcou interesse consegue ser referenciado depois (email, busca
+  // aberta) de forma estável. Ver salvarLancamento_().
+  'idOferta'
+];
+
+// ═══════════════════════════════════════════════════════════════
+// ROTAS HTTP
+// ═══════════════════════════════════════════════════════════════
+
+// Ações que fazem parte do próprio fluxo de login/reset de senha — não
+// exigem uma sessão já validada (senão ninguém conseguiria logar).
+// 'listar_lancamentos' também é pública: é lida pelo BASEIMOB (visitante
+// anônimo de anúncio, sem login nenhum), além do Base Inteligente.
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'rodar_matching'];
+
+function doGet(e) {
+  if (!e || !e.parameter) return ok({ status: 'sem parametros' });
+  var acao = e.parameter.acao;
+
+  // BASEIMOB manda os dados via GET com ?dados=<json> (mesmo truque do
+  // no-cors usado no restante do projeto) — a acao fica DENTRO do JSON, não
+  // como parâmetro solto. São ações públicas: visitante de anúncio não tem
+  // sessão, e nunca gravam na aba CONTATOS.
+  if (e.parameter.dados) {
+    var dadosGet = {};
+    try { dadosGet = JSON.parse(e.parameter.dados); } catch(errGet) {}
+    if (dadosGet.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(dadosGet));
+    if (dadosGet.acao === 'interesse_lancamento') return ok(salvarInteresse_(dadosGet));
+  }
+
+  if (ACOES_PUBLICAS_GET.indexOf(acao) < 0 && !sessaoValida_(e.parameter.token)) {
+    return ok({ status: 'nao_autenticado' });
+  }
+
+  if (acao === 'buscar') {
+    var q     = e.parameter.q || '';
+    var aba   = getAba();
+    var dados = aba.getDataRange().getValues();
+    var cab   = dados[0];
+    var res   = [];
+    for (var i = 1; i < dados.length; i++) {
+      var row  = dados[i];
+      var nome = String(row[cab.indexOf('nome')]     || '').toLowerCase();
+      var tel  = String(row[cab.indexOf('telefone')] || '').toLowerCase();
+      if (nome.indexOf(q.toLowerCase()) >= 0 || tel.indexOf(q.toLowerCase()) >= 0) {
+        var obj = { _linha: i + 1 };
+        cab.forEach(function(c, j) { obj[c] = row[j]; });
+        obj.scoreEfetivo = scoreComFrescor_(obj.score, obj.dataAtualizacao);
+        res.push(obj);
+      }
+    }
+    return ok(res);
+  }
+
+  if (acao === 'buscar_linha') {
+    var lin = parseInt(e.parameter.linha);
+    var abaBL = getAba();
+    if (!lin || lin < 2 || lin > abaBL.getLastRow()) return ok(null);
+    var cabBL = abaBL.getRange(1, 1, 1, CABECALHO.length).getValues()[0];
+    var rowBL = abaBL.getRange(lin, 1, 1, CABECALHO.length).getValues()[0];
+    var objBL = { _linha: lin };
+    cabBL.forEach(function(c, j) { objBL[c] = rowBL[j]; });
+    objBL.scoreEfetivo = scoreComFrescor_(objBL.score, objBL.dataAtualizacao);
+    return ok(objBL);
+  }
+
+  if (acao === 'dashboard')        return ok(dadosDashboard());
+  if (acao === 'verificar_senha')  return verificarSenha_(e.parameter.hash);
+  if (acao === 'esqueci_senha')    return esquecerSenha_();
+  if (acao === 'validar_token')    return validarToken_(e.parameter.token);
+  if (acao === 'matches_cliente')  return matchesCliente_(e.parameter.cod);
+  if (acao === 'listar_favoritos') return ok(listarFavoritos_(e.parameter.cod));
+  if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
+  if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
+  if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
+  if (acao === 'rodar_matching') {
+    try {
+      rodarMatching();
+      return ok({ status: 'matching_concluido' });
+    } catch(err) {
+      return ok({ status: 'erro', motivo: String(err) });
+    }
+  }
+
+  // ── ADM — rotas protegidas por sessão (não estão em ACOES_PUBLICAS_GET) ──
+  if (acao === 'adm_rodar_matching') {
+    try { rodarMatching(); return ok({ status: 'ok', msg: 'Matching recalculado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_sincronizar_revenda') {
+    try { sincronizarRevenda(); return ok({ status: 'ok', msg: 'REVENDA sincronizada com Imobzi.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_criar_gatilho_matching') {
+    try { criarGatilhoMatching(); return ok({ status: 'ok', msg: 'Gatilho rodarMatching (12h) criado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_criar_gatilho_revenda') {
+    try { criarGatilhoRevenda(); return ok({ status: 'ok', msg: 'Gatilho sincronizarRevenda (6h) criado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_preencher_ids_faltantes') {
+    try { preencherIdOfertaFaltantes(); return ok({ status: 'ok', msg: 'idOfertas preenchidos.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  // Nome diferente de 'adm_preencher_ids_faltantes' de propósito — aquela rota
+  // já é usada pro idOferta de LANCAMENTOS; esta é o idCliente de CONTATOS
+  // (preencherIdsFaltantes() nunca tinha rota nem rodava sozinha, então
+  // contatos antigos ficavam pra sempre sem código visível no formulário).
+  if (acao === 'adm_preencher_ids_faltantes_contatos') {
+    try { preencherIdsFaltantes(); return ok({ status: 'ok', msg: 'idClientes preenchidos.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_migrar_cabecalho_lancamentos') {
+    try { migrarCabecalhoLancamentos(); return ok({ status: 'ok', msg: 'Cabeçalho LANCAMENTOS atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_migrar_cabecalho_contatos') {
+    try { migrarCabecalhoContatos(); return ok({ status: 'ok', msg: 'Cabeçalho CONTATOS atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_preencher_data_atualizacao') {
+    try { preencherDataAtualizacaoFaltantes(); return ok({ status: 'ok', msg: 'dataAtualizacao preenchida.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_testar_matching') {
+    try { return ok(testarMatching()); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_verificar_gatilhos') {
+    try {
+      var gatilhos = ScriptApp.getProjectTriggers().map(function(t) {
+        return { funcao: t.getHandlerFunction() };
+      });
+      return ok({ gatilhos: gatilhos });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+
+  if (acao === 'adm_dados_insights') {
+    try {
+      var ss_ = SpreadsheetApp.getActiveSpreadsheet();
+      var hoje_ = new Date();
+      var tz_   = Session.getScriptTimeZone();
+      var semContato90_ = 0, bairros_ = {}, canais_ = {};
+      var dormentes_ = [], bairroMap_ = {}, canalMap_ = {};
+      var esfriando15_ = 0, esfriandoList_ = [];
+
+      var abaC_ = ss_.getSheetByName('CONTATOS');
+      if (abaC_ && abaC_.getLastRow() > 1) {
+        var nC_ = abaC_.getLastRow() - 1;
+        var dadosC_ = abaC_.getRange(2, 1, nC_, CABECALHO.length).getValues();
+        var iNome_ = CABECALHO.indexOf('nome');
+        var iTel_  = CABECALHO.indexOf('telefone');
+        var iUC_   = CABECALHO.indexOf('ultimoContato');
+        var iBI_   = CABECALHO.indexOf('bairroInteresse');
+        var iCan_  = CABECALHO.indexOf('canal');
+        var iSc_   = CABECALHO.indexOf('score');
+        var iCat_  = CABECALHO.indexOf('categoria');
+        var iSeg_  = CABECALHO.indexOf('segmento');
+        var iPad_  = CABECALHO.indexOf('padrao');
+        var iUrg_  = CABECALHO.indexOf('urgencia');
+        var iId_   = CABECALHO.indexOf('idCliente');
+        var iDA_   = CABECALHO.indexOf('dataAtualizacao');
+        var FORA_  = ['Corretor','Parceiro','Descartar','Igreja'];
+
+        dadosC_.forEach(function(r_) {
+          if (!r_[iNome_]) return;
+          var nome_ = String(r_[iNome_]||'');
+          var tel_  = String(r_[iTel_]||'');
+          var sc_   = parseInt(r_[iSc_])||0;
+          var seg_  = String(r_[iSeg_]||'');
+          var pad_  = String(r_[iPad_]||'');
+          var urg_  = String(r_[iUrg_]||'');
+          var id_   = String(r_[iId_]||'');
+          var can_  = (String(r_[iCan_]||'').trim()) || 'Não informado';
+          var cat_  = String(r_[iCat_]||'').trim();
+          var bais_ = String(r_[iBI_]||'');
+
+          var uc_   = r_[iUC_];
+          var d_    = uc_ instanceof Date ? uc_ : (uc_ ? new Date(String(uc_)) : null);
+          var dias_ = (d_ && !isNaN(d_.getTime())) ? Math.round((hoje_ - d_) / 86400000) : 9999;
+          var ucStr_= (d_ && !isNaN(d_.getTime())) ? Utilities.formatDate(d_, tz_, 'dd/MM/yyyy') : '—';
+
+          if (dias_ > 90) {
+            semContato90_++;
+            if (dormentes_.length < 100)
+              dormentes_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_,dias:dias_});
+          }
+
+          // "Esfriando": janela de aviso ENTRE 15 e 30 dias sem edição do
+          // cadastro — mesmos limiares de fatorFrescor_() pro Score do
+          // Cliente. Acima de 30 dias o cadastro já é "Frio" (fator 0.65,
+          // caso encerrado) e não entra mais aqui — o alerta é sobre quem
+          // ainda dá pra reverter antes de esfriar de vez, não sobre quem já
+          // esfriou. Só conta leads de verdade (fora Corretor/Parceiro/
+          // Descartar/Igreja).
+          if (FORA_.indexOf(cat_) < 0) {
+            var diasDA_ = diasDesdeData_(r_[iDA_]);
+            if (diasDA_ !== null && diasDA_ > 15 && diasDA_ <= 30) {
+              esfriando15_++;
+              if (esfriandoList_.length < 100)
+                esfriandoList_.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,idCliente:id_,dias:diasDA_});
+            }
+          }
+
+          bais_.split(',').forEach(function(b_) {
+            b_ = b_.trim();
+            if (b_.length <= 2) return;
+            bairros_[b_] = (bairros_[b_]||0) + 1;
+            if (!bairroMap_[b_]) bairroMap_[b_] = [];
+            if (bairroMap_[b_].length < 50)
+              bairroMap_[b_].push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_});
+          });
+
+          if (FORA_.indexOf(cat_) < 0) {
+            if (!canais_[can_]) canais_[can_] = {soma:0, n:0, clientes:[]};
+            canais_[can_].soma += sc_;
+            canais_[can_].n++;
+            if (canais_[can_].clientes.length < 50)
+              canais_[can_].clientes.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_});
+          }
+        });
+      }
+
+      dormentes_.sort(function(a,b){ return b.dias - a.dias; });
+      esfriandoList_.sort(function(a,b){ return b.dias - a.dias; });
+
+      var topBairros_ = Object.entries(bairros_)
+        .sort(function(a,b){return b[1]-a[1]}).slice(0,5)
+        .map(function(e_){return {bairro:e_[0], n:e_[1]};});
+      var bairroTopClientes_ = topBairros_.length ? (bairroMap_[topBairros_[0].bairro]||[]) : [];
+
+      var canalTop_ = {nome:'—', media:0, total:0};
+      var canalTopClientes_ = [];
+      Object.keys(canais_).forEach(function(c_) {
+        if (canais_[c_].n < 3) return;
+        var med_ = Math.round(canais_[c_].soma / canais_[c_].n);
+        if (med_ > canalTop_.media) {
+          canalTop_ = {nome:c_, media:med_, total:canais_[c_].n};
+          canalTopClientes_ = canais_[c_].clientes;
+        }
+      });
+
+      var abaLL_ = ss_.getSheetByName('LEADS_LANCAMENTOS');
+      var leadsPendentes_ = 0, leadsTotal_ = 0, leadsList_ = [];
+      if (abaLL_ && abaLL_.getLastRow() > 1) {
+        var nLL_   = abaLL_.getLastRow() - 1;
+        var dadosLL_ = abaLL_.getRange(2, 1, nLL_, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+        var iTipo_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('tipo_contato');
+        var iNLL_   = CABECALHO_LEADS_LANCAMENTOS.indexOf('nome');
+        var iTelLL_ = CABECALHO_LEADS_LANCAMENTOS.indexOf('telefone');
+        var iCanLL_ = CABECALHO_LEADS_LANCAMENTOS.indexOf('canal');
+        var iScLL_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('score');
+        var iIdLL_  = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+        dadosLL_.forEach(function(r_) {
+          if (!r_[0]) return;
+          leadsTotal_++;
+          if (String(r_[iTipo_]||'') !== 'MIGRADO CONTATOS') {
+            leadsPendentes_++;
+            if (leadsList_.length < 100)
+              leadsList_.push({nome:String(r_[iNLL_]||''),telefone:String(r_[iTelLL_]||''),tipo_contato:String(r_[iTipo_]||''),canal:String(r_[iCanLL_]||''),score:parseInt(r_[iScLL_])||0,idCliente:String(r_[iIdLL_]||'')});
+          }
+        });
+      }
+
+      return ok({
+        semContato90: semContato90_,
+        topBairros: topBairros_,
+        canalTop: canalTop_,
+        leadsPendentes: leadsPendentes_,
+        leadsTotal: leadsTotal_,
+        dormentes: dormentes_,
+        bairroTopClientes: bairroTopClientes_,
+        canalTopClientes: canalTopClientes_,
+        leadsList: leadsList_,
+        esfriando15: esfriando15_,
+        esfriandoList: esfriandoList_
+      });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+
+  if (acao === 'revenda_diff') {
+    try {
+      var props_rd = PropertiesService.getScriptProperties();
+      var antes_rd  = JSON.parse(props_rd.getProperty('bi_revenda_snap_antes')   || '{}');
+      var depois_rd = JSON.parse(props_rd.getProperty('bi_revenda_snap_depois')  || '{}');
+      var sync_rd   = props_rd.getProperty('bi_revenda_ultima_sync') || '—';
+      var totA_rd   = parseInt(props_rd.getProperty('bi_revenda_total_antes')  || '0');
+      var totD_rd   = parseInt(props_rd.getProperty('bi_revenda_total_depois') || '0');
+      // união de todos os tipos
+      var allT_rd = {};
+      Object.keys(antes_rd).forEach(function(t)  { allT_rd[t] = true; });
+      Object.keys(depois_rd).forEach(function(t) { allT_rd[t] = true; });
+      var delta_rd = Object.keys(allT_rd).map(function(t) {
+        var a = antes_rd[t]  || 0;
+        var d = depois_rd[t] || 0;
+        return {tipo: t, antes: a, depois: d, diff: d - a};
+      }).sort(function(a, b) { return b.depois - a.depois; });
+      return ok({ultimaSync: sync_rd, totalAntes: totA_rd, totalDepois: totD_rd, delta: delta_rd});
+    } catch(err) { return ok({ultimaSync:'—', totalAntes:0, totalDepois:0, delta:[]}); }
+  }
+
+  if (acao === 'pipeline_dados') {
+    try {
+      var ss_ = SpreadsheetApp.openById(SHEET_ID);
+      var aba_ = ss_.getSheetByName('CONTATOS');
+      var dados_ = aba_.getDataRange().getValues();
+      var cab_ = dados_[0];
+      var iNome_ = cab_.indexOf('nome');
+      var iId_   = cab_.indexOf('idCliente');
+      var iPip_  = cab_.indexOf('pipeline');
+      var stages_ = {urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]};
+      var keyMap_ = {'Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
+      if (iPip_ >= 0) {
+        for (var pi_ = 1; pi_ < dados_.length; pi_++) {
+          var pip_  = String(dados_[pi_][iPip_] || '').trim();
+          var nome_ = String(dados_[pi_][iNome_] || '').trim();
+          var id_   = String(dados_[pi_][iId_]   || '').trim();
+          if (!pip_ || !nome_) continue;
+          var sk_ = keyMap_[pip_];
+          if (!sk_) continue;
+          var primeiroNome_ = nome_.split(' ')[0];
+          stages_[sk_].push({nome: primeiroNome_, nomeCompleto: nome_, idCliente: id_});
+        }
+      }
+      return ok({stages: stages_});
+    } catch(err) { return ok({stages:{urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]}}); }
+  }
+
+  return ok({ status: 'acao desconhecida' });
+}
+
+function doPost(e) {
+  var contents = e.postData ? e.postData.contents : '';
+  var d = parseBody(contents);
+
+  // 'salvar_senha' fica de fora — pertence ao fluxo de redefinição de senha
+  // (protegido pelo próprio token de reset de validarToken_/salvarSenhaReset_,
+  // usado justamente por quem ainda não tem uma sessão ativa).
+  if (d.acao === 'salvar_senha')  return salvarSenhaReset_(d);
+
+  // BASEIMOB (lead_lancamento/interesse_lancamento) também é pública — o
+  // visitante de anúncio nunca faz login. Suportado aqui também (via POST)
+  // além do GET com ?dados=, caso o front mande assim no futuro.
+  if (d.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(d));
+  if (d.acao === 'interesse_lancamento') return ok(salvarInteresse_(d));
+
+  if (!sessaoValida_(d.token)) return ok({ status: 'nao_autenticado' });
+
+  if (d.acao === 'excluir')       return ok(excluir_(d));
+  if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
+  if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
+  if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
+  if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
+  if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
+  if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
+  // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
+  // já criou um contato em branco na base por engano com uma ação com typo/nova
+  // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
+  if (d.acao) return ok({ status: 'acao desconhecida' });
+  if (d._linha) return ok(atualizar(d));
+  if (!d.nome || !d.telefone) return ok({ status: 'erro', motivo: 'nome_e_telefone_obrigatorios' });
+  return ok(salvar(d));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONTATOS — Salvar / Atualizar / Excluir
+// ═══════════════════════════════════════════════════════════════
+
+// Próximo ID permanente disponível (CLI-NNNNN). Lê a coluna idCliente inteira
+// e pega o maior número já usado + 1 — não depende de posição de linha, então
+// sobrevive a reordenação/reimportação da planilha.
+function proximoIdCliente_() {
+  var aba     = getAba();
+  var lastRow = aba.getLastRow();
+  var idxId   = CABECALHO.indexOf('idCliente') + 1; // 1-based
+  var maxNum  = 10000;
+  if (lastRow >= 2) {
+    var valores = aba.getRange(2, idxId, lastRow - 1, 1).getValues();
+    valores.forEach(function(row) {
+      var m = String(row[0] || '').match(/(\d+)\s*$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    });
+  }
+  return 'CLI-' + (maxNum + 1);
+}
+
+function salvar(d) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba    = getAba();
+    var agora  = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var novoId = proximoIdCliente_();
+    var linha = CABECALHO.map(function(col) {
+      if (col === 'dataCadastro')     return agora;
+      if (col === 'dataAtualizacao')  return agora;
+      if (col === 'tipo_contato')     return 'LEAD INTERESSADO';
+      if (col === 'idCliente')        return novoId;
+      return d[col] !== undefined ? d[col] : '';
+    });
+    aba.appendRow(linha);
+    return { status: 'salvo', idCliente: novoId };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function excluir_(d) {
+  var lin = parseInt(d._linha);
+  if (!lin || lin < 2) return { status: 'erro', motivo: 'linha invalida' };
+  getAba().deleteRow(lin);
+  return { status: 'excluido', linha: lin };
+}
+
+function salvarPipeline_(d) {
+  if (!d.idCliente && !d._linha) return {ok: false, motivo: 'sem identificador'};
+  var aba   = getAba();
+  var dados = aba.getDataRange().getValues();
+  var cab   = dados[0];
+  var iPip  = cab.indexOf('pipeline');
+  if (iPip < 0) {
+    // coluna ainda não existe: adiciona ao cabeçalho
+    iPip = cab.length;
+    aba.getRange(1, iPip + 1).setValue('pipeline');
+  }
+  var iId = cab.indexOf('idCliente');
+  for (var i = 1; i < dados.length; i++) {
+    var match = d.idCliente ? String(dados[i][iId] || '') === String(d.idCliente) : (i + 1 === parseInt(d._linha));
+    if (match) {
+      aba.getRange(i + 1, iPip + 1).setValue(d.pipeline || '');
+      return {ok: true};
+    }
+  }
+  return {ok: false, motivo: 'cliente nao encontrado'};
+}
+
+function atualizar(d) {
+  var aba       = getAba();
+  var lin       = parseInt(d._linha);
+  var existente = aba.getRange(lin, 1, 1, CABECALHO.length).getValues()[0];
+  var dataCad   = existente[CABECALHO.indexOf('dataCadastro')];
+  var tipoAtual = existente[CABECALHO.indexOf('tipo_contato')];
+  var idAtual   = existente[CABECALHO.indexOf('idCliente')];
+  var agora     = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var linha = CABECALHO.map(function(col) {
+    if (col === 'dataCadastro') return dataCad;
+    // Toda edição conta como atualização "fresca" — diferente de dataCadastro,
+    // este campo NÃO é preservado (ver scoreComFrescor_/fatorFrescor_).
+    if (col === 'dataAtualizacao') return agora;
+    // Preserva a classificação manual do tipo_contato — o formulário não a edita
+    if (col === 'tipo_contato') return d[col] !== undefined && d[col] !== '' ? d[col] : tipoAtual;
+    // ID permanente nunca muda numa edição
+    if (col === 'idCliente') return idAtual;
+    return d[col] !== undefined ? d[col] : '';
+  });
+  aba.getRange(lin, 1, 1, CABECALHO.length).setValues([linha]);
+  return { status: 'atualizado', linha: lin };
+}
+
+// Roda UMA VEZ (manual, no editor do Apps Script) depois de implantar esta
+// versão — garante o cabeçalho da coluna idCliente e preenche o ID de todo
+// contato que ainda não tem (toda a base atual, migrada antes desta feature).
+function preencherIdsFaltantes() {
+  var aba     = getAba();
+  var lastRow = aba.getLastRow();
+  var idxId   = CABECALHO.indexOf('idCliente') + 1; // 1-based
+  aba.getRange(1, idxId).setValue('idCliente');
+  if (lastRow < 2) { Logger.log('Nenhuma linha de dados.'); return; }
+
+  var valores = aba.getRange(2, idxId, lastRow - 1, 1).getValues();
+  var maxNum  = 10000;
+  var faltando = [];
+  for (var i = 0; i < valores.length; i++) {
+    var v = String(valores[i][0] || '').trim();
+    if (v) {
+      var m = v.match(/(\d+)\s*$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    } else {
+      faltando.push(i + 2); // linha real na planilha (1-based, +1 pro cabeçalho)
+    }
+  }
+  faltando.forEach(function(lin) {
+    maxNum++;
+    aba.getRange(lin, idxId).setValue('CLI-' + maxNum);
+  });
+  Logger.log('IDs preenchidos: ' + faltando.length + ' (ultimo id: CLI-' + maxNum + ')');
+}
+
+// Roda a cada login (ver FUNCOES em index.html) — mesmo problema que
+// preencherIdsFaltantes() resolvia pro idCliente: dataAtualizacao só é
+// gravado quando salvar()/atualizar() rodam, então todo contato criado antes
+// dessa coluna existir fica com o campo vazio, e a coluna "Status" em
+// contatos.html (e o desconto de fatorFrescor_ no score) não tem o que
+// mostrar. Usa dataCadastro como aproximação razoável — não sabemos quando
+// foi editado de verdade, mas sabemos desde quando existe, e um cadastro
+// nunca tocado desde a criação DEVE aparecer frio se for antigo. Idempotente:
+// só preenche onde está vazio.
+function preencherDataAtualizacaoFaltantes() {
+  var aba     = getAba();
+  var lastRow = aba.getLastRow();
+  if (lastRow < 2) { Logger.log('Nenhuma linha de dados.'); return; }
+  var idxDA = CABECALHO.indexOf('dataAtualizacao') + 1; // 1-based
+  var idxDC = CABECALHO.indexOf('dataCadastro') + 1;
+  var valoresDA = aba.getRange(2, idxDA, lastRow - 1, 1).getValues();
+  var valoresDC = aba.getRange(2, idxDC, lastRow - 1, 1).getValues();
+  var preenchidos = 0;
+  for (var i = 0; i < valoresDA.length; i++) {
+    if (!valoresDA[i][0] && valoresDC[i][0]) {
+      aba.getRange(i + 2, idxDA).setValue(valoresDC[i][0]);
+      preenchidos++;
+    }
+  }
+  Logger.log('dataAtualizacao preenchida em ' + preenchidos + ' linhas (usando dataCadastro).');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+// Pesos por posição no ranking de matches do cliente (1º-4º; 5º em diante usa sempre 1)
+var PESOS_MATCH_RANK = [5, 4, 3, 2, 1];
+function pesoPorRank_(idx) {
+  return idx < PESOS_MATCH_RANK.length ? PESOS_MATCH_RANK[idx] : 1;
+}
+
+// ── Frescor do cadastro (2026-07) ──────────────────────────────
+// Cadastro atualizado recentemente pesa mais no Score do Cliente — um lead
+// que ninguém mexe há semanas está "esfriando", mesmo que o perfil declarado
+// seja bom. Fator multiplicativo, não pontos fixos: assim o efeito é
+// proporcional pra qualquer nível de score, não só pra quem tem sobra.
+function diasDesdeData_(dataStr) {
+  if (!dataStr) return null;
+  var d;
+  if (dataStr instanceof Date) {
+    d = dataStr;
+  } else {
+    // dataAtualizacao é gravado como "dd/MM/yyyy HH:mm" (Utilities.formatDate).
+    // new Date(string) NÃO pode ser usado aqui: o parser nativo do JS trata
+    // strings não-ISO como MM/DD/YYYY (padrão americano), trocando dia e mês
+    // silenciosamente sempre que o dia é <= 12 (ex: "06/07/2026" viraria 7 de
+    // junho em vez de 6 de julho). Regex explícito evita essa ambiguidade.
+    var m = String(dataStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (!m) return null;
+    d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10),
+                 parseInt(m[4] || 0, 10), parseInt(m[5] || 0, 10));
+  }
+  if (isNaN(d.getTime())) return null;
+  return Math.round((new Date() - d) / 86400000);
+}
+
+function fatorFrescor_(dataAtualizacaoStr) {
+  var dias = diasDesdeData_(dataAtualizacaoStr);
+  if (dias === null) return 1; // sem data (cadastro legado) → não penaliza
+  if (dias <= 15) return 1;    // até 15 dias: mais alto (sem penalidade)
+  if (dias <= 30) return 0.85; // 15–30 dias: valor médio
+  return 0.65;                 // mais de 30 dias: valor baixo
+}
+
+function scoreComFrescor_(scoreBase, dataAtualizacaoStr) {
+  var base = parseInt(scoreBase) || 0;
+  return Math.round(base * fatorFrescor_(dataAtualizacaoStr));
+}
+
+// Score Total = combina o score do cadastro (35%) com a média ponderada dos
+// scores dos matches do cliente (65%), dando mais peso aos melhores matches.
+// Sem matches, cai de volta pro score do cadastro puro.
+function calcularScoreTotal_(scoreCliente, scoresMatches) {
+  // Sem nenhum match, o componente de qualidade de produto (65% do peso) é
+  // zero — um cliente sem nada pra oferecer não pode virar morno/quente só
+  // pelo score de cadastro (máximo possível aqui: 100 × 0.35 = 35, sempre frio).
+  if (!scoresMatches || !scoresMatches.length) return scoreCliente * 0.35;
+  var somaPonderada = 0, totalPesos = 0;
+  scoresMatches.forEach(function(sc, idx) {
+    var p = pesoPorRank_(idx);
+    somaPonderada += sc * p;
+    totalPesos += p;
+  });
+  return (scoreCliente * 0.35) + ((somaPonderada / totalPesos) * 0.65);
+}
+
+// Classifica a temperatura pelo Score Total, com regra especial: se existe
+// pelo menos 1 match com score >= 85 (produto ideal), sobe pra QUENTE mesmo
+// que o Score Total não alcance 75.
+function classificarTemperatura_(scoreTotal, scoresMatches) {
+  var temMatchIdeal = (scoresMatches || []).some(function(sc) { return sc >= 85; });
+  if (temMatchIdeal) return 'quente';
+  if (scoreTotal >= 75) return 'quente';
+  if (scoreTotal >= 50) return 'morno';
+  return 'frio';
+}
+
+// Categorias que não representam leads de venda — ficam fora das listas de temperatura
+var CATEGORIAS_FORA_MATCH = ['Corretor', 'Parceiro', 'Descartar', 'Igreja'];
+
+function dadosDashboard() {
+  var ss    = SpreadsheetApp.openById(SHEET_ID);
+  var aba   = ss.getSheetByName('CONTATOS');
+  var dados = aba.getDataRange().getValues();
+  var cab   = dados[0];
+
+  // Lê MATCHES primeiro — precisamos dos scores de cada cliente antes de
+  // classificar a temperatura (Score Total depende dos matches dele).
+  var scoresPorCliente = {}; // cod -> [scoreMatch, ...] ordenado desc
+  var abaMat = ss.getSheetByName('MATCHES');
+  if (abaMat) {
+    var matDados = abaMat.getDataRange().getValues();
+    if (matDados.length > 1) {
+      var matCab = matDados[0];
+      var iCC = matCab.indexOf('cliCodigo');
+      var iSC = matCab.indexOf('scoreMatch');
+      for (var m = 1; m < matDados.length; m++) {
+        var cc = String(matDados[m][iCC] || '');
+        if (!cc) continue;
+        var scMat = parseInt(matDados[m][iSC]) || 0;
+        if (!scoresPorCliente[cc]) scoresPorCliente[cc] = [];
+        scoresPorCliente[cc].push(scMat);
+      }
+      Object.keys(scoresPorCliente).forEach(function(k) {
+        scoresPorCliente[k].sort(function(a, b) { return b - a; });
+      });
+    }
+  }
+
+  var total = 0;
+  var quentes = [], mornos = [], frios = [];
+  var segmentos = {}, padroes = {};
+
+  for (var i = 1; i < dados.length; i++) {
+    var row = dados[i];
+    var obj = {};
+    cab.forEach(function(c, j) { obj[c] = row[j]; });
+    if (!obj.nome) continue;
+    total++;
+
+    var s = obj.segmento || ''; if (s) segmentos[s] = (segmentos[s] || 0) + 1;
+    var p = obj.padrao   || ''; if (p) padroes[p]   = (padroes[p]   || 0) + 1;
+
+    // Corretor/Parceiro/Descartar/Igreja não entram nas listas de temperatura
+    if (CATEGORIAS_FORA_MATCH.indexOf(obj.categoria) >= 0) continue;
+
+    var scoreCliente  = parseInt(obj.score) || 0;
+    // Score com frescor entra na classificação de temperatura (cadastro
+    // desatualizado "esfria" mesmo com perfil declarado bom) — o score BRUTO
+    // continua exposto em item.score pra não confundir o corretor sobre o
+    // que ele realmente cadastrou.
+    var scoreClienteFresco = scoreComFrescor_(scoreCliente, obj.dataAtualizacao);
+    var cod           = String(obj.idCliente || '').trim() || gerarCodigo_(i);
+    var scoresMatches = scoresPorCliente[cod] || [];
+    var scoreTotal    = calcularScoreTotal_(scoreClienteFresco, scoresMatches);
+    var temperatura   = classificarTemperatura_(scoreTotal, scoresMatches);
+    var nome          = String(obj.nome || '').trim();
+    var item = {
+      cod: cod, nome: nome,
+      score: scoreCliente,
+      scoreEfetivo: scoreClienteFresco,
+      scoreTotal: Math.round(scoreTotal * 10) / 10,
+      seg: obj.segmento || '', pad: obj.padrao || '',
+      urg: obj.urgencia || obj.prioridade || ''
+    };
+    if      (temperatura === 'quente') quentes.push(item);
+    else if (temperatura === 'morno')  mornos.push(item);
+    else                                frios.push(item);
+  }
+
+  // Contagem de matches por cliente: mc80 (score>=80) e mc70 (70-79),
+  // derivada do mesmo scoresPorCliente já lido acima (sem reler a aba).
+  var matchCounts = {};
+  Object.keys(scoresPorCliente).forEach(function(cc) {
+    var counts = { mc80: 0, mc70: 0 };
+    scoresPorCliente[cc].forEach(function(sc) {
+      if (sc >= 80) counts.mc80++;
+      else if (sc >= 70) counts.mc70++;
+    });
+    matchCounts[cc] = counts;
+  });
+
+  [quentes, mornos, frios].forEach(function(lista) {
+    lista.forEach(function(item) {
+      var mc = matchCounts[item.cod] || { mc80: 0, mc70: 0 };
+      item.mc80 = mc.mc80;
+      item.mc70 = mc.mc70;
+    });
+    lista.sort(function(a, b) { return b.scoreTotal - a.scoreTotal; });
+  });
+
+  // Top 20 para rankings do dashboard
+  var top20 = dados.slice(1).map(function(row, i) {
+    var obj = {};
+    cab.forEach(function(c, j) { obj[c] = row[j]; });
+    return {
+      cod: String(obj.idCliente || '').trim() || gerarCodigo_(i + 1),
+      nome: String(obj.nome || '').trim(),
+      score: parseInt(obj.score) || 0,
+      seg: obj.segmento || '', pad: obj.padrao || '',
+      urg: obj.urgencia || obj.prioridade || ''
+    };
+  }).filter(function(x) { return x.nome; })
+    .sort(function(a, b) { return b.score - a.score; })
+    .slice(0, 20);
+
+  // Estatísticas REVENDA
+  var produtos = {
+    total: 0,
+    porTipo:   {},
+    porFaixa:  { 'Ate 300k': 0, '300k-700k': 0, '700k-1.5M': 0, 'Acima 1.5M': 0 },
+    porPadrao: {}
+  };
+  var abaRev = ss.getSheetByName('REVENDA');
+  if (abaRev) {
+    var revDados = abaRev.getDataRange().getValues();
+    var revCab   = revDados[0];
+    var iT = revCab.indexOf('tipo');
+    var iV = revCab.indexOf('valorVenda');
+    var iP = revCab.indexOf('padrao');
+    for (var r = 1; r < revDados.length; r++) {
+      produtos.total++;
+      var tipo = String(revDados[r][iT] || 'Outros');
+      produtos.porTipo[tipo] = (produtos.porTipo[tipo] || 0) + 1;
+      var pad2 = String(revDados[r][iP] || 'Outros');
+      produtos.porPadrao[pad2] = (produtos.porPadrao[pad2] || 0) + 1;
+      var vStr = String(revDados[r][iV] || '0').replace(/[^\d]/g, '');
+      var v    = parseInt(vStr) || 0;
+      if      (v <= 300000)  produtos.porFaixa['Ate 300k']++;
+      else if (v <= 700000)  produtos.porFaixa['300k-700k']++;
+      else if (v <= 1500000) produtos.porFaixa['700k-1.5M']++;
+      else                   produtos.porFaixa['Acima 1.5M']++;
+    }
+  }
+
+  // Estatísticas CONSTRUTORA-APARTAMENTOS
+  var construtora = {
+    total: 0,
+    porConstrutora: {},
+    porStatus: {},
+    porClasse: {},
+    porFaixa: { 'Ate 300k': 0, '300k-700k': 0, '700k-1.5M': 0, 'Acima 1.5M': 0 },
+    porBairro: {},
+    destaques: []
+  };
+  var abaCons = ss.getSheetByName('CONSTRUTORA-APARTAMENTOS');
+  if (abaCons) {
+    var consDados = abaCons.getDataRange().getValues();
+    if (consDados.length > 1) {
+      var consCab  = consDados[0];
+      var iEmp     = consCab.indexOf('empreendimento');
+      var iCons    = consCab.indexOf('construtora');
+      var iStat    = consCab.indexOf('status');
+      var iCls     = consCab.indexOf('classe');
+      var iPreco   = consCab.indexOf('preco');
+      var iBairro  = consCab.indexOf('bairro');
+      var iArea    = consCab.indexOf('areaPrivM2');
+      var iEntrega = consCab.indexOf('dataEntrega');
+      var iEntPc   = consCab.indexOf('entradaPerc');
+      var iQts     = consCab.indexOf('quartos');
+      var empsVistos = {};
+
+      for (var cx = 1; cx < consDados.length; cx++) {
+        var crow   = consDados[cx];
+        var cemp   = String(crow[iEmp]   || '').trim();
+        var ccons  = String(crow[iCons]  || '').trim();
+        var cstat  = String(crow[iStat]  || '').trim();
+        var ccls   = String(crow[iCls]   || '').trim();
+        var cpreco = parseInt(String(crow[iPreco] || '0').replace(/[^\d]/g, '')) || 0;
+        var cbairro= String(crow[iBairro]|| '').trim();
+        if (!cemp) continue;
+        construtora.total++;
+        if (ccons)   construtora.porConstrutora[ccons] = (construtora.porConstrutora[ccons] || 0) + 1;
+        if (cstat)   construtora.porStatus[cstat]      = (construtora.porStatus[cstat]      || 0) + 1;
+        if (ccls)    construtora.porClasse[ccls]        = (construtora.porClasse[ccls]        || 0) + 1;
+        if (cbairro) construtora.porBairro[cbairro]    = (construtora.porBairro[cbairro]    || 0) + 1;
+        if      (cpreco <= 300000)  construtora.porFaixa['Ate 300k']++;
+        else if (cpreco <= 700000)  construtora.porFaixa['300k-700k']++;
+        else if (cpreco <= 1500000) construtora.porFaixa['700k-1.5M']++;
+        else                        construtora.porFaixa['Acima 1.5M']++;
+        if (!empsVistos[cemp]) {
+          empsVistos[cemp] = true;
+          construtora.destaques.push({
+            empreendimento: cemp,
+            construtora: ccons,
+            status: cstat,
+            classe: ccls,
+            preco: cpreco,
+            bairro: cbairro,
+            area: String(crow[iArea]    || ''),
+            entrega: String(crow[iEntrega] || ''),
+            entradaPerc: String(crow[iEntPc]  || ''),
+            quartos: String(crow[iQts]  || '')
+          });
+        }
+      }
+      construtora.destaques.sort(function(a, b) { return a.preco - b.preco; });
+      construtora.destaques = construtora.destaques.slice(0, 6);
+    }
+  }
+
+  return {
+    total: total, segmentos: segmentos, padroes: padroes,
+    top20: top20, quentes: quentes, mornos: mornos, frios: frios,
+    produtos: produtos, construtora: construtora
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MATCHES — Busca por cliente
+// ═══════════════════════════════════════════════════════════════
+
+function matchesCliente_(cod) {
+  if (!cod) return ok([]);
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('MATCHES');
+  if (!aba) return ok([]);
+  var dados = aba.getDataRange().getValues();
+  if (dados.length < 2) return ok([]);
+  var cab  = dados[0];
+  var iCod = cab.indexOf('cliCodigo');
+  var res  = [];
+  for (var i = 1; i < dados.length; i++) {
+    if (String(dados[i][iCod]) === String(cod)) {
+      var obj = {};
+      cab.forEach(function(c, j) { obj[c] = String(dados[i][j]); });
+      res.push(obj);
+    }
+  }
+  res.sort(function(a, b) { return parseInt(b.scoreMatch || 0) - parseInt(a.scoreMatch || 0); });
+  return ok(res.slice(0, 10));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTRUTORA-APARTAMENTOS — Cabeçalho e inicialização
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_CONSTRUTORA = [
+  'codigo','dataAtualizacao','empreendimento','construtora',
+  'dataLancamento','status','dataEntrega','projeto',
+  'unidades','quartos','suites','vagas','torre',
+  'areaTotalM2','areaPrivM2',
+  'classe','segmento','preco','precoPorM2',
+  'bairro','cidade','pontoReferencia','observacoes',
+  'tabela','entradaPerc','entradaValor',
+  'sinalPerc','sinalValor',
+  'comissaoPerc','comissaoValor',
+  'corretorPerc','corretorValor'
+];
+
+function criarAbaConstrutora() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('CONSTRUTORA-APARTAMENTOS');
+  if (!aba) aba = ss.insertSheet('CONSTRUTORA-APARTAMENTOS');
+  aba.clearContents();
+  aba.getRange(1, 1, 1, CABECALHO_CONSTRUTORA.length).setValues([CABECALHO_CONSTRUTORA]);
+  var cab = aba.getRange(1, 1, 1, CABECALHO_CONSTRUTORA.length);
+  cab.setFontWeight('bold').setBackground('#1a0f3c').setFontColor('#ffffff');
+  aba.setFrozenRows(1);
+  Logger.log('Aba CONSTRUTORA-APARTAMENTOS criada com ' + CABECALHO_CONSTRUTORA.length + ' colunas.');
+}
+
+function constutoraParaImovel_(row) {
+  return {
+    codigo:       row.codigo         || '',
+    tipo:         'Apartamento',
+    bairro:       row.bairro         || '',
+    cidade:       row.cidade         || '',
+    condominio:   row.empreendimento || '',
+    quartos:      row.quartos        || '',
+    suites:       row.suites         || '',
+    vagas:        row.vagas          || '',
+    areaUtil:     row.areaPrivM2     || '',
+    valorVenda:   row.preco          || '',
+    padrao:       row.classe         || row.segmento || '',
+    estagio:      row.status         || '',
+    foto:         '',
+    urlSite:      '',
+    construtora:  row.construtora    || '',
+    dataEntrega:  row.dataEntrega    || '',
+    entradaPerc:  row.entradaPerc    || '',
+    entradaValor: row.entradaValor   || '',
+    sinalPerc:    row.sinalPerc      || '',
+    sinalValor:   row.sinalValor     || '',
+    comissaoPerc: row.comissaoPerc   || '',
+    comissaoValor:row.comissaoValor  || '',
+    corretorPerc: row.corretorPerc   || '',
+    corretorValor:row.corretorValor  || '',
+    tabela:       row.tabela         || '',
+    fonte:        'CONSTRUTORA'
+  };
+}
+
+// Converte linha da aba LANCAMENTOS para o formato de produto do motor de matching
+function lancamentoParaImovel_(row) {
+  var q  = parseInt(row.quartos) || 0;
+  var s  = parseInt(row.suites)  || 0;
+  var v  = parseInt(row.vagas)   || 0;
+
+  // Sem quartos e sem vagas → Terreno/Lote; tipo declarado tem prioridade
+  var tipo = row.tipo || ((q === 0 && v === 0) ? 'Terreno' : 'Apartamento');
+
+  // Label de tipologia para exibição (reconstruído dos campos separados)
+  var tipologiaLabel = (q === 0 && v === 0) ? '' : (q === 0 ? 'Studio' : q + 'q' + (s > 0 ? '+' + s + 's' : ''));
+
+  var precoMin = parseFloat(String(row.precoMin  || '').replace(/[^\d]/g, '')) || 0;
+  var precoMed = parseFloat(String(row.precoMedio|| '').replace(/[^\d]/g, '')) || precoMin;
+
+  return {
+    codigo:        String(row.idLancamento || ''),
+    tipo:          tipo,
+    bairro:        row.bairro             || '',
+    cidade:        row.cidade             || '',
+    condominio:    row.nomeEmpreendimento || '',
+    endereco:      row.endereco           || '',
+    quartos:       q || '',
+    suites:        s || '',
+    banheiros:     parseInt(row.banheiros) || '',
+    vagas:         v || '',
+    areaUtil:      row.areaUtil           || '',
+    areaTerr:      row.areaTerr           || '',
+    valorVenda:    precoMed               || '',
+    padrao:        row.padrao             || '',
+    estagio:       row.status             || '',
+    foto:          row.foto               || '',
+    urlSite:       row.urlSite            || '',
+    construtora:   row.construtora        || '',
+    dataEntrega:   row.previsaoEntrega    || '',
+    entradaPerc:   row.entrada            || '',
+    entradaValor:  '',
+    sinalPerc:     '', sinalValor:     '',
+    comissaoPerc:  '', comissaoValor: '',
+    corretorPerc:  '', corretorValor: '',
+    tabela:        '',
+    // Campos extras exclusivos de lançamentos
+    precoMin:      precoMin  || '',
+    precoMax:      parseFloat(String(row.precoMax || '').replace(/[^\d]/g, '')) || '',
+    precoMedio:    precoMed  || '',
+    tipologiaLabel:tipologiaLabel,
+    qtdUnidades:   row.unidade     || '',
+    idLancamento:  row.idLancamento|| '',
+    idOferta:      row.idOferta    || '',
+    dataTabela:    row.dataTabela  || '',
+    statusTabela:  row.statusTabela|| '',
+    estado:        row.estado      || '',
+    fonte:         'LANCAMENTO',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MOTOR DE MATCHING — CONTATOS × REVENDA + CONSTRUTORA → MATCHES
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_MATCHES = [
+  'fonte',
+  'cliCodigo','cliNome','cliScore','cliPrioridade',
+  'cliSegmento','cliPadrao','cliPrecoLimite',
+  'cliBairroInteresse','cliConversa',
+  'imoCodigo','imoTipo','imoBairro','imoCondominio',
+  'imoQuartos','imoSuites','imoVagas','imoAreaUtil',
+  'imoValorVenda','imoPadrao','imoEstagio','imoFoto','imoUrl',
+  'imoConstrutora','imoEntrega',
+  'imoEntradaPerc','imoEntradaValor','imoSinalPerc','imoSinalValor',
+  'imoComissaoPerc','imoComissaoValor','imoCorretorPerc','imoCorretorValor',
+  'imoTabela','imoDataTabela','imoStatusTabela',
+  'scoreMatch','detalheMatch','dataMatch'
+];
+
+function lerAba_(nomeAba) {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName(nomeAba);
+  if (!aba) return [];
+  var dados = aba.getDataRange().getValues();
+  if (dados.length < 2) return [];
+  var cab  = dados[0];
+  var rows = [];
+  for (var i = 1; i < dados.length; i++) {
+    var obj = {};
+    cab.forEach(function(c, j) { obj[c] = dados[i][j]; });
+    obj._rowIdx = i; // índice 1-based, mesmo usado em gerarCodigo_
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function gerarCodigo_(linha) {
+  return 'CLI-' + String(linha + 10000).slice(-5);
+}
+
+function norm_(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+function parseMoeda_(s) {
+  if (!s) return 0;
+  return parseInt(String(s).replace(/[^\d]/g, '')) || 0;
+}
+
+// ── Extração de tipo de imóvel ────────────────────────────────
+
+function extrairTipo_(texto) {
+  var t = norm_(texto);
+  if (/\bapto\b|\bapartamento\b/.test(t))        return 'apartamento';
+  if (/casa\s*cond|\bcasa\s*de\s*cond/.test(t))  return 'casa condominio';
+  if (/\bsobrado\b|\bsob\b/.test(t))             return 'sobrado';
+  if (/\bcasa\b|\bcs\b/.test(t))                 return 'casa';
+  if (/\blote\b|\blt\b|\bterreno\b/.test(t))     return 'lote';
+  if (/\bsala\b|\bcomercial\b|\bloja\b/.test(t)) return 'comercial';
+  if (/\bch[aá]cara\b|\bs[ií]tio\b/.test(t))    return 'chacara';
+  return '';
+}
+
+// ── Score de tipo ─────────────────────────────────────────────
+// Grupos separados: apartamento ≠ casa/sobrado (mesma faixa residencial
+// não basta — são produtos completamente diferentes para o comprador)
+
+function scoreTipo_(textoCliente, tipoImovel, segmentoCliente) {
+  // Campo estruturado (segmento, escolhido no formulário) manda mais que texto
+  // livre — conversa/observações podem citar "casa" fora de contexto (ex:
+  // "moramos numa casa alugada") e sequestrar a detecção do tipo desejado.
+  // Desde que os chips de "Tipo de imóvel" viraram múltipla escolha (2026-07),
+  // segmentoCliente pode trazer vários tipos separados por vírgula (ex: "Casa,
+  // Apartamento") — cada um é testado e o cliente é compatível se o imóvel
+  // bater com QUALQUER um dos tipos que ele marcou.
+  var segmentos = String(segmentoCliente || '').split(',')
+    .map(function(s) { return s.trim(); }).filter(Boolean);
+  var tiposCli = segmentos.map(extrairTipo_).filter(Boolean);
+  if (!tiposCli.length) {
+    var doTexto = extrairTipo_(textoCliente);
+    if (doTexto) tiposCli = [doTexto];
+  }
+
+  // O tipo do imóvel precisa passar pelo mesmo normalizador que o tipo do
+  // cliente — senão "Terreno" (como a Imobzi rotula lotes) nunca bate com
+  // "lote" (como o cliente que escolhe "Lote em cond." é normalizado), e o
+  // match é descartado por engano. Sem correspondência reconhecida, cai para
+  // o texto normalizado bruto (preserva o match exato por nome, ex: "Flat").
+  var tipoImo = extrairTipo_(tipoImovel) || norm_(tipoImovel || '');
+
+  // Sem preferência declarada: pontua neutro
+  if (!tiposCli.length) return 8;
+
+  // Grupos de compatibilidade:
+  // horizontal: casa, casa condominio, sobrado — mutuamente compatíveis
+  // vertical:   apartamento — incompatível com horizontal
+  // terra:      lote, chácara
+  // comercial:  sala, loja, galpão
+  var horizontal = ['casa', 'casa condominio', 'sobrado'];
+  var vertical   = ['apartamento'];
+  var terra      = ['lote', 'chacara'];
+  var comercial  = ['comercial', 'sala', 'loja'];
+
+  function grupo_(tp) {
+    if (horizontal.indexOf(tp) >= 0) return 'horiz';
+    if (vertical.indexOf(tp)   >= 0) return 'vert';
+    if (terra.indexOf(tp)      >= 0) return 'terra';
+    if (comercial.some(function(x) { return tp.indexOf(x) >= 0; })) return 'com';
+    return 'out';
+  }
+
+  var gImo = grupo_(tipoImo);
+
+  // Com múltiplos tipos declarados, o cliente é compatível pelo MELHOR deles
+  // — se marcou "Casa" e "Apartamento", um imóvel do tipo Apartamento não deve
+  // ser descartado só porque também marcou Casa.
+  var melhor = 0;
+  tiposCli.forEach(function(tipoCli) {
+    var pontos;
+    // Match exato ou subtipo (ex: "casa condominio" contém "casa")
+    if (tipoImo === tipoCli ||
+        tipoImo.indexOf(tipoCli) >= 0 ||
+        tipoCli.indexOf(tipoImo) >= 0) {
+      pontos = 25;
+    } else {
+      var gCli = grupo_(tipoCli);
+      // Mesmo grupo e não capturado acima → compatível parcial
+      pontos = (gCli === gImo && gCli !== 'out') ? 12 : 0;
+    }
+    if (pontos > melhor) melhor = pontos;
+  });
+
+  // Grupos diferentes de TODOS os tipos declarados = incompatível = 0
+  return melhor;
+}
+
+// ── Score de quartos ──────────────────────────────────────────
+
+function extrairQuartos_(texto) {
+  var t    = norm_(texto);
+  var pats = [/(\d)\s*quarto/, /\b(\d)\s*q\b/, /(\d)\s*dorm/, /\b(\d)\s*suite/];
+  for (var i = 0; i < pats.length; i++) {
+    var m = t.match(pats[i]);
+    if (m) return parseInt(m[1]);
+  }
+  return 0;
+}
+
+// quartosCliente é o campo estruturado do formulário (chip "Quartos", múltipla
+// escolha desde 2026-07 — pode vir "2, 3"). Prioridade igual scoreTipo_/
+// scorePadrao_: campo estruturado manda, texto livre só entra se o cliente
+// nunca declarou nada ali (senão editar o cadastro pra tirar uma preferência
+// não teria efeito nenhum no matching, porque o texto antigo continuaria
+// "puxando" o mesmo resultado de antes).
+function scoreQuartos_(textoCliente, quartosImovel, quartosCliente) {
+  var qImo = parseInt(quartosImovel) || 0;
+  if (qImo === 0) return 10; // imóvel sem info de quartos → neutro
+
+  var declarados = String(quartosCliente || '').split(',')
+    .map(function(s) { return s.trim(); }).filter(Boolean);
+  var qsCli = declarados.map(function(v) { return parseInt(v); })
+    .filter(function(n) { return !isNaN(n); });
+  if (!qsCli.length) {
+    var doTexto = extrairQuartos_(textoCliente);
+    if (doTexto) qsCli = [doTexto];
+  }
+  if (!qsCli.length) return 12; // cliente sem preferência → aceita qualquer
+
+  var melhor = 0;
+  qsCli.forEach(function(qCli) {
+    var diff = Math.abs(qCli - qImo);
+    var pontos = diff === 0 ? 20 : diff === 1 ? 10 : 0;
+    if (pontos > melhor) melhor = pontos;
+  });
+  return melhor;
+}
+
+// suitesCliente é o campo estruturado do formulário — mesma prioridade de
+// scoreQuartos_: estruturado manda, texto livre é só fallback pra quem nunca
+// teve esse campo preenchido.
+function scoreSuites_(textoCliente, suitesImovel, suitesCliente) {
+  var svImo = parseInt(suitesImovel) || 0;
+  if (svImo === 0) return 0;
+
+  var declarados = String(suitesCliente || '').split(',')
+    .map(function(s) { return s.trim(); }).filter(Boolean);
+  var svsCli = declarados.map(function(v) { return parseInt(v); })
+    .filter(function(n) { return !isNaN(n); });
+  if (svsCli.length) return svsCli.indexOf(svImo) >= 0 ? 3 : 0;
+
+  var t = norm_(textoCliente);
+  return t.indexOf(svImo + ' suite') >= 0 ? 3 : 0;
+}
+
+// ── Score de preço ────────────────────────────────────────────
+// precoLimite é o teto/referência informado pelo cliente (ex: "quero até 250k").
+// Margem padrão de tolerância: 30% para mais ou para menos, ajustável por
+// cliente via campo margem_preco. Acima da margem, o imóvel é excluído (score 0).
+
+function scorePreco_(valorImo, precoLimite, margemPerc) {
+  var limite = parseMoeda_(precoLimite) || 0;
+  if (!valorImo || !limite) return 15; // sem referência → aceita qualquer preço
+
+  var margem = parseFloat(margemPerc) || 30;
+  var distPerc = Math.abs(valorImo - limite) / limite * 100;
+
+  if (distPerc > margem) return 0;   // fora da margem tolerável → excluído
+  if (distPerc <= 5)  return 100;
+  if (distPerc <= 10) return 95;
+  if (distPerc <= 15) return 85;
+  if (distPerc <= 20) return 75;
+  if (distPerc <= 25) return 70;
+  return 60; // até o limite da margem (26%–30% por padrão)
+}
+
+// ── Score de bairro ───────────────────────────────────────────
+
+function scoreBairro_(bairroInteresse, bairroImo, cidadeImo) {
+  if (!bairroInteresse) return 3;
+  var interesse = norm_(bairroInteresse);
+  var imo       = norm_(bairroImo || '');
+  var cidade    = norm_(cidadeImo || '');
+  var bairros   = interesse.split(/[,;\/]/);
+  for (var i = 0; i < bairros.length; i++) {
+    var b = bairros[i].trim();
+    if (b && (imo.indexOf(b) >= 0 || b.indexOf(imo) >= 0)) return 15;
+  }
+  if (cidade && interesse.indexOf(cidade) >= 0) return 5;
+  return 0;
+}
+
+// ── Score de padrão ───────────────────────────────────────────
+
+function normPadrao_(s) {
+  var t = norm_(s);
+  if (t.indexOf('popular') >= 0 || t.indexOf('econom') >= 0) return 'popular';
+  if (t.indexOf('medio')   >= 0)                             return 'medio';
+  if (t.indexOf('alto')    >= 0)                             return 'alto';
+  if (t.indexOf('luxo')    >= 0 || t.indexOf('premium') >= 0) return 'luxo';
+  if (t === 'master' || t === 'classic' || t === 'prime')    return 'alto';
+  if (t === 'standard' || t === 'essencial')                 return 'medio';
+  return t;
+}
+
+var ORDEM_PADRAO = ['popular', 'medio', 'alto', 'luxo'];
+function scorePadrao_(pCli, pImo) {
+  var b = normPadrao_(pImo);
+  // Múltipla escolha (2026-07): pCli pode trazer vários padrões separados por
+  // vírgula — pontua pelo melhor entre os declarados, mesma lógica de scoreTipo_.
+  var padroesCli = String(pCli || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  if (!padroesCli.length || !b) return 5; // sem padrão declarado → aceita qualquer
+  var melhor = 0;
+  padroesCli.forEach(function(p) {
+    var a = normPadrao_(p);
+    if (!a) return;
+    var pontos;
+    if (a === b) { pontos = 10; }
+    else {
+      var ia = ORDEM_PADRAO.indexOf(a), ib = ORDEM_PADRAO.indexOf(b);
+      pontos = (ia < 0 || ib < 0) ? 3 : (Math.abs(ia - ib) === 1 ? 5 : 0);
+    }
+    if (pontos > melhor) melhor = pontos;
+  });
+  return melhor;
+}
+
+// ── Cálculo de match ──────────────────────────────────────────
+
+function calcularMatch_(contato, imovel) {
+  var valorImo  = parseMoeda_(imovel.valorVenda);
+  var textoFull = [
+    contato.conversa, contato.observacoes,
+    contato.nome_bruto, contato.produtoOrigem
+  ].join(' ');
+
+  var ptTipo    = scoreTipo_(textoFull, imovel.tipo, contato.segmento);
+
+  // Tipo incompatível (ex: cliente quer Apartamento, imóvel é Casa) desqualifica
+  // o match inteiro — preço/bairro perfeitos não compensam um produto
+  // fundamentalmente diferente do que o cliente pediu. scoreTipo_ só retorna 0
+  // quando o cliente declarou um tipo e ele está num grupo incompatível
+  // (vertical × horizontal × terra × comercial); sem preferência declarada
+  // (segmento vazio/Indefinido) o retorno é 8, não desqualifica.
+  if (ptTipo === 0) {
+    return { score: 0, detalhes: 'tipo incompatível' };
+  }
+
+  var ptPreco   = scorePreco_(valorImo, contato.precoLimite, contato.margem_preco);
+  var ptQuartos = scoreQuartos_(textoFull, imovel.quartos, contato.quartos);
+  var ptBairro  = scoreBairro_(contato.bairroInteresse, imovel.bairro, imovel.cidade);
+  var ptPadrao  = scorePadrao_(contato.padrao, imovel.padrao);
+
+  var bonus = 0;
+  var t  = norm_(textoFull);
+  bonus += scoreSuites_(textoFull, imovel.suites, contato.suites);
+  var vg = parseInt(imovel.vagas) || 0;
+  if (vg > 0 && (t.indexOf(vg + ' vaga') >= 0 || t.indexOf(vg + 'vg') >= 0)) bonus += 2;
+
+  // ptPreco vem em escala 0-100 (bandas da margem de 30%) — pra não "estourar"
+  // o total junto com tipo/quartos/bairro/padrao e mascarar preços ruins atrás
+  // de um score 100 (ex: imóvel 30% abaixo do precoLimite, mas com tipo/quartos
+  // perfeitos, aparecia com nota 100 igual um match perfeito), a contribuição
+  // dele no total volta a ser proporcional (até 30 pontos, como era antes da
+  // margem de 30% existir). O valor de 0-100 continua exposto no detalheMatch.
+  var ptPrecoContrib = ptPreco * 0.3;
+
+  var total = ptTipo + ptPrecoContrib + ptQuartos + ptBairro + ptPadrao + bonus;
+
+  var det = [];
+  if (ptTipo    > 0) det.push('tipo:'    + ptTipo);
+  if (ptPreco   > 0) det.push('preco:'   + ptPreco);
+  if (ptQuartos > 0) det.push('quartos:' + ptQuartos);
+  if (ptBairro  > 0) det.push('bairro:'  + ptBairro);
+  if (ptPadrao  > 0) det.push('padrao:'  + ptPadrao);
+  if (bonus     > 0) det.push('bonus:'   + bonus);
+
+  return { score: Math.round(Math.min(total, 100)), detalhes: det.join(' | ') };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUSCA ABERTA — descrição livre → matches, sem precisar de cadastro
+// ═══════════════════════════════════════════════════════════════
+
+// Extrai um valor de referência (precoLimite) de texto livre — mesma lógica
+// de extrair_valores() do processar_contatos_v3.py, adaptada pra JS.
+function extrairValorTexto_(texto) {
+  var t = norm_(texto);
+  var valores = [];
+  var m;
+
+  var reK = /(\d[\d.,]*)\s*k\b/g;
+  while ((m = reK.exec(t))) {
+    var vK = parseFloat(m[1].replace(/\./g, '').replace(',', '.')) * 1000;
+    if (!isNaN(vK)) valores.push(Math.round(vK));
+  }
+
+  var reMil = /(\d[\d.,]*)\s*mil\b/g;
+  while ((m = reMil.exec(t))) {
+    var vMil = parseFloat(m[1].replace(/\./g, '').replace(',', '.')) * 1000;
+    if (!isNaN(vMil)) valores.push(Math.round(vMil));
+  }
+
+  var reGrande = /\b(\d{1,3}(?:[.,]\d{3})+)\b/g;
+  while ((m = reGrande.exec(t))) {
+    var vG = parseInt(m[1].replace(/[.,]/g, ''), 10);
+    if (!isNaN(vG) && vG >= 100000) valores.push(vG);
+  }
+
+  // "Mi" ambíguo: número pequeno = milhão, número grande = mil (igual à
+  // heurística do script de migração)
+  var reMi = /(\d[\d.,\s]*)\s*mi\b/g;
+  while ((m = reMi.exec(t))) {
+    var numMi = parseFloat(m[1].replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(numMi)) valores.push(Math.round(numMi * (numMi < 100 ? 1000000 : 1000)));
+  }
+
+  var reMilhao = /(\d[\d.,]*)\s*milh(?:ao|oes)\b/g;
+  while ((m = reMilhao.exec(t))) {
+    var vM = parseFloat(m[1].replace(/\./g, '').replace(',', '.')) * 1000000;
+    if (!isNaN(vM)) valores.push(Math.round(vM));
+  }
+
+  if (!valores.length) return '';
+  return String(Math.max.apply(null, valores));
+}
+
+// Roda a descrição livre contra REVENDA + CONSTRUTORA-APARTAMENTOS usando o
+// mesmo motor de match do rodarMatching(), sem gravar nada — puramente uma
+// consulta. Retorna o que foi entendido do texto + os imóveis compatíveis.
+var TIPO_LABEL_BUSCA = {
+  'apartamento': 'Apartamento', 'casa': 'Casa', 'sobrado': 'Sobrado',
+  'casa condominio': 'Casa', 'lote': 'Lote em cond.',
+  'comercial': 'Sala comercial', 'chacara': 'Chácara'
+};
+
+// Tipos e bairros reais existentes em REVENDA + CONSTRUTORA-APARTAMENTOS, pra
+// alimentar os chips da Busca Aberta dinamicamente (em vez de lista fixa que
+// não reflete o estoque de verdade).
+// "AEROVIARIO" (maiúsculo) e "Aeroviário" (com acento) são o mesmo bairro
+// escrito diferente por quem cadastrou — agrupa por texto normalizado
+// (norm_) pra não duplicar o mesmo lugar na lista de chips.
+function tituloCase_(s) {
+  return String(s || '').toLowerCase().replace(/(^|\s)([a-zà-ÿ])/g, function(m, p1, p2) {
+    return p1 + p2.toUpperCase();
+  });
+}
+
+function opcoesFiltro_() {
+  var revenda     = lerAba_('REVENDA');
+  var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS');
+  var lancamentos = lerAba_('LANCAMENTOS');
+
+  var tiposMap = {};
+  function registrarTipo(t) {
+    t = String(t || '').trim();
+    if (!t) return;
+    var chave = norm_(t);
+    if (!tiposMap[chave]) tiposMap[chave] = tituloCase_(t);
+  }
+  revenda.forEach(function(r) { registrarTipo(r.tipo); });
+  if (construtora.length) registrarTipo('Apartamento');
+  lancamentos.forEach(function(r) { registrarTipo(r.tipo); });
+
+  var bairrosMap = {};
+  function registrarBairro(b) {
+    b = String(b || '').trim();
+    if (!b) return;
+    var chave = norm_(b);
+    if (!bairrosMap[chave]) bairrosMap[chave] = tituloCase_(b);
+  }
+  revenda.forEach(function(r) { registrarBairro(r.bairro); });
+  construtora.forEach(function(r) { registrarBairro(r.bairro); });
+  lancamentos.forEach(function(r) { registrarBairro(r.bairro); });
+
+  // Status do empreendimento — só existe de forma estruturada em LANCAMENTOS
+  // e CONSTRUTORA-APARTAMENTOS (Em planta/Em obras/Pronto/Pronto novo/Entregue);
+  // REVENDA é sempre pronto/usado, não tem esse conceito.
+  var statusMap = {};
+  function registrarStatus(s) {
+    s = String(s || '').trim();
+    if (!s) return;
+    var chave = norm_(s);
+    if (!statusMap[chave]) statusMap[chave] = s; // preserva a grafia original (ex: "Pronto novo")
+  }
+  lancamentos.forEach(function(r) { registrarStatus(r.status); });
+  construtora.forEach(function(r) { registrarStatus(r.status); });
+
+  // Cidade — as 3 fontes têm coluna própria com esse nome.
+  var cidadesMap = {};
+  function registrarCidade(c) {
+    c = String(c || '').trim();
+    if (!c) return;
+    var chave = norm_(c);
+    if (!cidadesMap[chave]) cidadesMap[chave] = tituloCase_(c);
+  }
+  revenda.forEach(function(r) { registrarCidade(r.cidade); });
+  construtora.forEach(function(r) { registrarCidade(r.cidade); });
+  lancamentos.forEach(function(r) { registrarCidade(r.cidade); });
+
+  // Padrão (Popular/Médio/Alto/Luxo) — REVENDA e LANCAMENTOS têm coluna
+  // "padrao" direto; CONSTRUTORA-APARTAMENTOS guarda o equivalente em "classe"
+  // (mesma coluna usada por constutoraParaImovel_ pra montar o padrao do imóvel).
+  var padroesMap = {};
+  function registrarPadrao(p) {
+    p = String(p || '').trim();
+    if (!p) return;
+    var chave = norm_(p);
+    if (!padroesMap[chave]) padroesMap[chave] = tituloCase_(p);
+  }
+  revenda.forEach(function(r) { registrarPadrao(r.padrao); });
+  construtora.forEach(function(r) { registrarPadrao(r.classe); });
+  lancamentos.forEach(function(r) { registrarPadrao(r.padrao); });
+
+  // Estado (UF) — só existe em LANCAMENTOS hoje (REVENDA/CONSTRUTORA não têm
+  // essa coluna); filtrar por estado naturalmente só retorna Lançamentos.
+  var estadosMap = {};
+  function registrarEstado(e) {
+    e = String(e || '').trim();
+    if (!e) return;
+    var chave = norm_(e);
+    if (!estadosMap[chave]) estadosMap[chave] = e.toUpperCase();
+  }
+  lancamentos.forEach(function(r) { registrarEstado(r.estado); });
+
+  var tipos    = Object.keys(tiposMap).map(function(k) { return tiposMap[k]; }).sort();
+  var bairros  = Object.keys(bairrosMap).map(function(k) { return bairrosMap[k]; }).sort();
+  var status   = Object.keys(statusMap).map(function(k) { return statusMap[k]; }).sort();
+  var cidades  = Object.keys(cidadesMap).map(function(k) { return cidadesMap[k]; }).sort();
+  var padroes  = Object.keys(padroesMap).map(function(k) { return padroesMap[k]; }).sort();
+  var estados  = Object.keys(estadosMap).map(function(k) { return estadosMap[k]; }).sort();
+
+  return { tipos: tipos, bairros: bairros, status: status, cidades: cidades, padroes: padroes, estados: estados };
+}
+
+// Normaliza um filtro de chip pra array — aceita tanto o formato antigo
+// (string única, de quando os chips eram seleção única) quanto o novo
+// (array, seleção múltipla). Remove valores vazios/placeholder.
+function paraArray_(v) {
+  var arr = Array.isArray(v) ? v : (v ? [v] : []);
+  return arr.filter(function(x) { return x && x !== 'Qualquer' && x !== 'Indiferente'; });
+}
+
+// Quartos/suítes/vagas em modo múltipla escolha (ex: cliente aceita 2 OU 3
+// quartos) — filtro rígido de "bate com pelo menos um dos valores marcados",
+// com suporte ao sufixo "+" dos chips (ex: "4+" quartos = 4 ou mais).
+function imovelBateContagem_(valorImo, valoresSelecionados) {
+  if (!valoresSelecionados.length) return true;
+  var n = parseInt(valorImo) || 0;
+  return valoresSelecionados.some(function(v) {
+    v = String(v).trim();
+    if (v.indexOf('+') >= 0) return n >= parseInt(v);
+    return n === parseInt(v);
+  });
+}
+
+// d: { tipo:[], padrao:[], quartos:[], suites:[], vagas:[], precoMax, areaMin,
+//      bairros:[], cidade:[], estado:[], status:[], condPagto:[], extras:[], urgencia, texto }
+// Todos os chips (exceto urgência, que hoje só é exibida, não filtra) aceitam
+// múltipla escolha — cliente pode marcar "2 e 3 quartos", "Alto e Luxo", etc.
+// Combina os chips estruturados (mais confiáveis) com o texto livre (fallback/contexto),
+// monta um "contato sintético" e roda no mesmo motor de match do rodarMatching().
+// extras/condPagto ainda não afetam o score — REVENDA/CONSTRUTORA não têm essas colunas
+// hoje (só existem como preferência do cliente em CONTATOS).
+function buscaAberta_(d) {
+  d = d || {};
+  var textoLivre = d.texto || '';
+
+  var bairros = paraArray_(d.bairros);
+  var bairroInteresse = bairros.length ? bairros.join(', ') : textoLivre;
+
+  var tiposArr   = paraArray_(d.tipo);
+  var padroesArr = paraArray_(d.padrao);
+
+  // Base do "contato sintético" comum a todas as combinações de tipo/padrão
+  // testadas abaixo — só segmento e padrao mudam por combinação.
+  var contatoBase = {
+    precoLimite: d.precoMax || extrairValorTexto_(textoLivre),
+    margem_preco: '',
+    bairroInteresse: bairroInteresse,
+    conversa: textoLivre,
+    observacoes: '',
+    produtoOrigem: '',
+    nome_bruto: ''
+  };
+
+  // Tipo e padrão entram no motor de match (scoreTipo_/scorePadrao_), que só
+  // aceita UM valor de cada por chamada. Com múltipla escolha, testamos cada
+  // combinação tipo×padrão marcada e ficamos com a de melhor score pra cada
+  // imóvel — equivalente a "compatível com qualquer um dos marcados".
+  function melhorMatch_(imo) {
+    var candidatosTipo   = tiposArr.length   ? tiposArr   : [''];
+    var candidatosPadrao = padroesArr.length ? padroesArr : [''];
+    var melhor = null;
+    candidatosTipo.forEach(function(tipoCand) {
+      candidatosPadrao.forEach(function(padraoCand) {
+        var contato = {
+          segmento: tipoCand || textoLivre,
+          precoLimite: contatoBase.precoLimite,
+          margem_preco: '',
+          bairroInteresse: contatoBase.bairroInteresse,
+          conversa: contatoBase.conversa,
+          observacoes: '',
+          produtoOrigem: '',
+          nome_bruto: '',
+          padrao: padraoCand
+        };
+        var res = calcularMatch_(contato, imo);
+        if (!melhor || res.score > melhor.score) melhor = res;
+      });
+    });
+    return melhor;
+  }
+
+  var revenda     = lerAba_('REVENDA').map(function(r) { r.fonte = 'REVENDA'; return r; });
+  var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS').map(constutoraParaImovel_);
+  var lancamentos = lerAba_('LANCAMENTOS').map(lancamentoParaImovel_);
+  var todos       = revenda.concat(construtora).concat(lancamentos);
+
+  // Quartos/suítes/vagas — filtro rígido de múltipla escolha (ver imovelBateContagem_).
+  var quartosArr = paraArray_(d.quartos);
+  var suitesArr  = paraArray_(d.suites);
+  var vagasArr   = paraArray_(d.vagas);
+  if (quartosArr.length) todos = todos.filter(function(imo) { return imovelBateContagem_(imo.quartos, quartosArr); });
+  if (suitesArr.length)  todos = todos.filter(function(imo) { return imovelBateContagem_(imo.suites,  suitesArr);  });
+  if (vagasArr.length)   todos = todos.filter(function(imo) { return imovelBateContagem_(imo.vagas,   vagasArr);   });
+
+  // Status do empreendimento (Em planta/Em obras/Pronto/Pronto novo/Entregue) —
+  // filtro rígido de múltipla escolha: não faz sentido "pontuar parcialmente"
+  // um estágio errado, ou é um dos estágios que o cliente quer ou não é.
+  var statusArr = paraArray_(d.status).map(norm_);
+  if (statusArr.length) {
+    todos = todos.filter(function(imo) { return statusArr.indexOf(norm_(imo.estagio || '')) >= 0; });
+  }
+
+  // Cidade — filtro rígido de múltipla escolha (cliente pode aceitar mais de uma cidade).
+  var cidadeArr = paraArray_(d.cidade).map(norm_);
+  if (cidadeArr.length) {
+    todos = todos.filter(function(imo) { return cidadeArr.indexOf(norm_(imo.cidade || '')) >= 0; });
+  }
+
+  // Estado (UF) — filtro rígido de múltipla escolha. Só LANCAMENTOS tem essa
+  // coluna hoje, então filtrar por estado naturalmente restringe a busca só a Lançamentos.
+  var estadoArr = paraArray_(d.estado).map(norm_);
+  if (estadoArr.length) {
+    todos = todos.filter(function(imo) { return estadoArr.indexOf(norm_(imo.estado || '')) >= 0; });
+  }
+
+  // Área útil mínima — piso rígido (diferente de preço, que tem margem pra
+  // ambos os lados de um alvo: aqui é só "pelo menos X m²", sem teto).
+  // Imóvel sem área cadastrada fica de fora quando o filtro está ativo — não
+  // dá pra saber se atende um mínimo que não está informado.
+  var areaMinFiltro = parseFloat(d.areaMin) || 0;
+  if (areaMinFiltro > 0) {
+    todos = todos.filter(function(imo) { return (parseFloat(imo.areaUtil) || 0) >= areaMinFiltro; });
+  }
+
+  // Limiar mais permissivo que o rodarMatching (70) — aqui é exploratório,
+  // não alimenta o dashboard/MATCHES, então vale mostrar até opções parciais.
+  var resultados = [];
+  todos.forEach(function(imo) {
+    var res = melhorMatch_(imo);
+    if (res.score >= 40) resultados.push({ imo: imo, score: res.score, det: res.detalhes });
+  });
+  resultados.sort(function(a, b) { return b.score - a.score; });
+  resultados = resultados.slice(0, 30);
+
+  return {
+    interpretado: {
+      tipo: tiposArr.length ? tiposArr.join(' ou ') : (TIPO_LABEL_BUSCA[extrairTipo_(textoLivre)] || ''),
+      precoLimite: contatoBase.precoLimite,
+      bairros: bairros.length ? bairros.join(', ') : '',
+      status: statusArr.length ? paraArray_(d.status).join(' ou ') : '',
+      cidade: cidadeArr.length ? paraArray_(d.cidade).join(' ou ') : '',
+      padrao: padroesArr.length ? padroesArr.join(' ou ') : '',
+      estado: estadoArr.length ? paraArray_(d.estado).join(' ou ') : '',
+      areaMin: areaMinFiltro || ''
+    },
+    resultados: resultados.map(function(r) {
+      var imo = r.imo;
+      return {
+        fonte: imo.fonte || 'REVENDA',
+        codigo: imo.codigo || '', endereco: imo.endereco || '',
+        tipo: imo.tipo || '', bairro: imo.bairro || '', condominio: imo.condominio || '',
+        quartos: imo.quartos || '', suites: imo.suites || '', vagas: imo.vagas || '',
+        areaUtil: imo.areaUtil || '', valorVenda: imo.valorVenda || '', padrao: imo.padrao || '',
+        estagio: imo.estagio || '', foto: imo.foto || '', url: imo.urlSite || '',
+        construtora: imo.construtora || '', entradaPerc: imo.entradaPerc || '',
+        precoMin: imo.precoMin || '', precoMax: imo.precoMax || '',
+        tipologiaLabel: imo.tipologiaLabel || '', idLancamento: imo.idLancamento || '',
+        idOferta: imo.idOferta || '',
+        dataTabela: imo.dataTabela || '', statusTabela: imo.statusTabela || '',
+        score: r.score, detalhe: r.det
+      };
+    })
+  };
+}
+
+// ── Persiste matches ──────────────────────────────────────────
+
+function empurrarMatch_(matches, c, par, agora) {
+  var imo = par.imo;
+  matches.push([
+    imo.fonte || 'REVENDA',
+    String(c.idCliente || '').trim() || gerarCodigo_(c._rowIdx), String(c.nome || '').trim(),
+    parseInt(c.score) || 0, c.urgencia || c.prioridade || '',
+    c.segmento || '', c.padrao || '',
+    c.precoLimite || '',
+    c.bairroInteresse || '', String(c.conversa || '').substring(0, 120),
+    imo.codigo || '', imo.tipo || '', imo.bairro || '', imo.condominio || '',
+    imo.quartos || '', imo.suites || '', imo.vagas || '', imo.areaUtil || '',
+    imo.valorVenda || '', imo.padrao || '', imo.estagio || '',
+    imo.foto || '', imo.urlSite || '',
+    imo.construtora || '', imo.dataEntrega || '',
+    imo.entradaPerc || '', imo.entradaValor || '',
+    imo.sinalPerc || '', imo.sinalValor || '',
+    imo.comissaoPerc || '', imo.comissaoValor || '',
+    imo.corretorPerc || '', imo.corretorValor || '',
+    imo.tabela       || '',
+    imo.dataTabela   || '',
+    imo.statusTabela || '',
+    par.score, par.det, agora
+  ]);
+}
+
+// ── Execução do matching ──────────────────────────────────────
+
+function rodarMatching() {
+  Logger.log('Iniciando motor de matching v26...');
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  var contatos    = lerAba_('CONTATOS');
+  var revenda     = lerAba_('REVENDA');
+  var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS');
+  var lancamentos = lerAba_('LANCAMENTOS');
+
+  var imoveisRevenda = revenda.map(function(r) { r.fonte = 'REVENDA'; return r; });
+  var imoveisConst   = construtora.map(function(r) { return constutoraParaImovel_(r); });
+  var imoveisLanc    = lancamentos.map(lancamentoParaImovel_);
+
+  Logger.log('Contatos: ' + contatos.length +
+             ' | Revenda: ' + revenda.length +
+             ' | Construtora: ' + construtora.length +
+             ' | Lançamentos: ' + lancamentos.length);
+
+  if (contatos.length === 0 || (imoveisRevenda.length === 0 && imoveisConst.length === 0 && imoveisLanc.length === 0)) {
+    Logger.log('Dados insuficientes.'); return;
+  }
+
+  // Elegível pra matching: ter alguma preferência declarada (segmento, preço
+  // ou bairro). Não filtra mais por score de cadastro — a base migrada tem
+  // score heurístico baixo mesmo quando o segmento/produto está bem
+  // identificado, e isso excluía a maioria dos contatos migrados do matching.
+  var contataveis = contatos.filter(function(c) {
+    return !!(c.segmento || c.precoLimite || c.bairroInteresse);
+  });
+  Logger.log('Contatos aptos: ' + contataveis.length + ' de ' + contatos.length);
+
+  var matches = [];
+
+  contataveis.forEach(function(c) {
+    var paresRev   = [];
+    var paresConst = [];
+    var paresLanc  = [];
+
+    imoveisRevenda.forEach(function(imo) {
+      var res = calcularMatch_(c, imo);
+      if (res.score >= 70) paresRev.push({ imo: imo, score: res.score, det: res.detalhes });
+    });
+
+    imoveisConst.forEach(function(imo) {
+      var res = calcularMatch_(c, imo);
+      if (res.score >= 70) paresConst.push({ imo: imo, score: res.score, det: res.detalhes });
+    });
+
+    imoveisLanc.forEach(function(imo) {
+      var res = calcularMatch_(c, imo);
+      if (res.score >= 70) paresLanc.push({ imo: imo, score: res.score, det: res.detalhes });
+    });
+
+    paresRev.sort(function(a, b)   { return b.score - a.score; });
+    paresConst.sort(function(a, b) { return b.score - a.score; });
+    paresLanc.sort(function(a, b)  { return b.score - a.score; });
+
+    // Top 5 REVENDA + top 5 CONSTRUTORA + top 5 LANCAMENTO, reordenados por score
+    var pares = paresRev.slice(0, 5).concat(paresConst.slice(0, 5)).concat(paresLanc.slice(0, 5));
+    pares.sort(function(a, b) { return b.score - a.score; });
+
+    pares.forEach(function(par) { empurrarMatch_(matches, c, par, agora); });
+  });
+
+  // Ordena matches globalmente por scoreMatch
+  var idxScore = CABECALHO_MATCHES.indexOf('scoreMatch'); // 0-indexed
+  matches.sort(function(a, b) { return b[idxScore] - a[idxScore]; });
+  Logger.log('Pares gerados: ' + matches.length);
+
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('MATCHES');
+  if (!aba) aba = ss.insertSheet('MATCHES');
+  aba.clearContents();
+
+  var linhas = [CABECALHO_MATCHES].concat(matches);
+  aba.getRange(1, 1, linhas.length, CABECALHO_MATCHES.length).setValues(linhas);
+
+  var colScore = idxScore + 1; // 1-indexed para Range
+  // Força scoreMatch como número — evita auto-format de data pelo Sheets
+  if (matches.length > 0) {
+    aba.getRange(2, colScore, matches.length, 1).setNumberFormat('0');
+  }
+
+  var cabRow = aba.getRange(1, 1, 1, CABECALHO_MATCHES.length);
+  cabRow.setFontWeight('bold').setBackground('#0f3460').setFontColor('#ffffff');
+  aba.setFrozenRows(1);
+
+  for (var i = 2; i <= linhas.length; i++) {
+    var sc  = matches[i - 2] ? matches[i - 2][idxScore] : 0;
+    var cor = sc >= 80 ? '#c8f7c5' : sc >= 70 ? '#fef9c3' : '#fde8e8';
+    aba.getRange(i, colScore).setBackground(cor);
+  }
+
+  Logger.log('MATCHES gerado: ' + matches.length + ' pares em ' + agora);
+}
+
+function criarGatilhoMatching() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'rodarMatching') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('rodarMatching').timeBased().everyHours(12).create();
+  Logger.log('Gatilho matching criado: a cada 12 horas.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REVENDA — Sincronização automática com Imobzi
+// ═══════════════════════════════════════════════════════════════
+
+// O token NUNCA fica hardcoded aqui — este arquivo é público no GitHub.
+// Configure uma vez em: Editor do Apps Script → ⚙️ Configurações do projeto →
+// Propriedades do script → adicionar IMOBZI_TOKEN com o valor do token.
+function obterImobziToken_() {
+  var token = PropertiesService.getScriptProperties().getProperty('IMOBZI_TOKEN');
+  if (!token) throw new Error('IMOBZI_TOKEN não configurado em Propriedades do script.');
+  return token;
+}
+var IMOBZI_BASE  = 'https://api.imobzi.app/v1';
+var IMOBZI_LIMIT = 50;
+
+var CABECALHO_REVENDA = [
+  'codigo','db_id','tipo','finalidade','bairro','cidade','endereco','condominio',
+  'quartos','suites','banheiros','vagas','areaUtil','areaTerr',
+  'valorVenda','padrao','estagio','publicadoSite','urlSite','foto',
+  'dataCadastro','dataAtualizacao','latitude','longitude','ultimaSincronizacao'
+];
+
+function buscarTodosImoveis_() {
+  var headers = { 'X-Imobzi-Secret': obterImobziToken_() };
+  var todos   = [];
+  var cursor  = null;
+  var pagina  = 0;
+
+  do {
+    var url = IMOBZI_BASE + '/properties?limit=' + IMOBZI_LIMIT;
+    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+
+    var resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('Erro Imobzi ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0, 200));
+      break;
+    }
+
+    var dados = JSON.parse(resp.getContentText());
+    var props = dados.properties || [];
+
+    props.forEach(function(p) {
+      var saleValue = p.sale_value || 0;
+      var ativo     = p.active !== false;
+      var status    = p.status || '';
+      if (saleValue > 0 && status === 'available' && ativo) todos.push(p);
+    });
+
+    cursor = dados.cursor || null;
+    pagina++;
+    if (pagina >= 50) break;
+    Utilities.sleep(300);
+
+  } while (cursor && todos.length < (dados.count || 9999));
+
+  return todos;
+}
+
+function formatarMoeda_(v) {
+  if (!v || v === 0) return '';
+  return 'R$ ' + Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function inferirPadrao_(valor) {
+  if (!valor) return '';
+  if (valor >= 1500000) return 'Luxo';
+  if (valor >= 700000)  return 'Alto';
+  if (valor >= 300000)  return 'Medio';
+  return 'Popular';
+}
+
+function traduzFinalidade_(f) {
+  return { residential: 'Residencial', commercial: 'Comercial', rural: 'Rural' }[f] || (f || '');
+}
+
+function traduzEstagio_(s) {
+  return { ready: 'Pronto', plant: 'Planta', building: 'Construcao' }[s] || (s || '');
+}
+
+function imovelParaLinha_(p, agora) {
+  var end  = [p.address, p.address_complement].filter(Boolean).join(', ');
+  var foto = (p.cover_photo && p.cover_photo.url) ? p.cover_photo.url : '';
+  var venda = p.sale_value || 0;
+  return [
+    p.code || '', p.db_id || '', p.property_type || '',
+    traduzFinalidade_(p.finality || ''),
+    p.neighborhood || '', p.city || '', end, p.building_name || '',
+    p.bedroom || '', p.suite || '', p.bathroom || '', p.garage || '',
+    p.useful_area || '', p.lot_area || '',
+    formatarMoeda_(venda), inferirPadrao_(venda),
+    traduzEstagio_(p.stage || ''),
+    p.site_publish ? 'Sim' : 'Nao', p.site_url || '', foto,
+    (p.created_at || '').substring(0, 10),
+    (p.updated_at || '').substring(0, 10),
+    p.latitude || '', p.longitude || '', agora
+  ];
+}
+
+function sincronizarRevenda() {
+  Logger.log('Iniciando sincronizacao Imobzi...');
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  var imoveis = buscarTodosImoveis_();
+  Logger.log('Imoveis para venda: ' + imoveis.length);
+
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('REVENDA');
+  if (!aba) { aba = ss.insertSheet('REVENDA'); Logger.log('Aba REVENDA criada.'); }
+
+  // ── Snapshot ANTES (lê a aba atual antes de apagar) ──────────────────────
+  var snapAntes = {}, totalAntes = 0;
+  if (aba.getLastRow() > 1) {
+    var dadosAnt = aba.getDataRange().getValues();
+    var cabAnt   = dadosAnt[0];
+    var iTAnt    = cabAnt.indexOf('tipo');
+    if (iTAnt >= 0) {
+      for (var ai = 1; ai < dadosAnt.length; ai++) {
+        var tipoAnt = String(dadosAnt[ai][iTAnt] || 'Outros').trim() || 'Outros';
+        snapAntes[tipoAnt] = (snapAntes[tipoAnt] || 0) + 1;
+        totalAntes++;
+      }
+    }
+  }
+
+  aba.clearContents();
+
+  if (imoveis.length === 0) {
+    aba.getRange(1, 1, 1, CABECALHO_REVENDA.length).setValues([CABECALHO_REVENDA]);
+    Logger.log('Nenhum imovel encontrado.');
+    return;
+  }
+
+  var linhas = [CABECALHO_REVENDA];
+  imoveis.forEach(function(p) { linhas.push(imovelParaLinha_(p, agora)); });
+  aba.getRange(1, 1, linhas.length, CABECALHO_REVENDA.length).setValues(linhas);
+
+  var cabRow = aba.getRange(1, 1, 1, CABECALHO_REVENDA.length);
+  cabRow.setFontWeight('bold').setBackground('#1a1a2e').setFontColor('#ffffff');
+  aba.setFrozenRows(1);
+  aba.setColumnWidth(7, 220);
+  aba.setColumnWidth(8, 180);
+
+  // ── Snapshot DEPOIS (conta tipos das linhas gravadas) ────────────────────
+  var snapDepois = {}, totalDepois = 0;
+  var iTipoRev = CABECALHO_REVENDA.indexOf('tipo');
+  if (iTipoRev >= 0) {
+    linhas.slice(1).forEach(function(l) {
+      var tipoNovo = String(l[iTipoRev] || 'Outros').trim() || 'Outros';
+      snapDepois[tipoNovo] = (snapDepois[tipoNovo] || 0) + 1;
+      totalDepois++;
+    });
+  }
+
+  // ── Persiste snapshots no PropertiesService ───────────────────────────────
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('bi_revenda_snap_antes',   JSON.stringify(snapAntes));
+  props.setProperty('bi_revenda_snap_depois',  JSON.stringify(snapDepois));
+  props.setProperty('bi_revenda_total_antes',  String(totalAntes));
+  props.setProperty('bi_revenda_total_depois', String(totalDepois));
+  props.setProperty('bi_revenda_ultima_sync',  agora);
+
+  Logger.log('REVENDA atualizada: ' + imoveis.length + ' imoveis em ' + agora);
+}
+
+function criarGatilhoRevenda() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sincronizarRevenda') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('sincronizarRevenda').timeBased().everyHours(6).create();
+  Logger.log('Gatilho criado: sincronizarRevenda a cada 6 horas.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH — Senha segura via PropertiesService + reset por e-mail
+// ═══════════════════════════════════════════════════════════════
+
+var RESET_URL = 'https://chaverleo1.github.io/base-inteligente/reset.html';
+var ADM_EMAIL = 'chaverleo@gmail.com';
+
+function verificarSenha_(hash) {
+  var props     = PropertiesService.getScriptProperties();
+  var hashSalvo = props.getProperty('bi_password_hash');
+  if (!hashSalvo) return ok({ ok: false, motivo: 'sem_senha' });
+  if (hash !== hashSalvo) return ok({ ok: false });
+  return ok({ ok: true, token: criarSessao_() });
+}
+
+function esquecerSenha_() {
+  var token  = Utilities.getUuid();
+  var expiry = new Date().getTime() + (60 * 60 * 1000);
+  var props  = PropertiesService.getScriptProperties();
+  props.setProperty('bi_reset_token',  token);
+  props.setProperty('bi_reset_expiry', String(expiry));
+
+  var link = RESET_URL + '?token=' + token;
+  MailApp.sendEmail({
+    to:      ADM_EMAIL,
+    subject: 'Base Inteligente — Redefinição de senha',
+    body:    'Clique no link abaixo para criar uma nova senha (válido por 1 hora):\n\n' + link +
+             '\n\nSe não foi você quem solicitou, ignore este e-mail.'
+  });
+  return ok({ ok: true });
+}
+
+function validarToken_(token) {
+  if (!token) return ok({ ok: false });
+  var props  = PropertiesService.getScriptProperties();
+  var salvo  = props.getProperty('bi_reset_token');
+  var expiry = parseInt(props.getProperty('bi_reset_expiry') || '0');
+  return ok({ ok: token === salvo && new Date().getTime() < expiry });
+}
+
+function salvarSenhaReset_(d) {
+  var token = d.token, hash = d.hash;
+  if (!token || !hash) return ok({ ok: false });
+  var props  = PropertiesService.getScriptProperties();
+  var salvo  = props.getProperty('bi_reset_token');
+  var expiry = parseInt(props.getProperty('bi_reset_expiry') || '0');
+  if (token !== salvo || new Date().getTime() >= expiry) return ok({ ok: false, motivo: 'token_invalido' });
+  props.setProperty('bi_password_hash', hash);
+  props.deleteProperty('bi_reset_token');
+  props.deleteProperty('bi_reset_expiry');
+  return ok({ ok: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITÁRIOS
+// ═══════════════════════════════════════════════════════════════
+
+function getAba() {
+  return SpreadsheetApp.openById(SHEET_ID).getSheetByName('CONTATOS');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SESSÃO — a tela de senha nas 5 páginas era só cosmética: o front-end
+// guardava "logado = true" no sessionStorage, mas nenhuma ação do backend
+// checava isso, então qualquer um com a URL do Web App (pública, já que o
+// repositório é público) conseguia ler/apagar a base inteira sem senha
+// nenhuma, direto pela URL. Agora o login gera um token de sessão guardado
+// no CacheService (servidor), e toda ação sensível exige esse token válido.
+// ═══════════════════════════════════════════════════════════════
+
+var SESSAO_TTL_SEGUNDOS = 6 * 60 * 60; // 6h — máximo permitido pelo CacheService
+
+function criarSessao_() {
+  var token = Utilities.getUuid();
+  CacheService.getScriptCache().put('sessao_' + token, '1', SESSAO_TTL_SEGUNDOS);
+  return token;
+}
+
+function sessaoValida_(token) {
+  if (!token) return false;
+  return CacheService.getScriptCache().get('sessao_' + token) === '1';
+}
+
+function ok(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function parseBody(contents) {
+  if (!contents) return {};
+  // JSON puro (Content-Type: application/json)
+  var trimmed = contents.trim();
+  if (trimmed.charAt(0) === '{') {
+    try { return JSON.parse(trimmed); } catch(e) {}
+  }
+  // form-encoded com chave 'dados'
+  var map = {};
+  contents.split('&').forEach(function(pair) {
+    var idx = pair.indexOf('=');
+    if (idx < 0) return;
+    var k = decodeURIComponent(pair.substring(0, idx).replace(/\+/g, ' '));
+    var v = decodeURIComponent(pair.substring(idx + 1).replace(/\+/g, ' '));
+    map[k] = v;
+  });
+  try { return JSON.parse(map['dados'] || '{}'); } catch(e) { return map; }
+}
+
+// Roda a cada login (ver FUNCOES em index.html), igual migrarCabecalhoLancamentos()
+// — idempotente: se as colunas novas já existem, só reescreve a linha 1 com o
+// mesmo conteúdo. Reescreve apenas o cabeçalho, preservando todos os dados.
+function migrarCabecalhoContatos() {
+  var aba = getAba();
+  if (!aba) { Logger.log('Aba CONTATOS não encontrada.'); return; }
+  var cab = CABECALHO;
+  var nCols = cab.length;
+  var atualCols = aba.getLastColumn();
+  if (atualCols < nCols) aba.insertColumnsAfter(atualCols, nCols - atualCols);
+  aba.getRange(1, 1, 1, nCols).setValues([cab]);
+  aba.getRange(1, 1, 1, nCols)
+     .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+  Logger.log('Cabeçalho CONTATOS atualizado: ' + nCols + ' colunas.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO LANCAMENTOS
+// ═══════════════════════════════════════════════════════════════
+
+// Rode UMA VEZ no editor do Apps Script após atualizar CABECALHO_LANCAMENTOS.
+// Reescreve apenas a linha 1 da aba preservando todos os dados existentes.
+function migrarCabecalhoLancamentos() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LANCAMENTOS');
+  if (!aba) { Logger.log('Aba LANCAMENTOS não encontrada.'); return; }
+  var cab = CABECALHO_LANCAMENTOS;
+  var nCols = cab.length;
+  var atualCols = aba.getLastColumn();
+  if (atualCols < nCols) aba.insertColumnsAfter(atualCols, nCols - atualCols);
+  aba.getRange(1, 1, 1, nCols).setValues([cab]);
+  aba.getRange(1, 1, 1, nCols)
+     .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+  Logger.log('Cabeçalho LANCAMENTOS atualizado: ' + nCols + ' colunas.');
+}
+
+// Rode UMA VEZ no editor do Apps Script depois de migrarCabecalhoLancamentos()
+// — preenche idOferta nas linhas que já existiam antes dessa coluna existir
+// (idOferta só é gerado pra linhas NOVAS em salvarLancamento_; sem rodar isso,
+// as ofertas antigas ficam sem código até serem reextraídas/resalvas).
+function preencherIdOfertaFaltantes() {
+  var aba = obterAbaLancamentos_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) { Logger.log('Nenhuma linha em LANCAMENTOS.'); return; }
+
+  var idxIdLanc   = CABECALHO_LANCAMENTOS.indexOf('idLancamento') + 1;
+  var idxIdOferta = CABECALHO_LANCAMENTOS.indexOf('idOferta') + 1;
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LANCAMENTOS.length).getValues();
+
+  var contadores = {}; // idLancamento -> maior sufixo já usado
+  var preenchidos = 0;
+
+  for (var i = 0; i < dados.length; i++) {
+    var idLanc       = dados[i][idxIdLanc - 1];
+    var idOfertaAtual = dados[i][idxIdOferta - 1];
+    if (!idLanc) continue;
+
+    if (idOfertaAtual) {
+      // Já tem código — só atualiza o contador pra próxima linha nova não colidir.
+      var m = String(idOfertaAtual).match(/-(\d+)$/);
+      if (m) contadores[idLanc] = Math.max(contadores[idLanc] || 0, parseInt(m[1], 10));
+      continue;
+    }
+
+    contadores[idLanc] = (contadores[idLanc] || 0) + 1;
+    var novoIdOferta = idLanc + '-' + String(contadores[idLanc]).padStart(2, '0');
+    aba.getRange(i + 2, idxIdOferta).setValue(novoIdOferta);
+    preenchidos++;
+  }
+
+  Logger.log('idOferta preenchido em ' + preenchidos + ' de ' + dados.length + ' linhas.');
+}
+
+// Rode UMA VEZ pelo editor do Apps Script. Corrige um bug do parser (já
+// consertado em lancamentos.html) que salvava o endereço inteiro no campo
+// bairro em vez de só o bairro — acontecia especificamente em cidades com
+// mais de uma palavra (ex: "Aparecida de Goiânia"; "Goiânia" sozinha nunca
+// deu problema). Sinal do bug: bairro de verdade nunca tem ".", então
+// qualquer linha com "." no bairro pega só o trecho depois do ÚLTIMO ponto.
+function corrigirBairroComEnderecoJunto() {
+  var aba = obterAbaLancamentos_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) { Logger.log('Nenhuma linha em LANCAMENTOS.'); return; }
+
+  var idxBairro = CABECALHO_LANCAMENTOS.indexOf('bairro') + 1;
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LANCAMENTOS.length).getValues();
+  var corrigidos = 0;
+
+  for (var i = 0; i < dados.length; i++) {
+    var bairroAtual = String(dados[i][idxBairro - 1] || '');
+    if (bairroAtual.indexOf('.') < 0) continue; // bairro normal, sem sinal do bug
+
+    var partes    = bairroAtual.split('.');
+    var corrigido = partes[partes.length - 1].trim();
+    if (corrigido && corrigido !== bairroAtual) {
+      aba.getRange(i + 2, idxBairro).setValue(corrigido);
+      corrigidos++;
+    }
+  }
+
+  Logger.log('Bairro corrigido em ' + corrigidos + ' linhas.');
+}
+
+function obterAbaLancamentos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LANCAMENTOS');
+  if (!aba) {
+    aba = ss.insertSheet('LANCAMENTOS');
+    aba.appendRow(CABECALHO_LANCAMENTOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_LANCAMENTOS.length)
+       .setFontWeight('bold')
+       .setBackground('#1e2335')
+       .setFontColor('#e8ecf4');
+  }
+  return aba;
+}
+
+function proximoIdLancamento_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba    = obterAbaLancamentos_();
+    var lr     = aba.getLastRow();
+    var maxNum = 0;
+    if (lr >= 2) {
+      var vals = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+      vals.forEach(function(v) {
+        var m = String(v || '').match(/(\d+)$/);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+      });
+    }
+    return 'LAN-' + String(maxNum + 1).padStart(5, '0');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listarLancamentos_() {
+  try {
+    var aba = obterAbaLancamentos_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { lancamentos: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LANCAMENTOS.length).getValues();
+    var lancamentos = dados
+      .filter(function(r) { return r[0]; })
+      .map(function(r) {
+        var obj = {};
+        CABECALHO_LANCAMENTOS.forEach(function(col, i) { obj[col] = r[i]; });
+        return obj;
+      });
+    return { lancamentos: lancamentos };
+  } catch(e) {
+    return { lancamentos: [], erro: e.message };
+  }
+}
+
+function salvarLancamento_(dados) {
+  if (!dados || !dados.nomeEmpreendimento) return { ok: false, erro: 'nomeEmpreendimento obrigatorio' };
+  try {
+    var aba     = obterAbaLancamentos_();
+    var agora   = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var unidades = dados.unidades || [];
+    if (!unidades.length) return { ok: false, erro: 'nenhuma unidade informada' };
+
+    // Verificar duplicata pelo nome — apagar antes de reinserir (merge)
+    var lr = aba.getLastRow();
+    var idExistente = '';
+    if (lr >= 2) {
+      var nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
+      var nomeNovo = String(dados.nomeEmpreendimento).toLowerCase().trim();
+      for (var i = nomes.length - 1; i >= 0; i--) {
+        if (String(nomes[i] || '').toLowerCase().trim() === nomeNovo) {
+          if (!idExistente) idExistente = aba.getRange(i + 2, 1).getValue();
+          aba.deleteRow(i + 2);
+        }
+      }
+    }
+
+    // Reaproveita o idLancamento já existente (mesmo empreendimento, dado
+    // reextraído/atualizado) em vez de gerar um novo toda vez — sem isso o ID
+    // mudava a cada reimportação e quebrava qualquer referência já enviada
+    // pro cliente (interesse registrado, link de email, etc.).
+    var id = idExistente || proximoIdLancamento_();
+
+    var linhas = unidades.map(function(u, idx) {
+      var q  = parseInt(u.quartos)  || 0;
+      var s  = parseInt(u.suites)   || 0;
+      var vg = parseInt(u.vagas)    || 0;
+      var idOferta = id + '-' + String(idx + 1).padStart(2, '0');
+      return [
+        id,
+        dados.nomeEmpreendimento || '',
+        dados.construtora        || '',
+        dados.tipo               || '',
+        dados.bairro             || '',
+        dados.cidade             || '',
+        dados.endereco           || '',
+        dados.status             || '',
+        dados.previsaoEntrega    || '',
+        q,
+        s,
+        parseInt(u.banheiros)    || '',
+        vg,
+        u.areaUtil               || '',
+        u.areaTerr               || '',
+        u.unidade                || '',
+        u.escaninho              || '',
+        dados.padrao             || '',
+        u.precoMedio             || '',
+        u.precoMin               || '',
+        u.precoMax               || '',
+        u.preco                  || '',
+        dados.dataTabela         || '',
+        dados.statusTabela       || '',
+        dados.urlSite            || '',
+        dados.foto               || '',
+        dados.entrada            || '',
+        dados.parcelasObra       || '',
+        dados.parcelasEntrega    || '',
+        dados.avaliacaoBanco     || '',
+        dados.fgts               || '',
+        dados.planoLongo         || '',
+        dados.lazer              || '',
+        dados.conceito           || '',
+        agora,
+        dados.estado             || '',
+        idOferta,
+      ];
+    });
+
+    if (linhas.length) {
+      aba.getRange(aba.getLastRow() + 1, 1, linhas.length, CABECALHO_LANCAMENTOS.length)
+         .setValues(linhas);
+    }
+
+    return { ok: true, idLancamento: id, unidades: linhas.length };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+function excluirLancamento_(dados) {
+  try {
+    var aba = obterAbaLancamentos_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { ok: true };
+
+    var ids = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+    for (var i = ids.length - 1; i >= 0; i--) {
+      var igual = dados.idLancamento
+        ? ids[i] === dados.idLancamento
+        : String(aba.getRange(i + 2, 2).getValue()).toLowerCase().trim() === String(dados.nomeEmpreendimento || '').toLowerCase().trim();
+      if (igual) aba.deleteRow(i + 2);
+    }
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO BASEIMOB — funil externo de captação de leads (tráfego pago)
+// ═══════════════════════════════════════════════════════════════
+// Sistema separado do Base Inteligente: público externo (anúncios), abas
+// próprias (LEADS_LANCAMENTOS/INTERESSES), NUNCA grava em CONTATOS. Só lê
+// LANCAMENTOS (mesma aba do Base Inteligente) pra popular os cards.
+// Ver baseimob-landing.html e baseimob-total.html.
+
+var CABECALHO_LEADS_LANCAMENTOS = [
+  'dataCadastro', 'email', 'nome', 'telefone',
+  'finalidade', 'quartos', 'precoLimite', 'margem',
+  'pagamento', 'diferenciais', 'urgencia',
+  'qtdEncontrados', 'canal', 'tipo_contato', 'score',
+  'tags', 'obs', 'idCliente'
+];
+
+var CABECALHO_INTERESSES = [
+  'dataCadastro', 'idCliente', 'email', 'nome', 'telefone',
+  'qtdInteresse', 'idsInteresse', 'tags',
+  'canal', 'tipo_contato', 'score'
+];
+
+// FAVORITOS — imóveis que o corretor marcou como favorito pra um cliente
+// específico, na página de ofertas (drawer do dashboard). Dados do imóvel
+// vêm denormalizados (mesmos campos imo* de MATCHES) porque a aba MATCHES é
+// TOTALMENTE reescrita a cada rodarMatching() — guardar só uma referência
+// (idCliente + imoCodigo) perderia a foto/preço/local assim que o matching
+// rodasse de novo. Cada linha é auto-contida, sobrevive independente do
+// recálculo de matching.
+var CABECALHO_FAVORITOS = [
+  'idCliente', 'cliNome',
+  'imoCodigo', 'fonte', 'imoTipo', 'imoBairro', 'imoCondominio', 'imoEndereco',
+  'imoQuartos', 'imoSuites', 'imoVagas', 'imoAreaUtil',
+  'imoValorVenda', 'imoPadrao', 'imoEstagio', 'imoFoto', 'imoUrl',
+  'imoConstrutora', 'imoEntrega',
+  'dataFavoritado'
+];
+
+function obterAbaFavoritos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('FAVORITOS');
+  if (!aba) {
+    aba = ss.insertSheet('FAVORITOS');
+    aba.setTabColor('#f5a623');
+    aba.appendRow(CABECALHO_FAVORITOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_FAVORITOS.length)
+       .setFontWeight('bold').setBackground('#f5a623').setFontColor('#1a1a2e');
+  }
+  return aba;
+}
+
+// Toggle: se o par (idCliente + imoCodigo + fonte) já existe, remove
+// (desfavoritar); senão, adiciona (favoritar). d traz os campos imo* já
+// carregados no drawer (vindos de matches_cliente) — evita ter que rebuscar
+// o imóvel em REVENDA/LANCAMENTOS/CONSTRUTORA só pra favoritar.
+function toggleFavorito_(d) {
+  d = d || {};
+  var idCliente = String(d.idCliente || '').trim();
+  var imoCodigo = String(d.imoCodigo || '').trim();
+  var fonte     = String(d.fonte || '').trim();
+  if (!idCliente || !imoCodigo) return { status: 'erro', motivo: 'idCliente e imoCodigo obrigatorios' };
+
+  var aba = obterAbaFavoritos_();
+  var lr  = aba.getLastRow();
+  var idxId  = CABECALHO_FAVORITOS.indexOf('idCliente');
+  var idxCod = CABECALHO_FAVORITOS.indexOf('imoCodigo');
+  var idxFon = CABECALHO_FAVORITOS.indexOf('fonte');
+
+  if (lr >= 2) {
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FAVORITOS.length).getValues();
+    for (var i = 0; i < dados.length; i++) {
+      if (String(dados[i][idxId]) === idCliente &&
+          String(dados[i][idxCod]) === imoCodigo &&
+          String(dados[i][idxFon]) === fonte) {
+        aba.deleteRow(i + 2);
+        return { status: 'removido' };
+      }
+    }
+  }
+
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var linha = CABECALHO_FAVORITOS.map(function(col) {
+    if (col === 'idCliente') return idCliente;
+    if (col === 'fonte')     return fonte;
+    if (col === 'dataFavoritado') return agora;
+    return d[col] !== undefined ? d[col] : '';
+  });
+  aba.appendRow(linha);
+  return { status: 'adicionado' };
+}
+
+function listarFavoritos_(idCliente) {
+  idCliente = String(idCliente || '').trim();
+  if (!idCliente) return [];
+  var aba = obterAbaFavoritos_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return [];
+  var idxId = CABECALHO_FAVORITOS.indexOf('idCliente');
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FAVORITOS.length).getValues();
+  var res = [];
+  dados.forEach(function(row, i) {
+    if (String(row[idxId]) === idCliente) {
+      var obj = { _linha: i + 2 };
+      CABECALHO_FAVORITOS.forEach(function(col, j) { obj[col] = row[j]; });
+      res.push(obj);
+    }
+  });
+  return res;
+}
+
+function obterAbaLeadsLancamentos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LEADS_LANCAMENTOS');
+  if (!aba) {
+    aba = ss.insertSheet('LEADS_LANCAMENTOS');
+    aba.setTabColor('#7030A0');
+    aba.appendRow(CABECALHO_LEADS_LANCAMENTOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_LEADS_LANCAMENTOS.length)
+       .setFontWeight('bold').setBackground('#7030A0').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+function obterAbaInteresses_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('INTERESSES');
+  if (!aba) {
+    aba = ss.insertSheet('INTERESSES');
+    aba.setTabColor('#C55A11');
+    aba.appendRow(CABECALHO_INTERESSES);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_INTERESSES.length)
+       .setFontWeight('bold').setBackground('#C55A11').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+// ID permanente do lead BaseImob (LL-NNNNN) — mesmo mecanismo de
+// proximoIdCliente_/proximoIdLancamento_, mas em contador próprio: LL nunca
+// pode colidir com CLI (CONTATOS) nem com LAN (LANCAMENTOS).
+function proximoIdLeadLancamento_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba    = obterAbaLeadsLancamentos_();
+    var lr     = aba.getLastRow();
+    var maxNum = 0;
+    if (lr >= 2) {
+      var idxId = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente') + 1;
+      var vals  = aba.getRange(2, idxId, lr - 1, 1).getValues();
+      vals.forEach(function(row) {
+        var m = String(row[0] || '').match(/(\d+)\s*$/);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+      });
+    }
+    return 'LL-' + String(maxNum + 1).padStart(5, '0');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Grava (ou atualiza) um lead do funil BaseImob. Chamado em 2 momentos da
+// jornada com o MESMO email: 1) landing envia email (LEAD LANDING PAGE) —
+// cria a linha; 2) BaseImob Total completa o cadastro (LEAD QUALIFICADO) —
+// atualiza a MESMA linha (upsert por email) em vez de duplicar, já que é a
+// mesma pessoa avançando no funil. NUNCA toca a aba CONTATOS.
+function salvarLeadLancamento_(d) {
+  d = d || {};
+  var email = String(d.email || '').trim().toLowerCase();
+  if (!email) return { ok: false, erro: 'email obrigatorio' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba   = obterAbaLeadsLancamentos_();
+    var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var idxEmail = CABECALHO_LEADS_LANCAMENTOS.indexOf('email');
+    var idxId    = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+
+    var lr = aba.getLastRow();
+    var linhaExistente = -1, idExistente = '';
+    if (lr >= 2) {
+      var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+      for (var i = 0; i < dados.length; i++) {
+        if (String(dados[i][idxEmail] || '').trim().toLowerCase() === email) {
+          linhaExistente = i + 2;
+          idExistente = dados[i][idxId];
+          break;
+        }
+      }
+    }
+
+    var id = idExistente || proximoIdLeadLancamento_();
+    var linha = CABECALHO_LEADS_LANCAMENTOS.map(function(col) {
+      if (col === 'dataCadastro') return linhaExistente > 0 ? undefined : agora; // preserva data original no upsert
+      if (col === 'idCliente')    return id;
+      return d[col] !== undefined ? d[col] : '';
+    });
+
+    if (linhaExistente > 0) {
+      // Upsert: mantém dataCadastro original, atualiza o resto (nome/telefone/
+      // tags chegam mais completos na 2ª etapa do funil).
+      var dataOriginal = aba.getRange(linhaExistente, CABECALHO_LEADS_LANCAMENTOS.indexOf('dataCadastro') + 1).getValue();
+      linha[CABECALHO_LEADS_LANCAMENTOS.indexOf('dataCadastro')] = dataOriginal;
+      aba.getRange(linhaExistente, 1, 1, CABECALHO_LEADS_LANCAMENTOS.length).setValues([linha]);
+    } else {
+      aba.appendRow(linha);
+    }
+
+    return { ok: true, idCliente: id };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Grava o interesse concreto (imóveis selecionados) do lead BaseImob Total.
+// Busca o idCliente (LL-NNNNN) em LEADS_LANCAMENTOS pelo email — o
+// formulário de "solicitar informações" não manda esse ID diretamente.
+// Dispara notificação pro corretor. NUNCA toca a aba CONTATOS.
+function salvarInteresse_(d) {
+  d = d || {};
+  var email = String(d.email || '').trim().toLowerCase();
+
+  var idCliente = '';
+  if (email) {
+    var abaLeads = obterAbaLeadsLancamentos_();
+    var lr = abaLeads.getLastRow();
+    if (lr >= 2) {
+      var idxEmail = CABECALHO_LEADS_LANCAMENTOS.indexOf('email');
+      var idxId    = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+      var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+      for (var i = 0; i < dados.length; i++) {
+        if (String(dados[i][idxEmail] || '').trim().toLowerCase() === email) {
+          idCliente = dados[i][idxId];
+          break;
+        }
+      }
+    }
+  }
+
+  var aba   = obterAbaInteresses_();
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var linha = CABECALHO_INTERESSES.map(function(col) {
+    if (col === 'dataCadastro') return agora;
+    if (col === 'idCliente')    return idCliente;
+    return d[col] !== undefined ? d[col] : '';
+  });
+  aba.appendRow(linha);
+
+  enviarNotificacaoAtendente_(d);
+  return { ok: true, idCliente: idCliente };
+}
+
+// E-mail pro corretor sempre que um lead pede atendimento — é o momento
+// mais quente do funil BaseImob, não pode passar batido.
+function enviarNotificacaoAtendente_(d) {
+  try {
+    var nome = d.nome || '(sem nome)';
+    var corpo = 'Nome: ' + nome + '\n' +
+                'Email: ' + (d.email || '-') + '\n' +
+                'WhatsApp: ' + (d.telefone || '-') + '\n' +
+                'Score: ' + (d.score || '-') + '\n' +
+                'Qtd. imóveis de interesse: ' + (d.qtdInteresse || '-') + '\n' +
+                'IDs selecionados: ' + (d.idsInteresse || '-') + '\n' +
+                'Tags: ' + (d.tags || '-') + '\n' +
+                'Canal: ' + (d.canal || '-') + '\n' +
+                'Data: ' + Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    MailApp.sendEmail({
+      to: ADM_EMAIL,
+      subject: '🔥 LEAD QUENTE — ' + nome + ' solicitou informações',
+      body: corpo
+    });
+  } catch(e) {
+    Logger.log('Falha ao enviar notificacao de lead quente: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRAÇÃO BASE INTELIGENTE ↔ BASE IMOB
+// ═══════════════════════════════════════════════════════════════
+// Funções que conectam os dois sistemas: listar leads capturados pelo
+// funil externo e migrá-los para CONTATOS quando o corretor decidir
+// qualificá-los. O corretor vê os leads no dashboard e escolhe quais
+// valem cadastrar — sem contaminar CONTATOS com leads ainda frios.
+
+// Lista todos os leads de LEADS_LANCAMENTOS cruzados com INTERESSES,
+// para exibição na aba "BaseImob" do dashboard.
+function listarLeadsBaseimob_() {
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { leads: [] };
+
+  var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+  var leads = [];
+  dados.forEach(function(r) {
+    var obj = {};
+    CABECALHO_LEADS_LANCAMENTOS.forEach(function(col, i) { obj[col] = r[i]; });
+    if (obj.email || obj.telefone) leads.push(obj);
+  });
+
+  // Coleta idOfertas de interesse para cada lead
+  var interesses = {};
+  var abaInt = obterAbaInteresses_();
+  var lrInt  = abaInt.getLastRow();
+  if (lrInt >= 2) {
+    var idxIdInt  = CABECALHO_INTERESSES.indexOf('idCliente');
+    var idxIdsInt = CABECALHO_INTERESSES.indexOf('idsInteresse');
+    var idxQtd    = CABECALHO_INTERESSES.indexOf('qtdInteresse');
+    var dadosInt  = abaInt.getRange(2, 1, lrInt - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosInt.forEach(function(r) {
+      var id  = String(r[idxIdInt]  || '').trim();
+      var ids = String(r[idxIdsInt] || '').trim();
+      if (!id) return;
+      if (!interesses[id]) interesses[id] = { ids: [], qtd: 0 };
+      if (ids) ids.split(',').forEach(function(x) {
+        x = x.trim();
+        if (x && interesses[id].ids.indexOf(x) < 0) interesses[id].ids.push(x);
+      });
+      interesses[id].qtd += parseInt(r[idxQtd]) || 0;
+    });
+  }
+
+  leads.forEach(function(lead) {
+    var inter = interesses[lead.idCliente] || { ids: [], qtd: 0 };
+    lead.idsInteresse = inter.ids.join(', ');
+    lead.qtdInteresse = inter.qtd || inter.ids.length;
+  });
+
+  // Mais recentes primeiro
+  leads.sort(function(a, b) {
+    return String(b.dataCadastro) > String(a.dataCadastro) ? 1 : -1;
+  });
+
+  return { leads: leads };
+}
+
+// Migra um lead do BaseImob para CONTATOS.
+// — Verifica duplicidade por email antes de criar.
+// — Pré-preenche produtoOrigem com os idOfertas que o lead marcou em
+//   INTERESSES, para o motor de matching já ter uma pista do produto certo.
+// — Marca o lead em LEADS_LANCAMENTOS como "MIGRADO CONTATOS".
+function migrarLeadBaseimob_(d) {
+  var idCliente = String(d.idCliente || '').trim();
+  if (!idCliente) return { ok: false, erro: 'idCliente obrigatorio' };
+
+  // Localiza o lead em LEADS_LANCAMENTOS
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'lead nao encontrado' };
+
+  var idxId   = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+  var idxTipo = CABECALHO_LEADS_LANCAMENTOS.indexOf('tipo_contato');
+  var dados   = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+  var lead = null;
+  var linhaLead = -1;
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][idxId]) === idCliente) {
+      lead = {};
+      CABECALHO_LEADS_LANCAMENTOS.forEach(function(col, j) { lead[col] = dados[i][j]; });
+      linhaLead = i + 2;
+      break;
+    }
+  }
+  if (!lead) return { ok: false, erro: 'lead nao encontrado' };
+
+  // Verifica duplicidade por email em CONTATOS
+  var email = String(lead.email || '').trim().toLowerCase();
+  if (email) {
+    var aba   = getAba();
+    var lrC   = aba.getLastRow();
+    var idxEM = CABECALHO.indexOf('email') + 1;
+    if (lrC >= 2) {
+      var emails = aba.getRange(2, idxEM, lrC - 1, 1).getValues().flat();
+      for (var j = 0; j < emails.length; j++) {
+        if (String(emails[j] || '').trim().toLowerCase() === email) {
+          return { ok: false, erro: 'email_ja_existe', msg: 'Este e-mail já existe em CONTATOS.' };
+        }
+      }
+    }
+  }
+
+  // Coleta idOfertas de INTERESSES para pré-preencher produtoOrigem
+  var abaInt = obterAbaInteresses_();
+  var lrInt  = abaInt.getLastRow();
+  var idsInteresse = [];
+  if (lrInt >= 2) {
+    var idxIdInt  = CABECALHO_INTERESSES.indexOf('idCliente');
+    var idxIdsInt = CABECALHO_INTERESSES.indexOf('idsInteresse');
+    var dadosInt  = abaInt.getRange(2, 1, lrInt - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosInt.forEach(function(r) {
+      if (String(r[idxIdInt]) !== idCliente || !r[idxIdsInt]) return;
+      String(r[idxIdsInt]).split(',').forEach(function(x) {
+        x = x.trim();
+        if (x && idsInteresse.indexOf(x) < 0) idsInteresse.push(x);
+      });
+    });
+  }
+
+  // Monta o registro para CONTATOS mapeando campos do BaseImob
+  var contatoData = {
+    nome:          String(lead.nome         || ''),
+    telefone:      String(lead.telefone     || ''),
+    email:         String(lead.email        || ''),
+    segmento:      String(lead.finalidade   || ''),
+    quartos:       String(lead.quartos      || ''),
+    precoLimite:   String(lead.precoLimite  || ''),
+    canal:         String(lead.canal        || 'BaseImob'),
+    urgencia:      String(lead.urgencia     || ''),
+    tags:          String(lead.tags         || ''),
+    observacoes:   String(lead.obs          || ''),
+    // idOfertas de interesse entram aqui — o motor de matching já usa esse
+    // campo pra dar pontuação de bairro/tipo quando o texto menciona o produto.
+    produtoOrigem: idsInteresse.join(', '),
+    tipo_contato:  'LEAD BASEIMOB'
+  };
+
+  var result = salvar(contatoData);
+
+  // Marca o lead como migrado para não aparecer em "pendentes" no dashboard
+  if (linhaLead > 0) {
+    abaLeads.getRange(linhaLead, idxTipo + 1).setValue('MIGRADO CONTATOS');
+  }
+
+  return { ok: true, idClienteNovo: result.idCliente, produtoOrigem: contatoData.produtoOrigem };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TESTES — SMOKE TEST DO MOTOR DE MATCHING
+// ═══════════════════════════════════════════════════════════════
+// Rode manualmente pelo editor do Apps Script (selecione testarMatching
+// no dropdown de função e clique Executar) sempre que mexer em qualquer
+// função de score (scoreTipo_, scorePreco_, scoreBairro_, scorePadrao_,
+// calcularMatch_, calcularScoreTotal_, classificarTemperatura_). Não lê
+// nem escreve na planilha — só chama as funções puras com dados fixos e
+// confere o resultado, então é seguro rodar a qualquer momento.
+//
+// Cada caso aqui documenta um bug real já corrigido nesta sessão — se
+// algum passar a falhar, é sinal de regressão numa mudança futura.
+// Resultado sai no Logger (Ver > Registros de execução).
+
+function testarMatching() {
+  var resultados = [];
+  function assertEqual_(nome, atual, esperado, tolerancia) {
+    var tol = tolerancia || 0;
+    var ok = typeof esperado === 'number'
+      ? Math.abs(atual - esperado) <= tol
+      : atual === esperado;
+    resultados.push({ nome: nome, ok: ok, esperado: esperado, atual: atual });
+  }
+
+  // ── calcularScoreTotal_ / classificarTemperatura_ ──
+  // Bug corrigido: cliente com score de cadastro alto mas ZERO matches não
+  // pode virar morno/quente — o componente de produto (65% do peso) tem
+  // que zerar, sobrando só 35% do score de cadastro (máx. 35 = sempre frio).
+  assertEqual_(
+    'scoreTotal sem matches = so 35% do score de cadastro',
+    calcularScoreTotal_(100, []), 35, 0.01
+  );
+  assertEqual_(
+    'sem matches, score de cadastro 100 ainda classifica como frio',
+    classificarTemperatura_(calcularScoreTotal_(100, []), []), 'frio'
+  );
+
+  // Média ponderada por rank (pesos [5,4,3,2,1,...]) — melhor match pesa mais
+  // que os seguintes, então o resultado fica mais perto do 1º match (100) do
+  // que da média simples (75) entre 100 e 50.
+  var stPonderado = calcularScoreTotal_(0, [100, 50]);
+  assertEqual_(
+    'scoreTotal pondera 1o match mais que os seguintes (rank 5,4)',
+    stPonderado, (100 * 5 + 50 * 4) / 9 * 0.65, 0.01
+  );
+
+  assertEqual_(
+    'scoreTotal 76 (sem match ideal) classifica como quente (>=75)',
+    classificarTemperatura_(76, [70, 60]), 'quente'
+  );
+  assertEqual_(
+    'scoreTotal 60 com 1 match >=85 sobe pra quente mesmo abaixo de 75',
+    classificarTemperatura_(60, [88, 40]), 'quente'
+  );
+  assertEqual_(
+    'scoreTotal 60 sem match ideal fica morno (50-74)',
+    classificarTemperatura_(60, [60, 55]), 'morno'
+  );
+  assertEqual_(
+    'scoreTotal 40 fica frio (<50)',
+    classificarTemperatura_(40, [40]), 'frio'
+  );
+
+  // ── scorePreco_ — bandas da margem de 30% ──
+  assertEqual_('preco identico ao limite = 100',         scorePreco_(600000, 600000, 30), 100);
+  assertEqual_('preco 5% acima do limite = 100',         scorePreco_(630000, 600000, 30), 100);
+  assertEqual_('preco 10% abaixo do limite = 95',        scorePreco_(540000, 600000, 30), 95);
+  assertEqual_('preco 30% abaixo do limite (borda) = 60', scorePreco_(420000, 600000, 30), 60);
+  assertEqual_('preco 31% abaixo do limite = excluido (0)', scorePreco_(414000, 600000, 30), 0);
+
+  // ── scoreTipo_ — desqualificação por incompatibilidade de grupo ──
+  // Bug corrigido: Casa aparecendo pra cliente que quer Apartamento.
+  assertEqual_(
+    'apartamento x casa = incompativel (grupos diferentes)',
+    scoreTipo_('', 'Casa', 'Apartamento'), 0
+  );
+  // Bug corrigido: "Terreno" (rótulo da Imobzi) não batia com "Lote em
+  // cond." (opção do formulário) por falta de normalização dos dois lados.
+  assertEqual_(
+    'lote em condominio x Terreno = compativel (mesmo grupo "terra")',
+    scoreTipo_('', 'Terreno', 'Lote em cond.'), 25
+  );
+  assertEqual_(
+    'sem segmento declarado = pontuacao neutra, nao desqualifica',
+    scoreTipo_('', 'Casa', ''), 8
+  );
+
+  // ── calcularMatch_ — desqualificação total por tipo, e contribuição
+  //    limitada do preço (ate 30 pontos, nao os 100 brutos) ──
+  var contatoBase = { precoLimite: 600000, margem_preco: 30, bairroInteresse: '', padrao: '', segmento: 'Casa', conversa: '', observacoes: '', nome_bruto: '', produtoOrigem: '' };
+  var imovelTipoErrado = { tipo: 'Apartamento', valorVenda: 600000, quartos: 3, bairro: '', cidade: '', padrao: '', suites: 0, vagas: 0 };
+  var mResult = calcularMatch_(contatoBase, imovelTipoErrado);
+  assertEqual_('tipo incompativel desqualifica o match inteiro (score 0)', mResult.score, 0);
+  assertEqual_('tipo incompativel registra motivo nos detalhes', mResult.detalhes, 'tipo incompatível');
+
+  // Bug corrigido: preço 30% fora do teto do cliente aparecia com score 100
+  // (a contribuição de preço vinha em escala 0-100 igual as outras, "estourando"
+  // o total e mascarando o preço ruim). Compara preço perfeito x preço na borda
+  // da margem, mantendo tipo/quartos/bairro/padrao idênticos e neutros.
+  var imovelBase = { tipo: 'Casa', quartos: 0, bairro: '', cidade: '', padrao: '', suites: 0, vagas: 0 };
+  var imovelPrecoPerfeito = Object.assign({}, imovelBase, { valorVenda: 600000 });
+  var imovelPrecoRuim     = Object.assign({}, imovelBase, { valorVenda: 420000 }); // 30% abaixo
+  var scorePrecoPerfeito  = calcularMatch_(contatoBase, imovelPrecoPerfeito).score;
+  var scorePrecoRuim      = calcularMatch_(contatoBase, imovelPrecoRuim).score;
+  resultados.push({
+    nome: 'preco 30% fora do teto pontua bem menos que preco exato (nao mascarado atras de 100)',
+    ok: scorePrecoRuim < scorePrecoPerfeito,
+    esperado: '< ' + scorePrecoPerfeito, atual: scorePrecoRuim
+  });
+  resultados.push({
+    nome: 'contribuicao do preco no total e limitada a 30 pontos (nao 100)',
+    ok: scorePrecoPerfeito <= 100 && (scorePrecoPerfeito - scorePrecoRuim) <= 30,
+    esperado: 'diferenca <= 30', atual: scorePrecoPerfeito - scorePrecoRuim
+  });
+
+  // ── Log do resultado ──
+  var falhas = resultados.filter(function(r) { return !r.ok; });
+  Logger.log('════════════════════════════════════════');
+  Logger.log('TESTE DO MOTOR DE MATCHING — ' + resultados.length + ' casos, ' +
+             (resultados.length - falhas.length) + ' passaram, ' + falhas.length + ' falharam');
+  Logger.log('════════════════════════════════════════');
+  resultados.forEach(function(r) {
+    Logger.log((r.ok ? '✅ PASS' : '❌ FAIL') + ' — ' + r.nome +
+               (r.ok ? '' : ' (esperado: ' + r.esperado + ', obtido: ' + r.atual + ')'));
+  });
+  return { total: resultados.length, passou: resultados.length - falhas.length, falhou: falhas.length, falhas: falhas };
+}
