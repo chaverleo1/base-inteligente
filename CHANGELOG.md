@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Favoritar em lote na Busca Aberta
+
+Novo botão "⭐ Favoritar" na barra de seleção de `busca.html` (ao lado de "Gerar PDF"), habilitado
+junto com a seleção de imóveis. Abre um painel lateral (`.fav-overlay`/`.fav-painel`, mesmo padrão
+visual do drawer de cliente) listando os imóveis marcados e um campo de busca de cliente por nome
+ou código.
+
+Backend: rota `buscar` (GET) passou a casar também por `idCliente`, e nova rota
+`adicionar_favorito` (`adicionarFavorito_`) faz adição idempotente na aba FAVORITOS — nunca remove,
+diferente do `toggleFavorito_` usado no botão de estrela individual (evita desfavoritar por acidente
+numa ação em lote). `toggleFavorito_` foi refatorado para compartilhar a busca de linha existente
+(`encontrarLinhaFavorito_`) com a nova função.
+
+Mapeamento de campos: para imóveis de `fonte === 'LANCAMENTO'`, usa `idOferta` como `imoCodigo`
+(esses itens não têm `codigo` preenchido) e usa `precoMin` como fallback de `imoValorVenda`. Os
+favoritos salvos aparecem automaticamente no botão "⭐ Favoritos (N)" do drawer e na página
+`favoritos.html`, já que reaproveitam a mesma aba/infra existente.
+
+Testado via Node (`adicionarFavorito_`/`toggleFavorito_` idempotência) e via preview do navegador
+(abertura do painel, busca de cliente com fetch mockado, payload de salvamento com mapeamento de
+campos para REVENDA e LANCAMENTO).
+
 ## 2026-07-06 — `code.txt` confirmado como arquivo canônico único; `Code.gs.txt` removido de novo
 
 Usuário confirmou: `code.txt` é o arquivo oficial do backend daqui pra frente. `Code.gs.txt`

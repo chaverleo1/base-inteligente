@@ -329,6 +329,78 @@ input[type=range]::-webkit-slider-thumb {
   font-family: 'Inter', sans-serif; transition: all .15s;
 }
 .btn-sel-all:hover { color: var(--accent2); border-color: var(--accent2); }
+.btn-favoritar {
+  padding: 9px 18px; border-radius: var(--radius-xs);
+  background: var(--amber); color: #1a1200;
+  font-size: 13px; font-weight: 700; border: none; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .18s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-favoritar:hover { background: #ffb02e; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245,158,11,.35); }
+.btn-favoritar:disabled { opacity: .6; cursor: default; transform: none; box-shadow: none; }
+
+/* ── PAINEL LATERAL FAVORITAR ── */
+.fav-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.6); z-index: 210;
+}
+.fav-overlay.open { display: block; }
+.fav-painel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 400px; max-width: 100%;
+  background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; z-index: 211;
+  transform: translateX(100%); transition: transform .25s ease;
+}
+.fav-overlay.open .fav-painel { transform: translateX(0); }
+.fav-painel-header {
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.fav-painel-titulo { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
+.fav-painel-close { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; }
+.fav-painel-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+.fav-painel-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+
+.fav-lista-imoveis { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.fav-imovel-item {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 12px; color: var(--text2);
+}
+.fav-imovel-item b { color: var(--text); }
+
+.fav-busca-cliente { position: relative; margin-bottom: 10px; }
+.fav-busca-cliente input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif; padding: 10px 12px; outline: none;
+}
+.fav-busca-cliente input:focus { border-color: var(--accent); }
+.fav-resultados-cliente {
+  margin-top: 6px; max-height: 220px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.fav-cliente-item {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-size: 12px; cursor: pointer; transition: all .15s;
+}
+.fav-cliente-item:hover { border-color: var(--accent); }
+.fav-cliente-item.selecionado { border-color: var(--accent2); background: rgba(0,212,170,.08); }
+.fav-cliente-item .nome { color: var(--text); font-weight: 600; }
+.fav-cliente-item .cod { color: var(--text3); font-size: 11px; margin-top: 2px; }
+
+.fav-cliente-selecionado {
+  background: rgba(0,212,170,.08); border: 1px solid rgba(0,212,170,.3); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 13px; color: var(--text); display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.fav-cliente-selecionado button { background: none; border: none; color: var(--text2); font-size: 14px; cursor: pointer; }
+
+.btn-salvar-favoritos {
+  width: 100%; padding: 12px; border-radius: var(--radius-sm);
+  background: var(--amber); color: #1a1200; border: none;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .18s;
+}
+.btn-salvar-favoritos:hover { background: #ffb02e; }
+.btn-salvar-favoritos:disabled { opacity: .6; cursor: default; }
 
 /* ── MODAL DETALHE ── */
 .overlay {
@@ -654,6 +726,7 @@ input[type=range]::-webkit-slider-thumb {
     <div class="barra-sel" id="barra-sel" style="display:none">
       <span class="barra-sel-info">📋 <b id="barra-sel-count">0</b> selecionados</span>
       <button class="btn-pdf" id="btnPDF" onclick="gerarPDF()">📄 Gerar PDF de Ofertas</button>
+      <button class="btn-favoritar" id="btnFavoritar" onclick="abrirPainelFavoritar()">⭐ Favoritar</button>
       <button class="btn-sel-all" id="btnSelAll" onclick="selecionarTodos()">☑ Todos</button>
       <button class="btn-sel-all" onclick="limparSelecao()" style="color:var(--danger);border-color:var(--danger)">✕ Limpar</button>
     </div>
@@ -684,6 +757,38 @@ input[type=range]::-webkit-slider-thumb {
     <div class="modal-actions">
       <button class="btn-copiar" onclick="copiarMsg()">📋 Copiar mensagem</button>
       <button class="btn-wpp-grande" onclick="abrirWpp()">📲 Abrir WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAINEL LATERAL FAVORITAR -->
+<div class="fav-overlay" id="favOverlay" onclick="if(event.target===this)fecharPainelFavoritar()">
+  <div class="fav-painel">
+    <div class="fav-painel-header">
+      <div class="fav-painel-titulo">⭐ Favoritar imóveis</div>
+      <button class="fav-painel-close" onclick="fecharPainelFavoritar()">✕</button>
+    </div>
+    <div class="fav-painel-body">
+      <div class="filtro-label">Imóveis selecionados</div>
+      <div class="fav-lista-imoveis" id="favListaImoveis"></div>
+
+      <div class="filtro-label">Cliente</div>
+      <div id="favClienteSelecionadoWrap" style="display:none;margin-bottom:14px">
+        <div class="fav-cliente-selecionado">
+          <span id="favClienteSelecionadoTxt"></span>
+          <button onclick="favLimparClienteSelecionado()" title="Trocar cliente">✕</button>
+        </div>
+      </div>
+      <div id="favBuscaClienteWrap">
+        <div class="fav-busca-cliente">
+          <input type="text" id="favBuscaClienteInput" placeholder="Buscar por nome ou código..."
+                 oninput="favBuscarCliente(this.value)">
+        </div>
+        <div class="fav-resultados-cliente" id="favResultadosCliente"></div>
+      </div>
+    </div>
+    <div class="fav-painel-footer">
+      <button class="btn-salvar-favoritos" id="btnSalvarFavoritos" onclick="salvarFavoritosSelecionados()" disabled>Salvar favoritos</button>
     </div>
   </div>
 </div>
@@ -738,8 +843,10 @@ const state = {
   ultimoInterpretado: null,
   ultimoTexto: '',
   selecionados: new Map(),   // idx → im
-  resultadosAtuais: []
+  resultadosAtuais: [],
+  favCliente: null
 };
+let favDebounce = null;
 let precoAtual = 500000;
 let areaMinAtual = 0;
 
@@ -890,6 +997,129 @@ function gerarHtmlPDF(lista) {
   <script>window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });<\/script>
 </body>
 </html>`;
+}
+
+// ─── FAVORITAR EM LOTE (painel lateral) ───────────────────────────────────────
+function abrirPainelFavoritar() {
+  if (!state.selecionados.size) { mostrarToast('Selecione ao menos um imóvel', 'erro'); return; }
+  renderFavListaImoveis();
+  document.getElementById('favOverlay').classList.add('open');
+}
+
+function fecharPainelFavoritar() {
+  document.getElementById('favOverlay').classList.remove('open');
+  document.getElementById('favBuscaClienteInput').value = '';
+  document.getElementById('favResultadosCliente').innerHTML = '';
+}
+
+function renderFavListaImoveis() {
+  const itens = [...state.selecionados.values()];
+  document.getElementById('favListaImoveis').innerHTML = itens.map(im => {
+    const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
+    return `<div class="fav-imovel-item"><b>${im.codigo || im.tipo || 'Imóvel'}</b> · ${local || im.bairro || '—'}</div>`;
+  }).join('');
+}
+
+function favBuscarCliente(valor) {
+  clearTimeout(favDebounce);
+  const q = valor.trim();
+  const cont = document.getElementById('favResultadosCliente');
+  if (!q) { cont.innerHTML = ''; return; }
+  favDebounce = setTimeout(async () => {
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(q) + '&token=' + encodeURIComponent(tokenSessao()));
+      const json = await resp.json();
+      if (trataNaoAutenticado(json)) return;
+      const lista = Array.isArray(json) ? json : [];
+      window._favResultadosClienteAtuais = lista;
+      cont.innerHTML = lista.length
+        ? lista.slice(0, 20).map((c, i) => `
+          <div class="fav-cliente-item" onclick="favSelecionarCliente(${i})">
+            <div class="nome">${c.nome || '—'}</div>
+            <div class="cod">${c.idCliente || ''}${c.telefone ? ' · ' + c.telefone : ''}</div>
+          </div>`).join('')
+        : '<div style="font-size:12px;color:var(--text3);padding:6px 2px">Nenhum cliente encontrado.</div>';
+    } catch (e) {
+      cont.innerHTML = '<div style="font-size:12px;color:var(--coral);padding:6px 2px">Erro ao buscar cliente.</div>';
+    }
+  }, 350);
+}
+
+function favSelecionarCliente(i) {
+  const c = (window._favResultadosClienteAtuais || [])[i];
+  if (!c) return;
+  state.favCliente = c;
+  document.getElementById('favClienteSelecionadoTxt').textContent = `${c.nome || '—'}${c.idCliente ? ' · ' + c.idCliente : ''}`;
+  document.getElementById('favClienteSelecionadoWrap').style.display = 'block';
+  document.getElementById('favBuscaClienteWrap').style.display = 'none';
+  document.getElementById('btnSalvarFavoritos').disabled = false;
+}
+
+function favLimparClienteSelecionado() {
+  state.favCliente = null;
+  document.getElementById('favClienteSelecionadoWrap').style.display = 'none';
+  document.getElementById('favBuscaClienteWrap').style.display = 'block';
+  document.getElementById('btnSalvarFavoritos').disabled = true;
+}
+
+function mapImovelParaFavorito_(im) {
+  const isLanc = im.fonte === 'LANCAMENTO';
+  return {
+    imoCodigo:      (isLanc ? (im.idOferta || im.codigo) : im.codigo) || '',
+    fonte:          im.fonte || '',
+    imoTipo:        im.tipo || '',
+    imoBairro:      im.bairro || '',
+    imoCondominio:  im.condominio || '',
+    imoEndereco:    im.endereco || '',
+    imoQuartos:     im.quartos || '',
+    imoSuites:      im.suites || '',
+    imoVagas:       im.vagas || '',
+    imoAreaUtil:    im.areaUtil || '',
+    imoValorVenda:  im.valorVenda || im.precoMin || '',
+    imoPadrao:      im.padrao || '',
+    imoEstagio:     im.estagio || '',
+    imoFoto:        im.foto || '',
+    imoUrl:         im.url || '',
+    imoConstrutora: im.construtora || '',
+    imoEntrega:     im.entrega || ''
+  };
+}
+
+async function salvarFavoritosSelecionados() {
+  if (!state.favCliente) { mostrarToast('Selecione um cliente', 'erro'); return; }
+  const itens = [...state.selecionados.values()];
+  if (!itens.length) { mostrarToast('Nenhum imóvel selecionado', 'erro'); return; }
+
+  const btn = document.getElementById('btnSalvarFavoritos');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  const idCliente = state.favCliente.idCliente || '';
+  const cliNome   = state.favCliente.nome || '';
+  let adicionados = 0, jaExistiam = 0, erros = 0;
+
+  try {
+    for (const im of itens) {
+      const payload = Object.assign(
+        { acao: 'adicionar_favorito', token: tokenSessao(), idCliente, cliNome },
+        mapImovelParaFavorito_(im)
+      );
+      try {
+        const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+        const json = await resp.json();
+        if (trataNaoAutenticado(json)) return;
+        if (json.status === 'adicionado') adicionados++;
+        else if (json.status === 'ja_existia') jaExistiam++;
+        else erros++;
+      } catch (e) { erros++; }
+    }
+
+    if (erros) mostrarToast(`${adicionados} favoritado(s), ${erros} erro(s) ao favoritar`, 'erro');
+    else mostrarToast(`⭐ ${adicionados} favoritado(s)${jaExistiam ? ', ' + jaExistiam + ' já estavam' : ''} para ${cliNome}`);
+
+    if (!erros) { fecharPainelFavoritar(); favLimparClienteSelecionado(); }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar favoritos';
+  }
 }
 
 // ─── OPÇÕES DINÂMICAS (tipos/bairros existentes na base) ──────────────────────

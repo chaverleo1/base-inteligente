@@ -100,15 +100,20 @@ function doGet(e) {
 
   if (acao === 'buscar') {
     var q     = e.parameter.q || '';
+    var qLow  = q.toLowerCase();
     var aba   = getAba();
     var dados = aba.getDataRange().getValues();
     var cab   = dados[0];
     var res   = [];
+    var idxIdCliente_ = cab.indexOf('idCliente');
     for (var i = 1; i < dados.length; i++) {
       var row  = dados[i];
       var nome = String(row[cab.indexOf('nome')]     || '').toLowerCase();
       var tel  = String(row[cab.indexOf('telefone')] || '').toLowerCase();
-      if (nome.indexOf(q.toLowerCase()) >= 0 || tel.indexOf(q.toLowerCase()) >= 0) {
+      // Busca por código (idCliente) também — usada em telas de "localizar
+      // cliente por nome ou código" (ex: favoritar em lote na Busca Aberta).
+      var idc  = idxIdCliente_ >= 0 ? String(row[idxIdCliente_] || '').toLowerCase() : '';
+      if (nome.indexOf(qLow) >= 0 || tel.indexOf(qLow) >= 0 || (qLow && idc.indexOf(qLow) >= 0)) {
         var obj = { _linha: i + 1 };
         cab.forEach(function(c, j) { obj[c] = row[j]; });
         obj.scoreEfetivo = scoreComFrescor_(obj.score, obj.dataAtualizacao);
@@ -419,6 +424,7 @@ function doPost(e) {
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
+  if (d.acao === 'adicionar_favorito')    return ok(adicionarFavorito_(d));
   if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
@@ -2396,6 +2402,26 @@ function obterAbaFavoritos_() {
 // (desfavoritar); senão, adiciona (favoritar). d traz os campos imo* já
 // carregados no drawer (vindos de matches_cliente) — evita ter que rebuscar
 // o imóvel em REVENDA/LANCAMENTOS/CONSTRUTORA só pra favoritar.
+// Retorna o número da linha (1-based, com cabeçalho) de um favorito
+// existente, ou -1 se não encontrado. Compartilhado por toggleFavorito_() e
+// adicionarFavorito_() pra não duplicar a busca.
+function encontrarLinhaFavorito_(aba, idCliente, imoCodigo, fonte) {
+  var lr = aba.getLastRow();
+  if (lr < 2) return -1;
+  var idxId  = CABECALHO_FAVORITOS.indexOf('idCliente');
+  var idxCod = CABECALHO_FAVORITOS.indexOf('imoCodigo');
+  var idxFon = CABECALHO_FAVORITOS.indexOf('fonte');
+  var dados  = aba.getRange(2, 1, lr - 1, CABECALHO_FAVORITOS.length).getValues();
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][idxId]) === idCliente &&
+        String(dados[i][idxCod]) === imoCodigo &&
+        String(dados[i][idxFon]) === fonte) {
+      return i + 2;
+    }
+  }
+  return -1;
+}
+
 function toggleFavorito_(d) {
   d = d || {};
   var idCliente = String(d.idCliente || '').trim();
@@ -2404,21 +2430,37 @@ function toggleFavorito_(d) {
   if (!idCliente || !imoCodigo) return { status: 'erro', motivo: 'idCliente e imoCodigo obrigatorios' };
 
   var aba = obterAbaFavoritos_();
-  var lr  = aba.getLastRow();
-  var idxId  = CABECALHO_FAVORITOS.indexOf('idCliente');
-  var idxCod = CABECALHO_FAVORITOS.indexOf('imoCodigo');
-  var idxFon = CABECALHO_FAVORITOS.indexOf('fonte');
+  var linhaExistente = encontrarLinhaFavorito_(aba, idCliente, imoCodigo, fonte);
+  if (linhaExistente > 0) {
+    aba.deleteRow(linhaExistente);
+    return { status: 'removido' };
+  }
 
-  if (lr >= 2) {
-    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FAVORITOS.length).getValues();
-    for (var i = 0; i < dados.length; i++) {
-      if (String(dados[i][idxId]) === idCliente &&
-          String(dados[i][idxCod]) === imoCodigo &&
-          String(dados[i][idxFon]) === fonte) {
-        aba.deleteRow(i + 2);
-        return { status: 'removido' };
-      }
-    }
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var linha = CABECALHO_FAVORITOS.map(function(col) {
+    if (col === 'idCliente') return idCliente;
+    if (col === 'fonte')     return fonte;
+    if (col === 'dataFavoritado') return agora;
+    return d[col] !== undefined ? d[col] : '';
+  });
+  aba.appendRow(linha);
+  return { status: 'adicionado' };
+}
+
+// Diferente de toggleFavorito_: NUNCA remove — só adiciona se ainda não
+// existir. Usada em ações em lote (ex: favoritar vários imóveis marcados na
+// Busca Aberta pra um cliente de uma vez), onde um toggle acidental
+// removeria um favorito que o cliente já tinha antes da ação em lote.
+function adicionarFavorito_(d) {
+  d = d || {};
+  var idCliente = String(d.idCliente || '').trim();
+  var imoCodigo = String(d.imoCodigo || '').trim();
+  var fonte     = String(d.fonte || '').trim();
+  if (!idCliente || !imoCodigo) return { status: 'erro', motivo: 'idCliente e imoCodigo obrigatorios' };
+
+  var aba = obterAbaFavoritos_();
+  if (encontrarLinhaFavorito_(aba, idCliente, imoCodigo, fonte) > 0) {
+    return { status: 'ja_existia' };
   }
 
   var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
