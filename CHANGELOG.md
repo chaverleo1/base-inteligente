@@ -1,5 +1,21 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Fix: backfill das ações planejadas que existiam antes do histórico
+
+Causa raiz do card sumir de novo: quando o histórico (`ACOES_PLANEJADAS`) foi introduzido, as ações
+que o usuário já tinha cadastrado nos clientes (via os campos antigos `proximaAcao`/`proximaAcaoData`
+em CONTATOS) nunca foram migradas pra lá — `registrarAcaoPlanejada_()` só dispara quando o valor
+MUDA numa edição, e esses clientes não foram editados de novo depois da mudança de modelo. Card
+ficava vazio porque a fonte nova (`ACOES_PLANEJADAS`) realmente não tinha nada.
+
+Nova função `migrarAcoesPlanejadasExistentes_()` (rota `adm_migrar_acoes_planejadas`): varre CONTATOS
+por linhas com `proximaAcaoData` preenchida e cria a entrada correspondente no histórico, usando
+idCliente+data como chave pra não duplicar se rodar mais de uma vez. Adicionada à lista `FUNCOES` de
+`index.html`, roda automaticamente a partir do próximo login "fresco" (sessão nova).
+
+Testado via Node: primeira rodada migra os clientes com ação pendente, ignora os sem ação; segunda
+rodada (idempotência) não duplica nada.
+
 ## 2026-07-07 — Reorganização visual do card "Ações Planejadas": "Hoje" em destaque
 
 Reordenado e redesenhado: **Hoje** (esquerda, em destaque — número maior, caixa com fundo/contorno

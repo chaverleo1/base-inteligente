@@ -210,6 +210,10 @@ function doGet(e) {
     try { preencherDataAtualizacaoFaltantes(); return ok({ status: 'ok', msg: 'dataAtualizacao preenchida.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
+  if (acao === 'adm_migrar_acoes_planejadas') {
+    try { migrarAcoesPlanejadasExistentes_(); return ok({ status: 'ok', msg: 'Ações planejadas migradas pro histórico.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
   if (acao === 'adm_testar_matching') {
     try { return ok(testarMatching()); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
@@ -746,6 +750,49 @@ function preencherDataAtualizacaoFaltantes() {
     }
   }
   Logger.log('dataAtualizacao preenchida em ' + preenchidos + ' linhas (usando dataCadastro).');
+}
+
+// Backfill único: clientes que já tinham proximaAcao/proximaAcaoData
+// preenchidos ANTES da aba ACOES_PLANEJADAS existir (histórico introduzido em
+// 2026-07) nunca geraram uma linha de log — registrarAcaoPlanejada_() só
+// dispara quando o valor MUDA numa edição, e esses clientes não foram
+// editados de novo depois da migração. Idempotente: usa idCliente+data como
+// chave pra não duplicar se rodar mais de uma vez (ver FUNCOES em index.html).
+function migrarAcoesPlanejadasExistentes_() {
+  var aba     = getAba();
+  var lastRow = aba.getLastRow();
+  if (lastRow < 2) { Logger.log('Nenhuma linha de dados.'); return; }
+  var dados = aba.getRange(2, 1, lastRow - 1, CABECALHO.length).getValues();
+  var iId   = CABECALHO.indexOf('idCliente');
+  var iNome = CABECALHO.indexOf('nome');
+  var iTel  = CABECALHO.indexOf('telefone');
+  var iPA   = CABECALHO.indexOf('proximaAcao');
+  var iPAD  = CABECALHO.indexOf('proximaAcaoData');
+
+  var abaAP = obterAbaAcoesPlanejadas_();
+  var jaExiste_ = {};
+  if (abaAP.getLastRow() > 1) {
+    var dadosAP  = abaAP.getRange(2, 1, abaAP.getLastRow() - 1, CABECALHO_ACOES_PLANEJADAS.length).getValues();
+    var iAPId    = CABECALHO_ACOES_PLANEJADAS.indexOf('idCliente');
+    var iAPData  = CABECALHO_ACOES_PLANEJADAS.indexOf('dataPlanejada');
+    dadosAP.forEach(function(r) {
+      jaExiste_[String(r[iAPId]) + '|' + normalizarDataComparavel_(r[iAPData])] = true;
+    });
+  }
+
+  var migrados = 0;
+  dados.forEach(function(row) {
+    var idCliente = String(row[iId] || '').trim();
+    var dataPlan  = row[iPAD];
+    if (!idCliente || !dataPlan) return;
+    var dataNorm = normalizarDataComparavel_(dataPlan);
+    var chave = idCliente + '|' + dataNorm;
+    if (jaExiste_[chave]) return;
+    registrarAcaoPlanejada_({ idCliente: idCliente, cliNome: row[iNome], telefone: row[iTel], acao: row[iPA], dataPlanejada: dataNorm });
+    jaExiste_[chave] = true;
+    migrados++;
+  });
+  Logger.log('Ações planejadas migradas pro histórico: ' + migrados);
 }
 
 // ═══════════════════════════════════════════════════════════════
