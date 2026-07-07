@@ -1629,6 +1629,64 @@ function rodapeDrawerCliente_(cliente) {
   return `<div style="text-align:center;font-size:11px;color:var(--text3);padding:14px 0 4px;border-top:1px solid var(--border);margin-top:14px">Cadastrado em ${data}</div>`;
 }
 
+// Histórico completo de "Ações Planejadas" do cliente (etapa 7: relacionamento)
+// — diferente do card do Dashboard, mostra TODAS as ações já lançadas, mais
+// nova primeiro, mesmo as já desativadas (o backend nunca apaga a linha, só
+// muda o status — ver ACOES_PLANEJADAS/desativarAcaoPlanejada_ no code.txt).
+async function carregarAcoesPlanejadas_(idCliente) {
+  const el = document.getElementById('drawerAcoesPlanejadas');
+  if (!el) return;
+  if (!idCliente) { el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Cliente sem código — histórico indisponível.</div>'; return; }
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_acoes_planejadas&idCliente=' + encodeURIComponent(idCliente) + '&token=' + encodeURIComponent(tokenSessao()));
+    const lista = await resp.json();
+    if (trataNaoAutenticado(lista)) return;
+    renderAcoesPlanejadas_(Array.isArray(lista) ? lista : []);
+  } catch (e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--danger)">Erro ao carregar histórico de ações.</div>';
+  }
+}
+
+function renderAcoesPlanejadas_(lista) {
+  const el = document.getElementById('drawerAcoesPlanejadas');
+  if (!el) return;
+  if (!lista.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Nenhuma ação planejada registrada ainda.</div>';
+    return;
+  }
+  el.innerHTML = lista.map(a => {
+    const ativa = a.status === 'Ativa';
+    return `<div class="d-step" style="${ativa ? '' : 'opacity:.55'}" data-linha="${a._linha}">
+      <div class="d-step-icon">${ativa ? '📅' : '✔️'}</div>
+      <div class="d-step-text" style="flex:1">
+        <b>${a.acao || '—'}</b> — planejada para ${a.dataPlanejada || '—'}
+        <div class="d-acao-sub" style="font-size:11px;color:var(--text3);margin-top:2px">Registrada em ${a.dataCriacao || '—'}${ativa ? '' : ' · desativada'}</div>
+      </div>
+      ${ativa ? `<button class="d-btn" style="flex-shrink:0;font-size:11px;padding:4px 10px" onclick="desativarAcaoHistorico_(${a._linha}, this)">Desativar</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function desativarAcaoHistorico_(linha, btnEl) {
+  if (btnEl) btnEl.disabled = true;
+  try {
+    const body = new URLSearchParams({ dados: JSON.stringify({ acao: 'desativar_acao_planejada', token: tokenSessao(), _linha: linha }) });
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const wrap = btnEl ? btnEl.closest('.d-step') : null;
+    if (wrap) {
+      wrap.style.opacity = '.55';
+      wrap.querySelector('.d-step-icon').textContent = '✔️';
+      const sub = wrap.querySelector('.d-acao-sub');
+      if (sub) sub.textContent = sub.textContent + ' · desativada';
+      btnEl.remove();
+    }
+  } catch (e) {
+    showToast('Erro ao desativar: ' + e.message, 'erro');
+  }
+}
+
 async function carregarMatchesDrawer(cod, cliente) {
   const el = document.getElementById('drawerImoveis');
   if (!el) return;
@@ -1833,6 +1891,7 @@ async function abrirCliente(nome, score, cod) {
     if (!c) { document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading">Cliente não encontrado na base.</div>'; return; }
     renderDrawer(c, sc);
     carregarMatchesDrawer(cod, c);
+    carregarAcoesPlanejadas_(c.idCliente);
   } catch(e) {
     document.getElementById('drawerBody').innerHTML =
       `<div class="drawer-loading">Erro: ${e.message}</div>`;
@@ -1969,6 +2028,11 @@ function renderDrawer(c, score) {
       <div class="d-steps">
         ${steps.map(s=>`<div class="d-step"><div class="d-step-icon">${s.icon}</div><div class="d-step-text">${s.text}</div></div>`).join('')}
       </div>
+    </div>
+
+    <div class="d-section">
+      <div class="d-section-title">Ações Planejadas</div>
+      <div id="drawerAcoesPlanejadas"><div class="drawer-loading dot-anim" style="padding:12px 0">Carregando histórico</div></div>
     </div>
 
     <div class="d-section">

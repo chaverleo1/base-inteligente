@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Histórico de "Ações Planejadas" na ficha do cliente + desativação sem perder o registro
+
+Mudança de modelo de dados: até aqui `proximaAcao`/`proximaAcaoData` em CONTATOS guardavam só "a
+ação atual", sobrescrita a cada edição — sem histórico. Nova aba **ACOES_PLANEJADAS** é um log
+permanente: toda vez que o corretor define ou troca a próxima ação planejada de um cliente (via
+`formulario.html`), uma linha NOVA é adicionada, para sempre. "Desativar" só muda o `status` da
+linha pra `'Inativa'` — nunca apaga, então o histórico completo continua visível na ficha do cliente
+mesmo depois de desativado.
+
+- `salvar()`/`atualizar()` chamam `registrarAcaoPlanejada_()` só quando a ação ou a data realmente
+  mudou nesta edição (mesmo padrão de "só loga quando muda" já usado em `pipelineData`) — evita
+  duplicar entradas a cada save que não mexeu nisso.
+- `adm_dados_insights` (card do Dashboard) passou a ler de ACOES_PLANEJADAS filtrando
+  `status='Ativa'`, em vez de CONTATOS diretamente — uma ação desativada some do card imediatamente,
+  sem precisar apagar nada.
+- Nova seção **"Ações Planejadas"** no drawer do cliente (`dashboard.html` e `contatos.html`), logo
+  abaixo de "Próximos passos": lista todo o histórico daquele cliente, mais novo primeiro, com botão
+  "Desativar" em cada entrada ativa (atualiza a linha na hora, sem recarregar a página).
+- Novas rotas: `listar_acoes_planejadas&idCliente=X` (GET) e `desativar_acao_planejada` (POST).
+
+Testado via Node: registro na criação e na edição (só quando muda), não duplica em edições que não
+mexem na ação, histórico ordenado mais novo→mais antigo, desativar marca só a linha certa (as
+demais do mesmo cliente continuam Ativa), e `adm_dados_insights` ignora corretamente entradas
+Inativas. Testado no preview: seção do drawer renderiza histórico completo, botão "Desativar"
+atualiza a entrada in-place em `dashboard.html` e `contatos.html`.
+
 ## 2026-07-07 — Card "Ações planejadas" ganha 3 colunas (atrasadas / hoje / próximos 7 dias)
 
 Reformulado de um número único ("urgentes" + texto mencionando futuras) pra 3 colunas

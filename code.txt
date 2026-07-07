@@ -156,6 +156,7 @@ function doGet(e) {
   if (acao === 'validar_token')    return validarToken_(e.parameter.token);
   if (acao === 'matches_cliente')  return matchesCliente_(e.parameter.cod);
   if (acao === 'listar_favoritos') return ok(listarFavoritos_(e.parameter.cod));
+  if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
@@ -266,8 +267,6 @@ function doGet(e) {
         var iUrg_  = CABECALHO.indexOf('urgencia');
         var iId_   = CABECALHO.indexOf('idCliente');
         var iDA_   = CABECALHO.indexOf('dataAtualizacao');
-        var iPA_   = CABECALHO.indexOf('proximaAcao');
-        var iPAD_  = CABECALHO.indexOf('proximaAcaoData');
         var FORA_  = ['Corretor','Parceiro','Descartar','Igreja'];
 
         dadosC_.forEach(function(r_) {
@@ -310,25 +309,6 @@ function doGet(e) {
             }
           }
 
-          // Etapa 7 (Relacionamento): "próxima ação planejada" com data —
-          // diasAteVencimento_ devolve negativo pra data futura, positivo pra
-          // vencida, 0 pra hoje. Traz vencidas + hoje + próximos 7 dias (>= -7)
-          // como uma prévia da semana — o Dashboard separa em duas contagens
-          // (urgente vs próximos 7 dias) a partir do sinal de "dias".
-          var proxAcao_ = iPA_ >= 0 ? String(r_[iPA_]||'').trim() : '';
-          var proxAcaoData_ = iPAD_ >= 0 ? r_[iPAD_] : '';
-          if (proxAcaoData_) {
-            var diasAcao_ = diasAteVencimento_(proxAcaoData_);
-            if (diasAcao_ !== null && diasAcao_ >= -7) {
-              acoesPlanejadas_.push({
-                nome: nome_, telefone: tel_, idCliente: id_,
-                proximaAcao: proxAcao_,
-                proximaAcaoData: (proxAcaoData_ instanceof Date) ? Utilities.formatDate(proxAcaoData_, tz_, 'dd/MM/yyyy') : String(proxAcaoData_),
-                dias: diasAcao_
-              });
-            }
-          }
-
           bais_.split(',').forEach(function(b_) {
             b_ = b_.trim();
             if (b_.length <= 2) return;
@@ -345,6 +325,36 @@ function doGet(e) {
             if (canais_[can_].clientes.length < 50)
               canais_[can_].clientes.push({nome:nome_,telefone:tel_,segmento:seg_,padrao:pad_,urgencia:urg_,score:sc_,ultimoContato:ucStr_,idCliente:id_});
           }
+        });
+      }
+
+      // Etapa 7 (Relacionamento): fonte agora é a aba ACOES_PLANEJADAS (log
+      // permanente), não mais CONTATOS.proximaAcao/proximaAcaoData — "Desativar"
+      // na ficha do cliente marca status='Inativa' e some daqui, sem apagar o
+      // histórico. diasAteVencimento_ devolve negativo pra data futura, positivo
+      // pra vencida, 0 pra hoje; traz vencidas + hoje + próximos 7 dias (>= -7).
+      var abaAP_ = ss_.getSheetByName('ACOES_PLANEJADAS');
+      if (abaAP_ && abaAP_.getLastRow() > 1) {
+        var iAPId_     = CABECALHO_ACOES_PLANEJADAS.indexOf('idCliente');
+        var iAPNome_   = CABECALHO_ACOES_PLANEJADAS.indexOf('cliNome');
+        var iAPTel_    = CABECALHO_ACOES_PLANEJADAS.indexOf('telefone');
+        var iAPAcao_   = CABECALHO_ACOES_PLANEJADAS.indexOf('acao');
+        var iAPData_   = CABECALHO_ACOES_PLANEJADAS.indexOf('dataPlanejada');
+        var iAPStatus_ = CABECALHO_ACOES_PLANEJADAS.indexOf('status');
+        var dadosAP_ = abaAP_.getRange(2, 1, abaAP_.getLastRow() - 1, CABECALHO_ACOES_PLANEJADAS.length).getValues();
+        dadosAP_.forEach(function(r_) {
+          if (String(r_[iAPStatus_] || '').trim() !== 'Ativa') return;
+          var dataPlan_ = r_[iAPData_];
+          if (!dataPlan_) return;
+          var diasAcao_ = diasAteVencimento_(dataPlan_);
+          if (diasAcao_ === null || diasAcao_ < -7) return;
+          acoesPlanejadas_.push({
+            nome: String(r_[iAPNome_] || ''), telefone: String(r_[iAPTel_] || ''),
+            idCliente: String(r_[iAPId_] || ''),
+            proximaAcao: String(r_[iAPAcao_] || ''),
+            proximaAcaoData: (dataPlan_ instanceof Date) ? Utilities.formatDate(dataPlan_, tz_, 'dd/MM/yyyy') : String(dataPlan_),
+            dias: diasAcao_
+          });
         });
       }
 
@@ -525,6 +535,7 @@ function doPost(e) {
   if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
   if (d.acao === 'adicionar_favorito')    return ok(adicionarFavorito_(d));
   if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
+  if (d.acao === 'desativar_acao_planejada') return ok(desativarAcaoPlanejada_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -574,6 +585,9 @@ function salvar(d) {
       return d[col] !== undefined ? d[col] : '';
     });
     aba.appendRow(linha);
+    if (d.proximaAcaoData) {
+      registrarAcaoPlanejada_({ idCliente: novoId, cliNome: d.nome, telefone: d.telefone, acao: d.proximaAcao, dataPlanejada: d.proximaAcaoData });
+    }
     return { status: 'salvo', idCliente: novoId };
   } finally {
     lock.releaseLock();
@@ -622,6 +636,16 @@ function salvarPipeline_(d) {
   return {ok: false, motivo: 'cliente nao encontrado'};
 }
 
+// Normaliza um valor de data pra comparação — o Sheets pode ter convertido a
+// string "dd/MM/yyyy" pra um Date de verdade sozinho (mesmo efeito visto em
+// pipelineData/dataAtualizacao), então comparar direto (Date !== string)
+// sempre daria "mudou" mesmo sem mudança real.
+function normalizarDataComparavel_(v) {
+  if (!v) return '';
+  if (v instanceof Date) return Utilities.formatDate(v, 'America/Sao_Paulo', 'dd/MM/yyyy');
+  return String(v);
+}
+
 function atualizar(d) {
   var aba           = getAba();
   var lin           = parseInt(d._linha);
@@ -631,6 +655,8 @@ function atualizar(d) {
   var idAtual       = existente[CABECALHO.indexOf('idCliente')];
   var pipelineAtual = existente[CABECALHO.indexOf('pipeline')];
   var pipelineDataAtual = existente[CABECALHO.indexOf('pipelineData')];
+  var proxAcaoAtual     = String(existente[CABECALHO.indexOf('proximaAcao')] || '');
+  var proxAcaoDataAtual = existente[CABECALHO.indexOf('proximaAcaoData')];
   var agora     = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
   var linha = CABECALHO.map(function(col) {
     if (col === 'dataCadastro') return dataCad;
@@ -651,6 +677,18 @@ function atualizar(d) {
     return d[col] !== undefined ? d[col] : '';
   });
   aba.getRange(lin, 1, 1, CABECALHO.length).setValues([linha]);
+
+  // Registra no histórico (ACOES_PLANEJADAS) só quando a ação ou a data
+  // planejada de fato mudou nesta edição — evita logar de novo a cada save
+  // que não mexeu nisso.
+  if (d.proximaAcaoData) {
+    var mudouAcao = normalizarDataComparavel_(d.proximaAcaoData) !== normalizarDataComparavel_(proxAcaoDataAtual)
+      || (d.proximaAcao || '') !== proxAcaoAtual;
+    if (mudouAcao) {
+      registrarAcaoPlanejada_({ idCliente: idAtual, cliNome: d.nome, telefone: d.telefone, acao: d.proximaAcao, dataPlanejada: d.proximaAcaoData });
+    }
+  }
+
   return { status: 'atualizado', linha: lin };
 }
 
@@ -2751,6 +2789,78 @@ function listarFavoritos_(idCliente) {
     }
   });
   return res;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AÇÕES PLANEJADAS — histórico completo (etapa 7: relacionamento)
+// ═══════════════════════════════════════════════════════════════
+// Diferente de CONTATOS.proximaAcao/proximaAcaoData (que só guarda "a ação
+// atual", sobrescrita a cada edição), esta aba é um LOG: cada vez que o
+// corretor define/troca a próxima ação planejada de um cliente, uma linha
+// NOVA é adicionada aqui, permanentemente — nunca sobrescrita. "Desativar"
+// só muda o status pra 'Inativa' (some do card do Dashboard, que só conta
+// status='Ativa'), sem apagar a linha — o histórico completo continua
+// visível na ficha do cliente.
+var CABECALHO_ACOES_PLANEJADAS = ['idCliente', 'cliNome', 'telefone', 'acao', 'dataPlanejada', 'dataCriacao', 'status'];
+
+function obterAbaAcoesPlanejadas_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('ACOES_PLANEJADAS');
+  if (!aba) {
+    aba = ss.insertSheet('ACOES_PLANEJADAS');
+    aba.setTabColor('#00d4aa');
+    aba.appendRow(CABECALHO_ACOES_PLANEJADAS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_ACOES_PLANEJADAS.length)
+       .setFontWeight('bold').setBackground('#00d4aa').setFontColor('#0f1117');
+  }
+  return aba;
+}
+
+// Registra uma nova ação planejada no histórico — chamado por salvar()/
+// atualizar() quando o campo proximaAcaoData muda (ver lá). Não faz nada se
+// não houver data (não tem sentido logar "próxima ação" sem quando).
+function registrarAcaoPlanejada_(d) {
+  d = d || {};
+  var idCliente = String(d.idCliente || '').trim();
+  if (!idCliente || !d.dataPlanejada) return;
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  obterAbaAcoesPlanejadas_().appendRow([
+    idCliente, d.cliNome || '', d.telefone || '', d.acao || '', d.dataPlanejada, agora, 'Ativa'
+  ]);
+}
+
+// Histórico completo de um cliente, mais novo primeiro. A ordem de inserção
+// já é cronológica (sempre appendRow) — inverter o array basta, sem precisar
+// comparar/parsear datas.
+function listarAcoesPlanejadas_(idCliente) {
+  idCliente = String(idCliente || '').trim();
+  if (!idCliente) return [];
+  var aba = obterAbaAcoesPlanejadas_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return [];
+  var idxId = CABECALHO_ACOES_PLANEJADAS.indexOf('idCliente');
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_ACOES_PLANEJADAS.length).getValues();
+  var res = [];
+  dados.forEach(function(row, i) {
+    if (String(row[idxId]) !== idCliente) return;
+    var obj = { _linha: i + 2 };
+    CABECALHO_ACOES_PLANEJADAS.forEach(function(col, j) { obj[col] = row[j]; });
+    res.push(obj);
+  });
+  res.reverse();
+  return res;
+}
+
+// "Desativar/excluir" pro card do Dashboard não conta mais essa ação — a
+// linha continua existindo pra sempre no histórico da ficha do cliente.
+function desativarAcaoPlanejada_(d) {
+  var lin = parseInt(d && d._linha);
+  if (!lin || lin < 2) return { status: 'erro', motivo: 'linha invalida' };
+  var aba = obterAbaAcoesPlanejadas_();
+  var iStatus = CABECALHO_ACOES_PLANEJADAS.indexOf('status');
+  aba.getRange(lin, iStatus + 1).setValue('Inativa');
+  return { status: 'ok' };
 }
 
 function obterAbaLeadsLancamentos_() {
