@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 — Merge com trabalho em paralelo (Pipeline, revenda_diff, contagem de favoritos)
+
+Outra estação pushou 5 commits enquanto a parte 20 estava sendo feita: Pipeline de Negociações
+(funil heatmap no dashboard + coluna select em `contatos.html` + rotas `pipeline_dados`/
+`salvar_pipeline`), painel de atualização do portfólio de revenda (rota `revenda_diff`), e uma
+caixa de contagem de favoritos ao lado dos matches no dashboard (`item.favs`, lendo a aba
+FAVORITOS). Sem conflito de merge a nível de texto — as mudanças de cada lado ficaram em blocos
+diferentes dos mesmos arquivos (ex: meu fix de `tel`/`ultimoContato` e o `item.favs` deles estão
+em pontos diferentes de `dadosDashboard()`).
+
+Validado rodando toda a suíte de testes de regressão da sessão contra o código mesclado — todos
+passaram — mais os testes de renderização do drawer/favoritos em `contatos.html`/`dashboard.html`.
+
+**Pendência**: a outra estação recriou `Code.gs.txt` e o declarou "fonte de verdade", contrariando
+a consolidação em `code.txt` único aprovada pelo usuário antes nesta sessão. Sincronizei os dois
+arquivos por ora (idênticos) pra não ficarem divergindo, mas qual dos dois deve ser o canônico daqui
+pra frente ainda precisa ser decidido com o usuário.
+
 ## 2026-07-06 (parte 20) — Fix: coluna "Último contato" vazia nas telas "Ver" de Quentes/Mornos/Frios
 
 Consequência direta da parte 19: os arrays `quentes`/`mornos`/`frios` de `dadosDashboard()` nunca
