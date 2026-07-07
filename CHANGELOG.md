@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Fix: "Data planejada" não aparecia ao reabrir o cliente
+
+Causa raiz: mesmo problema de auto-conversão do Sheets já visto antes neste projeto
+(`dataAtualizacao`/`pipelineData`). O Sheets converte "15/07/2026" gravado em `proximaAcaoData` pra
+um Date de verdade sozinho; ao voltar pro navegador pela rota `buscar` (usada por `carregarContato`),
+o `JSON.stringify` do backend serializa esse Date como ISO ("2026-07-15T00:00:00.000Z"), não como
+"dd/MM/yyyy". `dataBrParaIso_` só reconhecia o formato BR — falhava silenciosamente (`set()` não
+atribui valor vazio) e deixava o campo em branco ao reabrir o formulário, mesmo com o dado gravado
+corretamente na planilha.
+
+Fix: `dataBrParaIso_` agora aceita os dois formatos (ISO e "dd/MM/yyyy"), mesmo padrão dual-format
+já usado em `parseDataBr_` (contatos.html/dashboard.html). Só mudança de frontend — não precisa
+reimplantar o Apps Script.
+
+Testado no preview: conversão cobre ISO com hora/timezone, ISO sem hora, "dd/MM/yyyy" puro e
+vazio/nulo; `carregarContato()` com uma data simulando exatamente o retorno real (ISO) agora
+preenche o campo corretamente.
+
 ## 2026-07-07 — Card "Ações planejadas" ganha destaque próprio abaixo do Pipeline
 
 Usuário achou o card difícil de achar — estava misturado na grade genérica de "Insights" (mesmo

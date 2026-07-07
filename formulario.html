@@ -867,7 +867,15 @@
   }
   function dataBrParaIso_(br) {
     if (!br) return '';
-    const m = String(br).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    const s = String(br);
+    // O Sheets pode ter convertido "dd/MM/yyyy" pra Date de verdade ao gravar
+    // (acontece sozinho, sem a gente pedir) — nesse caso volta do backend já
+    // como ISO ("2026-07-15T00:00:00.000Z", efeito do JSON.stringify em cima
+    // de um objeto Date), não como "dd/MM/yyyy" puro. Mesmo problema já visto
+    // em dataAtualizacao/pipelineData neste projeto — aceita os dois formatos.
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : '';
   }
 
