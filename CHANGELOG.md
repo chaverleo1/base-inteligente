@@ -1,5 +1,20 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Botão "Sincronizar revenda" no painel de atualização do portfólio
+
+Novo botão no topo da seção "Atualização do portfólio" do Dashboard, chamando a rota já existente
+`adm_sincronizar_revenda` (mesma usada no fluxo de inicialização do `index.html`) — não precisa mais
+esperar o gatilho automático de 6h para forçar uma sincronização manual com o Imobzi.
+
+O painel deixou de ficar oculto até existir uma sincronização anterior (`renderRevendaDiff` tinha um
+early-return que escondia o painel inteiro sem `ultimaSync` — o que impedia rodar a primeira
+sincronização pela própria tela). Agora o painel sempre aparece com o botão; a tabela Antes/Depois/
+Variação só é exibida quando já existe algum histórico.
+
+Testado via preview: painel visível mesmo sem sincronização prévia, clique dispara
+`adm_sincronizar_revenda`, mostra spinner, toast de sucesso/erro, e reconstrói o painel com os dados
+atualizados (`revenda_diff`) ao final.
+
 ## 2026-07-07 — Fix: colunas do pipeline mostravam só o primeiro nome
 
 `pipeline_dados` cortava o nome do cliente em `nome_.split(' ')[0]` antes de mandar pro card do

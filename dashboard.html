@@ -115,6 +115,13 @@
   /* ── REVENDA DIFF ── */
   .revenda-diff{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px}
   .revenda-diff-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+  .btn-sync-revenda{padding:8px 16px;border-radius:var(--radius-xs,8px);background:var(--accent);color:#fff;border:none;
+    font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s}
+  .btn-sync-revenda:hover{background:#3d6aee}
+  .btn-sync-revenda:disabled{opacity:.6;cursor:default}
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+    border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .revenda-diff-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
   .revenda-diff-meta{font-size:12px;color:var(--text3)}
   .revenda-diff-tbl{width:100%;border-collapse:collapse}
@@ -730,39 +737,40 @@ async function carregarRevendaDiff() {
 
 function renderRevendaDiff(d) {
   const panel = document.getElementById('revendaDiffPanel');
-  if (!panel || !d.delta || !d.ultimaSync || d.ultimaSync === '—') return;
+  if (!panel) return;
 
-  window._revendaDiffData = d;
-  atualizarCardNovidades_(d);
+  // Painel sempre visível (mesmo sem sincronização ainda) pra sempre dar
+  // acesso ao botão "Sincronizar revenda" — antes o painel inteiro ficava
+  // escondido até existir uma sincronização, o que não dava jeito de rodar
+  // a primeira.
+  const temSync = !!(d && d.delta && d.ultimaSync && d.ultimaSync !== '—');
+  if (temSync) {
+    window._revendaDiffData = d;
+    atualizarCardNovidades_(d);
+  }
 
-  const totalDiff = (d.totalDepois || 0) - (d.totalAntes || 0);
+  const totalDiff = temSync ? (d.totalDepois || 0) - (d.totalAntes || 0) : 0;
   const totalCls  = totalDiff > 0 ? 'diff-pos' : totalDiff < 0 ? 'diff-neg' : 'diff-zero';
   const totalStr  = totalDiff > 0 ? '+' + totalDiff : totalDiff === 0 ? '—' : String(totalDiff);
 
-  const rows = d.delta.map(r => {
-    const df  = r.diff;
-    const cls = df > 0 ? 'diff-pos' : df < 0 ? 'diff-neg' : 'diff-zero';
-    const dStr = df > 0 ? '+' + df : df === 0 ? '—' : String(df);
-    return `<tr>
-      <td class="td-tipo">${r.tipo}</td>
-      <td>${r.antes}</td>
-      <td>${r.depois}</td>
-      <td><span class="diff-box ${cls}" ${df !== 0 ? `onclick="verRevendaDiffTipo('${String(r.tipo).replace(/'/g,"\\'")}')"` : ''}>${dStr}</span></td>
-    </tr>`;
-  }).join('');
-
-  panel.style.display = '';
-  panel.innerHTML = `<div class="revenda-diff">
-    <div class="revenda-diff-header">
-      <span class="revenda-diff-title">📋 Atualização do portfólio</span>
-      <span class="revenda-diff-meta">Última sincronização: <b style="color:var(--text)">${d.ultimaSync}</b>
-        &nbsp;·&nbsp; <span class="${totalCls}" style="font-weight:700">${totalStr !== '—' ? totalStr + ' imóveis' : 'sem variação'}</span>
-      </span>
+  const corpo = temSync ? `
+    <div class="revenda-diff-meta">Última sincronização: <b style="color:var(--text)">${d.ultimaSync}</b>
+      &nbsp;·&nbsp; <span class="${totalCls}" style="font-weight:700">${totalStr !== '—' ? totalStr + ' imóveis' : 'sem variação'}</span>
     </div>
     <table class="revenda-diff-tbl">
       <thead><tr><th>Tipo</th><th>Antes</th><th>Depois</th><th>Variação</th></tr></thead>
       <tbody>
-        ${rows}
+        ${d.delta.map(r => {
+          const df  = r.diff;
+          const cls = df > 0 ? 'diff-pos' : df < 0 ? 'diff-neg' : 'diff-zero';
+          const dStr = df > 0 ? '+' + df : df === 0 ? '—' : String(df);
+          return `<tr>
+            <td class="td-tipo">${r.tipo}</td>
+            <td>${r.antes}</td>
+            <td>${r.depois}</td>
+            <td><span class="diff-box ${cls}" ${df !== 0 ? `onclick="verRevendaDiffTipo('${String(r.tipo).replace(/'/g,"\\'")}')"` : ''}>${dStr}</span></td>
+          </tr>`;
+        }).join('')}
         <tr class="total-row">
           <td>Total</td>
           <td>${d.totalAntes || 0}</td>
@@ -770,8 +778,34 @@ function renderRevendaDiff(d) {
           <td><span class="diff-box ${totalCls}" ${totalDiff !== 0 ? `onclick="verRevendaDiffTipo('__total__')"` : ''}>${totalStr}</span></td>
         </tr>
       </tbody>
-    </table>
+    </table>` : `<div class="revenda-diff-meta">Nenhuma sincronização registrada ainda — clique em "Sincronizar revenda" para gerar o primeiro comparativo.</div>`;
+
+  panel.style.display = '';
+  panel.innerHTML = `<div class="revenda-diff">
+    <div class="revenda-diff-header">
+      <span class="revenda-diff-title">📋 Atualização do portfólio</span>
+      <button class="btn-sync-revenda" id="btnSyncRevenda" onclick="sincronizarRevendaClick()">🔄 Sincronizar revenda</button>
+    </div>
+    ${corpo}
   </div>`;
+}
+
+async function sincronizarRevendaClick() {
+  const btn = document.getElementById('btnSyncRevenda');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sincronizando...';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_sincronizar_revenda&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.status === 'ok') showToast('✓ Revenda sincronizada com sucesso', 'ok');
+    else showToast('Erro ao sincronizar: ' + (json.motivo || json.status || 'desconhecido'), 'erro');
+  } catch (e) {
+    showToast('Erro de conexão ao sincronizar: ' + e.message, 'erro');
+  } finally {
+    carregarRevendaDiff(); // reconstrói o painel inteiro (botão volta ao estado normal)
+  }
 }
 
 // Card "Novidades" da Visão geral: total de imóveis novos identificados na
