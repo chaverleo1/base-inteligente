@@ -1,5 +1,15 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Fix: colunas do pipeline mostravam só o primeiro nome
+
+`pipeline_dados` cortava o nome do cliente em `nome_.split(' ')[0]` antes de mandar pro card do
+funil no Dashboard — o `.pip-name` já suporta texto longo (`text-overflow:ellipsis` + `title` com o
+nome completo no hover), então o corte era só um resquício, não uma limitação de layout. Agora o
+campo `nome` enviado é o nome completo cadastrado (igual a `nomeCompleto`).
+
+Testado via Node (`pipeline_dados` retorna o nome completo) e via preview (`.pip-name` renderiza o
+nome completo no card).
+
 ## 2026-07-07 — Estágio do pipeline na Etapa 1 do formulário
 
 Adicionado um select "Estágio no pipeline" na Etapa 1 (Identificação) do `formulario.html`, antes
