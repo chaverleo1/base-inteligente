@@ -1,5 +1,13 @@
 # Changelog — Base Inteligente
 
+## 2026-07-06 (parte 20) — Fix: coluna "Último contato" vazia nas telas "Ver" de Quentes/Mornos/Frios
+
+Consequência direta da parte 19: os arrays `quentes`/`mornos`/`frios` de `dadosDashboard()` nunca
+incluíam `telefone`/`ultimoContato` no `item` (só `cod/nome/score/scoreTotal/seg/pad/urg`) — por
+isso as colunas Telefone e Último contato apareciam sempre com "—" nas páginas "Ver" novas, mesmo
+com o dado presente na planilha. Adicionado `tel: obj.telefone || ''` e
+`ultimoContato: obj.ultimoContato || ''` ao `item`.
+
 ## 2026-07-06 (parte 19) — Botão "Ver" em todos os cards de "Visão geral"
 
 Pedido do usuário: os cards Quentes/Mornos/Frios (só "Total de contatos" já tinha) ganharem botão
