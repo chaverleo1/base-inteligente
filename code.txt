@@ -306,13 +306,15 @@ function doGet(e) {
           }
 
           // Etapa 7 (Relacionamento): "próxima ação planejada" com data —
-          // diasAteVencimento_ devolve negativo pra data futura, então >= 0 já
-          // cobre "vence hoje" (=0) e "venceu há N dias" (>0) com o mesmo cálculo.
+          // diasAteVencimento_ devolve negativo pra data futura, positivo pra
+          // vencida, 0 pra hoje. Traz vencidas + hoje + próximos 7 dias (>= -7)
+          // como uma prévia da semana — o Dashboard separa em duas contagens
+          // (urgente vs próximos 7 dias) a partir do sinal de "dias".
           var proxAcao_ = iPA_ >= 0 ? String(r_[iPA_]||'').trim() : '';
           var proxAcaoData_ = iPAD_ >= 0 ? r_[iPAD_] : '';
           if (proxAcaoData_) {
             var diasAcao_ = diasAteVencimento_(proxAcaoData_);
-            if (diasAcao_ !== null && diasAcao_ >= 0) {
+            if (diasAcao_ !== null && diasAcao_ >= -7) {
               acoesPlanejadas_.push({
                 nome: nome_, telefone: tel_, idCliente: id_,
                 proximaAcao: proxAcao_,

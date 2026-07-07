@@ -1336,10 +1336,13 @@ function atualizarInsightsExtended(data) {
   const dorm  = data.semContato90 || 0;
   const esfriando = data.esfriando15 || 0;
   const leads = data.leadsPendentes || 0;
-  const acoes = (data.acoesPlanejadas || []).length;
-  upd('insAcoes','#00d4aa','📅', acoes,
-    'ações de relacionamento planejadas — hoje ou atrasadas',
-    acoes > 0 ? 'Fazer esse follow-up hoje — é o que o cliente está esperando' : 'Nenhuma ação vencida no momento');
+  const listaAcoes = data.acoesPlanejadas || [];
+  const acoesUrgentes = listaAcoes.filter(a => a.dias >= 0).length;
+  const acoesFuturas  = listaAcoes.filter(a => a.dias < 0).length;
+  upd('insAcoes','#00d4aa','📅', acoesUrgentes,
+    'ações de relacionamento planejadas — hoje ou atrasadas'
+      + (acoesFuturas > 0 ? ` · +${acoesFuturas} nos próximos 7 dias` : ''),
+    acoesUrgentes > 0 ? 'Fazer esse follow-up hoje — é o que o cliente está esperando' : 'Nenhuma ação vencida no momento');
   upd('insDormentes','#ff5a5a','😴', dorm,
     'clientes sem contato há mais de 90 dias',
     dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');

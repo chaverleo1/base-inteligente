@@ -283,11 +283,12 @@ function tableImoveis(items) {
 }
 
 function tableAcoes(items) {
-  if (!items.length) return '<div class="empty">Nenhuma ação planejada vencida ou pra hoje.</div>';
+  if (!items.length) return '<div class="empty">Nenhuma ação planejada nos próximos 7 dias.</div>';
   const rows = items.map(a => {
     const tel = a.telefone || '—';
-    const situacao = a.dias === 0 ? '<span class="badge badge-amber">Vence hoje</span>'
-      : `<span class="badge badge-red">Venceu há ${a.dias} dia${a.dias===1?'':'s'}</span>`;
+    const situacao = a.dias > 0  ? `<span class="badge badge-red">Venceu há ${a.dias} dia${a.dias===1?'':'s'}</span>`
+      : a.dias === 0 ? '<span class="badge badge-amber">Vence hoje</span>'
+      : `<span class="badge badge-blue">Em ${Math.abs(a.dias)} dia${Math.abs(a.dias)===1?'':'s'}</span>`;
     return `<tr>
       <td class="td-nome">${a.nome||'—'}</td>
       <td class="td-tel">${tel}${wpp(tel)}</td>

@@ -1,5 +1,18 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Card "Ações planejadas" também mostra prévia dos próximos 7 dias
+
+Usuário agendou 2 ações pra semana seguinte e o card não mudou — comportamento esperado (só contava
+vencidas/hoje), mas o usuário pediu pra também mostrar uma prévia da semana. `adm_dados_insights`
+passou a trazer vencidas + hoje + próximos 7 dias (`diasAteVencimento_(...) >= -7`, antes era `>= 0`)
+numa lista só. O Dashboard separa em duas leituras a partir do sinal de `dias`: número principal do
+card = urgentes (vencida ou hoje, `dias >= 0`); rótulo ganha "· +N nos próximos 7 dias" quando há
+itens futuros na janela. Em `insight-detail.html`, `tableAcoes` ganhou o terceiro estado de badge:
+vermelho "Venceu há N dias" (dias>0), âmbar "Vence hoje" (dias=0), azul "Em N dias" (dias<0).
+
+Testado via Node (janela de 7 dias inclui a de 5 dias no futuro, exclui a de 10 dias) e via preview
+(card com as duas contagens, lista de detalhe com os 3 estados de badge).
+
 ## 2026-07-07 — Remove caixa de diagnóstico do painel de atualização do portfólio
 
 A caixa "🔍 Consultar na Imobzi" (campo de código + resultado JSON) era uma ferramenta temporária de
