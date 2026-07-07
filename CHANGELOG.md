@@ -1,5 +1,20 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Card "Novidades" na Visão geral
+
+Novo card na seção "Visão geral" do Dashboard, ao lado de Quentes/Mornos/Frios: mostra o total de
+imóveis novos identificados na coluna "Variação" do painel "Atualização do portfólio" (hoje só
+REVENDA — a mesma lógica pode ser somada para LANÇAMENTOS quando aquele diff existir lá também).
+O card carrega em "—" e é atualizado assim que `carregarRevendaDiff()` resolve (`atualizarCardNovidades_`);
+clicar abre `insight-detail.html` com a lista dos imóveis novos (reaproveitando o `type: 'imoveis'`
+criado para o painel de variação).
+
+`tableImoveis` em `insight-detail.html` ganhou uma coluna "Fonte" (REVENDA/LANÇAMENTO) para já
+acomodar a extensão futura sem precisar tocar na página de novo.
+
+Testado via preview: card atualiza de "—" para a contagem correta, botão "Ver →" aparece só quando
+há novidades, e a navegação leva à lista com os itens certos e a coluna Fonte preenchida.
+
 ## 2026-07-07 — Caixa clicável de variação no painel "Atualização do portfólio"
 
 Na seção "Atualização do portfólio" do Dashboard, a coluna "Variação" agora mostra o número dentro

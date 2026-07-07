@@ -46,7 +46,7 @@
   .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
 
   /* ── CARDS TOTAIS ── */
-  .cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:32px}
+  .cards-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:32px}
   @media(max-width:700px){.cards-row{grid-template-columns:repeat(2,1fr)}}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px}
   .card-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
@@ -733,6 +733,7 @@ function renderRevendaDiff(d) {
   if (!panel || !d.delta || !d.ultimaSync || d.ultimaSync === '—') return;
 
   window._revendaDiffData = d;
+  atualizarCardNovidades_(d);
 
   const totalDiff = (d.totalDepois || 0) - (d.totalAntes || 0);
   const totalCls  = totalDiff > 0 ? 'diff-pos' : totalDiff < 0 ? 'diff-neg' : 'diff-zero';
@@ -773,6 +774,35 @@ function renderRevendaDiff(d) {
   </div>`;
 }
 
+// Card "Novidades" da Visão geral: total de imóveis novos identificados na
+// coluna Variação (hoje só REVENDA — quando o mesmo diff existir para
+// LANÇAMENTOS, basta somar os adicionados de lá aqui também).
+function atualizarCardNovidades_(d) {
+  const valorEl = document.getElementById('cardNovidadesValue');
+  const cardEl  = document.getElementById('cardNovidades');
+  if (!valorEl || !cardEl) return;
+  const novos = (d.adicionados || []).length;
+  valorEl.textContent = novos.toLocaleString('pt-BR');
+  if (novos > 0) {
+    cardEl.style.cursor = 'pointer';
+    cardEl.onclick = verNovidades;
+    if (!cardEl.querySelector('.novidades-verbtn')) {
+      cardEl.insertAdjacentHTML('beforeend', `<span class="novidades-verbtn" style="cursor:pointer;position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+        color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+        border-radius:6px;padding:3px 10px">Ver →</span>`);
+    }
+  }
+}
+
+function verNovidades() {
+  const d = window._revendaDiffData || {};
+  const itens = (d.adicionados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Adicionado'}));
+  sessionStorage.setItem('bi_insight_detail', JSON.stringify({
+    title: 'Novidades — imóveis novos identificados', icon: '🆕', color: 'var(--accent2)', type: 'imoveis', items: itens
+  }));
+  window.location.href = 'insight-detail.html';
+}
+
 // Abre insight-detail.html com os imóveis que entraram/saíram do portfólio
 // desde a última sincronização — '__total__' mostra todos os tipos, senão
 // filtra só o tipo daquela linha da tabela.
@@ -780,8 +810,8 @@ function verRevendaDiffTipo(tipo) {
   const d = window._revendaDiffData || {};
   const porTipo = o => tipo === '__total__' || (o.tipo || 'Outros') === tipo;
   const itens = [
-    ...(d.adicionados || []).filter(porTipo).map(o => Object.assign({}, o, { _movimento: 'Adicionado' })),
-    ...(d.removidos   || []).filter(porTipo).map(o => Object.assign({}, o, { _movimento: 'Removido'   }))
+    ...(d.adicionados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Adicionado' })),
+    ...(d.removidos   || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Removido'   }))
   ];
   sessionStorage.setItem('bi_insight_detail', JSON.stringify({
     title: tipo === '__total__' ? 'Variação do portfólio — Total' : `Variação do portfólio — ${tipo}`,
@@ -947,6 +977,11 @@ function renderDados(json) {
       <div class="card-value cold">${frios.length}</div>
       <div class="card-sub">nurturing / aguardar</div>
       ${verBtn_('cardFrios')}
+    </div>
+    <div class="card" style="position:relative" id="cardNovidades">
+      <div class="card-label">🆕 Novidades</div>
+      <div class="card-value" id="cardNovidadesValue" style="color:var(--accent2)">—</div>
+      <div class="card-sub">imóveis novos identificados (revenda)</div>
     </div>`;
 
   // ── Matches

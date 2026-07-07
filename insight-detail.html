@@ -249,17 +249,19 @@ function tableImoveis(items) {
       im.areaUtil ? `${im.areaUtil}m²` : '',
     ].filter(Boolean).join(' · ');
     const movCls = im._movimento === 'Removido' ? 'badge-red' : 'badge-green';
+    const fonteCls = im.fonte === 'LANCAMENTO' ? 'badge-amber' : 'badge-blue';
     return `<tr>
       <td class="td-nome">${im.codigo || '—'}</td>
       <td>${im.tipo || '—'}</td>
       <td>${local || '—'}</td>
       <td>${specs || '—'}</td>
       <td>${fmt(im.valorVenda)}</td>
+      <td><span class="badge ${fonteCls}">${im.fonte || '—'}</span></td>
       <td><span class="badge ${movCls}">${im._movimento || '—'}</span></td>
     </tr>`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Movimento</th></tr></thead>
+    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
