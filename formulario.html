@@ -255,6 +255,10 @@
         </select>
       </div>
       <div class="field-row">
+        <div class="field"><label>Próxima ação planejada <span class="opt">opcional</span></label><input type="text" id="proximaAcao" placeholder="Ex: Ligar pra confirmar visita"></div>
+        <div class="field"><label>Data planejada <span class="opt">opcional</span></label><input type="date" id="proximaAcaoData"></div>
+      </div>
+      <div class="field-row">
         <div class="field"><label>Nome <span class="req">*</span></label><input type="text" id="nome" placeholder="Ex: Aline Gurgel" oninput="updateScore()"></div>
         <div class="field"><label>Telefone <span class="req">*</span></label><input type="tel" id="telefone" placeholder="62 9 9271-2723" oninput="updateScore()"></div>
       </div>
@@ -853,6 +857,20 @@
       </div>`).join('');
   }
 
+  // ── DATAS (input type=date usa "yyyy-MM-dd" nativo; o resto do projeto
+  // grava "dd/MM/yyyy" — mesma convenção de diasDesdeData_ no backend, evita
+  // o parser ambíguo do JS pra string não-ISO) ─────────────────────────────
+  function dataIsoParaBr_(iso) {
+    if (!iso) return '';
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+  }
+  function dataBrParaIso_(br) {
+    if (!br) return '';
+    const m = String(br).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : '';
+  }
+
   // ── SAVE → GOOGLE SHEETS ──────────────────────────────────────────────────
   async function saveClient() {
     const nome     = (document.getElementById('nome')?.value || '').trim();
@@ -878,6 +896,8 @@
       nome,
       telefone,
       pipeline:        g('pipeline'),
+      proximaAcao:     g('proximaAcao'),
+      proximaAcaoData: dataIsoParaBr_(g('proximaAcaoData')),
       email:           g('email'),
       nascimento:      g('nascimento'),
       estadoCivil:     g('estadoCivil'),
@@ -1119,6 +1139,8 @@
     // Preenche campos de texto
     const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
     set('pipeline',       c.pipeline);
+    set('proximaAcao',    c.proximaAcao);
+    set('proximaAcaoData', dataBrParaIso_(c.proximaAcaoData));
     set('nome',           c.nome);
     set('telefone',       c.telefone);
     set('email',          c.email);

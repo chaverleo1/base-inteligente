@@ -156,6 +156,7 @@ function renderDetail(d) {
     case 'leads':       tableHtml = tableLeads(items); break;
     case 'pads':        tableHtml = tablePads(items); break;
     case 'imoveis':     tableHtml = tableImoveis(items); break;
+    case 'acoes':       tableHtml = tableAcoes(items); break;
     default: tableHtml = '<div class="empty">Tipo desconhecido.</div>';
   }
   document.getElementById('root').innerHTML = `
@@ -277,6 +278,26 @@ function tableImoveis(items) {
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function tableAcoes(items) {
+  if (!items.length) return '<div class="empty">Nenhuma ação planejada vencida ou pra hoje.</div>';
+  const rows = items.map(a => {
+    const tel = a.telefone || '—';
+    const situacao = a.dias === 0 ? '<span class="badge badge-amber">Vence hoje</span>'
+      : `<span class="badge badge-red">Venceu há ${a.dias} dia${a.dias===1?'':'s'}</span>`;
+    return `<tr>
+      <td class="td-nome">${a.nome||'—'}</td>
+      <td class="td-tel">${tel}${wpp(tel)}</td>
+      <td>${a.proximaAcao||'—'}</td>
+      <td>${a.proximaAcaoData||'—'}</td>
+      <td>${situacao}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="detail-wrap"><table class="detail-table">
+    <thead><tr><th>Nome</th><th>Telefone</th><th>Ação planejada</th><th>Data</th><th>Situação</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }

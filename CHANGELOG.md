@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — "Próxima ação planejada" + card de lembretes (Etapa 7 · Relacionamento)
+
+Campo simples na ficha do cliente — sem estrutura complexa de propósito: `proximaAcao` (texto livre)
++ `proximaAcaoData` (data). Adicionado na Etapa 1 do formulário, ao lado do estágio do pipeline.
+Data gravada como "dd/MM/yyyy" (mesma convenção do resto do projeto — evita o parser ambíguo do JS
+pra string não-ISO); o `<input type="date">` nativo usa "yyyy-MM-dd", então o formulário converte
+nos dois sentidos (`dataIsoParaBr_`/`dataBrParaIso_`) na hora de salvar/carregar.
+
+Novo card "📅 Ações planejadas" na seção de Insights do Dashboard, mesmo padrão de "Esfriando"/
+"Dormentes": mostra quantos clientes têm ação vencida ou vencendo hoje (`adm_dados_insights` calcula
+isso no backend, com `diasAteVencimento_` — comparação por dia, não por timestamp, pra "vence hoje"
+não oscilar entre 0 e 1 dependendo da hora em que a rota roda). Clicar abre a lista completa em
+`insight-detail.html` (novo `type: 'acoes'`), com badge vermelho "Venceu há N dias" ou âmbar "Vence
+hoje" por cliente.
+
+Testado via Node (`adm_dados_insights` retorna só as ações vencidas/de hoje, ignora as futuras e as
+sem data, ordena da mais atrasada pra mais recente) e via preview (card no Dashboard, navegação pra
+lista detalhada, round-trip completo do formulário incluindo a conversão de formato de data).
+
 ## 2026-07-07 — Sinal de estagnação no pipeline (!/!!) + estágio "Perda"
 
 Etapa 6 (Ação) do framework de decisão de compra: o pipeline (Urgentes→Ganhos) já existia, mas não

@@ -50,7 +50,14 @@ const CABECALHO = [
   // confundir com dataAtualizacao, que muda em qualquer edição do cadastro).
   // Usada só pra calcular "há quantos dias nesse estágio" e mostrar o sinal
   // de estagnação (! com 5+ dias, !! com 15+ dias) no funil do Dashboard.
-  'pipelineData'
+  'pipelineData',
+  // Etapa 7 (Relacionamento, adicionado em 2026-07) — lembrete simples de
+  // acompanhamento: o que fazer e quando. proximaAcaoData em "dd/MM/yyyy"
+  // (mesmo padrão do resto do projeto, evita o parser ambíguo do JS pra
+  // string não-ISO). Vencido/vence hoje aparece no card "Ações planejadas"
+  // do Dashboard (ver adm_dados_insights). Sem estrutura de recorrência
+  // ainda — é só um campo de texto + data, de propósito.
+  'proximaAcao', 'proximaAcaoData'
 ];
 
 const CABECALHO_LANCAMENTOS = [
@@ -236,6 +243,7 @@ function doGet(e) {
       var semContato90_ = 0, bairros_ = {}, canais_ = {};
       var dormentes_ = [], bairroMap_ = {}, canalMap_ = {};
       var esfriando15_ = 0, esfriandoList_ = [];
+      var acoesPlanejadas_ = [];
 
       var abaC_ = ss_.getSheetByName('CONTATOS');
       if (abaC_ && abaC_.getLastRow() > 1) {
@@ -253,6 +261,8 @@ function doGet(e) {
         var iUrg_  = CABECALHO.indexOf('urgencia');
         var iId_   = CABECALHO.indexOf('idCliente');
         var iDA_   = CABECALHO.indexOf('dataAtualizacao');
+        var iPA_   = CABECALHO.indexOf('proximaAcao');
+        var iPAD_  = CABECALHO.indexOf('proximaAcaoData');
         var FORA_  = ['Corretor','Parceiro','Descartar','Igreja'];
 
         dadosC_.forEach(function(r_) {
@@ -295,6 +305,23 @@ function doGet(e) {
             }
           }
 
+          // Etapa 7 (Relacionamento): "próxima ação planejada" com data —
+          // diasAteVencimento_ devolve negativo pra data futura, então >= 0 já
+          // cobre "vence hoje" (=0) e "venceu há N dias" (>0) com o mesmo cálculo.
+          var proxAcao_ = iPA_ >= 0 ? String(r_[iPA_]||'').trim() : '';
+          var proxAcaoData_ = iPAD_ >= 0 ? r_[iPAD_] : '';
+          if (proxAcaoData_) {
+            var diasAcao_ = diasAteVencimento_(proxAcaoData_);
+            if (diasAcao_ !== null && diasAcao_ >= 0) {
+              acoesPlanejadas_.push({
+                nome: nome_, telefone: tel_, idCliente: id_,
+                proximaAcao: proxAcao_,
+                proximaAcaoData: (proxAcaoData_ instanceof Date) ? Utilities.formatDate(proxAcaoData_, tz_, 'dd/MM/yyyy') : String(proxAcaoData_),
+                dias: diasAcao_
+              });
+            }
+          }
+
           bais_.split(',').forEach(function(b_) {
             b_ = b_.trim();
             if (b_.length <= 2) return;
@@ -316,6 +343,7 @@ function doGet(e) {
 
       dormentes_.sort(function(a,b){ return b.dias - a.dias; });
       esfriandoList_.sort(function(a,b){ return b.dias - a.dias; });
+      acoesPlanejadas_.sort(function(a,b){ return b.dias - a.dias; });
 
       var topBairros_ = Object.entries(bairros_)
         .sort(function(a,b){return b[1]-a[1]}).slice(0,5)
@@ -366,7 +394,8 @@ function doGet(e) {
         canalTopClientes: canalTopClientes_,
         leadsList: leadsList_,
         esfriando15: esfriando15_,
-        esfriandoList: esfriandoList_
+        esfriandoList: esfriandoList_,
+        acoesPlanejadas: acoesPlanejadas_
       });
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
@@ -707,6 +736,28 @@ function diasDesdeData_(dataStr) {
   }
   if (isNaN(d.getTime())) return null;
   return Math.round((new Date() - d) / 86400000);
+}
+
+// Como diasDesdeData_, mas compara meia-noite a meia-noite (zera a hora dos
+// dois lados) em vez de "agora" — pensado pra campos de DATA sem hora, como
+// proximaAcaoData: sem isso, "vence hoje" oscilava entre 0 e 1 dependendo da
+// hora do dia em que a rota rodava (14h de hoje menos 00h de hoje é só 0,58
+// dia, mas Math.round vira 1). Positivo = venceu há N dias, 0 = vence hoje,
+// negativo = ainda não venceu.
+function diasAteVencimento_(dataStr) {
+  if (!dataStr) return null;
+  var d;
+  if (dataStr instanceof Date) {
+    d = new Date(dataStr.getFullYear(), dataStr.getMonth(), dataStr.getDate());
+  } else {
+    var m = String(dataStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (!m) return null;
+    d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+  }
+  if (isNaN(d.getTime())) return null;
+  var hoje = new Date();
+  hoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  return Math.round((hoje - d) / 86400000);
 }
 
 function fatorFrescor_(dataAtualizacaoStr) {

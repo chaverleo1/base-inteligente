@@ -1285,6 +1285,7 @@ function renderInsights(json, lancamentos) {
            'insLancSem')
       : pendente('insLancSem','👻','Lançamentos sem demanda cadastrada')) +
 
+    pendente('insAcoes',     '📅','ações de relacionamento planejadas — hoje ou atrasadas') +
     pendente('insDormentes','😴','clientes sem contato há mais de 90 dias') +
     pendente('insEsfriando','🥶','cadastros entre 15 e 30 dias sem atualização') +
     pendente('insBairro',   '📍','bairro mais procurado pelos clientes') +
@@ -1339,6 +1340,7 @@ function atualizarInsightsExtended(data) {
   const topB  = (data.topBairros||[])[0] || {bairro:'—', n:0};
   const canal = data.canalTop || {nome:'—', media:0};
 
+  window._insightDetails['insAcoes']     = {title:'Ações planejadas (hoje ou atrasadas)', icon:'📅', color:'#00d4aa', type:'acoes', items:data.acoesPlanejadas||[]};
   window._insightDetails['insDormentes'] = {title:'Clientes dormentes (>90 dias sem contato)', icon:'😴', color:'#ff5a5a', type:'clientes', items:data.dormentes||[]};
   window._insightDetails['insEsfriando'] = {title:'Cadastros esfriando (15–30 dias sem atualização)', icon:'🥶', color:'#f5a623', type:'clientes', items:data.esfriandoList||[]};
   window._insightDetails['insBairro']    = {title:`Clientes buscando "${topB.bairro}"`, icon:'📍', color:'#4f7cff', type:'clientes', items:data.bairroTopClientes||[]};
@@ -1367,6 +1369,10 @@ function atualizarInsightsExtended(data) {
   const dorm  = data.semContato90 || 0;
   const esfriando = data.esfriando15 || 0;
   const leads = data.leadsPendentes || 0;
+  const acoes = (data.acoesPlanejadas || []).length;
+  upd('insAcoes','#00d4aa','📅', acoes,
+    'ações de relacionamento planejadas — hoje ou atrasadas',
+    acoes > 0 ? 'Fazer esse follow-up hoje — é o que o cliente está esperando' : 'Nenhuma ação vencida no momento');
   upd('insDormentes','#ff5a5a','😴', dorm,
     'clientes sem contato há mais de 90 dias',
     dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');
