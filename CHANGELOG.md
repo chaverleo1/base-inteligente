@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Abas em Lançamentos: "Empreendimentos Cadastrados" | "Novo Lançamento"
+
+`lancamentos.html` mostrava o formulário de extração ("Novo Lançamento") e a lista de
+empreendimentos cadastrados sempre juntos, um embaixo do outro, na mesma rolagem. Agora são duas
+abas separadas no topo da página — "Empreendimentos Cadastrados" (aba padrão ao abrir a página) e
+"Novo Lançamento". Salvar um lançamento com sucesso volta automaticamente pra aba de
+"Empreendimentos Cadastrados", pra já mostrar o item recém-criado na lista.
+
+Só mudança de frontend (`lancamentos.html`) — não precisa reimplantar o Apps Script.
+
+Testado no preview: aba "Empreendimentos Cadastrados" visível por padrão com a lista real
+carregada; alternar pra "Novo Lançamento" mostra o formulário e esconde a lista; alternar de volta
+funciona nos dois sentidos.
+
 ## 2026-07-07 — Card só considera a ação Ativa mais recente por cliente
 
 Com o histórico permanente, um cliente pode acumular mais de uma entrada com `status='Ativa'` (se o

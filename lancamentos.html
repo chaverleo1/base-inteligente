@@ -55,6 +55,14 @@ a { text-decoration: none; color: inherit; }
 /* ── MAIN ── */
 .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; }
 
+/* ── ABAS (Empreendimentos Cadastrados / Novo Lançamento) ── */
+.lanc-tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 10px; padding: 4px; margin-bottom: 24px; width: fit-content; }
+.lanc-tab { padding: 10px 20px; border-radius: 8px; border: none; background: transparent; color: var(--text2);
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
+.lanc-tab.active { background: var(--accent); color: #fff; }
+.lanc-tab:hover:not(.active) { color: var(--text); }
+@media (max-width: 560px) { .lanc-tabs { width: 100%; } .lanc-tab { flex: 1; text-align: center; padding: 10px 8px; } }
+
 /* ── SECTION HEADER ── */
 .sec-header { margin-bottom: 14px; }
 .sec-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; }
@@ -307,7 +315,14 @@ select.form-input option { background: var(--surface2); }
 <!-- MAIN -->
 <div class="main">
 
+  <!-- ABAS -->
+  <div class="lanc-tabs">
+    <button class="lanc-tab active" id="tabBtnLista" onclick="mudarAbaLancamentos('lista')">Empreendimentos Cadastrados</button>
+    <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Novo Lançamento</button>
+  </div>
+
   <!-- MOTOR -->
+  <div id="tabPainelNovo" class="tab-panel" style="display:none">
   <div class="sec-header">
     <div class="sec-title">Novo Lançamento</div>
     <div class="sec-sub">Cole a URL do empreendimento para referência, os dados gerais no BOX 1 e a tabela de unidades no BOX 2 — o motor estrutura e agrupa as tipologias automaticamente.</div>
@@ -511,8 +526,10 @@ select.form-input option { background: var(--surface2); }
       <button class="btn-salvar" id="btnSalvar" onclick="salvarLancamento()">💾 Salvar Lançamento</button>
     </div>
   </div>
+  </div>
 
   <!-- LISTA -->
+  <div id="tabPainelLista" class="tab-panel">
   <div class="lista-header">
     <div>
       <div class="sec-title">Empreendimentos cadastrados</div>
@@ -522,6 +539,7 @@ select.form-input option { background: var(--surface2); }
   </div>
   <div id="lista-grid" class="cards-grid">
     <div class="vazio"><h3>Carregando...</h3><p>Aguarde enquanto os empreendimentos são carregados.</p></div>
+  </div>
   </div>
 
 </div>
@@ -1064,6 +1082,15 @@ function atualizarUrlLink(val) {
   }
 }
 
+// ── ABAS (Empreendimentos Cadastrados / Novo Lançamento) ──────────────────────
+function mudarAbaLancamentos(nome) {
+  const ehLista = nome === 'lista';
+  document.getElementById('tabPainelLista').style.display = ehLista ? '' : 'none';
+  document.getElementById('tabPainelNovo').style.display  = ehLista ? 'none' : '';
+  document.getElementById('tabBtnLista').classList.toggle('active', ehLista);
+  document.getElementById('tabBtnNovo').classList.toggle('active', !ehLista);
+}
+
 function extrairDados() {
   const txtB1 = document.getElementById('txtBloco1').value.trim();
   const txtB2 = document.getElementById('txtBloco2').value.trim();
@@ -1278,6 +1305,7 @@ async function salvarLancamento() {
       mostrarToast(`"${dados.nomeEmpreendimento}" salvo com sucesso!`, 'ok');
       limparMotor();
       await carregarLancamentos();
+      mudarAbaLancamentos('lista');
     } else {
       mostrarToast(json.erro || 'Erro ao salvar.', 'erro');
     }
