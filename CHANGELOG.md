@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Sinal de estagnação no pipeline (!/!!) + estágio "Perda"
+
+Etapa 6 (Ação) do framework de decisão de compra: o pipeline (Urgentes→Ganhos) já existia, mas não
+tinha nenhum sinal de que um cliente travou num estágio. Agora:
+
+- Novo campo `pipelineData` em CONTATOS — registra quando o cliente ENTROU no estágio atual (não
+  confundir com `dataAtualizacao`, que muda em qualquer edição do cadastro). `salvar()`/`atualizar()`
+  só reiniciam essa data quando o campo `pipeline` de fato muda; `salvarPipeline_()` (troca rápida
+  pela lista/tabela) sempre reinicia, já que é sempre uma mudança intencional.
+- Funil do Dashboard mostra `!` ao lado do nome com 5+ dias no mesmo estágio, `!!` com 15+ dias
+  (tooltip com a contagem exata). Cliente sem `pipelineData` (cadastro antigo, migrado antes desse
+  campo existir) não recebe sinal nenhum — não acusa estagnação sem dado real.
+- Novo estágio **"Perda"** disponível nos seletores de pipeline (`formulario.html`, `contatos.html`)
+  — de propósito **sem card no funil do Dashboard**: serve só pra registrar o motivo sem perder o
+  dado do cliente, para análises futuras, sem poluir a visão operacional do funil ativo.
+
+Testado via Node: `salvar()` com pipeline definido na criação já marca `pipelineData`; `atualizar()`
+sem mudar o estágio preserva a data antiga; mudando o estágio, reinicia; `salvarPipeline_()` idem;
+`pipeline_dados` calcula os dias corretos por cliente e confirma que "Perda" nunca aparece em nenhuma
+coluna do funil. Testado também no preview: sinal `!`/`!!` renderizando certo por cliente, e "Perda"
+presente nos dois seletores de pipeline (round-trip salvar → carregar confirmado).
+
 ## 2026-07-07 — Responsividade mobile em todas as páginas internas
 
 Passada completa de responsividade, testada em viewport 375×812 (mobile) em todas as 12 páginas do

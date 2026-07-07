@@ -177,6 +177,8 @@
             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
             background:rgba(255,255,255,.04);color:var(--text2);cursor:default}
   .pip-name:hover{background:rgba(255,255,255,.08);color:var(--text)}
+  .pip-alerta{color:#ffc107;font-weight:700;margin-left:4px;cursor:help}
+  .pip-alerta.forte{color:#ff4a3f}
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
   @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
 
@@ -947,7 +949,14 @@ function renderPipeline(json) {
   document.getElementById('pipelineFunnel').innerHTML = cfg.map(s => {
     const list  = stages[s.key] || [];
     const names = list.length
-      ? list.map(c => `<div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}</div>`).join('')
+      ? list.map(c => {
+          // Sinal de estagnação: 5+ dias no mesmo estágio (!), 15+ dias (!!).
+          // c.dias vem null quando não há pipelineData ainda (cliente antigo,
+          // migrado antes desse campo existir) — nesse caso não mostra sinal
+          // nenhum, pra não acusar estagnação sem dado real.
+          const sinal = c.dias == null ? '' : c.dias >= 15 ? '<span class="pip-alerta forte" title="Há '+c.dias+' dias neste estágio">!!</span>' : c.dias >= 5 ? '<span class="pip-alerta" title="Há '+c.dias+' dias neste estágio">!</span>' : '';
+          return `<div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${sinal}</div>`;
+        }).join('')
       : `<div class="pip-empty">—</div>`;
     return `<div class="pip-col" style="background:${s.bg}">
       <div class="pip-header" style="color:${s.text}">
