@@ -352,7 +352,10 @@ function doGet(e) {
 
   if (acao === 'revenda_diff') {
     try {
-      var sync_rd = PropertiesService.getScriptProperties().getProperty('bi_revenda_ultima_sync') || '—';
+      var props_rd  = PropertiesService.getScriptProperties();
+      var sync_rd   = props_rd.getProperty('bi_revenda_ultima_sync') || '—';
+      var ancoraMs_rd = parseInt(props_rd.getProperty('bi_revenda_ancora_ts') || '0', 10);
+      var antesDesde_rd = ancoraMs_rd ? Utilities.formatDate(new Date(ancoraMs_rd), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm') : '—';
       var ss_rd    = SpreadsheetApp.openById(SHEET_ID);
       var antesObjs_rd  = linhasComoObjetos_(ss_rd.getSheetByName('REVENDA_ANTERIOR'));
       var depoisObjs_rd = linhasComoObjetos_(ss_rd.getSheetByName('REVENDA'));
@@ -377,13 +380,14 @@ function doGet(e) {
 
       return ok({
         ultimaSync: sync_rd,
+        antesDesde: antesDesde_rd,
         totalAntes: antesObjs_rd.length,
         totalDepois: depoisObjs_rd.length,
         delta: delta_rd,
         adicionados: adicionados_rd,
         removidos: removidos_rd
       });
-    } catch(err) { return ok({ultimaSync:'—', totalAntes:0, totalDepois:0, delta:[], adicionados:[], removidos:[]}); }
+    } catch(err) { return ok({ultimaSync:'—', antesDesde:'—', totalAntes:0, totalDepois:0, delta:[], adicionados:[], removidos:[]}); }
   }
 
   if (acao === 'pipeline_dados') {
@@ -1932,9 +1936,18 @@ function linhasComoObjetos_(aba) {
   return out;
 }
 
+// Janela de retenção do snapshot ANTES (item 7, 2026-07): o registro "antes"
+// fica congelado por 12h mesmo que a REVENDA seja sincronizada várias vezes
+// nesse meio tempo (ex: cliques manuais em "Sincronizar revenda") — só quando
+// a janela expira o "depois" atual passa a ser o novo "antes" e ela reinicia.
+// Sem isso, sincronizar duas vezes seguidas zerava a variação (antes = depois
+// da sincronização anterior, sempre).
+var JANELA_ANTES_MS = 12 * 60 * 60 * 1000;
+
 function sincronizarRevenda() {
   Logger.log('Iniciando sincronizacao Imobzi...');
-  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var agora   = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var agoraMs = new Date().getTime();
 
   var imoveis = buscarTodosImoveis_();
   Logger.log('Imoveis para venda: ' + imoveis.length);
@@ -1943,18 +1956,27 @@ function sincronizarRevenda() {
   var aba = ss.getSheetByName('REVENDA');
   if (!aba) { aba = ss.insertSheet('REVENDA'); Logger.log('Aba REVENDA criada.'); }
 
-  // ── Snapshot ANTES: copia a aba REVENDA como estava antes desta sincronização
-  // para uma aba espelho (REVENDA_ANTERIOR), com as linhas completas — não só a
-  // contagem por tipo. Isso permite ao painel "Atualização do portfólio" listar
-  // exatamente quais imóveis (por código) entraram ou saíram, não só o total.
+  var props    = PropertiesService.getScriptProperties();
+  var ancoraMs = parseInt(props.getProperty('bi_revenda_ancora_ts') || '0', 10);
+  var janelaExpirada = !ancoraMs || (agoraMs - ancoraMs) >= JANELA_ANTES_MS;
+
+  // ── Snapshot ANTES: só é atualizado quando a janela de 12h expira — copia a
+  // aba REVENDA como estava (o "depois" da sincronização anterior) para a aba
+  // espelho REVENDA_ANTERIOR, com as linhas completas (não só a contagem por
+  // tipo), permitindo listar exatamente quais imóveis (por código) entraram ou
+  // saíram, não só o total. Dentro da janela, REVENDA_ANTERIOR não é tocada —
+  // fica valendo o registro que já estava congelado.
   var abaAnt = ss.getSheetByName('REVENDA_ANTERIOR');
   if (!abaAnt) abaAnt = ss.insertSheet('REVENDA_ANTERIOR');
-  abaAnt.clearContents();
-  if (aba.getLastRow() > 1) {
-    var dadosAnt = aba.getDataRange().getValues();
-    abaAnt.getRange(1, 1, dadosAnt.length, dadosAnt[0].length).setValues(dadosAnt);
-  } else {
-    abaAnt.getRange(1, 1, 1, CABECALHO_REVENDA.length).setValues([CABECALHO_REVENDA]);
+  if (janelaExpirada) {
+    abaAnt.clearContents();
+    if (aba.getLastRow() > 1) {
+      var dadosAnt = aba.getDataRange().getValues();
+      abaAnt.getRange(1, 1, dadosAnt.length, dadosAnt[0].length).setValues(dadosAnt);
+    } else {
+      abaAnt.getRange(1, 1, 1, CABECALHO_REVENDA.length).setValues([CABECALHO_REVENDA]);
+    }
+    props.setProperty('bi_revenda_ancora_ts', String(agoraMs));
   }
 
   aba.clearContents();
@@ -1962,7 +1984,7 @@ function sincronizarRevenda() {
   if (imoveis.length === 0) {
     aba.getRange(1, 1, 1, CABECALHO_REVENDA.length).setValues([CABECALHO_REVENDA]);
     Logger.log('Nenhum imovel encontrado.');
-    PropertiesService.getScriptProperties().setProperty('bi_revenda_ultima_sync', agora);
+    props.setProperty('bi_revenda_ultima_sync', agora);
     return;
   }
 
@@ -1976,7 +1998,7 @@ function sincronizarRevenda() {
   aba.setColumnWidth(7, 220);
   aba.setColumnWidth(8, 180);
 
-  PropertiesService.getScriptProperties().setProperty('bi_revenda_ultima_sync', agora);
+  props.setProperty('bi_revenda_ultima_sync', agora);
   Logger.log('REVENDA atualizada: ' + imoveis.length + ' imoveis em ' + agora);
 }
 

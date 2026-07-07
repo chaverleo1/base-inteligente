@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-07 — Registro "Antes" congelado por 12h
+
+Mudança de comportamento pedida pelo usuário: antes, cada `sincronizarRevenda()` (gatilho de 6h ou
+clique manual em "Sincronizar revenda") sobrescrevia o "antes" com o "depois" da sincronização
+anterior — ou seja, sincronizar duas vezes seguidas sempre zerava a variação, mesmo que nada tivesse
+mudado de fato entre elas. Agora o snapshot "Antes" fica congelado por 12h (`JANELA_ANTES_MS`):
+qualquer sincronização dentro dessa janela só atualiza a coluna "Depois"; só quando as 12h expiram é
+que o "Depois" atual passa a ser o novo "Antes" e a janela reinicia.
+
+Implementado com uma âncora de tempo em `PropertiesService` (`bi_revenda_ancora_ts`) — quando
+`agora - ancora >= 12h` (ou não existe âncora ainda), a aba REVENDA_ANTERIOR é atualizada e a âncora
+avança; caso contrário, REVENDA_ANTERIOR não é tocada. `revenda_diff` agora também retorna
+`antesDesde` (quando a âncora atual foi fixada), exibido no painel do Dashboard como "Registro
+'Antes' congelado desde ... (renova a cada 12h)" — pra deixar claro por que sincronizar de novo não
+muda a coluna Antes.
+
+Testado via Node simulando 3 sincronizações (imediata, +1h, +13h): confirma que a 2ª sync dentro da
+janela não altera REVENDA_ANTERIOR nem a âncora, e a 3ª sync (após 12h) rola a janela corretamente,
+usando o "depois" da sync anterior como o novo "antes".
+
 ## 2026-07-07 — Botão "Sincronizar revenda" no painel de atualização do portfólio
 
 Novo botão no topo da seção "Atualização do portfólio" do Dashboard, chamando a rota já existente
