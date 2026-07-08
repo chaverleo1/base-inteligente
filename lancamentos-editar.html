@@ -313,11 +313,28 @@ function atualizarBadgeVendido() {
 // tipologias atuais do formulário (coletarUnidades(), a mesma função usada
 // pra montar o payload de salvar) sempre que uma unidade é adicionada,
 // removida ou editada — ver oninput em #unidades-wrap.
+//
+// Também reclassifica "Padrão" pelo mesmo m² médio (Alterações 08/07, parte
+// 5) — a extração já fazia isso, mas o Editar nunca ganhou essa regra, então
+// reabrir um lançamento salvo (ou editar área/preço aqui) não recalculava o
+// Padrão. "tipo" é por tipologia aqui (diferente da extração, onde é um
+// valor só pro lançamento inteiro) — só força "Médio" se TODAS as unidades
+// forem Lote Condomínio Horizontal; havendo mistura de tipos, usa o m² médio
+// geral normalmente.
 function atualizarResumoAreaPreco() {
+  const unidades = coletarUnidades();
   const painel = document.getElementById('resumoExtracao');
-  const html = montarResumoAreaPrecoHTML(coletarUnidades());
+  const html = montarResumoAreaPrecoHTML(unidades);
   painel.innerHTML = html;
   painel.style.display = html ? 'flex' : 'none';
+
+  const todasLote = unidades.length > 0 && unidades.every(u => u.tipo === 'Lote Condomínio Horizontal');
+  if (todasLote) {
+    document.getElementById('f-padrao').value = 'Médio';
+  } else {
+    const m2Medio = calcularM2Medio(unidades);
+    if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio);
+  }
 }
 
 let _uniCount = 0;

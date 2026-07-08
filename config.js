@@ -89,6 +89,18 @@ function badgeVendidoHTML(pct, estoque) {
   return `<span class="badge-vendido" style="background:${c.bg};color:${c.fg}">${pct}% | ${parseInt(estoque, 10)}</span>`;
 }
 
+// Classifica "padrão" pelo Metro Quadrado Médio (calcularM2Medio abaixo) —
+// não mais por um "(R$ x/m²)" solto no texto bruto, nem por faixa
+// provisória por tipo de imóvel. Regra confirmada pelo usuário em 08/07,
+// parte 5. Usada tanto na extração (lancamentos.html) quanto ao editar um
+// lançamento já salvo (lancamentos-editar.html).
+function classificarPadraoPorM2Medio_(m2Medio) {
+  if (m2Medio <= 1000) return 'Popular';
+  if (m2Medio <= 1500) return 'Médio';
+  if (m2Medio <= 2300) return 'Alto';
+  return 'Luxo';
+}
+
 // ── PAINEL RESUMO ÁREA/PREÇO/M² (Alterações 08/07, partes 2.3 e 5) ──────────
 // Compartilhado entre lancamentos.html (na extração) e lancamentos-editar.html
 // (ao editar um empreendimento já salvo) — antes só existia na extração; o

@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Classificação de "Padrão" pelo m² médio também no Editar
+
+A regra oficial de "Padrão" pelo Metro Quadrado Médio (parte 5) só tinha sido aplicada na
+extração (`lancamentos.html`) — usuário reportou que, mesmo com o m² médio calculado corretamente
+(ex: R$ 2.452,02/m²) e visível no painel resumo, o campo "Padrão" não mudava. Causa: essa regra
+nunca tinha sido replicada em `lancamentos-editar.html`.
+
+`classificarPadraoPorM2Medio_` movida pra `config.js` (compartilhada) e agora
+`atualizarResumoAreaPreco()` em `lancamentos-editar.html` também reclassifica "Padrão" toda vez
+que recalcula o painel — ou seja, ao abrir um lançamento salvo, e ao vivo sempre que uma tipologia
+é adicionada/removida/editada. Como "tipo" é por tipologia nessa página (diferente da extração,
+onde é um valor só pro lançamento inteiro), só força "Médio" se **todas** as unidades forem Lote
+Condomínio Horizontal; havendo mistura de tipos, usa o m² médio geral normalmente.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: abrir um lançamento com R$/m² de 2.000 classifica "Alto" automaticamente;
+editar o preço pra R$/m² ~2.426 reclassifica pra "Luxo" ao vivo; mudar o tipo da unidade pra Lote
+Condomínio Horizontal força "Médio" mesmo com esse m² alto. Sem erros no console.
+
 ## 2026-07-08 — Painel resumo (área/preço/m²) também na página de Editar
 
 O painel resumo (faixa de área, "a partir de", metro quadrado médio) só existia na extração
