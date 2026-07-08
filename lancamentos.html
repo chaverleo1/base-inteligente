@@ -130,6 +130,7 @@ textarea.motor-input::placeholder { color: var(--text3); }
 .resumo-item { font-size: 13px; color: var(--text); }
 .resumo-item b { color: var(--accent2); font-weight: 700; }
 .resumo-item small { display: block; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
+.resumo-titulo { flex-basis: 100%; display: flex; align-items: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
 @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .form-grid .span2, .form-grid .span3 { grid-column: span 1; } }
 .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
@@ -387,7 +388,7 @@ select.form-input option { background: var(--surface2); }
       <div class="form-grid">
         <div class="form-group span2">
           <div class="form-label">Nome do empreendimento <span class="lbl-warn" id="lbl-nome" style="display:none">⚠ não detectado</span></div>
-          <input class="form-input" id="f-nome" placeholder="Ex: Residencial Park Privilege">
+          <input class="form-input" id="f-nome" placeholder="Ex: Residencial Park Privilege" oninput="atualizarResumoEPadrao()">
         </div>
         <div class="form-group">
           <div class="form-label">Construtora / Incorporadora</div>
@@ -451,11 +452,11 @@ select.form-input option { background: var(--surface2); }
         </div>
         <div class="form-group">
           <div class="form-label">Estoque</div>
-          <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18">
+          <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18" oninput="atualizarResumoEPadrao()">
         </div>
         <div class="form-group">
           <div class="form-label">Total de unidades</div>
-          <input class="form-input" id="f-totalUnidades" type="number" min="0" placeholder="Ex: 839">
+          <input class="form-input" id="f-totalUnidades" type="number" min="0" placeholder="Ex: 839" oninput="atualizarResumoEPadrao()">
         </div>
         <div class="form-group">
           <div class="form-label">Data de lançamento</div>
@@ -1204,7 +1205,18 @@ function renderB2(unidades) {
 // montarResumoAreaPrecoHTML (config.js), compartilhada com lancamentos-editar.html.
 function renderResumoExtracao(unidades) {
   const painel = document.getElementById('resumoExtracao');
-  const html = montarResumoAreaPrecoHTML(unidades);
+  const nome = document.getElementById('f-nome').value.trim();
+  const estoque = document.getElementById('f-estoque').value;
+  const totalUnidades = document.getElementById('f-totalUnidades').value;
+  const pctVendido = calcularPercentualVendido(estoque, totalUnidades);
+  // Título "[90%|18] Nome do empreendimento" — mesmo quadro dos cards e da
+  // página de Editar, mas aqui dentro do painel resumo (só aparece o badge
+  // se Estoque/Total de unidades já estiverem preenchidos).
+  const titulo = nome
+    ? `<div class="resumo-titulo">${badgeVendidoHTML(pctVendido, estoque)}${nome}</div>`
+    : '';
+  const itensHtml = montarResumoAreaPrecoHTML(unidades);
+  const html = titulo + itensHtml;
   painel.innerHTML = html;
   painel.style.display = html ? 'flex' : 'none';
 }

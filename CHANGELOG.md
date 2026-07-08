@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Badge "[90%|18] Nome" também no painel da extração
+
+O quadro "[90%|18] Nome do empreendimento" já existia no título de `lancamentos-editar.html` e em
+cada card de "Empreendimentos Cadastrados" — agora aparece também dentro do painel resumo da
+extração (`lancamentos.html`), como primeira linha, antes da faixa de área/preço/m². Atualiza ao
+vivo enquanto o usuário edita Nome, Estoque ou Total de unidades (novos `oninput` nesses três
+campos, chamando `atualizarResumoEPadrao()`). Sem Estoque/Total preenchidos, mostra só o nome, sem
+o badge.
+
+`renderResumoExtracao()` monta esse título a partir de `f-nome`/`f-estoque`/`f-totalUnidades` e
+antepõe ao HTML do painel; nova classe `.resumo-titulo` (largura cheia dentro do flex do painel,
+pra ficar numa linha própria acima dos itens de área/preço).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: extração com Estoque/Total preenchidos mostra "[90%|18] Vinhas Flamboyant"
+igual ao exemplo pedido; editar Estoque pra 0 atualiza pra "100% | 0" (preto) ao vivo; limpar
+Estoque/Total mostra só o nome, sem badge, sem quebrar o resto do painel. Sem erros no console.
+
 ## 2026-07-08 — Padrão passa a depender de "Tipo de Empreendimento" (Horizontal x Vertical)
 
 A regra por m² médio agora usa duas faixas diferentes, dependendo do "Tipo de Empreendimento" —
