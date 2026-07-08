@@ -102,6 +102,114 @@ partir do preço médio por m² de cada tipologia. Não invente essa classifica�
 | `PRECO_MAXIMO` | Maior preço encontrado pra essa tipologia | Só número, mesmo formato. **Se o texto só der um preço único (não uma faixa), repita esse mesmo valor em PRECO_MEDIO, PRECO_MINIMO e PRECO_MAXIMO.** |
 | `DATA_TABELA` | Data da tabela de preços usada como fonte | Ex: `06/2026`, se o texto mencionar de quando é a tabela de preços |
 
+## Como interpretar "tabelas digitais" (planilha/grid de unidades)
+
+É muito comum receber o texto de uma **tabela digital de preços** — uma exportação tipo
+planilha, com uma linha por unidade individual (apartamento, lote, etc.), geralmente com colunas
+tipo `Status | Unid. | Tipo | Área (m²) | Valor (R$) | Valor Promo (R$)`. Esse formato precisa de
+um tratamento diferente do texto corrido: você não vai criar uma tipologia por linha (isso geraria
+dezenas de blocos repetidos) — você vai **agrupar as linhas e resumir**.
+
+### Exemplo real (Orulo, "Tabela Digital")
+
+Um trecho típico, colado direto da tela, se parece com isto (cada célula em uma linha, às vezes
+com linhas em branco entre elas — isso é normal, é só a forma como a tabela foi copiada):
+
+```
+Status
+Unid.
+Tipo
+
+Disponível
+Qd02Lt34
+Terreno/Lote Residencial
+180,0
+
+260.740
+
+-
+
+0
+0
+0
+0
+Disponível
+Qd02Lt41
+Terreno/Lote Residencial
+180,0
+
+260.740
+
+-
+
+0
+0
+0
+0
+Vendido
+Qd02Lt42
+Terreno/Lote Residencial
+180,0
+
+285.000
+
+-
+
+0
+0
+0
+0
+```
+
+Cada bloco de linhas repete o mesmo padrão, um atrás do outro, um bloco por unidade:
+`Status → Código da unidade → Tipo → Área → Valor → Valor Promo (ou "-") → 4 números (quartos/
+suítes/vagas/banheiros, geralmente "0" quando é lote/terreno)`.
+
+### Passo a passo pra resumir uma tabela dessas
+
+1. **Ignore tudo que for interface, não dado real**: cabeçalhos de filtro repetidos ("Status",
+   "Preço", "Tipo", "Quartos", "Suites", "Vagas" aparecendo sozinhos, às vezes duas vezes seguidas),
+   "limpar filtros", "Arquivos de tabela", "Observações", "Não possui anotações", menus tipo "ÁREA
+   DO CLIENTE", "TERRENOS DE INTERESSE", "EMPREENDIMENTOS", "INTEGRAR CRM", "INDICAR", texto de
+   selo/imagem, contador de "Opinião". Nada disso é dado do empreendimento.
+2. **Cada bloco `Status / Código / Tipo / Área / Valor / Valor Promo / números` é UMA unidade
+   individual** — não é uma tipologia por si só.
+3. **`TOTAL_UNIDADES`** = conte quantos blocos de unidade existem na tabela inteira (todas, não
+   importa o status).
+4. **`ESTOQUE`** = conte só os blocos com status `Disponível`. Não conte `Vendido` nem `Reservado`.
+   Se o restante do texto (fora da tabela) já trouxer Estoque/Total de unidades explícitos em
+   outro lugar, use esses — a tabela só serve pra calcular quando não tem essa informação em
+   nenhum outro lugar do material.
+5. **Agrupe as unidades disponíveis por área igual (ou muito parecida)** — cada grupo de área vira
+   **um bloco de tipologia**. No exemplo acima, todas as unidades são 180,0m², então viram **um
+   único bloco de tipologia**, não dez.
+6. **Ignore unidades `Vendido`/`Reservado` na hora de calcular preço** — elas não estão mais
+   disponíveis por aquele valor, não deixe que "puxem" a faixa de preço pra baixo ou pra cima.
+   Some/considere só os valores das unidades `Disponível` daquele grupo de área.
+7. **Preço de cada unidade** = use o `Valor Promo` quando ele existir e for um número (não "-");
+   senão, use o `Valor` cheio.
+8. Dentro de cada grupo de área (só unidades disponíveis, já aplicando a regra 7):
+   - `PRECO_MEDIO` = média dos valores do grupo
+   - `PRECO_MINIMO` = menor valor do grupo
+   - `PRECO_MAXIMO` = maior valor do grupo
+9. **Coluna "Tipo"** decide `TIPO_PRODUTO` e se a área vai em `AREA_UTIL` ou `AREA_TERRENO` —
+   mesma regra já explicada: qualquer coisa com "Terreno"/"Lote" no nome dessa coluna vira
+   `TIPO_PRODUTO: Lote Condomínio Horizontal` e a metragem vai em `AREA_TERRENO`; apartamento/casa
+   vira `AREA_UTIL`.
+10. Os 4 números no fim de cada bloco (geralmente quartos/suítes/vagas/banheiros) — preencha
+    `QUARTOS`/`SUITES`/`VAGAS`/`BANHEIROS` só se esses números fizerem sentido pro tipo de produto
+    (pra terreno/lote, praticamente sempre vêm zerados, então pode deixar os campos zerados ou em
+    branco).
+11. `DESCRICAO` da tipologia pode ser algo simples gerado por você, tipo `Lote 180m²` ou
+    `Apartamento 2 quartos` — não precisa ser o código da unidade individual (`Qd02Lt34` etc.), esse
+    código some no agrupamento, e não faz falta.
+
+**Aplicando isso ao exemplo acima**: das 3 linhas mostradas, 2 são `Disponível` (260.740 cada) e 1
+é `Vendido` (ignorada no cálculo de preço, mas conta pro `TOTAL_UNIDADES`). Resultado:
+`ESTOQUE: 2` (nesse trecho — na tabela completa real, conte todas as disponíveis), `TIPO_PRODUTO:
+Lote Condomínio Horizontal`, `AREA_TERRENO: 180`, `PRECO_MEDIO: 260740`, `PRECO_MINIMO: 260740`,
+`PRECO_MAXIMO: 260740` (as duas disponíveis têm o mesmo valor nesse recorte).
+
 ## Regras gerais de bom senso
 
 1. **Nunca invente dado que não está no texto.** Campo sem informação = deixa em branco.

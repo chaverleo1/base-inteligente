@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — ORGANIZADOR_PROMPT.md: seção sobre "tabelas digitais" (planilha de unidades)
+
+Usuário reportou que os dados gerais do empreendimento saem bem organizados, mas dados vindos de
+**tabela digital de preços** (exportação tipo planilha, uma linha por unidade — ex: "Tabela
+Digital" da Orulo, colunas `Status | Unid. | Tipo | Área | Valor | Valor Promo`) não estavam sendo
+bem aproveitados pelo assistente organizador. Adicionada uma seção nova ao
+`ORGANIZADOR_PROMPT.md` com passo a passo específico pra esse formato, usando um trecho real
+enviado pelo usuário como exemplo:
+
+- Como reconhecer e ignorar ruído de interface (filtros repetidos, menus, "limpar filtros" etc.)
+  que aparece misturado com os dados reais da tabela.
+- `TOTAL_UNIDADES` = contar todas as linhas da tabela; `ESTOQUE` = contar só as linhas com status
+  `Disponível` — usar a tabela pra calcular esses dois campos quando não vierem informados em
+  outro lugar do material.
+- Agrupar unidades por área igual/parecida em vez de criar uma tipologia por linha (uma tabela com
+  50 lotes do mesmo tamanho vira 1 bloco de tipologia, não 50).
+- Ignorar unidades `Vendido`/`Reservado` no cálculo de preço (só contam pro total, não pra
+  faixa de preço da tipologia).
+- Usar "Valor Promo" no lugar de "Valor" quando presente (preço promocional).
+- Exemplo completo com números, mostrando o resultado esperado a partir de um trecho de tabela.
+
+Só documentação (`ORGANIZADOR_PROMPT.md`) — nenhum código mudou, não precisa reimplantar nada.
+
 ## 2026-07-08 — Nova aba "Outros": lançamentos a partir de texto organizado por IA
 
 Nova aba "Outros" em `lancamentos.html`, ao lado de "Novo Lançamento", pra cadastrar
