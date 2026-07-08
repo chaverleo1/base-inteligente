@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Parser da aba "Outros" mais tolerante a variações do assistente organizador
+
+Usuário testou a aba "Outros" com um texto real gerado pelo assistente organizador e reportou que
+"Tipo de Imóvel", "Padrão", "Data da Tabela" e a lista de tipologias não foram capturados. Causa
+raiz: o texto usava `## TIPOLOGIAS:` (prefixo markdown) e **não tinha nenhum `---`** separando os
+7 blocos de tipologia — o parser antigo dependia estritamente desses dois formatos exatos, então
+todos os campos repetidos (`TIPO_PRODUTO`, `DESCRICAO`, etc.) colapsavam num objeto só, com apenas
+o último valor de cada campo sobrevivendo. "Tipo de Imóvel"/"Padrão" vinham vazios como
+consequência direta disso (são derivados da primeira tipologia e do m² médio de todas — sem
+tipologias capturadas, não tem como calcular nenhum dos dois).
+
+Duas mudanças em `extrairOutrosFormato()` (lancamentos.html) pra não depender de o assistente
+seguir o formato à risca:
+
+1. **Remove prefixo markdown** (`#`, `##`, `-`, `*`) de toda linha antes de tentar casar
+   `CAMPO: valor` — resolve `## TIPOLOGIAS:` e `## DATA_TABELA: ...`.
+2. **Detecta o início de cada tipologia pela linha `TIPO_PRODUTO:`**, em vez de depender do
+   separador `---` — é um campo obrigatório em toda tipologia, serve de âncora confiável mesmo
+   quando o assistente esquece de colocar o separador. Um `---` eventual continua sendo tolerado
+   (só é ignorado, não quebra nada).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview com o texto real enviado pelo usuário (Parqville Figueira, 7 tipologias de
+lote, formato com `##` e sem `---`): as 7 linhas da tabela saem certas, Tipo de Imóvel = "Lote
+Condomínio Horizontal", Tipo de Empreendimento = "Condomínio Horizontal", Padrão calculado
+("Alto"), Estoque/Total de unidades, Data da Tabela em cada linha ("06/2026"), painel resumo com
+badge "91% | 28" — tudo batendo. Testado também o formato antigo (com `---`, sem markdown) pra
+confirmar que não regrediu. Sem erros no console.
+
 ## 2026-07-08 — ORGANIZADOR_PROMPT.md: seção sobre "tabelas digitais" (planilha de unidades)
 
 Usuário reportou que os dados gerais do empreendimento saem bem organizados, mas dados vindos de

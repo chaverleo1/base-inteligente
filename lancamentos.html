@@ -1176,18 +1176,25 @@ const CAMPO_MAP_UNIDADE_OUTROS = {
 // Linhas "CAMPO: valor" — aceita tanto "CAMPO:" (maiúsculo, do template) quanto
 // pequenas variações de espaço; ignora qualquer linha que não bata no padrão
 // (títulos, comentários que o assistente organizador tenha deixado passar).
+// Também tolera prefixo de markdown ("##", "-", "*") que assistentes de IA
+// às vezes adicionam mesmo quando instruídos a devolver texto puro — sem
+// isso, uma linha tipo "## TIPOLOGIAS:" ou "## DATA_TABELA: 06/2026" não
+// batia com o padrão e o campo/marcador era descartado silenciosamente.
+function limparPrefixoMarkdown_(l) {
+  return l.replace(/^#{1,6}\s*/, '').replace(/^[-*]\s*(?=[A-Za-z_]+\s*:)/, '');
+}
 function parsearLinhasCampoValor_(linhas, mapa, alvo) {
   linhas.forEach(l => {
-    const m = l.match(/^([A-Z_]+)\s*:\s*(.*)$/);
+    const m = limparPrefixoMarkdown_(l).match(/^([A-Za-z_]+)\s*:\s*(.*)$/);
     if (!m) return;
-    const campo = mapa[m[1]];
+    const campo = mapa[m[1].toUpperCase()];
     if (campo) alvo[campo] = m[2].trim();
   });
 }
 
 function extrairOutrosFormato(txt) {
-  const linhas = txt.split('\n').map(l => l.trim());
-  const idxTipologias = linhas.findIndex(l => l.toUpperCase() === 'TIPOLOGIAS:');
+  const linhas = txt.split('\n').map(l => limparPrefixoMarkdown_(l.trim()));
+  const idxTipologias = linhas.findIndex(l => /^TIPOLOGIAS\s*:?\s*$/i.test(l));
   const linhasGerais = idxTipologias >= 0 ? linhas.slice(0, idxTipologias) : linhas;
   const linhasTipologias = idxTipologias >= 0 ? linhas.slice(idxTipologias + 1) : [];
 
@@ -1196,15 +1203,29 @@ function extrairOutrosFormato(txt) {
     urlSite:'', foto:'', lazer:'', conceito:'', tipo:'', dataTabela:'' };
   parsearLinhasCampoValor_(linhasGerais, CAMPO_MAP_GERAL_OUTROS, b1);
 
-  // Blocos de tipologia delimitados por "---" — junta tudo e separa pelo
-  // marcador, descartando pedaços vazios (o "---" aparece antes do primeiro
-  // bloco e depois do último, então sobram strings vazias nas pontas).
-  const blocosBrutos = linhasTipologias.join('\n').split('---').map(b => b.trim()).filter(b => b.length > 0);
-  const b2 = blocosBrutos.map(bloco => {
+  // Cada tipologia começa numa linha "TIPO_PRODUTO:" — mais confiável que
+  // depender do assistente organizador colocar "---" entre os blocos (na
+  // prática, nem sempre ele coloca, mesmo instruído; TIPO_PRODUTO é
+  // obrigatório em toda tipologia, então serve de âncora segura). Um "---"
+  // eventual é só ignorado (não quebra nada, já que não bate no padrão
+  // CAMPO: valor).
+  const blocos = [];
+  let atual = null;
+  linhasTipologias.forEach(l => {
+    if (/^TIPO_PRODUTO\s*:/i.test(l)) {
+      if (atual) blocos.push(atual);
+      atual = [l];
+    } else if (atual) {
+      atual.push(l);
+    }
+  });
+  if (atual) blocos.push(atual);
+
+  const b2 = blocos.map(blocoLinhas => {
     const u = { tipo:'', unidade:'', quartos:0, suites:0, banheiros:0, vagas:0, escaninho:'',
       areaUtil:0, areaTerr:0, precoMedio:0, precoMin:0, precoMax:0, dataTabela:'' };
     const uStr = {};
-    parsearLinhasCampoValor_(bloco.split('\n'), CAMPO_MAP_UNIDADE_OUTROS, uStr);
+    parsearLinhasCampoValor_(blocoLinhas, CAMPO_MAP_UNIDADE_OUTROS, uStr);
     u.tipo       = uStr.tipo || '';
     u.unidade    = uStr.unidade || '';
     u.escaninho  = uStr.escaninho || '';
