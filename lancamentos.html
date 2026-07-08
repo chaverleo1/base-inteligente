@@ -330,6 +330,7 @@ select.form-input option { background: var(--surface2); }
   <div class="lanc-tabs">
     <button class="lanc-tab active" id="tabBtnLista" onclick="mudarAbaLancamentos('lista')">Empreendimentos Cadastrados</button>
     <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Novo Lançamento</button>
+    <button class="lanc-tab" id="tabBtnOutros" onclick="mudarAbaLancamentos('outros')">Outros</button>
   </div>
 
   <!-- MOTOR -->
@@ -524,6 +525,23 @@ select.form-input option { background: var(--surface2); }
         </table>
       </div>
       <button class="btn-salvar" id="btnSalvar" onclick="salvarLancamento()">💾 Salvar Lançamento</button>
+    </div>
+  </div>
+  </div>
+
+  <!-- OUTROS -->
+  <div id="tabPainelOutros" class="tab-panel" style="display:none">
+  <div class="sec-header">
+    <div class="sec-title">Outros formatos</div>
+    <div class="sec-sub">Cole aqui o texto já organizado por um assistente de IA (ficha técnica, book, site — qualquer formato que não seja Orulo). Veja <code>ORGANIZADOR_PROMPT.md</code> no projeto pras instruções que esse assistente precisa seguir.</div>
+  </div>
+  <div class="motor-box">
+    <div class="motor-label">Texto organizado</div>
+    <textarea class="motor-input" id="txtOutros" placeholder="Cole aqui o texto já estruturado (NOME:, CONSTRUTORA:, TIPO_EMPREENDIMENTO:, ... TIPOLOGIAS: ... blocos separados por ---)" style="min-height:320px"></textarea>
+    <div class="motor-actions">
+      <button class="btn-extrair" id="btnExtrairOutros" onclick="extrairOutros()">⚡ Extrair Dados</button>
+      <button class="btn-sec" onclick="document.getElementById('txtOutros').value=''">✕ Limpar</button>
+      <span class="motor-hint">Extrai pro mesmo formulário de revisão da aba "Novo Lançamento".</span>
     </div>
   </div>
   </div>
@@ -1077,13 +1095,14 @@ function atualizarUrlLink(val) {
   }
 }
 
-// ── ABAS (Empreendimentos Cadastrados / Novo Lançamento) ──────────────────────
+// ── ABAS (Empreendimentos Cadastrados / Novo Lançamento / Outros) ────────────
 function mudarAbaLancamentos(nome) {
-  const ehLista = nome === 'lista';
-  document.getElementById('tabPainelLista').style.display = ehLista ? '' : 'none';
-  document.getElementById('tabPainelNovo').style.display  = ehLista ? 'none' : '';
-  document.getElementById('tabBtnLista').classList.toggle('active', ehLista);
-  document.getElementById('tabBtnNovo').classList.toggle('active', !ehLista);
+  document.getElementById('tabPainelLista').style.display  = nome === 'lista'  ? '' : 'none';
+  document.getElementById('tabPainelNovo').style.display   = nome === 'novo'   ? '' : 'none';
+  document.getElementById('tabPainelOutros').style.display = nome === 'outros' ? '' : 'none';
+  document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
+  document.getElementById('tabBtnNovo').classList.toggle('active', nome === 'novo');
+  document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
 }
 
 function extrairDados() {
@@ -1129,6 +1148,123 @@ function extrairDados() {
       else mostrarToast(`${b2.length} tipologia(s) extraída(s) com sucesso!`, 'ok');
     } catch(e) {
       mostrarToast('Erro ao extrair. Verifique o texto ou preencha manualmente.', 'erro');
+      console.error(e);
+    } finally {
+      btn.disabled = false; btn.textContent = '⚡ Extrair Dados';
+    }
+  }, 80);
+}
+
+// ─── EXTRAÇÃO — ABA "OUTROS" (texto já organizado por um assistente de IA) ────
+// Formato esperado: campos "CAMPO: valor" pros dados gerais, seguidos de
+// "TIPOLOGIAS:" e blocos delimitados por "---", um por tipologia. Ver
+// ORGANIZADOR_PROMPT.md na raiz do projeto — é o texto de instrução pro
+// assistente que organiza o material bruto (fichas técnicas, books, sites)
+// nesse formato antes do usuário colar aqui.
+const CAMPO_MAP_GERAL_OUTROS = {
+  NOME: 'nomeEmpreendimento', CONSTRUTORA: 'construtora', TIPO_EMPREENDIMENTO: 'tipoEmpreendimento',
+  STATUS: 'status', ENDERECO: 'endereco', BAIRRO: 'bairro', CIDADE: 'cidade', ESTADO: 'estado',
+  PREVISAO_ENTREGA: 'previsaoEntrega', ESTOQUE: 'estoque', TOTAL_UNIDADES: 'totalUnidades',
+  DATA_LANCAMENTO: 'dataLancamento', URL_SITE: 'urlSite', FOTO: 'foto', LAZER: 'lazer', CONCEITO: 'conceito',
+};
+const CAMPO_MAP_UNIDADE_OUTROS = {
+  TIPO_PRODUTO: 'tipo', DESCRICAO: 'unidade', QUARTOS: 'quartos', SUITES: 'suites',
+  BANHEIROS: 'banheiros', VAGAS: 'vagas', ESCANINHO: 'escaninho', AREA_UTIL: 'areaUtil',
+  AREA_TERRENO: 'areaTerr', PRECO_MEDIO: 'precoMedio', PRECO_MINIMO: 'precoMin',
+  PRECO_MAXIMO: 'precoMax', DATA_TABELA: 'dataTabela',
+};
+// Linhas "CAMPO: valor" — aceita tanto "CAMPO:" (maiúsculo, do template) quanto
+// pequenas variações de espaço; ignora qualquer linha que não bata no padrão
+// (títulos, comentários que o assistente organizador tenha deixado passar).
+function parsearLinhasCampoValor_(linhas, mapa, alvo) {
+  linhas.forEach(l => {
+    const m = l.match(/^([A-Z_]+)\s*:\s*(.*)$/);
+    if (!m) return;
+    const campo = mapa[m[1]];
+    if (campo) alvo[campo] = m[2].trim();
+  });
+}
+
+function extrairOutrosFormato(txt) {
+  const linhas = txt.split('\n').map(l => l.trim());
+  const idxTipologias = linhas.findIndex(l => l.toUpperCase() === 'TIPOLOGIAS:');
+  const linhasGerais = idxTipologias >= 0 ? linhas.slice(0, idxTipologias) : linhas;
+  const linhasTipologias = idxTipologias >= 0 ? linhas.slice(idxTipologias + 1) : [];
+
+  const b1 = { nomeEmpreendimento:'', construtora:'', tipoEmpreendimento:'', status:'', endereco:'',
+    bairro:'', cidade:'', estado:'', previsaoEntrega:'', estoque:'', totalUnidades:'', dataLancamento:'',
+    urlSite:'', foto:'', lazer:'', conceito:'', tipo:'', dataTabela:'' };
+  parsearLinhasCampoValor_(linhasGerais, CAMPO_MAP_GERAL_OUTROS, b1);
+
+  // Blocos de tipologia delimitados por "---" — junta tudo e separa pelo
+  // marcador, descartando pedaços vazios (o "---" aparece antes do primeiro
+  // bloco e depois do último, então sobram strings vazias nas pontas).
+  const blocosBrutos = linhasTipologias.join('\n').split('---').map(b => b.trim()).filter(b => b.length > 0);
+  const b2 = blocosBrutos.map(bloco => {
+    const u = { tipo:'', unidade:'', quartos:0, suites:0, banheiros:0, vagas:0, escaninho:'',
+      areaUtil:0, areaTerr:0, precoMedio:0, precoMin:0, precoMax:0, dataTabela:'' };
+    const uStr = {};
+    parsearLinhasCampoValor_(bloco.split('\n'), CAMPO_MAP_UNIDADE_OUTROS, uStr);
+    u.tipo       = uStr.tipo || '';
+    u.unidade    = uStr.unidade || '';
+    u.escaninho  = uStr.escaninho || '';
+    u.dataTabela = uStr.dataTabela || '';
+    u.quartos    = parseInt(uStr.quartos) || 0;
+    u.suites     = parseInt(uStr.suites) || 0;
+    u.banheiros  = parseInt(uStr.banheiros) || 0;
+    u.vagas      = parseInt(uStr.vagas) || 0;
+    u.areaUtil   = parseFloat(String(uStr.areaUtil || '').replace(',', '.')) || 0;
+    u.areaTerr   = parseFloat(String(uStr.areaTerr || '').replace(',', '.')) || 0;
+    u.precoMedio = parsePrecoBR(uStr.precoMedio || '') || parseFloat(uStr.precoMedio) || 0;
+    u.precoMin   = parsePrecoBR(uStr.precoMin || '')   || parseFloat(uStr.precoMin)   || 0;
+    u.precoMax   = parsePrecoBR(uStr.precoMax || '')   || parseFloat(uStr.precoMax)   || 0;
+    // Se só veio um preço único (sem faixa), replica pros três campos —
+    // mesma regra pedida ao assistente organizador, reforçada aqui por segurança.
+    if (!u.precoMedio) u.precoMedio = u.precoMax || u.precoMin || 0;
+    if (!u.precoMin)   u.precoMin   = u.precoMedio || u.precoMax || 0;
+    if (!u.precoMax)   u.precoMax   = u.precoMedio || u.precoMin || 0;
+    return u;
+  }).filter(u => u.areaUtil > 0 || u.areaTerr > 0 || u.precoMedio > 0);
+
+  // "Tipo de imóvel" (Bloco 1, campo único) mostra o tipo da primeira
+  // tipologia como referência — cada linha da tabela mantém seu próprio tipo
+  // individual (selecionável por linha), isso aqui é só o valor de exibição.
+  if (b2.length && b2[0].tipo) b1.tipo = b2[0].tipo;
+
+  return { b1, b2 };
+}
+
+function extrairOutros() {
+  const txt = document.getElementById('txtOutros').value.trim();
+  if (!txt) { mostrarToast('Cole o texto já organizado primeiro.', 'erro'); return; }
+  const btn = document.getElementById('btnExtrairOutros');
+  btn.disabled = true; btn.textContent = '⏳ Extraindo...';
+  setTimeout(() => {
+    try {
+      const { b1, b2 } = extrairOutrosFormato(txt);
+      renderB1(b1); renderB2(b2);
+      atualizarResumoEPadrao();
+
+      const campos = [b1.nomeEmpreendimento, b1.bairro, b1.status, b1.previsaoEntrega].filter(v=>v).length;
+      const badge = document.getElementById('preview-badge');
+      badge.textContent = `${b2.length} tipologia(s) detectada(s) · ${campos}/4 campos identificados`;
+      badge.style.cssText = `background:${campos>=3?'rgba(0,212,170,.15)':'rgba(245,158,11,.15)'};color:${campos>=3?'var(--accent2)':'var(--amber)'};`;
+
+      document.getElementById('lbl-nome').style.display   = b1.nomeEmpreendimento ? 'none' : 'inline';
+      document.getElementById('lbl-bairro').style.display = b1.bairro             ? 'none' : 'inline';
+      document.getElementById('f-nome').className   = 'form-input ' + (b1.nomeEmpreendimento ? 'ok' : 'warn');
+      document.getElementById('f-bairro').className = 'form-input ' + (b1.bairro             ? 'ok' : 'warn');
+
+      document.getElementById('preview-box').style.display = 'block';
+      // O preview mora na aba "Novo Lançamento" — "Outros" é só uma entrada
+      // de texto alternativa que alimenta o mesmo formulário de revisão/salvar.
+      mudarAbaLancamentos('novo');
+      document.getElementById('preview-box').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      if (!b2.length) mostrarToast('Nenhuma tipologia detectada — confira o formato do texto colado.', 'erro');
+      else mostrarToast(`${b2.length} tipologia(s) extraída(s) com sucesso!`, 'ok');
+    } catch(e) {
+      mostrarToast('Erro ao extrair. Verifique o formato do texto.', 'erro');
       console.error(e);
     } finally {
       btn.disabled = false; btn.textContent = '⚡ Extrair Dados';

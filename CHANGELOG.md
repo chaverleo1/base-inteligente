@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Nova aba "Outros": lançamentos a partir de texto organizado por IA
+
+Nova aba "Outros" em `lancamentos.html`, ao lado de "Novo Lançamento", pra cadastrar
+empreendimentos a partir de material que não segue o formato da Orulo (fichas técnicas, books de
+vendas, sites, PDFs colados etc.) — textos assim variam demais de formato pra um parser de regex
+dar conta como faz com a Orulo.
+
+**Fluxo pensado**: o usuário passa o material bruto pra um assistente de IA separado (o
+"organizador"), que devolve um texto num formato fixo e previsível; esse texto é colado na aba
+"Outros"; o Base Inteligente extrai dali com um parser simples (`extrairOutrosFormato`, chave:valor
++ blocos de tipologia delimitados por `---`) e alimenta o **mesmo** formulário de revisão da aba
+"Novo Lançamento" — a aba "Outros" é só uma entrada de texto alternativa, não duplica nada do
+formulário/tabela/salvamento.
+
+Criado `ORGANIZADOR_PROMPT.md` na raiz do projeto — texto pronto pra colar como instrução nesse
+assistente organizador, com a listagem completa de todos os campos (Dados Gerais e por tipologia),
+os valores válidos de Tipo de Empreendimento/Tipo de Produto, e as regras de captura já
+estabelecidas no projeto (terreno → Lote Condomínio Horizontal, área útil só pra apartamento/casa,
+Padrão não deve ser calculado pelo organizador — o sistema já faz isso automaticamente pelo m²
+médio).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: texto de exemplo (Condomínio Vertical, 2 tipologias de apartamento) extrai
+todos os dados gerais corretamente, calcula Padrão "Médio" automaticamente, e povoa a tabela com as
+2 tipologias; texto de lote (Condomínio Horizontal, área terreno) extrai `areaTerr` no campo certo
+(não `areaUtil`) e classifica Padrão pela faixa horizontal; painel resumo com badge "[90%|18]"
+funcionando igual à extração da Orulo; texto sem tipologias e texto vazio tratados sem quebrar
+(toast de erro amigável). Sem erros no console.
+
 ## 2026-07-08 — Pipeline: segmento no card + novo estágio "Fechamento"
 
 **5. Segmento ao lado do nome** — cada card do funil (`dashboard.html`) agora mostra o segmento de
