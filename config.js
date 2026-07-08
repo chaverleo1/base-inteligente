@@ -66,8 +66,13 @@ function calcularPercentualVendido(estoque, totalUnidades) {
   const est = parseInt(estoque, 10);
   const tot = parseInt(totalUnidades, 10);
   if (!tot || tot <= 0 || isNaN(est) || est < 0) return null;
+  if (est === 0) return 100;
   const vendidas = Math.max(0, tot - est);
-  return Math.max(0, Math.min(100, Math.round((vendidas / tot) * 100)));
+  // Nunca fecha em 100% se ainda sobra estoque — só o "if (est === 0)" acima
+  // chega em 100%. Sem esse teto, arredondamento normal já dava 100% com
+  // estoque > 0 em empreendimentos grandes (ex: 2 restantes de 400+
+  // unidades vira 99,5% → Math.round arredonda pra 100).
+  return Math.min(99, Math.round((vendidas / tot) * 100));
 }
 
 // Regras de cor do quadro (item 2.1): quanto mais vendido, mais "quente"/
@@ -145,7 +150,7 @@ function montarResumoAreaPrecoHTML(unidades) {
 
   const itens = [];
   if (areas.length) {
-    itens.push(`<div class="resumo-item"><b>${fmtArea(areaMin)}m²${areaMax > areaMin ? ' a ' + fmtArea(areaMax) + 'm²' : ''}</b><small>Área</small></div>`);
+    itens.push(`<div class="resumo-item"><b>${fmtArea(areaMin)}m²${areaMax > areaMin ? ' a ' + fmtArea(areaMax) + 'm²' : ''}</b><small>Faixa de áreas</small></div>`);
   }
   if (precoPartir) {
     itens.push(`<div class="resumo-item"><b>A partir de R$ ${exibirPrecoBR(precoPartir)}</b><small>Menor preço</small></div>`);

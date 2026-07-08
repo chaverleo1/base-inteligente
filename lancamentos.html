@@ -162,7 +162,7 @@ select.form-input option { background: var(--surface2); }
 
 /* ── TABELA UNIDADES ── */
 .table-wrap { overflow-x: auto; margin-bottom: 14px; }
-.unidades-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1550px; }
+.unidades-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1050px; }
 .unidades-table th {
   background: var(--surface); color: var(--text3); font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px;
@@ -235,8 +235,8 @@ select.form-input option { background: var(--surface2); }
 .emp-card-body { padding: 14px 16px; }
 .emp-tipologias { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .tip-chip { font-size: 11px; padding: 3px 10px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
-.emp-preco { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; }
-.emp-preco small { font-size: 11px; color: var(--text3); font-weight: 400; font-family: 'Inter', sans-serif; margin-left: 6px; }
+.emp-resumo { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.emp-resumo-count small { font-size: 11px; color: var(--text3); }
 
 .emp-card-footer {
   padding: 10px 16px; border-top: 1px solid var(--border);
@@ -504,8 +504,6 @@ select.form-input option { background: var(--surface2); }
           <thead>
             <tr>
               <th style="width:110px">Tipo de produto</th>
-              <th style="width:55px">Qd</th>
-              <th style="width:55px">Lt</th>
               <th style="width:48px">Qtos</th>
               <th style="width:48px">Suítes</th>
               <th style="width:45px">Banh</th>
@@ -519,14 +517,6 @@ select.form-input option { background: var(--surface2); }
               <th class="r" style="width:85px">Máximo / Tabela</th>
               <th class="r" style="width:90px">Preço Total</th>
               <th style="width:85px">Data Tabela</th>
-              <th class="r" style="width:75px">Ato/Entr.</th>
-              <th style="width:45px">Qtd</th>
-              <th class="r" style="width:70px">Sinal</th>
-              <th style="width:45px">Qtd</th>
-              <th class="r" style="width:75px">Mensais</th>
-              <th style="width:45px">Qtd</th>
-              <th class="r" style="width:75px">Anuais</th>
-              <th style="width:45px">Qtd</th>
               <th style="width:28px"></th>
             </tr>
           </thead>
@@ -1059,8 +1049,6 @@ function agruparPorArea(uns, ehTerreno, defaults) {
     const bModa  = moda(g.items.map(u => u.banheiros || 0));
     return {
       tipo:        defaults.tipo || '',
-      qd:          '',
-      lt:          '',
       quartos:     qModa,
       suites:      sModa,
       banheiros:   bModa,
@@ -1074,10 +1062,6 @@ function agruparPorArea(uns, ehTerreno, defaults) {
       precoMax:    precos.length ? Math.max(...precos) : 0,
       precoTotal:  '',
       dataTabela:  defaults.dataTabela || '',
-      atoEntrada: '', atoEntradaQtd: '',
-      sinal: '', sinalQtd: '',
-      mensais: '', mensaisQtd: '',
-      anuais: '', anuaisQtd: '',
     };
   }).sort((a, b) => (a.areaUtil || a.areaTerr) - (b.areaUtil || b.areaTerr));
 }
@@ -1195,7 +1179,7 @@ function renderB2(unidades) {
   const tbody = document.getElementById('unidades-tbody');
   tbody.innerHTML = '';
   if (!unidades.length) {
-    tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;color:var(--text3);padding:16px 0">Nenhuma unidade detectada — use "+ Linha" para adicionar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:16px 0">Nenhuma unidade detectada — use "+ Linha" para adicionar.</td></tr>';
     return;
   }
   unidades.forEach(u => tbody.appendChild(criarLinha(u)));
@@ -1256,8 +1240,6 @@ function criarLinha(u = {}) {
     `<select class="t-inp ${cls}"><option value="">—</option>${TIPOS_PRODUTO.map(t => `<option ${t===val?'selected':''}>${t}</option>`).join('')}</select>`;
   tr.innerHTML = `
     <td>${sel(u.tipo || '', 't-tipo')}</td>
-    <td>${inp(u.qd || '', 'Qd', 'left', 't-qd')}</td>
-    <td>${inp(u.lt || '', 'Lt', 'left', 't-lt')}</td>
     <td>${inp(u.quartos  != null && u.quartos  !== '' ? u.quartos  : '', '0', 'center', 't-quartos')}</td>
     <td>${inp(u.suites   != null && u.suites   !== '' ? u.suites   : '', '0', 'center', 't-suites')}</td>
     <td>${inp(u.banheiros!= null && u.banheiros!== '' ? u.banheiros: '', '0', 'center', 't-banheiros')}</td>
@@ -1274,14 +1256,6 @@ function criarLinha(u = {}) {
         onfocus="this.select()"></td>
     <td><input class="t-inp t-precoTotal" value="${exibirPrecoBR(u.precoTotal) || exibirPrecoBR(u.precoMax)}" placeholder="R$" style="text-align:right" readonly title="Sempre igual ao Preço Máximo"></td>
     <td>${inp(u.dataTabela || '', 'mm/aaaa', 'left', 't-dataTabela')}</td>
-    <td>${inpPreco(u.atoEntrada, 'R$', 'right', 't-atoEntrada')}</td>
-    <td>${inp(u.atoEntradaQtd || '', 'qtd', 'center', 't-atoEntradaQtd')}</td>
-    <td>${inpPreco(u.sinal, 'R$', 'right', 't-sinal')}</td>
-    <td>${inp(u.sinalQtd || '', 'qtd', 'center', 't-sinalQtd')}</td>
-    <td>${inpPreco(u.mensais, 'R$', 'right', 't-mensais')}</td>
-    <td>${inp(u.mensaisQtd || '', 'qtd', 'center', 't-mensaisQtd')}</td>
-    <td>${inpPreco(u.anuais, 'R$', 'right', 't-anuais')}</td>
-    <td>${inp(u.anuaisQtd || '', 'qtd', 'center', 't-anuaisQtd')}</td>
     <td><button onclick="this.closest('tr').remove();atualizarResumoEPadrao()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
   return tr;
 }
@@ -1362,8 +1336,6 @@ function lerPreview() {
     unidades.push({
       tipologia,
       tipo:       gt('tipo'),
-      qd:         gt('qd'),
-      lt:         gt('lt'),
       quartos:    q,
       suites:     s,
       banheiros:  parseInt(gt('banheiros')) || 0,
@@ -1381,14 +1353,6 @@ function lerPreview() {
       preco:      precoMax,
       precoTotal: precoMax,
       dataTabela: gt('dataTabela'),
-      atoEntrada:    valorPrecoBR(gt('atoEntrada')),
-      atoEntradaQtd: gt('atoEntradaQtd'),
-      sinal:         valorPrecoBR(gt('sinal')),
-      sinalQtd:      gt('sinalQtd'),
-      mensais:       valorPrecoBR(gt('mensais')),
-      mensaisQtd:    gt('mensaisQtd'),
-      anuais:        valorPrecoBR(gt('anuais')),
-      anuaisQtd:     gt('anuaisQtd'),
     });
   });
   return { ...empr, unidades };
@@ -1488,11 +1452,9 @@ function renderLista(lista) {
 
   grid.innerHTML = emps.map((e, i) => {
     const tips   = [...new Set(e.unidades.map(u => u.tipologia).filter(Boolean))];
-    const precos = e.unidades.map(u => Number(u.precoMedio)).filter(p => p > 0);
-    const pMin   = precos.length ? Math.min(...precos) : 0;
-    const pMax   = precos.length ? Math.max(...precos) : 0;
     const stCls  = { 'Em obras':'st-obras','Em planta':'st-planta','Pronto':'st-pronto','Entregue':'st-entregue' }[e.status] || 'st-planta';
     const pctVendido = calcularPercentualVendido(e.estoque, e.totalUnidades);
+    const resumoHtml = montarResumoAreaPrecoHTML(e.unidades);
 
     return `
     <div class="emp-card" id="ec-${i}">
@@ -1506,10 +1468,8 @@ function renderLista(lista) {
       </div>
       <div class="emp-card-body">
         ${tips.length ? `<div class="emp-tipologias">${tips.map(t=>`<span class="tip-chip">${t}</span>`).join('')}</div>` : ''}
-        <div class="emp-preco">
-          ${pMin ? fmt_(pMin) + (pMax>pMin ? ' – ' + fmt_(pMax) : '') : '—'}
-          <small>${e.unidades.length} tipologia${e.unidades.length!==1?'s':''}</small>
-        </div>
+        <div class="emp-resumo">${resumoHtml || '—'}</div>
+        <div class="emp-resumo-count"><small>${e.unidades.length} tipologia${e.unidades.length!==1?'s':''}</small></div>
       </div>
       <div class="emp-card-footer">
         <button class="btn-toggle" onclick="togglePanel(${i})">▶ Ver unidades</button>

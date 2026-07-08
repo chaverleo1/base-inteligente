@@ -1,5 +1,47 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — "Alterações 08/07 parte 3": remove plano de pagamento/Qd/Lt, cards com resumo, fix 100%
+
+1. **Removidos** de `lancamentos.html` e `lancamentos-editar.html` (UI, coleta de dados e payload):
+   Qd (quadra), Lt (lote) e todo o plano de pagamento por unidade (Ato/Entrada, Sinal, Mensais,
+   Anuais, cada um com Qtd). Em `lancamentos-editar.html`, o campo "Unidade" volta a usar só a
+   "Descrição/nome" digitada (a derivação automática "Qd X - Lt Y" foi removida junto). Tabela do
+   Bloco 2 em `lancamentos.html` caiu de 25 pra 15 colunas (min-width ajustado de 1550px pra
+   1050px).
+
+   **Sobre "excluir na base"**: as colunas continuam existindo em `CABECALHO_LANCAMENTOS`
+   (`code.txt`) — **não foram removidas do backend**. Elas ficam no MEIO do array (antes de
+   `precoTotal`/`tipoEmpreendimento`), então removê-las desalinharia todas as colunas seguintes
+   pra linhas já salvas na planilha (o array é posicional, sem uma migração real de dados a
+   remoção quebraria dados existentes). A partir de agora essas colunas simplesmente não são mais
+   preenchidas por nenhuma das duas páginas — ficam vazias em qualquer lançamento novo/reeditado,
+   sem risco pros dados antigos. Nenhuma mudança em `code.txt`, não precisa reimplantar.
+
+2. Label "Área" no painel resumo (Dados Gerais / extração) renomeada pra **"Faixa de áreas"**
+   (`montarResumoAreaPrecoHTML`, config.js) — nota do usuário: esses três dados (faixa de área,
+   preço mínimo, m² médio) vão virar filtros pro cliente na próxima fase do projeto ("Tração de
+   Leads via Landing Pages"), planejamento a ser enviado depois.
+
+3. Cards de "Empreendimentos Cadastrados" (`lancamentos.html`) agora mostram o **painel resumo
+   completo** (faixa de área, a partir de R$ X, m² médio) no lugar da faixa de preço simples
+   ("R$ 733.200 – R$ 1.281.032"). Nova classe `.emp-resumo` reaproveitando os itens do mesmo
+   `montarResumoAreaPrecoHTML` usado na extração e no Editar.
+
+4. **Bug corrigido**: `calcularPercentualVendido` (config.js) podia arredondar pra 100% mesmo com
+   estoque > 0 em empreendimentos grandes (ex: 2 restantes de 839 unidades = 99,76%, `Math.round`
+   fechava em 100). Reproduzido exatamente o caso relatado ("100% | 2 Parqville Jacarandá") e
+   corrigido: só fecha em 100% quando o estoque é exatamente 0; caso contrário, o teto é 99%,
+   mesmo que o cálculo bruto arredonde mais alto.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: tabela do Bloco 2 com 15 colunas (14 campos + botão remover) e sem nenhum
+resquício de Qd/Lt/plano de pagamento no payload; card reproduzindo o cenário exato do bug (estoque
+2, total 839) mostra "99% | 2" em vermelho, não mais "100%" em preto; card mostra o painel resumo
+completo com faixa de área, menor preço e m² médio. Sem erros no console (à parte de um cache
+teimoso do `config.js` no próprio ambiente de preview durante os testes — o arquivo em disco já
+está correto, confirmado lendo o conteúdo servido via fetch com cache-busting).
+
 ## 2026-07-08 — Badge "[90%|18] Nome" também no painel da extração
 
 O quadro "[90%|18] Nome do empreendimento" já existia no título de `lancamentos-editar.html` e em
