@@ -152,7 +152,7 @@
   .revenda-diff-tbl .total-row td{color:var(--text);font-weight:700;border-top:1px solid var(--border);border-bottom:none;padding-top:10px}
 
   /* ── PIPELINE ── */
-  .pipeline-funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:32px;
+  .pipeline-funnel{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-bottom:32px;
                    border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
   .pip-col{display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06)}
   .pip-col:last-child{border-right:none}
@@ -167,6 +167,7 @@
             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
             background:rgba(255,255,255,.04);color:var(--text2);cursor:default}
   .pip-name:hover{background:rgba(255,255,255,.08);color:var(--text)}
+  .pip-segmento{font-size:10px;color:var(--text3);margin-left:5px;font-weight:500}
   .pip-alerta{color:#ffc107;font-weight:700;margin-left:4px;cursor:help}
   .pip-alerta.forte{color:#ff4a3f}
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
@@ -960,6 +961,7 @@ async function carregarPipeline() {
 function renderPipeline(json) {
   const stages = json.stages || {};
   const cfg = [
+    {key:'fechamento',     label:'Fechamento',      icon:'🤝', bg:'rgba(52,120,246,.15)',  text:'#3478f6'},
     {key:'urgentes',       label:'Urgentes',        icon:'🔥', bg:'rgba(255,59,48,.15)',   text:'#ff4a3f'},
     {key:'posVisita',      label:'Pós-Visita',       icon:'👁',  bg:'rgba(255,107,53,.11)',  text:'#ff7844'},
     {key:'agendarVisita',  label:'Agendar Visita',   icon:'📅', bg:'rgba(255,184,0,.09)',   text:'#ffc107'},
@@ -975,7 +977,8 @@ function renderPipeline(json) {
           // migrado antes desse campo existir) — nesse caso não mostra sinal
           // nenhum, pra não acusar estagnação sem dado real.
           const sinal = c.dias == null ? '' : c.dias >= 15 ? '<span class="pip-alerta forte" title="Há '+c.dias+' dias neste estágio">!!</span>' : c.dias >= 5 ? '<span class="pip-alerta" title="Há '+c.dias+' dias neste estágio">!</span>' : '';
-          return `<div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${sinal}</div>`;
+          const segmento = c.segmento ? `<span class="pip-segmento">${c.segmento}</span>` : '';
+          return `<div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${segmento}${sinal}</div>`;
         }).join('')
       : `<div class="pip-empty">—</div>`;
     return `<div class="pip-col" style="background:${s.bg}">

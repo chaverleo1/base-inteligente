@@ -41,7 +41,7 @@ const CABECALHO = [
   // dashboard (contatos.html, adm_dados_insights).
   'dataAtualizacao',
   // Estágio do cliente no funil de vendas (adicionado em 2026-07) — valores:
-  // Urgentes, Pós-Visita, Agendar Visita, Pré-Atendimento, Ganhos, Perda.
+  // Fechamento, Urgentes, Pós-Visita, Agendar Visita, Pré-Atendimento, Ganhos, Perda.
   // Vazio = sem estágio. "Perda" não aparece no funil do Dashboard (sem
   // card) — só existe como opção nas caixas de seleção, pra registrar o
   // motivo sem perder o dado; serve de base pra análises futuras.
@@ -518,13 +518,14 @@ function doGet(e) {
       var iId_      = cab_.indexOf('idCliente');
       var iPip_     = cab_.indexOf('pipeline');
       var iPipData_ = cab_.indexOf('pipelineData');
-      var stages_ = {urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]};
+      var iSeg_     = cab_.indexOf('segmento');
+      var stages_ = {fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]};
       // "Perda" de propósito não entra aqui — não tem card no funil do
       // Dashboard, só existe como opção nas caixas de seleção (pipSelectHtml)
       // pra registrar o motivo sem perder o dado, servindo de base pra
       // análises futuras. Como não está no keyMap_, cai no "if (!sk_) continue"
       // abaixo e simplesmente não aparece em nenhuma coluna do funil.
-      var keyMap_ = {'Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
+      var keyMap_ = {'Fechamento':'fechamento','Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
       if (iPip_ >= 0) {
         for (var pi_ = 1; pi_ < dados_.length; pi_++) {
           var pip_  = String(dados_[pi_][iPip_] || '').trim();
@@ -536,11 +537,12 @@ function doGet(e) {
           // Dias desde que entrou nesse estágio — alimenta o sinal de
           // estagnação (! com 5+ dias, !! com 15+ dias) no funil.
           var dias_ = iPipData_ >= 0 ? diasDesdeData_(dados_[pi_][iPipData_]) : null;
-          stages_[sk_].push({nome: nome_, nomeCompleto: nome_, idCliente: id_, dias: dias_});
+          var seg_  = iSeg_ >= 0 ? String(dados_[pi_][iSeg_] || '').trim() : '';
+          stages_[sk_].push({nome: nome_, nomeCompleto: nome_, idCliente: id_, dias: dias_, segmento: seg_});
         }
       }
       return ok({stages: stages_});
-    } catch(err) { return ok({stages:{urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]}}); }
+    } catch(err) { return ok({stages:{fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]}}); }
   }
 
   return ok({ status: 'acao desconhecida' });

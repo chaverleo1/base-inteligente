@@ -1,5 +1,34 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Pipeline: segmento no card + novo estágio "Fechamento"
+
+**5. Segmento ao lado do nome** — cada card do funil (`dashboard.html`) agora mostra o segmento de
+interesse do cliente (Casa/Sobrado/Apartamento/Lote em cond./Sala comercial/Indefinido) ao lado do
+nome, estilo discreto (`.pip-segmento`, texto pequeno e apagado). A rota `pipeline_dados`
+(`code.txt`) não trazia esse campo antes — só `nome`/`nomeCompleto`/`idCliente`/`dias` — agora
+inclui `segmento` também.
+
+**6. Novo estágio "Fechamento"** — adicionado como primeira coluna do funil (à esquerda de
+"Urgentes"), fundo azul (`rgba(52,120,246,.15)` / `#3478f6`, tom diferente do azul já usado em
+"Ganhos" pra não confundir visualmente). Grid do funil passou de 5 pra 6 colunas
+(`grid-template-columns:repeat(6,1fr)`). Atualizado em todo lugar que enumera os estágios do
+pipeline, pra manter consistência entre o funil e as caixas de seleção:
+
+- `dashboard.html`: array `cfg` do funil + CSS do grid.
+- `code.txt` (rota `pipeline_dados`): `stages_`, `keyMap_` e o fallback do `catch` ganharam a
+  chave `fechamento`; comentário do cabeçalho `pipeline` atualizado.
+- `contatos.html` e `formulario.html`: `PIP_STAGES`/`PIP_COLORS` (usados nas caixas de seleção de
+  estágio da tabela de contatos e do próprio formulário) e o `<select id="pipeline">` do
+  formulário ganharam a opção "Fechamento".
+
+⚠️ Precisa reimplantar o Apps Script (mudança em `code.txt`).
+
+Testado: suite Node confirmando que a rota `pipeline_dados` devolve `fechamento` com o cliente e o
+`segmento` certos, e que "Perda" continua de fora de qualquer coluna do funil; preview confirmando
+6 colunas no funil (desktop) com "Fechamento" primeiro e fundo azul, segmento aparecendo no card, e
+2 colunas no mobile (media query já existente); `PIP_STAGES`/`PIP_COLORS`/select de
+`contatos.html`/`formulario.html` conferidos direto no HTML servido.
+
 ## 2026-07-08 — Cards ordenados por metro quadrado (mais barato primeiro)
 
 Cards de "Empreendimentos Cadastrados" (`lancamentos.html`) agora ordenam do m² médio mais barato
