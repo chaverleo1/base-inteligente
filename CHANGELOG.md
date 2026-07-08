@@ -1,5 +1,17 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Cards ordenados por metro quadrado (mais barato primeiro)
+
+Cards de "Empreendimentos Cadastrados" (`lancamentos.html`) agora ordenam do m² médio mais barato
+pro mais caro (mesmo `calcularM2Medio` usado no painel resumo de cada card). Empreendimento sem
+área/preço suficiente pra calcular o m² vai pro final da lista, não pro topo — senão pareceria
+erroneamente "o mais barato".
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: 4 empreendimentos de teste (2.000, 3.500, 5.000 R$/m² e um sem dados)
+renderizaram na ordem exata esperada. Sem erros no console.
+
 ## 2026-07-08 — "Alterações 08/07 parte 3": remove plano de pagamento/Qd/Lt, cards com resumo, fix 100%
 
 1. **Removidos** de `lancamentos.html` e `lancamentos-editar.html` (UI, coleta de dados e payload):

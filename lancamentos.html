@@ -1446,7 +1446,11 @@ function renderLista(lista) {
     if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
     mapa[key].unidades.push(l);
   }
-  _emps = Object.values(mapa);
+  // Ordena do metro quadrado mais barato pro mais caro (mesmo m² médio do
+  // painel resumo — calcularM2Medio, config.js). Empreendimento sem
+  // área/preço suficiente pra calcular vai pro final (Infinity), não pro
+  // topo, senão pareceria erroneamente "mais barato".
+  _emps = Object.values(mapa).sort((a, b) => (calcularM2Medio(a.unidades) || Infinity) - (calcularM2Medio(b.unidades) || Infinity));
   const emps = _emps;
   cnt.innerHTML = `<b>${emps.length}</b> empreendimento${emps.length !== 1 ? 's' : ''}`;
 
