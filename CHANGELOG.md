@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — "URL do Empreendimento" captura em "URL do site / Orulo"
+
+Em `lancamentos.html`, a "URL do Empreendimento" (topo da página, usada só pro botão "↗ Abrir")
+nunca preenchia o campo "URL do site / Orulo" do Bloco 1 — que é o que de fato vai salvo no
+backend. O usuário tinha que colar o link duas vezes. Agora, ao clicar "Extrair Dados", o valor da
+URL do topo é capturado automaticamente em "URL do site / Orulo" (renderB1 também ganhou esse
+campo, que não era populado por ele antes).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: URL preenchida no campo do topo aparece em "URL do site / Orulo" após
+"Extrair Dados", com a classe visual "ok", e `lerPreview()` retorna o valor correto. Sem erros no
+console.
+
 ## 2026-07-08 — Bloqueia salvar sem marcar status da "Data da tabela de preços"
 
 Em `lancamentos.html`, dava pra salvar um lançamento sem marcar "Atualizada" ou "Desatualizada" no

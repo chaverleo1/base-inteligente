@@ -634,7 +634,7 @@ function classificarPadraoPorM2_(v, tipoTexto) {
 }
 
 function extrairBloco1(txt) {
-  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', tipoEmpreendimento:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'' };
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', tipoEmpreendimento:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'', urlSite:'' };
   const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   // ── Localiza a linha de endereço em QUALQUER posição do texto ──
@@ -1134,6 +1134,11 @@ function extrairDados() {
       // BOX 1 → dados gerais; se vazio usa BOX 2 como fallback
       const srcB1 = txtB1 || txtB2;
       const b1    = extrairBloco1(srcB1);
+      // "URL do Empreendimento" (topo da página) já é preenchida pelo usuário
+      // pra abrir o anúncio original — captura o mesmo valor em "URL do site /
+      // Orulo" (Bloco 1) em vez de exigir que ela seja digitada de novo.
+      const urlEmp = document.getElementById('urlEmpreendimento').value.trim();
+      if (urlEmp) b1.urlSite = urlEmp;
       // BOX 2 → tabela de unidades; se vazio tenta mini-tabela do BOX 1
       const ehTerreno = b1.tipo === 'Lote Condomínio Horizontal';
       const b2    = extrairBloco2(txtB2 || txtB1, ehTerreno, { tipo: b1.tipo, dataTabela: b1.dataTabela });
@@ -1181,6 +1186,7 @@ function renderB1(b) {
   set('f-estoque', b.estoque);
   set('f-totalUnidades', b.totalUnidades);
   set('f-dataLancamento', b.dataLancamento);
+  set('f-urlSite', b.urlSite);
   set('f-lazer', b.lazer);
   set('f-conceito', b.conceito);
   if (b.status) document.getElementById('f-status').value = b.status;
