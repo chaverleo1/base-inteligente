@@ -43,6 +43,7 @@ a{text-decoration:none;color:inherit}
 .container{max-width:900px;margin:0 auto;padding:28px 24px}
 .page-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
 .page-title{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700}
+.badge-vendido{display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:700;white-space:nowrap}
 .page-sub{font-size:13px;color:var(--text3);margin-top:3px}
 .back-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
           color:var(--text2);padding:7px 16px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
@@ -124,6 +125,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
 <div class="container">
 
   <div class="page-header">
+    <span id="badgeVendidoTitulo"></span>
     <div>
       <div class="page-title" id="pageTitulo">Editar Lançamento</div>
       <div class="page-sub" id="pageSub">Carregando dados...</div>
@@ -203,11 +205,11 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Estoque</label>
-        <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18">
+        <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18" oninput="atualizarBadgeVendido()">
       </div>
       <div class="form-group">
         <label class="form-label">Total de unidades</label>
-        <input class="form-input" id="f-totalUnidades" type="number" min="0" placeholder="Ex: 839">
+        <input class="form-input" id="f-totalUnidades" type="number" min="0" placeholder="Ex: 839" oninput="atualizarBadgeVendido()">
       </div>
       <div class="form-group">
         <label class="form-label">Data de lançamento</label>
@@ -290,6 +292,14 @@ function preencherForm(e) {
 
   const unidades = e.unidades && e.unidades.length ? e.unidades : [{}];
   unidades.forEach(u => addUnidade(u));
+  atualizarBadgeVendido();
+}
+
+// Percentual vendido = derivado de Estoque/Total de unidades (Alterações
+// 08/07, parte 2) — recalcula ao vivo sempre que um dos dois campos muda.
+function atualizarBadgeVendido() {
+  const pct = calcularPercentualVendido(gV('f-estoque'), gV('f-totalUnidades'));
+  document.getElementById('badgeVendidoTitulo').innerHTML = badgeVendidoHTML(pct, gV('f-estoque'));
 }
 
 let _uniCount = 0;

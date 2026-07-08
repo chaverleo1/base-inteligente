@@ -56,3 +56,35 @@ function exibirPrecoBR(v) {
     ? n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : '';
 }
+
+// ── PERCENTUAL VENDIDO (Alterações 08/07, parte 2) ───────────────────────────
+// "Estoque" é quantas unidades ainda restam à venda; "Total de unidades" é o
+// empreendimento inteiro — vendidas = total - estoque. Não existe como coluna
+// própria no backend (é sempre derivado desses dois campos que já existem),
+// calculado direto na tela sempre que precisa exibir.
+function calcularPercentualVendido(estoque, totalUnidades) {
+  const est = parseInt(estoque, 10);
+  const tot = parseInt(totalUnidades, 10);
+  if (!tot || tot <= 0 || isNaN(est) || est < 0) return null;
+  const vendidas = Math.max(0, tot - est);
+  return Math.max(0, Math.min(100, Math.round((vendidas / tot) * 100)));
+}
+
+// Regras de cor do quadro (item 2.1): quanto mais vendido, mais "quente"/
+// urgente a cor — até chegar em preto quando esgotou (100%).
+function corPercentualVendido(pct) {
+  if (pct >= 100) return { bg: '#000000', fg: '#ffffff' };
+  if (pct > 90)   return { bg: '#e53935', fg: '#ffffff' }; // vermelho
+  if (pct > 70)   return { bg: '#f57c00', fg: '#1a1a1a' }; // laranja
+  if (pct > 50)   return { bg: '#f5c518', fg: '#1a1a1a' }; // amarelo
+  return { bg: '#2e7d32', fg: '#ffffff' };                 // verde
+}
+
+// Monta o HTML do quadro "[90%|18]" — pct já calculado, estoque é o número
+// de unidades restantes mostrado ao lado. Retorna '' se não dá pra calcular
+// (empreendimento sem Estoque/Total de unidades preenchidos ainda).
+function badgeVendidoHTML(pct, estoque) {
+  if (pct == null) return '';
+  const c = corPercentualVendido(pct);
+  return `<span class="badge-vendido" style="background:${c.bg};color:${c.fg}">${pct}% | ${parseInt(estoque, 10)}</span>`;
+}

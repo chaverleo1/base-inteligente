@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — "Alterações 08/07 parte 2": percentual vendido + painel resumo da extração
+
+1. **Percentual vendido** — derivado de Estoque/Total de unidades (não é uma coluna nova no
+   backend, é calculado na hora a partir dos dois campos que já existiam). Novas funções
+   compartilhadas em `config.js`: `calcularPercentualVendido`, `corPercentualVendido`,
+   `badgeVendidoHTML`.
+2. **Quadro "[90%|18]"** ao lado do nome do empreendimento: em `lancamentos-editar.html` (no
+   cabeçalho da página, atualiza ao vivo quando Estoque/Total de unidades mudam) e em
+   `lancamentos.html` (em cada card de "Empreendimentos Cadastrados"). Regras de cor: até 50%
+   verde/letra branca, 51–70% amarelo/letra escura, 71–90% laranja/letra escura, 91–99%
+   vermelho/letra branca, 100% preto/letra branca.
+3. **Painel resumo na extração** (`lancamentos.html`, ao lado do "Nome do empreendimento"):
+   calcula, a partir das tipologias já extraídas no Bloco 2, a faixa de área ("371,1m² a
+   583,5m²"), o menor preço entre as unidades ("A partir de R$ 902.524,00") e o metro quadrado
+   médio ("R$ 2.427,00") — média do R$/m² de cada tipologia. **Observação para o futuro**: esse
+   R$/m² médio ainda não alimenta a classificação de "padrão" automaticamente — fica só
+   informativo por enquanto; qualificar o "padrão" com base nele é um próximo passo combinado
+   com o usuário, não implementado nesta etapa.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: badge "90% | 18" com cor laranja batendo com o exemplo do usuário; 100%
+vendido vira preto; badge some quando não há Estoque/Total de unidades preenchidos (sem quebrar o
+card); painel resumo calcula área/preço/m² médio corretamente a partir de texto de teste, some ao
+limpar o motor, e não quebra com lista de unidades vazia. Sem erros no console.
+
 ## 2026-07-08 — Padrão "553.235,00" em todos os campos de preço (lançamentos)
 
 Campos de preço em `lancamentos.html` e `lancamentos-editar.html` (Preço médio/mínimo/máximo,

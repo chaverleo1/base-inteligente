@@ -122,6 +122,14 @@ textarea.motor-input::placeholder { color: var(--text3); }
   letter-spacing: .7px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
 .bloco-title::after { content: ''; flex: 1; height: 1px; background: rgba(0,212,170,.2); }
+.resumo-extracao {
+  display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center;
+  background: rgba(0,212,170,.08); border: 1px solid rgba(0,212,170,.25); border-radius: var(--radius-sm);
+  padding: 12px 16px; margin-bottom: 16px;
+}
+.resumo-item { font-size: 13px; color: var(--text); }
+.resumo-item b { color: var(--accent2); font-weight: 700; }
+.resumo-item small { display: block; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-top: 1px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
 @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .form-grid .span2, .form-grid .span3 { grid-column: span 1; } }
 .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
@@ -211,7 +219,9 @@ select.form-input option { background: var(--surface2); }
 .emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
 .emp-card:hover { border-color: var(--border2); }
 .emp-card-header { padding: 16px; border-bottom: 1px solid var(--border); }
-.emp-nome { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.emp-nome-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.emp-nome { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; }
+.badge-vendido { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
 .emp-sub { font-size: 12px; color: var(--text2); line-height: 1.5; }
 .emp-badges { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .st-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 4px; letter-spacing: .3px; }
@@ -373,6 +383,7 @@ select.form-input option { background: var(--surface2); }
 
       <!-- BLOCO 1 -->
       <div class="bloco-title">Bloco 1 — Empreendimento</div>
+      <div id="resumoExtracao" class="resumo-extracao" style="display:none"></div>
       <div class="form-grid">
         <div class="form-group span2">
           <div class="form-label">Nome do empreendimento <span class="lbl-warn" id="lbl-nome" style="display:none">⚠ não detectado</span></div>
@@ -1143,7 +1154,7 @@ function extrairDados() {
       const ehTerreno = b1.tipo === 'Lote Condomínio Horizontal';
       const b2    = extrairBloco2(txtB2 || txtB1, ehTerreno, { tipo: b1.tipo, dataTabela: b1.dataTabela });
 
-      renderB1(b1); renderB2(b2);
+      renderB1(b1); renderB2(b2); renderResumoExtracao(b2);
 
       const campos = [b1.nomeEmpreendimento, b1.bairro, b1.status, b1.previsaoEntrega].filter(v=>v).length;
       const badge = document.getElementById('preview-badge');
@@ -1218,6 +1229,41 @@ function renderB2(unidades) {
   unidades.forEach(u => tbody.appendChild(criarLinha(u)));
 }
 
+// Painel resumo (Alterações 08/07 parte 2, item 3) — calculado em cima das
+// tipologias já extraídas pro Bloco 2: faixa de área, "a partir de" (menor
+// preço entre as unidades) e metro quadrado médio (média do R$/m² de cada
+// tipologia). O R$/m² médio ainda não alimenta a classificação de "padrão"
+// automaticamente — é só informativo por enquanto, conforme combinado.
+function renderResumoExtracao(unidades) {
+  const painel = document.getElementById('resumoExtracao');
+  const areas = unidades.map(u => u.areaUtil || u.areaTerr || 0).filter(a => a > 0);
+  const precos = unidades.map(u => u.precoMin || u.precoMedio || 0).filter(p => p > 0);
+  const m2s = unidades
+    .map(u => { const a = u.areaUtil || u.areaTerr || 0; return (a > 0 && u.precoMedio > 0) ? u.precoMedio / a : 0; })
+    .filter(v => v > 0);
+
+  if (!areas.length && !precos.length) { painel.style.display = 'none'; painel.innerHTML = ''; return; }
+
+  const fmtArea = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const areaMin = areas.length ? Math.min(...areas) : 0;
+  const areaMax = areas.length ? Math.max(...areas) : 0;
+  const precoPartir = precos.length ? Math.min(...precos) : 0;
+  const m2Medio = m2s.length ? m2s.reduce((a, b) => a + b, 0) / m2s.length : 0;
+
+  const itens = [];
+  if (areas.length) {
+    itens.push(`<div class="resumo-item"><b>${fmtArea(areaMin)}m²${areaMax > areaMin ? ' a ' + fmtArea(areaMax) + 'm²' : ''}</b><small>Área</small></div>`);
+  }
+  if (precoPartir) {
+    itens.push(`<div class="resumo-item"><b>A partir de R$ ${exibirPrecoBR(precoPartir)}</b><small>Menor preço</small></div>`);
+  }
+  if (m2Medio) {
+    itens.push(`<div class="resumo-item"><b>R$ ${exibirPrecoBR(m2Medio)}</b><small>Metro quadrado médio (R$/m²)</small></div>`);
+  }
+  painel.innerHTML = itens.join('');
+  painel.style.display = itens.length ? 'flex' : 'none';
+}
+
 const TIPOS_PRODUTO = ['Apartamento','Casa','Sobrado','Cobertura','Loft','Studio','Terreno','Lote Condomínio Horizontal','Comercial'];
 
 function criarLinha(u = {}) {
@@ -1282,6 +1328,8 @@ function limparMotor() {
   if (urlEl) { urlEl.value = ''; }
   const linkEl = document.getElementById('url-link');
   if (linkEl) { linkEl.style.display = 'none'; }
+  const resumoEl = document.getElementById('resumoExtracao');
+  if (resumoEl) { resumoEl.style.display = 'none'; resumoEl.innerHTML = ''; }
   document.getElementById('preview-box').style.display = 'none';
   // Limpar campos
   document.getElementById('grp-dataTabela').classList.remove('alerta-tabela');
@@ -1470,11 +1518,12 @@ function renderLista(lista) {
     const pMin   = precos.length ? Math.min(...precos) : 0;
     const pMax   = precos.length ? Math.max(...precos) : 0;
     const stCls  = { 'Em obras':'st-obras','Em planta':'st-planta','Pronto':'st-pronto','Entregue':'st-entregue' }[e.status] || 'st-planta';
+    const pctVendido = calcularPercentualVendido(e.estoque, e.totalUnidades);
 
     return `
     <div class="emp-card" id="ec-${i}">
       <div class="emp-card-header">
-        <div class="emp-nome">${e.nomeEmpreendimento || '—'}</div>
+        <div class="emp-nome-row">${badgeVendidoHTML(pctVendido, e.estoque)}<div class="emp-nome">${e.nomeEmpreendimento || '—'}</div></div>
         <div class="emp-sub">${[e.construtora, e.bairro].filter(Boolean).join(' · ')}</div>
         <div class="emp-badges">
           ${e.status ? `<span class="st-badge ${stCls}">${e.status}</span>` : ''}
