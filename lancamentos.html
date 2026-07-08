@@ -626,14 +626,7 @@ function classificarPadraoPorM2Medio_(m2Medio) {
   return 'Luxo';
 }
 
-// Metro Quadrado Médio: média do R$/m² de cada tipologia (precoMedio/área) —
-// mesma conta usada no painel resumo da extração (renderResumoExtracao).
-function calcularM2Medio(unidades) {
-  var m2s = unidades
-    .map(function(u) { var a = u.areaUtil || u.areaTerr || 0; return (a > 0 && u.precoMedio > 0) ? u.precoMedio / a : 0; })
-    .filter(function(v) { return v > 0; });
-  return m2s.length ? m2s.reduce(function(a, b) { return a + b; }, 0) / m2s.length : 0;
-}
+// calcularM2Medio agora mora em config.js (compartilhada com lancamentos-editar.html).
 
 function extrairBloco1(txt) {
   const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', tipoEmpreendimento:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'', urlSite:'' };
@@ -1222,35 +1215,13 @@ function renderB2(unidades) {
   unidades.forEach(u => tbody.appendChild(criarLinha(u)));
 }
 
-// Painel resumo (Alterações 08/07 parte 2, item 3) — calculado em cima das
-// tipologias já extraídas pro Bloco 2: faixa de área, "a partir de" (menor
-// preço entre as unidades) e metro quadrado médio (mesma conta de
-// calcularM2Medio, usada também pra classificar o "padrão" — parte 5).
+// Painel resumo (Alterações 08/07 parte 2, item 3) — cálculo em si mora em
+// montarResumoAreaPrecoHTML (config.js), compartilhada com lancamentos-editar.html.
 function renderResumoExtracao(unidades) {
   const painel = document.getElementById('resumoExtracao');
-  const areas = unidades.map(u => u.areaUtil || u.areaTerr || 0).filter(a => a > 0);
-  const precos = unidades.map(u => u.precoMin || u.precoMedio || 0).filter(p => p > 0);
-
-  if (!areas.length && !precos.length) { painel.style.display = 'none'; painel.innerHTML = ''; return; }
-
-  const fmtArea = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const areaMin = areas.length ? Math.min(...areas) : 0;
-  const areaMax = areas.length ? Math.max(...areas) : 0;
-  const precoPartir = precos.length ? Math.min(...precos) : 0;
-  const m2Medio = calcularM2Medio(unidades);
-
-  const itens = [];
-  if (areas.length) {
-    itens.push(`<div class="resumo-item"><b>${fmtArea(areaMin)}m²${areaMax > areaMin ? ' a ' + fmtArea(areaMax) + 'm²' : ''}</b><small>Área</small></div>`);
-  }
-  if (precoPartir) {
-    itens.push(`<div class="resumo-item"><b>A partir de R$ ${exibirPrecoBR(precoPartir)}</b><small>Menor preço</small></div>`);
-  }
-  if (m2Medio) {
-    itens.push(`<div class="resumo-item"><b>R$ ${exibirPrecoBR(m2Medio)}</b><small>Metro quadrado médio (R$/m²)</small></div>`);
-  }
-  painel.innerHTML = itens.join('');
-  painel.style.display = itens.length ? 'flex' : 'none';
+  const html = montarResumoAreaPrecoHTML(unidades);
+  painel.innerHTML = html;
+  painel.style.display = html ? 'flex' : 'none';
 }
 
 const TIPOS_PRODUTO = ['Apartamento','Casa','Sobrado','Cobertura','Loft','Studio','Terreno','Lote Condomínio Horizontal','Comercial'];

@@ -88,3 +88,42 @@ function badgeVendidoHTML(pct, estoque) {
   const c = corPercentualVendido(pct);
   return `<span class="badge-vendido" style="background:${c.bg};color:${c.fg}">${pct}% | ${parseInt(estoque, 10)}</span>`;
 }
+
+// ── PAINEL RESUMO ÁREA/PREÇO/M² (Alterações 08/07, partes 2.3 e 5) ──────────
+// Compartilhado entre lancamentos.html (na extração) e lancamentos-editar.html
+// (ao editar um empreendimento já salvo) — antes só existia na extração; o
+// usuário reportou que sumia ao abrir "Editar", já que cada página tinha sua
+// própria cópia da lógica. Agora as duas chamam essas mesmas funções.
+function calcularM2Medio(unidades) {
+  const m2s = unidades
+    .map(u => { const a = Number(u.areaUtil) || Number(u.areaTerr) || 0; const p = Number(u.precoMedio) || 0; return (a > 0 && p > 0) ? p / a : 0; })
+    .filter(v => v > 0);
+  return m2s.length ? m2s.reduce((a, b) => a + b, 0) / m2s.length : 0;
+}
+
+// Retorna o HTML dos itens do painel (faixa de área, "a partir de", m² médio)
+// ou '' se não houver dados suficientes — quem chama decide o que fazer com
+// o container (mostrar/esconder), já que cada página tem seu próprio layout.
+function montarResumoAreaPrecoHTML(unidades) {
+  const areas = unidades.map(u => Number(u.areaUtil) || Number(u.areaTerr) || 0).filter(a => a > 0);
+  const precos = unidades.map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(p => p > 0);
+  if (!areas.length && !precos.length) return '';
+
+  const fmtArea = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const areaMin = areas.length ? Math.min(...areas) : 0;
+  const areaMax = areas.length ? Math.max(...areas) : 0;
+  const precoPartir = precos.length ? Math.min(...precos) : 0;
+  const m2Medio = calcularM2Medio(unidades);
+
+  const itens = [];
+  if (areas.length) {
+    itens.push(`<div class="resumo-item"><b>${fmtArea(areaMin)}m²${areaMax > areaMin ? ' a ' + fmtArea(areaMax) + 'm²' : ''}</b><small>Área</small></div>`);
+  }
+  if (precoPartir) {
+    itens.push(`<div class="resumo-item"><b>A partir de R$ ${exibirPrecoBR(precoPartir)}</b><small>Menor preço</small></div>`);
+  }
+  if (m2Medio) {
+    itens.push(`<div class="resumo-item"><b>R$ ${exibirPrecoBR(m2Medio)}</b><small>Metro quadrado médio (R$/m²)</small></div>`);
+  }
+  return itens.join('');
+}

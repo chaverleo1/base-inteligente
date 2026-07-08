@@ -44,6 +44,10 @@ a{text-decoration:none;color:inherit}
 .page-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
 .page-title{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700}
 .badge-vendido{display:inline-flex;align-items:center;padding:6px 12px;border-radius:8px;font-size:14px;font-weight:700;white-space:nowrap}
+.resumo-extracao{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.25);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px}
+.resumo-item{font-size:13px;color:var(--text)}
+.resumo-item b{color:var(--accent2);font-weight:700}
+.resumo-item small{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
 .page-sub{font-size:13px;color:var(--text3);margin-top:3px}
 .back-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
           color:var(--text2);padding:7px 16px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
@@ -135,6 +139,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
   <!-- ── DADOS GERAIS ── -->
   <div class="section">
     <div class="section-title">Dados Gerais</div>
+    <div id="resumoExtracao" class="resumo-extracao" style="display:none"></div>
     <div class="form-grid cols3">
       <div class="form-group span2">
         <label class="form-label">Nome do empreendimento *</label>
@@ -241,7 +246,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
   <!-- ── TIPOLOGIAS ── -->
   <div class="section">
     <div class="section-title">Tipologias / Unidades</div>
-    <div id="unidades-wrap"></div>
+    <div id="unidades-wrap" oninput="atualizarResumoAreaPreco()"></div>
     <button class="btn-add-uni" onclick="addUnidade()">+ Adicionar tipologia</button>
   </div>
 
@@ -293,6 +298,7 @@ function preencherForm(e) {
   const unidades = e.unidades && e.unidades.length ? e.unidades : [{}];
   unidades.forEach(u => addUnidade(u));
   atualizarBadgeVendido();
+  atualizarResumoAreaPreco();
 }
 
 // Percentual vendido = derivado de Estoque/Total de unidades (Alterações
@@ -300,6 +306,18 @@ function preencherForm(e) {
 function atualizarBadgeVendido() {
   const pct = calcularPercentualVendido(gV('f-estoque'), gV('f-totalUnidades'));
   document.getElementById('badgeVendidoTitulo').innerHTML = badgeVendidoHTML(pct, gV('f-estoque'));
+}
+
+// Painel resumo (área/preço/m² médio) — antes só existia na extração
+// (lancamentos.html), sumia ao abrir "Editar". Recalculado a partir das
+// tipologias atuais do formulário (coletarUnidades(), a mesma função usada
+// pra montar o payload de salvar) sempre que uma unidade é adicionada,
+// removida ou editada — ver oninput em #unidades-wrap.
+function atualizarResumoAreaPreco() {
+  const painel = document.getElementById('resumoExtracao');
+  const html = montarResumoAreaPrecoHTML(coletarUnidades());
+  painel.innerHTML = html;
+  painel.style.display = html ? 'flex' : 'none';
 }
 
 let _uniCount = 0;
@@ -460,6 +478,7 @@ function removerUnidade(n) {
   if (total <= 1) { toast('Pelo menos uma tipologia é obrigatória.', 'err'); return; }
   el.remove();
   atualizarNumerosUnidades();
+  atualizarResumoAreaPreco();
 }
 
 function atualizarNumerosUnidades() {

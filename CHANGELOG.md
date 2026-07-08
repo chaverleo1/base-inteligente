@@ -1,5 +1,21 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Painel resumo (área/preço/m²) também na página de Editar
+
+O painel resumo (faixa de área, "a partir de", metro quadrado médio) só existia na extração
+(`lancamentos.html`) — ao salvar um empreendimento e voltar depois clicando em "Editar", o painel
+sumia, porque a lógica de cálculo só existia ali, com uma cópia local. Movido pra `config.js`
+(`calcularM2Medio`, `montarResumoAreaPrecoHTML`) e agora `lancamentos-editar.html` também mostra o
+mesmo painel, no topo de "Dados Gerais" — calculado a partir das tipologias que estão no
+formulário no momento (mesma função `coletarUnidades()` usada pra montar o payload de salvar),
+recalculado ao vivo sempre que uma tipologia é adicionada, removida ou tem área/preço editado.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: abrir "Editar" com um lançamento salvo já mostra o painel corretamente; editar
+a área de uma unidade recalcula o painel na hora; `lancamentos.html` continua funcionando igual
+depois da função de cálculo ter sido movida pra `config.js`. Sem erros no console.
+
 ## 2026-07-08 — "Alterações 08/07 parte 5": regra oficial de "padrão" pelo m² médio
 
 A classificação de "padrão" na extração da Orulo (`lancamentos.html`) usava faixas de R$/m²
