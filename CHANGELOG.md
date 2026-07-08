@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — "Preço Total" passa a espelhar "Preço Máximo" (lancamentos.html)
+
+Na tabela "Bloco 2 — Unidades Referência", "Preço Total" era um campo manual independente. Agora é
+somente leitura e sempre reflete o valor de "Preço Máximo" — atualiza ao vivo enquanto o usuário
+digita no Máximo, e ao salvar o valor gravado vem direto de `precoMax` (não depende do campo
+visual). Confirmado que "Plano de pagamento" já tinha sido removido dessa página no commit
+anterior — nada a fazer ali.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: campo Preço Total nasce com o mesmo valor de Preço Máximo após extração,
+`readonly` confirmado, edição manual em Preço Máximo propaga ao vivo pro Preço Total, e
+`lerPreview()` retorna `precoTotal` igual a `precoMax` na unidade. Sem erros no console.
+
 ## 2026-07-08 — Paridade estrutural da página de extração da Orulo (lancamentos.html)
 
 As mudanças estruturais de "Alterações 08/07" e da separação Tipo de Empreendimento/Tipo de

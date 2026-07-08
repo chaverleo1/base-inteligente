@@ -1236,8 +1236,8 @@ function criarLinha(u = {}) {
     <td>${inp(fmtN(u.escaninho), 'S/N', 'center', 't-escaninho')}</td>
     <td>${inp(fmtP(u.precoMedio), 'R$',  'right', 't-precoMedio')}</td>
     <td>${inp(fmtP(u.precoMin),   'mín', 'right', 't-precoMin')}</td>
-    <td>${inp(fmtP(u.precoMax),   'máx', 'right', 't-precoMax')}</td>
-    <td>${inp(fmtP(u.precoTotal), 'R$',  'right', 't-precoTotal')}</td>
+    <td><input class="t-inp t-precoMax" value="${fmtP(u.precoMax)}" placeholder="máx" style="text-align:right" oninput="this.closest('tr').querySelector('.t-precoTotal').value=this.value"></td>
+    <td><input class="t-inp t-precoTotal" value="${fmtP(u.precoTotal) || fmtP(u.precoMax)}" placeholder="R$" style="text-align:right" readonly title="Sempre igual ao Preço Máximo"></td>
     <td>${inp(u.dataTabela || '', 'mm/aaaa', 'left', 't-dataTabela')}</td>
     <td>${inp(u.atoEntrada || '', 'R$', 'right', 't-atoEntrada')}</td>
     <td>${inp(u.atoEntradaQtd || '', 'qtd', 'center', 't-atoEntradaQtd')}</td>
@@ -1338,10 +1338,11 @@ function lerPreview() {
       precoMedio: limP(gt('precoMedio')),
       precoMin:   limP(gt('precoMin')),
       precoMax,
-      // Preço máximo = Preço tabela (Alterações 08/07, item 5a) — mesmo
-      // critério usado em lancamentos-editar.html.
+      // Preço máximo = Preço tabela = Preço Total — o campo Preço Total é
+      // só leitura na tabela (sempre espelha o Máximo), então lê direto de
+      // precoMax em vez do input, sem depender do JS de sincronismo visual.
       preco:      precoMax,
-      precoTotal: limP(gt('precoTotal')),
+      precoTotal: precoMax,
       dataTabela: gt('dataTabela'),
       atoEntrada:    gt('atoEntrada'),
       atoEntradaQtd: gt('atoEntradaQtd'),
