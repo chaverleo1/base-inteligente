@@ -90,14 +90,27 @@ function badgeVendidoHTML(pct, estoque) {
 }
 
 // Classifica "padrão" pelo Metro Quadrado Médio (calcularM2Medio abaixo) —
-// não mais por um "(R$ x/m²)" solto no texto bruto, nem por faixa
-// provisória por tipo de imóvel. Vale pra todo tipo de empreendimento, sem
-// exceção (inclusive Lote Condomínio Horizontal). Faixas atualizadas em
-// 08/07 (nova regra confirmada pelo usuário, item 5): até 1.000 popular,
-// 1.001–2.000 médio, 2.001–3.000 alto, acima de 3.001 luxo. Usada tanto na
-// extração (lancamentos.html) quanto ao editar um lançamento já salvo
-// (lancamentos-editar.html).
-function classificarPadraoPorM2Medio_(m2Medio) {
+// não mais por um "(R$ x/m²)" solto no texto bruto. Duas faixas diferentes
+// dependendo do "Tipo de Empreendimento", porque apartamento (vertical)
+// estruturalmente custa bem mais por m² que lote/casa térrea (horizontal):
+//
+// Condomínio Vertical — faixa antiga (a mesma usada antes de existir a
+// classificação por m² médio, item 5, só que agora restrita a esse tipo):
+// até 4.999 popular, 5.000–9.999 médio, 10.000–14.999 alto, 15.000+ luxo.
+//
+// Condomínio Horizontal (ou tipo não informado) — faixa nova confirmada
+// pelo usuário em 08/07 item 5: até 1.000 popular, 1.001–2.000 médio,
+// 2.001–3.000 alto, acima de 3.001 luxo.
+//
+// Usada tanto na extração (lancamentos.html) quanto ao editar um lançamento
+// já salvo (lancamentos-editar.html).
+function classificarPadraoPorM2Medio_(m2Medio, tipoEmpreendimento) {
+  if (tipoEmpreendimento === 'Condomínio Vertical') {
+    if (m2Medio >= 15000) return 'Luxo';
+    if (m2Medio >= 10000) return 'Alto';
+    if (m2Medio >= 5000)  return 'Médio';
+    return 'Popular';
+  }
   if (m2Medio <= 1000) return 'Popular';
   if (m2Medio <= 2000) return 'Médio';
   if (m2Medio <= 3000) return 'Alto';

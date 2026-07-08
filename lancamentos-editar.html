@@ -153,7 +153,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Tipo de empreendimento</label>
-        <select class="form-input" id="f-tipoEmpreendimento">
+        <select class="form-input" id="f-tipoEmpreendimento" onchange="atualizarResumoAreaPreco()">
           <option value="">Selecionar...</option>
           <option>Condomínio Horizontal</option>
           <option>Condomínio Vertical</option>
@@ -163,7 +163,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
         <label class="form-label">Padrão</label>
         <select class="form-input" id="f-padrao">
           <option value="">Selecionar...</option>
-          <option>Econômico</option>
+          <option>Popular</option>
           <option>Médio</option>
           <option>Alto</option>
           <option>Luxo</option>
@@ -325,7 +325,8 @@ function atualizarResumoAreaPreco() {
   painel.style.display = html ? 'flex' : 'none';
 
   const m2Medio = calcularM2Medio(unidades);
-  if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio);
+  const tipoEmpreendimento = gV('f-tipoEmpreendimento');
+  if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio, tipoEmpreendimento);
 }
 
 let _uniCount = 0;

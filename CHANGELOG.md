@@ -1,5 +1,34 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Padrão passa a depender de "Tipo de Empreendimento" (Horizontal x Vertical)
+
+A regra por m² médio agora usa duas faixas diferentes, dependendo do "Tipo de Empreendimento" —
+apartamento (vertical) custa estruturalmente mais por m² que lote/casa térrea (horizontal):
+
+- **Condomínio Vertical**: reativa a faixa antiga (a mesma de antes de existir a classificação por
+  m², restrita agora só a esse tipo): até R$ 4.999/m² Popular, R$ 5.000–9.999 Médio, R$
+  10.000–14.999 Alto, R$ 15.000+ Luxo.
+- **Condomínio Horizontal** (ou tipo não informado): mantém a faixa nova do commit anterior (até
+  1.000 Popular, 1.001–2.000 Médio, 2.001–3.000 Alto, acima de 3.001 Luxo).
+
+`classificarPadraoPorM2Medio_` (config.js) ganhou um segundo parâmetro (`tipoEmpreendimento`).
+Mudar o select "Tipo de Empreendimento" agora recalcula o Padrão na hora, nas duas páginas.
+
+**Bug real encontrado e corrigido durante o teste**: o `<select>` "Padrão" em
+`lancamentos-editar.html` tinha a opção **"Econômico"**, enquanto a função sempre retornou
+**"Popular"** (nome usado em `lancamentos.html`) — como não batia com nenhuma `<option>`, o
+`.value =` do select falhava silenciosamente (comportamento padrão do DOM: atribuir a um `<select>`
+um valor sem `<option>` correspondente simplesmente não faz nada, sem erro no console), deixando o
+campo em branco toda vez que a classificação calculava "Popular". Corrigido renomeando a opção pra
+"Popular", igual à extração.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: as duas faixas (vertical e horizontal) batem em todos os limites; extração de
+apartamento com R$/m² de 2.500 classifica "Popular" (regra vertical) e recalcula pra "Alto" ao
+trocar manualmente pro tipo Horizontal; mesmo teste replicado em `lancamentos-editar.html` após a
+correção do select. Sem erros no console.
+
 ## 2026-07-08 — Novas faixas de "Padrão" pelo m² médio
 
 Limites da classificação (`classificarPadraoPorM2Medio_`, em `config.js`) atualizados pra:
