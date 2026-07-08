@@ -376,21 +376,24 @@ function addUnidade(dados = {}) {
       </div>
       <div class="form-group">
         <label class="form-label">Preço médio (R$)</label>
-        <input class="form-input" id="u${n}-precoMedio" placeholder="Ex: 450000" value="${esc(dados.precoMedio)}">
+        <input class="form-input" id="u${n}-precoMedio" placeholder="Ex: 450000" value="${esc(exibirPrecoBR(dados.precoMedio))}" oninput="formatarPrecoBR(this)" onblur="normalizarPrecoBR(this)" onfocus="this.select()">
       </div>
       <div class="form-group">
         <label class="form-label">Preço mínimo (R$)</label>
-        <input class="form-input" id="u${n}-precoMin" placeholder="Ex: 420000" value="${esc(dados.precoMin)}">
+        <input class="form-input" id="u${n}-precoMin" placeholder="Ex: 420000" value="${esc(exibirPrecoBR(dados.precoMin))}" oninput="formatarPrecoBR(this)" onblur="normalizarPrecoBR(this)" onfocus="this.select()">
       </div>
     </div>
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Preço máximo / tabela (R$)</label>
-        <input class="form-input" id="u${n}-precoMax" placeholder="Ex: 480000" value="${esc(dados.precoMax)}" oninput="document.getElementById('u${n}-precoTotal').value=this.value">
+        <input class="form-input" id="u${n}-precoMax" placeholder="Ex: 480000" value="${esc(exibirPrecoBR(dados.precoMax))}"
+          oninput="formatarPrecoBR(this);document.getElementById('u${n}-precoTotal').value=this.value"
+          onblur="normalizarPrecoBR(this);document.getElementById('u${n}-precoTotal').value=this.value"
+          onfocus="this.select()">
       </div>
       <div class="form-group">
         <label class="form-label">Preço total (R$)</label>
-        <input class="form-input" id="u${n}-precoTotal" placeholder="Ex: 480000" value="${esc(dados.precoTotal) || esc(dados.precoMax)}" readonly title="Sempre igual ao Preço Máximo / Tabela">
+        <input class="form-input" id="u${n}-precoTotal" placeholder="Ex: 480000" value="${esc(exibirPrecoBR(dados.precoTotal)) || esc(exibirPrecoBR(dados.precoMax))}" readonly title="Sempre igual ao Preço Máximo / Tabela">
       </div>
       <div class="form-group">
         <label class="form-label">Data da tabela</label>
@@ -401,7 +404,7 @@ function addUnidade(dados = {}) {
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Ato / entrada (R$)</label>
-        <input class="form-input" id="u${n}-atoEntrada" placeholder="Ex: 20000" value="${esc(dados.atoEntrada)}">
+        <input class="form-input" id="u${n}-atoEntrada" placeholder="Ex: 20000" value="${esc(exibirPrecoBR(dados.atoEntrada))}" oninput="formatarPrecoBR(this)" onblur="normalizarPrecoBR(this)" onfocus="this.select()">
       </div>
       <div class="form-group">
         <label class="form-label">Ato / entrada — qtd</label>
@@ -409,7 +412,7 @@ function addUnidade(dados = {}) {
       </div>
       <div class="form-group">
         <label class="form-label">Sinal (R$)</label>
-        <input class="form-input" id="u${n}-sinal" placeholder="Ex: 5000" value="${esc(dados.sinal)}">
+        <input class="form-input" id="u${n}-sinal" placeholder="Ex: 5000" value="${esc(exibirPrecoBR(dados.sinal))}" oninput="formatarPrecoBR(this)" onblur="normalizarPrecoBR(this)" onfocus="this.select()">
       </div>
     </div>
     <div class="form-grid cols3">
@@ -419,7 +422,7 @@ function addUnidade(dados = {}) {
       </div>
       <div class="form-group">
         <label class="form-label">Mensais (R$)</label>
-        <input class="form-input" id="u${n}-mensais" placeholder="Ex: 1500" value="${esc(dados.mensais)}">
+        <input class="form-input" id="u${n}-mensais" placeholder="Ex: 1500" value="${esc(exibirPrecoBR(dados.mensais))}" oninput="formatarPrecoBR(this)" onblur="normalizarPrecoBR(this)" onfocus="this.select()">
       </div>
       <div class="form-group">
         <label class="form-label">Mensais — qtd</label>
@@ -429,7 +432,7 @@ function addUnidade(dados = {}) {
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Anuais (R$)</label>
-        <input class="form-input" id="u${n}-anuais" placeholder="Ex: 9000" value="${esc(dados.anuais)}">
+        <input class="form-input" id="u${n}-anuais" placeholder="Ex: 9000" value="${esc(exibirPrecoBR(dados.anuais))}" oninput="formatarPrecoBR(this)" onblur="normalizarPrecoBR(this)" onfocus="this.select()">
       </div>
       <div class="form-group">
         <label class="form-label">Anuais — qtd</label>
@@ -475,7 +478,9 @@ function coletarUnidades() {
     // Qd+Lt juntos representam a "Unidade" em Lote Condomínio Horizontal — se
     // preenchidos, a descrição digitada é ignorada em favor desse formato.
     const unidade = (qd || lt) ? ('Qd ' + qd + ' - Lt ' + lt).trim() : gV('u' + id + '-unidade');
-    const precoMax = gV('u' + id + '-precoMax');
+    // Campos de preço vêm formatados "553.235,00" na tela — valorPrecoBR()
+    // (config.js) converte de volta pro número puro que vai pro backend.
+    const precoMax = valorPrecoBR(gV('u' + id + '-precoMax'));
     items.push({
       unidade,
       qd, lt,
@@ -487,8 +492,8 @@ function coletarUnidades() {
       escaninho:    gV('u' + id + '-escaninho'),
       areaUtil:     gV('u' + id + '-areaUtil'),
       areaTerr:     gV('u' + id + '-areaTerr'),
-      precoMedio:   gV('u' + id + '-precoMedio'),
-      precoMin:     gV('u' + id + '-precoMin'),
+      precoMedio:   valorPrecoBR(gV('u' + id + '-precoMedio')),
+      precoMin:     valorPrecoBR(gV('u' + id + '-precoMin')),
       precoMax,
       // Preço máximo = Preço tabela = Preço total — precoTotal é campo
       // readonly na tela (sempre espelha precoMax), então lê direto do
@@ -496,13 +501,13 @@ function coletarUnidades() {
       preco:        precoMax,
       precoTotal:   precoMax,
       dataTabela:   gV('u' + id + '-dataTabela'),
-      atoEntrada:   gV('u' + id + '-atoEntrada'),
+      atoEntrada:   valorPrecoBR(gV('u' + id + '-atoEntrada')),
       atoEntradaQtd:gV('u' + id + '-atoEntradaQtd'),
-      sinal:        gV('u' + id + '-sinal'),
+      sinal:        valorPrecoBR(gV('u' + id + '-sinal')),
       sinalQtd:     gV('u' + id + '-sinalQtd'),
-      mensais:      gV('u' + id + '-mensais'),
+      mensais:      valorPrecoBR(gV('u' + id + '-mensais')),
       mensaisQtd:   gV('u' + id + '-mensaisQtd'),
-      anuais:       gV('u' + id + '-anuais'),
+      anuais:       valorPrecoBR(gV('u' + id + '-anuais')),
       anuaisQtd:    gV('u' + id + '-anuaisQtd'),
     });
   });

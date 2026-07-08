@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Padrão "553.235,00" em todos os campos de preço (lançamentos)
+
+Campos de preço em `lancamentos.html` e `lancamentos-editar.html` (Preço médio/mínimo/máximo,
+Ato-Entrada, Sinal, Mensais, Anuais) mostravam número cru ("553235"). Agora seguem o padrão
+brasileiro "553.235,00": agrupam milhar ao vivo enquanto digita, e fecham com ",00" ao sair do
+campo — mesmo formato aplicado automaticamente aos valores capturados da Orulo (extração já
+preenche os campos formatados). Três funções novas e compartilhadas em `config.js`
+(`formatarPrecoBR`, `normalizarPrecoBR`, `exibirPrecoBR`) e uma de conversão (`valorPrecoBR`, que
+sempre lê o número puro na hora de montar o payload — a planilha continua guardando número, nunca a
+string formatada).
+
+Corrigido de passagem: `lerPreview()` em `lancamentos.html` usava uma regra herdada estranha
+(`n<10000 ? n*1000 : n`) pra "adivinhar" se o valor digitado estava em milhares — trocada pelo
+parser correto, e os campos Ato/Entrada, Sinal, Mensais e Anuais (que antes nem eram convertidos
+pra número) passaram a ser parseados também. Adicionado ainda `onfocus="this.select()"` em todo
+campo de preço — sem isso, reabrir um campo já fechado em "553.235,00" e digitar mais um dígito no
+final absorvia o ",00" como dígito de verdade, inflando o valor.
+
+**Revisão geral**: os únicos campos de preço com o problema (número cru, sem máscara) eram os de
+`lancamentos.html`/`lancamentos-editar.html`. "Preço limite" (`formulario.html`) e o campo de preço
+com slider (`busca.html`) já tinham máscara própria (agrupamento de milhar, sem ",00") — não foram
+alterados: são um conceito diferente (teto de orçamento do cliente, sempre em reais inteiros,
+sincronizado com um slider) e adicionar centavos ali só criaria risco de quebrar esse sincronismo
+sem ganho real. Os demais lugares que mostram "R$" no projeto (dashboard, contatos, insight-detail,
+favoritos, BaseImob) são exibição somente-leitura, já formatada — não precisam de máscara de
+digitação.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: extração da Orulo preenche os campos já formatados; digitação simulada
+tecla-a-tecla confirma que o valor não "explode" a cada tecla nem a cada blur repetido
+(idempotente); reabrir um campo já fechado e digitar mais um dígito substitui o valor inteiro (via
+`select()`) em vez de grudar no ",00"; `lerPreview()`/`coletarUnidades()` devolvem o número puro
+correto em ambas as páginas. Sem erros no console.
+
 ## 2026-07-08 — "URL do Empreendimento" captura em "URL do site / Orulo"
 
 Em `lancamentos.html`, a "URL do Empreendimento" (topo da página, usada só pro botão "↗ Abrir")

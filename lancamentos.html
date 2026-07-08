@@ -1222,10 +1222,17 @@ const TIPOS_PRODUTO = ['Apartamento','Casa','Sobrado','Cobertura','Loft','Studio
 
 function criarLinha(u = {}) {
   const fmtN = v => v || '';
-  const fmtP = v => (v && v > 0) ? String(Math.round(v)) : '';
   const tr = document.createElement('tr');
   const inp = (val, ph, align, cls) =>
     `<input class="t-inp ${cls}" value="${val}" placeholder="${ph}" style="text-align:${align||'left'}">`;
+  // Campos de preço (R$): mascara ao vivo (agrupa milhar) + fecha em "553.235,00"
+  // ao sair do campo. Ver formatarPrecoBR/normalizarPrecoBR em config.js.
+  // onfocus seleciona tudo — sem isso, reabrir um campo já fechado em
+  // "553.235,00" e digitar mais um dígito no final absorvia o ",00" como
+  // dígito de verdade (o campo virava "553.235.00X"); selecionando tudo, a
+  // primeira tecla substitui o valor inteiro em vez de emendar nele.
+  const inpPreco = (val, ph, align, cls) =>
+    `<input class="t-inp ${cls}" value="${exibirPrecoBR(val)}" placeholder="${ph}" style="text-align:${align||'left'}" oninput="formatarPrecoBR(this)" onblur="normalizarPrecoBR(this)" onfocus="this.select()">`;
   const sel = (val, cls) =>
     `<select class="t-inp ${cls}"><option value="">—</option>${TIPOS_PRODUTO.map(t => `<option ${t===val?'selected':''}>${t}</option>`).join('')}</select>`;
   tr.innerHTML = `
@@ -1240,18 +1247,21 @@ function criarLinha(u = {}) {
     <td>${inp(u.unidade   ||'', 'cód.', 'left', 't-unidade')}</td>
     <td>${inp(u.vagas    ||'', 'qtd', 'center', 't-vagas')}</td>
     <td>${inp(fmtN(u.escaninho), 'S/N', 'center', 't-escaninho')}</td>
-    <td>${inp(fmtP(u.precoMedio), 'R$',  'right', 't-precoMedio')}</td>
-    <td>${inp(fmtP(u.precoMin),   'mín', 'right', 't-precoMin')}</td>
-    <td><input class="t-inp t-precoMax" value="${fmtP(u.precoMax)}" placeholder="máx" style="text-align:right" oninput="this.closest('tr').querySelector('.t-precoTotal').value=this.value"></td>
-    <td><input class="t-inp t-precoTotal" value="${fmtP(u.precoTotal) || fmtP(u.precoMax)}" placeholder="R$" style="text-align:right" readonly title="Sempre igual ao Preço Máximo"></td>
+    <td>${inpPreco(u.precoMedio, 'R$',  'right', 't-precoMedio')}</td>
+    <td>${inpPreco(u.precoMin,   'mín', 'right', 't-precoMin')}</td>
+    <td><input class="t-inp t-precoMax" value="${exibirPrecoBR(u.precoMax)}" placeholder="máx" style="text-align:right"
+        oninput="formatarPrecoBR(this);this.closest('tr').querySelector('.t-precoTotal').value=this.value"
+        onblur="normalizarPrecoBR(this);this.closest('tr').querySelector('.t-precoTotal').value=this.value"
+        onfocus="this.select()"></td>
+    <td><input class="t-inp t-precoTotal" value="${exibirPrecoBR(u.precoTotal) || exibirPrecoBR(u.precoMax)}" placeholder="R$" style="text-align:right" readonly title="Sempre igual ao Preço Máximo"></td>
     <td>${inp(u.dataTabela || '', 'mm/aaaa', 'left', 't-dataTabela')}</td>
-    <td>${inp(u.atoEntrada || '', 'R$', 'right', 't-atoEntrada')}</td>
+    <td>${inpPreco(u.atoEntrada, 'R$', 'right', 't-atoEntrada')}</td>
     <td>${inp(u.atoEntradaQtd || '', 'qtd', 'center', 't-atoEntradaQtd')}</td>
-    <td>${inp(u.sinal || '', 'R$', 'right', 't-sinal')}</td>
+    <td>${inpPreco(u.sinal, 'R$', 'right', 't-sinal')}</td>
     <td>${inp(u.sinalQtd || '', 'qtd', 'center', 't-sinalQtd')}</td>
-    <td>${inp(u.mensais || '', 'R$', 'right', 't-mensais')}</td>
+    <td>${inpPreco(u.mensais, 'R$', 'right', 't-mensais')}</td>
     <td>${inp(u.mensaisQtd || '', 'qtd', 'center', 't-mensaisQtd')}</td>
-    <td>${inp(u.anuais || '', 'R$', 'right', 't-anuais')}</td>
+    <td>${inpPreco(u.anuais, 'R$', 'right', 't-anuais')}</td>
     <td>${inp(u.anuaisQtd || '', 'qtd', 'center', 't-anuaisQtd')}</td>
     <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
   return tr;
@@ -1317,7 +1327,6 @@ function lerPreview() {
     const c = cls => tr.querySelector('.t-' + cls);
     if (!c('quartos')) return; // linha placeholder ("Nenhuma unidade detectada")
     const gt = cls => (c(cls)?.value || '').trim();
-    const limP = s => { const n = parseFloat(s.replace(/\./g,'').replace(',','.').replace('R$','').trim()); return isNaN(n)?0:(n<10000?n*1000:n); };
     const q  = parseInt(gt('quartos')) || 0;
     const s  = parseInt(gt('suites')) || 0;
     const vg = parseInt(gt('vagas')) || 0;
@@ -1327,7 +1336,7 @@ function lerPreview() {
     // Aceita área terreno sozinha (sem área útil) — caso do Lote Condomínio
     // Horizontal, onde só "Área terreno" é preenchida (item 6).
     if (a <= 0 && at <= 0) return;
-    const precoMax = limP(gt('precoMax'));
+    const precoMax = valorPrecoBR(gt('precoMax'));
     unidades.push({
       tipologia,
       tipo:       gt('tipo'),
@@ -1341,8 +1350,8 @@ function lerPreview() {
       unidade:    gt('unidade'),
       vagas:      vg,
       escaninho:  gt('escaninho'),
-      precoMedio: limP(gt('precoMedio')),
-      precoMin:   limP(gt('precoMin')),
+      precoMedio: valorPrecoBR(gt('precoMedio')),
+      precoMin:   valorPrecoBR(gt('precoMin')),
       precoMax,
       // Preço máximo = Preço tabela = Preço Total — o campo Preço Total é
       // só leitura na tabela (sempre espelha o Máximo), então lê direto de
@@ -1350,13 +1359,13 @@ function lerPreview() {
       preco:      precoMax,
       precoTotal: precoMax,
       dataTabela: gt('dataTabela'),
-      atoEntrada:    gt('atoEntrada'),
+      atoEntrada:    valorPrecoBR(gt('atoEntrada')),
       atoEntradaQtd: gt('atoEntradaQtd'),
-      sinal:         gt('sinal'),
+      sinal:         valorPrecoBR(gt('sinal')),
       sinalQtd:      gt('sinalQtd'),
-      mensais:       gt('mensais'),
+      mensais:       valorPrecoBR(gt('mensais')),
       mensaisQtd:    gt('mensaisQtd'),
-      anuais:        gt('anuais'),
+      anuais:        valorPrecoBR(gt('anuais')),
       anuaisQtd:     gt('anuaisQtd'),
     });
   });
