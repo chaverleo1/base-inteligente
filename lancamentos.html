@@ -769,14 +769,12 @@ function extrairBloco1(txt) {
   };
   if (b.tipo && TIPO_EMPREENDIMENTO_MAP[b.tipo]) b.tipoEmpreendimento = TIPO_EMPREENDIMENTO_MAP[b.tipo];
 
-  // ── Padrão ── "Lote Condomínio Horizontal" sempre cai como "Médio"
-  // (Alterações 08/07, item 2). Para os demais tipos, o padrão é definido
-  // depois em extrairDados() a partir do Metro Quadrado Médio calculado com
-  // as tipologias do Bloco 2 (só disponível depois que o Bloco 2 é
-  // extraído) — ver classificarPadraoPorM2Medio_/calcularM2Medio.
-  if (b.tipo === 'Lote Condomínio Horizontal') {
-    b.padrao = 'Médio';
-  }
+  // ── Padrão ── definido depois em atualizarResumoEPadrao(), a partir do
+  // Metro Quadrado Médio calculado com as tipologias do Bloco 2 (só
+  // disponível depois que o Bloco 2 é extraído) — vale pra todo tipo,
+  // inclusive Lote Condomínio Horizontal (a regra de forçar "Médio" pra
+  // lote foi retirada — o usuário confirmou que o m² deve classificar
+  // igual aos demais tipos).
 
   // ── Status ── prioridade: "Estágio: ..." (Orulo)
   const estagioM = txt.match(/Est[aá]gio:\s*([^\n]+)/i);
@@ -1216,17 +1214,14 @@ function renderResumoExtracao(unidades) {
 // "Extrair Dados" quanto sempre que o usuário edita área/preço à mão na
 // tabela depois (ver oninput em #unidades-tbody). Sem isso, editar um valor
 // manualmente na tabela não refletia no Padrão, que ficava parado no que foi
-// calculado na extração original.
+// calculado na extração original. Classificação por m² médio vale pra todo
+// tipo, inclusive Lote Condomínio Horizontal (sem exceção — confirmado pelo
+// usuário; a regra antiga de forçar "Médio" pra lote foi removida).
 function atualizarResumoEPadrao() {
   const unidades = lerPreview().unidades;
   renderResumoExtracao(unidades);
-  const tipo = document.getElementById('f-tipo').value;
-  if (tipo === 'Lote Condomínio Horizontal') {
-    document.getElementById('f-padrao').value = 'Médio';
-  } else {
-    const m2Medio = calcularM2Medio(unidades);
-    if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio);
-  }
+  const m2Medio = calcularM2Medio(unidades);
+  if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio);
 }
 
 const TIPOS_PRODUTO = ['Apartamento','Casa','Sobrado','Cobertura','Loft','Studio','Terreno','Lote Condomínio Horizontal','Comercial'];

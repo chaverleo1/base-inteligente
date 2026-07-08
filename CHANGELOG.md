@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Remove a exceção "Lote Condomínio Horizontal sempre Médio"
+
+Causa raiz do relato anterior (Padrão preso em "Médio" mesmo com painel mostrando um m² médio de
+Luxo): o desenvolvimento era mesmo um Lote Condomínio Horizontal, e existia uma regra antiga
+(Alterações 08/07, item 2, de alguns dias atrás — antes de existir a classificação por m²) forçando
+"Médio" sempre pra esse tipo, sem olhar pro m² calculado. Confirmado com o usuário: essa exceção foi
+**removida** — Lote Condomínio Horizontal agora é classificado pelo m² médio como qualquer outro
+tipo, sem exceção.
+
+Removido: o bloco em `extrairBloco1()` (lancamentos.html) que fixava `b.padrao = 'Médio'`; o `if`
+especial em `atualizarResumoEPadrao()` (lancamentos.html) e em `atualizarResumoAreaPreco()`
+(lancamentos-editar.html); e a função `aoMudarTipoUnidade()` inteira (lancamentos-editar.html, só
+existia pra forçar essa exceção ao trocar o tipo de uma tipologia).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: extração de um Lote Condomínio Horizontal com R$/m² de 3.000 classifica "Luxo"
+(antes ficava travado em "Médio"); em `lancamentos-editar.html`, um lançamento salvo como Lote
+Condomínio Horizontal com R$/m² de 2.000 classifica "Alto" corretamente. Sem erros no console.
+
 ## 2026-07-08 — Padrão recalcula ao editar a tabela na extração (não só ao clicar "Extrair")
 
 Mesmo depois da correção anterior, o usuário reportou que editar manualmente um valor na tabela do

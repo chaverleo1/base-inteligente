@@ -315,12 +315,8 @@ function atualizarBadgeVendido() {
 // removida ou editada — ver oninput em #unidades-wrap.
 //
 // Também reclassifica "Padrão" pelo mesmo m² médio (Alterações 08/07, parte
-// 5) — a extração já fazia isso, mas o Editar nunca ganhou essa regra, então
-// reabrir um lançamento salvo (ou editar área/preço aqui) não recalculava o
-// Padrão. "tipo" é por tipologia aqui (diferente da extração, onde é um
-// valor só pro lançamento inteiro) — só força "Médio" se TODAS as unidades
-// forem Lote Condomínio Horizontal; havendo mistura de tipos, usa o m² médio
-// geral normalmente.
+// 5) — vale pra todo tipo, inclusive Lote Condomínio Horizontal (a regra de
+// forçar "Médio" pra lote foi removida — confirmado pelo usuário).
 function atualizarResumoAreaPreco() {
   const unidades = coletarUnidades();
   const painel = document.getElementById('resumoExtracao');
@@ -328,13 +324,8 @@ function atualizarResumoAreaPreco() {
   painel.innerHTML = html;
   painel.style.display = html ? 'flex' : 'none';
 
-  const todasLote = unidades.length > 0 && unidades.every(u => u.tipo === 'Lote Condomínio Horizontal');
-  if (todasLote) {
-    document.getElementById('f-padrao').value = 'Médio';
-  } else {
-    const m2Medio = calcularM2Medio(unidades);
-    if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio);
-  }
+  const m2Medio = calcularM2Medio(unidades);
+  if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio);
 }
 
 let _uniCount = 0;
@@ -354,7 +345,7 @@ function addUnidade(dados = {}) {
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Tipo de produto</label>
-        <select class="form-input" id="u${n}-tipo" onchange="aoMudarTipoUnidade(${n})">
+        <select class="form-input" id="u${n}-tipo">
           <option value="">Selecionar...</option>
           <option ${dados.tipo==='Apartamento'?'selected':''}>Apartamento</option>
           <option ${dados.tipo==='Casa'?'selected':''}>Casa</option>
@@ -558,13 +549,6 @@ function coletarUnidades() {
     });
   });
   return items;
-}
-
-function aoMudarTipoUnidade(n) {
-  const tipo = gV('u' + n + '-tipo');
-  if (tipo === 'Lote Condomínio Horizontal') {
-    document.getElementById('f-padrao').value = 'Médio';
-  }
 }
 
 async function salvar() {
