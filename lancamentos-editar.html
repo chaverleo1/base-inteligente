@@ -115,7 +115,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
     <a href="dashboard.html"   class="nav-tab">Dashboard</a>
     <a href="busca.html"       class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab active">Lançamentos</a>
-    <a href="dashboard.html"   class="nav-tab">BaseImob</a>
+    <a href="dashboard.html?secao=baseimob"   class="nav-tab">BaseImob</a>
     <a href="dashboard.html"   class="nav-tab">ADM</a>
   </div>
   <button class="refresh-btn" onclick="history.back()">← Voltar</button>
@@ -130,9 +130,9 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
     </div>
   </div>
 
-  <!-- ── DADOS DO EMPREENDIMENTO ── -->
+  <!-- ── DADOS GERAIS ── -->
   <div class="section">
-    <div class="section-title">Identificação</div>
+    <div class="section-title">Dados Gerais</div>
     <div class="form-grid cols3">
       <div class="form-group span2">
         <label class="form-label">Nome do empreendimento *</label>
@@ -146,7 +146,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Tipo</label>
-        <select class="form-input" id="f-tipo">
+        <select class="form-input" id="f-tipo" onchange="aoMudarTipo()">
           <option value="">Selecionar...</option>
           <option>Apartamento</option>
           <option>Casa</option>
@@ -155,6 +155,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
           <option>Loft</option>
           <option>Studio</option>
           <option>Terreno</option>
+          <option>Lote Condomínio Horizontal</option>
           <option>Comercial</option>
         </select>
       </div>
@@ -176,16 +177,12 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
           <option>Em planta</option>
           <option>Em obras</option>
           <option>Pronto</option>
+          <option>Pronto novo</option>
           <option>Entregue</option>
           <option>Lançamento</option>
         </select>
       </div>
     </div>
-  </div>
-
-  <!-- ── LOCALIZAÇÃO ── -->
-  <div class="section">
-    <div class="section-title">Localização</div>
     <div class="form-grid cols3">
       <div class="form-group span2">
         <label class="form-label">Endereço</label>
@@ -210,11 +207,20 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
         <input class="form-input" id="f-previsaoEntrega" placeholder="MM/AAAA ou AAAA-MM-DD">
       </div>
     </div>
-  </div>
-
-  <!-- ── COMERCIAL ── -->
-  <div class="section">
-    <div class="section-title">Dados comerciais</div>
+    <div class="form-grid cols3">
+      <div class="form-group">
+        <label class="form-label">Estoque</label>
+        <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total de unidades</label>
+        <input class="form-input" id="f-totalUnidades" type="number" min="0" placeholder="Ex: 839">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data de lançamento</label>
+        <input class="form-input" id="f-dataLancamento" placeholder="Ex: 01/12/2020">
+      </div>
+    </div>
     <div class="form-grid">
       <div class="form-group">
         <label class="form-label">URL do site / pasta digital</label>
@@ -223,48 +229,6 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
       <div class="form-group">
         <label class="form-label">Foto / imagem (URL)</label>
         <input class="form-input" id="f-foto" placeholder="https://...">
-      </div>
-    </div>
-    <div class="form-grid cols3">
-      <div class="form-group">
-        <label class="form-label">Entrada</label>
-        <input class="form-input" id="f-entrada" placeholder="Ex: 30%">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Parcelas em obra</label>
-        <input class="form-input" id="f-parcelasObra" placeholder="Ex: 36x R$ 1.500">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Parcelas na entrega</label>
-        <input class="form-input" id="f-parcelasEntrega" placeholder="Ex: 120x R$ 2.000">
-      </div>
-    </div>
-    <div class="form-grid cols3">
-      <div class="form-group">
-        <label class="form-label">Avaliação bancária</label>
-        <input class="form-input" id="f-avaliacaoBanco" placeholder="Ex: Aprovado CEF">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Aceita FGTS</label>
-        <select class="form-input" id="f-fgts">
-          <option value="">—</option>
-          <option>Sim</option>
-          <option>Não</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Plano longo</label>
-        <input class="form-input" id="f-planoLongo" placeholder="Ex: 240 meses">
-      </div>
-    </div>
-    <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">Data da tabela</label>
-        <input class="form-input" id="f-dataTabela" placeholder="Ex: 01/06/2026">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Status da tabela</label>
-        <input class="form-input" id="f-statusTabela" placeholder="Ex: Vigente">
       </div>
     </div>
     <div class="form-grid">
@@ -324,9 +288,8 @@ function preencherForm(e) {
 
   const campos = ['nomeEmpreendimento','construtora','tipo','padrao','status',
                   'endereco','bairro','cidade','estado','previsaoEntrega',
-                  'urlSite','foto','entrada','parcelasObra','parcelasEntrega',
-                  'avaliacaoBanco','fgts','planoLongo','dataTabela','statusTabela',
-                  'lazer','conceito'];
+                  'estoque','totalUnidades','dataLancamento',
+                  'urlSite','foto','lazer','conceito'];
   campos.forEach(c => {
     const el = document.getElementById('f-' + c);
     if (el && e[c] != null) el.value = e[c];
@@ -384,9 +347,19 @@ function addUnidade(dados = {}) {
     </div>
     <div class="form-grid cols3">
       <div class="form-group">
+        <label class="form-label">Qd (quadra)</label>
+        <input class="form-input" id="u${n}-qd" placeholder="Ex: 05" value="${esc(dados.qd)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lt (lote)</label>
+        <input class="form-input" id="u${n}-lt" placeholder="Ex: 12" value="${esc(dados.lt)}">
+      </div>
+      <div class="form-group">
         <label class="form-label">Área útil (m²)</label>
         <input class="form-input" id="u${n}-areaUtil" placeholder="Ex: 78" value="${esc(dados.areaUtil)}">
       </div>
+    </div>
+    <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Área terreno (m²)</label>
         <input class="form-input" id="u${n}-areaTerr" placeholder="Ex: 120" value="${esc(dados.areaTerr)}">
@@ -395,19 +368,62 @@ function addUnidade(dados = {}) {
         <label class="form-label">Preço médio (R$)</label>
         <input class="form-input" id="u${n}-precoMedio" placeholder="Ex: 450000" value="${esc(dados.precoMedio)}">
       </div>
-    </div>
-    <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Preço mínimo (R$)</label>
         <input class="form-input" id="u${n}-precoMin" placeholder="Ex: 420000" value="${esc(dados.precoMin)}">
       </div>
+    </div>
+    <div class="form-grid cols3">
       <div class="form-group">
-        <label class="form-label">Preço máximo (R$)</label>
+        <label class="form-label">Preço máximo / tabela (R$)</label>
         <input class="form-input" id="u${n}-precoMax" placeholder="Ex: 480000" value="${esc(dados.precoMax)}">
       </div>
       <div class="form-group">
-        <label class="form-label">Preço tabela (R$)</label>
-        <input class="form-input" id="u${n}-preco" placeholder="Ex: 450000" value="${esc(dados.preco)}">
+        <label class="form-label">Preço total (R$)</label>
+        <input class="form-input" id="u${n}-precoTotal" placeholder="Ex: 480000" value="${esc(dados.precoTotal)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data da tabela</label>
+        <input class="form-input" id="u${n}-dataTabela" placeholder="Ex: 01/06/2026" value="${esc(dados.dataTabela)}">
+      </div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin:10px 0 2px">Plano de pagamento</div>
+    <div class="form-grid cols3">
+      <div class="form-group">
+        <label class="form-label">Ato / entrada (R$)</label>
+        <input class="form-input" id="u${n}-atoEntrada" placeholder="Ex: 20000" value="${esc(dados.atoEntrada)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ato / entrada — qtd</label>
+        <input class="form-input" id="u${n}-atoEntradaQtd" type="number" min="0" placeholder="Ex: 1" value="${esc(dados.atoEntradaQtd)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sinal (R$)</label>
+        <input class="form-input" id="u${n}-sinal" placeholder="Ex: 5000" value="${esc(dados.sinal)}">
+      </div>
+    </div>
+    <div class="form-grid cols3">
+      <div class="form-group">
+        <label class="form-label">Sinal — qtd</label>
+        <input class="form-input" id="u${n}-sinalQtd" type="number" min="0" placeholder="Ex: 1" value="${esc(dados.sinalQtd)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mensais (R$)</label>
+        <input class="form-input" id="u${n}-mensais" placeholder="Ex: 1500" value="${esc(dados.mensais)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mensais — qtd</label>
+        <input class="form-input" id="u${n}-mensaisQtd" type="number" min="0" placeholder="Ex: 36" value="${esc(dados.mensaisQtd)}">
+      </div>
+    </div>
+    <div class="form-grid cols3">
+      <div class="form-group">
+        <label class="form-label">Anuais (R$)</label>
+        <input class="form-input" id="u${n}-anuais" placeholder="Ex: 9000" value="${esc(dados.anuais)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Anuais — qtd</label>
+        <input class="form-input" id="u${n}-anuaisQtd" type="number" min="0" placeholder="Ex: 3" value="${esc(dados.anuaisQtd)}">
       </div>
     </div>`;
   wrap.appendChild(div);
@@ -444,22 +460,48 @@ function coletarUnidades() {
   const items = [];
   document.querySelectorAll('#unidades-wrap .unidade-wrap').forEach(div => {
     const id = div.id.replace('uni-', '');
+    const qd = gV('u' + id + '-qd');
+    const lt = gV('u' + id + '-lt');
+    // Qd+Lt juntos representam a "Unidade" em Lote Condomínio Horizontal — se
+    // preenchidos, a descrição digitada é ignorada em favor desse formato.
+    const unidade = (qd || lt) ? ('Qd ' + qd + ' - Lt ' + lt).trim() : gV('u' + id + '-unidade');
+    const precoMax = gV('u' + id + '-precoMax');
     items.push({
-      unidade:    gV('u' + id + '-unidade'),
-      quartos:    gV('u' + id + '-quartos'),
-      suites:     gV('u' + id + '-suites'),
-      banheiros:  gV('u' + id + '-banheiros'),
-      vagas:      gV('u' + id + '-vagas'),
-      escaninho:  gV('u' + id + '-escaninho'),
-      areaUtil:   gV('u' + id + '-areaUtil'),
-      areaTerr:   gV('u' + id + '-areaTerr'),
-      precoMedio: gV('u' + id + '-precoMedio'),
-      precoMin:   gV('u' + id + '-precoMin'),
-      precoMax:   gV('u' + id + '-precoMax'),
-      preco:      gV('u' + id + '-preco'),
+      unidade,
+      qd, lt,
+      quartos:      gV('u' + id + '-quartos'),
+      suites:       gV('u' + id + '-suites'),
+      banheiros:    gV('u' + id + '-banheiros'),
+      vagas:        gV('u' + id + '-vagas'),
+      escaninho:    gV('u' + id + '-escaninho'),
+      areaUtil:     gV('u' + id + '-areaUtil'),
+      areaTerr:     gV('u' + id + '-areaTerr'),
+      precoMedio:   gV('u' + id + '-precoMedio'),
+      precoMin:     gV('u' + id + '-precoMin'),
+      precoMax,
+      // Preço máximo = Preço tabela (Alterações 08/07, item 5a) — não existe
+      // mais input separado, o valor manda pros dois campos do backend.
+      preco:        precoMax,
+      precoTotal:   gV('u' + id + '-precoTotal'),
+      dataTabela:   gV('u' + id + '-dataTabela'),
+      atoEntrada:   gV('u' + id + '-atoEntrada'),
+      atoEntradaQtd:gV('u' + id + '-atoEntradaQtd'),
+      sinal:        gV('u' + id + '-sinal'),
+      sinalQtd:     gV('u' + id + '-sinalQtd'),
+      mensais:      gV('u' + id + '-mensais'),
+      mensaisQtd:   gV('u' + id + '-mensaisQtd'),
+      anuais:       gV('u' + id + '-anuais'),
+      anuaisQtd:    gV('u' + id + '-anuaisQtd'),
     });
   });
   return items;
+}
+
+function aoMudarTipo() {
+  const tipo = gV('f-tipo');
+  if (tipo === 'Lote Condomínio Horizontal') {
+    document.getElementById('f-padrao').value = 'Médio';
+  }
 }
 
 async function salvar() {
@@ -482,16 +524,11 @@ async function salvar() {
     cidade:            gV('f-cidade'),
     estado:            gV('f-estado').toUpperCase(),
     previsaoEntrega:   gV('f-previsaoEntrega'),
+    estoque:           gV('f-estoque'),
+    totalUnidades:     gV('f-totalUnidades'),
+    dataLancamento:    gV('f-dataLancamento'),
     urlSite:           gV('f-urlSite'),
     foto:              gV('f-foto'),
-    entrada:           gV('f-entrada'),
-    parcelasObra:      gV('f-parcelasObra'),
-    parcelasEntrega:   gV('f-parcelasEntrega'),
-    avaliacaoBanco:    gV('f-avaliacaoBanco'),
-    fgts:              gV('f-fgts'),
-    planoLongo:        gV('f-planoLongo'),
-    dataTabela:        gV('f-dataTabela'),
-    statusTabela:      gV('f-statusTabela'),
     lazer:             gV('f-lazer'),
     conceito:          gV('f-conceito'),
     unidades

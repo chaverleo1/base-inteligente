@@ -301,7 +301,7 @@ select.form-input option { background: var(--surface2); }
     <a href="dashboard.html"   class="nav-tab">Dashboard</a>
     <a href="busca.html"       class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab active">Lançamentos</a>
-    <a href="dashboard.html"   class="nav-tab">BaseImob</a>
+    <a href="dashboard.html?secao=baseimob"   class="nav-tab">BaseImob</a>
     <a href="dashboard.html"   class="nav-tab">ADM</a>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
@@ -389,6 +389,7 @@ select.form-input option { background: var(--surface2); }
             <option value="Apartamento">Apartamento</option>
             <option value="Casa">Casa</option>
             <option value="Terreno">Terreno / Lote</option>
+            <option value="Lote Condomínio Horizontal">Lote Condomínio Horizontal</option>
             <option value="Comercial">Comercial</option>
           </select>
         </div>
@@ -428,6 +429,18 @@ select.form-input option { background: var(--surface2); }
         <div class="form-group">
           <div class="form-label">Previsão de entrega</div>
           <input class="form-input" id="f-entrega" placeholder="Ex: Dez/2026">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Estoque</div>
+          <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Total de unidades</div>
+          <input class="form-input" id="f-totalUnidades" type="number" min="0" placeholder="Ex: 839">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Data de lançamento</div>
+          <input class="form-input" id="f-dataLancamento" placeholder="Ex: 01/12/2020">
         </div>
         <div class="form-group" id="grp-dataTabela">
           <div class="form-label">Data da tabela de preços <span class="alerta-tabela-tag" id="lbl-dataTabela" style="display:none">⚠ VERIFICAR PREÇOS</span></div>
@@ -636,7 +649,7 @@ function classificarPadraoPorM2_(v, tipoTexto) {
 }
 
 function extrairBloco1(txt) {
-  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'' };
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'' };
   const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   // ── Localiza a linha de endereço em QUALQUER posição do texto ──
@@ -753,24 +766,38 @@ function extrairBloco1(txt) {
   // mapeado pros 4 do seletor (Apartamento/Casa/Terreno/Comercial) — o texto
   // bruto é usado como chave mais granular na tabela de faixas de padrão.
   var tipoTextoBruto = '';
+  // "terreno" no texto bruto da Orulo sempre vira "Lote Condomínio Horizontal"
+  // (Alterações 08/07, item 1f) — não o "Terreno" genérico do seletor.
   const tipoM = txt.match(/Tipologias\s+dispon[íi]veis\s*\n\s*([^\n]+)/i);
   if (tipoM) {
     tipoTextoBruto = tipoM[1].trim().toLowerCase();
     const TIPO_MAP = { apartamento: 'Apartamento', casa: 'Casa', sobrado: 'Casa',
-                        terreno: 'Terreno', lote: 'Terreno', comercial: 'Comercial',
-                        sala: 'Comercial', loja: 'Comercial' };
+                        terreno: 'Lote Condomínio Horizontal', lote: 'Lote Condomínio Horizontal',
+                        comercial: 'Comercial', sala: 'Comercial', loja: 'Comercial' };
     for (const key in TIPO_MAP) {
       if (tipoTextoBruto.indexOf(key) >= 0) { b.tipo = TIPO_MAP[key]; break; }
     }
+  }
+  // Mesma checagem em cima do texto bruto inteiro — "terreno" às vezes aparece
+  // só em "Outras informações"/no corpo do anúncio, fora da seção "Tipologias
+  // disponíveis" (que pode nem existir no texto colado).
+  if (b.tipo !== 'Lote Condomínio Horizontal' && /\bterreno\b/i.test(txt)) {
+    b.tipo = 'Lote Condomínio Horizontal';
   }
 
   // ── Padrão — a partir do R$/m² (ex: "(R$ 12.888/m²)") ──
   // Usa o texto bruto do tipo (mais granular que os 4 do seletor) pra
   // escolher a faixa de referência certa — ver FAIXAS_PADRAO_POR_TIPO.
-  const m2M = txt.match(/\(?\s*R\$\s*([\d.,]+)\s*\/\s*m[²2]\s*\)?/i);
-  if (m2M) {
-    const valorM2 = parsePrecoBR(m2M[1]);
-    if (valorM2 > 0) b.padrao = classificarPadraoPorM2_(valorM2, tipoTextoBruto);
+  // "Lote Condomínio Horizontal" sempre cai como "Médio" (Alterações 08/07,
+  // item 2), sem passar pela classificação por R$/m².
+  if (b.tipo === 'Lote Condomínio Horizontal') {
+    b.padrao = 'Médio';
+  } else {
+    const m2M = txt.match(/\(?\s*R\$\s*([\d.,]+)\s*\/\s*m[²2]\s*\)?/i);
+    if (m2M) {
+      const valorM2 = parsePrecoBR(m2M[1]);
+      if (valorM2 > 0) b.padrao = classificarPadraoPorM2_(valorM2, tipoTextoBruto);
+    }
   }
 
   // ── Status ── prioridade: "Estágio: ..." (Orulo)
@@ -807,6 +834,22 @@ function extrairBloco1(txt) {
       if (dtM) b.previsaoEntrega = dtM[1];
     }
   }
+
+  // ── "Outras informações" (Orulo) — Estoque / Total de unidades / Lançamento ──
+  // Alterações 08/07, itens 2a/3: bloco típico:
+  //   Outras informações
+  //   Estágio: Pronto novo
+  //   Estoque: 18
+  //   Lançamento: 01/12/2020
+  //   Unidades por andar: -
+  //   Entrega: 30/07/2024
+  //   Total de unidades: 839
+  const estoqueM = txt.match(/Estoque:\s*(\d+)/i);
+  if (estoqueM) b.estoque = estoqueM[1];
+  const totalUnidM = txt.match(/Total\s+de\s+unidades:\s*(\d+)/i);
+  if (totalUnidM) b.totalUnidades = totalUnidM[1];
+  const lancamentoM = txt.match(/Lan[çc]amento:\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if (lancamentoM) b.dataLancamento = lancamentoM[1];
 
   // ── Lazer ── "Características condominiais" + opcionalmente "Características da unidade"
   const limpItem = l => l.trim().length > 1 && !/^\d+$/.test(l.trim()) && !/alguma informa[çc]/i.test(l);
@@ -1013,16 +1056,16 @@ function extrairTipologiasCompactas(linhas) {
   return unidades;
 }
 
-function extrairBloco2(txt) {
+function extrairBloco2(txt, ehTerreno) {
   const linhas = txt.split('\n').map(l => l.trim());
 
   // 1ª tentativa: parser linha-a-linha (formato completo Orulo — unidade por unidade)
   const uns1 = extrairOruloLinhaALinha(linhas);
-  if (uns1.length) return agruparPorArea(uns1);
+  if (uns1.length) return agruparPorArea(uns1, ehTerreno);
 
   // 2ª tentativa: mini-tabela "Tipologias disponíveis" (formato compacto Orulo)
   const uns2 = extrairTipologiasCompactas(linhas);
-  if (uns2.length) return agruparPorArea(uns2);
+  if (uns2.length) return agruparPorArea(uns2, ehTerreno);
 
   // Fallback: scanner por m² + R$ na mesma linha
   const uns3 = [];
@@ -1040,10 +1083,14 @@ function extrairBloco2(txt) {
     uns3.push({ area, preco, vagas: vm ? parseInt(vm[1]) : 0,
                 quartos: qm ? parseInt(qm[1]) : 0, suites: sm ? parseInt(sm[1]) : 0 });
   }
-  return agruparPorArea(uns3);
+  return agruparPorArea(uns3, ehTerreno);
 }
 
-function agruparPorArea(uns) {
+// ehTerreno (Alterações 08/07, item 6): quando o tipo é "Lote Condomínio
+// Horizontal", a metragem capturada é área de TERRENO, não área útil — só se
+// aplica a apartamento/casa. Joga o valor pro campo certo em vez de sempre
+// preencher areaUtil.
+function agruparPorArea(uns, ehTerreno) {
   const grupos = {};
   for (const u of uns) {
     const key = (Math.round(u.area * 10) / 10).toFixed(1);
@@ -1060,7 +1107,8 @@ function agruparPorArea(uns) {
       quartos:     qModa,
       suites:      sModa,
       banheiros:   bModa,
-      areaUtil:    g.area,
+      areaUtil:    ehTerreno ? 0 : g.area,
+      areaTerr:    ehTerreno ? g.area : 0,
       unidade:     '',
       vagas:       vagas.length ? Math.round(vagas.reduce((a, b) => a + b, 0) / vagas.length) : 0,
       escaninho:   '',
@@ -1068,7 +1116,7 @@ function agruparPorArea(uns) {
       precoMin:    precos.length ? Math.min(...precos) : 0,
       precoMax:    precos.length ? Math.max(...precos) : 0,
     };
-  }).sort((a, b) => a.areaUtil - b.areaUtil);
+  }).sort((a, b) => (a.areaUtil || a.areaTerr) - (b.areaUtil || b.areaTerr));
 }
 
 // ─── EXTRAIR ──────────────────────────────────────────────────────────────────
@@ -1104,7 +1152,8 @@ function extrairDados() {
       const b1    = extrairBloco1(srcB1);
       const plano = extrairPlano(srcB1);
       // BOX 2 → tabela de unidades; se vazio tenta mini-tabela do BOX 1
-      const b2    = extrairBloco2(txtB2 || txtB1);
+      const ehTerreno = b1.tipo === 'Lote Condomínio Horizontal';
+      const b2    = extrairBloco2(txtB2 || txtB1, ehTerreno);
 
       renderB1(b1); renderPlano(plano); renderB2(b2);
 
@@ -1146,6 +1195,9 @@ function renderB1(b) {
   set('f-estado', b.estado);
   set('f-endereco', b.endereco);
   set('f-entrega', b.previsaoEntrega);
+  set('f-estoque', b.estoque);
+  set('f-totalUnidades', b.totalUnidades);
+  set('f-dataLancamento', b.dataLancamento);
   set('f-lazer', b.lazer);
   set('f-conceito', b.conceito);
   if (b.status) document.getElementById('f-status').value = b.status;
@@ -1229,6 +1281,7 @@ function limparMotor() {
   document.getElementById('lbl-dataTabela').style.display = 'none';
   document.querySelectorAll('input[name="statusTabela"]').forEach(r => r.checked = false);
   ['f-nome','f-construtora','f-cidade','f-estado','f-bairro','f-endereco','f-entrega','f-dataTabela',
+   'f-estoque','f-totalUnidades','f-dataLancamento',
    'f-urlSite','f-lazer','f-conceito',
    'f-entrada','f-parcOb','f-parcEntrega','f-banco','f-planoLongo'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
@@ -1253,6 +1306,9 @@ function lerPreview() {
     endereco:           g('f-endereco'),
     status:             g('f-status'),
     previsaoEntrega:    g('f-entrega'),
+    estoque:            g('f-estoque'),
+    totalUnidades:      g('f-totalUnidades'),
+    dataLancamento:     g('f-dataLancamento'),
     dataTabela:         g('f-dataTabela'),
     statusTabela:       (document.querySelector('input[name="statusTabela"]:checked') || {}).value || '',
     padrao:             g('f-padrao'),

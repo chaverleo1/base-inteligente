@@ -81,7 +81,21 @@ const CABECALHO_LANCAMENTOS = [
   // vez que o filtro mudava a ordem). Com esse código, o mesmo imóvel que o
   // cliente marcou interesse consegue ser referenciado depois (email, busca
   // aberta) de forma estável. Ver salvarLancamento_().
-  'idOferta'
+  'idOferta',
+  // Campos adicionados em 2026-07 ("Alterações 08/07") pra suportar
+  // "Lote Condomínio Horizontal": estoque/totalUnidades/dataLancamento são do
+  // empreendimento inteiro (vêm do bloco "Outras informações" da Orulo); qd/lt
+  // e o plano de pagamento por tipologia (ato/entrada, sinal, mensais, anuais,
+  // precoTotal) são POR UNIDADE — cada tipologia pode ter condições diferentes.
+  // dataTabela passou a ser lida de u.dataTabela (por unidade) em vez de
+  // dados.dataTabela — a coluna em si não mudou de lugar no array.
+  'estoque', 'totalUnidades', 'dataLancamento',
+  'qd', 'lt',
+  'atoEntrada', 'atoEntradaQtd',
+  'sinal', 'sinalQtd',
+  'mensais', 'mensaisQtd',
+  'anuais', 'anuaisQtd',
+  'precoTotal'
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -2632,6 +2646,11 @@ function salvarLancamento_(dados) {
       var s  = parseInt(u.suites)   || 0;
       var vg = parseInt(u.vagas)    || 0;
       var idOferta = id + '-' + String(idx + 1).padStart(2, '0');
+      // "Preço tabela" e "Preço máximo" passaram a ser tratados como o mesmo
+      // valor (Alterações 08/07, item 5a) — o formulário de edição não manda
+      // mais um campo "preco" separado, só precoMax; se vier preco explícito
+      // (extração antiga) ele ainda tem prioridade.
+      var precoTabela = u.preco || u.precoMax || '';
       return [
         id,
         dados.nomeEmpreendimento || '',
@@ -2654,8 +2673,10 @@ function salvarLancamento_(dados) {
         u.precoMedio             || '',
         u.precoMin               || '',
         u.precoMax               || '',
-        u.preco                  || '',
-        dados.dataTabela         || '',
+        precoTabela,
+        // dataTabela agora é POR UNIDADE (Alterações 08/07, item 5b) — antes
+        // vinha de dados.dataTabela (um valor só pro empreendimento inteiro).
+        u.dataTabela             || '',
         dados.statusTabela       || '',
         dados.urlSite            || '',
         dados.foto               || '',
@@ -2670,6 +2691,20 @@ function salvarLancamento_(dados) {
         agora,
         dados.estado             || '',
         idOferta,
+        dados.estoque            || '',
+        dados.totalUnidades      || '',
+        dados.dataLancamento     || '',
+        u.qd                     || '',
+        u.lt                     || '',
+        u.atoEntrada             || '',
+        u.atoEntradaQtd          || '',
+        u.sinal                  || '',
+        u.sinalQtd               || '',
+        u.mensais                || '',
+        u.mensaisQtd             || '',
+        u.anuais                 || '',
+        u.anuaisQtd              || '',
+        u.precoTotal             || '',
       ];
     });
 

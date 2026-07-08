@@ -1,5 +1,48 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — "Alterações 08/07": Lote Condomínio Horizontal, footer BaseImob, bug nav
+
+Pacote de 8 mudanças pedidas pelo usuário:
+
+1. **`lancamentos-editar.html` reestruturado**: "Identificação" + "Localização" viraram uma seção
+   única "Dados Gerais", que também ganhou os campos antes em "Dados comerciais" (URL do site,
+   foto, lazer, conceito) e os campos novos (Estoque, Total de unidades, Data de lançamento). Tipo
+   ganhou a opção "Lote Condomínio Horizontal".
+2. A seção "Dados comerciais" foi eliminada — entrada, parcelas em obra/entrega, avaliação
+   bancária, FGTS, plano longo e status da tabela não existem mais no formulário nem são mais
+   gravados.
+3. "Tipologias / Unidades" ganhou: Qd (quadra) + Lt (lote) — juntos formam a "Unidade" — e um
+   plano de pagamento por tipologia (Ato/Entrada, Sinal, Mensais, Anuais — cada um com preço e
+   quantidade —, Preço Total e Data da Tabela, essa última agora por unidade em vez de por
+   empreendimento inteiro). "Preço máximo" e "Preço tabela" viraram o mesmo campo.
+4. **`lancamentos.html`** (extração de texto bruto da Orulo): "terreno" no texto sempre classifica
+   o tipo como "Lote Condomínio Horizontal" (em vez do "Terreno" genérico), que por sua vez sempre
+   entra como padrão "Médio". Estoque, Total de unidades e Data de lançamento passaram a ser
+   extraídos do bloco "Outras informações". Quando o tipo é Lote Condomínio Horizontal, a metragem
+   detectada vai para "Área terreno (m²)" em vez de "Área útil (m²)" (que só se aplica a
+   apartamento/casa).
+5. **BaseImob** (`baseimob-landing.html`, `baseimob-total.html`): rodapé fixo com aviso de juros e
+   correções, mais uma nota por card citando o código da unidade específica (idOferta).
+6. **Bug de navegação corrigido**: clicar em "BaseImob" no cabeçalho de qualquer página (Lançamentos,
+   Busca Aberta, Formulário, Contatos, Favoritos, Insight) abria o Dashboard em vez da seção
+   BaseImob — o link agora manda `?secao=baseimob` e `dashboard.html` lê esse parâmetro no
+   carregamento pra abrir a seção certa.
+
+Backend (`code.txt`) ganhou 14 colunas novas em `CABECALHO_LANCAMENTOS` (estoque, totalUnidades,
+dataLancamento no nível do empreendimento; qd, lt, atoEntrada/Qtd, sinal/Qtd, mensais/Qtd,
+anuais/Qtd, precoTotal por unidade) — como sempre, colunas só se ANEXAM no fim, sem desalinhar
+dados existentes. **Depois de reimplantar, rode `migrarCabecalhoLancamentos()` uma vez no editor do
+Apps Script** pra essas colunas aparecerem no cabeçalho da planilha (linhas já salvas continuam
+intactas; só o cabeçalho de exibição precisa desse passo).
+
+⚠️ Precisa reimplantar o Apps Script (mudança em `code.txt`).
+
+Testado: suite Node (`eval` do `code.txt`) cobrindo o novo mapeamento de colunas em
+`salvarLancamento_`; preview do formulário de edição com todos os campos novos preenchidos e
+`coletarUnidades()` retornando o payload esperado; `extrairBloco1`/`extrairBloco2` com texto de
+teste contendo "terreno" e o bloco "Outras informações"; navegação `dashboard.html?secao=baseimob`
+abrindo a seção BaseImob direto.
+
 ## 2026-07-07 — Abas em Lançamentos: "Empreendimentos Cadastrados" | "Novo Lançamento"
 
 `lancamentos.html` mostrava o formulário de extração ("Novo Lançamento") e a lista de
