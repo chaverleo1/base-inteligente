@@ -395,7 +395,7 @@ select.form-input option { background: var(--surface2); }
         </div>
         <div class="form-group">
           <div class="form-label">Tipo de imóvel</div>
-          <select class="form-input" id="f-tipo">
+          <select class="form-input" id="f-tipo" onchange="atualizarResumoEPadrao()">
             <option value="">Selecione</option>
             <option value="Apartamento">Apartamento</option>
             <option value="Casa">Casa</option>
@@ -529,7 +529,7 @@ select.form-input option { background: var(--surface2); }
               <th style="width:28px"></th>
             </tr>
           </thead>
-          <tbody id="unidades-tbody"></tbody>
+          <tbody id="unidades-tbody" oninput="atualizarResumoEPadrao()"></tbody>
         </table>
       </div>
       <button class="btn-salvar" id="btnSalvar" onclick="salvarLancamento()">💾 Salvar Lançamento</button>
@@ -1123,15 +1123,11 @@ function extrairDados() {
       const ehTerreno = b1.tipo === 'Lote Condomínio Horizontal';
       const b2    = extrairBloco2(txtB2 || txtB1, ehTerreno, { tipo: b1.tipo, dataTabela: b1.dataTabela });
 
-      // Padrão a partir do Metro Quadrado Médio das tipologias extraídas
-      // (Alterações 08/07, parte 5) — só recalcula se não for Lote
-      // Condomínio Horizontal, que já ficou fixo em "Médio" na extrairBloco1.
-      if (b1.tipo !== 'Lote Condomínio Horizontal') {
-        const m2MedioPadrao = calcularM2Medio(b2);
-        if (m2MedioPadrao > 0) b1.padrao = classificarPadraoPorM2Medio_(m2MedioPadrao);
-      }
-
-      renderB1(b1); renderB2(b2); renderResumoExtracao(b2);
+      renderB1(b1); renderB2(b2);
+      // Painel resumo + classificação de "Padrão" (Alterações 08/07, partes 2.3
+      // e 5) — mesma função chamada de novo sempre que a tabela é editada à
+      // mão depois (ver oninput em #unidades-tbody), pra não ficar desatualizada.
+      atualizarResumoEPadrao();
 
       const campos = [b1.nomeEmpreendimento, b1.bairro, b1.status, b1.previsaoEntrega].filter(v=>v).length;
       const badge = document.getElementById('preview-badge');
@@ -1215,6 +1211,24 @@ function renderResumoExtracao(unidades) {
   painel.style.display = html ? 'flex' : 'none';
 }
 
+// Recalcula o painel resumo E o "Padrão" a partir do estado ATUAL da tabela
+// (não do que foi extraído automaticamente) — chamada tanto logo após
+// "Extrair Dados" quanto sempre que o usuário edita área/preço à mão na
+// tabela depois (ver oninput em #unidades-tbody). Sem isso, editar um valor
+// manualmente na tabela não refletia no Padrão, que ficava parado no que foi
+// calculado na extração original.
+function atualizarResumoEPadrao() {
+  const unidades = lerPreview().unidades;
+  renderResumoExtracao(unidades);
+  const tipo = document.getElementById('f-tipo').value;
+  if (tipo === 'Lote Condomínio Horizontal') {
+    document.getElementById('f-padrao').value = 'Médio';
+  } else {
+    const m2Medio = calcularM2Medio(unidades);
+    if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio);
+  }
+}
+
 const TIPOS_PRODUTO = ['Apartamento','Casa','Sobrado','Cobertura','Loft','Studio','Terreno','Lote Condomínio Horizontal','Comercial'];
 
 function criarLinha(u = {}) {
@@ -1260,7 +1274,7 @@ function criarLinha(u = {}) {
     <td>${inp(u.mensaisQtd || '', 'qtd', 'center', 't-mensaisQtd')}</td>
     <td>${inpPreco(u.anuais, 'R$', 'right', 't-anuais')}</td>
     <td>${inp(u.anuaisQtd || '', 'qtd', 'center', 't-anuaisQtd')}</td>
-    <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
+    <td><button onclick="this.closest('tr').remove();atualizarResumoEPadrao()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
   return tr;
 }
 
@@ -1270,6 +1284,7 @@ function addLinhaUnidade() {
   if (td) td.closest('tr').remove();
   const g = id => document.getElementById(id)?.value.trim() || '';
   tbody.appendChild(criarLinha({ tipo: g('f-tipo'), dataTabela: g('f-dataTabela') }));
+  atualizarResumoEPadrao();
 }
 
 function limparMotor() {

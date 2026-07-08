@@ -1,5 +1,26 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Padrão recalcula ao editar a tabela na extração (não só ao clicar "Extrair")
+
+Mesmo depois da correção anterior, o usuário reportou que editar manualmente um valor na tabela do
+Bloco 2 (ex: aumentar o preço médio até o R$/m² cruzar de "Alto" pra "Luxo") não atualizava o campo
+"Padrão" em `lancamentos.html`. Causa: a classificação só rodava uma vez, dentro de
+`extrairDados()`, no momento do clique em "Extrair Dados" — nenhuma edição posterior na tabela
+recalculava.
+
+Nova função `atualizarResumoEPadrao()` (lê o estado ATUAL da tabela via `lerPreview().unidades`,
+não o que foi extraído originalmente) chamada em todo ponto que muda as tipologias: `oninput` na
+tabela inteira (`#unidades-tbody`, delegação — cobre editar qualquer célula), `onchange` no select
+"Tipo de imóvel" (mudar pra/de Lote Condomínio Horizontal reclassifica na hora), e explicitamente
+em `addLinhaUnidade()` e no botão de remover linha (adicionar/remover não dispara "input").
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: extração inicial classifica "Alto" (R$/m² ~1.886); editar o preço médio na
+tabela pra R$/m² ~2.452 reclassifica "Luxo" ao vivo (o cenário exato relatado); mudar "Tipo de
+imóvel" pra Lote Condomínio Horizontal força "Médio" mesmo com esse m² de Luxo; adicionar e depois
+remover uma linha não quebra nada. Sem erros no console.
+
 ## 2026-07-08 — Classificação de "Padrão" pelo m² médio também no Editar
 
 A regra oficial de "Padrão" pelo Metro Quadrado Médio (parte 5) só tinha sido aplicada na
