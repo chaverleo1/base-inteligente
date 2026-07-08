@@ -1,5 +1,18 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Bloqueia salvar sem marcar status da "Data da tabela de preços"
+
+Em `lancamentos.html`, dava pra salvar um lançamento sem marcar "Atualizada" ou "Desatualizada" no
+campo "Data da tabela de preços" — o valor simplesmente ia em branco pro backend. Agora
+`salvarLancamento()` bloqueia o salvamento (com toast de erro) se nenhuma das duas opções estiver
+marcada, mesmo padrão de validação já usado pra nome do empreendimento/bairro/unidades.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: salvar sem marcar nenhuma opção mostra o toast de erro e não chega a chamar o
+backend; marcando "Atualizada" o `lerPreview()` retorna `statusTabela` preenchido e o salvamento
+segue normalmente. Sem erros no console.
+
 ## 2026-07-08 — Mesmo espelhamento em lancamentos-editar.html
 
 O ajuste anterior ("Preço Total" = "Preço Máximo") só tinha sido aplicado em `lancamentos.html`.
