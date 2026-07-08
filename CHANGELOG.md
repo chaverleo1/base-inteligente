@@ -1,5 +1,38 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Campo "Tipo de Empreendimento" separado do "Tipo de Produto"
+
+Em Empreendimentos, "Tipo" (Apartamento/Casa/Terreno/etc) descrevia o produto de cada tipologia,
+mas ficava no nível do empreendimento inteiro — não dava pra ter, por exemplo, lotes e casas
+prontas no mesmo condomínio com tipos diferentes. Agora:
+
+- **"Tipo de Empreendimento"** (novo campo, em "Dados Gerais"): "Condomínio Horizontal" ou
+  "Condomínio Vertical" — classificação do empreendimento inteiro.
+- **"Tipo de Produto"** (renomeado de "Tipo", movido pra dentro de cada tipologia em
+  "Tipologias / Unidades"): Apartamento/Casa/Sobrado/Cobertura/Loft/Studio/Terreno/Lote Condomínio
+  Horizontal/Comercial — agora pode variar por tipologia.
+
+Na extração de texto da Orulo (`lancamentos.html`), o tipo de produto detectado deriva o tipo de
+empreendimento automaticamente: "terreno" → Condomínio Horizontal (assim como Casa/Sobrado);
+"apartamento" → Condomínio Vertical (assim como Cobertura/Loft/Studio/Comercial). O campo fica
+editável no preview antes de salvar, como os demais.
+
+Corrigido de passagem: `lerPreview()` só considerava uma unidade da tabela do BOX 2 se "Área útil"
+estivesse preenchida — unidades de Lote Condomínio Horizontal (só "Área terreno", sem área útil)
+estavam sendo descartadas silenciosamente ao salvar. Agora aceita qualquer uma das duas áreas.
+
+Backend (`code.txt`): `tipo` passou a ser lido por unidade (`u.tipo`) em vez de uma vez só pro
+empreendimento inteiro; nova coluna `tipoEmpreendimento` anexada no fim de `CABECALHO_LANCAMENTOS`.
+
+⚠️ Precisa reimplantar o Apps Script (mudança em `code.txt`) e rodar `migrarCabecalhoLancamentos()`
+uma vez pra `tipoEmpreendimento` aparecer no cabeçalho da planilha.
+
+Testado: suite Node atualizada confirmando `tipo` por unidade e `tipoEmpreendimento` no nível do
+empreendimento; preview do formulário de edição com o novo select "Tipo de Empreendimento" em
+Dados Gerais e "Tipo de Produto" dentro da tipologia; extração de texto com "terreno" (→ Condomínio
+Horizontal) e "apartamento" (→ Condomínio Vertical), incluindo o caso antes quebrado de unidade só
+com área terreno.
+
 ## 2026-07-08 — "Alterações 08/07": Lote Condomínio Horizontal, footer BaseImob, bug nav
 
 Pacote de 8 mudanças pedidas pelo usuário:

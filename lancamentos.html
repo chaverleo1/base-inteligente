@@ -394,6 +394,14 @@ select.form-input option { background: var(--surface2); }
           </select>
         </div>
         <div class="form-group">
+          <div class="form-label">Tipo de empreendimento</div>
+          <select class="form-input" id="f-tipoEmpreendimento">
+            <option value="">Selecione</option>
+            <option value="Condomínio Horizontal">Condomínio Horizontal</option>
+            <option value="Condomínio Vertical">Condomínio Vertical</option>
+          </select>
+        </div>
+        <div class="form-group">
           <div class="form-label">Status</div>
           <select class="form-input" id="f-status">
             <option value="">Selecione</option>
@@ -649,7 +657,7 @@ function classificarPadraoPorM2_(v, tipoTexto) {
 }
 
 function extrairBloco1(txt) {
-  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'' };
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', tipoEmpreendimento:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'' };
   const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   // ── Localiza a linha de endereço em QUALQUER posição do texto ──
@@ -784,6 +792,19 @@ function extrairBloco1(txt) {
   if (b.tipo !== 'Lote Condomínio Horizontal' && /\bterreno\b/i.test(txt)) {
     b.tipo = 'Lote Condomínio Horizontal';
   }
+
+  // ── Tipo de empreendimento — derivado do tipo de PRODUTO detectado acima ──
+  // "tipo" (Apartamento/Casa/Terreno/etc) é o produto de cada tipologia; "tipo
+  // de empreendimento" classifica o condomínio inteiro como horizontal
+  // (lotes/casas térreas) ou vertical (prédio de apartamentos). Alterações
+  // 08/07 (parte 2): terreno → Horizontal, apartamento → Vertical.
+  var TIPO_EMPREENDIMENTO_MAP = {
+    'Apartamento': 'Condomínio Vertical', 'Cobertura': 'Condomínio Vertical',
+    'Loft': 'Condomínio Vertical', 'Studio': 'Condomínio Vertical', 'Comercial': 'Condomínio Vertical',
+    'Casa': 'Condomínio Horizontal', 'Sobrado': 'Condomínio Horizontal',
+    'Terreno': 'Condomínio Horizontal', 'Lote Condomínio Horizontal': 'Condomínio Horizontal',
+  };
+  if (b.tipo && TIPO_EMPREENDIMENTO_MAP[b.tipo]) b.tipoEmpreendimento = TIPO_EMPREENDIMENTO_MAP[b.tipo];
 
   // ── Padrão — a partir do R$/m² (ex: "(R$ 12.888/m²)") ──
   // Usa o texto bruto do tipo (mais granular que os 4 do seletor) pra
@@ -1202,6 +1223,7 @@ function renderB1(b) {
   set('f-conceito', b.conceito);
   if (b.status) document.getElementById('f-status').value = b.status;
   if (b.tipo)   document.getElementById('f-tipo').value   = b.tipo;
+  if (b.tipoEmpreendimento) document.getElementById('f-tipoEmpreendimento').value = b.tipoEmpreendimento;
   if (b.padrao) document.getElementById('f-padrao').value = b.padrao;
   const dtEl  = document.getElementById('f-dataTabela');
   const grpEl = document.getElementById('grp-dataTabela');
@@ -1288,6 +1310,7 @@ function limparMotor() {
   });
   document.getElementById('f-status').value = '';
   document.getElementById('f-tipo').value   = '';
+  document.getElementById('f-tipoEmpreendimento').value = '';
   document.getElementById('f-padrao').value = '';
   document.getElementById('f-fgts').value   = '';
   document.getElementById('unidades-tbody').innerHTML = '';
@@ -1299,7 +1322,7 @@ function lerPreview() {
   const empr = {
     nomeEmpreendimento: g('f-nome'),
     construtora:        g('f-construtora'),
-    tipo:               g('f-tipo'),
+    tipoEmpreendimento: g('f-tipoEmpreendimento'),
     bairro:             g('f-bairro'),
     cidade:             g('f-cidade'),
     estado:             g('f-estado').toUpperCase(),
@@ -1322,6 +1345,7 @@ function lerPreview() {
     fgts:               g('f-fgts'),
     planoLongo:         g('f-planoLongo'),
   };
+  const tipoProduto = g('f-tipo');
   const unidades = [];
   document.querySelectorAll('#unidades-tbody tr').forEach(tr => {
     const inps = [...tr.querySelectorAll('input')];
@@ -1333,8 +1357,14 @@ function lerPreview() {
     const s  = parseInt(v[1]) || 0;
     const vg = parseInt(v[6]) || 0;
     const tipologia = (q === 0 && vg === 0) ? '' : (q === 0 ? 'Studio' : q + 'q' + (s > 0 ? '+' + s + 's' : ''));
-    const a = parseFloat(v[3]) || 0;
-    if (a > 0) unidades.push({ tipologia, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:parseFloat(v[4])||0, unidade:v[5]||'', vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]), preco:limP(v[11]) });
+    const a  = parseFloat(v[3]) || 0;
+    const at = parseFloat(v[4]) || 0;
+    // "tipo" (produto) agora é por unidade no backend — a extração ainda só
+    // detecta um tipo por lançamento, então propaga o mesmo valor pra cada
+    // linha (dá pra diferenciar por tipologia depois, na página de Editar).
+    // Aceita área terreno sozinha (sem área útil) — caso do Lote Condomínio
+    // Horizontal, onde só "Área terreno" é preenchida (item 6).
+    if (a > 0 || at > 0) unidades.push({ tipologia, tipo:tipoProduto, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:at, unidade:v[5]||'', vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]), preco:limP(v[11]) });
   });
   return { ...empr, unidades };
 }

@@ -95,7 +95,13 @@ const CABECALHO_LANCAMENTOS = [
   'sinal', 'sinalQtd',
   'mensais', 'mensaisQtd',
   'anuais', 'anuaisQtd',
-  'precoTotal'
+  'precoTotal',
+  // tipoEmpreendimento — "Condomínio Horizontal"/"Condomínio Vertical", nível
+  // do empreendimento inteiro. Distinto de "tipo" (produto: Apartamento/Casa/
+  // Terreno/etc), que a partir de agora é lido POR UNIDADE (u.tipo) em vez de
+  // dados.tipo — um mesmo lançamento pode ter tipologias de produtos
+  // diferentes (ex: lotes e casas prontas no mesmo condomínio).
+  'tipoEmpreendimento'
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -2655,7 +2661,11 @@ function salvarLancamento_(dados) {
         id,
         dados.nomeEmpreendimento || '',
         dados.construtora        || '',
-        dados.tipo               || '',
+        // tipo (produto: Apartamento/Casa/Terreno/etc) passou a ser lido POR
+        // UNIDADE — antes vinha de dados.tipo (um valor só pro empreendimento
+        // inteiro). Ver tipoEmpreendimento (Condomínio Horizontal/Vertical)
+        // mais abaixo, esse sim continua no nível do empreendimento.
+        u.tipo                   || '',
         dados.bairro             || '',
         dados.cidade             || '',
         dados.endereco           || '',
@@ -2705,6 +2715,7 @@ function salvarLancamento_(dados) {
         u.anuais                 || '',
         u.anuaisQtd              || '',
         u.precoTotal             || '',
+        dados.tipoEmpreendimento || '',
       ];
     });
 

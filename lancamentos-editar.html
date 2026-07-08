@@ -145,18 +145,11 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
     </div>
     <div class="form-grid cols3">
       <div class="form-group">
-        <label class="form-label">Tipo</label>
-        <select class="form-input" id="f-tipo" onchange="aoMudarTipo()">
+        <label class="form-label">Tipo de empreendimento</label>
+        <select class="form-input" id="f-tipoEmpreendimento">
           <option value="">Selecionar...</option>
-          <option>Apartamento</option>
-          <option>Casa</option>
-          <option>Sobrado</option>
-          <option>Cobertura</option>
-          <option>Loft</option>
-          <option>Studio</option>
-          <option>Terreno</option>
-          <option>Lote Condomínio Horizontal</option>
-          <option>Comercial</option>
+          <option>Condomínio Horizontal</option>
+          <option>Condomínio Vertical</option>
         </select>
       </div>
       <div class="form-group">
@@ -286,7 +279,7 @@ function preencherForm(e) {
   document.getElementById('pageTitulo').textContent = e.nomeEmpreendimento || 'Editar Lançamento';
   document.getElementById('pageSub').textContent = [e.construtora, e.bairro, e.cidade].filter(Boolean).join(' · ') || 'Preencha os dados abaixo';
 
-  const campos = ['nomeEmpreendimento','construtora','tipo','padrao','status',
+  const campos = ['nomeEmpreendimento','construtora','tipoEmpreendimento','padrao','status',
                   'endereco','bairro','cidade','estado','previsaoEntrega',
                   'estoque','totalUnidades','dataLancamento',
                   'urlSite','foto','lazer','conceito'];
@@ -315,6 +308,21 @@ function addUnidade(dados = {}) {
     </div>
     <div class="form-grid cols3">
       <div class="form-group">
+        <label class="form-label">Tipo de produto</label>
+        <select class="form-input" id="u${n}-tipo" onchange="aoMudarTipoUnidade(${n})">
+          <option value="">Selecionar...</option>
+          <option ${dados.tipo==='Apartamento'?'selected':''}>Apartamento</option>
+          <option ${dados.tipo==='Casa'?'selected':''}>Casa</option>
+          <option ${dados.tipo==='Sobrado'?'selected':''}>Sobrado</option>
+          <option ${dados.tipo==='Cobertura'?'selected':''}>Cobertura</option>
+          <option ${dados.tipo==='Loft'?'selected':''}>Loft</option>
+          <option ${dados.tipo==='Studio'?'selected':''}>Studio</option>
+          <option ${dados.tipo==='Terreno'?'selected':''}>Terreno</option>
+          <option ${dados.tipo==='Lote Condomínio Horizontal'?'selected':''}>Lote Condomínio Horizontal</option>
+          <option ${dados.tipo==='Comercial'?'selected':''}>Comercial</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label class="form-label">Descrição / nome</label>
         <input class="form-input" id="u${n}-unidade" placeholder="Ex: 3 quartos" value="${esc(dados.unidade)}">
       </div>
@@ -322,12 +330,12 @@ function addUnidade(dados = {}) {
         <label class="form-label">Quartos</label>
         <input class="form-input" id="u${n}-quartos" type="number" min="0" placeholder="0" value="${esc(dados.quartos)}">
       </div>
+    </div>
+    <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Suítes</label>
         <input class="form-input" id="u${n}-suites" type="number" min="0" placeholder="0" value="${esc(dados.suites)}">
       </div>
-    </div>
-    <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Banheiros</label>
         <input class="form-input" id="u${n}-banheiros" type="number" min="0" placeholder="0" value="${esc(dados.banheiros)}">
@@ -336,6 +344,8 @@ function addUnidade(dados = {}) {
         <label class="form-label">Vagas</label>
         <input class="form-input" id="u${n}-vagas" type="number" min="0" placeholder="0" value="${esc(dados.vagas)}">
       </div>
+    </div>
+    <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Escaninho</label>
         <select class="form-input" id="u${n}-escaninho">
@@ -469,6 +479,7 @@ function coletarUnidades() {
     items.push({
       unidade,
       qd, lt,
+      tipo:         gV('u' + id + '-tipo'),
       quartos:      gV('u' + id + '-quartos'),
       suites:       gV('u' + id + '-suites'),
       banheiros:    gV('u' + id + '-banheiros'),
@@ -497,8 +508,8 @@ function coletarUnidades() {
   return items;
 }
 
-function aoMudarTipo() {
-  const tipo = gV('f-tipo');
+function aoMudarTipoUnidade(n) {
+  const tipo = gV('u' + n + '-tipo');
   if (tipo === 'Lote Condomínio Horizontal') {
     document.getElementById('f-padrao').value = 'Médio';
   }
@@ -516,7 +527,7 @@ async function salvar() {
     token: tokenSessao(),
     nomeEmpreendimento: nome,
     construtora:       gV('f-construtora'),
-    tipo:              gV('f-tipo'),
+    tipoEmpreendimento: gV('f-tipoEmpreendimento'),
     padrao:            gV('f-padrao'),
     status:            gV('f-status'),
     endereco:          gV('f-endereco'),
