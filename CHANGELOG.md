@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — "Alterações 08/07 parte 5": regra oficial de "padrão" pelo m² médio
+
+A classificação de "padrão" na extração da Orulo (`lancamentos.html`) usava faixas de R$/m²
+provisórias por tipo de imóvel (5.000/10.000/15.000 — nunca confirmadas de verdade) e dependia de
+achar um "(R$ x/m²)" solto no texto bruto, que nem sempre existia. Substituída pela regra oficial,
+confirmada pelo usuário, aplicada sobre o **Metro Quadrado Médio já calculado com as tipologias
+extraídas** (mesmo valor mostrado no painel resumo — parte 2, item 3):
+
+- até R$ 1.000/m² → Popular
+- R$ 1.001 a 1.500/m² → Médio
+- R$ 1.501 a 2.300/m² → Alto
+- acima de R$ 2.301/m² → Luxo
+
+"Lote Condomínio Horizontal" continua sempre "Médio" por regra própria (Alterações 08/07, item 2),
+sem passar por essa classificação. O cálculo roda automaticamente ao clicar "Extrair Dados" e
+sobrescreve o campo Padrão (ainda editável manualmente depois, como os demais campos detectados).
+
+Funções novas/renomeadas em `lancamentos.html`: `classificarPadraoPorM2Medio_` (regra fixa acima,
+substitui `classificarPadraoPorM2_` e as faixas provisórias por tipo, removidas) e `calcularM2Medio`
+(extraída do painel resumo pra ser reaproveitada também na classificação de padrão).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: os 4 limites da regra (1.000/1.001/1.500/1.501/2.300/2.301) batem exatamente
+com Popular/Médio/Alto/Luxo; extração com R$/m² calculado em 2.500 preenche "Luxo" corretamente;
+Lote Condomínio Horizontal continua fixo em "Médio" mesmo com R$/m² de 3.000 (que cairia em Luxo
+pela regra geral). Sem erros no console.
+
 ## 2026-07-08 — "Alterações 08/07 parte 2": percentual vendido + painel resumo da extração
 
 1. **Percentual vendido** — derivado de Estoque/Total de unidades (não é uma coluna nova no

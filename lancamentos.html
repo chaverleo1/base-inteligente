@@ -615,33 +615,24 @@ function normalizarTexto_(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
-// Faixas de R$/m² por tipo de imóvel — cada tipo tem sua própria escala de
-// mercado (lote costuma valer bem menos por m² que apartamento, por exemplo;
-// cobertura costuma valer mais). Só "apartamento" tem faixa confirmada pelo
-// usuário até agora — os demais tipos usam a mesma faixa como valor
-// provisório. Ajuste aqui assim que tiver a referência real de mercado de
-// cada tipo (não precisa mexer em mais nada, a busca já é por tipo).
-var FAIXAS_PADRAO_POR_TIPO = {
-  'apartamento':        { medio: 5000, alto: 10000, luxo: 15000 },
-  'cobertura':          { medio: 5000, alto: 10000, luxo: 15000 }, // provisório = apartamento
-  'casa':               { medio: 5000, alto: 10000, luxo: 15000 }, // provisório
-  'casa em condominio': { medio: 5000, alto: 10000, luxo: 15000 }, // provisório
-  'lote':               { medio: 5000, alto: 10000, luxo: 15000 }, // provisório
-  'lote em condominio': { medio: 5000, alto: 10000, luxo: 15000 }, // provisório
-  'lote comercial':     { medio: 5000, alto: 10000, luxo: 15000 }, // provisório
-};
-var FAIXA_PADRAO_DEFAULT = FAIXAS_PADRAO_POR_TIPO['apartamento'];
+// Classifica "padrão" pelo Metro Quadrado Médio calculado a partir das
+// próprias tipologias extraídas no Bloco 2 (não mais por um "(R$ x/m²)"
+// solto no texto bruto, nem por faixa provisória por tipo de imóvel — regra
+// confirmada pelo usuário em 08/07, parte 5).
+function classificarPadraoPorM2Medio_(m2Medio) {
+  if (m2Medio <= 1000) return 'Popular';
+  if (m2Medio <= 1500) return 'Médio';
+  if (m2Medio <= 2300) return 'Alto';
+  return 'Luxo';
+}
 
-// Classifica padrão pela faixa de R$/m² do tipo de imóvel informado (ex:
-// "lote em condomínio", "casa", "apartamento" — texto bruto, não precisa ser
-// um dos 4 valores do seletor). Sem tipo reconhecido, cai na faixa padrão.
-function classificarPadraoPorM2_(v, tipoTexto) {
-  var chave = normalizarTexto_(tipoTexto);
-  var faixa = FAIXAS_PADRAO_POR_TIPO[chave] || FAIXA_PADRAO_DEFAULT;
-  if (v >= faixa.luxo)  return 'Luxo';
-  if (v >= faixa.alto)  return 'Alto';
-  if (v >= faixa.medio) return 'Médio';
-  return 'Popular';
+// Metro Quadrado Médio: média do R$/m² de cada tipologia (precoMedio/área) —
+// mesma conta usada no painel resumo da extração (renderResumoExtracao).
+function calcularM2Medio(unidades) {
+  var m2s = unidades
+    .map(function(u) { var a = u.areaUtil || u.areaTerr || 0; return (a > 0 && u.precoMedio > 0) ? u.precoMedio / a : 0; })
+    .filter(function(v) { return v > 0; });
+  return m2s.length ? m2s.reduce(function(a, b) { return a + b; }, 0) / m2s.length : 0;
 }
 
 function extrairBloco1(txt) {
@@ -794,19 +785,13 @@ function extrairBloco1(txt) {
   };
   if (b.tipo && TIPO_EMPREENDIMENTO_MAP[b.tipo]) b.tipoEmpreendimento = TIPO_EMPREENDIMENTO_MAP[b.tipo];
 
-  // ── Padrão — a partir do R$/m² (ex: "(R$ 12.888/m²)") ──
-  // Usa o texto bruto do tipo (mais granular que os 4 do seletor) pra
-  // escolher a faixa de referência certa — ver FAIXAS_PADRAO_POR_TIPO.
-  // "Lote Condomínio Horizontal" sempre cai como "Médio" (Alterações 08/07,
-  // item 2), sem passar pela classificação por R$/m².
+  // ── Padrão ── "Lote Condomínio Horizontal" sempre cai como "Médio"
+  // (Alterações 08/07, item 2). Para os demais tipos, o padrão é definido
+  // depois em extrairDados() a partir do Metro Quadrado Médio calculado com
+  // as tipologias do Bloco 2 (só disponível depois que o Bloco 2 é
+  // extraído) — ver classificarPadraoPorM2Medio_/calcularM2Medio.
   if (b.tipo === 'Lote Condomínio Horizontal') {
     b.padrao = 'Médio';
-  } else {
-    const m2M = txt.match(/\(?\s*R\$\s*([\d.,]+)\s*\/\s*m[²2]\s*\)?/i);
-    if (m2M) {
-      const valorM2 = parsePrecoBR(m2M[1]);
-      if (valorM2 > 0) b.padrao = classificarPadraoPorM2_(valorM2, tipoTextoBruto);
-    }
   }
 
   // ── Status ── prioridade: "Estágio: ..." (Orulo)
@@ -1154,6 +1139,14 @@ function extrairDados() {
       const ehTerreno = b1.tipo === 'Lote Condomínio Horizontal';
       const b2    = extrairBloco2(txtB2 || txtB1, ehTerreno, { tipo: b1.tipo, dataTabela: b1.dataTabela });
 
+      // Padrão a partir do Metro Quadrado Médio das tipologias extraídas
+      // (Alterações 08/07, parte 5) — só recalcula se não for Lote
+      // Condomínio Horizontal, que já ficou fixo em "Médio" na extrairBloco1.
+      if (b1.tipo !== 'Lote Condomínio Horizontal') {
+        const m2MedioPadrao = calcularM2Medio(b2);
+        if (m2MedioPadrao > 0) b1.padrao = classificarPadraoPorM2Medio_(m2MedioPadrao);
+      }
+
       renderB1(b1); renderB2(b2); renderResumoExtracao(b2);
 
       const campos = [b1.nomeEmpreendimento, b1.bairro, b1.status, b1.previsaoEntrega].filter(v=>v).length;
@@ -1231,16 +1224,12 @@ function renderB2(unidades) {
 
 // Painel resumo (Alterações 08/07 parte 2, item 3) — calculado em cima das
 // tipologias já extraídas pro Bloco 2: faixa de área, "a partir de" (menor
-// preço entre as unidades) e metro quadrado médio (média do R$/m² de cada
-// tipologia). O R$/m² médio ainda não alimenta a classificação de "padrão"
-// automaticamente — é só informativo por enquanto, conforme combinado.
+// preço entre as unidades) e metro quadrado médio (mesma conta de
+// calcularM2Medio, usada também pra classificar o "padrão" — parte 5).
 function renderResumoExtracao(unidades) {
   const painel = document.getElementById('resumoExtracao');
   const areas = unidades.map(u => u.areaUtil || u.areaTerr || 0).filter(a => a > 0);
   const precos = unidades.map(u => u.precoMin || u.precoMedio || 0).filter(p => p > 0);
-  const m2s = unidades
-    .map(u => { const a = u.areaUtil || u.areaTerr || 0; return (a > 0 && u.precoMedio > 0) ? u.precoMedio / a : 0; })
-    .filter(v => v > 0);
 
   if (!areas.length && !precos.length) { painel.style.display = 'none'; painel.innerHTML = ''; return; }
 
@@ -1248,7 +1237,7 @@ function renderResumoExtracao(unidades) {
   const areaMin = areas.length ? Math.min(...areas) : 0;
   const areaMax = areas.length ? Math.max(...areas) : 0;
   const precoPartir = precos.length ? Math.min(...precos) : 0;
-  const m2Medio = m2s.length ? m2s.reduce((a, b) => a + b, 0) / m2s.length : 0;
+  const m2Medio = calcularM2Medio(unidades);
 
   const itens = [];
   if (areas.length) {
