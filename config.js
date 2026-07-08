@@ -91,13 +91,16 @@ function badgeVendidoHTML(pct, estoque) {
 
 // Classifica "padrão" pelo Metro Quadrado Médio (calcularM2Medio abaixo) —
 // não mais por um "(R$ x/m²)" solto no texto bruto, nem por faixa
-// provisória por tipo de imóvel. Regra confirmada pelo usuário em 08/07,
-// parte 5. Usada tanto na extração (lancamentos.html) quanto ao editar um
-// lançamento já salvo (lancamentos-editar.html).
+// provisória por tipo de imóvel. Vale pra todo tipo de empreendimento, sem
+// exceção (inclusive Lote Condomínio Horizontal). Faixas atualizadas em
+// 08/07 (nova regra confirmada pelo usuário, item 5): até 1.000 popular,
+// 1.001–2.000 médio, 2.001–3.000 alto, acima de 3.001 luxo. Usada tanto na
+// extração (lancamentos.html) quanto ao editar um lançamento já salvo
+// (lancamentos-editar.html).
 function classificarPadraoPorM2Medio_(m2Medio) {
   if (m2Medio <= 1000) return 'Popular';
-  if (m2Medio <= 1500) return 'Médio';
-  if (m2Medio <= 2300) return 'Alto';
+  if (m2Medio <= 2000) return 'Médio';
+  if (m2Medio <= 3000) return 'Alto';
   return 'Luxo';
 }
 

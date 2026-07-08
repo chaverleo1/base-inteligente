@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Novas faixas de "Padrão" pelo m² médio
+
+Limites da classificação (`classificarPadraoPorM2Medio_`, em `config.js`) atualizados pra:
+
+- até R$ 1.000/m² → Popular
+- R$ 1.001 a 2.000/m² → Médio
+- R$ 2.001 a 3.000/m² → Alto
+- acima de R$ 3.001/m² → Luxo
+
+(substituindo as faixas anteriores: 1.001–1.500 médio, 1.501–2.300 alto). Vale pra todo tipo de
+empreendimento, sem exceção — mesmo comportamento de antes, só os números mudaram.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: os 6 limites (1.000/1.001/2.000/2.001/3.000/3.001) batem exatamente com
+Popular/Médio/Alto/Luxo. Sem erros no console.
+
 ## 2026-07-08 — Remove a exceção "Lote Condomínio Horizontal sempre Médio"
 
 Causa raiz do relato anterior (Padrão preso em "Médio" mesmo com painel mostrando um m² médio de
