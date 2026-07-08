@@ -1,5 +1,18 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Mesmo espelhamento em lancamentos-editar.html
+
+O ajuste anterior ("Preço Total" = "Preço Máximo") só tinha sido aplicado em `lancamentos.html`.
+Aplicado agora em `lancamentos-editar.html` também: "Preço total (R$)" de cada tipologia fica
+somente leitura, sincroniza ao vivo com "Preço máximo / tabela (R$)", e o valor salvo vem direto de
+`precoMax` (não do input).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: `u1-precoTotal` nasce com o mesmo valor de `u1-precoMax`, é `readonly`, edição
+manual em `u1-precoMax` propaga ao vivo, e `coletarUnidades()` retorna `precoTotal` igual a
+`precoMax`. Sem erros no console.
+
 ## 2026-07-08 — "Preço Total" passa a espelhar "Preço Máximo" (lancamentos.html)
 
 Na tabela "Bloco 2 — Unidades Referência", "Preço Total" era um campo manual independente. Agora é

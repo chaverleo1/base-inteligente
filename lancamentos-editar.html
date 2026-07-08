@@ -386,11 +386,11 @@ function addUnidade(dados = {}) {
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Preço máximo / tabela (R$)</label>
-        <input class="form-input" id="u${n}-precoMax" placeholder="Ex: 480000" value="${esc(dados.precoMax)}">
+        <input class="form-input" id="u${n}-precoMax" placeholder="Ex: 480000" value="${esc(dados.precoMax)}" oninput="document.getElementById('u${n}-precoTotal').value=this.value">
       </div>
       <div class="form-group">
         <label class="form-label">Preço total (R$)</label>
-        <input class="form-input" id="u${n}-precoTotal" placeholder="Ex: 480000" value="${esc(dados.precoTotal)}">
+        <input class="form-input" id="u${n}-precoTotal" placeholder="Ex: 480000" value="${esc(dados.precoTotal) || esc(dados.precoMax)}" readonly title="Sempre igual ao Preço Máximo / Tabela">
       </div>
       <div class="form-group">
         <label class="form-label">Data da tabela</label>
@@ -490,10 +490,11 @@ function coletarUnidades() {
       precoMedio:   gV('u' + id + '-precoMedio'),
       precoMin:     gV('u' + id + '-precoMin'),
       precoMax,
-      // Preço máximo = Preço tabela (Alterações 08/07, item 5a) — não existe
-      // mais input separado, o valor manda pros dois campos do backend.
+      // Preço máximo = Preço tabela = Preço total — precoTotal é campo
+      // readonly na tela (sempre espelha precoMax), então lê direto do
+      // precoMax já coletado acima em vez do input.
       preco:        precoMax,
-      precoTotal:   gV('u' + id + '-precoTotal'),
+      precoTotal:   precoMax,
       dataTabela:   gV('u' + id + '-dataTabela'),
       atoEntrada:   gV('u' + id + '-atoEntrada'),
       atoEntradaQtd:gV('u' + id + '-atoEntradaQtd'),
