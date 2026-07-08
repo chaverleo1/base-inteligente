@@ -153,7 +153,7 @@ select.form-input option { background: var(--surface2); }
 
 /* ── TABELA UNIDADES ── */
 .table-wrap { overflow-x: auto; margin-bottom: 14px; }
-.unidades-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+.unidades-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1550px; }
 .unidades-table th {
   background: var(--surface); color: var(--text3); font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px;
@@ -482,41 +482,6 @@ select.form-input option { background: var(--surface2); }
 
       <hr class="pdiv">
 
-      <!-- PLANO DE PAGAMENTO -->
-      <div class="bloco-title">Plano de pagamento</div>
-      <div class="form-grid cols3">
-        <div class="form-group">
-          <div class="form-label">Entrada (R$ ou %)</div>
-          <input class="form-input" id="f-entrada" placeholder="Ex: 20% ou R$ 80.000">
-        </div>
-        <div class="form-group">
-          <div class="form-label">Parcelas em obra</div>
-          <input class="form-input" id="f-parcOb" placeholder="Ex: 36 × R$ 1.500">
-        </div>
-        <div class="form-group">
-          <div class="form-label">Saldo na entrega / chaves</div>
-          <input class="form-input" id="f-parcEntrega" placeholder="Ex: R$ 120.000">
-        </div>
-        <div class="form-group">
-          <div class="form-label">Avaliação banco</div>
-          <input class="form-input" id="f-banco" placeholder="Ex: Caixa, Bradesco">
-        </div>
-        <div class="form-group">
-          <div class="form-label">FGTS</div>
-          <select class="form-input" id="f-fgts">
-            <option value="">Não informado</option>
-            <option value="Sim">Aceita FGTS</option>
-            <option value="Não">Não aceita FGTS</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <div class="form-label">Outros planos</div>
-          <input class="form-input" id="f-planoLongo" placeholder="Ex: Direto 120 meses">
-        </div>
-      </div>
-
-      <hr class="pdiv">
-
       <!-- BLOCO 2 -->
       <div class="bloco-row">
         <div class="bloco-title" style="margin-bottom:0;flex:1">Bloco 2 — Unidades Referência <span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">(agrupadas por metragem)</span></div>
@@ -526,6 +491,9 @@ select.form-input option { background: var(--surface2); }
         <table class="unidades-table">
           <thead>
             <tr>
+              <th style="width:110px">Tipo de produto</th>
+              <th style="width:55px">Qd</th>
+              <th style="width:55px">Lt</th>
               <th style="width:48px">Qtos</th>
               <th style="width:48px">Suítes</th>
               <th style="width:45px">Banh</th>
@@ -536,8 +504,17 @@ select.form-input option { background: var(--surface2); }
               <th style="width:60px">Escaninho</th>
               <th class="r" style="width:95px">Preço Médio</th>
               <th class="r" style="width:85px">Mínimo</th>
-              <th class="r" style="width:85px">Máximo</th>
-              <th class="r" style="width:95px">Preço Manual</th>
+              <th class="r" style="width:85px">Máximo / Tabela</th>
+              <th class="r" style="width:90px">Preço Total</th>
+              <th style="width:85px">Data Tabela</th>
+              <th class="r" style="width:75px">Ato/Entr.</th>
+              <th style="width:45px">Qtd</th>
+              <th class="r" style="width:70px">Sinal</th>
+              <th style="width:45px">Qtd</th>
+              <th class="r" style="width:75px">Mensais</th>
+              <th style="width:45px">Qtd</th>
+              <th class="r" style="width:75px">Anuais</th>
+              <th style="width:45px">Qtd</th>
               <th style="width:28px"></th>
             </tr>
           </thead>
@@ -931,34 +908,6 @@ function extrairBloco1(txt) {
   return b;
 }
 
-// ─── PARSER — PLANO DE PAGAMENTO ─────────────────────────────────────────────
-function extrairPlano(txt) {
-  const p = { entrada:'', parcelasObra:'', parcelasEntrega:'', avaliacaoBanco:'', fgts:'', planoLongo:'' };
-
-  const entM = txt.match(/entrada[^:\n]{0,20}[:\-]\s*([^\n]{2,60})/i);
-  if (entM) p.entrada = entM[1].trim();
-  else {
-    const pM = txt.match(/(\d+(?:[.,]\d+)?)\s*%\s*(?:de\s+)?entrada/i);
-    if (pM) p.entrada = pM[1] + '% de entrada';
-  }
-
-  const parMatches = [...txt.matchAll(/(\d+)\s*[xX×]\s*R?\$?\s*([\d.,]+)/g)];
-  if (parMatches.length) p.parcelasObra = parMatches.map(m => `${m[1]}x R$ ${m[2]}`).slice(0, 3).join(' + ');
-
-  const saldoM = txt.match(/(?:saldo|chaves|entrega\s+d(?:o|as)\s+chaves)[^\n]*R\$\s*([\d.,]+)/i);
-  if (saldoM) p.parcelasEntrega = 'R$ ' + saldoM[1];
-
-  const bancoM = txt.match(/\b(Caixa|CEF|Bradesco|Ita[uú]|Santander|BB|Banco\s+do\s+Brasil|Inter|Sicoob)\b/i);
-  if (bancoM) p.avaliacaoBanco = bancoM[1];
-
-  if (/\bfgts\b/i.test(txt)) p.fgts = 'Sim';
-
-  const planoM = txt.match(/(?:plano\s+direto|financiamento\s+direto)[^\n]{0,80}/i);
-  if (planoM) p.planoLongo = planoM[0].trim().substring(0, 120);
-
-  return p;
-}
-
 // ─── PARSER — BLOCO 2 (unidades) ─────────────────────────────────────────────
 
 // Converte preço em formato BR para inteiro (ex: "470.195" → 470195, "R$ 470.195,00" → 470195)
@@ -1077,16 +1026,16 @@ function extrairTipologiasCompactas(linhas) {
   return unidades;
 }
 
-function extrairBloco2(txt, ehTerreno) {
+function extrairBloco2(txt, ehTerreno, defaults) {
   const linhas = txt.split('\n').map(l => l.trim());
 
   // 1ª tentativa: parser linha-a-linha (formato completo Orulo — unidade por unidade)
   const uns1 = extrairOruloLinhaALinha(linhas);
-  if (uns1.length) return agruparPorArea(uns1, ehTerreno);
+  if (uns1.length) return agruparPorArea(uns1, ehTerreno, defaults);
 
   // 2ª tentativa: mini-tabela "Tipologias disponíveis" (formato compacto Orulo)
   const uns2 = extrairTipologiasCompactas(linhas);
-  if (uns2.length) return agruparPorArea(uns2, ehTerreno);
+  if (uns2.length) return agruparPorArea(uns2, ehTerreno, defaults);
 
   // Fallback: scanner por m² + R$ na mesma linha
   const uns3 = [];
@@ -1104,14 +1053,19 @@ function extrairBloco2(txt, ehTerreno) {
     uns3.push({ area, preco, vagas: vm ? parseInt(vm[1]) : 0,
                 quartos: qm ? parseInt(qm[1]) : 0, suites: sm ? parseInt(sm[1]) : 0 });
   }
-  return agruparPorArea(uns3, ehTerreno);
+  return agruparPorArea(uns3, ehTerreno, defaults);
 }
 
 // ehTerreno (Alterações 08/07, item 6): quando o tipo é "Lote Condomínio
 // Horizontal", a metragem capturada é área de TERRENO, não área útil — só se
 // aplica a apartamento/casa. Joga o valor pro campo certo em vez de sempre
 // preencher areaUtil.
-function agruparPorArea(uns, ehTerreno) {
+// defaults ({tipo, dataTabela}): tipo de produto e data da tabela detectados
+// no Bloco 1 — só existe UM valor detectado por colagem, então propaga pra
+// cada tipologia da tabela (fica editável por linha, ex: mix de tipos no
+// mesmo condomínio precisa de ajuste manual depois).
+function agruparPorArea(uns, ehTerreno, defaults) {
+  defaults = defaults || {};
   const grupos = {};
   for (const u of uns) {
     const key = (Math.round(u.area * 10) / 10).toFixed(1);
@@ -1125,6 +1079,9 @@ function agruparPorArea(uns, ehTerreno) {
     const sModa  = moda(g.items.map(u => u.suites    || 0));
     const bModa  = moda(g.items.map(u => u.banheiros || 0));
     return {
+      tipo:        defaults.tipo || '',
+      qd:          '',
+      lt:          '',
       quartos:     qModa,
       suites:      sModa,
       banheiros:   bModa,
@@ -1136,6 +1093,12 @@ function agruparPorArea(uns, ehTerreno) {
       precoMedio:  precos.length ? Math.round(precos.reduce((a, b) => a + b, 0) / precos.length) : 0,
       precoMin:    precos.length ? Math.min(...precos) : 0,
       precoMax:    precos.length ? Math.max(...precos) : 0,
+      precoTotal:  '',
+      dataTabela:  defaults.dataTabela || '',
+      atoEntrada: '', atoEntradaQtd: '',
+      sinal: '', sinalQtd: '',
+      mensais: '', mensaisQtd: '',
+      anuais: '', anuaisQtd: '',
     };
   }).sort((a, b) => (a.areaUtil || a.areaTerr) - (b.areaUtil || b.areaTerr));
 }
@@ -1171,12 +1134,11 @@ function extrairDados() {
       // BOX 1 → dados gerais; se vazio usa BOX 2 como fallback
       const srcB1 = txtB1 || txtB2;
       const b1    = extrairBloco1(srcB1);
-      const plano = extrairPlano(srcB1);
       // BOX 2 → tabela de unidades; se vazio tenta mini-tabela do BOX 1
       const ehTerreno = b1.tipo === 'Lote Condomínio Horizontal';
-      const b2    = extrairBloco2(txtB2 || txtB1, ehTerreno);
+      const b2    = extrairBloco2(txtB2 || txtB1, ehTerreno, { tipo: b1.tipo, dataTabela: b1.dataTabela });
 
-      renderB1(b1); renderPlano(plano); renderB2(b2);
+      renderB1(b1); renderB2(b2);
 
       const campos = [b1.nomeEmpreendimento, b1.bairro, b1.status, b1.previsaoEntrega].filter(v=>v).length;
       const badge = document.getElementById('preview-badge');
@@ -1240,45 +1202,51 @@ function renderB1(b) {
   }
 }
 
-function renderPlano(p) {
-  const set = (id, val) => { const el = document.getElementById(id); if (el && val) { el.value = val; el.classList.add('ok'); } };
-  set('f-entrada', p.entrada);
-  set('f-parcOb', p.parcelasObra);
-  set('f-parcEntrega', p.parcelasEntrega);
-  set('f-banco', p.avaliacaoBanco);
-  set('f-planoLongo', p.planoLongo);
-  if (p.fgts) document.getElementById('f-fgts').value = p.fgts;
-}
-
 function renderB2(unidades) {
   const tbody = document.getElementById('unidades-tbody');
   tbody.innerHTML = '';
   if (!unidades.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:16px 0">Nenhuma unidade detectada — use "+ Linha" para adicionar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="25" style="text-align:center;color:var(--text3);padding:16px 0">Nenhuma unidade detectada — use "+ Linha" para adicionar.</td></tr>';
     return;
   }
   unidades.forEach(u => tbody.appendChild(criarLinha(u)));
 }
 
+const TIPOS_PRODUTO = ['Apartamento','Casa','Sobrado','Cobertura','Loft','Studio','Terreno','Lote Condomínio Horizontal','Comercial'];
+
 function criarLinha(u = {}) {
   const fmtN = v => v || '';
   const fmtP = v => (v && v > 0) ? String(Math.round(v)) : '';
   const tr = document.createElement('tr');
-  const inp = (val, ph, align) =>
-    `<input class="t-inp" value="${val}" placeholder="${ph}" style="text-align:${align||'left'}">`;
+  const inp = (val, ph, align, cls) =>
+    `<input class="t-inp ${cls}" value="${val}" placeholder="${ph}" style="text-align:${align||'left'}">`;
+  const sel = (val, cls) =>
+    `<select class="t-inp ${cls}"><option value="">—</option>${TIPOS_PRODUTO.map(t => `<option ${t===val?'selected':''}>${t}</option>`).join('')}</select>`;
   tr.innerHTML = `
-    <td>${inp(u.quartos  != null && u.quartos  !== '' ? u.quartos  : '', '0', 'center')}</td>
-    <td>${inp(u.suites   != null && u.suites   !== '' ? u.suites   : '', '0', 'center')}</td>
-    <td>${inp(u.banheiros!= null && u.banheiros!== '' ? u.banheiros: '', '0', 'center')}</td>
-    <td>${inp(u.areaUtil ||'', 'm²',  'right')}</td>
-    <td>${inp(u.areaTerr ||'', 'm²',  'right')}</td>
-    <td>${inp(u.unidade   ||'', 'cód.', 'left')}</td>
-    <td>${inp(u.vagas    ||'', 'qtd', 'center')}</td>
-    <td>${inp(fmtN(u.escaninho), 'S/N', 'center')}</td>
-    <td>${inp(fmtP(u.precoMedio), 'R$',  'right')}</td>
-    <td>${inp(fmtP(u.precoMin),   'mín', 'right')}</td>
-    <td>${inp(fmtP(u.precoMax),   'máx', 'right')}</td>
-    <td>${inp(fmtP(u.preco),      'R$',  'right')}</td>
+    <td>${sel(u.tipo || '', 't-tipo')}</td>
+    <td>${inp(u.qd || '', 'Qd', 'left', 't-qd')}</td>
+    <td>${inp(u.lt || '', 'Lt', 'left', 't-lt')}</td>
+    <td>${inp(u.quartos  != null && u.quartos  !== '' ? u.quartos  : '', '0', 'center', 't-quartos')}</td>
+    <td>${inp(u.suites   != null && u.suites   !== '' ? u.suites   : '', '0', 'center', 't-suites')}</td>
+    <td>${inp(u.banheiros!= null && u.banheiros!== '' ? u.banheiros: '', '0', 'center', 't-banheiros')}</td>
+    <td>${inp(u.areaUtil ||'', 'm²',  'right', 't-areaUtil')}</td>
+    <td>${inp(u.areaTerr ||'', 'm²',  'right', 't-areaTerr')}</td>
+    <td>${inp(u.unidade   ||'', 'cód.', 'left', 't-unidade')}</td>
+    <td>${inp(u.vagas    ||'', 'qtd', 'center', 't-vagas')}</td>
+    <td>${inp(fmtN(u.escaninho), 'S/N', 'center', 't-escaninho')}</td>
+    <td>${inp(fmtP(u.precoMedio), 'R$',  'right', 't-precoMedio')}</td>
+    <td>${inp(fmtP(u.precoMin),   'mín', 'right', 't-precoMin')}</td>
+    <td>${inp(fmtP(u.precoMax),   'máx', 'right', 't-precoMax')}</td>
+    <td>${inp(fmtP(u.precoTotal), 'R$',  'right', 't-precoTotal')}</td>
+    <td>${inp(u.dataTabela || '', 'mm/aaaa', 'left', 't-dataTabela')}</td>
+    <td>${inp(u.atoEntrada || '', 'R$', 'right', 't-atoEntrada')}</td>
+    <td>${inp(u.atoEntradaQtd || '', 'qtd', 'center', 't-atoEntradaQtd')}</td>
+    <td>${inp(u.sinal || '', 'R$', 'right', 't-sinal')}</td>
+    <td>${inp(u.sinalQtd || '', 'qtd', 'center', 't-sinalQtd')}</td>
+    <td>${inp(u.mensais || '', 'R$', 'right', 't-mensais')}</td>
+    <td>${inp(u.mensaisQtd || '', 'qtd', 'center', 't-mensaisQtd')}</td>
+    <td>${inp(u.anuais || '', 'R$', 'right', 't-anuais')}</td>
+    <td>${inp(u.anuaisQtd || '', 'qtd', 'center', 't-anuaisQtd')}</td>
     <td><button onclick="this.closest('tr').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px" title="Remover">×</button></td>`;
   return tr;
 }
@@ -1287,7 +1255,8 @@ function addLinhaUnidade() {
   const tbody = document.getElementById('unidades-tbody');
   const td = tbody.querySelector('td[colspan]');
   if (td) td.closest('tr').remove();
-  tbody.appendChild(criarLinha());
+  const g = id => document.getElementById(id)?.value.trim() || '';
+  tbody.appendChild(criarLinha({ tipo: g('f-tipo'), dataTabela: g('f-dataTabela') }));
 }
 
 function limparMotor() {
@@ -1304,15 +1273,13 @@ function limparMotor() {
   document.querySelectorAll('input[name="statusTabela"]').forEach(r => r.checked = false);
   ['f-nome','f-construtora','f-cidade','f-estado','f-bairro','f-endereco','f-entrega','f-dataTabela',
    'f-estoque','f-totalUnidades','f-dataLancamento',
-   'f-urlSite','f-lazer','f-conceito',
-   'f-entrada','f-parcOb','f-parcEntrega','f-banco','f-planoLongo'].forEach(id => {
+   'f-urlSite','f-lazer','f-conceito'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
   });
   document.getElementById('f-status').value = '';
   document.getElementById('f-tipo').value   = '';
   document.getElementById('f-tipoEmpreendimento').value = '';
   document.getElementById('f-padrao').value = '';
-  document.getElementById('f-fgts').value   = '';
   document.getElementById('unidades-tbody').innerHTML = '';
 }
 
@@ -1338,33 +1305,53 @@ function lerPreview() {
     urlSite:            g('f-urlSite'),
     lazer:              g('f-lazer'),
     conceito:           g('f-conceito'),
-    entrada:            g('f-entrada'),
-    parcelasObra:       g('f-parcOb'),
-    parcelasEntrega:    g('f-parcEntrega'),
-    avaliacaoBanco:     g('f-banco'),
-    fgts:               g('f-fgts'),
-    planoLongo:         g('f-planoLongo'),
   };
-  const tipoProduto = g('f-tipo');
   const unidades = [];
   document.querySelectorAll('#unidades-tbody tr').forEach(tr => {
-    const inps = [...tr.querySelectorAll('input')];
-    if (inps.length < 12) return;
-    const v = inps.map(i => i.value.trim());
+    const c = cls => tr.querySelector('.t-' + cls);
+    if (!c('quartos')) return; // linha placeholder ("Nenhuma unidade detectada")
+    const gt = cls => (c(cls)?.value || '').trim();
     const limP = s => { const n = parseFloat(s.replace(/\./g,'').replace(',','.').replace('R$','').trim()); return isNaN(n)?0:(n<10000?n*1000:n); };
-    // v[0]=quartos v[1]=suites v[2]=banheiros v[3]=areaUtil v[4]=areaTerr v[5]=unidade v[6]=vagas v[7]=escaninho v[8]=precoMedio v[9]=precoMin v[10]=precoMax v[11]=preco
-    const q  = parseInt(v[0]) || 0;
-    const s  = parseInt(v[1]) || 0;
-    const vg = parseInt(v[6]) || 0;
+    const q  = parseInt(gt('quartos')) || 0;
+    const s  = parseInt(gt('suites')) || 0;
+    const vg = parseInt(gt('vagas')) || 0;
     const tipologia = (q === 0 && vg === 0) ? '' : (q === 0 ? 'Studio' : q + 'q' + (s > 0 ? '+' + s + 's' : ''));
-    const a  = parseFloat(v[3]) || 0;
-    const at = parseFloat(v[4]) || 0;
-    // "tipo" (produto) agora é por unidade no backend — a extração ainda só
-    // detecta um tipo por lançamento, então propaga o mesmo valor pra cada
-    // linha (dá pra diferenciar por tipologia depois, na página de Editar).
+    const a  = parseFloat(gt('areaUtil')) || 0;
+    const at = parseFloat(gt('areaTerr')) || 0;
     // Aceita área terreno sozinha (sem área útil) — caso do Lote Condomínio
     // Horizontal, onde só "Área terreno" é preenchida (item 6).
-    if (a > 0 || at > 0) unidades.push({ tipologia, tipo:tipoProduto, quartos:q, suites:s, banheiros:parseInt(v[2])||0, areaUtil:a, areaTerr:at, unidade:v[5]||'', vagas:vg, escaninho:v[7], precoMedio:limP(v[8]), precoMin:limP(v[9]), precoMax:limP(v[10]), preco:limP(v[11]) });
+    if (a <= 0 && at <= 0) return;
+    const precoMax = limP(gt('precoMax'));
+    unidades.push({
+      tipologia,
+      tipo:       gt('tipo'),
+      qd:         gt('qd'),
+      lt:         gt('lt'),
+      quartos:    q,
+      suites:     s,
+      banheiros:  parseInt(gt('banheiros')) || 0,
+      areaUtil:   a,
+      areaTerr:   at,
+      unidade:    gt('unidade'),
+      vagas:      vg,
+      escaninho:  gt('escaninho'),
+      precoMedio: limP(gt('precoMedio')),
+      precoMin:   limP(gt('precoMin')),
+      precoMax,
+      // Preço máximo = Preço tabela (Alterações 08/07, item 5a) — mesmo
+      // critério usado em lancamentos-editar.html.
+      preco:      precoMax,
+      precoTotal: limP(gt('precoTotal')),
+      dataTabela: gt('dataTabela'),
+      atoEntrada:    gt('atoEntrada'),
+      atoEntradaQtd: gt('atoEntradaQtd'),
+      sinal:         gt('sinal'),
+      sinalQtd:      gt('sinalQtd'),
+      mensais:       gt('mensais'),
+      mensaisQtd:    gt('mensaisQtd'),
+      anuais:        gt('anuais'),
+      anuaisQtd:     gt('anuaisQtd'),
+    });
   });
   return { ...empr, unidades };
 }

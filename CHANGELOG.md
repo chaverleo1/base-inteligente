@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Paridade estrutural da página de extração da Orulo (lancamentos.html)
+
+As mudanças estruturais de "Alterações 08/07" e da separação Tipo de Empreendimento/Tipo de
+Produto tinham sido aplicadas só na página de Editar (`lancamentos-editar.html`). Agora
+`lancamentos.html` (extração/captura de texto bruto da Orulo) tem a mesma estrutura:
+
+- **Bloco "Plano de pagamento" removido** (Entrada, Parcelas em obra/entrega, Avaliação banco,
+  FGTS, Outros planos) — mesmo campo que foi eliminado como "Dados comerciais" na Editar.
+- **Tabela "Bloco 2 — Unidades Referência" reestruturada**: cada linha ganhou um seletor "Tipo de
+  produto" (pré-preenchido com o tipo detectado no Bloco 1, editável por linha — permite misturar
+  tipos na mesma tabela), campos Qd/Lt, Preço Total, Data da Tabela (pré-preenchida a partir da
+  "Data da tabela de preços" detectada), e o plano de pagamento por tipologia (Ato/Entrada, Sinal,
+  Mensais, Anuais, cada um com preço + quantidade). A coluna "Preço Manual" foi removida — "Preço
+  máximo" agora manda pros dois campos (`precoMax` e `preco`), mesmo critério da Editar.
+- Tabela ficou bem mais larga (25 colunas) — like antes, rola horizontalmente dentro do card.
+
+Bug corrigido de passagem: os inputs da tabela eram lidos por **posição** (`v[0]`, `v[1]`...) —
+frágil e já teria quebrado com as colunas novas. Trocado por seletor de classe CSS por campo
+(`.t-tipo`, `.t-qd`, `.t-precoMedio` etc.), mais robusto a mudanças futuras na tabela.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: extração com texto contendo "terreno" (tipo de produto e tipo de empreendimento
+corretos, área jogada pra "Área terreno", campos "Outras informações" capturados); preenchimento
+manual de Qd/Lt e plano de pagamento numa linha, refletido corretamente em `lerPreview()`; botão "+
+Linha" cria linha nova com tipo/data da tabela pré-preenchidos a partir do Bloco 1; sem erros no
+console em nenhum dos passos.
+
 ## 2026-07-08 — Campo "Tipo de Empreendimento" separado do "Tipo de Produto"
 
 Em Empreendimentos, "Tipo" (Apartamento/Casa/Terreno/etc) descrevia o produto de cada tipologia,
