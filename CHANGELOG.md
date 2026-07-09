@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — "Data da tabela de preços" (Bloco 1) também preenchida na aba "Outros"
+
+Usuário reportou de novo que "Data da Tabela" não capturava — dessa vez era o campo **geral** "Data
+da tabela de preços" (Bloco 1, junto com Nome/Bairro/Cidade), não a coluna por unidade (essa já
+tinha sido corrigida no commit anterior e continuava funcionando certo). O formato "Outros" só
+tinha `DATA_TABELA` por tipologia; nada populava o campo geral de Bloco 1, que também aciona o
+alerta visual "⚠ VERIFICAR PREÇOS".
+
+`extrairOutrosFormato()` agora usa a `DATA_TABELA` da primeira tipologia como referência pro campo
+geral do empreendimento também — mesmo padrão já usado pro "Tipo de imóvel" (que também deriva da
+primeira tipologia).
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: campo "Data da tabela de preços" preenchido com "06/2026" e o alerta "⚠
+VERIFICAR PREÇOS" ativo, ao mesmo tempo em que as colunas por unidade continuam corretas. Sem
+erros no console.
+
 ## 2026-07-08 — Parser da aba "Outros" mais tolerante a variações do assistente organizador
 
 Usuário testou a aba "Outros" com um texto real gerado pelo assistente organizador e reportou que
