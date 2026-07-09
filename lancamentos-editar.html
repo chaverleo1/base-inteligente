@@ -616,6 +616,11 @@ async function salvar() {
   const payload = {
     acao: 'salvar_lancamento',
     token: tokenSessao(),
+    // idLancamento estável — sem isso o backend só sabe achar o registro já
+    // salvo comparando pelo NOME, e quebra exatamente quando o nome está
+    // sendo alterado aqui (busca pelo nome novo não acha nada, gera um
+    // idLancamento novo, e o registro antigo com o nome velho fica órfão).
+    idLancamento: _empOriginal ? _empOriginal.idLancamento : '',
     nomeEmpreendimento: nome,
     construtora:       gV('f-construtora'),
     tipoEmpreendimento: gV('f-tipoEmpreendimento'),

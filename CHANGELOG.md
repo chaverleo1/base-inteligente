@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Fix: renomear empreendimento na Editar não salvava
+
+**Bug**: ao mudar o "Nome do empreendimento" na página Editar e clicar em Salvar, aparecia
+"salvo com sucesso" mas o nome antigo continuava aparecendo — o cadastro renomeado nunca
+sobrescrevia o antigo.
+
+**Causa raiz**: o backend (`salvarLancamento_`) decidia "qual lançamento é esse" comparando o
+**nome novo** digitado contra os nomes já salvos na planilha. Isso funciona ao reextrair o mesmo
+empreendimento (nome igual), mas quebra exatamente ao **renomear**: a busca pelo nome novo não
+encontra nada, gera um `idLancamento` novo do zero, salva como se fosse outro empreendimento — e o
+registro antigo (com o nome velho) fica órfão na planilha, intocado.
+
+**Fix**: a página Editar agora manda o `idLancamento` (estável, não muda) junto no payload de
+salvar; o backend passa a usar esse ID pra achar e substituir o registro certo quando ele vier
+preenchido, caindo pro dedup por nome (comportamento original) só quando não vier — que é o caso do
+fluxo de extração nova em "Novo Lançamento"/"Outros", sem ID ainda. ⚠️ precisa reimplantar o Apps
+Script.
+
 ## 2026-07-09 — Botão "Excluir" na lista de Links Úteis
 
 Ao lado do botão "✏️ Editar" em cada link, novo botão **"🗑 Excluir"** — pede confirmação

@@ -2637,16 +2637,33 @@ function salvarLancamento_(dados) {
     var unidades = dados.unidades || [];
     if (!unidades.length) return { ok: false, erro: 'nenhuma unidade informada' };
 
-    // Verificar duplicata pelo nome — apagar antes de reinserir (merge)
+    // Localizar o registro já salvo pra substituir (merge) — prioriza
+    // dados.idLancamento (estável, mandado pela página Editar) quando vier
+    // preenchido; SEM ele, cai pro dedup pelo nome (comportamento original,
+    // usado pela extração em lancamentos.html, que não tem ID ainda na hora
+    // de salvar). Buscar só pelo nome quebra justamente quando o usuário está
+    // RENOMEANDO o empreendimento na Editar: a busca pelo nome NOVO não acha
+    // o registro antigo, gera um idLancamento novo e o registro com o nome
+    // velho fica órfão na planilha — por isso o idLancamento tem prioridade.
     var lr = aba.getLastRow();
     var idExistente = '';
     if (lr >= 2) {
-      var nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
-      var nomeNovo = String(dados.nomeEmpreendimento).toLowerCase().trim();
-      for (var i = nomes.length - 1; i >= 0; i--) {
-        if (String(nomes[i] || '').toLowerCase().trim() === nomeNovo) {
-          if (!idExistente) idExistente = aba.getRange(i + 2, 1).getValue();
-          aba.deleteRow(i + 2);
+      if (dados.idLancamento) {
+        var idsAtuais = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+        for (var i = idsAtuais.length - 1; i >= 0; i--) {
+          if (idsAtuais[i] === dados.idLancamento) {
+            idExistente = idsAtuais[i];
+            aba.deleteRow(i + 2);
+          }
+        }
+      } else {
+        var nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
+        var nomeNovo = String(dados.nomeEmpreendimento).toLowerCase().trim();
+        for (var i = nomes.length - 1; i >= 0; i--) {
+          if (String(nomes[i] || '').toLowerCase().trim() === nomeNovo) {
+            if (!idExistente) idExistente = aba.getRange(i + 2, 1).getValue();
+            aba.deleteRow(i + 2);
+          }
         }
       }
     }
