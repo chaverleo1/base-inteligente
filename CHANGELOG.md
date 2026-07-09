@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-08 — Badge de status da tabela de preços nos cards de Empreendimentos
+
+Cada card de "Empreendimentos Cadastrados" (`lancamentos.html`) agora mostra se a tabela de preços
+está atualizada, a partir do campo `statusTabela` (já existia no backend, vindo do rádio
+"Atualizada/Desatualizada" preenchido na extração/edição):
+
+- **Desatualizada**: botão piscando (`⚠ Tabela desatualizada`), clicável — leva direto pro
+  "Editar" do empreendimento (mesma função `editarEmp()` do botão "✏️ Editar").
+- **Atualizada**: selo verde discreto (`✓ Tabela atualizada`), sem animação.
+- **Sem status definido**: não mostra nada (não força uma opinião sobre dado que não existe).
+
+Reaproveita o mesmo estilo de alerta (`⚠ VERIFICAR PREÇOS`) já usado no formulário de extração,
+agora também visível na lista, sem precisar abrir cada empreendimento pra saber.
+
+Só frontend — não precisa reimplantar o Apps Script.
+
+Testado no preview: os 3 cenários (desatualizada, atualizada, sem status) renderizam certo;
+animação `pisca-badge` confirmada via computed style; botão de "desatualizada" clicável
+(`cursor:pointer`, `onclick` chamando o índice correto do card). Sem erros no console.
+
 ## 2026-07-08 — "Data da tabela de preços" (Bloco 1) também preenchida na aba "Outros"
 
 Usuário reportou de novo que "Data da Tabela" não capturava — dessa vez era o campo **geral** "Data

@@ -157,6 +157,14 @@ select.form-input option { background: var(--surface2); }
 .alerta-tabela-tag { font-size:10px; font-weight:700; color:#c98000; margin-left:6px; animation: pisca .9s step-end infinite; }
 @keyframes pisca { 0%,100%{opacity:1} 50%{opacity:0} }
 
+/* ── BADGE STATUS DA TABELA (nos cards de Empreendimentos) ── */
+.tabela-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:4px; letter-spacing:.3px;
+                border:none; font-family:'Inter',sans-serif; display:inline-flex; align-items:center; gap:4px; }
+.tabela-badge.atualizada { background:rgba(0,212,170,.15); color:var(--accent2); border:1px solid rgba(0,212,170,.3); cursor:default; }
+.tabela-badge.desatualizada { background:rgba(255,90,90,.2); color:#ff5a5a; border:1px solid rgba(255,90,90,.45);
+                               cursor:pointer; animation: pisca-badge .9s step-end infinite; }
+@keyframes pisca-badge { 0%,100%{opacity:1} 50%{opacity:.35} }
+
 /* ── PREVIEW DIVIDER ── */
 .pdiv { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
@@ -1621,6 +1629,14 @@ function renderLista(lista) {
     const stCls  = { 'Em obras':'st-obras','Em planta':'st-planta','Pronto':'st-pronto','Entregue':'st-entregue' }[e.status] || 'st-planta';
     const pctVendido = calcularPercentualVendido(e.estoque, e.totalUnidades);
     const resumoHtml = montarResumoAreaPrecoHTML(e.unidades);
+    // Destaca se a tabela de preços está atualizada — "Desatualizada" pisca
+    // e é clicável (leva direto pro Editar, mesmo alerta visual já usado no
+    // formulário de extração). Sem status definido, não mostra nada.
+    const tabelaBadge = e.statusTabela === 'Desatualizada'
+      ? `<button class="tabela-badge desatualizada" onclick="editarEmp(${i})" title="Tabela de preços desatualizada — clique pra atualizar">⚠ Tabela desatualizada</button>`
+      : e.statusTabela === 'Atualizada'
+        ? `<span class="tabela-badge atualizada">✓ Tabela atualizada</span>`
+        : '';
 
     return `
     <div class="emp-card" id="ec-${i}">
@@ -1630,6 +1646,7 @@ function renderLista(lista) {
         <div class="emp-badges">
           ${e.status ? `<span class="st-badge ${stCls}">${e.status}</span>` : ''}
           ${e.previsaoEntrega ? `<span class="st-badge st-data">📅 ${e.previsaoEntrega}</span>` : ''}
+          ${tabelaBadge}
         </div>
       </div>
       <div class="emp-card-body">
