@@ -390,6 +390,26 @@
   .adm-rel-table td{padding:9px 12px;font-size:13px;vertical-align:middle}
   .adm-rel-table tr.ok td{background:rgba(0,212,170,.04)}
   .adm-rel-table tr.err td{background:rgba(255,90,90,.04)}
+  /* ── ADM SUB-ABAS (Funções / Links Úteis) ── */
+  .adm-subtabs{display:flex;gap:2px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:20px;width:fit-content}
+  .adm-subtab{padding:8px 18px;border-radius:8px;border:none;background:transparent;color:var(--text2);
+              font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+  .adm-subtab.active{background:var(--accent);color:#fff}
+  .adm-subtab:hover:not(.active){color:var(--text)}
+  @media(max-width:560px){.adm-subtabs{width:100%}.adm-subtab{flex:1;text-align:center;padding:8px 6px}}
+  /* ── LINKS ÚTEIS ── */
+  .link-form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+  .link-form-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px}
+  .link-form-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+                    color:var(--text);font-size:13px;font-family:'Inter',sans-serif;padding:9px 12px;
+                    outline:none;transition:border .2s;width:100%}
+  .link-form-input:focus{border-color:var(--accent)}
+  textarea.link-form-input{resize:vertical;min-height:60px;line-height:1.5}
+  .links-uteis-nome a{color:var(--accent);font-weight:600;text-decoration:none}
+  .links-uteis-nome a:hover{text-decoration:underline}
+  .links-uteis-url{font-size:12px;color:var(--text3);word-break:break-all}
+  .links-uteis-obs{font-size:12px;color:var(--text2)}
+  .links-uteis-vazio{padding:30px;text-align:center;color:var(--text3);font-size:13px}
   /* ── INIT OVERLAY ── */
   .init-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
             padding:44px 48px;width:360px;max-width:90vw;text-align:center}
@@ -584,7 +604,14 @@
 
 <!-- ADM SECTION -->
 <div class="page" id="secao-adm" style="display:none">
-  <div class="section-title">Administração — Funções manuais</div>
+  <div class="section-title">Administração</div>
+
+  <div class="adm-subtabs">
+    <button class="adm-subtab active" id="admSubtabFuncoes" onclick="mostrarAdmSubtab('funcoes')">Funções manuais</button>
+    <button class="adm-subtab" id="admSubtabLinks" onclick="mostrarAdmSubtab('links')">🔗 Links Úteis</button>
+  </div>
+
+  <div id="admPainelFuncoes">
 
   <!-- Gatilhos automáticos -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;margin-bottom:20px;display:flex;align-items:center;flex-wrap:wrap;gap:10px">
@@ -675,6 +702,52 @@
 
   <!-- Relatório final (Ativar TODOS) -->
   <div id="adm-relatorio-final" style="display:none"></div>
+
+  </div>
+
+  <!-- LINKS ÚTEIS -->
+  <div id="admPainelLinks" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="adm-btn" style="width:auto" onclick="abrirDrawerLink()">+ Cadastrar Link</button>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <table class="adm-table">
+        <thead>
+          <tr><th>Nome</th><th>URL</th><th>OBS</th></tr>
+        </thead>
+        <tbody id="linksUteisTbody">
+          <tr><td colspan="3" class="links-uteis-vazio">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER LINK ÚTIL -->
+<div class="drawer-overlay" id="drawerOverlayLink" onclick="fecharDrawerLink()"></div>
+<div class="drawer" id="drawerLink">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-nome">Cadastrar Link Útil</div>
+      <div class="drawer-cod">Aparece na lista de "Links Úteis" da aba ADM</div>
+    </div>
+    <button class="drawer-close" onclick="fecharDrawerLink()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="link-form-group">
+      <label class="link-form-label">Nome</label>
+      <input class="link-form-input" id="fLinkNome" placeholder="Ex: Painel Imobzi">
+    </div>
+    <div class="link-form-group">
+      <label class="link-form-label">URL</label>
+      <input class="link-form-input" id="fLinkUrl" placeholder="https://...">
+    </div>
+    <div class="link-form-group">
+      <label class="link-form-label">OBS</label>
+      <textarea class="link-form-input" id="fLinkObs" rows="3" placeholder="Anotação opcional..."></textarea>
+    </div>
+    <button class="adm-btn" style="width:100%" id="btnSalvarLink" onclick="salvarNovoLink()">💾 Salvar link</button>
+  </div>
 </div>
 
 <!-- DRAWER CLIENTE -->
@@ -2143,6 +2216,80 @@ function mostrarAdm() {
   document.getElementById('btnTabDash').classList.remove('active');
   document.getElementById('btnTabBaseimob').classList.remove('active');
   document.getElementById('btnTabAdm').classList.add('active');
+}
+
+// ── SUB-ABAS DA ADM (Funções manuais / Links Úteis) ──────────────────────────
+function mostrarAdmSubtab(nome) {
+  document.getElementById('admPainelFuncoes').style.display = nome === 'funcoes' ? '' : 'none';
+  document.getElementById('admPainelLinks').style.display   = nome === 'links'   ? '' : 'none';
+  document.getElementById('admSubtabFuncoes').classList.toggle('active', nome === 'funcoes');
+  document.getElementById('admSubtabLinks').classList.toggle('active', nome === 'links');
+  if (nome === 'links') carregarLinksUteis();
+}
+
+async function carregarLinksUteis() {
+  const tbody = document.getElementById('linksUteisTbody');
+  tbody.innerHTML = '<tr><td colspan="3" class="links-uteis-vazio">Carregando...</td></tr>';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_listar_links_uteis&token=' + encodeURIComponent(tokenSessao()));
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const links = r.links || [];
+    if (!links.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="links-uteis-vazio">Nenhum link cadastrado ainda.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = links.map(l => `
+      <tr>
+        <td class="links-uteis-nome"><a href="${l.url}" target="_blank" rel="noopener">🔗 ${l.nome || '—'}</a></td>
+        <td class="links-uteis-url">${l.url || '—'}</td>
+        <td class="links-uteis-obs">${l.obs || '—'}</td>
+      </tr>`).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="3" class="links-uteis-vazio">Erro ao carregar links.</td></tr>';
+  }
+}
+
+function abrirDrawerLink() {
+  document.getElementById('fLinkNome').value = '';
+  document.getElementById('fLinkUrl').value  = '';
+  document.getElementById('fLinkObs').value  = '';
+  document.getElementById('drawerLink').classList.add('open');
+  document.getElementById('drawerOverlayLink').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharDrawerLink() {
+  document.getElementById('drawerLink').classList.remove('open');
+  document.getElementById('drawerOverlayLink').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function salvarNovoLink() {
+  const nome = document.getElementById('fLinkNome').value.trim();
+  const url  = document.getElementById('fLinkUrl').value.trim();
+  const obs  = document.getElementById('fLinkObs').value.trim();
+  if (!nome || !url) { showToast('Nome e URL são obrigatórios.', 'erro'); return; }
+
+  const btn = document.getElementById('btnSalvarLink');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_link_util', token: tokenSessao(), nome, url, obs }) })
+    });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok === false) throw new Error(r.erro || 'Erro desconhecido');
+    showToast('Link cadastrado com sucesso!', 'ok');
+    fecharDrawerLink();
+    carregarLinksUteis();
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Salvar link';
+  }
 }
 
 async function admVerificarGatilhos() {

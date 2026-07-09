@@ -251,6 +251,7 @@ function doGet(e) {
       return ok({ gatilhos: gatilhos });
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
+  if (acao === 'adm_listar_links_uteis') return ok(listarLinksUteis_());
 
   // Diagnóstico pontual: investigar por que um imóvel específico da Imobzi
   // não aparece na REVENDA (ex: ativo no CRM mas não marcado "publicar no
@@ -579,6 +580,7 @@ function doPost(e) {
   if (d.acao === 'adicionar_favorito')    return ok(adicionarFavorito_(d));
   if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
   if (d.acao === 'desativar_acao_planejada') return ok(desativarAcaoPlanejada_(d));
+  if (d.acao === 'salvar_link_util')      return ok(salvarLinkUtil_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -2753,6 +2755,60 @@ function excluirLancamento_(dados) {
         : String(aba.getRange(i + 2, 2).getValue()).toLowerCase().trim() === String(dados.nomeEmpreendimento || '').toLowerCase().trim();
       if (igual) aba.deleteRow(i + 2);
     }
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO LINKS ÚTEIS — atalhos administrativos cadastrados na aba ADM
+// (dashboard.html, aba "Links Úteis") — ferramentas/painéis externos que o
+// corretor usa com frequência e não quer procurar de novo toda vez.
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_LINKS_UTEIS = ['idLink', 'nome', 'url', 'obs', 'dataCadastro'];
+
+function obterAbaLinksUteis_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LINKS_UTEIS');
+  if (!aba) {
+    aba = ss.insertSheet('LINKS_UTEIS');
+    aba.appendRow(CABECALHO_LINKS_UTEIS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_LINKS_UTEIS.length)
+       .setFontWeight('bold')
+       .setBackground('#1e2335')
+       .setFontColor('#e8ecf4');
+  }
+  return aba;
+}
+
+function listarLinksUteis_() {
+  try {
+    var aba = obterAbaLinksUteis_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { links: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LINKS_UTEIS.length).getValues();
+    var links = dados
+      .filter(function(r) { return r[0]; })
+      .map(function(r) {
+        var obj = {};
+        CABECALHO_LINKS_UTEIS.forEach(function(col, i) { obj[col] = r[i]; });
+        return obj;
+      });
+    return { links: links };
+  } catch(e) {
+    return { links: [], erro: e.message };
+  }
+}
+
+function salvarLinkUtil_(dados) {
+  if (!dados || !dados.nome || !dados.url) return { ok: false, erro: 'nome e url são obrigatórios' };
+  try {
+    var aba   = obterAbaLinksUteis_();
+    var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    aba.appendRow([Utilities.getUuid(), dados.nome, dados.url, dados.obs || '', agora]);
     return { ok: true };
   } catch(e) {
     return { ok: false, erro: e.message };

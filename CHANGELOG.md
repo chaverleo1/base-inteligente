@@ -1,5 +1,17 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Aba "Links Úteis" na página ADM
+
+Na página ADM (`dashboard.html`), nova sub-aba **"🔗 Links Úteis"** ao lado de "Funções manuais":
+
+- Lista os links cadastrados (Nome, URL, OBS) — clicar no nome abre a URL em outra aba.
+- Botão **"+ Cadastrar Link"** abre uma janela lateral (mesmo padrão de drawer já usado no projeto)
+  com campos Nome/URL/OBS. Nome e URL são obrigatórios.
+
+**Backend** (`code.txt`): nova aba **LINKS_UTEIS** na planilha (criada automaticamente na primeira
+gravação), com `idLink`/`nome`/`url`/`obs`/`dataCadastro`. Rotas novas: `adm_listar_links_uteis`
+(GET) e `salvar_link_util` (POST) — ⚠️ precisa reimplantar o Apps Script.
+
 ## 2026-07-09 — Botão URL e dados do Gerente nos cards de Empreendimentos
 
 Cada card de "Empreendimentos Cadastrados" (`lancamentos.html`) agora mostra, quando cadastrados:
