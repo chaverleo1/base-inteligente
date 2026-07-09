@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Formulário: botão "Atualizar" renomeado pra "Buscar" + cores fixas
+
+No seletor de modo do Formulário (`formulario.html`):
+
+- Botão "Atualizar" renomeado pra **"Buscar"** (o rótulo não refletia bem a ação — é onde o
+  corretor busca um contato já cadastrado antes de editar).
+- Cores fixas por botão, em vez do azul genérico de "ativo": **"Novo"** fundo verde
+  (`var(--success)`), **"Buscar"** fundo branco com letra escura. O botão selecionado fica em
+  opacidade cheia; o outro, esmaecido — mesma lógica de antes, só que sem depender de uma cor
+  compartilhada.
+
 ## 2026-07-09 — Botão "Editar" na lista de Links Úteis
 
 Cada linha da lista de "Links Úteis" (aba ADM) ganha um botão **"✏️ Editar"**, que abre o mesmo
