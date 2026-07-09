@@ -164,6 +164,18 @@ select.form-input option { background: var(--surface2); }
 .tabela-badge.desatualizada { background:rgba(255,90,90,.2); color:#ff5a5a; border:1px solid rgba(255,90,90,.45);
                                cursor:pointer; animation: pisca-badge .9s step-end infinite; }
 @keyframes pisca-badge { 0%,100%{opacity:1} 50%{opacity:.35} }
+.st-url { background:rgba(79,124,255,.12); color:var(--accent); border:1px solid rgba(79,124,255,.3);
+          text-decoration:none; cursor:pointer; }
+.st-url:hover { background:rgba(79,124,255,.22); }
+
+/* ── GERENTE COMERCIAL (nos cards) ── */
+.emp-gerente { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text2);
+               margin-bottom:10px; flex-wrap:wrap; }
+.emp-gerente-nome { font-weight:600; }
+.emp-gerente-wpp { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700;
+                   color:#25d366; background:rgba(37,211,102,.12); border:1px solid rgba(37,211,102,.3);
+                   border-radius:99px; padding:2px 8px; text-decoration:none; }
+.emp-gerente-wpp:hover { background:rgba(37,211,102,.22); }
 
 /* ── PREVIEW DIVIDER ── */
 .pdiv { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
@@ -1637,6 +1649,17 @@ function renderLista(lista) {
       : e.statusTabela === 'Atualizada'
         ? `<span class="tabela-badge atualizada">✓ Tabela atualizada</span>`
         : '';
+    // Botão que abre a URL/pasta digital do empreendimento em outra aba —
+    // só aparece se o campo urlSite estiver preenchido.
+    const urlBadge = e.urlSite
+      ? `<a class="st-badge st-url" href="${e.urlSite}" target="_blank" rel="noopener">🔗 URL</a>`
+      : '';
+    // Contato do Gerente Comercial do Produto (painel/drawer criado em
+    // lancamentos-editar.html) — mostrado no card só se já cadastrado.
+    const gerenteTelLimpo = String(e.gerenteTelefone || '').replace(/\D/g, '');
+    const gerenteHtml = e.gerenteNome
+      ? `<div class="emp-gerente"><span class="emp-gerente-nome">👤 ${e.gerenteNome}</span>${gerenteTelLimpo ? `<a class="emp-gerente-wpp" href="https://wa.me/55${gerenteTelLimpo}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}</div>`
+      : '';
 
     return `
     <div class="emp-card" id="ec-${i}">
@@ -1647,9 +1670,11 @@ function renderLista(lista) {
           ${e.status ? `<span class="st-badge ${stCls}">${e.status}</span>` : ''}
           ${e.previsaoEntrega ? `<span class="st-badge st-data">📅 ${e.previsaoEntrega}</span>` : ''}
           ${tabelaBadge}
+          ${urlBadge}
         </div>
       </div>
       <div class="emp-card-body">
+        ${gerenteHtml}
         ${tips.length ? `<div class="emp-tipologias">${tips.map(t=>`<span class="tip-chip">${t}</span>`).join('')}</div>` : ''}
         <div class="emp-resumo">${resumoHtml || '—'}</div>
         <div class="emp-resumo-count"><small>${e.unidades.length} tipologia${e.unidades.length!==1?'s':''}</small></div>

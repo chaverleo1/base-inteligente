@@ -1,5 +1,15 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Botão URL e dados do Gerente nos cards de Empreendimentos
+
+Cada card de "Empreendimentos Cadastrados" (`lancamentos.html`) agora mostra, quando cadastrados:
+
+- **🔗 URL**: botão ao lado do badge de status da tabela de preços, abre `urlSite` (URL/pasta
+  digital do empreendimento) em outra aba.
+- **Gerente Comercial**: nome + botão "💬 WhatsApp" (mesmo padrão `wa.me/55...`) logo no topo do
+  corpo do card, usando os campos `gerenteNome`/`gerenteTelefone` cadastrados no drawer da página
+  Editar (ver item abaixo). Nenhum dos dois aparece se o campo correspondente estiver vazio.
+
 ## 2026-07-09 — Gerente Comercial do Produto (painel + cadastro em drawer lateral)
 
 Na página "Editar Lançamento" (`lancamentos-editar.html`), novo painel acima de "Dados Gerais"
