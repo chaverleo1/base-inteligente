@@ -581,6 +581,7 @@ function doPost(e) {
   if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
   if (d.acao === 'desativar_acao_planejada') return ok(desativarAcaoPlanejada_(d));
   if (d.acao === 'salvar_link_util')      return ok(salvarLinkUtil_(d));
+  if (d.acao === 'excluir_link_util')     return ok(excluirLinkUtil_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -2827,6 +2828,21 @@ function salvarLinkUtil_(dados) {
     }
 
     aba.appendRow([Utilities.getUuid(), dados.nome, dados.url, dados.obs || '', agora]);
+    return { ok: true };
+  } catch(e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+function excluirLinkUtil_(dados) {
+  if (!dados || !dados.idLink) return { ok: false, erro: 'idLink obrigatório' };
+  try {
+    var aba = obterAbaLinksUteis_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { ok: true };
+    var ids = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+    var idx = ids.indexOf(dados.idLink);
+    if (idx >= 0) aba.deleteRow(idx + 2);
     return { ok: true };
   } catch(e) {
     return { ok: false, erro: e.message };

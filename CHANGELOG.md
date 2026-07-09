@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Botão "Excluir" na lista de Links Úteis
+
+Ao lado do botão "✏️ Editar" em cada link, novo botão **"🗑 Excluir"** — pede confirmação
+(`confirm()` nativo, mesmo padrão usado em Empreendimentos/Contatos) antes de apagar
+permanentemente o link.
+
+**Backend** (`code.txt`): nova função `excluirLinkUtil_` + rota `excluir_link_util` (POST).
+⚠️ precisa reimplantar o Apps Script.
+
 ## 2026-07-09 — Formulário: botão "Atualizar" renomeado pra "Buscar" + cores fixas
 
 No seletor de modo do Formulário (`formulario.html`):

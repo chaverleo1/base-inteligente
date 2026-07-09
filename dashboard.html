@@ -410,9 +410,13 @@
   .links-uteis-url{font-size:12px;color:var(--text3);word-break:break-all}
   .links-uteis-obs{font-size:12px;color:var(--text2)}
   .links-uteis-vazio{padding:30px;text-align:center;color:var(--text3);font-size:13px}
+  .links-uteis-acoes{display:flex;gap:12px;white-space:nowrap}
   .links-uteis-editar{font-size:11px;font-weight:600;color:var(--accent);background:none;border:none;
                        cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap}
   .links-uteis-editar:hover{text-decoration:underline}
+  .links-uteis-excluir{font-size:11px;font-weight:600;color:var(--text3);background:none;border:none;
+                        cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap}
+  .links-uteis-excluir:hover{color:var(--danger);text-decoration:underline}
   /* ── INIT OVERLAY ── */
   .init-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
             padding:44px 48px;width:360px;max-width:90vw;text-align:center}
@@ -2251,7 +2255,10 @@ async function carregarLinksUteis() {
         <td class="links-uteis-nome"><a href="${l.url}" target="_blank" rel="noopener">🔗 ${l.nome || '—'}</a></td>
         <td class="links-uteis-url">${l.url || '—'}</td>
         <td class="links-uteis-obs">${l.obs || '—'}</td>
-        <td><button class="links-uteis-editar" onclick="abrirDrawerLink(_linksUteisCache[${i}])">✏️ Editar</button></td>
+        <td class="links-uteis-acoes">
+          <button class="links-uteis-editar" onclick="abrirDrawerLink(_linksUteisCache[${i}])">✏️ Editar</button>
+          <button class="links-uteis-excluir" onclick="excluirLinkUtil(_linksUteisCache[${i}])">🗑 Excluir</button>
+        </td>
       </tr>`).join('');
   } catch(e) {
     tbody.innerHTML = '<tr><td colspan="4" class="links-uteis-vazio">Erro ao carregar links.</td></tr>';
@@ -2302,6 +2309,25 @@ async function salvarNovoLink() {
     showToast('Erro ao salvar: ' + e.message, 'erro');
   } finally {
     btn.disabled = false; btn.textContent = '💾 Salvar link';
+  }
+}
+
+async function excluirLinkUtil(link) {
+  if (!link || !link.idLink) return;
+  if (!confirm(`Excluir o link "${link.nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_link_util', token: tokenSessao(), idLink: link.idLink }) })
+    });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok === false) throw new Error(r.erro || 'Erro desconhecido');
+    showToast('Link excluído.', 'ok');
+    carregarLinksUteis();
+  } catch(e) {
+    showToast('Erro ao excluir: ' + e.message, 'erro');
   }
 }
 
