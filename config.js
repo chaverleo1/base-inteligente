@@ -12,6 +12,7 @@ const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxxlKelRh51vwcPq86z
 // (touch 2 2026-07-06 13:2x — primeiro touch nao desprendeu o deploy, tentando de novo)
 // (touch 2026-07-08 — deploy travou de novo apos o fix da Data da tabela na aba Outros)
 // (touch 2026-07-09 — deploy travou de novo, lancamentos.html nao pegou o botao URL/gerente nos cards)
+// (touch 2 2026-07-09 — deploy travou de novo, formulario.html nao pegou o botao Buscar/cores)
 
 // ── PADRÃO DE PREÇO (R$ 553.235,00) ──────────────────────────────────────────
 // Usado nos campos de preço de lancamentos.html/lancamentos-editar.html.
