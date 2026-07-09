@@ -14,6 +14,8 @@ const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxxlKelRh51vwcPq86z
 // (touch 2026-07-09 — deploy travou de novo, lancamentos.html nao pegou o botao URL/gerente nos cards)
 // (touch 2 2026-07-09 — deploy travou de novo, formulario.html nao pegou o botao Buscar/cores)
 // (touch 3 2026-07-09 — segundo touch nao desprendeu o deploy em ~5min, tentando de novo)
+// (touch 4 2026-07-09 — causa raiz era outage do GitHub Actions/Pages (confirmado em
+// githubstatus.com); agora que voltou a "All Systems Operational", tentando de novo)
 
 // ── PADRÃO DE PREÇO (R$ 553.235,00) ──────────────────────────────────────────
 // Usado nos campos de preço de lancamentos.html/lancamentos-editar.html.
