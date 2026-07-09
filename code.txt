@@ -2808,6 +2808,24 @@ function salvarLinkUtil_(dados) {
   try {
     var aba   = obterAbaLinksUteis_();
     var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+    // Com idLink → edição de um link já cadastrado (atualiza a linha existente
+    // em vez de duplicar); sem idLink → cadastro novo (mesmo comportamento de
+    // sempre). dataCadastro original é preservada na edição.
+    if (dados.idLink) {
+      var lr  = aba.getLastRow();
+      var ids = lr >= 2 ? aba.getRange(2, 1, lr - 1, 1).getValues().flat() : [];
+      var idx = ids.indexOf(dados.idLink);
+      if (idx >= 0) {
+        var linha = idx + 2;
+        var idxDataCad = CABECALHO_LINKS_UTEIS.indexOf('dataCadastro') + 1;
+        var dataCadastroAtual = aba.getRange(linha, idxDataCad).getValue();
+        aba.getRange(linha, 1, 1, CABECALHO_LINKS_UTEIS.length)
+           .setValues([[dados.idLink, dados.nome, dados.url, dados.obs || '', dataCadastroAtual || agora]]);
+        return { ok: true };
+      }
+    }
+
     aba.appendRow([Utilities.getUuid(), dados.nome, dados.url, dados.obs || '', agora]);
     return { ok: true };
   } catch(e) {

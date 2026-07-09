@@ -410,6 +410,9 @@
   .links-uteis-url{font-size:12px;color:var(--text3);word-break:break-all}
   .links-uteis-obs{font-size:12px;color:var(--text2)}
   .links-uteis-vazio{padding:30px;text-align:center;color:var(--text3);font-size:13px}
+  .links-uteis-editar{font-size:11px;font-weight:600;color:var(--accent);background:none;border:none;
+                       cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap}
+  .links-uteis-editar:hover{text-decoration:underline}
   /* ── INIT OVERLAY ── */
   .init-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
             padding:44px 48px;width:360px;max-width:90vw;text-align:center}
@@ -713,10 +716,10 @@
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
       <table class="adm-table">
         <thead>
-          <tr><th>Nome</th><th>URL</th><th>OBS</th></tr>
+          <tr><th>Nome</th><th>URL</th><th>OBS</th><th></th></tr>
         </thead>
         <tbody id="linksUteisTbody">
-          <tr><td colspan="3" class="links-uteis-vazio">Carregando...</td></tr>
+          <tr><td colspan="4" class="links-uteis-vazio">Carregando...</td></tr>
         </tbody>
       </table>
     </div>
@@ -728,7 +731,7 @@
 <div class="drawer" id="drawerLink">
   <div class="drawer-header">
     <div>
-      <div class="drawer-nome">Cadastrar Link Útil</div>
+      <div class="drawer-nome" id="drawerLinkTitulo">Cadastrar Link Útil</div>
       <div class="drawer-cod">Aparece na lista de "Links Úteis" da aba ADM</div>
     </div>
     <button class="drawer-close" onclick="fecharDrawerLink()">✕</button>
@@ -2227,33 +2230,40 @@ function mostrarAdmSubtab(nome) {
   if (nome === 'links') carregarLinksUteis();
 }
 
+let _linksUteisCache = [];
+let _linkEditandoId  = '';
+
 async function carregarLinksUteis() {
   const tbody = document.getElementById('linksUteisTbody');
-  tbody.innerHTML = '<tr><td colspan="3" class="links-uteis-vazio">Carregando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4" class="links-uteis-vazio">Carregando...</td></tr>';
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=adm_listar_links_uteis&token=' + encodeURIComponent(tokenSessao()));
     const r = await resp.json();
     if (trataNaoAutenticado(r)) return;
     const links = r.links || [];
+    _linksUteisCache = links;
     if (!links.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="links-uteis-vazio">Nenhum link cadastrado ainda.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="links-uteis-vazio">Nenhum link cadastrado ainda.</td></tr>';
       return;
     }
-    tbody.innerHTML = links.map(l => `
+    tbody.innerHTML = links.map((l, i) => `
       <tr>
         <td class="links-uteis-nome"><a href="${l.url}" target="_blank" rel="noopener">🔗 ${l.nome || '—'}</a></td>
         <td class="links-uteis-url">${l.url || '—'}</td>
         <td class="links-uteis-obs">${l.obs || '—'}</td>
+        <td><button class="links-uteis-editar" onclick="abrirDrawerLink(_linksUteisCache[${i}])">✏️ Editar</button></td>
       </tr>`).join('');
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="3" class="links-uteis-vazio">Erro ao carregar links.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="links-uteis-vazio">Erro ao carregar links.</td></tr>';
   }
 }
 
-function abrirDrawerLink() {
-  document.getElementById('fLinkNome').value = '';
-  document.getElementById('fLinkUrl').value  = '';
-  document.getElementById('fLinkObs').value  = '';
+function abrirDrawerLink(link) {
+  _linkEditandoId = link ? link.idLink : '';
+  document.getElementById('drawerLinkTitulo').textContent = link ? 'Editar Link Útil' : 'Cadastrar Link Útil';
+  document.getElementById('fLinkNome').value = link ? (link.nome || '') : '';
+  document.getElementById('fLinkUrl').value  = link ? (link.url  || '') : '';
+  document.getElementById('fLinkObs').value  = link ? (link.obs  || '') : '';
   document.getElementById('drawerLink').classList.add('open');
   document.getElementById('drawerOverlayLink').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -2271,18 +2281,21 @@ async function salvarNovoLink() {
   const obs  = document.getElementById('fLinkObs').value.trim();
   if (!nome || !url) { showToast('Nome e URL são obrigatórios.', 'erro'); return; }
 
+  const payload = { acao: 'salvar_link_util', token: tokenSessao(), nome, url, obs };
+  if (_linkEditandoId) payload.idLink = _linkEditandoId;
+
   const btn = document.getElementById('btnSalvarLink');
   btn.disabled = true; btn.textContent = 'Salvando...';
   try {
     const resp = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_link_util', token: tokenSessao(), nome, url, obs }) })
+      body: new URLSearchParams({ dados: JSON.stringify(payload) })
     });
     const r = await resp.json();
     if (trataNaoAutenticado(r)) return;
     if (r.ok === false) throw new Error(r.erro || 'Erro desconhecido');
-    showToast('Link cadastrado com sucesso!', 'ok');
+    showToast(_linkEditandoId ? 'Link atualizado com sucesso!' : 'Link cadastrado com sucesso!', 'ok');
     fecharDrawerLink();
     carregarLinksUteis();
   } catch(e) {

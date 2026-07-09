@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Botão "Editar" na lista de Links Úteis
+
+Cada linha da lista de "Links Úteis" (aba ADM) ganha um botão **"✏️ Editar"**, que abre o mesmo
+drawer lateral já usado pra cadastrar, só que pré-preenchido com os dados daquele link. Ao salvar,
+atualiza a linha existente na planilha em vez de criar uma duplicata — a `dataCadastro` original é
+preservada.
+
+**Backend** (`code.txt`): `salvarLinkUtil_` agora aceita `idLink` opcional no payload — com ele,
+atualiza a linha correspondente; sem ele, cadastra novo (comportamento de sempre). ⚠️ precisa
+reimplantar o Apps Script.
+
 ## 2026-07-09 — Fix: link "ADM" no cabeçalho + renomeia sub-aba pra "ATIVAR FUNÇÕES"
 
 - **Bug de navegação**: o link "ADM" no cabeçalho de Formulário, Busca Aberta, Lançamentos,
