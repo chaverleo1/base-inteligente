@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Fix: link "ADM" no cabeçalho + renomeia sub-aba pra "ATIVAR FUNÇÕES"
+
+- **Bug de navegação**: o link "ADM" no cabeçalho de Formulário, Busca Aberta, Lançamentos,
+  Editar Lançamento, Contatos, Favoritos e Insight sempre caía na aba "Dashboard" (seção padrão)
+  em vez de já abrir a seção ADM — mesmo bug que já tinha sido corrigido pro link "BaseImob" antes.
+  Corrigido do mesmo jeito: os links agora apontam pra `dashboard.html?secao=adm`, e o `dashboard.html`
+  lê esse parâmetro no carregamento e chama `mostrarAdm()` automaticamente.
+- Sub-aba "Funções manuais" (dentro de ADM) renomeada pra **"ATIVAR FUNÇÕES"**.
+
 ## 2026-07-09 — Aba "Links Úteis" na página ADM
 
 Na página ADM (`dashboard.html`), nova sub-aba **"🔗 Links Úteis"** ao lado de "Funções manuais":

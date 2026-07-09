@@ -607,7 +607,7 @@
   <div class="section-title">Administração</div>
 
   <div class="adm-subtabs">
-    <button class="adm-subtab active" id="admSubtabFuncoes" onclick="mostrarAdmSubtab('funcoes')">Funções manuais</button>
+    <button class="adm-subtab active" id="admSubtabFuncoes" onclick="mostrarAdmSubtab('funcoes')">ATIVAR FUNÇÕES</button>
     <button class="adm-subtab" id="admSubtabLinks" onclick="mostrarAdmSubtab('links')">🔗 Links Úteis</button>
   </div>
 
@@ -2641,10 +2641,13 @@ async function verificarLeadsPendentes() {
 // ── INIT ──────────────────────────────────────────────────────────────────────
 carregarDados();
 verificarLeadsPendentes();
-// Outras páginas linkam "BaseImob" pra cá com ?secao=baseimob (Alterações
-// 08/07, item 8) — sem essa checagem, o link sempre caía na aba Dashboard
-// (a seção default), já que mostrarBaseImob() só existia como onclick interno.
-if (new URLSearchParams(location.search).get('secao') === 'baseimob') mostrarBaseImob();
+// Outras páginas linkam "BaseImob"/"ADM" pra cá com ?secao=baseimob/?secao=adm
+// (Alterações 08/07, item 8, e 2026-07-09 pro ADM) — sem essa checagem, o link
+// sempre caía na aba Dashboard (a seção default), já que mostrarBaseImob()/
+// mostrarAdm() só existiam como onclick interno.
+var _secaoInicial = new URLSearchParams(location.search).get('secao');
+if (_secaoInicial === 'baseimob') mostrarBaseImob();
+if (_secaoInicial === 'adm')      mostrarAdm();
 </script>
 </body>
 </html>
