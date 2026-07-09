@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Gerente Comercial do Produto (painel + cadastro em drawer lateral)
+
+Na página "Editar Lançamento" (`lancamentos-editar.html`), novo painel acima de "Dados Gerais"
+mostrando o contato do gerente comercial responsável por aquele empreendimento específico:
+
+- **Painel**: Nome, telefone (com botão "💬 WhatsApp" ao lado, mesmo padrão `wa.me/55...` usado em
+  Contatos/Dashboard) e OBS. Mostra "Nenhum gerente cadastrado" quando ainda não preenchido.
+- **Botão "📇 Cadastrar Gerente"** (vira "✏️ Editar Gerente" quando já existe um) abre uma janela
+  lateral (drawer) reaproveitando o padrão visual já usado em Contatos/Dashboard, com campos
+  editáveis de Nome/Telefone/OBS.
+- Os dados do gerente são gravados junto com o resto do lançamento — não têm salvamento próprio;
+  clicar em "Salvar dados do gerente" no drawer só atualiza o painel, e "Salvar alterações" (botão
+  principal da página) é quem grava tudo no backend.
+
+**Backend** (`code.txt`): novos campos `gerenteNome`, `gerenteTelefone`, `gerenteObs` no final de
+`CABECALHO_LANCAMENTOS` (nível do lançamento inteiro, não por unidade) — ⚠️ precisa reimplantar o
+Apps Script.
+
 ## 2026-07-08 — Badge de status da tabela de preços nos cards de Empreendimentos
 
 Cada card de "Empreendimentos Cadastrados" (`lancamentos.html`) agora mostra se a tabela de preços

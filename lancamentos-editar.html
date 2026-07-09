@@ -54,6 +54,37 @@ a{text-decoration:none;color:inherit}
           transition:all .2s;display:inline-flex;align-items:center;gap:6px}
 .back-btn:hover{border-color:var(--accent);color:var(--accent)}
 
+/* ── GERENTE COMERCIAL DO PRODUTO ── */
+.gerente-panel{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.gerente-info{display:flex;flex-direction:column;gap:5px;min-width:0}
+.gerente-nome{font-size:15px;font-weight:700;color:var(--text)}
+.gerente-nome.vazio{color:var(--text3);font-weight:500;font-style:italic}
+.gerente-tel-row{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
+.gerente-obs{font-size:12px;color:var(--text3);max-width:520px;line-height:1.5}
+.btn-gerente{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+             color:var(--text);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;
+             font-family:'Inter',sans-serif;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.btn-gerente:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── DRAWER (mesmo padrão de contatos.html/dashboard.html) ── */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .25s}
+.drawer-overlay.open{opacity:1;pointer-events:all}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:480px;max-width:100vw;background:var(--surface);
+        border-left:1px solid var(--border);z-index:501;transform:translateX(100%);
+        transition:transform .3s;overflow-y:auto;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;position:sticky;top:0;background:var(--surface);z-index:1}
+.drawer-nome{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--text);line-height:1.2}
+.drawer-cod{font-size:12px;color:var(--text3);margin-top:2px}
+.drawer-close{margin-left:auto;background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.drawer-close:hover{color:var(--text)}
+.drawer-body{padding:20px 24px;flex:1}
+.d-btn{padding:11px 14px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+       cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;text-align:center;
+       text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.d-btn-wpp{background:#25d366;color:#fff}
+.d-btn-wpp:hover{background:#1ebe5d}
+
 /* ── SECTIONS ── */
 .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
          padding:22px 24px;margin-bottom:20px}
@@ -133,6 +164,22 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
     <div>
       <div class="page-title" id="pageTitulo">Editar Lançamento</div>
       <div class="page-sub" id="pageSub">Carregando dados...</div>
+    </div>
+  </div>
+
+  <!-- ── GERENTE COMERCIAL DO PRODUTO ── -->
+  <div class="section">
+    <div class="section-title">Gerente Comercial do Produto</div>
+    <div class="gerente-panel">
+      <div class="gerente-info">
+        <div class="gerente-nome vazio" id="viewGerenteNome">Nenhum gerente cadastrado</div>
+        <div class="gerente-tel-row" id="viewGerenteTelRow" style="display:none">
+          <span id="viewGerenteTelefone"></span>
+          <a class="d-btn d-btn-wpp" id="linkWhatsappGerente" href="#" target="_blank" style="padding:5px 12px;font-size:12px">💬 WhatsApp</a>
+        </div>
+        <div class="gerente-obs" id="viewGerenteObs"></div>
+      </div>
+      <button class="btn-gerente" id="btnGerenteToggle" onclick="abrirDrawerGerente()">📇 Cadastrar Gerente</button>
     </div>
   </div>
 
@@ -260,6 +307,32 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
   </div>
 </div>
 
+<div class="drawer-overlay" id="drawerOverlayGerente" onclick="fecharDrawerGerente()"></div>
+<div class="drawer" id="drawerGerente">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-nome">Gerente Comercial do Produto</div>
+      <div class="drawer-cod">Contato do responsável comercial desse empreendimento</div>
+    </div>
+    <button class="drawer-close" onclick="fecharDrawerGerente()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Nome</label>
+      <input class="form-input" id="f-gerenteNome" placeholder="Nome do gerente comercial">
+    </div>
+    <div class="form-group" style="margin-bottom:14px">
+      <label class="form-label">Telefone</label>
+      <input class="form-input" id="f-gerenteTelefone" placeholder="(62) 99999-9999">
+    </div>
+    <div class="form-group" style="margin-bottom:18px">
+      <label class="form-label">OBS</label>
+      <textarea class="form-input" id="f-gerenteObs" rows="4" placeholder="Anotações sobre esse contato..."></textarea>
+    </div>
+    <button class="btn-salvar" style="width:100%" onclick="salvarGerenteDrawer()">💾 Salvar dados do gerente</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="config.js"></script>
@@ -289,7 +362,8 @@ function preencherForm(e) {
   const campos = ['nomeEmpreendimento','construtora','tipoEmpreendimento','padrao','status',
                   'endereco','bairro','cidade','estado','previsaoEntrega',
                   'estoque','totalUnidades','dataLancamento',
-                  'urlSite','foto','lazer','conceito'];
+                  'urlSite','foto','lazer','conceito',
+                  'gerenteNome','gerenteTelefone','gerenteObs'];
   campos.forEach(c => {
     const el = document.getElementById('f-' + c);
     if (el && e[c] != null) el.value = e[c];
@@ -299,6 +373,49 @@ function preencherForm(e) {
   unidades.forEach(u => addUnidade(u));
   atualizarBadgeVendido();
   atualizarResumoAreaPreco();
+  atualizarPainelGerente();
+}
+
+// Painel "Gerente Comercial do Produto" — os campos f-gerenteNome/Telefone/Obs
+// vivem dentro do drawer (única cópia dos dados); esta função só reflete o
+// estado deles no painel de visualização acima de "Dados Gerais". Chamada ao
+// carregar o lançamento e de novo ao salvar no drawer (sem round-trip ao
+// backend — só vai pro servidor quando o usuário clicar em "Salvar
+// alterações", junto com o resto do formulário).
+function atualizarPainelGerente() {
+  const nome = gV('f-gerenteNome');
+  const tel  = gV('f-gerenteTelefone');
+  const obs  = gV('f-gerenteObs');
+
+  const elNome = document.getElementById('viewGerenteNome');
+  elNome.textContent = nome || 'Nenhum gerente cadastrado';
+  elNome.classList.toggle('vazio', !nome);
+
+  const telLimpo = tel.replace(/\D/g, '');
+  document.getElementById('viewGerenteTelRow').style.display = tel ? 'flex' : 'none';
+  document.getElementById('viewGerenteTelefone').textContent = tel;
+  document.getElementById('linkWhatsappGerente').href = telLimpo ? 'https://wa.me/55' + telLimpo : '#';
+
+  document.getElementById('viewGerenteObs').textContent = obs;
+  document.getElementById('btnGerenteToggle').textContent = nome ? '✏️ Editar Gerente' : '📇 Cadastrar Gerente';
+}
+
+function abrirDrawerGerente() {
+  document.getElementById('drawerGerente').classList.add('open');
+  document.getElementById('drawerOverlayGerente').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharDrawerGerente() {
+  document.getElementById('drawerGerente').classList.remove('open');
+  document.getElementById('drawerOverlayGerente').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function salvarGerenteDrawer() {
+  atualizarPainelGerente();
+  fecharDrawerGerente();
+  toast('Dados do gerente atualizados. Clique em "Salvar alterações" pra gravar no lançamento.', 'ok');
 }
 
 // Percentual vendido = derivado de Estoque/Total de unidades (Alterações
@@ -516,6 +633,9 @@ async function salvar() {
     foto:              gV('f-foto'),
     lazer:             gV('f-lazer'),
     conceito:          gV('f-conceito'),
+    gerenteNome:       gV('f-gerenteNome'),
+    gerenteTelefone:   gV('f-gerenteTelefone'),
+    gerenteObs:        gV('f-gerenteObs'),
     unidades
   };
 
