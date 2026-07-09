@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Novo BaseImob: Configurador de Lote (`baseimob-funil.html`), fase 1
+
+Nova página, separada de `baseimob-landing.html`/`baseimob-total.html` (não mexe nas que já
+estão no ar). Converte o protótipo `baseimob-funil.jsx` (estudo de redesign premium enviado pelo
+usuário) de React/JSX pra HTML+CSS+JS puro — mesmo padrão do resto do projeto, sem build/bundler —
+usando Tailwind via CDN pra preservar a identidade visual (dourado/creme, DM Serif Display) sem
+reescrever centenas de classes na mão.
+
+**Fase 1 — interação com a base real** (comunicação/design ficam pra próxima fase, combinado com
+o usuário):
+- Array `CONDOS` mockado do protótipo → substituído por `listar_lancamentos` real, filtrado a
+  unidades com `tipo === 'Lote Condomínio Horizontal'` dentro de empreendimentos com
+  `tipoEmpreendimento === 'Condomínio Horizontal'`, agrupadas por `idLancamento` (mesmo
+  agrupamento de `lancamentos.html`).
+- Faixas dos sliders (metragem e preço/m²) calculadas dinamicamente a partir dos dados reais, não
+  mais fixas como no protótipo.
+- Captura de WhatsApp grava um interesse de verdade via `interesse_lancamento` (mesma rota já
+  usada por `baseimob-total.html`) — não precisou de rota nova no backend.
+- Campo "Valorização" do protótipo (ex: "12% ao ano") não tem equivalente na base hoje —
+  substituído por "A partir de" (menor preço real do grupo) até a fase de design decidir o que
+  fazer com esse dado.
+
+Testado de ponta a ponta com dados reais (11 empreendimentos "Lote Condomínio Horizontal"
+encontrados na base atual): sliders recalculando o match ao vivo, tela de revelação mostrando
+nome/região/padrão/diferenciais reais, e envio de interesse com payload correto.
+
 ## 2026-07-09 — Fix: renomear empreendimento na Editar não salvava
 
 **Bug**: ao mudar o "Nome do empreendimento" na página Editar e clicar em Salvar, aparecia
