@@ -168,23 +168,28 @@
                    border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
   .pip-col{display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06)}
   .pip-col:last-child{border-right:none}
-  .pip-header{padding:10px 12px;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;
+  .pip-header{padding:10px 14px;font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;
               text-transform:uppercase;letter-spacing:.7px;text-align:center;
               border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;align-items:center;gap:4px}
   .pip-count{font-size:20px;font-weight:700;font-family:'Space Grotesk',sans-serif;line-height:1;margin-top:2px}
-  .pip-body{padding:8px 7px;min-height:90px;max-height:260px;overflow-y:auto;flex:1}
-  .pip-body::-webkit-scrollbar{width:3px}
-  .pip-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
-  .pip-item{display:flex;align-items:center;gap:4px;margin-bottom:3px}
-  .pip-name{flex:1;min-width:0;font-size:12px;padding:5px 8px;border-radius:5px;
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-            background:rgba(255,255,255,.04);color:var(--text2);cursor:default}
-  .pip-name:hover{background:rgba(255,255,255,.08);color:var(--text)}
-  .pip-segmento{font-size:10px;color:var(--text3);margin-left:5px;font-weight:500}
+  .pip-body{padding:8px 10px;min-height:90px;max-height:300px;overflow-y:auto;flex:1;scrollbar-gutter:stable}
+  .pip-body::-webkit-scrollbar{width:4px}
+  .pip-body::-webkit-scrollbar-track{background:transparent}
+  .pip-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+  .pip-item{display:flex;align-items:flex-start;gap:6px;margin-bottom:5px}
+  .pip-name-wrap{flex:1;min-width:0;padding:6px 10px;border-radius:6px;
+                 background:rgba(255,255,255,.04);cursor:default;
+                 transition:background .15s}
+  .pip-name-wrap:hover{background:rgba(255,255,255,.08)}
+  .pip-name{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;
+            text-overflow:ellipsis;line-height:1.35}
+  .pip-name-wrap:hover .pip-name{color:var(--text)}
+  .pip-segmento{font-size:10px;color:var(--text3);font-weight:500;margin-top:2px;
+                white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pip-alerta{color:#ffc107;font-weight:700;margin-left:4px;cursor:help}
   .pip-alerta.forte{color:#ff4a3f}
-  .pip-fav{font-size:10px;padding:2px 5px;border-radius:4px;background:transparent;
-           color:var(--text3);white-space:nowrap;flex-shrink:0;line-height:1.4}
+  .pip-fav{font-size:10px;padding:3px 5px;border-radius:4px;background:transparent;
+           color:var(--text3);white-space:nowrap;flex-shrink:0;line-height:1.4;margin-top:3px}
   .pip-fav.has-fav{color:#ffc107;background:rgba(255,193,7,.12)}
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
   @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
@@ -1228,12 +1233,15 @@ function renderPipeline(json) {
     const list  = stages[s.key] || [];
     const names = list.length
       ? list.map(c => {
-          const sinal = c.dias == null ? '' : c.dias >= 15 ? '<span class="pip-alerta forte" title="Há '+c.dias+' dias neste estágio">!!</span>' : c.dias >= 5 ? '<span class="pip-alerta" title="Há '+c.dias+' dias neste estágio">!</span>' : '';
-          const segmento = c.segmento ? `<span class="pip-segmento">${c.segmento}</span>` : '';
+          const sinal  = c.dias == null ? '' : c.dias >= 15 ? '<span class="pip-alerta forte" title="Há '+c.dias+' dias neste estágio">!!</span>' : c.dias >= 5 ? '<span class="pip-alerta" title="Há '+c.dias+' dias neste estágio">!</span>' : '';
+          const segRow = c.segmento ? `<div class="pip-segmento">${c.segmento}</div>` : '';
           const favCls = (c.favs > 0) ? 'pip-fav has-fav' : 'pip-fav';
           const favTip = c.favs > 0 ? `${c.favs} favorito${c.favs!==1?'s':''}` : 'Sem favoritos';
           return `<div class="pip-item">
-            <div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${segmento}${sinal}</div>
+            <div class="pip-name-wrap" title="${(c.nomeCompleto||c.nome||'').replace(/"/g,'&quot;')}">
+              <div class="pip-name">${c.nome||'—'}${sinal}</div>
+              ${segRow}
+            </div>
             <span class="${favCls}" title="${favTip}">⭐${c.favs||0}</span>
           </div>`;
         }).join('')
@@ -1255,14 +1263,17 @@ function renderPipeline(json) {
   if (urgentesLista) {
     urgentesLista.innerHTML = urgentesList.length
       ? urgentesList.map(c => {
-          const sinal = c.dias == null ? '' : c.dias >= 15
+          const sinal  = c.dias == null ? '' : c.dias >= 15
             ? `<span class="pip-alerta forte" title="Há ${c.dias} dias neste estágio">!!</span>`
             : c.dias >= 5 ? `<span class="pip-alerta" title="Há ${c.dias} dias neste estágio">!</span>` : '';
-          const seg  = c.segmento ? `<span class="pip-segmento">${c.segmento}</span>` : '';
+          const segRow = c.segmento ? `<div class="pip-segmento">${c.segmento}</div>` : '';
           const fCls = c.favs > 0 ? 'pip-fav has-fav' : 'pip-fav';
           const fTip = c.favs > 0 ? `${c.favs} favorito${c.favs!==1?'s':''}` : 'Sem favoritos';
           return `<div class="pip-item">
-            <div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${seg}${sinal}</div>
+            <div class="pip-name-wrap" title="${(c.nomeCompleto||c.nome||'').replace(/"/g,'&quot;')}">
+              <div class="pip-name">${c.nome||'—'}${sinal}</div>
+              ${segRow}
+            </div>
             <span class="${fCls}" title="${fTip}">⭐${c.favs||0}</span>
           </div>`;
         }).join('')
