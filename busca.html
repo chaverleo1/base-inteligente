@@ -641,29 +641,14 @@ input[type=range]::-webkit-slider-thumb {
       </div>
     </div>
 
-    <!-- Cidade + Estado -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="filtro-secao">
-        <div class="filtro-label">Cidade</div>
-        <div class="chips" id="chips-cidade">
-          <span style="font-size:12px;color:var(--text3)">Carregando...</span>
-        </div>
-      </div>
-      <div class="filtro-secao">
-        <div class="filtro-label">Estado (UF)</div>
-        <div class="chips" id="chips-estado">
-          <span style="font-size:12px;color:var(--text3)">Carregando...</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bairros -->
+    <!-- Bairro / Cidade -->
     <div class="filtro-secao">
-      <div class="filtro-label">Bairros / regiões aceitos</div>
-      <div class="chips" id="chips-bairro">
-        <span style="font-size:12px;color:var(--text3)">Carregando...</span>
+      <div class="filtro-label">Bairro / Cidade</div>
+      <div class="preco-input-row" style="min-height:unset;padding:9px 12px">
+        <input type="text" id="input-bairro-cidade" class="preco-input"
+               style="font-size:13px;font-weight:400;font-family:'Inter',sans-serif"
+               placeholder="Ex: Alphaville, Jardins, São Paulo...">
       </div>
-      <div class="hint" style="font-size:11px;color:var(--text3);margin-top:6px">Não achou o bairro? Descreva no texto livre abaixo — ele também entra na busca.</div>
     </div>
 
     <!-- Status do empreendimento -->
@@ -673,17 +658,6 @@ input[type=range]::-webkit-slider-thumb {
         <span style="font-size:12px;color:var(--text3)">Carregando...</span>
       </div>
       <div class="hint" style="font-size:11px;color:var(--text3);margin-top:6px">Só existe pra Lançamentos e Construtora — Revenda é sempre pronto/usado.</div>
-    </div>
-
-    <!-- Condições de pagamento -->
-    <div class="filtro-secao">
-      <div class="filtro-label">Condições de pagamento</div>
-      <div class="chips" id="chips-cond">
-        <div class="chip" data-group="cond" onclick="toggleChip(this)">Aceita financiamento</div>
-        <div class="chip" data-group="cond" onclick="toggleChip(this)">FGTS</div>
-        <div class="chip" data-group="cond" onclick="toggleChip(this)">Permuta</div>
-        <div class="chip" data-group="cond" onclick="toggleChip(this)">À vista</div>
-      </div>
     </div>
 
     <!-- Características desejadas -->
@@ -705,17 +679,6 @@ input[type=range]::-webkit-slider-thumb {
       <div class="filtro-label">Descrição livre</div>
       <textarea class="input-busca" id="texto-livre"
         placeholder="Ex: cliente quer casa com quintal grande, aceita reformar, prefere rua sem saída..."></textarea>
-    </div>
-
-    <!-- Urgência -->
-    <div class="filtro-secao">
-      <div class="filtro-label">Urgência de compra</div>
-      <div class="chips" id="chips-urgencia">
-        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Imediata (até 30 dias)</div>
-        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Curto prazo (3 meses)</div>
-        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Médio prazo (6 meses)</div>
-        <div class="chip" data-group="urgencia" onclick="toggleChip(this)">Sem prazo definido</div>
-      </div>
     </div>
 
     <button class="btn-buscar" id="btnBuscar" onclick="executarBusca()">
@@ -1140,28 +1103,18 @@ async function salvarFavoritosSelecionados() {
 // ─── OPÇÕES DINÂMICAS (tipos/bairros existentes na base) ──────────────────────
 async function carregarOpcoesFiltro() {
   const chipsTipo   = document.getElementById('chips-tipo');
-  const chipsBairro = document.getElementById('chips-bairro');
   const chipsStatus = document.getElementById('chips-status');
   const chipsPadrao = document.getElementById('chips-padrao');
-  const chipsCidade = document.getElementById('chips-cidade');
-  const chipsEstado = document.getElementById('chips-estado');
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=opcoes_filtro&token=' + encodeURIComponent(tokenSessao()));
     const json = await resp.json();
-    const tipos   = json.tipos    || [];
-    const bairros = json.bairros  || [];
-    const status  = json.status   || [];
-    const padroes = json.padroes  || [];
-    const cidades = json.cidades  || [];
-    const estados = json.estados  || [];
+    const tipos   = json.tipos   || [];
+    const status  = json.status  || [];
+    const padroes = json.padroes || [];
 
     chipsTipo.innerHTML = tipos.length
       ? tipos.map(t => `<div class="chip" data-group="tipo" onclick="toggleChip(this)">${t}</div>`).join('')
       : '<span style="font-size:12px;color:var(--text3)">Nenhum tipo cadastrado ainda</span>';
-
-    chipsBairro.innerHTML = bairros.length
-      ? bairros.map(b => `<div class="chip" data-group="bairro" onclick="toggleChip(this)">${b}</div>`).join('')
-      : '<span style="font-size:12px;color:var(--text3)">Nenhum bairro cadastrado ainda</span>';
 
     chipsStatus.innerHTML = status.length
       ? status.map(s => `<div class="chip" data-group="status" onclick="toggleChip(this)">${s}</div>`).join('')
@@ -1170,21 +1123,10 @@ async function carregarOpcoesFiltro() {
     chipsPadrao.innerHTML = padroes.length
       ? padroes.map(p => `<div class="chip" data-group="padrao" onclick="toggleChip(this)">${p}</div>`).join('')
       : '<span style="font-size:12px;color:var(--text3)">Nenhum padrão cadastrado ainda</span>';
-
-    chipsCidade.innerHTML = cidades.length
-      ? cidades.map(c => `<div class="chip" data-group="cidade" onclick="toggleChip(this)">${c}</div>`).join('')
-      : '<span style="font-size:12px;color:var(--text3)">Nenhuma cidade cadastrada ainda</span>';
-
-    chipsEstado.innerHTML = estados.length
-      ? estados.map(e => `<div class="chip" data-group="estado" onclick="toggleChip(this)">${e}</div>`).join('')
-      : '<span style="font-size:12px;color:var(--text3)">Nenhum estado cadastrado ainda</span>';
   } catch (e) {
     chipsTipo.innerHTML   = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar tipos</span>';
-    chipsBairro.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar bairros</span>';
     chipsStatus.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar status</span>';
     chipsPadrao.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar padrão</span>';
-    chipsCidade.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar cidades</span>';
-    chipsEstado.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar estados</span>';
   }
 }
 carregarOpcoesFiltro();
@@ -1249,23 +1191,19 @@ function fmt_(v) {
 // ─── BUSCA (chama o Apps Script de verdade) ───────────────────────────────────
 async function executarBusca() {
   const filtros = {
-    acao:      'busca_aberta',
-    tipo:      getChips('tipo'),
-    padrao:    getChips('padrao'),
-    quartos:   getChips('quartos'),
-    suites:    getChips('suites'),
-    vagas:     getChips('vagas'),
-    bairros:   getChips('bairro'),
-    cidade:    getChips('cidade'),
-    estado:    getChips('estado'),
-    status:    getChips('status'),
-    condPagto: getChips('cond'),
-    extras:    getChips('extra'),
-    urgencia:  getChips('urgencia'),
-    precoMax:  precoAtual,
-    areaMin:   areaMinAtual,
-    texto:     document.getElementById('texto-livre').value.trim(),
-    token:     tokenSessao(),
+    acao:         'busca_aberta',
+    tipo:         getChips('tipo'),
+    padrao:       getChips('padrao'),
+    quartos:      getChips('quartos'),
+    suites:       getChips('suites'),
+    vagas:        getChips('vagas'),
+    bairroCidade: document.getElementById('input-bairro-cidade').value.trim(),
+    status:       getChips('status'),
+    extras:       getChips('extra'),
+    precoMax:     precoAtual,
+    areaMin:      areaMinAtual,
+    texto:        document.getElementById('texto-livre').value.trim(),
+    token:        tokenSessao(),
   };
 
   const btn = document.getElementById('btnBuscar');
@@ -1305,8 +1243,7 @@ function renderResultados(resultados, filtros, interpretado) {
   if (interpretado.tipo) partes.push(interpretado.tipo);
   if (interpretado.padrao) partes.push(interpretado.padrao);
   if (interpretado.status) partes.push(interpretado.status);
-  if (interpretado.cidade) partes.push(interpretado.cidade + (interpretado.estado ? '/' + interpretado.estado : ''));
-  if (interpretado.bairros) partes.push(interpretado.bairros);
+  if (filtros.bairroCidade) partes.push(filtros.bairroCidade);
   partes.push('preço limite ' + fmt_(interpretado.precoLimite || filtros.precoMax));
   if (filtros.areaMin) partes.push(filtros.areaMin + 'm²+');
   if (filtros.quartos.length) partes.push(filtros.quartos.join(' ou ') + ' quartos');
