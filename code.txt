@@ -1874,7 +1874,7 @@ function buscaAberta_(d) {
   var textoLivre = d.texto || '';
 
   var bairros = paraArray_(d.bairros);
-  var bairroInteresse = bairros.length ? bairros.join(', ') : textoLivre;
+  var bairroInteresse = d.bairroCidade || (bairros.length ? bairros.join(', ') : textoLivre);
 
   var tiposArr   = paraArray_(d.tipo);
   var padroesArr = paraArray_(d.padrao);
@@ -1964,10 +1964,23 @@ function buscaAberta_(d) {
 
   // Limiar mais permissivo que o rodarMatching (70) — aqui é exploratório,
   // não alimenta o dashboard/MATCHES, então vale mostrar até opções parciais.
+  // Quando bairroCidade está preenchido, inclui qualquer imóvel que bata com
+  // ao menos um dos termos (independente do score global) — o front ordena
+  // por prioridade de termo depois.
+  var bcTermos = (d.bairroCidade || '').split(',').map(function(t) { return norm_(t.trim()); }).filter(Boolean);
+  function bateNoBairro_(imo) {
+    if (!bcTermos.length) return false;
+    var b = norm_(imo.bairro || '');
+    var c = norm_(imo.condominio || '');
+    return bcTermos.some(function(t) {
+      return (b && (b.indexOf(t) >= 0 || t.indexOf(b) >= 0)) ||
+             (c && (c.indexOf(t) >= 0 || t.indexOf(c) >= 0));
+    });
+  }
   var resultados = [];
   todos.forEach(function(imo) {
     var res = melhorMatch_(imo);
-    if (res.score >= 40) resultados.push({ imo: imo, score: res.score, det: res.detalhes });
+    if (res.score >= 40 || bateNoBairro_(imo)) resultados.push({ imo: imo, score: res.score, det: res.detalhes });
   });
   resultados.sort(function(a, b) {
     if (b.score !== a.score) return b.score - a.score;
