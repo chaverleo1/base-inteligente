@@ -309,11 +309,13 @@ function tableImoveis(items) {
     const movCls   = im._movimento === 'Removido' ? 'badge-red' : im._movimento === 'Modificado' ? 'badge-amber' : 'badge-green';
     const fonteCls = im.fonte === 'LANCAMENTO' ? 'badge-amber' : 'badge-blue';
     const temObs   = im._mudancas && im._mudancas.length;
-    const obsRow   = temObs ? `<tr class="obs-row"><td colspan="8" class="td-obs">obs: ${im._mudancas.join('; ')}</td></tr>` : '';
+    const obsRow   = temObs ? `<tr class="obs-row"><td colspan="9" class="td-obs">obs: ${im._mudancas.join('; ')}</td></tr>` : '';
     const mList    = im._matches || [];
     const matchCell = mList.length > 0
       ? `<span class="match-count-btn" onclick="abrirMatchesPanel(${imIdx})">🎯 ${mList.length}</span>`
       : `<span style="color:var(--text3);font-size:12px">—</span>`;
+    const topScore = mList.length > 0 ? Math.max(...mList.map(m => m.score || 0)) : null;
+    const scoreCell = topScore !== null ? scoreEl(topScore) : `<span style="color:var(--text3);font-size:12px">—</span>`;
     return `<tr${temObs ? ' class="has-obs"' : ''}>
       <td class="td-nome">${im.codigo || '—'}</td>
       <td>${im.tipo || '—'}</td>
@@ -323,10 +325,11 @@ function tableImoveis(items) {
       <td><span class="badge ${fonteCls}">${im.fonte || '—'}</span></td>
       <td><span class="badge ${movCls}">${im._movimento || '—'}</span></td>
       <td style="text-align:center">${matchCell}</td>
+      <td style="text-align:center">${scoreCell}</td>
     </tr>${obsRow}`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th><th>Matches 🎯</th></tr></thead>
+    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th><th>Matches 🎯</th><th>Score</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
