@@ -179,7 +179,8 @@ function doGet(e) {
   if (acao === 'verificar_senha')  return verificarSenha_(e.parameter.hash);
   if (acao === 'esqueci_senha')    return esquecerSenha_();
   if (acao === 'validar_token')    return validarToken_(e.parameter.token);
-  if (acao === 'matches_cliente')  return matchesCliente_(e.parameter.cod);
+  if (acao === 'matches_cliente')       return matchesCliente_(e.parameter.cod);
+  if (acao === 'matches_imoveis_batch') return matchesImoveisBatch_(e.parameter.codigos);
   if (acao === 'listar_favoritos') return ok(listarFavoritos_(e.parameter.cod));
   if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
@@ -1208,6 +1209,46 @@ function matchesCliente_(cod) {
   return ok(res.slice(0, 10));
 }
 
+// MATCHES — Busca reversa por imóvel (batch)
+// ═══════════════════════════════════════════════════════════════
+
+function matchesImoveisBatch_(codigos) {
+  if (!codigos) return ok({});
+  var lista = String(codigos).split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  if (!lista.length) return ok({});
+  var ss   = SpreadsheetApp.openById(SHEET_ID);
+  var aba  = ss.getSheetByName('MATCHES');
+  if (!aba) return ok({});
+  var dados = aba.getDataRange().getValues();
+  if (dados.length < 2) return ok({});
+  var cab      = dados[0];
+  var iImoCod  = cab.indexOf('imoCodigo');
+  var iCliCod  = cab.indexOf('cliCodigo');
+  var iCliNome = cab.indexOf('cliNome');
+  var iCliSeg  = cab.indexOf('cliSegmento');
+  var iScore   = cab.indexOf('scoreMatch');
+  var iCliScore= cab.indexOf('cliScore');
+  var set = {};
+  lista.forEach(function(c) { set[c] = true; });
+  var res = {};
+  for (var i = 1; i < dados.length; i++) {
+    var imoCod = String(dados[i][iImoCod]);
+    if (!set[imoCod]) continue;
+    if (!res[imoCod]) res[imoCod] = [];
+    var sc = parseInt(dados[i][iScore]) || parseInt(dados[i][iCliScore]) || 0;
+    res[imoCod].push({
+      codCliente: String(dados[i][iCliCod]),
+      nome:       String(dados[i][iCliNome]),
+      seg:        String(dados[i][iCliSeg]),
+      score:      sc
+    });
+  }
+  Object.keys(res).forEach(function(cod) {
+    res[cod].sort(function(a, b) { return b.score - a.score; });
+  });
+  return ok(res);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // CONSTRUTORA-APARTAMENTOS — Cabeçalho e inicialização
 // ═══════════════════════════════════════════════════════════════
@@ -1928,7 +1969,12 @@ function buscaAberta_(d) {
     var res = melhorMatch_(imo);
     if (res.score >= 40) resultados.push({ imo: imo, score: res.score, det: res.detalhes });
   });
-  resultados.sort(function(a, b) { return b.score - a.score; });
+  resultados.sort(function(a, b) {
+    if (b.score !== a.score) return b.score - a.score;
+    var precoA = parseFloat(String(a.imo.valorVenda || a.imo.precoMin || a.imo.preco || '').replace(/[^\d]/g,'')) || Infinity;
+    var precoB = parseFloat(String(b.imo.valorVenda || b.imo.precoMin || b.imo.preco || '').replace(/[^\d]/g,'')) || Infinity;
+    return precoA - precoB;
+  });
   resultados = resultados.slice(0, 30);
 
   return {
