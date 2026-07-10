@@ -177,11 +177,24 @@
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
   @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
 
+  /* ── URGENTES + AÇÕES PLANEJADAS — linha 2 colunas abaixo do funil ── */
+  .urgentes-acoes-row{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:32px;align-items:start}
+  .urgentes-panel{background:rgba(255,59,48,.07);border:1px solid rgba(255,74,63,.2);
+    border-left:4px solid #ff4a3f;border-radius:var(--radius);padding:16px 18px}
+  .urgentes-panel-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .urgentes-panel-label{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;
+    color:#ff4a3f;text-transform:uppercase;letter-spacing:.6px}
+  .urgentes-panel-count{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:#ff4a3f;line-height:1}
+  .urgentes-panel-body{display:flex;flex-direction:column;gap:3px;max-height:280px;overflow-y:auto}
+  .urgentes-panel-body::-webkit-scrollbar{width:3px}
+  .urgentes-panel-body::-webkit-scrollbar-thumb{background:rgba(255,74,63,.2);border-radius:3px}
+  @media(max-width:700px){.urgentes-acoes-row{grid-template-columns:1fr}}
+
   /* ── AÇÕES PLANEJADAS (card único, etapa 7) — "Hoje" em destaque à
      esquerda com lista embutida, "Próximos dias" no meio, "Atrasadas" à
      direita ── */
   .acoes-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent2);
-    border-radius:var(--radius);padding:16px 20px;margin-bottom:32px}
+    border-radius:var(--radius);padding:16px 20px}
   .acoes-card-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px}
   .acoes-card-icon{font-size:15px;margin-right:2px}
   .acoes-card-cols{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:16px;align-items:start}
@@ -504,11 +517,21 @@
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando pipeline</div>
   </div>
 
-  <!-- AÇÕES PLANEJADAS — card único, logo abaixo do pipeline (etapa 7:
-       relacionamento). Fica escondido até ter dado, pra não aparecer um
-       card vazio "0" antes da primeira carga. "Hoje" em destaque à esquerda
-       (com lista resumida nome/ação embutida), "Próximos dias" no meio,
-       "Atrasadas" à direita. -->
+  <!-- URGENTES + AÇÕES PLANEJADAS — 2 colunas na mesma linha -->
+  <div class="urgentes-acoes-row">
+
+  <!-- Coluna 1: Urgentes (clientes do estágio Urgentes do Pipeline) -->
+  <div class="urgentes-panel" id="urgentesPainel">
+    <div class="urgentes-panel-header">
+      <span class="urgentes-panel-label">🔥 Urgentes</span>
+      <span class="urgentes-panel-count" id="urgentesCount">—</span>
+    </div>
+    <div class="urgentes-panel-body" id="urgentesLista">
+      <div class="pip-empty">Carregando...</div>
+    </div>
+  </div>
+
+  <!-- Coluna 2: Ações Planejadas — fica escondido até ter dado -->
   <div class="acoes-card" id="acoesPlanejadasCard" style="display:none">
     <div class="acoes-card-title"><span class="acoes-card-icon">📅</span> Ações de relacionamento planejadas</div>
     <div class="acoes-card-cols">
@@ -529,6 +552,8 @@
       </div>
     </div>
   </div>
+
+  </div><!-- /urgentes-acoes-row -->
 
   <!-- MATCHES -->
   <div class="section-title">Matches do momento</div>
@@ -1046,7 +1071,6 @@ function renderPipeline(json) {
   const stages = json.stages || {};
   const cfg = [
     {key:'fechamento',     label:'Fechamento',      icon:'🤝', bg:'rgba(52,120,246,.15)',  text:'#3478f6'},
-    {key:'urgentes',       label:'Urgentes',        icon:'🔥', bg:'rgba(255,59,48,.15)',   text:'#ff4a3f'},
     {key:'posVisita',      label:'Pós-Visita',       icon:'👁',  bg:'rgba(255,107,53,.11)',  text:'#ff7844'},
     {key:'agendarVisita',  label:'Agendar Visita',   icon:'📅', bg:'rgba(255,184,0,.09)',   text:'#ffc107'},
     {key:'potencial',      label:'Potencial',        icon:'💡', bg:'rgba(134,197,67,.09)',  text:'#86c543'},
@@ -1074,6 +1098,28 @@ function renderPipeline(json) {
       <div class="pip-body">${names}</div>
     </div>`;
   }).join('');
+
+  // Painel Urgentes — popula com clientes do estágio Urgentes
+  const urgentesList  = stages.urgentes || [];
+  const urgentesCount = document.getElementById('urgentesCount');
+  const urgentesLista = document.getElementById('urgentesLista');
+  if (urgentesCount) urgentesCount.textContent = urgentesList.length;
+  if (urgentesLista) {
+    urgentesLista.innerHTML = urgentesList.length
+      ? urgentesList.map(c => {
+          const sinal = c.dias == null ? '' : c.dias >= 15
+            ? `<span class="pip-alerta forte" title="Há ${c.dias} dias neste estágio">!!</span>`
+            : c.dias >= 5 ? `<span class="pip-alerta" title="Há ${c.dias} dias neste estágio">!</span>` : '';
+          const seg  = c.segmento ? `<span class="pip-segmento">${c.segmento}</span>` : '';
+          const fCls = c.favs > 0 ? 'pip-fav has-fav' : 'pip-fav';
+          const fTip = c.favs > 0 ? `${c.favs} favorito${c.favs!==1?'s':''}` : 'Sem favoritos';
+          return `<div class="pip-item">
+            <div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${seg}${sinal}</div>
+            <span class="${fCls}" title="${fTip}">⭐${c.favs||0}</span>
+          </div>`;
+        }).join('')
+      : '<div class="pip-empty">Nenhum cliente urgente</div>';
+  }
 
   // Card "Ganhos" na Visão Geral — atualiza valor e lista de clientes
   const ganhosEl    = document.getElementById('cardGanhosValue');
