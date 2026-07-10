@@ -111,7 +111,7 @@
   .empty-state{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
 
   /* ── NOVAS OFERTAS ── */
-  .no-layout{display:grid;grid-template-columns:3fr 2fr;grid-template-rows:480px;margin-bottom:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .no-layout{display:grid;grid-template-columns:2fr 3fr;grid-template-rows:480px;margin-bottom:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
   @media(max-width:700px){.no-layout{grid-template-columns:1fr;grid-template-rows:none}}
   .no-imoveis-col{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;overflow:hidden}
   @media(max-width:700px){.no-imoveis-col{border-right:none;border-bottom:1px solid var(--border)}}
@@ -1141,10 +1141,10 @@ function _parseBrDate(s) {
 }
 
 function renderNovasOfertas() {
-  const d          = window._revendaDiffData || {};
+  const d           = window._revendaDiffData || {};
   const adicionados = d.adicionados || [];
 
-  const hoje        = new Date();
+  const hoje          = new Date();
   const tresDiasAtras = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 3);
 
   _noOfertasImoveis = adicionados.filter(o => {
@@ -1157,49 +1157,64 @@ function renderNovasOfertas() {
   if (!listEl) return;
   if (countEl) countEl.textContent = _noOfertasImoveis.length || '0';
 
-  // Reseta coluna de clientes
+  // Reseta coluna de clientes para estado inicial
   _noOfertasSelected = -1;
-  const hdr  = document.getElementById('noClientesHeader');
-  const ph   = document.getElementById('noClientesPlaceholder');
-  const body = document.getElementById('noClientesList');
-  if (hdr)  hdr.innerHTML  = '<span style="font-size:12px;font-weight:600;color:var(--text2)">👥 Clientes com perfil</span><span style="font-size:11px;color:var(--text3)">Selecione um imóvel para ver os clientes</span>';
-  if (ph)   { ph.style.display = ''; ph.innerHTML = '<span style="font-size:28px">🏘️</span><span>Selecione um imóvel para ver os clientes identificados</span>'; }
-  if (body)   body.style.display = 'none';
+  _noResetClientes_();
 
   if (!_noOfertasImoveis.length) {
     listEl.innerHTML = '<div class="match-detail-placeholder"><span style="font-size:24px">🔍</span><span>Nenhum imóvel novo nos últimos 3 dias</span></div>';
     return;
   }
 
-  listEl.innerHTML = _noOfertasImoveis.map((o, i) => {
+  // ── Renderiza como match-table (mesmo padrão visual da col 2 de Matches) ──
+  const rows = _noOfertasImoveis.map((o, i) => {
+    const fotoUrl  = o.foto || o.urlFoto || o.imagem || '';
+    const fotoHtml = fotoUrl && fotoUrl.startsWith('http')
+      ? `<img src="${fotoUrl}" style="width:72px;height:57px;object-fit:cover;border-radius:6px;display:block" onerror="this.style.display='none'">`
+      : `<div style="width:72px;height:57px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px">🔑</div>`;
     const local    = [o.condominio, o.bairro].filter(Boolean).join(' · ') || '—';
-    const specs    = [o.quartos?o.quartos+'q':'', o.suites?o.suites+'s':'', o.vagas?o.vagas+'v':'', o.areaUtil?o.areaUtil+'m²':''].filter(Boolean).join(' · ');
+    const specs    = [o.quartos?o.quartos+' qto':'', o.areaUtil?o.areaUtil+' m²':'', o.padrao||''].filter(Boolean).join(' · ');
     const matches  = o._computedMatches || [];
     const bestScore = o._bestScore || (matches.length ? Math.max(...matches.map(m => m.score)) : 0);
-    const badgeCls  = bestScore >= 80 ? 'no-match-hot' : bestScore >= 70 ? 'no-match-warm' : 'no-match-none';
-    const badgeTxt  = matches.length ? `🎯 ${matches.length} cliente${matches.length > 1 ? 's' : ''}` : '—';
-    const valorFmt  = fmt_(o.valorVenda);
-    return `<div class="no-imo-row" id="no-imo-${i}" onclick="selecionarImovelNO(${i})">
-      <div class="no-imo-info">
-        <div class="no-imo-local">${local}</div>
-        <div class="no-imo-sub">${[o.tipo, specs].filter(Boolean).join(' · ') || '—'}</div>
-      </div>
-      <div class="no-imo-right">
-        <div class="no-imo-valor">${valorFmt || '—'}</div>
-        <span class="no-match-badge ${badgeCls}">${badgeTxt}</span>
-      </div>
-    </div>`;
+    const scCls    = bestScore >= 80 ? 'score-hot' : bestScore >= 70 ? 'score-warm' : 'score-cold';
+    return `<tr id="no-imo-${i}" style="cursor:pointer" onclick="selecionarImovelNO(${i})">
+      <td style="padding:4px 6px;vertical-align:middle;width:78px">${fotoHtml}</td>
+      <td style="width:100%;padding-left:6px">
+        <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${local}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px">${o.tipo||''}${specs?' · '+specs:''}</div>
+        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
+          <span class="imovel-fonte-badge fonte-rev">🔑 Revenda</span>
+          ${o.codigo?`<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">#${o.codigo}</span>`:''}
+        </div>
+      </td>
+      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
+        ${bestScore > 0 ? `<span class="mt-score ${scCls}">${bestScore}</span>` : ''}
+      </td>
+      <td class="mt-valor" style="white-space:nowrap;vertical-align:middle">${fmt_(o.valorVenda)||'—'}</td>
+    </tr>`;
   }).join('');
+
+  listEl.innerHTML = `<table class="match-table"><tbody>${rows}</tbody></table>`;
+}
+
+function _noResetClientes_() {
+  const hdr  = document.getElementById('noClientesHeader');
+  const ph   = document.getElementById('noClientesPlaceholder');
+  const body = document.getElementById('noClientesList');
+  if (hdr) hdr.innerHTML = `<span>👥 Clientes com perfil</span><span class="match-clients-count">—</span>`;
+  if (ph)  { ph.style.display = ''; ph.innerHTML = '<span style="font-size:28px">🏘️</span><span>Selecione um imóvel para ver os clientes identificados</span>'; }
+  if (body) body.style.display = 'none';
 }
 
 function selecionarImovelNO(idx) {
+  // Deseleciona anterior
   if (_noOfertasSelected >= 0) {
     const prev = document.getElementById('no-imo-' + _noOfertasSelected);
-    if (prev) prev.classList.remove('no-selected');
+    if (prev) prev.classList.remove('selected');
   }
   _noOfertasSelected = idx;
   const rowEl = document.getElementById('no-imo-' + idx);
-  if (rowEl) rowEl.classList.add('no-selected');
+  if (rowEl) rowEl.classList.add('selected');
 
   const o = _noOfertasImoveis[idx];
   if (!o) return;
@@ -1211,27 +1226,30 @@ function selecionarImovelNO(idx) {
   const ph   = document.getElementById('noClientesPlaceholder');
   const body = document.getElementById('noClientesList');
 
-  if (hdr) hdr.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text)">${local}</span>
-    ${o.codigo ? `<span style="font-size:10px;color:var(--text3)">#${o.codigo}${o.tipo ? ' · ' + o.tipo : ''}</span>` : ''}`;
+  // Header: nome do imóvel + contagem (estilo match-clients-header)
+  if (hdr) hdr.innerHTML = `
+    <span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+      🏠 ${local}${o.codigo ? ' <span style="font-weight:400;color:var(--text3)">#'+o.codigo+'</span>' : ''}
+    </span>
+    <span class="match-clients-count">${matches.length || '0'}</span>`;
 
   if (!matches.length) {
-    if (ph)   { ph.style.display = ''; ph.innerHTML = '<span style="font-size:24px">—</span><span>Nenhum cliente com perfil para este imóvel</span>'; }
-    if (body)   body.style.display = 'none';
+    if (ph)  { ph.style.display = ''; ph.innerHTML = '<span style="font-size:24px">—</span><span>Nenhum cliente com perfil para este imóvel</span>'; }
+    if (body)  body.style.display = 'none';
     return;
   }
 
   if (ph)   ph.style.display = 'none';
   if (body) {
     body.style.display = '';
+    // ── Renderiza como match-row (mesmo padrão visual da col 1 de Matches) ──
     body.innerHTML = matches.map(m => {
       const sc  = m.score || 0;
       const cls = sc >= 80 ? 'score-hot' : sc >= 70 ? 'score-warm' : 'score-cold';
-      return `<div class="no-cli-row">
-        <div style="flex:1;min-width:0">
-          <div class="no-cli-name">${m.nome || '—'}</div>
-          <div class="no-cli-seg">${m.seg || ''}</div>
-        </div>
-        <span class="mt-score ${cls}">${sc}</span>
+      const seg = m.seg ? `<span class="match-row-seg"> · ${m.seg}</span>` : '';
+      return `<div class="match-row">
+        <div class="match-row-name">${m.nome || '—'}${seg}</div>
+        <div class="match-row-score ${cls}">${sc}</div>
       </div>`;
     }).join('');
   }
