@@ -1794,16 +1794,17 @@ async function selecionarCliente(cod, nome) {
       ].filter(Boolean).join(' · ');
       const jaFav   = favKeys.has(chaveFavorito_(m.imoCodigo, m.fonte));
       const fotoHtml = m.imoFoto && m.imoFoto.startsWith('http')
-        ? `<img src="${m.imoFoto}" style="width:48px;height:38px;object-fit:cover;border-radius:4px;display:block" onerror="this.style.display='none'">`
-        : `<div style="width:48px;height:38px;border-radius:4px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div>`;
-      const tipoBadge = isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda';
+        ? `<img src="${m.imoFoto}" style="width:96px;height:76px;object-fit:cover;border-radius:6px;display:block" onerror="this.style.display='none'">`
+        : `<div style="width:96px;height:76px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px">${icon}</div>`;
+      const fonteCls  = isLanc ? 'fonte-lanc' : isConst ? 'fonte-const' : 'fonte-rev';
+      const fonteTxt  = isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda';
       return `<tr data-idx="${idx}" onclick="abrirImovelDrawer(${idx},'${escAttr(cod)}','${escAttr(nome)}')">
-        <td style="padding:6px 8px">${fotoHtml}</td>
+        <td style="padding:6px 8px;vertical-align:middle">${fotoHtml}</td>
         <td>
-          <div class="mt-tipo">${m.imoTipo||'—'}</div>
-          <div class="mt-fonte">${local}</div>
-          <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
-            <span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">${tipoBadge}</span>
+          <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${local||'—'}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:1px">${m.imoTipo||''}</div>
+          <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
+            <span class="imovel-fonte-badge ${fonteCls}">${fonteTxt}</span>
             ${m.imoCodigo?`<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">#${m.imoCodigo}</span>`:''}
           </div>
         </td>
@@ -1830,8 +1831,8 @@ function abrirImovelDrawer(idx, cod, cliNome) {
   const cls     = sc >= 80 ? 'd-badge-hot' : sc >= 70 ? 'd-badge-warm' : 'd-badge-cold';
 
   document.getElementById('imovelDrawerAvatar').textContent = icon;
-  document.getElementById('imovelDrawerTipo').textContent   = m.imoTipo || 'Imóvel';
-  document.getElementById('imovelDrawerLocal').textContent  = local;
+  document.getElementById('imovelDrawerTipo').textContent   = local || m.imoTipo || 'Imóvel';
+  document.getElementById('imovelDrawerLocal').textContent  = m.imoTipo || '';
 
   const attrs = [
     m.imoQuartos  ? m.imoQuartos  + ' quartos'  : '',
