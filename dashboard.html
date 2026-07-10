@@ -576,9 +576,21 @@
       </div>
     </div>
     <div class="match-detail-col">
-      <div class="match-detail-header" id="matchDetailHeader" style="display:none">
-        <span id="matchDetailClientName" style="font-weight:600;color:var(--text)">—</span>
-        <span class="match-clients-count" id="matchDetailCount">—</span>
+      <div class="match-detail-header" id="matchDetailHeader" style="display:none;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="matchDetailClientName">—</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px">
+            <span id="matchDetailClientCod" style="font-size:11px;color:var(--text3)"></span>
+            <span id="matchDetailPipelineBadge" style="display:none;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px"></span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-top:2px">
+          <span class="match-clients-count" id="matchDetailCount">—</span>
+          <a id="matchDetailEditBtn" href="contatos.html" target="_blank"
+             style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(79,124,255,.1);
+                    border:1px solid rgba(79,124,255,.25);border-radius:6px;padding:4px 10px;
+                    text-decoration:none;white-space:nowrap">✏️ Editar</a>
+        </div>
       </div>
       <div class="match-detail-placeholder" id="matchDetailPlaceholder">
         <span style="font-size:28px">🏠</span>
@@ -1702,26 +1714,53 @@ function renderMatchesSection(quentes, mornos) {
   }
 }
 
+const PIP_COLORS_DASH = {
+  'Fechamento':'#3478f6','Urgentes':'#ff4a3f','Pós-Visita':'#ff7844',
+  'Agendar Visita':'#ffc107','Potencial':'#86c543','Pré-Atendimento':'#3fc9e0',
+  'Ganhos':'#1a9ed4','Perda':'#5a5a68'
+};
+
 async function selecionarCliente(cod, nome) {
   const headerEl     = document.getElementById('matchDetailHeader');
   const nameEl       = document.getElementById('matchDetailClientName');
+  const codEl        = document.getElementById('matchDetailClientCod');
+  const pipEl        = document.getElementById('matchDetailPipelineBadge');
+  const editBtn      = document.getElementById('matchDetailEditBtn');
   const countEl      = document.getElementById('matchDetailCount');
   const placeholder  = document.getElementById('matchDetailPlaceholder');
   const tableWrap    = document.getElementById('matchTableWrap');
   const tbody        = document.getElementById('matchTableBody');
 
-  if (nameEl)    nameEl.textContent    = nome || '—';
+  // Mostrar cabeçalho imediatamente com dados já disponíveis
+  if (nameEl)    nameEl.textContent     = nome || '—';
+  if (codEl)     codEl.textContent      = cod  ? '#' + cod : '';
+  if (pipEl)     pipEl.style.display    = 'none';
+  if (editBtn)   editBtn.href           = 'contatos.html';
   if (headerEl)  headerEl.style.display = 'flex';
-  if (countEl)   countEl.textContent   = '…';
+  if (countEl)   countEl.textContent    = '…';
   if (placeholder) placeholder.style.display = 'none';
   if (tableWrap) tableWrap.style.display = 'block';
   if (tbody)     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px" class="dot-anim">Buscando matches</td></tr>';
 
   try {
-    const [respMatches, respFav] = await Promise.all([
+    const [respMatches, respFav, respCli] = await Promise.all([
       fetch(WEBHOOK_URL + '?acao=matches_cliente&cod=' + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao())),
-      fetch(WEBHOOK_URL + '?acao=listar_favoritos&cod='  + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao()))
+      fetch(WEBHOOK_URL + '?acao=listar_favoritos&cod='  + encodeURIComponent(cod) + '&token=' + encodeURIComponent(tokenSessao())),
+      fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(nome) + '&token=' + encodeURIComponent(tokenSessao()))
     ]);
+
+    // Atualizar pipeline badge com dados do cliente
+    try {
+      const listaC = await respCli.json();
+      const c = Array.isArray(listaC)
+        ? (listaC.find(x => x.idCliente === cod) || listaC.find(x => x.nome === nome) || listaC[0])
+        : null;
+      if (c && c.pipeline && pipEl) {
+        const cor = PIP_COLORS_DASH[c.pipeline] || 'var(--text3)';
+        pipEl.textContent   = c.pipeline;
+        pipEl.style.cssText = `display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${cor}22;color:${cor};border:1px solid ${cor}55`;
+      }
+    } catch(eCli) { /* pipeline badge opcional */ }
     const lista = await respMatches.json();
     let favoritos = [];
     try { favoritos = await respFav.json(); } catch(e) {}
