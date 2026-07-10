@@ -1870,10 +1870,13 @@ async function selecionarCliente(cod, nome) {
       const c = Array.isArray(listaC)
         ? (listaC.find(x => x.idCliente === cod) || listaC.find(x => x.nome === nome) || listaC[0])
         : null;
-      if (c && c.pipeline && pipEl) {
-        const cor = PIP_COLORS_DASH[c.pipeline] || 'var(--text3)';
-        pipEl.textContent   = c.pipeline;
-        pipEl.style.cssText = `display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${cor}22;color:${cor};border:1px solid ${cor}55`;
+      if (c) {
+        if (c.pipeline && pipEl) {
+          const cor = PIP_COLORS_DASH[c.pipeline] || 'var(--text3)';
+          pipEl.textContent   = c.pipeline;
+          pipEl.style.cssText = `display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${cor}22;color:${cor};border:1px solid ${cor}55`;
+        }
+        if (c._linha && editBtn) editBtn.href = 'formulario.html?linha=' + encodeURIComponent(c._linha);
       }
     } catch(eCli) { /* pipeline badge opcional */ }
     const lista = await respMatches.json();
