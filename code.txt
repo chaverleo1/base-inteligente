@@ -505,20 +505,51 @@ function doGet(e) {
         return {tipo: t, ultimo: ultimo, modificado: modPorTipo_rd[t] || 0, novo: novoPorTipo_rd[t] || 0, variacao: depois - ultimo};
       }).sort(function(a, b) { return (depoisPorTipo_rd[b.tipo] || 0) - (depoisPorTipo_rd[a.tipo] || 0); });
 
-      // Score do melhor match para cada imóvel, sem limiar (mostra mesmo < 70).
-      // Calcula contra todos os contatos usando o mesmo motor de calcularMatch_.
-      var contatosRd_ = lerAba_('CONTATOS');
-      function calcBestScore_(imo) {
+      // Matches e melhor score para cada imóvel — calculados diretamente no
+      // diff, sem depender de rodarMatching ou matches_imoveis_batch. Usa os
+      // mesmos filtros de contatos elegíveis que rodarMatching (tem segmento,
+      // preço ou bairro), threshold >= 70 para a lista de clientes-alvo, e
+      // qualquer score > 0 para _bestScore (mostra mesmo abaixo de 70).
+      var contatosRd_    = lerAba_('CONTATOS');
+      var contataveis_rd = contatosRd_.filter(function(c) {
+        return !!(c.segmento || c.precoLimite || c.bairroInteresse);
+      });
+      function computeMatchesForImo_(imo) {
         var best = 0;
-        contatosRd_.forEach(function(c) {
-          var sc = calcularMatch_(c, imo).score;
-          if (sc > best) best = sc;
+        var matches = [];
+        contataveis_rd.forEach(function(c) {
+          var res = calcularMatch_(c, imo);
+          if (res.score > best) best = res.score;
+          if (res.score >= 70) {
+            matches.push({
+              codCliente: String(c.idCliente || '').trim(),
+              nome:       String(c.nome      || '').trim(),
+              seg:        c.segmento         || '',
+              score:      res.score
+            });
+          }
         });
-        return best;
+        matches.sort(function(a, b) { return b.score - a.score; });
+        return { bestScore: best, matches: matches };
       }
-      adicionados_rd.forEach(function(o) { o.fonte = o.fonte || 'REVENDA'; o._bestScore = calcBestScore_(o); });
-      modificados_rd.forEach(function(o) { o.fonte = o.fonte || 'REVENDA'; o._bestScore = calcBestScore_(o); });
-      removidos_rd.forEach(function(o)   { o.fonte = o.fonte || 'REVENDA'; o._bestScore = calcBestScore_(o); });
+      adicionados_rd.forEach(function(o) {
+        o.fonte = o.fonte || 'REVENDA';
+        var r = computeMatchesForImo_(o);
+        o._bestScore        = r.bestScore;
+        o._computedMatches  = r.matches;
+      });
+      modificados_rd.forEach(function(o) {
+        o.fonte = o.fonte || 'REVENDA';
+        var r = computeMatchesForImo_(o);
+        o._bestScore        = r.bestScore;
+        o._computedMatches  = r.matches;
+      });
+      removidos_rd.forEach(function(o) {
+        o.fonte = o.fonte || 'REVENDA';
+        var r = computeMatchesForImo_(o);
+        o._bestScore        = r.bestScore;
+        o._computedMatches  = r.matches;
+      });
 
       return ok({
         ultimaSync: sync_rd,

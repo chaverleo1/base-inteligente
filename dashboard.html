@@ -1061,57 +1061,76 @@ async function sincronizarRevendaClick() {
   }
 }
 
-// Busca matches para todos os imóveis novos do diff e atualiza a coluna 🎯
+// Agrega _computedMatches (já calculados pelo revenda_diff) num mapa por
+// código de imóvel — usado como fonte primária mesmo sem matches_imoveis_batch.
+function buildMmFromComputed_(todos) {
+  const mm = {};
+  todos.forEach(o => {
+    if (o._computedMatches && o._computedMatches.length)
+      mm[o.codigo] = o._computedMatches;
+  });
+  return mm;
+}
+
+// Busca matches para todos os imóveis novos/modificados do diff e atualiza 🎯
 async function carregarDiffMatches(d) {
-  const novos = (d && d.adicionados) || [];
-  if (!novos.length) return;
-  const codigos = novos.map(o => o.codigo).filter(Boolean).join(',');
-  if (!codigos) return;
-  try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=matches_imoveis_batch&codigos=' + encodeURIComponent(codigos));
-    const mm   = await resp.json() || {};
-    window._revendaMatchesData = mm;
+  const adicionados = (d && d.adicionados) || [];
+  const modificados = (d && d.modificados) || [];
+  const todos       = adicionados.concat(modificados);
+  if (!todos.length) return;
 
-    // Agrega clientes únicos por tipo
-    const porTipo = {};
-    novos.forEach(o => {
-      const tipo = o.tipo || 'Outros';
-      if (!porTipo[tipo]) porTipo[tipo] = { seen: new Set(), list: [] };
-      (mm[o.codigo] || []).forEach(m => {
-        if (!porTipo[tipo].seen.has(m.codCliente)) {
-          porTipo[tipo].seen.add(m.codCliente);
-          porTipo[tipo].list.push(m);
-        }
-      });
-    });
-    window._revendaMatchesPorTipo = porTipo;
+  // ── 1. Usa _computedMatches (do revenda_diff) imediatamente, sem fetch ──
+  let mm = buildMmFromComputed_(todos);
+  window._revendaMatchesData = mm;
+  renderDiffMatchBadges_(todos, mm);
 
-    // Atualiza células [data-diffm]
-    const totalSeen = new Set();
-    novos.forEach(o => (mm[o.codigo] || []).forEach(m => totalSeen.add(m.codCliente)));
+  // ── 2. Tenta matches_imoveis_batch para enriquecer com dados do sheet ──
+  const codigos = todos.map(o => o.codigo).filter(Boolean).join(',');
+  if (codigos) {
+    try {
+      const resp   = await fetch(WEBHOOK_URL + '?acao=matches_imoveis_batch&codigos=' + encodeURIComponent(codigos) + '&token=' + encodeURIComponent(tokenSessao()));
+      const mmSheet = await resp.json() || {};
+      // Mescla: sheet prevalece sobre computed para os códigos que tiver
+      if (mmSheet && typeof mmSheet === 'object' && !mmSheet.status) {
+        Object.keys(mmSheet).forEach(cod => { mm[cod] = mmSheet[cod]; });
+        window._revendaMatchesData = mm;
+        renderDiffMatchBadges_(todos, mm);
+      }
+    } catch(e) { /* _computedMatches já foi aplicado acima */ }
+  }
+}
 
-    document.querySelectorAll('[data-diffm]').forEach(el => {
-      const tipo  = el.dataset.diffm;
-      const count = tipo === '__total__'
-        ? totalSeen.size
-        : (porTipo[tipo] ? porTipo[tipo].seen.size : 0);
-      if (count > 0) {
-        el.className = 'diff-match-badge has-match';
-        el.textContent = '🎯 ' + count;
-        el.onclick = () => verMatchesTipo_(tipo);
-      } else {
-        el.className = 'diff-match-badge no-match';
-        el.textContent = '—';
+function renderDiffMatchBadges_(todos, mm) {
+  // Agrega clientes únicos por tipo
+  const porTipo   = {};
+  const totalSeen = new Set();
+  todos.forEach(o => {
+    const tipo = o.tipo || 'Outros';
+    if (!porTipo[tipo]) porTipo[tipo] = { seen: new Set(), list: [] };
+    (mm[o.codigo] || []).forEach(m => {
+      totalSeen.add(m.codCliente);
+      if (!porTipo[tipo].seen.has(m.codCliente)) {
+        porTipo[tipo].seen.add(m.codCliente);
+        porTipo[tipo].list.push(m);
       }
     });
-  } catch(e) {
-    // Se a rota ainda não existe no backend (reimplantação pendente), atualiza
-    // as células para '—' em vez de deixar o spinner '⋯' para sempre.
-    document.querySelectorAll('[data-diffm]').forEach(el => {
-      el.className = 'diff-match-badge no-match';
+  });
+  window._revendaMatchesPorTipo = porTipo;
+
+  document.querySelectorAll('[data-diffm]').forEach(el => {
+    const tipo  = el.dataset.diffm;
+    const count = tipo === '__total__'
+      ? totalSeen.size
+      : (porTipo[tipo] ? porTipo[tipo].seen.size : 0);
+    if (count > 0) {
+      el.className  = 'diff-match-badge has-match';
+      el.textContent = '🎯 ' + count;
+      el.onclick    = () => verMatchesTipo_(tipo);
+    } else {
+      el.className  = 'diff-match-badge no-match';
       el.textContent = '—';
-    });
-  }
+    }
+  });
 }
 
 // Abre insight-detail com os clientes que matcham imóveis novos de um tipo
@@ -1168,9 +1187,12 @@ function verNovidades() {
       showToast('Nenhum imóvel novo ou modificado encontrado.', 'erro');
       return;
     }
+    // _matches: usa dados do sheet (mm) se disponível; senão usa _computedMatches
+    // calculados diretamente pelo revenda_diff (não exige rodarMatching/reimplantação).
+    const pickMatches = o => (mm[o.codigo] && mm[o.codigo].length ? mm[o.codigo] : (o._computedMatches || []));
     const itens = [
-      ...adicionados.map(o => Object.assign({}, o, {fonte: 'REVENDA', _movimento: 'Novo',       _matches: mm[o.codigo] || []})),
-      ...modificados.map(o => Object.assign({}, o, {fonte: 'REVENDA', _movimento: 'Modificado', _matches: mm[o.codigo] || []}))
+      ...adicionados.map(o => Object.assign({}, o, {fonte: 'REVENDA', _movimento: 'Novo',       _matches: pickMatches(o)})),
+      ...modificados.map(o => Object.assign({}, o, {fonte: 'REVENDA', _movimento: 'Modificado', _matches: pickMatches(o)}))
     ];
     sessionStorage.setItem('bi_insight_detail', JSON.stringify({
       title: 'Novidades — imóveis novos ou modificados', icon: '🆕', color: 'var(--accent2)', type: 'imoveis', items: itens
