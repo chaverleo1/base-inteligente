@@ -1670,7 +1670,16 @@ function verAcoesPlanejadas_(categoria) {
 }
 
 function renderMatchesSection(quentes, mornos) {
-  const todos = [...(quentes||[]), ...(mornos||[])];
+  const todos = [
+    ...(quentes||[]).map(d => ({...d, _tipo:'hot'})),
+    ...(mornos||[]).map(d => ({...d, _tipo:'warm'}))
+  ].sort((a, b) => {
+    const favDiff = (parseInt(b.favs)||0) - (parseInt(a.favs)||0);
+    if (favDiff !== 0) return favDiff;
+    const sA = parseFloat(a.scoreTotal != null ? a.scoreTotal : a.score) || 0;
+    const sB = parseFloat(b.scoreTotal != null ? b.scoreTotal : b.score) || 0;
+    return sB - sA;
+  });
   const countEl = document.getElementById('matchClientsCount');
   const listEl  = document.getElementById('matchClientsList');
   if (countEl) countEl.textContent = todos.length;
@@ -1678,9 +1687,8 @@ function renderMatchesSection(quentes, mornos) {
     if (listEl) listEl.innerHTML = '<div class="empty-state">Nenhum match ainda.<br><small>Score insuficiente ou base vazia.</small></div>';
     return;
   }
-  const qLen = (quentes||[]).length;
   if (listEl) {
-    listEl.innerHTML = todos.map((d, i) => {
+    listEl.innerHTML = todos.map(d => {
       const mc80 = parseInt(d.mc80) || 0;
       const mc70 = parseInt(d.mc70) || 0;
       const mcTotal = mc80 + mc70;
@@ -1695,13 +1703,12 @@ function renderMatchesSection(quentes, mornos) {
       const scoreTotal = d.scoreTotal != null ? d.scoreTotal : d.score;
       const favs   = parseInt(d.favs) || 0;
       const favCls = favs > 0 ? 'match-fav has-fav' : 'match-fav';
-      const tipo   = i < qLen ? 'hot' : 'warm';
       const seg    = d.seg ? `<span class="match-row-seg"> · ${d.seg}</span>` : '';
       return `<div class="match-row" data-cod="${d.cod||''}" data-nome="${(d.nome||'').replace(/"/g,'&quot;')}">
         <div class="${mcCls}" title="${mc80} acima de 80 · ${mc70} entre 70 e 79">${mcHtml}</div>
         <div class="${favCls}">⭐ ${favs}</div>
         <div class="match-row-name">${d.nome||'—'}${seg}</div>
-        <div class="match-row-score score-${tipo}">${scoreTotal}</div>
+        <div class="match-row-score score-${d._tipo}">${scoreTotal}</div>
       </div>`;
     }).join('');
     listEl.onclick = e => {
