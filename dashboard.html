@@ -649,6 +649,7 @@
   </div>
 
   <!-- NOVAS OFERTAS -->
+  <div id="novasOfertasSection" style="display:none">
   <div class="section-title">Novas ofertas <span style="font-size:12px;font-weight:400;color:var(--text3);margin-left:8px">imóveis adicionados nos últimos 3 dias</span></div>
   <div class="no-layout">
     <div class="no-imoveis-col">
@@ -673,6 +674,7 @@
       <div class="no-clientes-body" id="noClientesList" style="display:none"></div>
     </div>
   </div>
+  </div><!-- /novasOfertasSection -->
 
   <!-- GRÁFICOS -->
   <div class="section-title">Composição da base de clientes</div>
@@ -1152,19 +1154,22 @@ function renderNovasOfertas() {
     return !dt || dt >= tresDiasAtras;
   });
 
+  const section = document.getElementById('novasOfertasSection');
   const countEl = document.getElementById('noImoveisCount');
   const listEl  = document.getElementById('noImoveisList');
   if (!listEl) return;
-  if (countEl) countEl.textContent = _noOfertasImoveis.length || '0';
+
+  if (!_noOfertasImoveis.length) {
+    if (section) section.style.display = 'none';
+    return;
+  }
+
+  if (section) section.style.display = '';
+  if (countEl) countEl.textContent = _noOfertasImoveis.length;
 
   // Reseta coluna de clientes para estado inicial
   _noOfertasSelected = -1;
   _noResetClientes_();
-
-  if (!_noOfertasImoveis.length) {
-    listEl.innerHTML = '<div class="match-detail-placeholder"><span style="font-size:24px">🔍</span><span>Nenhum imóvel novo nos últimos 3 dias</span></div>';
-    return;
-  }
 
   // ── Renderiza como match-table (mesmo padrão visual da col 2 de Matches) ──
   const rows = _noOfertasImoveis.map((o, i) => {
