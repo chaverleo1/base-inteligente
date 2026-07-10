@@ -641,6 +641,21 @@ input[type=range]::-webkit-slider-thumb {
       </div>
     </div>
 
+    <!-- Área de terreno mínima -->
+    <div class="filtro-secao">
+      <div class="filtro-label">Área de terreno mínima</div>
+      <div class="preco-input-row">
+        <input type="text" class="preco-input" id="areaterr-digitado" placeholder="0"
+               oninput="atualizarAreaTerrDigitada(this.value)">
+        <span class="preco-prefixo">m²</span>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="slider-areaterr" min="0" max="2000" step="10" value="0"
+               oninput="atualizarSliderAreaTerr(this.value)">
+        <div class="slider-labels"><span>0 m²</span><span>2.000+ m²</span></div>
+      </div>
+    </div>
+
     <!-- Bairro / Cidade -->
     <div class="filtro-secao">
       <div class="filtro-label">Bairro / Cidade</div>
@@ -827,6 +842,7 @@ const state = {
 let favDebounce = null;
 let precoAtual = 500000;
 let areaMinAtual = 0;
+let areaTerrAtual = 0;
 
 // ─── SELEÇÃO / PDF ────────────────────────────────────────────────────────────
 function toggleSelecionado(idx, el) {
@@ -1182,6 +1198,23 @@ function atualizarAreaDigitada(val) {
   slider.value = Math.min(Math.max(areaMinAtual || min, min), max);
 }
 
+function atualizarSliderAreaTerr(val) {
+  areaTerrAtual = parseInt(val) || 0;
+  document.getElementById('areaterr-digitado').value = areaTerrAtual ? areaTerrAtual.toLocaleString('pt-BR') : '';
+}
+
+function atualizarAreaTerrDigitada(val) {
+  const digitos = val.replace(/\D/g, '');
+  areaTerrAtual = parseInt(digitos) || 0;
+  const input = document.getElementById('areaterr-digitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+  input.value = digitos ? areaTerrAtual.toLocaleString('pt-BR') : '';
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
+  const slider = document.getElementById('slider-areaterr');
+  const min = parseInt(slider.min), max = parseInt(slider.max);
+  slider.value = Math.min(Math.max(areaTerrAtual || min, min), max);
+}
+
 function fmt_(v) {
   const n = parseInt(String(v || '').replace(/\D/g, '')) || 0;
   if (!n) return '—';
@@ -1202,6 +1235,7 @@ async function executarBusca() {
     extras:       getChips('extra'),
     precoMax:     precoAtual,
     areaMin:      areaMinAtual,
+    areaTerrMin:  areaTerrAtual,
     texto:        document.getElementById('texto-livre').value.trim(),
     token:        tokenSessao(),
   };
@@ -1245,7 +1279,8 @@ function renderResultados(resultados, filtros, interpretado) {
   if (interpretado.status) partes.push(interpretado.status);
   if (filtros.bairroCidade) partes.push(filtros.bairroCidade);
   partes.push('preço limite ' + fmt_(interpretado.precoLimite || filtros.precoMax));
-  if (filtros.areaMin) partes.push(filtros.areaMin + 'm²+');
+  if (filtros.areaMin) partes.push(filtros.areaMin + 'm²+ útil');
+  if (filtros.areaTerrMin) partes.push(filtros.areaTerrMin + 'm²+ terreno');
   if (filtros.quartos.length) partes.push(filtros.quartos.join(' ou ') + ' quartos');
   if (filtros.extras.length) partes.push(filtros.extras.slice(0, 3).join(', '));
 
