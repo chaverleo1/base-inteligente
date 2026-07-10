@@ -1240,7 +1240,13 @@ async function executarBusca() {
   btn.innerHTML = '<span>Buscando...</span>';
 
   try {
-    const body = new URLSearchParams({ dados: JSON.stringify(filtros) });
+    // Compatibilidade com backend ainda não reimplantado: passa bairroCidade
+    // também como 'bairros' (campo antigo) para que scoreBairro_ o use.
+    const bcTermos = filtros.bairroCidade
+      ? filtros.bairroCidade.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+    const payload = Object.assign({}, filtros, { bairros: bcTermos });
+    const body = new URLSearchParams({ dados: JSON.stringify(payload) });
     const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
     const json = await resp.json();
 
