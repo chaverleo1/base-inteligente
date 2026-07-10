@@ -625,7 +625,7 @@ input[type=range]::-webkit-slider-thumb {
       <div class="filtro-label">Preço limite</div>
       <div class="preco-input-row">
         <span class="preco-prefixo">R$</span>
-        <input type="text" class="preco-input" id="preco-digitado" placeholder="500.000"
+        <input type="text" class="preco-input" id="preco-digitado" placeholder="Sem limite"
                oninput="atualizarPrecoDigitado(this.value)">
       </div>
       <div class="slider-wrap">
@@ -1157,7 +1157,7 @@ function getChips(group) {
 // ─── PREÇO (slider + caixa de texto, sincronizados) ───────────────────────────
 function atualizarSlider(val) {
   precoAtual = parseInt(val) || 0;
-  document.getElementById('preco-digitado').value = precoAtual.toLocaleString('pt-BR');
+  document.getElementById('preco-digitado').value = precoAtual > 0 ? precoAtual.toLocaleString('pt-BR') : '';
 }
 
 function atualizarPrecoDigitado(val) {
@@ -1273,7 +1273,7 @@ function renderResultados(resultados, filtros, interpretado) {
   if (interpretado.padrao) partes.push(interpretado.padrao);
   if (interpretado.status) partes.push(interpretado.status);
   if (filtros.bairroCidade) partes.push(filtros.bairroCidade);
-  partes.push('preço limite ' + fmt_(interpretado.precoLimite || filtros.precoMax));
+  if (filtros.precoMax > 0) partes.push('preço limite ' + fmt_(interpretado.precoLimite || filtros.precoMax));
   if (filtros.areaMin) partes.push(filtros.areaMin + 'm²+ útil');
   if (filtros.areaTerrMin) partes.push(filtros.areaTerrMin + 'm²+ terreno');
   if (filtros.quartos.length) partes.push(filtros.quartos.join(' ou ') + ' quartos');
