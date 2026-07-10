@@ -1099,7 +1099,14 @@ async function carregarDiffMatches(d) {
         el.textContent = '—';
       }
     });
-  } catch(e) { /* silencioso */ }
+  } catch(e) {
+    // Se a rota ainda não existe no backend (reimplantação pendente), atualiza
+    // as células para '—' em vez de deixar o spinner '⋯' para sempre.
+    document.querySelectorAll('[data-diffm]').forEach(el => {
+      el.className = 'diff-match-badge no-match';
+      el.textContent = '—';
+    });
+  }
 }
 
 // Abre insight-detail com os clientes que matcham imóveis novos de um tipo
@@ -1147,16 +1154,26 @@ function atualizarCardNovidades_(d) {
 }
 
 function verNovidades() {
-  const d  = window._revendaDiffData    || {};
-  const mm = window._revendaMatchesData || {};
-  const itens = [
-    ...(d.adicionados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Novo',       _matches: mm[o.codigo] || []})),
-    ...(d.modificados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Modificado', _matches: mm[o.codigo] || []}))
-  ];
-  sessionStorage.setItem('bi_insight_detail', JSON.stringify({
-    title: 'Novidades — imóveis novos ou modificados', icon: '🆕', color: 'var(--accent2)', type: 'imoveis', items: itens
-  }));
-  window.location.href = 'insight-detail.html';
+  try {
+    const d  = window._revendaDiffData    || {};
+    const mm = window._revendaMatchesData || {};
+    const adicionados = (d.adicionados || []).slice();
+    const modificados = (d.modificados || []).slice();
+    if (!adicionados.length && !modificados.length) {
+      showToast('Nenhum imóvel novo ou modificado encontrado.', 'erro');
+      return;
+    }
+    const itens = [
+      ...adicionados.map(o => Object.assign({}, o, {fonte: 'REVENDA', _movimento: 'Novo',       _matches: mm[o.codigo] || []})),
+      ...modificados.map(o => Object.assign({}, o, {fonte: 'REVENDA', _movimento: 'Modificado', _matches: mm[o.codigo] || []}))
+    ];
+    sessionStorage.setItem('bi_insight_detail', JSON.stringify({
+      title: 'Novidades — imóveis novos ou modificados', icon: '🆕', color: 'var(--accent2)', type: 'imoveis', items: itens
+    }));
+    window.location.href = 'insight-detail.html';
+  } catch(e) {
+    showToast('Erro ao abrir novidades: ' + e.message, 'erro');
+  }
 }
 
 // Abre insight-detail.html com os imóveis por trás de uma célula da tabela
