@@ -1191,6 +1191,11 @@ function renderNovasOfertas() {
         ${bestScore > 0 ? `<span class="mt-score ${scCls}">${bestScore}</span>` : ''}
       </td>
       <td class="mt-valor" style="white-space:nowrap;vertical-align:middle">${fmt_(o.valorVenda)||'—'}</td>
+      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
+        ${matches.length > 0
+          ? `<span class="diff-match-badge has-match">🎯 ${matches.length}</span>`
+          : `<span class="diff-match-badge no-match">—</span>`}
+      </td>
     </tr>`;
   }).join('');
 
@@ -1244,14 +1249,47 @@ function selecionarImovelNO(idx) {
     body.style.display = '';
     // ── Renderiza como match-row (mesmo padrão visual da col 1 de Matches) ──
     body.innerHTML = matches.map(m => {
-      const sc  = m.score || 0;
-      const cls = sc >= 80 ? 'score-hot' : sc >= 70 ? 'score-warm' : 'score-cold';
-      const seg = m.seg ? `<span class="match-row-seg"> · ${m.seg}</span>` : '';
-      return `<div class="match-row">
+      const sc   = m.score || 0;
+      const cls  = sc >= 80 ? 'score-hot' : sc >= 70 ? 'score-warm' : 'score-cold';
+      const seg  = m.seg ? `<span class="match-row-seg"> · ${m.seg}</span>` : '';
+      const cKey = escAttr(m.codCliente || '');
+      const nKey = escAttr(m.nome || '');
+      return `<div class="match-row" style="gap:8px">
         <div class="match-row-name">${m.nome || '—'}${seg}</div>
         <div class="match-row-score ${cls}">${sc}</div>
+        <button class="mp-fav-btn" title="Favoritar imóvel para ${nKey}"
+          onclick="event.stopPropagation();toggleFavoritoNO('${cKey}','${nKey}',this)">☆</button>
       </div>`;
     }).join('');
+  }
+}
+async function toggleFavoritoNO(codCli, nomeCli, btnEl) {
+  const o = _noOfertasImoveis[_noOfertasSelected];
+  if (!o) return;
+  btnEl.disabled = true;
+  try {
+    const payload = {
+      acao: 'toggle_favorito', token: tokenSessao(),
+      idCliente: codCli, cliNome: nomeCli,
+      imoCodigo: o.codigo || '', fonte: 'REVENDA',
+      imoTipo: o.tipo || '', imoBairro: o.bairro || '', imoCondominio: o.condominio || '',
+      imoEndereco: o.endereco || '',
+      imoQuartos: o.quartos || '', imoSuites: o.suites || '', imoVagas: o.vagas || '', imoAreaUtil: o.areaUtil || '',
+      imoValorVenda: o.valorVenda || '', imoPadrao: o.padrao || '', imoEstagio: o.estagio || '',
+      imoFoto: o.foto || o.urlFoto || o.imagem || '', imoUrl: o.url || '',
+      imoConstrutora: '', imoEntrega: ''
+    };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const agora = r.status === 'adicionado';
+    btnEl.textContent = agora ? '★' : '☆';
+    btnEl.classList.toggle('ativo', agora);
+    showToast(agora ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos', 'ok');
+  } catch(e) {
+    showToast('Erro ao favoritar: ' + e.message, 'erro');
+  } finally {
+    btnEl.disabled = false;
   }
 }
 // ───────────────────────────────────────────────────────────────────────────
