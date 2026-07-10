@@ -1262,6 +1262,20 @@ async function executarBusca() {
 }
 
 function renderResultados(resultados, filtros, interpretado) {
+  // Filtro por opção (Revenda / Lançamento)
+  const opcaoSel = (filtros.opcao || []).map(o => o.toLowerCase());
+  if (opcaoSel.length > 0) {
+    const querRevenda    = opcaoSel.some(o => o === 'revenda');
+    const querLancamento = opcaoSel.some(o => o.includes('lan'));
+    resultados = resultados.filter(im => {
+      const isLanc = (im.fonte || '').toUpperCase() === 'LANCAMENTO';
+      if (querRevenda && querLancamento) return true;
+      if (querRevenda)    return !isLanc;
+      if (querLancamento) return isLanc;
+      return true;
+    });
+  }
+
   const precoDeImo = im => parseFloat(String(im.valorVenda || im.precoMin || im.preco || '').replace(/[^\d]/g,'')) || Infinity;
   resultados = [...resultados].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
