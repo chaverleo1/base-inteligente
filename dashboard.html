@@ -624,6 +624,7 @@
           <div style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="matchDetailClientName">—</div>
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px">
             <span id="matchDetailClientCod" style="font-size:11px;color:var(--text3)"></span>
+            <span id="matchDetailClientTel" style="font-size:11px;color:var(--text2);display:none"></span>
             <span id="matchDetailPipelineBadge" style="display:none;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px"></span>
           </div>
           <div style="margin-top:10px">
@@ -2125,8 +2126,10 @@ async function selecionarCliente(cod, nome) {
   const tbody        = document.getElementById('matchTableBody');
 
   // Mostrar cabeçalho imediatamente com dados já disponíveis
+  const telEl = document.getElementById('matchDetailClientTel');
   if (nameEl)    nameEl.textContent     = nome || '—';
   if (codEl)     codEl.textContent      = cod  ? '#' + cod : '';
+  if (telEl)     { telEl.textContent = ''; telEl.style.display = 'none'; }
   if (pipEl)     pipEl.style.display    = 'none';
   if (editBtn)   { editBtn.removeAttribute('href'); editBtn.style.opacity = '0.4'; editBtn.style.pointerEvents = 'none'; }
   if (headerEl)  headerEl.style.display = 'flex';
@@ -2149,6 +2152,8 @@ async function selecionarCliente(cod, nome) {
         ? (listaC.find(x => x.idCliente === cod) || listaC.find(x => x.nome === nome) || listaC[0])
         : null;
       if (c) {
+        const tel = c.telefone || c.tel || '';
+        if (tel && telEl) { telEl.textContent = tel; telEl.style.display = ''; }
         if (c.pipeline && pipEl) {
           const cor = PIP_COLORS_DASH[c.pipeline] || 'var(--text3)';
           pipEl.textContent   = c.pipeline;
