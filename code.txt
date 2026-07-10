@@ -505,6 +505,21 @@ function doGet(e) {
         return {tipo: t, ultimo: ultimo, modificado: modPorTipo_rd[t] || 0, novo: novoPorTipo_rd[t] || 0, variacao: depois - ultimo};
       }).sort(function(a, b) { return (depoisPorTipo_rd[b.tipo] || 0) - (depoisPorTipo_rd[a.tipo] || 0); });
 
+      // Score do melhor match para cada imóvel, sem limiar (mostra mesmo < 70).
+      // Calcula contra todos os contatos usando o mesmo motor de calcularMatch_.
+      var contatosRd_ = lerAba_('CONTATOS');
+      function calcBestScore_(imo) {
+        var best = 0;
+        contatosRd_.forEach(function(c) {
+          var sc = calcularMatch_(c, imo).score;
+          if (sc > best) best = sc;
+        });
+        return best;
+      }
+      adicionados_rd.forEach(function(o) { o.fonte = o.fonte || 'REVENDA'; o._bestScore = calcBestScore_(o); });
+      modificados_rd.forEach(function(o) { o.fonte = o.fonte || 'REVENDA'; o._bestScore = calcBestScore_(o); });
+      removidos_rd.forEach(function(o)   { o.fonte = o.fonte || 'REVENDA'; o._bestScore = calcBestScore_(o); });
+
       return ok({
         ultimaSync: sync_rd,
         antesDesde: antesDesde_rd,
