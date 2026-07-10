@@ -253,7 +253,18 @@ function tableLeads(items) {
 
 function tableImoveis(items) {
   if (!items.length) return '<div class="empty">Nenhum imóvel encontrado.</div>';
+  const hasMatches = items.some(im => im._matches && im._matches.length > 0);
   const fmt = v => { const n = parseInt(String(v||'').replace(/\D/g,'')); if (!n) return '—'; return 'R$ ' + n.toLocaleString('pt-BR'); };
+  function matchChips(list) {
+    if (!list || !list.length) return '<span style="color:var(--text3);font-size:11px">—</span>';
+    const top   = list.slice(0, 2);
+    const extra = list.length - 2;
+    const cls   = sc => sc >= 80 ? 'badge-red' : sc >= 70 ? 'badge-amber' : 'badge-blue';
+    let html = top.map(m => `<span class="badge ${cls(m.score)}" style="font-size:10px;padding:1px 7px;margin:1px 2px 1px 0">${m.nome.split(' ')[0]} · ${m.score}</span>`).join('');
+    if (extra > 0) html += `<span class="badge badge-muted" style="font-size:10px;padding:1px 6px">+${extra}</span>`;
+    return `<div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center">${html}</div>`;
+  }
+  const cols = hasMatches ? 8 : 7;
   const rows = items.map(im => {
     const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
     const specs = [
@@ -262,10 +273,10 @@ function tableImoveis(items) {
       im.vagas    ? `${im.vagas}v`     : '',
       im.areaUtil ? `${im.areaUtil}m²` : '',
     ].filter(Boolean).join(' · ');
-    const movCls = im._movimento === 'Removido' ? 'badge-red' : im._movimento === 'Modificado' ? 'badge-amber' : 'badge-green';
+    const movCls   = im._movimento === 'Removido' ? 'badge-red' : im._movimento === 'Modificado' ? 'badge-amber' : 'badge-green';
     const fonteCls = im.fonte === 'LANCAMENTO' ? 'badge-amber' : 'badge-blue';
-    const temObs = im._mudancas && im._mudancas.length;
-    const obsRow = temObs ? `<tr class="obs-row"><td colspan="7" class="td-obs">obs: ${im._mudancas.join('; ')}</td></tr>` : '';
+    const temObs   = im._mudancas && im._mudancas.length;
+    const obsRow   = temObs ? `<tr class="obs-row"><td colspan="${cols}" class="td-obs">obs: ${im._mudancas.join('; ')}</td></tr>` : '';
     return `<tr${temObs ? ' class="has-obs"' : ''}>
       <td class="td-nome">${im.codigo || '—'}</td>
       <td>${im.tipo || '—'}</td>
@@ -274,10 +285,11 @@ function tableImoveis(items) {
       <td>${fmt(im.valorVenda)}</td>
       <td><span class="badge ${fonteCls}">${im.fonte || '—'}</span></td>
       <td><span class="badge ${movCls}">${im._movimento || '—'}</span></td>
+      ${hasMatches ? `<td style="min-width:130px">${matchChips(im._matches)}</td>` : ''}
     </tr>${obsRow}`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th></tr></thead>
+    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th>${hasMatches ? '<th>Matches 🎯</th>' : ''}</tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }

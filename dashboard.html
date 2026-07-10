@@ -141,7 +141,7 @@
   .revenda-diff-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px}
   .revenda-diff-meta{font-size:12px;color:var(--text3)}
   .revenda-diff-tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .revenda-diff-tbl{width:100%;min-width:480px;border-collapse:collapse}
+  .revenda-diff-tbl{width:100%;min-width:580px;border-collapse:collapse}
   .revenda-diff-tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);padding:4px 12px 8px;text-align:left;border-bottom:1px solid var(--border)}
   .revenda-diff-tbl th:not(:first-child){text-align:center}
   .revenda-diff-tbl td{padding:7px 12px;border-bottom:1px solid rgba(42,48,80,.4);color:var(--text2);font-size:13px}
@@ -158,6 +158,10 @@
   .diff-mod{color:#f5a623}
   .diff-box.diff-mod{background:rgba(245,166,35,.14);border-color:rgba(245,166,35,.35)}
   .revenda-diff-tbl .total-row td{color:var(--text);font-weight:700;border-top:1px solid var(--border);border-bottom:none;padding-top:10px}
+  .diff-match-badge{display:inline-flex;align-items:center;justify-content:center;min-width:36px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;transition:all .15s;border:1px solid transparent;white-space:nowrap}
+  .diff-match-badge.has-match{background:rgba(0,212,170,.14);border-color:rgba(0,212,170,.35);color:var(--accent2);cursor:pointer}
+  .diff-match-badge.has-match:hover{transform:translateY(-1px);filter:brightness(1.15)}
+  .diff-match-badge.no-match{background:rgba(74,84,112,.1);border-color:var(--border);color:var(--text3);cursor:default}
 
   /* ── PIPELINE ── */
   .pipeline-funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:32px;
@@ -956,6 +960,7 @@ async function carregarRevendaDiff() {
     const json = await res.json();
     if (trataNaoAutenticado(json)) return;
     renderRevendaDiff(json);
+    carregarDiffMatches(json);
   } catch(e) { /* painel é suplementar — falha silenciosa */ }
 }
 
@@ -989,20 +994,25 @@ function renderRevendaDiff(d) {
     </div>` : ''}
     <div class="revenda-diff-tbl-wrap">
     <table class="revenda-diff-tbl">
-      <thead><tr><th>Tipo</th><th>Último</th><th>Modificado</th><th>Novo</th><th>Variação</th></tr></thead>
+      <thead><tr><th>Tipo</th><th>Último</th><th>Modificado</th><th>Novo</th><th>Matches 🎯</th><th>Variação</th></tr></thead>
       <tbody>
         ${d.delta.map(r => {
-          const escTipo = String(r.tipo).replace(/'/g,"\\'");
+          const escTipo    = String(r.tipo).replace(/'/g,"\\'");
+          const escTipoAttr= String(r.tipo).replace(/"/g,'&quot;');
           const df    = r.variacao;
           const cls   = df > 0 ? 'diff-pos' : df < 0 ? 'diff-neg' : 'diff-zero';
           const dStr  = df > 0 ? '+' + df : df === 0 ? '—' : String(df);
           const modCls  = r.modificado > 0 ? 'diff-mod' : 'diff-zero';
           const novoCls = r.novo > 0 ? 'diff-pos' : 'diff-zero';
+          const matchCell = r.novo > 0
+            ? `<span class="diff-match-badge no-match" data-diffm="${escTipoAttr}">⋯</span>`
+            : `<span class="diff-match-badge no-match">—</span>`;
           return `<tr>
             <td class="td-tipo">${r.tipo}</td>
             <td>${r.ultimo}</td>
             <td><span class="diff-box ${modCls}" ${r.modificado > 0 ? `onclick="verRevendaDiffTipo('${escTipo}','modificado')"` : ''}>${r.modificado}</span></td>
             <td><span class="diff-box ${novoCls}" ${r.novo > 0 ? `onclick="verRevendaDiffTipo('${escTipo}','novo')"` : ''}>${r.novo}</span></td>
+            <td>${matchCell}</td>
             <td><span class="diff-box ${cls}" ${df !== 0 ? `onclick="verRevendaDiffTipo('${escTipo}','variacao')"` : ''}>${dStr}</span></td>
           </tr>`;
         }).join('')}
@@ -1011,6 +1021,7 @@ function renderRevendaDiff(d) {
           <td>${d.totalAntes || 0}</td>
           <td><span class="diff-box ${totalMod > 0 ? 'diff-mod' : 'diff-zero'}" ${totalMod > 0 ? `onclick="verRevendaDiffTipo('__total__','modificado')"` : ''}>${totalMod}</span></td>
           <td><span class="diff-box ${totalNovo > 0 ? 'diff-pos' : 'diff-zero'}" ${totalNovo > 0 ? `onclick="verRevendaDiffTipo('__total__','novo')"` : ''}>${totalNovo}</span></td>
+          <td>${totalNovo > 0 ? `<span class="diff-match-badge no-match" data-diffm="__total__">⋯</span>` : `<span class="diff-match-badge no-match">—</span>`}</td>
           <td><span class="diff-box ${totalCls}" ${totalDiff !== 0 ? `onclick="verRevendaDiffTipo('__total__','variacao')"` : ''}>${totalStr}</span></td>
         </tr>
       </tbody>
@@ -1045,6 +1056,77 @@ async function sincronizarRevendaClick() {
   }
 }
 
+// Busca matches para todos os imóveis novos do diff e atualiza a coluna 🎯
+async function carregarDiffMatches(d) {
+  const novos = (d && d.adicionados) || [];
+  if (!novos.length) return;
+  const codigos = novos.map(o => o.codigo).filter(Boolean).join(',');
+  if (!codigos) return;
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=matches_imoveis_batch&codigos=' + encodeURIComponent(codigos));
+    const data = await resp.json();
+    const mm   = data.result || {};
+    window._revendaMatchesData = mm;
+
+    // Agrega clientes únicos por tipo
+    const porTipo = {};
+    novos.forEach(o => {
+      const tipo = o.tipo || 'Outros';
+      if (!porTipo[tipo]) porTipo[tipo] = { seen: new Set(), list: [] };
+      (mm[o.codigo] || []).forEach(m => {
+        if (!porTipo[tipo].seen.has(m.codCliente)) {
+          porTipo[tipo].seen.add(m.codCliente);
+          porTipo[tipo].list.push(m);
+        }
+      });
+    });
+    window._revendaMatchesPorTipo = porTipo;
+
+    // Atualiza células [data-diffm]
+    const totalSeen = new Set();
+    novos.forEach(o => (mm[o.codigo] || []).forEach(m => totalSeen.add(m.codCliente)));
+
+    document.querySelectorAll('[data-diffm]').forEach(el => {
+      const tipo  = el.dataset.diffm;
+      const count = tipo === '__total__'
+        ? totalSeen.size
+        : (porTipo[tipo] ? porTipo[tipo].seen.size : 0);
+      if (count > 0) {
+        el.className = 'diff-match-badge has-match';
+        el.textContent = '🎯 ' + count;
+        el.onclick = () => verMatchesTipo_(tipo);
+      } else {
+        el.className = 'diff-match-badge no-match';
+        el.textContent = '—';
+      }
+    });
+  } catch(e) { /* silencioso */ }
+}
+
+// Abre insight-detail com os clientes que matcham imóveis novos de um tipo
+function verMatchesTipo_(tipo) {
+  const d  = window._revendaDiffData     || {};
+  const mm = window._revendaMatchesData  || {};
+  const pt = window._revendaMatchesPorTipo || {};
+  let clientes;
+  if (tipo === '__total__') {
+    const seen = new Set(); clientes = [];
+    (d.adicionados || []).forEach(o =>
+      (mm[o.codigo] || []).forEach(m => {
+        if (!seen.has(m.codCliente)) { seen.add(m.codCliente); clientes.push(m); }
+      }));
+  } else {
+    clientes = (pt[tipo] && pt[tipo].list) || [];
+  }
+  if (!clientes.length) return;
+  sessionStorage.setItem('bi_insight_detail', JSON.stringify({
+    title: 'Matches Identificados — Novos ' + (tipo === '__total__' ? 'imóveis' : tipo),
+    icon: '🎯', color: 'var(--accent2)', type: 'clientes',
+    items: clientes.map(m => ({ nome: m.nome, seg: m.seg, score: m.score, cod: m.codCliente }))
+  }));
+  window.location.href = 'insight-detail.html';
+}
+
 // Card "Novidades" da Visão geral: total de imóveis novos OU modificados
 // (preço, endereço, etc.) identificados na última janela — hoje só REVENDA
 // (quando o mesmo diff existir para LANÇAMENTOS, basta somar aqui também).
@@ -1066,10 +1148,11 @@ function atualizarCardNovidades_(d) {
 }
 
 function verNovidades() {
-  const d = window._revendaDiffData || {};
+  const d  = window._revendaDiffData    || {};
+  const mm = window._revendaMatchesData || {};
   const itens = [
-    ...(d.adicionados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Novo'})),
-    ...(d.modificados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Modificado'}))
+    ...(d.adicionados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Novo',       _matches: mm[o.codigo] || []})),
+    ...(d.modificados || []).map(o => Object.assign({fonte: 'REVENDA'}, o, {_movimento: 'Modificado', _matches: mm[o.codigo] || []}))
   ];
   sessionStorage.setItem('bi_insight_detail', JSON.stringify({
     title: 'Novidades — imóveis novos ou modificados', icon: '🆕', color: 'var(--accent2)', type: 'imoveis', items: itens
@@ -1085,8 +1168,9 @@ function verNovidades() {
 function verRevendaDiffTipo(tipo, categoria) {
   const d = window._revendaDiffData || {};
   const porTipo = o => tipo === '__total__' || (o.tipo || 'Outros') === tipo;
-  const novos      = () => (d.adicionados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Novo' }));
-  const modificados = () => (d.modificados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Modificado' }));
+  const mm = window._revendaMatchesData || {};
+  const novos      = () => (d.adicionados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Novo',       _matches: mm[o.codigo] || [] }));
+  const modificados = () => (d.modificados || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Modificado', _matches: mm[o.codigo] || [] }));
   const removidos   = () => (d.removidos   || []).filter(porTipo).map(o => Object.assign({fonte: 'REVENDA'}, o, { _movimento: 'Removido' }));
 
   let itens, rotulo;
