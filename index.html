@@ -137,18 +137,20 @@
   }
 
   async function inicializarERedirecionar() {
+    // timeout (ms) por etapa — operações pesadas recebem mais tempo,
+    // mas nunca travam a barra indefinidamente.
     const FUNCOES = [
-      'migrar_cabecalho_lancamentos',
-      'migrar_cabecalho_contatos',
-      'preencher_ids_faltantes',
-      'preencher_ids_faltantes_contatos',
-      'preencher_data_atualizacao',
-      'migrar_acoes_planejadas',
-      'sincronizar_revenda',
-      'criar_gatilho_revenda',
-      'criar_gatilho_matching',
-      'rodar_matching',
-      'testar_matching'
+      { a: 'migrar_cabecalho_lancamentos',      t: 20000 },
+      { a: 'migrar_cabecalho_contatos',         t: 20000 },
+      { a: 'preencher_ids_faltantes',           t: 20000 },
+      { a: 'preencher_ids_faltantes_contatos',  t: 20000 },
+      { a: 'preencher_data_atualizacao',        t: 20000 },
+      { a: 'migrar_acoes_planejadas',           t: 20000 },
+      { a: 'sincronizar_revenda',               t: 90000 },
+      { a: 'criar_gatilho_revenda',             t: 15000 },
+      { a: 'criar_gatilho_matching',            t: 15000 },
+      { a: 'rodar_matching',                    t: 90000 },
+      { a: 'testar_matching',                   t: 30000 },
     ];
     const total  = FUNCOES.length;
     const fillEl = document.getElementById('initFill');
@@ -156,11 +158,23 @@
     document.getElementById('initOverlay').style.display = 'flex';
 
     for (let i = 0; i < total; i++) {
+      const { a, t } = FUNCOES[i];
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), t);
       try {
-        const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + FUNCOES[i] + '&token=' + encodeURIComponent(tokenSessao()));
-        const r    = await resp.json();
-        if (r.status === 'nao_autenticado') { sessionStorage.removeItem(SESS_KEY); window.location.href = 'index.html'; return; }
-      } catch(e) { /* silent */ }
+        const resp = await fetch(
+          WEBHOOK_URL + '?acao=adm_' + a + '&token=' + encodeURIComponent(tokenSessao()),
+          { signal: ctrl.signal }
+        );
+        const r = await resp.json();
+        if (r.status === 'nao_autenticado') {
+          clearTimeout(tid);
+          sessionStorage.removeItem(SESS_KEY);
+          window.location.href = 'index.html';
+          return;
+        }
+      } catch(e) { /* timeout ou erro de rede — avança para o próximo passo */ }
+      finally    { clearTimeout(tid); }
       fillEl.style.width = Math.round(((i + 1) / total) * 100) + '%';
     }
     sessionStorage.setItem('bi_init_done', '1');
