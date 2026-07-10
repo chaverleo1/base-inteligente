@@ -1262,6 +1262,11 @@ async function executarBusca() {
 }
 
 function renderResultados(resultados, filtros, interpretado) {
+  const precoDeImo = im => parseFloat(String(im.valorVenda || im.precoMin || im.preco || '').replace(/[^\d]/g,'')) || Infinity;
+  resultados = [...resultados].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return precoDeImo(a) - precoDeImo(b);
+  });
   state.resultadosAtuais = resultados;
   state.selecionados.clear();
   document.getElementById('estado-inicial').style.display = 'none';
