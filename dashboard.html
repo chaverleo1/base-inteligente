@@ -1215,6 +1215,12 @@ async function carregarLancamentosDash() {
     const s1 = statusTop[0] || ['—', 0];
     const s2 = statusTop[1] || ['—', 0];
 
+    // Atualiza card na Visão Geral
+    const vgVal = document.getElementById('cardVGLancValue');
+    const vgSub = document.getElementById('cardVGLancSub');
+    if (vgVal) vgVal.textContent = empIds.size;
+    if (vgSub) vgSub.textContent = total + ' tipologias cadastradas';
+
     document.getElementById('cardsLancamentos').innerHTML = `
       <div class="card" style="position:relative">
         <div class="card-label">Empreendimentos</div>
@@ -1258,10 +1264,11 @@ async function carregarLancamentosDash() {
 // ── RENDERIZAR ────────────────────────────────────────────────────────────────
 
 function renderDados(json) {
-  const total   = json.total   || 0;
-  const quentes = json.quentes || [];
-  const mornos  = json.mornos  || [];
-  const frios   = json.frios   || [];
+  const total      = json.total   || 0;
+  const quentes    = json.quentes || [];
+  const mornos     = json.mornos  || [];
+  const frios      = json.frios   || [];
+  const prodTotal  = (json.produtos || {}).total || 0;
 
   // "Ver →" das colunas Quentes/Mornos/Frios reaproveita o mesmo mecanismo
   // dos cards de Insight (window._insightDetails + verInsight() +
@@ -1283,6 +1290,22 @@ function renderDados(json) {
       <div class="card-value">${total.toLocaleString('pt-BR')}</div>
       <div class="card-sub">na base atual</div>
       <a href="contatos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+         color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+         border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+    </div>
+    <div class="card" style="position:relative">
+      <div class="card-label">🔑 Total de revendas</div>
+      <div class="card-value green">${prodTotal}</div>
+      <div class="card-sub">disponíveis para venda</div>
+      <a href="busca.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+         color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+         border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+    </div>
+    <div class="card" style="position:relative" id="cardVGLanc">
+      <div class="card-label">🚀 Empreendimentos</div>
+      <div class="card-value" style="color:var(--accent2)" id="cardVGLancValue">—</div>
+      <div class="card-sub" id="cardVGLancSub">carregando…</div>
+      <a href="lancamentos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
          color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
          border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
     </div>
