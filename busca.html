@@ -1261,6 +1261,36 @@ async function executarBusca() {
   }
 }
 
+// Normaliza texto para comparação (minúsculas + remove acentos)
+function normLocal_(s) {
+  return (s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Retorna pontuação de prioridade de termos vírgula-separados contra os campos do imóvel.
+// Maior = melhor: primeiro termo > segundo > terceiro; dentro do termo: exato > começa > contém > todas palavras > alguma palavra.
+function calcPrioridadeTermos_(termosBrutos, campos) {
+  if (!termosBrutos) return 0;
+  const termos = termosBrutos.split(',').map(t => normLocal_(t)).filter(Boolean);
+  if (!termos.length) return 0;
+  const n = termos.length;
+  for (let i = 0; i < termos.length; i++) {
+    const t = termos[i];
+    const palavras = t.split(/\s+/).filter(p => p.length > 2);
+    for (const c of campos) {
+      const cn = normLocal_(c);
+      if (!cn) continue;
+      if (cn === t)                                                         return (n - i) * 10 + 4;
+      if (cn.startsWith(t) || t.startsWith(cn))                            return (n - i) * 10 + 3;
+      if (cn.includes(t)   || t.includes(cn))                              return (n - i) * 10 + 2;
+      if (palavras.length && palavras.every(p => cn.includes(p)))          return (n - i) * 10 + 1;
+      if (palavras.some(p => p.length >= 4 && cn.includes(p)))             return (n - i) * 10 + 0;
+    }
+  }
+  return 0;
+}
+
 function renderResultados(resultados, filtros, interpretado) {
   // Filtro por opção (Revenda / Lançamento)
   const opcaoSel = (filtros.opcao || []).map(o => o.toLowerCase());
@@ -1276,8 +1306,22 @@ function renderResultados(resultados, filtros, interpretado) {
     });
   }
 
-  const precoDeImo = im => parseFloat(String(im.valorVenda || im.precoMin || im.preco || '').replace(/[^\d]/g,'')) || Infinity;
+  const precoDeImo  = im => parseFloat(String(im.valorVenda || im.precoMin || im.preco || '').replace(/[^\d]/g,'')) || Infinity;
+  const locTexto    = filtros.bairroCidade || '';
+  const descTexto   = filtros.texto || '';
   resultados = [...resultados].sort((a, b) => {
+    // Prioridade por termos de localização (vírgula-separados, o primeiro tem maior peso)
+    if (locTexto) {
+      const pa = calcPrioridadeTermos_(locTexto, [a.bairro, a.condominio]);
+      const pb = calcPrioridadeTermos_(locTexto, [b.bairro, b.condominio]);
+      if (pa !== pb) return pb - pa;
+    }
+    // Prioridade por termos de descrição livre
+    if (descTexto) {
+      const pa = calcPrioridadeTermos_(descTexto, [a.bairro, a.condominio, a.tipo, a.padrao, a.construtora]);
+      const pb = calcPrioridadeTermos_(descTexto, [b.bairro, b.condominio, b.tipo, b.padrao, b.construtora]);
+      if (pa !== pb) return pb - pa;
+    }
     if (b.score !== a.score) return b.score - a.score;
     return precoDeImo(a) - precoDeImo(b);
   });
