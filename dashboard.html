@@ -152,7 +152,7 @@
   .revenda-diff-tbl .total-row td{color:var(--text);font-weight:700;border-top:1px solid var(--border);border-bottom:none;padding-top:10px}
 
   /* ── PIPELINE ── */
-  .pipeline-funnel{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-bottom:32px;
+  .pipeline-funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-bottom:32px;
                    border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
   .pip-col{display:flex;flex-direction:column;border-right:1px solid rgba(255,255,255,.06)}
   .pip-col:last-child{border-right:none}
@@ -163,13 +163,17 @@
   .pip-body{padding:8px 7px;min-height:90px;max-height:260px;overflow-y:auto;flex:1}
   .pip-body::-webkit-scrollbar{width:3px}
   .pip-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
-  .pip-name{font-size:12px;padding:5px 8px;border-radius:5px;margin-bottom:3px;
+  .pip-item{display:flex;align-items:center;gap:4px;margin-bottom:3px}
+  .pip-name{flex:1;min-width:0;font-size:12px;padding:5px 8px;border-radius:5px;
             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
             background:rgba(255,255,255,.04);color:var(--text2);cursor:default}
   .pip-name:hover{background:rgba(255,255,255,.08);color:var(--text)}
   .pip-segmento{font-size:10px;color:var(--text3);margin-left:5px;font-weight:500}
   .pip-alerta{color:#ffc107;font-weight:700;margin-left:4px;cursor:help}
   .pip-alerta.forte{color:#ff4a3f}
+  .pip-fav{font-size:10px;padding:2px 5px;border-radius:4px;background:transparent;
+           color:var(--text3);white-space:nowrap;flex-shrink:0;line-height:1.4}
+  .pip-fav.has-fav{color:#ffc107;background:rgba(255,193,7,.12)}
   .pip-empty{font-size:11px;color:var(--text3);text-align:center;padding:20px 8px;font-style:italic}
   @media(max-width:700px){.pipeline-funnel{grid-template-columns:1fr 1fr}}
 
@@ -1045,20 +1049,21 @@ function renderPipeline(json) {
     {key:'urgentes',       label:'Urgentes',        icon:'🔥', bg:'rgba(255,59,48,.15)',   text:'#ff4a3f'},
     {key:'posVisita',      label:'Pós-Visita',       icon:'👁',  bg:'rgba(255,107,53,.11)',  text:'#ff7844'},
     {key:'agendarVisita',  label:'Agendar Visita',   icon:'📅', bg:'rgba(255,184,0,.09)',   text:'#ffc107'},
+    {key:'potencial',      label:'Potencial',        icon:'💡', bg:'rgba(134,197,67,.09)',  text:'#86c543'},
     {key:'preAtendimento', label:'Pré-Atendimento',  icon:'📋', bg:'rgba(63,201,224,.08)',  text:'#3fc9e0'},
-    {key:'ganhos',         label:'Ganhos',           icon:'✅', bg:'rgba(10,126,164,.13)',  text:'#1a9ed4'},
   ];
   document.getElementById('pipelineFunnel').innerHTML = cfg.map(s => {
     const list  = stages[s.key] || [];
     const names = list.length
       ? list.map(c => {
-          // Sinal de estagnação: 5+ dias no mesmo estágio (!), 15+ dias (!!).
-          // c.dias vem null quando não há pipelineData ainda (cliente antigo,
-          // migrado antes desse campo existir) — nesse caso não mostra sinal
-          // nenhum, pra não acusar estagnação sem dado real.
           const sinal = c.dias == null ? '' : c.dias >= 15 ? '<span class="pip-alerta forte" title="Há '+c.dias+' dias neste estágio">!!</span>' : c.dias >= 5 ? '<span class="pip-alerta" title="Há '+c.dias+' dias neste estágio">!</span>' : '';
           const segmento = c.segmento ? `<span class="pip-segmento">${c.segmento}</span>` : '';
-          return `<div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${segmento}${sinal}</div>`;
+          const favCls = (c.favs > 0) ? 'pip-fav has-fav' : 'pip-fav';
+          const favTip = c.favs > 0 ? `${c.favs} favorito${c.favs!==1?'s':''}` : 'Sem favoritos';
+          return `<div class="pip-item">
+            <div class="pip-name" title="${(c.nomeCompleto||'').replace(/"/g,'&quot;')}">${c.nome||'—'}${segmento}${sinal}</div>
+            <span class="${favCls}" title="${favTip}">⭐${c.favs||0}</span>
+          </div>`;
         }).join('')
       : `<div class="pip-empty">—</div>`;
     return `<div class="pip-col" style="background:${s.bg}">
@@ -1069,6 +1074,21 @@ function renderPipeline(json) {
       <div class="pip-body">${names}</div>
     </div>`;
   }).join('');
+
+  // Card "Ganhos" na Visão Geral — atualiza valor e lista de clientes
+  const ganhosEl    = document.getElementById('cardGanhosValue');
+  const ganhosCard  = document.getElementById('cardGanhos');
+  const ganhosLista = stages.ganhos || [];
+  if (ganhosEl) ganhosEl.textContent = ganhosLista.length;
+  if (ganhosCard) {
+    ganhosCard.onclick = ganhosLista.length ? () => {
+      window._insightDetails['cardGanhos'] = ganhosLista.map(c => ({
+        cod: c.idCliente, nome: c.nomeCompleto || c.nome, score: null, scoreTotal: null
+      }));
+      verInsight('cardGanhos');
+    } : null;
+    ganhosCard.style.cursor = ganhosLista.length ? 'pointer' : 'default';
+  }
 }
 
 async function carregarLancamentosDash() {
@@ -1195,6 +1215,11 @@ function renderDados(json) {
       <div class="card-label">🆕 Novidades</div>
       <div class="card-value" id="cardNovidadesValue" style="color:var(--accent2)">—</div>
       <div class="card-sub">novos ou modificados (revenda)</div>
+    </div>
+    <div class="card" style="position:relative" id="cardGanhos">
+      <div class="card-label">✅ Ganhos</div>
+      <div class="card-value" id="cardGanhosValue" style="color:#1a9ed4">—</div>
+      <div class="card-sub">clientes convertidos</div>
     </div>`;
 
   // ── Matches

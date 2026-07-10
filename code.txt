@@ -525,13 +525,29 @@ function doGet(e) {
       var iPip_     = cab_.indexOf('pipeline');
       var iPipData_ = cab_.indexOf('pipelineData');
       var iSeg_     = cab_.indexOf('segmento');
-      var stages_ = {fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]};
+      var stages_ = {fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],potencial:[],preAtendimento:[],ganhos:[]};
       // "Perda" de propósito não entra aqui — não tem card no funil do
       // Dashboard, só existe como opção nas caixas de seleção (pipSelectHtml)
       // pra registrar o motivo sem perder o dado, servindo de base pra
       // análises futuras. Como não está no keyMap_, cai no "if (!sk_) continue"
       // abaixo e simplesmente não aparece em nenhuma coluna do funil.
-      var keyMap_ = {'Fechamento':'fechamento','Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
+      // "Ganhos" também não aparece como coluna no funil — está no keyMap_ mas
+      // é exibido como card separado na seção "Visão geral" do Dashboard.
+      var keyMap_ = {'Fechamento':'fechamento','Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Potencial':'potencial','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
+      // Contagem de favoritos por idCliente — mostrada ao lado do nome no funil
+      var favCounts_ = {};
+      var abaFav_ = ss_.getSheetByName('FAVORITOS');
+      if (abaFav_ && abaFav_.getLastRow() > 1) {
+        var favDados_ = abaFav_.getDataRange().getValues();
+        var favCab_   = favDados_[0];
+        var iFavId_   = favCab_.indexOf('idCliente');
+        if (iFavId_ >= 0) {
+          for (var fi_ = 1; fi_ < favDados_.length; fi_++) {
+            var fid_ = String(favDados_[fi_][iFavId_] || '').trim();
+            if (fid_) favCounts_[fid_] = (favCounts_[fid_] || 0) + 1;
+          }
+        }
+      }
       if (iPip_ >= 0) {
         for (var pi_ = 1; pi_ < dados_.length; pi_++) {
           var pip_  = String(dados_[pi_][iPip_] || '').trim();
@@ -544,11 +560,11 @@ function doGet(e) {
           // estagnação (! com 5+ dias, !! com 15+ dias) no funil.
           var dias_ = iPipData_ >= 0 ? diasDesdeData_(dados_[pi_][iPipData_]) : null;
           var seg_  = iSeg_ >= 0 ? String(dados_[pi_][iSeg_] || '').trim() : '';
-          stages_[sk_].push({nome: nome_, nomeCompleto: nome_, idCliente: id_, dias: dias_, segmento: seg_});
+          stages_[sk_].push({nome: nome_, nomeCompleto: nome_, idCliente: id_, dias: dias_, segmento: seg_, favs: favCounts_[id_] || 0});
         }
       }
       return ok({stages: stages_});
-    } catch(err) { return ok({stages:{fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],preAtendimento:[],ganhos:[]}}); }
+    } catch(err) { return ok({stages:{fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],potencial:[],preAtendimento:[],ganhos:[]}}); }
   }
 
   return ok({ status: 'acao desconhecida' });
