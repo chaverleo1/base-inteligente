@@ -76,6 +76,24 @@ a { text-decoration:none; color:inherit; }
 .detail-table tr:last-child td { border-bottom:none; }
 .detail-table tr:hover td { background:rgba(255,255,255,.02); }
 
+.mp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .2s}
+.mp-overlay.open{opacity:1;pointer-events:all}
+.mp-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-48%) scale(.97);width:calc(100% - 32px);max-width:500px;max-height:78vh;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);z-index:501;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:all .2s;overflow:hidden}
+.mp-panel.open{opacity:1;pointer-events:all;transform:translate(-50%,-50%) scale(1)}
+.mp-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.mp-body{overflow-y:auto;flex:1}
+.mp-body::-webkit-scrollbar{width:4px}
+.mp-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.mp-cli{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid rgba(42,48,80,.4)}
+.mp-cli:last-child{border-bottom:none}
+.mp-cli-score{font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;flex-shrink:0;white-space:nowrap}
+.mp-fav-btn{flex-shrink:0;background:var(--surface2);border:1px solid var(--border);color:var(--text3);width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0}
+.mp-fav-btn:hover:not(:disabled){border-color:#f5a623;color:#f5a623}
+.mp-fav-btn.ativo{background:rgba(245,166,35,.15);border-color:#f5a623;color:#f5a623}
+.mp-fav-btn:disabled{opacity:.5;cursor:default}
+.match-count-btn{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;cursor:pointer;background:rgba(0,212,170,.12);color:var(--accent2);border:1px solid rgba(0,212,170,.3);transition:all .15s;white-space:nowrap}
+.match-count-btn:hover{filter:brightness(1.15)}
+
 .td-nome { font-weight:600; }
 .td-tel { color:var(--text2); font-size:12px; }
 .wpp { display:inline-block; margin-left:8px; color:#25d366; font-size:11px; font-weight:600; }
@@ -129,6 +147,20 @@ a { text-decoration:none; color:inherit; }
   <div id="root">Carregando...</div>
 </div>
 
+<!-- PAINEL MATCHES DO IMÓVEL -->
+<div class="mp-overlay" id="mpOverlay" onclick="fecharMatchesPanel()"></div>
+<div class="mp-panel" id="mpPanel">
+  <div class="mp-header">
+    <div style="flex:1;min-width:0">
+      <div id="mpTitle" style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+      <div id="mpSub" style="font-size:12px;color:var(--text3);margin-top:4px">—</div>
+    </div>
+    <button onclick="fecharMatchesPanel()" style="background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+  </div>
+  <div class="mp-body" id="mpBody"></div>
+</div>
+
+<script src="config.js"></script>
 <script>
 const SESS_KEY  = 'bi_session';
 const TOKEN_KEY = 'bi_session_token';
@@ -251,23 +283,15 @@ function tableLeads(items) {
   </table></div>`;
 }
 
+let _imoveisDetail = [];
+
 function tableImoveis(items) {
   if (!items.length) return '<div class="empty">Nenhum imóvel encontrado.</div>';
-  const hasMatches = items.some(im => im._matches && im._matches.length > 0);
+  _imoveisDetail = items;
   const fmt = v => { const n = parseInt(String(v||'').replace(/\D/g,'')); if (!n) return '—'; return 'R$ ' + n.toLocaleString('pt-BR'); };
-  function matchChips(list) {
-    if (!list || !list.length) return '<span style="color:var(--text3);font-size:11px">—</span>';
-    const top   = list.slice(0, 2);
-    const extra = list.length - 2;
-    const cls   = sc => sc >= 80 ? 'badge-red' : sc >= 70 ? 'badge-amber' : 'badge-blue';
-    let html = top.map(m => `<span class="badge ${cls(m.score)}" style="font-size:10px;padding:1px 7px;margin:1px 2px 1px 0">${m.nome.split(' ')[0]} · ${m.score}</span>`).join('');
-    if (extra > 0) html += `<span class="badge badge-muted" style="font-size:10px;padding:1px 6px">+${extra}</span>`;
-    return `<div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center">${html}</div>`;
-  }
-  const cols = hasMatches ? 8 : 7;
-  const rows = items.map(im => {
-    const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
-    const specs = [
+  const rows = items.map((im, imIdx) => {
+    const local  = [im.condominio, im.bairro].filter(Boolean).join(' — ');
+    const specs  = [
       im.quartos  ? `${im.quartos}q`   : '',
       im.suites   ? `${im.suites}s`    : '',
       im.vagas    ? `${im.vagas}v`     : '',
@@ -276,7 +300,11 @@ function tableImoveis(items) {
     const movCls   = im._movimento === 'Removido' ? 'badge-red' : im._movimento === 'Modificado' ? 'badge-amber' : 'badge-green';
     const fonteCls = im.fonte === 'LANCAMENTO' ? 'badge-amber' : 'badge-blue';
     const temObs   = im._mudancas && im._mudancas.length;
-    const obsRow   = temObs ? `<tr class="obs-row"><td colspan="${cols}" class="td-obs">obs: ${im._mudancas.join('; ')}</td></tr>` : '';
+    const obsRow   = temObs ? `<tr class="obs-row"><td colspan="8" class="td-obs">obs: ${im._mudancas.join('; ')}</td></tr>` : '';
+    const mList    = im._matches || [];
+    const matchCell = mList.length > 0
+      ? `<span class="match-count-btn" onclick="abrirMatchesPanel(${imIdx})">🎯 ${mList.length}</span>`
+      : `<span style="color:var(--text3);font-size:12px">—</span>`;
     return `<tr${temObs ? ' class="has-obs"' : ''}>
       <td class="td-nome">${im.codigo || '—'}</td>
       <td>${im.tipo || '—'}</td>
@@ -285,11 +313,11 @@ function tableImoveis(items) {
       <td>${fmt(im.valorVenda)}</td>
       <td><span class="badge ${fonteCls}">${im.fonte || '—'}</span></td>
       <td><span class="badge ${movCls}">${im._movimento || '—'}</span></td>
-      ${hasMatches ? `<td style="min-width:130px">${matchChips(im._matches)}</td>` : ''}
+      <td style="text-align:center">${matchCell}</td>
     </tr>${obsRow}`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th>${hasMatches ? '<th>Matches 🎯</th>' : ''}</tr></thead>
+    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th><th>Matches 🎯</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
@@ -325,6 +353,85 @@ function tablePads(items) {
     <thead><tr><th>Padrão no lançamento</th><th>Situação</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
+}
+
+// ── PAINEL MATCHES ────────────────────────────────────────────────────────────
+
+function abrirMatchesPanel(imIdx) {
+  const im      = _imoveisDetail[imIdx] || {};
+  const matches = im._matches || [];
+  const local   = [im.condominio, im.bairro].filter(Boolean).join(' — ');
+  document.getElementById('mpTitle').textContent = local || im.tipo || im.codigo || 'Imóvel';
+  document.getElementById('mpSub').textContent   = '🎯 ' + matches.length + ' cliente' + (matches.length !== 1 ? 's' : '') + ' com perfil compatível';
+
+  const scoreStyle = sc => {
+    const n = parseInt(sc) || 0;
+    return n >= 80 ? 'background:rgba(255,90,90,.15);color:#ff5a5a'
+         : n >= 70 ? 'background:rgba(245,166,35,.15);color:#f5a623'
+         :           'background:rgba(79,124,255,.15);color:#4f7cff';
+  };
+
+  document.getElementById('mpBody').innerHTML = matches.length
+    ? matches.map((m, i) => `
+        <div class="mp-cli">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.nome || '—'}</div>
+            <div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;align-items:center">
+              ${m.codCliente ? `<span style="font-size:11px;color:var(--text3);font-family:monospace">#${m.codCliente}</span>` : ''}
+              ${m.seg        ? `<span style="font-size:11px;color:var(--text2)">${m.seg}</span>` : ''}
+            </div>
+          </div>
+          <span class="mp-cli-score" style="${scoreStyle(m.score)}">${parseInt(m.score)||0} pts</span>
+          <button class="mp-fav-btn" id="mpFav_${imIdx}_${i}"
+            onclick="toggleFavInsight(${imIdx}, '${(m.codCliente||'').replace(/'/g,"\\'")}', ${i}, this)"
+            title="Favoritar este imóvel para ${(m.nome||'').replace(/"/g,'&quot;')}">☆</button>
+        </div>`)
+      .join('')
+    : '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">Nenhum cliente com match encontrado.</div>';
+
+  document.getElementById('mpOverlay').classList.add('open');
+  document.getElementById('mpPanel').classList.add('open');
+}
+
+function fecharMatchesPanel() {
+  document.getElementById('mpOverlay').classList.remove('open');
+  document.getElementById('mpPanel').classList.remove('open');
+}
+
+async function toggleFavInsight(imIdx, cliCodigo, matchIdx, btnEl) {
+  if (typeof WEBHOOK_URL === 'undefined') return;
+  const token = sessionStorage.getItem(TOKEN_KEY) || '';
+  const im    = _imoveisDetail[imIdx] || {};
+  btnEl.disabled = true;
+  try {
+    const payload = {
+      acao: 'toggle_favorito', token,
+      idCliente:    cliCodigo,
+      fonte:        im.fonte        || 'REVENDA',
+      imoCodigo:    im.codigo       || '',
+      imoTipo:      im.tipo         || '',
+      imoBairro:    im.bairro       || '',
+      imoCondominio:im.condominio   || '',
+      imoEndereco:  im.endereco     || '',
+      imoQuartos:   im.quartos      || '',
+      imoSuites:    im.suites       || '',
+      imoVagas:     im.vagas        || '',
+      imoAreaUtil:  im.areaUtil     || '',
+      imoValorVenda:im.valorVenda   || '',
+      imoPadrao:    im.padrao       || '',
+      imoEstagio:   im.estagio      || '',
+      imoFoto:      im.foto         || '',
+      imoUrl:       im.urlSite      || '',
+      imoConstrutora: '',
+      imoEntrega:   ''
+    };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const r    = await resp.json();
+    const adicionado = r.status === 'adicionado';
+    btnEl.textContent = adicionado ? '★' : '☆';
+    btnEl.classList.toggle('ativo', adicionado);
+  } catch(e) { /* silent */ }
+  btnEl.disabled = false;
 }
 </script>
 </body>
