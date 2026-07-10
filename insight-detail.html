@@ -240,26 +240,35 @@ function urgBadge(urg) {
 /* ── tables ── */
 function tableClientes(items) {
   if (!items.length) return '<div class="empty">Nenhum cliente encontrado.</div>';
+  const favs = JSON.parse(localStorage.getItem('bi_cli_favs') || '{}');
   const rows = items.map(c => {
-    const tel = c.telefone||c.tel||'—';
-    const dias = c.dias ? `<span class="dias-chip">${c.dias}d atrás</span>` : '';
+    const dias   = c.dias ? `<span class="dias-chip">${c.dias}d atrás</span>` : '';
+    const cKey   = String(c.cod || c.codCliente || c.nome || '').replace(/'/g, "\\'");
+    const isFav  = !!favs[c.cod || c.codCliente || c.nome || ''];
     return `<tr>
       <td class="td-nome">${c.nome||'—'}</td>
-      <td class="td-tel">${tel}${wpp(tel)}</td>
       <td>${c.segmento||c.seg||'—'}</td>
-      <td>${c.padrao||c.pad||'—'}</td>
       <td>${urgBadge(c.urgencia||c.urg)}</td>
       <td>${scoreEl(c.score)}</td>
-      <td>${mcEl(c.mc80,c.mc70)}</td>
       <td>${c.ultimoContato||'—'}${dias}</td>
+      <td style="text-align:center"><button class="mp-fav-btn${isFav?' ativo':''}" onclick="toggleFavCli('${cKey}',this)">${isFav?'★':'☆'}</button></td>
     </tr>`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr>
-      <th>Nome</th><th>Telefone</th><th>Segmento</th><th>Padrão</th>
-      <th>Urgência</th><th>Score</th><th>Matches</th><th>Último contato</th>
+      <th>Nome</th><th>Segmento</th><th>Urgência</th><th>Score</th>
+      <th>Último contato</th><th>Favoritar</th>
     </tr></thead><tbody>${rows}</tbody>
   </table></div>`;
+}
+
+function toggleFavCli(cKey, btn) {
+  const favs   = JSON.parse(localStorage.getItem('bi_cli_favs') || '{}');
+  const nowFav = !favs[cKey];
+  if (nowFav) favs[cKey] = true; else delete favs[cKey];
+  localStorage.setItem('bi_cli_favs', JSON.stringify(favs));
+  btn.textContent = nowFav ? '★' : '☆';
+  btn.classList.toggle('ativo', nowFav);
 }
 
 function tableLancamentos(items) {
