@@ -2490,6 +2490,51 @@ function sincronizarRevenda() {
 
   props.setProperty('bi_revenda_ultima_sync', agora);
   Logger.log('REVENDA atualizada: ' + imoveis.length + ' imoveis em ' + agora);
+
+  limparFavoritosObsoletos_();
+}
+
+// Remove de FAVORITOS os registros de imóveis REVENDA que não constam mais
+// na aba REVENDA (saíram de venda na última sincronização). Percorre de baixo
+// pra cima para não deslocar índices ao deletar linhas.
+// Favoritos de LANCAMENTO e CONSTRUTORA ficam intactos.
+function limparFavoritosObsoletos_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+
+  // Códigos que ainda existem em REVENDA após a sync
+  var abaRev = ss.getSheetByName('REVENDA');
+  var codigosAtivos = {};
+  if (abaRev && abaRev.getLastRow() > 1) {
+    var revDados = abaRev.getDataRange().getValues();
+    var revCab   = revDados[0];
+    var iCod     = revCab.indexOf('codigo');
+    if (iCod >= 0) {
+      for (var r = 1; r < revDados.length; r++) {
+        var cod = String(revDados[r][iCod] || '').trim();
+        if (cod) codigosAtivos[cod] = true;
+      }
+    }
+  }
+
+  var abaFav = ss.getSheetByName('FAVORITOS');
+  if (!abaFav || abaFav.getLastRow() < 2) return;
+
+  var favDados = abaFav.getDataRange().getValues();
+  var favCab   = favDados[0];
+  var iFavCod  = favCab.indexOf('imoCodigo');
+  var iFavFon  = favCab.indexOf('fonte');
+  if (iFavCod < 0 || iFavFon < 0) return;
+
+  var removidos = 0;
+  for (var i = favDados.length - 1; i >= 1; i--) {
+    var imoCod = String(favDados[i][iFavCod] || '').trim();
+    var fonte  = String(favDados[i][iFavFon] || '').trim();
+    if (fonte === 'REVENDA' && imoCod && !codigosAtivos[imoCod]) {
+      abaFav.deleteRow(i + 1);
+      removidos++;
+    }
+  }
+  if (removidos > 0) Logger.log('Favoritos obsoletos removidos: ' + removidos);
 }
 
 function criarGatilhoRevenda() {
