@@ -1741,11 +1741,22 @@ async function selecionarCliente(cod, nome) {
         m.imoPadrao   || ''
       ].filter(Boolean).join(' · ');
       const jaFav   = favKeys.has(chaveFavorito_(m.imoCodigo, m.fonte));
+      const fotoHtml = m.imoFoto && m.imoFoto.startsWith('http')
+        ? `<img src="${m.imoFoto}" style="width:48px;height:38px;object-fit:cover;border-radius:4px;display:block" onerror="this.style.display='none'">`
+        : `<div style="width:48px;height:38px;border-radius:4px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px">${icon}</div>`;
+      const tipoBadge = isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda';
       return `<tr data-idx="${idx}" onclick="abrirImovelDrawer(${idx},'${escAttr(cod)}','${escAttr(nome)}')">
+        <td style="padding:6px 8px">${fotoHtml}</td>
+        <td>
+          <div class="mt-tipo">${m.imoTipo||'—'}</div>
+          <div class="mt-fonte">${local}</div>
+          <div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">
+            <span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">${tipoBadge}</span>
+            ${m.imoCodigo?`<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">#${m.imoCodigo}</span>`:''}
+          </div>
+        </td>
         <td><span class="mt-score ${cls}">${sc}</span></td>
-        <td><div class="mt-tipo">${icon} ${m.imoTipo||'—'}</div><div class="mt-fonte">${local}</div></td>
         <td class="mt-valor">${fmt_(m.imoValorVenda)||'—'}</td>
-        <td class="mt-attrs">${attrs}</td>
         <td style="color:${jaFav?'#f5a623':'var(--text3)'};font-size:14px;text-align:center">${jaFav?'★':'☆'}</td>
       </tr>`;
     }).join('');
@@ -1814,7 +1825,7 @@ function abrirImovelDrawer(idx, cod, cliNome) {
         ${m.imoCodigo?`<div class="imovel-codigo">Código: ${m.imoCodigo}</div>`:''}
       </div>
     </div>
-    ${attrs.length?`<div class="imovel-attrs" style="margin-bottom:10px">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>`:''}
+    ${attrs.length?`<div class="imovel-attrs" style="margin-bottom:10px">${attrs.map(a=>`<span class="imovel-attr" style="font-size:14px;padding:5px 12px;color:var(--text)">${a}</span>`).join('')}</div>`:''}
     ${condPag.length?`<div class="imovel-condpag" style="margin-bottom:10px">${condPag.map(p=>`<div class="imovel-condpag-item">${p}</div>`).join('')}</div>`:''}
     ${det?`<div class="imovel-det" style="margin-bottom:10px">${det}</div>`:''}
     <div style="display:flex;gap:8px;margin-bottom:14px">
