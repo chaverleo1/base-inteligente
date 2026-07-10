@@ -283,6 +283,17 @@ input[type=range]::-webkit-slider-thumb {
 .tag-fonte-const { background: rgba(0,212,170,.12); color: var(--accent2); }
 .tag-fonte-rev   { background: rgba(79,124,255,.12); color: var(--accent); }
 .tag-fonte-lanc  { background: rgba(255,165,0,.15);  color: #e67e00; }
+.tag-excluido    { background: rgba(255,90,90,.12);  color: var(--danger);  border-color: rgba(255,90,90,.25) !important; }
+
+/* ── STATUS TOGGLE (detalhe do imóvel) ── */
+.status-toggle-wrap { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.status-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.status-toggle button {
+  border: none; padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .2s; background: var(--surface2); color: var(--text3);
+}
+.status-toggle button.active-ativo    { background: rgba(0,212,170,.15); color: var(--accent2); }
+.status-toggle button.active-excluido { background: rgba(255,90,90,.15); color: var(--danger); }
 
 .card-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
 .btn-sm {
@@ -1380,6 +1391,7 @@ function renderResultados(resultados, filtros, interpretado) {
 
     const card = document.createElement('div');
     card.className = `card${isTop ? ' top' : ''}`;
+    card._codigoImovel = im.codigo || '';
     card.onclick = () => abrirDetalhe(im);
     card.innerHTML = `
       <div class="card-inner">
@@ -1410,6 +1422,7 @@ function renderResultados(resultados, filtros, interpretado) {
           ${isLanc && im.dataTabela ? `<div style="margin-top:4px;font-size:11px;font-weight:700;color:${im.statusTabela==='Desatualizada'?'#c98000':'#00a884'}">${im.statusTabela==='Desatualizada'?'⚠️':'✅'} Tabela ${im.dataTabela}${im.statusTabela?' · '+im.statusTabela:''}</div>` : ''}
           <div class="tags-match">
             <span class="tag ${isLanc ? 'tag-fonte-lanc' : isConst ? 'tag-fonte-const' : 'tag-fonte-rev'}">${isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
+            ${im.statusAtivo === 'Excluído' ? '<span class="tag tag-excluido">🚫 Excluído</span>' : ''}
           </div>
           <div class="card-actions">
             <button class="btn-sm btn-ver" onclick="event.stopPropagation();abrirDetalhe(${JSON.stringify(im).replace(/"/g,'&quot;')})">Ver detalhes e mensagem</button>
@@ -1449,10 +1462,54 @@ function abrirDetalhe(im) {
     ${isLancM && im.estagio ? `<div class="detalhe-item"><div class="detalhe-key">Status obra</div><div class="detalhe-val">${im.estagio}</div></div>` : ''}
     ${isLancM && im.dataTabela ? `<div class="detalhe-item"><div class="detalhe-key">Tabela de preços</div><div class="detalhe-val" style="font-weight:700;color:${im.statusTabela==='Desatualizada'?'#c98000':'#00a884'}">${im.statusTabela==='Desatualizada'?'⚠️':'✅'} ${im.dataTabela}${im.statusTabela?' — '+im.statusTabela:''}</div></div>` : ''}
     <div class="detalhe-item"><div class="detalhe-key">Score do match</div><div class="detalhe-val">${im.score}</div></div>
+    <div class="detalhe-item" style="grid-column:span 2">
+      <div class="detalhe-key" style="margin-bottom:8px">Status do imóvel</div>
+      <div class="status-toggle-wrap">
+        <div class="status-toggle" id="modal-status-toggle">
+          <button id="btn-ativo"    onclick="toggleStatusImovel_('Ativo')"    class="${(im.statusAtivo||'Ativo')==='Ativo'    ? 'active-ativo'    : ''}">✅ Ativo</button>
+          <button id="btn-excluido" onclick="toggleStatusImovel_('Excluído')" class="${(im.statusAtivo||'Ativo')==='Excluído'  ? 'active-excluido' : ''}">🚫 Excluído</button>
+        </div>
+        <span id="modal-status-msg" style="font-size:11px;color:var(--text3)"></span>
+      </div>
+    </div>
   `;
 
   document.getElementById('modal-msg').textContent = gerarMensagem(im);
   document.getElementById('overlay').classList.add('open');
+}
+
+async function toggleStatusImovel_(novoStatus) {
+  const im = state.imovelAtual;
+  if (!im) return;
+  const msgEl = document.getElementById('modal-status-msg');
+  msgEl.textContent = 'Salvando...';
+  try {
+    const payload = { acao: 'set_status_imovel', token: tokenSessao(), fonte: im.fonte, codigo: im.codigo, statusAtivo: novoStatus };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const r = await resp.json();
+    if (!r.ok) { msgEl.textContent = 'Erro ao salvar.'; return; }
+    im.statusAtivo = novoStatus;
+    document.getElementById('btn-ativo').className    = novoStatus === 'Ativo'    ? 'active-ativo'    : '';
+    document.getElementById('btn-excluido').className = novoStatus === 'Excluído' ? 'active-excluido' : '';
+    msgEl.textContent = 'Salvo!';
+    setTimeout(() => { msgEl.textContent = ''; }, 2000);
+    // Atualiza badge no card correspondente (se visível na lista)
+    document.querySelectorAll('.tag-excluido-dyn').forEach(el => el.remove());
+    if (novoStatus === 'Excluído') {
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(c => {
+        if (c._codigoImovel === im.codigo) {
+          const tags = c.querySelector('.tags-match');
+          if (tags && !tags.querySelector('.tag-excluido')) {
+            const badge = document.createElement('span');
+            badge.className = 'tag tag-excluido tag-excluido-dyn';
+            badge.textContent = '🚫 Excluído';
+            tags.appendChild(badge);
+          }
+        }
+      });
+    }
+  } catch(e) { msgEl.textContent = 'Erro: ' + e.message; }
 }
 
 function gerarMensagem(im) {
