@@ -169,13 +169,23 @@ const TOKEN_KEY = 'bi_session_token';
   if (sessionStorage.getItem(SESS_KEY) !== 'ok') { window.location.href = 'index.html'; return; }
   const raw = sessionStorage.getItem('bi_insight_detail');
   if (!raw) {
+    // Sem dados = veio direto pela URL ou sessão expirou. Redireciona ao dashboard.
     document.getElementById('root').innerHTML =
-      '<div class="empty">Nenhum insight selecionado. <a href="dashboard.html" style="color:var(--accent)">← Voltar ao Dashboard</a></div>';
+      '<div class="empty">Redirecionando ao Dashboard…<br><small><a href="dashboard.html" style="color:var(--accent)">Clique aqui se não redirecionar automaticamente</a></small></div>';
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1500);
     return;
   }
   let d;
-  try { d = JSON.parse(raw); } catch(e) { document.getElementById('root').innerHTML='<div class="empty">Dados inválidos.</div>'; return; }
-  renderDetail(d);
+  try { d = JSON.parse(raw); } catch(e) {
+    document.getElementById('root').innerHTML='<div class="empty">Dados inválidos. <a href="dashboard.html" style="color:var(--accent)">← Voltar ao Dashboard</a></div>';
+    return;
+  }
+  try {
+    renderDetail(d);
+  } catch(e) {
+    document.getElementById('root').innerHTML=`<div class="empty">Erro ao exibir insight: ${e.message}.<br><a href="dashboard.html" style="color:var(--accent)">← Voltar ao Dashboard</a></div>`;
+    console.error('renderDetail error:', e, d);
+  }
 })();
 
 function renderDetail(d) {

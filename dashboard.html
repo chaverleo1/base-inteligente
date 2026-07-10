@@ -1866,7 +1866,7 @@ async function selecionarCliente(cod, nome) {
   if (nameEl)    nameEl.textContent     = nome || '—';
   if (codEl)     codEl.textContent      = cod  ? '#' + cod : '';
   if (pipEl)     pipEl.style.display    = 'none';
-  if (editBtn)   editBtn.href           = 'contatos.html';
+  if (editBtn)   { editBtn.removeAttribute('href'); editBtn.style.opacity = '0.4'; editBtn.style.pointerEvents = 'none'; }
   if (headerEl)  headerEl.style.display = 'flex';
   if (countEl)   countEl.textContent    = '…';
   if (placeholder) placeholder.style.display = 'none';
@@ -1892,7 +1892,11 @@ async function selecionarCliente(cod, nome) {
           pipEl.textContent   = c.pipeline;
           pipEl.style.cssText = `display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${cor}22;color:${cor};border:1px solid ${cor}55`;
         }
-        if (c._linha && editBtn) editBtn.href = 'formulario.html?linha=' + encodeURIComponent(c._linha);
+        if (c._linha && editBtn) {
+          editBtn.href = 'formulario.html?linha=' + encodeURIComponent(c._linha);
+          editBtn.style.opacity = '';
+          editBtn.style.pointerEvents = '';
+        }
       }
     } catch(eCli) { /* pipeline badge opcional */ }
     const lista = await respMatches.json();
