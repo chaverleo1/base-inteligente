@@ -110,6 +110,40 @@
   .score-cold{background:rgba(79,124,255,.15);color:var(--cold)}
   .empty-state{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
 
+  /* ── NOVAS OFERTAS ── */
+  .no-layout{display:grid;grid-template-columns:3fr 2fr;grid-template-rows:480px;margin-bottom:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  @media(max-width:700px){.no-layout{grid-template-columns:1fr;grid-template-rows:none}}
+  .no-imoveis-col{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  @media(max-width:700px){.no-imoveis-col{border-right:none;border-bottom:1px solid var(--border)}}
+  .no-imoveis-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--text2)}
+  .no-filter-tag{font-size:10px;color:var(--accent);background:rgba(79,124,255,.1);border:1px solid rgba(79,124,255,.2);border-radius:99px;padding:1px 8px}
+  .no-imoveis-body{flex:1;overflow-y:auto;scrollbar-width:thin}
+  .no-imoveis-body::-webkit-scrollbar{width:4px}
+  .no-imoveis-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  .no-imo-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+  .no-imo-row:last-child{border-bottom:none}
+  .no-imo-row:hover{background:var(--surface2)}
+  .no-imo-row.no-selected{background:rgba(79,124,255,.07);border-left:3px solid var(--accent)}
+  .no-imo-info{flex:1;min-width:0}
+  .no-imo-local{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .no-imo-sub{font-size:11px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .no-imo-right{text-align:right;flex-shrink:0}
+  .no-imo-valor{font-size:12px;font-weight:700;color:var(--text)}
+  .no-match-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap;display:inline-block;margin-top:3px}
+  .no-match-hot{background:rgba(255,90,90,.15);color:var(--hot)}
+  .no-match-warm{background:rgba(79,124,255,.15);color:var(--accent)}
+  .no-match-none{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+  .no-clientes-col{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .no-clientes-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:3px;flex-shrink:0}
+  .no-clientes-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;gap:8px;padding:40px 20px;text-align:center}
+  .no-clientes-body{flex:1;overflow-y:auto;scrollbar-width:thin}
+  .no-clientes-body::-webkit-scrollbar{width:4px}
+  .no-clientes-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  .no-cli-row{padding:9px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .no-cli-row:last-child{border-bottom:none}
+  .no-cli-name{font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .no-cli-seg{font-size:10px;color:var(--text3)}
+
   /* ── INSIGHTS ── */
   .insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px}
   @media(max-width:900px){.insight-grid{grid-template-columns:repeat(2,1fr)}}
@@ -614,6 +648,32 @@
     </div>
   </div>
 
+  <!-- NOVAS OFERTAS -->
+  <div class="section-title">Novas ofertas <span style="font-size:12px;font-weight:400;color:var(--text3);margin-left:8px">imóveis adicionados nos últimos 3 dias</span></div>
+  <div class="no-layout">
+    <div class="no-imoveis-col">
+      <div class="no-imoveis-header">
+        <span>🏠 Imóveis novos</span>
+        <span class="no-filter-tag">últimos 3 dias</span>
+        <span class="match-clients-count" id="noImoveisCount">—</span>
+      </div>
+      <div class="no-imoveis-body" id="noImoveisList">
+        <div class="empty-state dot-anim">Carregando</div>
+      </div>
+    </div>
+    <div class="no-clientes-col">
+      <div class="no-clientes-header" id="noClientesHeader">
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">👥 Clientes com perfil</span>
+        <span style="font-size:11px;color:var(--text3)">Selecione um imóvel para ver os clientes</span>
+      </div>
+      <div class="no-clientes-placeholder" id="noClientesPlaceholder">
+        <span style="font-size:28px">🏘️</span>
+        <span>Selecione um imóvel para ver os clientes identificados</span>
+      </div>
+      <div class="no-clientes-body" id="noClientesList" style="display:none"></div>
+    </div>
+  </div>
+
   <!-- GRÁFICOS -->
   <div class="section-title">Composição da base de clientes</div>
   <div class="cards-row" id="cardsTemperatura" style="margin-bottom:16px">
@@ -1072,6 +1132,112 @@ function buildMmFromComputed_(todos) {
   return mm;
 }
 
+// ── NOVAS OFERTAS ──────────────────────────────────────────────────────────
+let _noOfertasImoveis = [], _noOfertasSelected = -1;
+
+function _parseBrDate(s) {
+  const m = String(s || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+}
+
+function renderNovasOfertas() {
+  const d          = window._revendaDiffData || {};
+  const adicionados = d.adicionados || [];
+
+  const hoje        = new Date();
+  const tresDiasAtras = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 3);
+
+  _noOfertasImoveis = adicionados.filter(o => {
+    const dt = _parseBrDate(o.dataCadastro) || _parseBrDate(o.ultimaSincronizacao);
+    return !dt || dt >= tresDiasAtras;
+  });
+
+  const countEl = document.getElementById('noImoveisCount');
+  const listEl  = document.getElementById('noImoveisList');
+  if (!listEl) return;
+  if (countEl) countEl.textContent = _noOfertasImoveis.length || '0';
+
+  // Reseta coluna de clientes
+  _noOfertasSelected = -1;
+  const hdr  = document.getElementById('noClientesHeader');
+  const ph   = document.getElementById('noClientesPlaceholder');
+  const body = document.getElementById('noClientesList');
+  if (hdr)  hdr.innerHTML  = '<span style="font-size:12px;font-weight:600;color:var(--text2)">👥 Clientes com perfil</span><span style="font-size:11px;color:var(--text3)">Selecione um imóvel para ver os clientes</span>';
+  if (ph)   { ph.style.display = ''; ph.innerHTML = '<span style="font-size:28px">🏘️</span><span>Selecione um imóvel para ver os clientes identificados</span>'; }
+  if (body)   body.style.display = 'none';
+
+  if (!_noOfertasImoveis.length) {
+    listEl.innerHTML = '<div class="match-detail-placeholder"><span style="font-size:24px">🔍</span><span>Nenhum imóvel novo nos últimos 3 dias</span></div>';
+    return;
+  }
+
+  listEl.innerHTML = _noOfertasImoveis.map((o, i) => {
+    const local    = [o.condominio, o.bairro].filter(Boolean).join(' · ') || '—';
+    const specs    = [o.quartos?o.quartos+'q':'', o.suites?o.suites+'s':'', o.vagas?o.vagas+'v':'', o.areaUtil?o.areaUtil+'m²':''].filter(Boolean).join(' · ');
+    const matches  = o._computedMatches || [];
+    const bestScore = o._bestScore || (matches.length ? Math.max(...matches.map(m => m.score)) : 0);
+    const badgeCls  = bestScore >= 80 ? 'no-match-hot' : bestScore >= 70 ? 'no-match-warm' : 'no-match-none';
+    const badgeTxt  = matches.length ? `🎯 ${matches.length} cliente${matches.length > 1 ? 's' : ''}` : '—';
+    const valorFmt  = fmt_(o.valorVenda);
+    return `<div class="no-imo-row" id="no-imo-${i}" onclick="selecionarImovelNO(${i})">
+      <div class="no-imo-info">
+        <div class="no-imo-local">${local}</div>
+        <div class="no-imo-sub">${[o.tipo, specs].filter(Boolean).join(' · ') || '—'}</div>
+      </div>
+      <div class="no-imo-right">
+        <div class="no-imo-valor">${valorFmt || '—'}</div>
+        <span class="no-match-badge ${badgeCls}">${badgeTxt}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selecionarImovelNO(idx) {
+  if (_noOfertasSelected >= 0) {
+    const prev = document.getElementById('no-imo-' + _noOfertasSelected);
+    if (prev) prev.classList.remove('no-selected');
+  }
+  _noOfertasSelected = idx;
+  const rowEl = document.getElementById('no-imo-' + idx);
+  if (rowEl) rowEl.classList.add('no-selected');
+
+  const o = _noOfertasImoveis[idx];
+  if (!o) return;
+
+  const matches = o._computedMatches || [];
+  const local   = [o.condominio, o.bairro].filter(Boolean).join(' — ') || o.bairro || o.codigo || 'Imóvel';
+
+  const hdr  = document.getElementById('noClientesHeader');
+  const ph   = document.getElementById('noClientesPlaceholder');
+  const body = document.getElementById('noClientesList');
+
+  if (hdr) hdr.innerHTML = `<span style="font-size:13px;font-weight:700;color:var(--text)">${local}</span>
+    ${o.codigo ? `<span style="font-size:10px;color:var(--text3)">#${o.codigo}${o.tipo ? ' · ' + o.tipo : ''}</span>` : ''}`;
+
+  if (!matches.length) {
+    if (ph)   { ph.style.display = ''; ph.innerHTML = '<span style="font-size:24px">—</span><span>Nenhum cliente com perfil para este imóvel</span>'; }
+    if (body)   body.style.display = 'none';
+    return;
+  }
+
+  if (ph)   ph.style.display = 'none';
+  if (body) {
+    body.style.display = '';
+    body.innerHTML = matches.map(m => {
+      const sc  = m.score || 0;
+      const cls = sc >= 80 ? 'score-hot' : sc >= 70 ? 'score-warm' : 'score-cold';
+      return `<div class="no-cli-row">
+        <div style="flex:1;min-width:0">
+          <div class="no-cli-name">${m.nome || '—'}</div>
+          <div class="no-cli-seg">${m.seg || ''}</div>
+        </div>
+        <span class="mt-score ${cls}">${sc}</span>
+      </div>`;
+    }).join('');
+  }
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 // Busca matches para todos os imóveis novos/modificados do diff e atualiza 🎯
 async function carregarDiffMatches(d) {
   const adicionados = (d && d.adicionados) || [];
@@ -1083,6 +1249,7 @@ async function carregarDiffMatches(d) {
   let mm = buildMmFromComputed_(todos);
   window._revendaMatchesData = mm;
   renderDiffMatchBadges_(todos, mm);
+  renderNovasOfertas();
 
   // ── 2. Tenta matches_imoveis_batch para enriquecer com dados do sheet ──
   const codigos = todos.map(o => o.codigo).filter(Boolean).join(',');
@@ -1095,6 +1262,7 @@ async function carregarDiffMatches(d) {
         Object.keys(mmSheet).forEach(cod => { mm[cod] = mmSheet[cod]; });
         window._revendaMatchesData = mm;
         renderDiffMatchBadges_(todos, mm);
+        renderNovasOfertas();
       }
     } catch(e) { /* _computedMatches já foi aplicado acima */ }
   }
