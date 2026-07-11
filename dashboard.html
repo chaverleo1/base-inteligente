@@ -561,6 +561,7 @@
     <a href="busca.html" class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
     <button class="nav-tab" id="btnTabBaseimob" onclick="mostrarBaseImob()">BaseImob <span id="badgeBaseimob" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
+    <button class="nav-tab" id="btnTabImobzi" onclick="mostrarImobzi()">Leads Imobzi <span id="badgeImobzi" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
     <button class="nav-tab" id="btnTabAdm" onclick="mostrarAdm()">ADM</button>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
@@ -772,6 +773,37 @@
 <div class="page" id="secao-baseimob" style="display:none">
   <div class="section-title">Leads BaseImob — pendentes de qualificação</div>
   <div id="bi-lista"><div class="loading dot-anim">Carregando leads</div></div>
+</div>
+
+<!-- IMOBZI LEADS SECTION -->
+<div class="page" id="secao-imobzi" style="display:none">
+  <div class="section-title">🎯 Novos Leads Imobzi <span style="font-size:12px;font-weight:400;color:var(--text3);margin-left:8px">leads captados pelo portal — aguardando primeiro atendimento</span></div>
+
+  <div class="no-layout" style="grid-template-rows:560px">
+    <!-- Coluna 1: lista de leads -->
+    <div class="no-imoveis-col">
+      <div class="no-imoveis-header">
+        <span>👤 Leads</span>
+        <span class="match-clients-count" id="imobziLeadsCount">—</span>
+      </div>
+      <div class="no-imoveis-body" id="imobzi-lista">
+        <div class="empty-state dot-anim">Carregando</div>
+      </div>
+    </div>
+
+    <!-- Coluna 2: imóvel de interesse + afins -->
+    <div class="no-clientes-col">
+      <div class="no-clientes-header" id="imobziDetalheHeader">
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">🏠 Imóvel de interesse</span>
+        <span style="font-size:11px;color:var(--text3)">Selecione um lead para ver o imóvel e opções afins</span>
+      </div>
+      <div class="no-clientes-placeholder" id="imobziDetalhePlaceholder">
+        <span style="font-size:28px">🎯</span>
+        <span>Selecione um lead para ver o imóvel de interesse e sugestões afins</span>
+      </div>
+      <div id="imobziDetalheBody" style="display:none;overflow-y:auto;flex:1;padding:14px"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ADM SECTION -->
@@ -1705,8 +1737,16 @@ function renderDados(json) {
          color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
          border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
     </div>
+    <div class="card" style="position:relative" id="cardNovoLeads">
+      <div class="card-label">🎯 Novos Leads</div>
+      <div class="card-value" id="cardNovoLeadsValue" style="color:#ff5a5a">—</div>
+      <div class="card-sub">leads Imobzi aguardando atendimento</div>
+      <button onclick="mostrarImobzi()" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+         color:#ff5a5a;background:rgba(255,90,90,.1);border:1px solid rgba(255,90,90,.2);
+         border-radius:6px;padding:3px 10px;cursor:pointer">Ver →</button>
+    </div>
     <div class="card" style="position:relative" id="cardNovidades">
-      <div class="card-label">🆕 Novidades</div>
+      <div class="card-label">🆕 Novos Imóveis</div>
       <div class="card-value" id="cardNovidadesValue" style="color:var(--accent2)">—</div>
       <div class="card-sub">novos ou modificados (revenda)</div>
     </div>
@@ -3017,31 +3057,38 @@ async function rodarEAtualizar() {
 
 // ── BASEIMOB ──────────────────────────────────────────────────────────────────
 
+function _ocultarTodasSecoes() {
+  ['secao-dashboard','secao-baseimob','secao-imobzi','secao-adm'].forEach(function(id) {
+    document.getElementById(id).style.display = 'none';
+  });
+  ['btnTabDash','btnTabBaseimob','btnTabImobzi','btnTabAdm'].forEach(function(id) {
+    document.getElementById(id).classList.remove('active');
+  });
+}
+
 function mostrarDashboard() {
+  _ocultarTodasSecoes();
   document.getElementById('secao-dashboard').style.display = '';
-  document.getElementById('secao-baseimob').style.display  = 'none';
-  document.getElementById('secao-adm').style.display       = 'none';
   document.getElementById('btnTabDash').classList.add('active');
-  document.getElementById('btnTabBaseimob').classList.remove('active');
-  document.getElementById('btnTabAdm').classList.remove('active');
 }
 
 function mostrarBaseImob() {
-  document.getElementById('secao-dashboard').style.display = 'none';
-  document.getElementById('secao-baseimob').style.display  = '';
-  document.getElementById('secao-adm').style.display       = 'none';
-  document.getElementById('btnTabDash').classList.remove('active');
+  _ocultarTodasSecoes();
+  document.getElementById('secao-baseimob').style.display = '';
   document.getElementById('btnTabBaseimob').classList.add('active');
-  document.getElementById('btnTabAdm').classList.remove('active');
   carregarLeadsBaseimob();
 }
 
+function mostrarImobzi() {
+  _ocultarTodasSecoes();
+  document.getElementById('secao-imobzi').style.display = '';
+  document.getElementById('btnTabImobzi').classList.add('active');
+  carregarLeadsImobzi();
+}
+
 function mostrarAdm() {
-  document.getElementById('secao-dashboard').style.display = 'none';
-  document.getElementById('secao-baseimob').style.display  = 'none';
-  document.getElementById('secao-adm').style.display       = '';
-  document.getElementById('btnTabDash').classList.remove('active');
-  document.getElementById('btnTabBaseimob').classList.remove('active');
+  _ocultarTodasSecoes();
+  document.getElementById('secao-adm').style.display = '';
   document.getElementById('btnTabAdm').classList.add('active');
 }
 
@@ -3504,6 +3551,7 @@ verificarLeadsPendentes();
 // mostrarAdm() só existiam como onclick interno.
 var _secaoInicial = new URLSearchParams(location.search).get('secao');
 if (_secaoInicial === 'baseimob') mostrarBaseImob();
+if (_secaoInicial === 'imobzi')   mostrarImobzi();
 if (_secaoInicial === 'adm')      mostrarAdm();
 </script>
 
@@ -3632,6 +3680,250 @@ async function migrarLeadBI(idCliente, btn) {
   } catch(e) {
     alert('Erro de conexão: ' + e.message);
     btn.disabled = false; btn.textContent = 'Migrar → Contatos';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEADS IMOBZI
+// ═══════════════════════════════════════════════════════════════════════════════
+
+var _imobziLeadsMap = {};  // idLeadImobzi → lead object
+var _imobziLeadSelecionado = null;
+
+async function carregarLeadsImobzi() {
+  document.getElementById('imobzi-lista').innerHTML = '<div class="loading dot-anim">Carregando leads Imobzi</div>';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_leads_imobzi&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    renderLeadsImobzi(json.leads || []);
+  } catch(e) {
+    document.getElementById('imobzi-lista').innerHTML = '<div class="bi-empty">Erro ao carregar leads.</div>';
+  }
+}
+
+function renderLeadsImobzi(leads) {
+  _imobziLeadsMap = {};
+  const ativos = leads.filter(l => l.pipeline !== 'MIGRADO');
+  ativos.forEach(l => { _imobziLeadsMap[l.idLeadImobzi || l.dataCadastro] = l; });
+
+  // Atualiza badge e card visão geral
+  const badge = document.getElementById('badgeImobzi');
+  const cardVal = document.getElementById('cardNovoLeadsValue');
+  if (badge)   { badge.textContent = ativos.length; badge.style.display = ativos.length ? 'inline' : 'none'; }
+  if (cardVal) cardVal.textContent = ativos.length;
+
+  const countEl = document.getElementById('imobziLeadsCount');
+  if (countEl) countEl.textContent = ativos.length;
+
+  if (!ativos.length) {
+    document.getElementById('imobzi-lista').innerHTML =
+      '<div class="bi-empty">Nenhum lead Imobzi pendente.</div>';
+    return;
+  }
+
+  document.getElementById('imobzi-lista').innerHTML = ativos.map(l => {
+    const uid     = l.idLeadImobzi || l.dataCadastro;
+    const wppTel  = String(l.telefone || '').replace(/\D/g,'');
+    const jaBase  = l.statusBase === 'JÁ NA BASE';
+    const pipBadge = `<span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+      padding:2px 7px;border-radius:99px;background:${jaBase?'rgba(255,184,0,.15)':'rgba(255,90,90,.15)'};
+      color:${jaBase?'#ffc107':'#ff5a5a'}">${jaBase?'⚠ Já na base':'🎯 LEAD'}</span>`;
+
+    return `
+    <div class="bi-card" id="imobzicard_${uid}" onclick="selecionarLeadImobzi('${uid}')" style="cursor:pointer">
+      <div class="bi-avatar" style="background:rgba(255,90,90,.15);border-color:#ff5a5a;color:#ff5a5a">${(l.nome||'?')[0].toUpperCase()}</div>
+      <div class="bi-info">
+        <div class="bi-name">${l.nome || 'Sem nome'} ${pipBadge}</div>
+        <div class="bi-sub" style="margin-top:4px">
+          ${l.codigoImovel ? `🏷 <strong>${l.codigoImovel}</strong>` : ''}
+          ${l.nomeImovel   ? ` — ${l.nomeImovel}` : ''}
+        </div>
+        ${l.telefone ? `<div style="font-size:12px;color:var(--text3);margin-top:3px">📞 ${l.telefone}</div>` : ''}
+        ${l.email    ? `<div style="font-size:11px;color:var(--text3);margin-top:1px">✉ ${l.email}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">📅 ${l.dataCadastro || '—'} · ${l.canal || 'Imobzi'}</div>
+      </div>
+      <div class="bi-actions" onclick="event.stopPropagation()">
+        ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬</a>` : ''}
+        <button class="bi-btn" style="background:var(--surface2);color:var(--text2);font-size:11px"
+          onclick="selecionarLeadImobzi('${uid}')">Ver ›</button>
+        <button class="bi-btn" style="background:#3a1a1a;color:#e05a3a;font-size:13px" title="Excluir"
+          onclick="excluirLeadImobzi_('${uid}',this)">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selecionarLeadImobzi(uid) {
+  _imobziLeadSelecionado = uid;
+  const l = _imobziLeadsMap[uid];
+  if (!l) return;
+
+  // Destaca card selecionado
+  document.querySelectorAll('.bi-card').forEach(c => c.style.borderColor = '');
+  const card = document.getElementById('imobzicard_' + uid);
+  if (card) card.style.borderColor = 'var(--accent)';
+
+  const header = document.getElementById('imobziDetalheHeader');
+  header.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--text)">${l.nome || '—'}</div>
+    <div style="font-size:11px;color:var(--text3)">${l.telefone || ''} ${l.email ? '· '+l.email : ''}</div>`;
+
+  document.getElementById('imobziDetalhePlaceholder').style.display = 'none';
+  const body = document.getElementById('imobziDetalheBody');
+  body.style.display = '';
+
+  const preco = Number(l.precoImovel) || 0;
+  const pipOpts = ['LEAD','Pré-Atendimento','Potencial','Agendar Visita','Pós-Visita','Fechamento','Urgentes','Ganhos','Perda']
+    .map(s => `<option value="${s}" ${l.pipeline===s?'selected':''}>${s}</option>`).join('');
+
+  body.innerHTML = `
+    <!-- Imóvel de interesse -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">🏠 Imóvel de interesse</div>
+      <div style="font-size:15px;font-weight:700;color:var(--accent);letter-spacing:.06em">${l.codigoImovel || '—'}</div>
+      ${l.nomeImovel ? `<div style="font-size:13px;color:var(--text);margin-top:2px">${l.nomeImovel}</div>` : ''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        ${l.tipoImovel ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Tipo</div><div style="font-size:12px;color:var(--text2)">${l.tipoImovel}</div></div>` : ''}
+        ${l.bairro     ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Bairro</div><div style="font-size:12px;color:var(--text2)">${l.bairro}</div></div>` : ''}
+        ${preco>0      ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Preço</div><div style="font-size:13px;font-weight:700;color:var(--accent2)">${fmtBRL(preco)}</div></div>` : ''}
+        ${l.finalidade ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Finalidade</div><div style="font-size:12px;color:var(--text2)">${l.finalidade}</div></div>` : ''}
+      </div>
+      ${l.mensagem ? `<div style="margin-top:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px">💬 "${l.mensagem}"</div>` : ''}
+    </div>
+
+    <!-- Pipeline -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Estágio do pipeline</div>
+      ${l.statusBase==='JÁ NA BASE'
+        ? `<div style="font-size:12px;color:#ffc107;font-weight:600;margin-bottom:8px">⚠ Cliente já existe na base (${l.idClienteBase || ''})</div>`
+        : ''}
+      <select id="imobziPipSelect_${uid}" onchange="atualizarPipelineImobzi('${uid}',this)"
+        style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;
+               color:var(--text);font-size:13px;padding:8px;cursor:pointer;outline:none">
+        ${pipOpts}
+      </select>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">Ao mudar de LEAD para outro estágio, o cliente é migrado automaticamente para CONTATOS.</div>
+    </div>
+
+    <!-- Imóveis afins -->
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">🔍 Imóveis afins na base</div>
+      <div id="imobziAfins_${uid}"><div class="loading dot-anim" style="font-size:12px">Buscando</div></div>
+    </div>`;
+
+  // Busca afins se tiver código ou bairro
+  if (l.codigoImovel || l.bairro || preco > 0) {
+    buscarAfinsImobzi(uid, l);
+  } else {
+    document.getElementById('imobziAfins_' + uid).innerHTML =
+      '<div style="font-size:12px;color:var(--text3)">Sem dados de imóvel para buscar afins.</div>';
+  }
+}
+
+async function buscarAfinsImobzi(uid, l) {
+  const el = document.getElementById('imobziAfins_' + uid);
+  if (!el) return;
+  try {
+    const preco = Number(l.precoImovel) || 0;
+    const q = l.bairro || l.tipoImovel || '';
+    const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(q) + '&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    let imoveis = (json.resultados || json.items || []).filter(im => {
+      if (!preco) return true;
+      const p = Number(im.preco || im.valorVenda || 0);
+      return !p || (p >= preco * 0.65 && p <= preco * 1.35);
+    }).slice(0, 5);
+
+    if (!imoveis.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Nenhum imóvel afim encontrado na base.</div>';
+      return;
+    }
+    el.innerHTML = imoveis.map(im => {
+      const cod   = im.codigo || im.idImovel || im.referencia || '—';
+      const nome  = im.nomeImovel || im.logradouro || im.bairro || '';
+      const pIm   = Number(im.preco || im.valorVenda || 0);
+      return `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);
+                  border-radius:8px;margin-bottom:6px;background:var(--surface)">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em">${cod}</div>
+          ${nome ? `<div style="font-size:11px;color:var(--text2);margin-top:1px">${nome}</div>` : ''}
+        </div>
+        ${pIm ? `<div style="font-size:12px;font-weight:700;color:var(--accent2);white-space:nowrap">${fmtBRL(pIm)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Erro ao buscar afins.</div>';
+  }
+}
+
+async function atualizarPipelineImobzi(uid, select) {
+  const novoPipeline = select.value;
+  select.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'atualizar_pipeline_lead_imobzi', idLeadImobzi: uid, pipeline: novoPipeline, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      if (r.migrado) {
+        const card = document.getElementById('imobzicard_' + uid);
+        if (card) { card.style.opacity = '0.45'; card.style.pointerEvents = 'none'; }
+        select.closest('div').insertAdjacentHTML('beforeend',
+          `<div style="font-size:12px;color:var(--accent2);font-weight:600;margin-top:8px">✅ Migrado para CONTATOS${r.idClienteBase ? ' como '+r.idClienteBase : ''}</div>`);
+        if (_imobziLeadsMap[uid]) {
+          _imobziLeadsMap[uid].pipeline = 'MIGRADO';
+          const badge = document.getElementById('badgeImobzi');
+          const ativos = Object.values(_imobziLeadsMap).filter(l => l.pipeline !== 'MIGRADO').length;
+          if (badge) { badge.textContent = ativos; badge.style.display = ativos ? 'inline' : 'none'; }
+          const cardVal = document.getElementById('cardNovoLeadsValue');
+          if (cardVal) cardVal.textContent = ativos;
+        }
+      }
+    } else {
+      alert('Erro: ' + (r.erro || JSON.stringify(r)));
+      select.disabled = false;
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+    select.disabled = false;
+  }
+}
+
+async function excluirLeadImobzi_(uid, btn) {
+  const l = _imobziLeadsMap[uid];
+  const nome = l ? (l.nome || 'este lead') : 'este lead';
+  if (!confirm(`Excluir "${nome}" permanentemente?\n\nEsta ação não pode ser desfeita.`)) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'excluir_lead_imobzi', idLeadImobzi: uid, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      const card = document.getElementById('imobzicard_' + uid);
+      if (card) card.remove();
+      delete _imobziLeadsMap[uid];
+      const ativos = Object.keys(_imobziLeadsMap).length;
+      const badge  = document.getElementById('badgeImobzi');
+      if (badge)   { badge.textContent = ativos; badge.style.display = ativos ? 'inline' : 'none'; }
+      const cardVal = document.getElementById('cardNovoLeadsValue');
+      if (cardVal) cardVal.textContent = ativos;
+      if (_imobziLeadSelecionado === uid) {
+        document.getElementById('imobziDetalhePlaceholder').style.display = '';
+        document.getElementById('imobziDetalheBody').style.display = 'none';
+      }
+    } else {
+      alert('Erro: ' + (r.erro || JSON.stringify(r)));
+      btn.disabled = false; btn.textContent = '🗑';
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+    btn.disabled = false; btn.textContent = '🗑';
   }
 }
 
