@@ -3780,11 +3780,23 @@ function salvarLeadImobzi_(d) {
   return { ok: true, statusBase: statusBase, jaExisteEmBase: statusBase === 'JÁ NA BASE', idClienteBase: idClienteBase };
 }
 
+// Extrai tipo e localização do título do deal.
+// Padrão Imobzi: "Casa para compra em Residencial Olinda"
+//                 ^^^^                    ^^^^^^^^^^^^^^^^^
+//                 tipo                    local (bairro/condomínio)
+function parseTituloDeal_(titulo) {
+  if (!titulo) return { tipo: '', local: '' };
+  var m = String(titulo).match(/^(\S+)\s+para\s+\S+\s+em\s+(.+)$/i);
+  if (m) return { tipo: m[1].trim(), local: m[2].trim() };
+  return { tipo: '', local: String(titulo).trim() };
+}
+
 // Processa payload de webhook deal_created / deal_updated do Imobzi.
-// Estrutura real (confirmada via debug):
-//   deal.contact.name (não fullname!), deal.contact.email (array!),
+// Estrutura real (confirmada via debug de lista /v1/deals):
+//   deal.contact.name (não fullname!), deal.contact.email (array ou string),
 //   deal.contact.phone.number_plain, deal.user.email (responsável),
 //   deal.title = "Casa para compra em Residencial Olinda", deal.value, deal.interest = "buy"/"rent"
+// Nota: payload do webhook pode diferir da API de lista — adicionados múltiplos fallbacks.
 function salvarLeadImobziDeal_(payload) {
   var deal = payload.deal || payload;
   var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
@@ -3803,30 +3815,41 @@ function salvarLeadImobziDeal_(payload) {
     }
   }
 
-  // Contato (lead): deal.contact.name, email é ARRAY, phone.number_plain
-  var contato  = deal.contact || {};
-  var nome     = String(contato.name || contato.fullname || '').trim();
-  var emailArr = Array.isArray(contato.email) ? contato.email : (contato.email ? [contato.email] : []);
+  // Contato: múltiplos fallbacks pois payload do webhook pode diferir da API de lista
+  var contato  = deal.contact || deal.person || deal.lead || {};
+  var nome     = String(contato.name || contato.fullname || deal.contact_name || deal.name || '').trim();
+
+  // Email: array (API lista) ou string (webhook) — ambos suportados
+  var emailRaw = contato.email || deal.contact_email || deal.email || '';
+  var emailArr = Array.isArray(emailRaw) ? emailRaw : (emailRaw ? [String(emailRaw)] : []);
   var email    = String(emailArr[0] || '').trim().toLowerCase();
-  if (email.indexOf('@example.com') >= 0) email = ''; // ignorar emails placeholder do Imobzi
-  var phone_   = contato.phone || {};
+  if (email.indexOf('@example.com') >= 0) email = ''; // placeholder gerado pelo Imobzi
+
+  // Telefone: phone.number_plain (lista), cellphone.number (webhook legado), phones[] (lista)
+  var phone_   = contato.phone || contato.cellphone || {};
   var phones_  = Array.isArray(contato.phones) ? contato.phones : [];
   var tel      = String(phone_.number_plain || phone_.number ||
-                        (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '').replace(/\D/g,'');
+                        (phones_[0] && (phones_[0].number_plain || phones_[0].number)) ||
+                        deal.contact_phone || deal.phone || '').replace(/\D/g,'');
 
-  var idDeal   = String(deal.db_id || deal.deal_id || '').trim();
+  var idDeal   = String(deal.db_id || deal.deal_id || deal.id || '').trim();
   var canal    = String(deal.media_source || contato.media_source || 'Imobzi').trim();
   var FMAP     = { buy: 'Compra', rent: 'Aluguel', buy_rent: 'Compra/Aluguel' };
   var final    = FMAP[deal.interest] || String(deal.interest || '').trim();
 
   if (!nome) return { ok: false, erro: 'deal sem nome de contato' };
 
+  // Extrai tipo e localização do título: "Casa para compra em Residencial Olinda"
+  var titulo    = String(deal.title || '').trim();
+  var parsed    = parseTituloDeal_(titulo);
+
   var flat = {
     nome: nome, email: email, telefone: tel,
     codigoImovel: '',
-    nomeImovel:  String(deal.title || '').trim(),
+    nomeImovel:  titulo,
     precoImovel: Number(deal.value) || 0,
-    tipoImovel: '', bairro: '',
+    tipoImovel:  parsed.tipo,
+    bairro:      parsed.local,
     finalidade:  final,
     mensagem:    String(deal.description || '').trim(),
     idLeadImobzi: idDeal, canal: canal
@@ -4021,13 +4044,16 @@ function sincronizarLeadsImobzi_() {
       var idDeal   = String(deal.db_id || '').trim();
       var canal    = String(deal.media_source || contato.media_source || 'Imobzi').trim();
       var final    = FMAP[deal.interest] || String(deal.interest || '').trim();
+      var titulo   = String(deal.title || '').trim();
+      var parsed   = parseTituloDeal_(titulo);
 
       var d_ = {
         nome: nome, email: email, telefone: tel,
         codigoImovel: '',
-        nomeImovel:  String(deal.title || '').trim(),
+        nomeImovel:  titulo,
         precoImovel: Number(deal.value) || 0,
-        tipoImovel: '', bairro: '',
+        tipoImovel:  parsed.tipo,
+        bairro:      parsed.local,
         finalidade:  final,
         mensagem:    String(deal.description || '').trim(),
         canal: canal, idLeadImobzi: idDeal
