@@ -3936,16 +3936,25 @@ function enviarEmailNovoLeadImobzi_(lead) {
 }
 
 // ── Sincroniza Negócios (Deals) novos da API Imobzi (polling) ─────────────────
-// Chamada manual pelo ADM ou por trigger de tempo (a cada 5 min)
+// Chamada manual pelo ADM ou por trigger de tempo (a cada 5 min).
+// Usa IMOBZI_LAST_SYNC para filtrar somente deals criados após o último sync.
 function sincronizarLeadsImobzi_() {
   var secret;
   try { secret = obterImobziToken_(); } catch(e) { return { ok: false, erro: e.message }; }
 
+  var props = PropertiesService.getScriptProperties();
   var headers = { 'X-Imobzi-Secret': secret };
   var novos = 0, duplic = 0, totalVisto = 0;
 
-  var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
+  var RESPONSAVEL_ID = props.getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
   var CONTA = 'leonardoviana@lidderimobiliaria.com.br';
+
+  // Corte temporal: só deals criados APÓS o último sync bem-sucedido.
+  // Se IMOBZI_LAST_SYNC não existe (primeiro uso), define como "agora" —
+  // assume que a importação inicial já foi feita e só queremos novos.
+  var agora     = new Date();
+  var lastStr   = props.getProperty('IMOBZI_LAST_SYNC');
+  var corteMs   = lastStr ? new Date(lastStr).getTime() : agora.getTime();
 
   // Resposta REAL (confirmada via debug): objeto chaveado por ID de estágio do pipeline
   // { stageId: { stage_name, deals: [...], cursor, count, total }, cursor_all_stages: "..." }
@@ -3983,6 +3992,10 @@ function sincronizarLeadsImobzi_() {
     pagina++;
 
     deals.forEach(function(deal) {
+      // Filtro temporal: ignora deals criados antes ou igual ao último sync
+      var criadoMs = deal.created_at ? new Date(deal.created_at).getTime() : 0;
+      if (criadoMs <= corteMs) return;
+
       // Valida responsável (double-check além do filtro user_id na URL)
       var user_     = deal.user || {};
       var userEmail = String(user_.email || '').trim().toLowerCase();
@@ -4024,6 +4037,10 @@ function sincronizarLeadsImobzi_() {
     });
 
   } while (cursor && pagina < 10);
+
+  // Salva timestamp do INÍCIO deste ciclo como nova referência.
+  // Próximo sync pegará apenas deals criados após este momento.
+  props.setProperty('IMOBZI_LAST_SYNC', agora.toISOString());
 
   return { ok: true, novos: novos, duplicados: duplic, total: totalVisto };
 }
