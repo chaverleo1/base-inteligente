@@ -3894,6 +3894,7 @@ function sincronizarLeadsImobzi_() {
   //  2) contact_type=all   (cobre contatos adicionados manualmente)
   // A verificação de duplicidade por contact_id em salvarLeadImobzi_ evita
   // gravar o mesmo contato duas vezes.
+  var CONTA   = 'leonardoviana@lidderimobiliaria.com.br';
   var filtros = ['lead', 'all'];
   filtros.forEach(function(tipo) {
     var cursor = null;
@@ -3912,8 +3913,13 @@ function sincronizarLeadsImobzi_() {
       var contatos = Array.isArray(data) ? data : (data.contacts || []);
       cursor = data.cursor || null;
       pagina++;
-
       contatos.forEach(function(l) {
+        // Filtra pelo responsável: só processa contatos cujo manager seja a conta correta.
+        // Se não houver manager definido, aceita (contato ainda não atribuído).
+        var mgr      = (l.manager && l.manager.user) ? l.manager.user : {};
+        var mgrEmail = String(mgr.email || mgr.login || mgr.username || '').trim().toLowerCase();
+        if (mgrEmail && mgrEmail !== CONTA) return;
+
         // Para contact_type=all, só processa contatos criados nos últimos 30 dias
         if (tipo === 'all') {
           var criadoMs = l.created_at ? new Date(l.created_at).getTime() : 0;
