@@ -625,6 +625,17 @@ function doGet(e) {
 
 function doPost(e) {
   var contents = e.postData ? e.postData.contents : '';
+  // LOG TEMPORÁRIO — salva payload bruto para diagnóstico do webhook Imobzi
+  try {
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var logAba = ss.getSheetByName('WEBHOOK_LOG') || ss.insertSheet('WEBHOOK_LOG');
+    if (logAba.getLastRow() === 0) logAba.appendRow(['timestamp','contentType','body']);
+    logAba.appendRow([
+      Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss'),
+      e.postData ? e.postData.type : '',
+      contents
+    ]);
+  } catch(logErr) {}
   var d = parseBody(contents);
 
   // 'salvar_senha' fica de fora — pertence ao fluxo de redefinição de senha
