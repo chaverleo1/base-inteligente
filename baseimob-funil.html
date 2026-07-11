@@ -101,16 +101,21 @@ input[type=range] { background: transparent; }
         <p class="text-[9px] tracking-[0.22em] uppercase text-[#3A3328]">1ª etapa da sua consultoria</p>
       </div>
 
-      <!-- PRINCIPAL: investimento estimado -->
-      <div class="text-center mb-2 anim-num">
-        <div class="text-[10px] tracking-[0.22em] uppercase text-[#6B5F4C] mb-3">investimento estimado</div>
-        <div id="lbl-investimento-big" class="font-display text-[#C9A96E]"
-             style="font-size:clamp(3.2rem,16vw,6.5rem);letter-spacing:-0.03em;line-height:1">R$–</div>
-      </div>
-
-      <!-- Secundário: opções compatíveis -->
-      <div class="text-center mb-8 anim-fadeUp delay-1">
-        <p id="cnt-compat-sub" class="text-sm text-[#6B5F4C]">Calculando opções...</p>
+      <!-- PRINCIPAL: investimento + quantidade lado a lado -->
+      <div class="flex items-center gap-4 mb-8 anim-num">
+        <!-- Preço -->
+        <div style="flex:1;min-width:0">
+          <div class="text-[10px] tracking-[0.22em] uppercase text-[#6B5F4C] mb-2">investimento estimado</div>
+          <div id="lbl-investimento-big" class="font-display text-[#C9A96E]"
+               style="font-size:clamp(1.9rem,9vw,3.8rem);letter-spacing:-0.03em;line-height:1;white-space:nowrap">R$–</div>
+        </div>
+        <!-- Box de quantidade -->
+        <div style="flex-shrink:0;background:rgba(201,169,110,.07);border:1px solid rgba(201,169,110,.18);
+                    border-radius:16px;padding:14px 18px;text-align:center;min-width:84px">
+          <div id="cnt-compat-box" class="font-display text-[#C9A96E]"
+               style="font-size:clamp(2rem,10vw,3.2rem);letter-spacing:-0.03em;line-height:1">–</div>
+          <div id="cnt-compat-lbl" class="text-[9px] tracking-[0.16em] uppercase text-[#6B5F4C] mt-1">opções</div>
+        </div>
       </div>
 
       <!-- Slider metragem -->
@@ -471,21 +476,22 @@ function recalcularMatch() {
   ranking    = scored.filter(c => c.score >= MATCH_THRESHOLD);
   melhorLote = ranking[0] || scored[0] || null;
 
-  const sub   = document.getElementById('cnt-compat-sub');
-  const btn   = document.getElementById('btn-ver-opcoes');
-  const vazio = document.getElementById('config-vazio');
+  const boxNum = document.getElementById('cnt-compat-box');
+  const boxLbl = document.getElementById('cnt-compat-lbl');
+  const btn    = document.getElementById('btn-ver-opcoes');
+  const vazio  = document.getElementById('config-vazio');
+  const n      = ranking.length;
+
+  if (boxNum) boxNum.textContent = CONDOS.length ? n : '–';
+  if (boxLbl) boxLbl.textContent = n === 1 ? 'opção' : 'opções';
 
   if (!CONDOS.length) {
-    sub.textContent = 'Nenhum lote disponível no momento.';
     btn.disabled = true; btn.textContent = 'Nenhum lote disponível';
     vazio.classList.add('hidden-tela');
-  } else if (!ranking.length) {
-    sub.textContent = 'Nenhuma opção compatível com a faixa atual.';
+  } else if (!n) {
     btn.disabled = true; btn.textContent = 'Ver opções';
     vazio.classList.remove('hidden-tela');
   } else {
-    const n = ranking.length;
-    sub.textContent = `${n} ${n===1?'opção compatível':'opções compatíveis'} com o seu perfil`;
     btn.disabled    = false;
     btn.textContent = `Ver ${n} ${n===1?'opção compatível':'opções compatíveis'}`;
     vazio.classList.add('hidden-tela');
