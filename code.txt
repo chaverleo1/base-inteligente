@@ -4305,10 +4305,26 @@ function listarLeadsImobzi_(d) {
   var lr  = aba.getLastRow();
   if (lr < 2) return { leads: [] };
   var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LEADS_IMOBZI.length).getValues();
+  var iCod     = CABECALHO_LEADS_IMOBZI.indexOf('codigoImovel');
+  var iNome    = CABECALHO_LEADS_IMOBZI.indexOf('nomeImovel');
+  var iTipo    = CABECALHO_LEADS_IMOBZI.indexOf('tipoImovel');
+  var iBairro  = CABECALHO_LEADS_IMOBZI.indexOf('bairro');
+  var iPreco   = CABECALHO_LEADS_IMOBZI.indexOf('precoImovel');
   var leads = dados.map(function(row) {
     var obj = {};
     CABECALHO_LEADS_IMOBZI.forEach(function(col, i) { obj[col] = row[i]; });
     obj._linha = dados.indexOf(row) + 2;
+    // Enriquece com REVENDA se nome/tipo/bairro vazios mas codigo existe
+    var cod = String(obj.codigoImovel || '').trim();
+    if (cod && (!String(obj.nomeImovel||'').trim() || !String(obj.tipoImovel||'').trim())) {
+      var rev = buscarImovelRevenda_(cod);
+      if (rev) {
+        if (!String(obj.nomeImovel||'').trim())  obj.nomeImovel  = String(rev.condominio || rev.endereco || '').trim();
+        if (!String(obj.tipoImovel||'').trim())  obj.tipoImovel  = String(rev.tipo   || '').trim();
+        if (!String(obj.bairro||'').trim())      obj.bairro      = String(rev.bairro || '').trim();
+        if (!Number(obj.precoImovel))            obj.precoImovel = Number(String(rev.valorVenda||'').replace(/\D/g,'')) || 0;
+      }
+    }
     return obj;
   }).filter(function(l) { return String(l.pipeline || '') !== 'MIGRADO'; });
   return { leads: leads };
