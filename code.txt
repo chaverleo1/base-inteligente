@@ -3970,29 +3970,35 @@ function debugSyncImobzi() {
   function testar(label, url) {
     var r = UrlFetchApp.fetch(url, opts);
     var body = r.getContentText();
-    Logger.log(label + ' → ' + r.getResponseCode() + ': ' + body.substring(0, 400));
+    Logger.log(label + ' [' + r.getResponseCode() + ']: ' + body.substring(0, 300));
+    return r;
   }
 
-  // 1) Quem é o usuário autenticado?
-  testar('GET /me',           base + '/me');
-  testar('GET /users/me',     base + '/users/me');
-  testar('GET /account',      base + '/account');
-  testar('GET /account/me',   base + '/account/me');
+  // 1) Filtros por tag
+  testar('?tags=lead',         base + '/contacts?tags=lead&limit=5');
+  testar('?tag=lead',          base + '/contacts?tag=lead&limit=5');
+  testar('?tags[]=lead',       base + '/contacts?tags[]=lead&limit=5');
 
-  // 2) Endpoints alternativos de leads
-  testar('GET /leads?limit=3',               base + '/leads?limit=3');
-  testar('GET /pipeline_leads?limit=3',      base + '/pipeline_leads?limit=3');
-  testar('GET /contacts?type=lead&limit=3',  base + '/contacts?type=lead&limit=3');
-
-  // 3) JSON completo do 1o lead de contact_type=lead (ver TODOS os campos)
-  var r2 = UrlFetchApp.fetch(base + '/contacts?contact_type=lead', opts);
+  // 2) type=lead (retornou resultado diferente de contact_type=lead)
+  var r2 = UrlFetchApp.fetch(base + '/contacts?type=lead', opts);
   try {
-    var d2  = JSON.parse(r2.getContentText());
-    var arr = d2.contacts || d2;
-    if (arr.length > 0) {
-      Logger.log('--- JSON completo do 1o lead ---');
-      Logger.log(JSON.stringify(arr[0]).substring(0, 2000));
-    }
+    var d2 = JSON.parse(r2.getContentText());
+    var arr2 = d2.contacts || [];
+    Logger.log('type=lead → total: ' + arr2.length);
+    arr2.forEach(function(c,i) {
+      Logger.log('  ['+i+'] '+c.fullname+' | tags='+JSON.stringify(c.tags)+' | media_source='+c.media_source);
+    });
+  } catch(e) {}
+
+  // 3) contact_type=lead — mostrar tags e media_source
+  var r3 = UrlFetchApp.fetch(base + '/contacts?contact_type=lead', opts);
+  try {
+    var d3 = JSON.parse(r3.getContentText());
+    var arr3 = d3.contacts || [];
+    Logger.log('contact_type=lead → total: ' + arr3.length);
+    arr3.forEach(function(c,i) {
+      Logger.log('  ['+i+'] '+c.fullname+' | tags='+JSON.stringify(c.tags)+' | media_source='+c.media_source);
+    });
   } catch(e) {}
 }
 
