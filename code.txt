@@ -193,6 +193,13 @@ function doGet(e) {
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
+  if (acao === 'buscar_afins_imovel') {
+    var afCod    = String(e.parameter.cod    || '').trim();
+    var afBairro = String(e.parameter.bairro || '').trim();
+    var afTipo   = String(e.parameter.tipo   || '').trim();
+    var afPreco  = Number(e.parameter.preco  || 0);
+    return ok(buscarAfinsImovelRevenda_(afCod, afBairro, afTipo, afPreco));
+  }
   if (acao === 'rodar_matching') {
     try {
       rodarMatching();
@@ -3813,6 +3820,59 @@ function buscarImovelRevenda_(codigo) {
   return null;
 }
 
+// Busca imóveis afins na REVENDA com base em bairro, tipo e preço.
+// Retorna até 6 imóveis ordenados por score (tipo match +40, bairro +30, preço ±20% +30).
+function buscarAfinsImovelRevenda_(cod, bairro, tipo, preco) {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('REVENDA');
+  if (!aba || aba.getLastRow() < 2) return [];
+  var dados = aba.getRange(2, 1, aba.getLastRow() - 1, CABECALHO_REVENDA.length).getValues();
+  var norm = function(s) { return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
+  var nTipo   = norm(tipo);
+  var nBairro = norm(bairro);
+  var results = [];
+  dados.forEach(function(row) {
+    var obj = {};
+    CABECALHO_REVENDA.forEach(function(col, j) { obj[col] = row[j]; });
+    if (String(obj.codigo || '').trim() === cod) return; // exclui o próprio
+    var rTipo   = norm(obj.tipo);
+    var rBairro = norm(obj.bairro);
+    var rCond   = norm(obj.condominio);
+    var rPreco  = Number(String(obj.valorVenda||'').replace(/\D/g,'')) || 0;
+    var score   = 0;
+    if (nTipo   && (rTipo === nTipo || rTipo.indexOf(nTipo) >= 0 || nTipo.indexOf(rTipo) >= 0)) score += 40;
+    if (nBairro && (rBairro.indexOf(nBairro) >= 0 || rCond.indexOf(nBairro) >= 0 ||
+                    nBairro.indexOf(rBairro) >= 0)) score += 30;
+    if (preco && rPreco) {
+      var diff = Math.abs(rPreco - preco) / Math.max(rPreco, preco);
+      if (diff <= 0.20) score += 30;
+      else if (diff <= 0.40) score += 15;
+    }
+    if (score > 0) results.push({ obj: obj, score: score });
+  });
+  results.sort(function(a, b) { return b.score - a.score; });
+  return results.slice(0, 6).map(function(r) {
+    var o = r.obj;
+    return {
+      imoCodigo:     String(o.codigo     || '').trim(),
+      imoTipo:       String(o.tipo       || '').trim(),
+      imoBairro:     String(o.bairro     || '').trim(),
+      imoCondominio: String(o.condominio || '').trim(),
+      imoEndereco:   String(o.endereco   || '').trim(),
+      imoQuartos:    o.quartos   || '',
+      imoSuites:     o.suites    || '',
+      imoVagas:      o.vagas     || '',
+      imoAreaUtil:   o.areaUtil  || '',
+      imoValorVenda: String(o.valorVenda || '').trim(),
+      imoPadrao:     String(o.padrao     || '').trim(),
+      imoFoto:       String(o.foto       || '').trim(),
+      imoUrl:        String(o.urlSite    || '').trim(),
+      fonte:         'REVENDA',
+      scoreMatch:    r.score
+    };
+  });
+}
+
 // Busca deal completo via /deal/{db_key} — único endpoint que retorna
 // properties_presented[0].property_code (a lista não inclui esse campo).
 function obterDealCompleto_(dbKey, secret) {
@@ -4314,15 +4374,23 @@ function listarLeadsImobzi_(d) {
     var obj = {};
     CABECALHO_LEADS_IMOBZI.forEach(function(col, i) { obj[col] = row[i]; });
     obj._linha = dados.indexOf(row) + 2;
-    // Enriquece com REVENDA se nome/tipo/bairro vazios mas codigo existe
+    // Enriquece com REVENDA sempre que houver código — preenche campos vazios
+    // e adiciona campos extras (_foto, _urlSite, _quartos, etc.) para a UI
     var cod = String(obj.codigoImovel || '').trim();
-    if (cod && (!String(obj.nomeImovel||'').trim() || !String(obj.tipoImovel||'').trim())) {
+    if (cod) {
       var rev = buscarImovelRevenda_(cod);
       if (rev) {
         if (!String(obj.nomeImovel||'').trim())  obj.nomeImovel  = String(rev.condominio || rev.endereco || '').trim();
         if (!String(obj.tipoImovel||'').trim())  obj.tipoImovel  = String(rev.tipo   || '').trim();
         if (!String(obj.bairro||'').trim())      obj.bairro      = String(rev.bairro || '').trim();
         if (!Number(obj.precoImovel))            obj.precoImovel = Number(String(rev.valorVenda||'').replace(/\D/g,'')) || 0;
+        obj._foto    = String(rev.foto      || '').trim();
+        obj._urlSite = String(rev.urlSite   || '').trim();
+        obj._quartos = String(rev.quartos   || '').trim();
+        obj._suites  = String(rev.suites    || '').trim();
+        obj._vagas   = String(rev.vagas     || '').trim();
+        obj._area    = String(rev.areaUtil  || '').trim();
+        obj._padrao  = String(rev.padrao    || '').trim();
       }
     }
     return obj;

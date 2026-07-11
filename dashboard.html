@@ -3822,6 +3822,8 @@ function fmtBRL(v) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+let _imobziAfinsMap = {}; // uid -> array de afins para toggleFavoritoImobziAfim
+
 function selecionarLeadImobzi(uid) {
   _imobziLeadSelecionado = uid;
   const l = _imobziLeadsMap[uid];
@@ -3841,23 +3843,49 @@ function selecionarLeadImobzi(uid) {
   const body = document.getElementById('imobziDetalheBody');
   body.style.display = '';
 
-  const preco = Number(l.precoImovel) || 0;
+  const preco  = Number(l.precoImovel) || 0;
   const pipOpts = ['LEAD','Pré-Atendimento','Potencial','Agendar Visita','Pós-Visita','Fechamento','Urgentes','Ganhos','Perda']
     .map(s => `<option value="${s}" ${l.pipeline===s?'selected':''}>${s}</option>`).join('');
 
+  // Imóvel de interesse — card no mesmo padrão dos matches
+  const foto = (l._foto && l._foto.startsWith('http'))
+    ? `<img class="imovel-foto" src="${escAttr(l._foto)}" onerror="this.style.display='none'">`
+    : `<div class="imovel-foto-placeholder">🏠</div>`;
+  const attrs = [
+    l._quartos ? l._quartos + ' qtos'   : '',
+    l._suites  ? l._suites  + ' suítes' : '',
+    l._vagas   ? l._vagas   + ' vagas'  : '',
+    l._area    ? l._area    + ' m²'     : '',
+    l._padrao  || ''
+  ].filter(Boolean);
+  const local = [l.nomeImovel, l.bairro].filter(Boolean).join(' — ');
+
   body.innerHTML = `
     <!-- Imóvel de interesse -->
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+    <div style="margin-bottom:16px">
       <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">🏠 Imóvel de interesse</div>
-      <div style="font-size:15px;font-weight:700;color:var(--accent);letter-spacing:.06em">${l.codigoImovel || '—'}</div>
-      ${l.nomeImovel ? `<div style="font-size:13px;color:var(--text);margin-top:2px">${l.nomeImovel}</div>` : ''}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
-        ${l.tipoImovel ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Tipo</div><div style="font-size:12px;color:var(--text2)">${l.tipoImovel}</div></div>` : ''}
-        ${l.bairro     ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Bairro</div><div style="font-size:12px;color:var(--text2)">${l.bairro}</div></div>` : ''}
-        ${preco>0      ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Preço</div><div style="font-size:13px;font-weight:700;color:var(--accent2)">${fmtBRL(preco)}</div></div>` : ''}
-        ${l.finalidade ? `<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">Finalidade</div><div style="font-size:12px;color:var(--text2)">${l.finalidade}</div></div>` : ''}
+      <div class="imovel-card">
+        <div class="imovel-card-top">
+          ${foto}
+          <div class="imovel-info">
+            <div class="imovel-fonte-row">
+              <span class="imovel-fonte-badge fonte-rev">🔑 Revenda</span>
+            </div>
+            <div class="imovel-tipo">${l.tipoImovel || 'Imóvel'}</div>
+            <div class="imovel-local">${local || '—'}</div>
+            ${l.codigoImovel ? `<div class="imovel-codigo">Código: ${l.codigoImovel}</div>` : ''}
+            <div class="imovel-valor">${preco > 0 ? fmtBRL(preco) : '—'}</div>
+          </div>
+          <div class="imovel-top-actions">
+            <button type="button" class="imovel-btn-fav" id="favBtnInteresse_${uid}"
+                    onclick="toggleFavoritoImobziInteresse('${uid}',this)"
+                    title="Marcar como favorito">☆</button>
+          </div>
+        </div>
+        ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+        ${l.mensagem ? `<div class="imovel-det">💬 "${l.mensagem}"</div>` : ''}
+        ${(l._urlSite && l._urlSite.startsWith('http')) ? `<a class="imovel-link" href="${escAttr(l._urlSite)}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>
-      ${l.mensagem ? `<div style="margin-top:10px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px">💬 "${l.mensagem}"</div>` : ''}
     </div>
 
     <!-- Pipeline -->
@@ -3880,7 +3908,6 @@ function selecionarLeadImobzi(uid) {
       <div id="imobziAfins_${uid}"><div class="loading dot-anim" style="font-size:12px">Buscando</div></div>
     </div>`;
 
-  // Busca afins se tiver código ou bairro
   if (l.codigoImovel || l.bairro || preco > 0) {
     buscarAfinsImobzi(uid, l);
   } else {
@@ -3893,38 +3920,128 @@ async function buscarAfinsImobzi(uid, l) {
   const el = document.getElementById('imobziAfins_' + uid);
   if (!el) return;
   try {
-    const preco = Number(l.precoImovel) || 0;
-    const q = l.bairro || l.tipoImovel || '';
-    const resp = await fetch(WEBHOOK_URL + '?acao=buscar&q=' + encodeURIComponent(q) + '&token=' + encodeURIComponent(tokenSessao()));
-    const json = await resp.json();
-    if (trataNaoAutenticado(json)) return;
-    let imoveis = (json.resultados || json.items || []).filter(im => {
-      if (!preco) return true;
-      const p = Number(im.preco || im.valorVenda || 0);
-      return !p || (p >= preco * 0.65 && p <= preco * 1.35);
-    }).slice(0, 5);
-
-    if (!imoveis.length) {
+    const preco  = Number(l.precoImovel) || 0;
+    const params = new URLSearchParams({
+      acao: 'buscar_afins_imovel',
+      cod:    l.codigoImovel || '',
+      bairro: l.bairro       || '',
+      tipo:   l.tipoImovel   || '',
+      preco:  preco || '',
+      token:  tokenSessao()
+    });
+    const resp  = await fetch(WEBHOOK_URL + '?' + params);
+    const afins = await resp.json();
+    if (trataNaoAutenticado(afins)) return;
+    if (!Array.isArray(afins) || !afins.length) {
       el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Nenhum imóvel afim encontrado na base.</div>';
       return;
     }
-    el.innerHTML = imoveis.map(im => {
-      const cod   = im.codigo || im.idImovel || im.referencia || '—';
-      const nome  = im.nomeImovel || im.logradouro || im.bairro || '';
-      const pIm   = Number(im.preco || im.valorVenda || 0);
-      return `
-      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);
-                  border-radius:8px;margin-bottom:6px;background:var(--surface)">
-        <div style="min-width:0;flex:1">
-          <div style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em">${cod}</div>
-          ${nome ? `<div style="font-size:11px;color:var(--text2);margin-top:1px">${nome}</div>` : ''}
+    _imobziAfinsMap[uid] = afins;
+    el.innerHTML = `<div class="imovel-cards">${afins.map((m, idx) => {
+      const sc   = m.scoreMatch || 0;
+      const cls  = sc >= 70 ? 'd-badge-hot' : sc >= 40 ? 'd-badge-warm' : 'd-badge-cold';
+      const foto = (m.imoFoto && m.imoFoto.startsWith('http'))
+        ? `<img class="imovel-foto" src="${escAttr(m.imoFoto)}" onerror="this.style.display='none'">`
+        : `<div class="imovel-foto-placeholder">🏠</div>`;
+      const local = [m.imoCondominio, m.imoBairro].filter(Boolean).join(' — ');
+      const attrs = [
+        m.imoQuartos  ? m.imoQuartos  + ' qtos'   : '',
+        m.imoSuites   ? m.imoSuites   + ' suítes' : '',
+        m.imoVagas    ? m.imoVagas    + ' vagas'  : '',
+        m.imoAreaUtil ? m.imoAreaUtil + ' m²'      : '',
+        m.imoPadrao   || ''
+      ].filter(Boolean);
+      const pIm = Number(String(m.imoValorVenda||'').replace(/\D/g,'')) || 0;
+      return `<div class="imovel-card">
+        <div class="imovel-card-top">
+          ${foto}
+          <div class="imovel-info">
+            <div class="imovel-fonte-row">
+              <span class="imovel-fonte-badge fonte-rev">🔑 Revenda</span>
+            </div>
+            <div class="imovel-tipo">${m.imoTipo || 'Imóvel'}</div>
+            <div class="imovel-local">${local || '—'}</div>
+            ${m.imoCodigo ? `<div class="imovel-codigo">Código: ${m.imoCodigo}</div>` : ''}
+            <div class="imovel-valor">${pIm ? fmtBRL(pIm) : '—'}</div>
+          </div>
+          <div class="imovel-top-actions">
+            <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
+            <button type="button" class="imovel-btn-fav" id="favAfim_${uid}_${idx}"
+                    onclick="toggleFavoritoImobziAfim('${uid}',${idx},this)"
+                    title="Marcar como favorito">☆</button>
+          </div>
         </div>
-        ${pIm ? `<div style="font-size:12px;font-weight:700;color:var(--accent2);white-space:nowrap">${fmtBRL(pIm)}</div>` : ''}
+        ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+        ${(m.imoUrl && m.imoUrl.startsWith('http')) ? `<a class="imovel-link" href="${escAttr(m.imoUrl)}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>`;
-    }).join('');
+    }).join('')}</div>`;
   } catch(e) {
     if (el) el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Erro ao buscar afins.</div>';
   }
+}
+
+async function toggleFavoritoImobziInteresse(uid, btnEl) {
+  const l = _imobziLeadsMap[uid];
+  if (!l) return;
+  btnEl.disabled = true;
+  const favClienteId = l.idClienteBase || ('LEAD_' + uid);
+  const payload = {
+    acao: 'toggle_favorito', token: tokenSessao(),
+    idCliente: favClienteId, cliNome: l.nome || '',
+    imoCodigo: l.codigoImovel || '', fonte: 'REVENDA',
+    imoTipo: l.tipoImovel || '', imoBairro: l.bairro || '',
+    imoCondominio: l.nomeImovel || '', imoEndereco: '',
+    imoQuartos: l._quartos || '', imoSuites: l._suites || '',
+    imoVagas: l._vagas || '', imoAreaUtil: l._area || '',
+    imoValorVenda: l.precoImovel ? String(l.precoImovel) : '',
+    imoPadrao: l._padrao || '', imoEstagio: '',
+    imoFoto: l._foto || '', imoUrl: l._urlSite || '',
+    imoConstrutora: '', imoEntrega: ''
+  };
+  try {
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const agora = r.status === 'adicionado';
+    btnEl.textContent = agora ? '★' : '☆';
+    btnEl.classList.toggle('ativo', agora);
+    btnEl.title = agora ? 'Remover dos favoritos' : 'Marcar como favorito';
+    showToast(agora ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos', 'ok');
+  } catch(e) {
+    showToast('Erro ao favoritar: ' + e.message, 'erro');
+  } finally { btnEl.disabled = false; }
+}
+
+async function toggleFavoritoImobziAfim(uid, idx, btnEl) {
+  const m = (_imobziAfinsMap[uid] || [])[idx];
+  if (!m) return;
+  btnEl.disabled = true;
+  const l = _imobziLeadsMap[uid];
+  const favClienteId = l ? (l.idClienteBase || ('LEAD_' + uid)) : uid;
+  const payload = {
+    acao: 'toggle_favorito', token: tokenSessao(),
+    idCliente: favClienteId, cliNome: l ? (l.nome || '') : '',
+    imoCodigo: m.imoCodigo || '', fonte: m.fonte || 'REVENDA',
+    imoTipo: m.imoTipo || '', imoBairro: m.imoBairro || '',
+    imoCondominio: m.imoCondominio || '', imoEndereco: m.imoEndereco || '',
+    imoQuartos: m.imoQuartos || '', imoSuites: m.imoSuites || '',
+    imoVagas: m.imoVagas || '', imoAreaUtil: m.imoAreaUtil || '',
+    imoValorVenda: m.imoValorVenda || '', imoPadrao: m.imoPadrao || '', imoEstagio: '',
+    imoFoto: m.imoFoto || '', imoUrl: m.imoUrl || '',
+    imoConstrutora: '', imoEntrega: ''
+  };
+  try {
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    const agora = r.status === 'adicionado';
+    btnEl.textContent = agora ? '★' : '☆';
+    btnEl.classList.toggle('ativo', agora);
+    btnEl.title = agora ? 'Remover dos favoritos' : 'Marcar como favorito';
+    showToast(agora ? '⭐ Adicionado aos favoritos' : 'Removido dos favoritos', 'ok');
+  } catch(e) {
+    showToast('Erro ao favoritar: ' + e.message, 'erro');
+  } finally { btnEl.disabled = false; }
 }
 
 async function atualizarPipelineImobzi(uid, select) {
