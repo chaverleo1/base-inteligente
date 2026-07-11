@@ -3924,6 +3924,41 @@ function rodarSyncImobziTrigger() {
   try { sincronizarLeadsImobzi_(); } catch(e) { Logger.log('Sync Imobzi falhou: ' + e); }
 }
 
+// ── Gerenciamento de Webhooks Imobzi ──────────────────────────────────────────
+// Rodar UMA VEZ manualmente no editor do Apps Script para registrar o webhook.
+// Após rodar, o Imobzi passará a chamar nossa URL a cada novo lead criado.
+
+function listarWebhooksImobzi() {
+  var secret = obterImobziToken_();
+  var resp = UrlFetchApp.fetch(IMOBZI_BASE + '/webhooks', {
+    method: 'get',
+    headers: { 'X-Imobzi-Secret': secret },
+    muteHttpExceptions: true
+  });
+  Logger.log('Status: ' + resp.getResponseCode());
+  Logger.log(resp.getContentText());
+}
+
+function registrarWebhookImobzi() {
+  var secret    = obterImobziToken_();
+  var scriptUrl = ScriptApp.getService().getUrl();
+
+  var eventos = ['lead_created', 'lead_updated'];
+  eventos.forEach(function(evento) {
+    var payload = JSON.stringify({ url: scriptUrl, event: evento });
+    var resp = UrlFetchApp.fetch(IMOBZI_BASE + '/webhooks', {
+      method: 'post',
+      headers: {
+        'X-Imobzi-Secret': secret,
+        'Content-Type': 'application/json'
+      },
+      payload: payload,
+      muteHttpExceptions: true
+    });
+    Logger.log(evento + ' → ' + resp.getResponseCode() + ': ' + resp.getContentText());
+  });
+}
+
 function listarLeadsImobzi_(d) {
   var aba = obterAbaLeadsImobzi_();
   var lr  = aba.getLastRow();
