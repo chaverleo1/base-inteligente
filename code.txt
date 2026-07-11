@@ -3889,13 +3889,11 @@ function sincronizarLeadsImobzi_() {
   // Janela de 30 dias — contatos criados antes disso não são novos leads
   var corteMs = Date.now() - (30 * 24 * 60 * 60 * 1000);
 
-  // Busca em duas passagens:
-  //  1) contact_type=lead  (leads de portais/formulários)
-  //  2) contact_type=all   (cobre contatos adicionados manualmente)
-  // A verificação de duplicidade por contact_id em salvarLeadImobzi_ evita
-  // gravar o mesmo contato duas vezes.
+  // Busca apenas contact_type=lead (leads de portais/formulários atribuídos à conta).
+  // contact_type=all foi removido — puxa toda a base da empresa (outros agentes).
+  // Leads adicionados manualmente no Imobzi chegam via webhook (lead_created).
   var CONTA   = 'leonardoviana@lidderimobiliaria.com.br';
-  var filtros = ['lead', 'all'];
+  var filtros = ['lead'];
   filtros.forEach(function(tipo) {
     var cursor = null;
     var pagina = 0;
