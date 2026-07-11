@@ -414,6 +414,23 @@
   .bi-btn-migrar:hover{background:#3d6aee}
   .bi-btn-migrar:disabled{background:var(--border);color:var(--text3);cursor:default}
   .bi-empty{text-align:center;padding:48px;color:var(--text3);font-size:14px}
+  .bi-card{cursor:pointer}
+  .bi-card:hover .bi-name{color:var(--accent)}
+  /* Drawer lateral lead BaseImob */
+  #biDrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:var(--bg2,var(--surface));border-left:1px solid var(--border);z-index:1200;overflow-y:auto;box-shadow:-10px 0 40px rgba(0,0,0,.5);transform:translateX(100%);transition:transform .28s cubic-bezier(.16,1,.3,1)}
+  #biDrawer.open{transform:translateX(0)}
+  #biDrawerOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1199}
+  .bi-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2,var(--surface));z-index:1}
+  .bi-drawer-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;transition:color .15s}
+  .bi-drawer-close:hover{color:var(--text)}
+  .bi-drawer-body{padding:20px 22px 32px}
+  .bi-drawer-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+  .bi-drawer-val{font-size:14px;color:var(--text);margin-bottom:16px}
+  .bi-imovel-row{display:grid;grid-template-columns:22px 1fr auto;align-items:start;gap:10px;padding:11px 14px;border-radius:10px;background:var(--surface2,rgba(255,255,255,.03));border:1px solid var(--border);margin-bottom:8px}
+  .bi-imovel-rank{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--accent);line-height:1;text-align:center}
+  .bi-imovel-invest{font-size:13px;font-weight:700;color:var(--text)}
+  .bi-imovel-sub{font-size:11px;color:var(--text3);margin-top:2px}
+  .bi-imovel-pct{font-size:12px;font-weight:700;text-align:right;white-space:nowrap}
 
   /* ── ADM ── */
   .adm-table{width:100%;border-collapse:collapse}
@@ -3386,6 +3403,10 @@ async function carregarLeadsBaseimob() {
 function renderLeadsBaseimob(leads) {
   const pendentes = leads.filter(l => l.tipo_contato !== 'MIGRADO CONTATOS');
 
+  // Popula mapa global para o drawer acessar sem serializar JSON no onclick
+  _biLeadsMap = {};
+  pendentes.forEach(l => { _biLeadsMap[l.idCliente] = l; });
+
   const badge = document.getElementById('badgeBaseimob');
   if (pendentes.length > 0) {
     badge.textContent = pendentes.length;
@@ -3401,32 +3422,24 @@ function renderLeadsBaseimob(leads) {
   }
 
   document.getElementById('bi-lista').innerHTML = pendentes.map(l => {
-    const score    = parseInt(l.score) || 0;
-    const scoreCls = score >= 70 ? 'score-hot' : score >= 50 ? 'score-warm' : 'score-cold';
-    const tags     = (l.tags || '').split(',').map(t => t.trim()).filter(Boolean);
-    const tagsHtml = tags.map(t => `<span class="tag-chip tag-default">${t}</span>`).join('');
-    const wppTel   = String(l.telefone || '').replace(/\D/g, '');
-    const partes   = [
-      l.canal       ? `📡 ${l.canal}` : '',
-      l.quartos     ? `${l.quartos} qtos` : '',
-      l.precoLimite ? `até R$ ${l.precoLimite}` : ''
-    ].filter(Boolean);
+    const wppTel  = String(l.telefone || '').replace(/\D/g, '');
+    const nImoveis = l.qtdEncontrados || l.qtdInteresse || '';
+    const canal   = l.canal ? `📡 ${l.canal}` : '';
+    const subInfo = [canal, nImoveis ? `${nImoveis} imóveis compatíveis` : ''].filter(Boolean).join(' · ');
 
     return `
-    <div class="bi-card" id="bicard_${l.idCliente}">
+    <div class="bi-card" id="bicard_${l.idCliente}" onclick="abrirDetalheLeadBI('${l.idCliente}')">
       <div class="bi-avatar">${(l.nome || '?')[0].toUpperCase()}</div>
       <div class="bi-info">
-        <div class="bi-name">${l.nome || 'Sem nome'}${score ? `<span class="match-score ${scoreCls}" style="float:none;margin-left:8px">${score}</span>` : ''}</div>
-        <div class="bi-sub">${partes.join(' · ') || 'Sem detalhes'}</div>
-        ${l.email    ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">✉️ ${l.email}</div>` : ''}
-        ${l.telefone ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📞 ${l.telefone}</div>` : ''}
-        ${l.idsInteresse ? `<div class="bi-ofertas">🔖 Interesses: ${l.idsInteresse}</div>` : ''}
-        ${tagsHtml ? `<div class="bi-tags">${tagsHtml}</div>` : ''}
-        <div style="font-size:11px;color:var(--text3);margin-top:6px">📅 ${l.dataCadastro || '—'}</div>
+        <div class="bi-name">${l.nome || 'Sem nome'}</div>
+        <div class="bi-sub">${subInfo || 'Clique para ver detalhes'}</div>
+        ${l.telefone ? `<div style="font-size:12px;color:var(--text3);margin-top:3px">📞 ${l.telefone}</div>` : ''}
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">📅 ${l.dataCadastro || '—'}</div>
       </div>
-      <div class="bi-actions">
-        ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬 WPP</a>` : ''}
-        <button class="bi-btn bi-btn-migrar" onclick="migrarLead('${l.idCliente}', this)">Migrar →</button>
+      <div class="bi-actions" onclick="event.stopPropagation()">
+        ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬</a>` : ''}
+        <button class="bi-btn" style="background:var(--surface2,var(--border));color:var(--text2);font-size:11px"
+          onclick="abrirDetalheLeadBI('${l.idCliente}')">Ver ›</button>
       </div>
     </div>`;
   }).join('');
@@ -3490,6 +3503,135 @@ verificarLeadsPendentes();
 var _secaoInicial = new URLSearchParams(location.search).get('secao');
 if (_secaoInicial === 'baseimob') mostrarBaseImob();
 if (_secaoInicial === 'adm')      mostrarAdm();
+</script>
+
+<!-- ═══ DRAWER: detalhe lead BaseImob ═══ -->
+<div id="biDrawerOverlay" onclick="fecharDrawerBI()"></div>
+<div id="biDrawer">
+  <div class="bi-drawer-header">
+    <div>
+      <div id="biDrawerNome" style="font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;color:var(--text)">—</div>
+      <div id="biDrawerSub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+    </div>
+    <button class="bi-drawer-close" onclick="fecharDrawerBI()">✕</button>
+  </div>
+  <div class="bi-drawer-body">
+    <!-- Ações rápidas -->
+    <div id="biDrawerAcoes" style="display:flex;gap:10px;margin-bottom:20px"></div>
+    <!-- Dados -->
+    <div id="biDrawerDados"></div>
+    <!-- Ranking de imóveis -->
+    <div id="biDrawerImoveis"></div>
+    <!-- Botão migrar -->
+    <div id="biDrawerMigrar" style="margin-top:24px"></div>
+  </div>
+</div>
+
+<script>
+// ── Drawer BaseImob ────────────────────────────────────────────────────────
+var _biLeadsMap = {};  // idCliente → lead object
+
+function abrirDetalheLeadBI(idCliente) {
+  const l = _biLeadsMap[idCliente];
+  if (!l) return;
+
+  const wppTel = String(l.telefone || '').replace(/\D/g, '');
+  const fmtBRL = v => Number(v).toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 });
+
+  // Cabeçalho
+  document.getElementById('biDrawerNome').textContent = l.nome || 'Sem nome';
+  document.getElementById('biDrawerSub').textContent  = `📅 ${l.dataCadastro || '—'}  ·  ${l.canal || ''}`;
+
+  // Ações rápidas
+  document.getElementById('biDrawerAcoes').innerHTML = `
+    ${wppTel ? `<a href="https://wa.me/55${wppTel}" target="_blank"
+      style="flex:1;text-align:center;padding:10px;border-radius:10px;background:#25d366;color:#fff;font-size:13px;font-weight:600;text-decoration:none">
+      💬 WhatsApp</a>` : ''}
+    <button onclick="migrarLeadBI('${idCliente}',this)" id="btnMigrarBI_${idCliente}"
+      style="flex:1;padding:10px;border-radius:10px;background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer">
+      Migrar → Contatos</button>`;
+
+  // Dados principais
+  let tags = [];
+  try { const t = JSON.parse(l.tags || '{}'); tags = Object.entries(t).map(([k,v]) => `${k}: ${Array.isArray(v) ? v.join('–') : v}`); } catch(e) { tags = String(l.tags||'').split(',').map(s=>s.trim()).filter(Boolean); }
+
+  document.getElementById('biDrawerDados').innerHTML = `
+    <div class="bi-drawer-label">Telefone</div>
+    <div class="bi-drawer-val">${l.telefone || '—'}</div>
+    ${l.email ? `<div class="bi-drawer-label">E-mail</div><div class="bi-drawer-val">${l.email}</div>` : ''}
+    ${tags.length ? `<div class="bi-drawer-label">Perfil buscado</div><div class="bi-drawer-val" style="font-size:13px">${tags.join(' · ')}</div>` : ''}
+    <div class="bi-drawer-label">Qtd. compatíveis</div>
+    <div class="bi-drawer-val">${l.qtdEncontrados || l.qtdInteresse || '—'} imóveis</div>`;
+
+  // Ranking de imóveis (armazenado em obs como JSON)
+  let ranking = [];
+  try { ranking = JSON.parse(l.obs || '[]'); } catch(e) {}
+
+  if (ranking.length) {
+    const rows = ranking.map(r => {
+      const pctColor = r.pctOferta >= 60 ? '#6FCF97' : r.pctOferta >= 30 ? 'var(--accent)' : '#E05A3A';
+      return `
+      <div class="bi-imovel-row">
+        <div class="bi-imovel-rank">${r.rank}</div>
+        <div>
+          <div class="bi-imovel-invest">${r.investimento ? fmtBRL(r.investimento) : '—'}</div>
+          <div class="bi-imovel-sub">${r.metragem || '—'}  ·  ${fmtBRL(r.precoM2 || 0)}/m²</div>
+        </div>
+        <div class="bi-imovel-pct" style="color:${pctColor}">${r.pctOferta ?? '–'}%<br>
+          <span style="font-size:9px;color:var(--text3);font-weight:400">oferta</span></div>
+      </div>`;
+    }).join('');
+    document.getElementById('biDrawerImoveis').innerHTML = `
+      <div style="border-top:1px solid var(--border);padding-top:18px;margin-top:4px">
+        <div class="bi-drawer-label" style="margin-bottom:12px">🏘 Ranking de imóveis compatíveis</div>
+        ${rows}
+      </div>`;
+  } else {
+    document.getElementById('biDrawerImoveis').innerHTML = '';
+  }
+
+  document.getElementById('biDrawerMigrar').innerHTML = '';
+
+  // Abre o drawer
+  document.getElementById('biDrawer').classList.add('open');
+  document.getElementById('biDrawerOverlay').style.display = 'block';
+}
+
+function fecharDrawerBI() {
+  document.getElementById('biDrawer').classList.remove('open');
+  document.getElementById('biDrawerOverlay').style.display = 'none';
+}
+
+async function migrarLeadBI(idCliente, btn) {
+  if (!confirm('Migrar este lead para CONTATOS?\n\nEle entrará no motor de matching com os imóveis de interesse já pré-preenchidos.')) return;
+  btn.disabled = true; btn.textContent = 'Migrando...';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'migrar_lead_baseimob', idCliente, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method:'POST', body:fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      btn.textContent = '✅ Migrado';
+      btn.style.background = 'var(--accent2)';
+      const card = document.getElementById('bicard_' + idCliente);
+      if (card) { card.style.opacity = '0.45'; card.style.pointerEvents = 'none'; }
+      if (r.idClienteNovo) {
+        document.getElementById('biDrawerMigrar').innerHTML =
+          `<div style="font-size:13px;color:var(--accent2);font-weight:600;text-align:center">✅ Cadastrado como ${r.idClienteNovo}</div>`;
+      }
+    } else if (r.erro === 'email_ja_existe') {
+      alert('E-mail já existe em CONTATOS. Verifique antes de migrar.');
+      btn.disabled = false; btn.textContent = 'Migrar → Contatos';
+    } else {
+      alert('Erro: ' + (r.msg || r.erro || JSON.stringify(r)));
+      btn.disabled = false; btn.textContent = 'Migrar → Contatos';
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Migrar → Contatos';
+  }
+}
 </script>
 </body>
 </html>

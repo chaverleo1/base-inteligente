@@ -582,14 +582,19 @@ async function submitCaptura() {
     telefone:     whatsLead,
     qtdInteresse: ranking.length,
     idsInteresse: ranking.map(c => c.id).join(', '),
-    rankingDetalhado: JSON.stringify(ranking.slice(0,5).map((c,i) => ({
-      rank:     i+1,
-      regiao:   c.regiao,
-      metragem: `${c.metragemMin}-${c.metragemMax}m²`,
-      precoM2:  c.precoM2,
-      compat:   c.score,
-      tracao:   Math.round(c.tracao * 10) / 10,
-    }))),
+    rankingDetalhado: JSON.stringify(ranking.slice(0,5).map((c,i) => {
+      const avgM2 = (c.metragemMin + c.metragemMax) / 2 || c.metragemMin || 250;
+      return {
+        rank:        i+1,
+        regiao:      c.regiao,
+        metragem:    `${c.metragemMin}–${c.metragemMax} m²`,
+        precoM2:     c.precoM2,
+        investimento: Math.round(avgM2 * c.precoM2),
+        pctOferta:   c.total > 0 ? Math.round(c.disponivel / c.total * 100) : 0,
+        compat:      c.score,
+        tracao:      Math.round(c.tracao * 10) / 10,
+      };
+    })),
     tags:         JSON.stringify({ faixaMetragem: metragemRange, precoM2Alvo: precoM2 }),
     canal:        'BaseImob Funil Lote',
     tipo_contato: 'LEAD QUENTE',

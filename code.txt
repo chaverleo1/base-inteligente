@@ -3457,27 +3457,58 @@ function salvarLeadLancamento_(d) {
 // Dispara notificação pro corretor. NUNCA toca a aba CONTATOS.
 function salvarInteresse_(d) {
   d = d || {};
-  var email = String(d.email || '').trim().toLowerCase();
+  var email    = String(d.email    || '').trim().toLowerCase();
+  var telefone = String(d.telefone || '').trim().replace(/\D/g, '');
+  var agora    = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
 
-  var idCliente = '';
-  if (email) {
-    var abaLeads = obterAbaLeadsLancamentos_();
-    var lr = abaLeads.getLastRow();
-    if (lr >= 2) {
-      var idxEmail = CABECALHO_LEADS_LANCAMENTOS.indexOf('email');
-      var idxId    = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
-      var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
-      for (var i = 0; i < dados.length; i++) {
-        if (String(dados[i][idxEmail] || '').trim().toLowerCase() === email) {
-          idCliente = dados[i][idxId];
-          break;
-        }
+  // --- Upsert em LEADS_LANCAMENTOS para que o lead apareça no dashboard ---
+  var abaLeads       = obterAbaLeadsLancamentos_();
+  var lr             = abaLeads.getLastRow();
+  var idCliente      = '';
+  var linhaExistente = -1;
+
+  if (lr >= 2) {
+    var idxEmailLL = CABECALHO_LEADS_LANCAMENTOS.indexOf('email');
+    var idxTelLL   = CABECALHO_LEADS_LANCAMENTOS.indexOf('telefone');
+    var idxIdLL    = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+    var dadosLL    = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+    for (var i = 0; i < dadosLL.length; i++) {
+      var rowEmail = String(dadosLL[i][idxEmailLL] || '').trim().toLowerCase();
+      var rowTel   = String(dadosLL[i][idxTelLL]   || '').trim().replace(/\D/g, '');
+      if ((email && rowEmail === email) || (telefone && rowTel === telefone)) {
+        idCliente       = String(dadosLL[i][idxIdLL] || '');
+        linhaExistente  = i + 2; // 1-indexed, +1 para cabeçalho
+        break;
       }
     }
   }
 
+  var idxObs = CABECALHO_LEADS_LANCAMENTOS.indexOf('obs') + 1; // 1-based para setValues
+  if (linhaExistente > 0) {
+    // Atualiza rankingDetalhado na coluna obs do lead existente
+    if (d.rankingDetalhado) abaLeads.getRange(linhaExistente, idxObs).setValue(d.rankingDetalhado);
+  } else {
+    // Novo lead vindo do funil — gera ID e cria linha em LEADS_LANCAMENTOS
+    idCliente = 'BIF-' + agora.replace(/[^0-9]/g, '').slice(0, 12);
+    var novaLinha = CABECALHO_LEADS_LANCAMENTOS.map(function(col) {
+      if (col === 'dataCadastro')   return agora;
+      if (col === 'email')          return email || '';
+      if (col === 'nome')           return d.nome || '';
+      if (col === 'telefone')       return d.telefone || '';
+      if (col === 'canal')          return d.canal || '';
+      if (col === 'tipo_contato')   return d.tipo_contato || 'LEAD QUENTE';
+      if (col === 'score')          return d.score || 0;
+      if (col === 'tags')           return d.tags || '';
+      if (col === 'obs')            return d.rankingDetalhado || '';
+      if (col === 'qtdEncontrados') return d.qtdInteresse || 0;
+      if (col === 'idCliente')      return idCliente;
+      return '';
+    });
+    abaLeads.appendRow(novaLinha);
+  }
+
+  // --- Salva em INTERESSES (histórico de cada interesse do lead) ---
   var aba   = obterAbaInteresses_();
-  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
   var linha = CABECALHO_INTERESSES.map(function(col) {
     if (col === 'dataCadastro') return agora;
     if (col === 'idCliente')    return idCliente;
