@@ -3841,11 +3841,10 @@ function enviarEmailNovoLeadImobzi_(lead) {
 // ── Sincroniza leads novos da API Imobzi (polling) ────────────────────────────
 // Chamada manual pelo ADM ou por trigger de tempo (a cada 10 min)
 function sincronizarLeadsImobzi_() {
-  var props  = PropertiesService.getScriptProperties();
-  var secret = props.getProperty('IMOBZI_SECRET');
-  if (!secret) return { ok: false, erro: 'IMOBZI_SECRET nao configurado — acesse Apps Script > Propriedades do projeto e adicione a chave' };
+  var secret;
+  try { secret = obterImobziToken_(); } catch(e) { return { ok: false, erro: e.message }; }
 
-  var url  = 'https://api.imobzi.app/v1/leads';
+  var url  = IMOBZI_BASE + '/leads';
   var opts = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
 
   var resp;
