@@ -3724,26 +3724,24 @@ async function admAcao(acao, btn) {
 }
 
 async function syncImobziManual(btn) {
-  const orig = btn.textContent;
+  const orig = btn.dataset.orig || btn.textContent;
   btn.disabled = true; btn.textContent = '⟳ Sincronizando...';
   const status = document.getElementById('admStatus_sincronizar_imobzi');
   try {
-    const fd = new FormData();
-    fd.append('dados', JSON.stringify({ acao: 'sincronizar_imobzi', token: tokenSessao() }));
-    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_sincronizar_imobzi&token=' + encodeURIComponent(tokenSessao()));
     const r    = await resp.json();
     if (trataNaoAutenticado(r)) return;
-    if (r.ok) {
-      status.textContent = `✅ ${r.novos} novo(s) · ${r.duplicados} já existiam`;
-      status.style.color = 'var(--accent2)';
-      if (r.novos > 0) carregarLeadsImobzi();
+    if (r.status === 'ok') {
+      status.textContent = '✔ ' + (r.msg || 'ok');
+      status.className = 'adm-status adm-ok';
+      if (r.msg && r.msg.indexOf('0 novos') === -1) carregarLeadsImobzi();
     } else {
-      status.textContent = '❌ ' + (r.erro || JSON.stringify(r));
-      status.style.color = '#e05a3a';
+      status.textContent = '✖ ' + (r.motivo || r.erro || JSON.stringify(r));
+      status.className = 'adm-status adm-err';
     }
   } catch(e) {
-    status.textContent = '❌ ' + e.message;
-    status.style.color = '#e05a3a';
+    status.textContent = '✖ ' + e.message;
+    status.className = 'adm-status adm-err';
   }
   btn.disabled = false; btn.textContent = orig;
 }
