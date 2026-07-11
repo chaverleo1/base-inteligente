@@ -625,7 +625,22 @@
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px">
             <span id="matchDetailClientCod" style="font-size:11px;color:var(--text3)"></span>
             <span id="matchDetailClientTel" style="font-size:11px;color:var(--text2);display:none"></span>
-            <span id="matchDetailPipelineBadge" style="display:none;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px"></span>
+          </div>
+          <div style="margin-top:6px">
+            <select id="matchPipelineSelect" onchange="mudarPipelineDash(this)"
+              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2);
+                     font-size:12px;font-family:'Inter',sans-serif;padding:4px 8px;cursor:pointer;
+                     outline:none;width:100%;display:none">
+              <option value="">— Estágio —</option>
+              <option value="Pré-Atendimento">Pré-Atendimento</option>
+              <option value="Potencial">Potencial</option>
+              <option value="Agendar Visita">Agendar Visita</option>
+              <option value="Pós-Visita">Pós-Visita</option>
+              <option value="Fechamento">Fechamento</option>
+              <option value="Urgentes">Urgentes</option>
+              <option value="Ganhos">Ganhos</option>
+              <option value="Perda">Perda</option>
+            </select>
           </div>
           <div style="margin-top:10px">
             <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px">Total de imóveis identificados</div>
@@ -2114,6 +2129,39 @@ const PIP_COLORS_DASH = {
   'Ganhos':'#1a9ed4','Perda':'#5a5a68'
 };
 
+function _aplicarCorPipelineSelect(sel, pipeline) {
+  const cor = pipeline ? (PIP_COLORS_DASH[pipeline] || '#8892aa') : '#8892aa';
+  sel.style.color       = cor;
+  sel.style.borderColor = cor + '66';
+}
+
+async function mudarPipelineDash(sel) {
+  const cod      = sel.dataset.cod;
+  const pipeline = sel.value;
+  if (!cod) return;
+  _aplicarCorPipelineSelect(sel, pipeline);
+  // Atualiza o badge ao lado
+  const pipEl = document.getElementById('matchDetailPipelineBadge');
+  if (pipEl && pipeline) {
+    const cor = PIP_COLORS_DASH[pipeline] || 'var(--text3)';
+    pipEl.textContent   = pipeline;
+    pipEl.style.cssText = `display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;background:${cor}22;color:${cor};border:1px solid ${cor}55`;
+  } else if (pipEl) {
+    pipEl.style.display = 'none';
+  }
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ acao: 'salvar_pipeline', idCliente: cod, pipeline, token: tokenSessao() })
+    });
+    const r = await resp.json();
+    mostrarToast(r.ok ? '✅ Estágio atualizado' : '⚠️ Erro ao salvar estágio');
+  } catch(e) {
+    mostrarToast('⚠️ Erro de conexão');
+  }
+}
+
 async function selecionarCliente(cod, nome) {
   const headerEl     = document.getElementById('matchDetailHeader');
   const nameEl       = document.getElementById('matchDetailClientName');
@@ -2129,8 +2177,10 @@ async function selecionarCliente(cod, nome) {
   const telEl = document.getElementById('matchDetailClientTel');
   if (nameEl)    nameEl.textContent     = nome || '—';
   if (codEl)     codEl.textContent      = cod  ? '#' + cod : '';
+  const pipSelEl = document.getElementById('matchPipelineSelect');
   if (telEl)     { telEl.textContent = ''; telEl.style.display = 'none'; }
   if (pipEl)     pipEl.style.display    = 'none';
+  if (pipSelEl)  { pipSelEl.value = ''; pipSelEl.style.display = 'none'; pipSelEl.dataset.cod = cod; }
   if (editBtn)   { editBtn.removeAttribute('href'); editBtn.style.opacity = '0.4'; editBtn.style.pointerEvents = 'none'; }
   if (headerEl)  headerEl.style.display = 'flex';
   if (countEl)   countEl.textContent    = '…';
@@ -2154,6 +2204,11 @@ async function selecionarCliente(cod, nome) {
       if (c) {
         const tel = c.telefone || c.tel || '';
         if (tel && telEl) { telEl.textContent = tel; telEl.style.display = ''; }
+        if (pipSelEl) {
+          pipSelEl.value        = c.pipeline || '';
+          pipSelEl.style.display = '';
+          _aplicarCorPipelineSelect(pipSelEl, c.pipeline);
+        }
         if (c.pipeline && pipEl) {
           const cor = PIP_COLORS_DASH[c.pipeline] || 'var(--text3)';
           pipEl.textContent   = c.pipeline;
