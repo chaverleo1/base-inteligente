@@ -638,7 +638,7 @@ function doPost(e) {
   var contents = e.postData ? e.postData.contents : '';
   // LOG TEMPORÁRIO — salva payload bruto para diagnóstico do webhook Imobzi
   try {
-    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var ss   = SpreadsheetApp.openById(SHEET_ID);
     var logAba = ss.getSheetByName('WEBHOOK_LOG') || ss.insertSheet('WEBHOOK_LOG');
     if (logAba.getLastRow() === 0) logAba.appendRow(['timestamp','contentType','body']);
     logAba.appendRow([
@@ -3844,15 +3844,27 @@ function salvarLeadImobziDeal_(payload) {
   var titulo    = String(deal.title || '').trim();
   var parsed    = parseTituloDeal_(titulo);
 
+  // Imóvel de interesse: site → properties_captured; portais → properties_presented (reference_code)
+  var propArr_ = (Array.isArray(deal.properties_captured) && deal.properties_captured.length)
+                 ? deal.properties_captured
+                 : (Array.isArray(deal.properties_presented) ? deal.properties_presented : []);
+  var propObj_ = propArr_[0] || {};
+  var codigoImovel = String(propObj_.reference_code || propObj_.code || propObj_.advertiser_code
+                            || propObj_.reference || deal.property_code || '').trim();
+  var nomeImovel   = String(propObj_.title || propObj_.name || titulo).trim();
+  var precoImovel  = Number(propObj_.price || propObj_.sale_price || deal.value) || 0;
+  var tipoImovel   = String(propObj_.type || propObj_.property_type || '').trim() || parsed.tipo;
+  var bairroIm     = String(propObj_.neighborhood || propObj_.bairro || '').trim() || parsed.local;
+
   var flat = {
     nome: nome, email: email, telefone: tel,
-    codigoImovel: '',
-    nomeImovel:  titulo,
-    precoImovel: Number(deal.value) || 0,
-    tipoImovel:  parsed.tipo,
-    bairro:      parsed.local,
-    finalidade:  final,
-    mensagem:    String(deal.description || '').trim(),
+    codigoImovel: codigoImovel,
+    nomeImovel:   nomeImovel,
+    precoImovel:  precoImovel,
+    tipoImovel:   tipoImovel,
+    bairro:       bairroIm,
+    finalidade:   final,
+    mensagem:     String(deal.description || '').trim(),
     idLeadImobzi: idDeal, canal: canal
   };
   return salvarLeadImobzi_(flat);
@@ -4048,15 +4060,26 @@ function sincronizarLeadsImobzi_() {
       var titulo   = String(deal.title || '').trim();
       var parsed   = parseTituloDeal_(titulo);
 
+      var propArr_ = (Array.isArray(deal.properties_captured) && deal.properties_captured.length)
+                     ? deal.properties_captured
+                     : (Array.isArray(deal.properties_presented) ? deal.properties_presented : []);
+      var propObj_ = propArr_[0] || {};
+      var codIm_   = String(propObj_.reference_code || propObj_.code || propObj_.advertiser_code
+                            || propObj_.reference || '').trim();
+      var nomeIm_  = String(propObj_.title || propObj_.name || titulo).trim();
+      var precoIm_ = Number(propObj_.price || propObj_.sale_price || deal.value) || 0;
+      var tipoIm_  = String(propObj_.type || propObj_.property_type || '').trim() || parsed.tipo;
+      var bairroI_ = String(propObj_.neighborhood || propObj_.bairro || '').trim() || parsed.local;
+
       var d_ = {
         nome: nome, email: email, telefone: tel,
-        codigoImovel: '',
-        nomeImovel:  titulo,
-        precoImovel: Number(deal.value) || 0,
-        tipoImovel:  parsed.tipo,
-        bairro:      parsed.local,
-        finalidade:  final,
-        mensagem:    String(deal.description || '').trim(),
+        codigoImovel: codIm_,
+        nomeImovel:   nomeIm_,
+        precoImovel:  precoIm_,
+        tipoImovel:   tipoIm_,
+        bairro:       bairroI_,
+        finalidade:   final,
+        mensagem:     String(deal.description || '').trim(),
         canal: canal, idLeadImobzi: idDeal
       };
       var r = salvarLeadImobzi_(d_);
@@ -4092,6 +4115,22 @@ function debugDealsImobzi() {
   // 2) Deals recentes sem filtro (ver estrutura bruta)
   var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?limit=2', opts);
   Logger.log('/deals?limit=2 [' + r2.getResponseCode() + ']: ' + r2.getContentText().substring(0, 3000));
+}
+
+// Debug: busca deal específico por ID e loga properties_captured + properties_presented
+function debugDealById(dealId) {
+  var secret = obterImobziToken_();
+  var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
+  var r      = UrlFetchApp.fetch(IMOBZI_BASE + '/deal/' + dealId, opts);
+  var txt    = r.getContentText();
+  Logger.log('deal/' + dealId + ' [' + r.getResponseCode() + ']: ' + txt.substring(0, 5000));
+  try {
+    var d = JSON.parse(txt).deal || JSON.parse(txt);
+    Logger.log('properties_captured: ' + JSON.stringify(d.properties_captured));
+    Logger.log('properties_presented: ' + JSON.stringify(d.properties_presented));
+    Logger.log('title: ' + d.title);
+    Logger.log('value: ' + d.value);
+  } catch(e) { Logger.log('parse error: ' + e); }
 }
 
 // Debug legado — mantido para referência
