@@ -365,9 +365,8 @@ function calcTracaoScore(c) {
   const maxP = precos.length ? Math.max(...precos) : c.precoM2;
   const disp  = c.total > 0 ? (c.disponivel / c.total) * 10 : 5;
   const trac  = c.total > 0 ? ((c.total - c.disponivel) / c.total) * 10 : 5;
-  const acess = ({'Em planta':10,'Pré-Lançamento':10,'Em obras':7,'Pronto':3,'Entregue':1})[c.status] ?? 5;
   const atrat = (maxP === minP) ? 5 : 10 * (1 - (c.precoM2 - minP) / (maxP - minP));
-  return disp * 0.3333 + acess * 0.3333 + atrat * 0.2222 + trac * 0.1111;
+  return disp * 0.50 + atrat * 0.333 + trac * 0.167;
 }
 
 async function carregarLotes() {
