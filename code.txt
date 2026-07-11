@@ -659,7 +659,11 @@ function doPost(e) {
   if (d.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(d));
   if (d.acao === 'interesse_lancamento') return ok(salvarInteresse_(d));
   // Imobzi webhook — público (vem do sistema externo sem sessão).
-  // O Imobzi NÃO envia campo 'acao'; detectar pelo contact_type ou cellphone.
+  // Negócio (Deal): Imobzi envia {event:"deal_created", deal:{...}}
+  if (d.event === 'deal_created' || d.event === 'deal_updated' || (d.deal && d.deal.db_id)) {
+    return ok(salvarLeadImobziDeal_(d));
+  }
+  // Legado: payload de contato direto (contact_type=lead) ou acao manual
   if (d.acao === 'receber_lead_imobzi' || d.contact_type === 'lead' || d.cellphone) {
     return ok(salvarLeadImobzi_(d));
   }
@@ -3776,6 +3780,66 @@ function salvarLeadImobzi_(d) {
   return { ok: true, statusBase: statusBase, jaExisteEmBase: statusBase === 'JÁ NA BASE', idClienteBase: idClienteBase };
 }
 
+// Processa payload de webhook deal_created / deal_updated do Imobzi.
+// Estrutura: { event: "deal_created", deal: { db_id, contact:{fullname,email,cellphone,phones[]},
+//   responsible:{email,...}, property:{code,name,...}, media_source, created_at, ... } }
+function salvarLeadImobziDeal_(payload) {
+  var deal = payload.deal || payload;
+  var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
+  var CONTA_IMOBZI   = 'leonardoviana@lidderimobiliaria.com.br';
+
+  // Filtro de conta: responsável pelo deal
+  var resp       = deal.responsible || deal.manager || {};
+  var respUser   = resp.user || resp;
+  var respEmail  = String(respUser.email || respUser.login || respUser.username || '').trim().toLowerCase();
+  var respId     = String(deal.responsible_id || deal.manager_id || respUser.db_id || '').trim();
+  // Aceita se: email bate, OU db_id bate, OU nenhum dos dois foi informado
+  var temResponsavel = respEmail || respId;
+  if (temResponsavel) {
+    var emailOk = respEmail && respEmail === CONTA_IMOBZI;
+    var idOk    = respId    && respId    === RESPONSAVEL_ID;
+    if (!emailOk && !idOk) {
+      return { ok: false, ignorado: true, motivo: 'deal de outro responsavel: ' + (respEmail || respId) };
+    }
+  }
+
+  // Extrai dados do contato dentro do deal
+  var contato = deal.contact || deal.person || {};
+  var nome    = String(contato.fullname || contato.name || deal.contact_name || '').trim();
+  var email   = String(contato.email    || deal.contact_email || '').trim().toLowerCase();
+
+  // Telefone: cellphone.number OU phones[] OU campo flat
+  var cel_    = contato.cellphone || {};
+  var phones_ = Array.isArray(contato.phones) ? contato.phones : [];
+  var tel     = String(cel_.number || (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || deal.contact_phone || '').replace(/\D/g,'');
+
+  var msg     = String(deal.message || deal.description || contato.message || '').trim();
+  var idDeal  = String(deal.db_id || deal.deal_id || deal.id || '').trim();
+  var canal   = String(deal.media_source || deal.source || contato.media_source || 'Imobzi').trim();
+
+  // Imóvel de interesse dentro do deal
+  var prop    = deal.property || deal.properties_interest || {};
+  if (Array.isArray(prop)) prop = prop[0] || {};
+  var codIm   = String(prop.reference || prop.code || prop.codigo || deal.property_code || '').trim();
+  var nomeIm  = String(prop.name      || prop.address || deal.property_name || '').trim();
+  var precoIm = Number(prop.price     || prop.value   || deal.property_value || 0);
+  var tipoIm  = String(prop.type      || prop.category || deal.property_type || '').trim();
+  var bairro  = String(prop.neighborhood || prop.bairro || deal.property_neighborhood || '').trim();
+  var final   = String(prop.usage     || prop.finalidade || deal.property_usage || '').trim();
+
+  if (!nome) return { ok: false, erro: 'deal sem nome de contato' };
+
+  // Monta objeto flat e reutiliza salvarLeadImobzi_ que já tem dedup + append
+  var flat = {
+    nome: nome, email: email, telefone: tel, mensagem: msg,
+    idLeadImobzi: idDeal, canal: canal,
+    codigoImovel: codIm, nomeImovel: nomeIm,
+    precoImovel:  precoIm, tipoImovel: tipoIm,
+    bairro: bairro, finalidade: final
+  };
+  return salvarLeadImobzi_(flat);
+}
+
 function enviarEmailNovoLeadImobzi_(lead) {
   var ADMIN_EMAIL = 'chaverleo@mail.com';
   var preco = Number(lead.precoImovel) || 0;
@@ -3877,8 +3941,8 @@ function enviarEmailNovoLeadImobzi_(lead) {
   MailApp.sendEmail({ to: ADMIN_EMAIL, subject: assunto, htmlBody: html });
 }
 
-// ── Sincroniza leads novos da API Imobzi (polling) ────────────────────────────
-// Chamada manual pelo ADM ou por trigger de tempo (a cada 10 min)
+// ── Sincroniza Negócios (Deals) novos da API Imobzi (polling) ─────────────────
+// Chamada manual pelo ADM ou por trigger de tempo (a cada 5 min)
 function sincronizarLeadsImobzi_() {
   var secret;
   try { secret = obterImobziToken_(); } catch(e) { return { ok: false, erro: e.message }; }
@@ -3886,71 +3950,72 @@ function sincronizarLeadsImobzi_() {
   var headers = { 'X-Imobzi-Secret': secret };
   var novos = 0, duplic = 0, totalVisto = 0;
 
-  // Janela de 30 dias — contatos criados antes disso não são novos leads
-  var corteMs = Date.now() - (30 * 24 * 60 * 60 * 1000);
-
-  // db_id do usuário leonardoviana@ na API Imobzi (obtido via /users?user_email=...).
-  // Filtro responsible_id garante somente leads atribuídos ao Leonardo, independente
-  // de outros agentes da Lidder que compartilham o mesmo database.
   var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
-  var CONTA   = 'leonardoviana@lidderimobiliaria.com.br';
-  var filtros = ['lead'];
-  filtros.forEach(function(tipo) {
-    var cursor = null;
-    var pagina = 0;
-    do {
-      var url = IMOBZI_BASE + '/contacts?contact_type=' + tipo + '&responsible_id=' + RESPONSAVEL_ID + '&limit=' + IMOBZI_LIMIT;
-      if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
-      var resp;
-      try { resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true }); }
-      catch(e) { break; }
-      if (resp.getResponseCode() !== 200) break;
+  var CONTA = 'leonardoviana@lidderimobiliaria.com.br';
 
-      var data;
-      try { data = JSON.parse(resp.getContentText()); } catch(e) { break; }
+  var cursor = null, pagina = 0;
+  do {
+    var url = IMOBZI_BASE + '/deals?responsible_id=' + RESPONSAVEL_ID + '&limit=' + IMOBZI_LIMIT;
+    if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+    var resp;
+    try { resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true }); }
+    catch(e) { break; }
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('sincronizarLeadsImobzi_ /deals erro ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0,300));
+      break;
+    }
 
-      var contatos = Array.isArray(data) ? data : (data.contacts || []);
-      cursor = data.cursor || null;
-      pagina++;
-      contatos.forEach(function(l) {
-        // Filtra pelo responsável: só processa contatos cujo manager seja a conta correta.
-        // Se não houver manager definido, aceita (contato ainda não atribuído).
-        var mgr      = (l.manager && l.manager.user) ? l.manager.user : {};
-        var mgrEmail = String(mgr.email || mgr.login || mgr.username || '').trim().toLowerCase();
-        if (mgrEmail && mgrEmail !== CONTA) return;
+    var data;
+    try { data = JSON.parse(resp.getContentText()); } catch(e) { break; }
 
-        // Para contact_type=all, só processa contatos criados nos últimos 30 dias
-        if (tipo === 'all') {
-          var criadoMs = l.created_at ? new Date(l.created_at).getTime() : 0;
-          if (criadoMs < corteMs) return;
-        }
-        totalVisto++;
-        var phones_ = Array.isArray(l.phones) ? l.phones : [];
-        var tel     = (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '';
-        var emailVal = (Array.isArray(l.emails) && l.emails[0]) ? l.emails[0] : (l.email || '');
-        var props_   = Array.isArray(l.properties) ? l.properties : [];
-        var p0       = props_[0] || {};
-        var d_ = {
-          nome:         l.fullname || l.name || '',
-          email:        emailVal,
-          telefone:     tel,
-          codigoImovel: p0.reference || p0.code || '',
-          nomeImovel:   p0.name || '',
-          precoImovel:  p0.price || 0,
-          tipoImovel:   p0.type || '',
-          bairro:       p0.neighborhood || '',
-          finalidade:   p0.usage || '',
-          mensagem:     l.message || '',
-          canal:        l.media_source || 'Imobzi',
-          idLeadImobzi: l.contact_id || l.db_id || l.code || '',
-        };
-        var r = salvarLeadImobzi_(d_);
-        if (r && r.duplicado) duplic++; else novos++;
-      });
+    var deals = Array.isArray(data) ? data : (data.deals || data.data || []);
+    cursor = (data && data.cursor) || null;
+    pagina++;
 
-      // Sem cursor = última página
-    } while (cursor && pagina < 20);
-  });
+    deals.forEach(function(deal) {
+      // Confirma que o responsável é o Leonardo (double-check além do filtro da URL)
+      var resp_      = deal.responsible || deal.manager || {};
+      var respUser_  = resp_.user || resp_;
+      var respEmail_ = String(respUser_.email || respUser_.login || '').trim().toLowerCase();
+      var respId_    = String(deal.responsible_id || deal.manager_id || '').trim();
+      if ((respEmail_ && respEmail_ !== CONTA) && (respId_ && respId_ !== RESPONSAVEL_ID)) return;
+
+      totalVisto++;
+
+      // Contato dentro do deal
+      var contato = deal.contact || deal.person || {};
+      var nome    = String(contato.fullname || contato.name || deal.contact_name || '').trim();
+      if (!nome) return;
+
+      var email   = String(contato.email    || deal.contact_email || '').trim().toLowerCase();
+      var cel_    = contato.cellphone || {};
+      var phones_ = Array.isArray(contato.phones) ? contato.phones : [];
+      var tel     = String(cel_.number || (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '').replace(/\D/g,'');
+      var idDeal  = String(deal.db_id || deal.deal_id || deal.id || '').trim();
+      var canal   = String(deal.media_source || contato.media_source || 'Imobzi').trim();
+
+      var prop    = deal.property || deal.properties_interest || {};
+      if (Array.isArray(prop)) prop = prop[0] || {};
+      var codIm   = String(prop.reference || prop.code   || '').trim();
+      var nomeIm  = String(prop.name      || prop.address || '').trim();
+      var precoIm = Number(prop.price     || prop.value   || 0);
+      var tipoIm  = String(prop.type      || prop.category || '').trim();
+      var bairro  = String(prop.neighborhood || '').trim();
+      var final   = String(prop.usage     || '').trim();
+
+      var d_ = {
+        nome: nome, email: email, telefone: tel,
+        codigoImovel: codIm, nomeImovel: nomeIm,
+        precoImovel: precoIm, tipoImovel: tipoIm,
+        bairro: bairro, finalidade: final,
+        mensagem: String(deal.message || deal.description || '').trim(),
+        canal: canal, idLeadImobzi: idDeal
+      };
+      var r = salvarLeadImobzi_(d_);
+      if (r && r.duplicado) duplic++; else novos++;
+    });
+
+  } while (cursor && pagina < 20);
 
   return { ok: true, novos: novos, duplicados: duplic, total: totalVisto };
 }
@@ -3962,55 +4027,38 @@ function rodarSyncImobziTrigger() {
 
 // Roda UMA VEZ no editor para instalar o trigger de 5 minutos.
 // Após isso, leads novos do Imobzi chegam automaticamente a cada 5 min.
-// Roda no editor para ver o que a API retorna — diagnóstico
+// Debug: sonda a API de Deals e loga estrutura dos primeiros resultados
+function debugDealsImobzi() {
+  var secret = obterImobziToken_();
+  var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
+  var RESPONSAVEL_ID = 'pFdAIcTEWta4I3476I4HkjMWaul1';
+
+  // 1) Deals sem filtro (ver estrutura)
+  var r1 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?limit=3', opts);
+  Logger.log('/deals?limit=3 [' + r1.getResponseCode() + ']: ' + r1.getContentText().substring(0, 2000));
+
+  // 2) Deals filtrado pelo responsável
+  var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?responsible_id=' + RESPONSAVEL_ID + '&limit=5', opts);
+  Logger.log('/deals?responsible_id [' + r2.getResponseCode() + ']: ' + r2.getContentText().substring(0, 2000));
+
+  // 3) Tenta variações de endpoint caso /deals não exista
+  var alts = ['/negocios', '/pipeline/deals', '/pipelines/deals'];
+  alts.forEach(function(ep) {
+    var r = UrlFetchApp.fetch(IMOBZI_BASE + ep + '?limit=1', opts);
+    if (r.getResponseCode() !== 404) {
+      Logger.log(ep + ' [' + r.getResponseCode() + ']: ' + r.getContentText().substring(0, 500));
+    }
+  });
+}
+
+// Debug legado — mantido para referência
 function debugSyncImobzi() {
   var secret = obterImobziToken_();
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
-  var base   = IMOBZI_BASE;
+  var RESPONSAVEL_ID = 'pFdAIcTEWta4I3476I4HkjMWaul1';
 
-  // 1) Perfil do usuário autenticado → pega o db_id
-  var rProfile = UrlFetchApp.fetch(base + '/user/profile', opts);
-  Logger.log('/user/profile [' + rProfile.getResponseCode() + ']: ' + rProfile.getContentText().substring(0, 500));
-
-  // 2) Lista de usuários filtrando pelo email → pega db_id
-  var rUser = UrlFetchApp.fetch(base + '/users?user_email=leonardoviana%40lidderimobiliaria.com.br', opts);
-  var userId = '';
-  try {
-    var du = JSON.parse(rUser.getContentText());
-    var users = Array.isArray(du) ? du : (du.users || []);
-    Logger.log('users por email → total: ' + users.length);
-    users.forEach(function(u) { Logger.log('  ' + u.email + ' | db_id=' + u.db_id + ' | database=' + u.database); });
-    if (users[0]) userId = users[0].db_id;
-  } catch(e) { Logger.log('users err: ' + rUser.getContentText().substring(0,200)); }
-
-  // 3) Tenta filtrar contatos pelo db_id do usuário
-  if (userId) {
-    var eps = [
-      '/contacts?contact_type=lead&responsible_id=' + userId,
-      '/contacts?contact_type=lead&manager_id='     + userId,
-      '/contacts?contact_type=lead&user_id='        + userId,
-      '/contacts?responsible_id=' + userId + '&limit=3'
-    ];
-    eps.forEach(function(ep) {
-      var r = UrlFetchApp.fetch(base + ep, opts);
-      var d = JSON.parse(r.getContentText());
-      var arr = d.contacts || d;
-      Logger.log(ep + ' → ' + r.getResponseCode() + ' | total: ' + (Array.isArray(arr) ? arr.length : '?'));
-    });
-  }
-
-  // 4) Leads mais recentes (contact_type=all, últimas 24h) — ver se o lead de teste chegou
-  var r4 = UrlFetchApp.fetch(base + '/contacts?contact_type=all', opts);
-  try {
-    var d4  = JSON.parse(r4.getContentText());
-    var arr4 = d4.contacts || [];
-    var corte = Date.now() - (24 * 60 * 60 * 1000);
-    var recentes = arr4.filter(function(c) { return c.created_at && new Date(c.created_at).getTime() > corte; });
-    Logger.log('Criados nas últimas 24h: ' + recentes.length);
-    recentes.forEach(function(c) {
-      Logger.log('  ' + c.fullname + ' | tags=' + JSON.stringify(c.tags) + ' | source=' + c.media_source + ' | created=' + c.created_at);
-    });
-  } catch(e) {}
+  var r = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?contact_type=lead&responsible_id=' + RESPONSAVEL_ID + '&limit=5', opts);
+  Logger.log('/contacts?contact_type=lead [' + r.getResponseCode() + ']: ' + r.getContentText().substring(0,1000));
 }
 
 function instalarTriggerSyncImobzi() {
@@ -4056,7 +4104,7 @@ function registrarWebhookImobzi() {
   // Imobzi espera "events" (array), não "event" (string)
   var payload = JSON.stringify({
     url:    scriptUrl,
-    events: ['lead_created', 'lead_updated']
+    events: ['deal_created', 'deal_updated', 'lead_created', 'lead_updated']
   });
   var resp = UrlFetchApp.fetch(IMOBZI_BASE + '/webhooks', {
     method: 'post',
