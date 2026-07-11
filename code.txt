@@ -3883,52 +3883,71 @@ function sincronizarLeadsImobzi_() {
   var secret;
   try { secret = obterImobziToken_(); } catch(e) { return { ok: false, erro: e.message }; }
 
-  // Endpoint correto é /contacts (não /leads — retorna 400)
-  var url  = IMOBZI_BASE + '/contacts?contact_type=lead&limit=50';
-  var opts = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
+  var headers = { 'X-Imobzi-Secret': secret };
+  var novos = 0, duplic = 0, totalVisto = 0;
 
-  var resp;
-  try { resp = UrlFetchApp.fetch(url, opts); }
-  catch(e) { return { ok: false, erro: 'Erro de rede: ' + e.message }; }
+  // Janela de 30 dias — contatos criados antes disso não são novos leads
+  var corteMs = Date.now() - (30 * 24 * 60 * 60 * 1000);
 
-  if (resp.getResponseCode() !== 200) {
-    return { ok: false, erro: 'Imobzi retornou ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0,300) };
-  }
+  // Busca em duas passagens:
+  //  1) contact_type=lead  (leads de portais/formulários)
+  //  2) contact_type=all   (cobre contatos adicionados manualmente)
+  // A verificação de duplicidade por contact_id em salvarLeadImobzi_ evita
+  // gravar o mesmo contato duas vezes.
+  var filtros = ['lead', 'all'];
+  filtros.forEach(function(tipo) {
+    var cursor = null;
+    var pagina = 0;
+    do {
+      var url = IMOBZI_BASE + '/contacts?contact_type=' + tipo + '&limit=' + IMOBZI_LIMIT;
+      if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
+      var resp;
+      try { resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true }); }
+      catch(e) { break; }
+      if (resp.getResponseCode() !== 200) break;
 
-  var data;
-  try { data = JSON.parse(resp.getContentText()); } catch(e) { return { ok: false, erro: 'JSON inválido' }; }
+      var data;
+      try { data = JSON.parse(resp.getContentText()); } catch(e) { break; }
 
-  // Imobzi retorna {contacts:[...]}
-  var leads = Array.isArray(data) ? data : (data.contacts || data.leads || []);
+      var contatos = Array.isArray(data) ? data : (data.contacts || []);
+      cursor = data.cursor || null;
+      pagina++;
 
-  var novos = 0, duplic = 0;
-  leads.forEach(function(l) {
-    // Imobzi usa phones[] array, não cellphone{}
-    var phones_ = Array.isArray(l.phones) ? l.phones : [];
-    var tel     = (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '';
-    // Imobzi usa emails[] array ou email string
-    var emailVal = (Array.isArray(l.emails) && l.emails[0]) ? l.emails[0] : (l.email || '');
-    var props_   = Array.isArray(l.properties) ? l.properties : [];
-    var p0       = props_[0] || {};
-    var d_ = {
-      nome:         l.fullname || l.name || '',
-      email:        emailVal,
-      telefone:     tel,
-      codigoImovel: p0.reference || p0.code || p0.codigo || '',
-      nomeImovel:   p0.name || p0.nome || '',
-      precoImovel:  p0.price || p0.valor || p0.valorVenda || 0,
-      tipoImovel:   p0.type || p0.tipo || '',
-      bairro:       p0.neighborhood || p0.bairro || '',
-      finalidade:   p0.usage || p0.finalidade || '',
-      mensagem:     l.message || l.mensagem || '',
-      canal:        l.media_source || 'Imobzi',
-      idLeadImobzi: l.contact_id || l.db_id || l.code || '',
-    };
-    var r = salvarLeadImobzi_(d_);
-    if (r.duplicado) duplic++; else novos++;
+      contatos.forEach(function(l) {
+        // Para contact_type=all, só processa contatos criados nos últimos 30 dias
+        if (tipo === 'all') {
+          var criadoMs = l.created_at ? new Date(l.created_at).getTime() : 0;
+          if (criadoMs < corteMs) return;
+        }
+        totalVisto++;
+        var phones_ = Array.isArray(l.phones) ? l.phones : [];
+        var tel     = (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '';
+        var emailVal = (Array.isArray(l.emails) && l.emails[0]) ? l.emails[0] : (l.email || '');
+        var props_   = Array.isArray(l.properties) ? l.properties : [];
+        var p0       = props_[0] || {};
+        var d_ = {
+          nome:         l.fullname || l.name || '',
+          email:        emailVal,
+          telefone:     tel,
+          codigoImovel: p0.reference || p0.code || '',
+          nomeImovel:   p0.name || '',
+          precoImovel:  p0.price || 0,
+          tipoImovel:   p0.type || '',
+          bairro:       p0.neighborhood || '',
+          finalidade:   p0.usage || '',
+          mensagem:     l.message || '',
+          canal:        l.media_source || 'Imobzi',
+          idLeadImobzi: l.contact_id || l.db_id || l.code || '',
+        };
+        var r = salvarLeadImobzi_(d_);
+        if (r && r.duplicado) duplic++; else novos++;
+      });
+
+      // Sem cursor = última página
+    } while (cursor && pagina < 20);
   });
 
-  return { ok: true, novos: novos, duplicados: duplic, total: leads.length };
+  return { ok: true, novos: novos, duplicados: duplic, total: totalVisto };
 }
 
 // Acionado pelo trigger de tempo — não precisa de token
