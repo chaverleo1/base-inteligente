@@ -3440,6 +3440,8 @@ function renderLeadsBaseimob(leads) {
         ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬</a>` : ''}
         <button class="bi-btn" style="background:var(--surface2,var(--border));color:var(--text2);font-size:11px"
           onclick="abrirDetalheLeadBI('${l.idCliente}')">Ver ›</button>
+        <button class="bi-btn" style="background:#3a1a1a;color:#e05a3a;font-size:13px" title="Excluir lead"
+          onclick="excluirLeadBI('${l.idCliente}',this)">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -3630,6 +3632,35 @@ async function migrarLeadBI(idCliente, btn) {
   } catch(e) {
     alert('Erro de conexão: ' + e.message);
     btn.disabled = false; btn.textContent = 'Migrar → Contatos';
+  }
+}
+
+async function excluirLeadBI(idCliente, btn) {
+  const l = _biLeadsMap[idCliente];
+  const nome = l ? (l.nome || 'este lead') : 'este lead';
+  if (!confirm(`Excluir "${nome}" permanentemente?\n\nEsta ação não pode ser desfeita.`)) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'excluir_lead_baseimob', idCliente, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      const card = document.getElementById('bicard_' + idCliente);
+      if (card) card.remove();
+      delete _biLeadsMap[idCliente];
+      // atualiza badge
+      const restantes = Object.keys(_biLeadsMap).length;
+      const badge = document.getElementById('badgeBaseimob');
+      if (badge) { badge.textContent = restantes; if (!restantes) badge.style.display = 'none'; }
+    } else {
+      alert('Erro ao excluir: ' + (r.erro || JSON.stringify(r)));
+      btn.disabled = false; btn.textContent = '🗑';
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+    btn.disabled = false; btn.textContent = '🗑';
   }
 }
 </script>

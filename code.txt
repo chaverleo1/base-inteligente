@@ -646,6 +646,7 @@ function doPost(e) {
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
+  if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
   if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
   if (d.acao === 'adicionar_favorito')    return ok(adicionarFavorito_(d));
   if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
@@ -3608,6 +3609,25 @@ function listarLeadsBaseimob_() {
 // — Pré-preenche produtoOrigem com os idOfertas que o lead marcou em
 //   INTERESSES, para o motor de matching já ter uma pista do produto certo.
 // — Marca o lead em LEADS_LANCAMENTOS como "MIGRADO CONTATOS".
+function excluirLeadBaseimob_(d) {
+  var idCliente = String(d.idCliente || '').trim();
+  if (!idCliente) return { ok: false, erro: 'idCliente obrigatorio' };
+
+  var aba  = obterAbaLeadsLancamentos_();
+  var lr   = aba.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'lead nao encontrado' };
+
+  var idxId = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][idxId]) === idCliente) {
+      aba.deleteRow(i + 2);
+      return { ok: true };
+    }
+  }
+  return { ok: false, erro: 'lead nao encontrado' };
+}
+
 function migrarLeadBaseimob_(d) {
   var idCliente = String(d.idCliente || '').trim();
   if (!idCliente) return { ok: false, erro: 'idCliente obrigatorio' };
