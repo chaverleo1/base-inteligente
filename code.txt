@@ -3820,8 +3820,8 @@ function buscarImovelRevenda_(codigo) {
   return null;
 }
 
-// Busca imóveis afins na REVENDA com base em bairro, tipo e preço.
-// Retorna até 6 imóveis ordenados por score (tipo match +40, bairro +30, preço ±20% +30).
+// Busca imóveis afins na REVENDA com base em tipo, bairro e preço.
+// Ordena por proximidade de preço (diff absoluta); exige ao menos tipo ou bairro coincidente.
 function buscarAfinsImovelRevenda_(cod, bairro, tipo, preco) {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('REVENDA');
@@ -3839,18 +3839,14 @@ function buscarAfinsImovelRevenda_(cod, bairro, tipo, preco) {
     var rBairro = norm(obj.bairro);
     var rCond   = norm(obj.condominio);
     var rPreco  = Number(String(obj.valorVenda||'').replace(/\D/g,'')) || 0;
-    var score   = 0;
-    if (nTipo   && (rTipo === nTipo || rTipo.indexOf(nTipo) >= 0 || nTipo.indexOf(rTipo) >= 0)) score += 40;
-    if (nBairro && (rBairro.indexOf(nBairro) >= 0 || rCond.indexOf(nBairro) >= 0 ||
-                    nBairro.indexOf(rBairro) >= 0)) score += 30;
-    if (preco && rPreco) {
-      var diff = Math.abs(rPreco - preco) / Math.max(rPreco, preco);
-      if (diff <= 0.20) score += 30;
-      else if (diff <= 0.40) score += 15;
-    }
-    if (score > 0) results.push({ obj: obj, score: score });
+    var tipoOk   = nTipo   && (rTipo === nTipo || rTipo.indexOf(nTipo) >= 0 || nTipo.indexOf(rTipo) >= 0);
+    var bairroOk = nBairro && (rBairro.indexOf(nBairro) >= 0 || rCond.indexOf(nBairro) >= 0 || nBairro.indexOf(rBairro) >= 0);
+    if (!tipoOk && !bairroOk) return; // exige ao menos tipo ou bairro compatível
+    // Diff de preço: 0 = idêntico, 1 = sem preço em algum lado (ordena no fim)
+    var priceDiff = (preco && rPreco) ? Math.abs(rPreco - preco) / Math.max(rPreco, preco) : 1;
+    results.push({ obj: obj, priceDiff: priceDiff });
   });
-  results.sort(function(a, b) { return b.score - a.score; });
+  results.sort(function(a, b) { return a.priceDiff - b.priceDiff; });
   return results.slice(0, 6).map(function(r) {
     var o = r.obj;
     return {
@@ -3868,7 +3864,7 @@ function buscarAfinsImovelRevenda_(cod, bairro, tipo, preco) {
       imoFoto:       String(o.foto       || '').trim(),
       imoUrl:        String(o.urlSite    || '').trim(),
       fonte:         'REVENDA',
-      scoreMatch:    r.score
+      scoreMatch:    Math.round((1 - r.priceDiff) * 100)
     };
   });
 }
