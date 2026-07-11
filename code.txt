@@ -4129,21 +4129,40 @@ function rodarSyncImobziTrigger() {
   try { sincronizarLeadsImobzi_(); } catch(e) { Logger.log('Sync Imobzi falhou: ' + e); }
 }
 
-// Roda UMA VEZ no editor para instalar o trigger de 5 minutos.
-// Após isso, leads novos do Imobzi chegam automaticamente a cada 5 min.
-// Debug: sonda a API de Deals — GET /v1/deals (doc: user_id para filtrar por corretor)
+// Debug: inspeciona estrutura de campos de imóvel no primeiro deal recente
 function debugDealsImobzi() {
   var secret = obterImobziToken_();
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
   var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
 
-  // 1) Deals filtrado pelo user_id (conforme documentação /v1/deals)
-  var r1 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?user_id=' + RESPONSAVEL_ID + '&limit=3', opts);
-  Logger.log('/deals?user_id [' + r1.getResponseCode() + ']: ' + r1.getContentText().substring(0, 3000));
+  var r = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?user_id=' + RESPONSAVEL_ID + '&limit=5', opts);
+  Logger.log('status: ' + r.getResponseCode());
+  var data;
+  try { data = JSON.parse(r.getContentText()); } catch(e) { Logger.log('parse error: ' + e); return; }
 
-  // 2) Deals recentes sem filtro (ver estrutura bruta)
-  var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?limit=2', opts);
-  Logger.log('/deals?limit=2 [' + r2.getResponseCode() + ']: ' + r2.getContentText().substring(0, 3000));
+  // Coleta o primeiro deal de qualquer stage
+  var primeiroDeal = null;
+  var IGNORAR = ['cursor_all_stages','total_pages','total_values','total_deals'];
+  Object.keys(data).forEach(function(key) {
+    if (IGNORAR.indexOf(key) >= 0 || primeiroDeal) return;
+    var stage = data[key];
+    if (stage && Array.isArray(stage.deals) && stage.deals.length) {
+      primeiroDeal = stage.deals[0];
+    }
+  });
+
+  if (!primeiroDeal) { Logger.log('Nenhum deal encontrado'); return; }
+
+  Logger.log('=== DEAL: ' + primeiroDeal.db_id + ' | title: ' + primeiroDeal.title + ' ===');
+  Logger.log('properties_captured:  ' + JSON.stringify(primeiroDeal.properties_captured));
+  Logger.log('properties_presented: ' + JSON.stringify(primeiroDeal.properties_presented));
+  Logger.log('field_values:         ' + JSON.stringify(primeiroDeal.field_values));
+  Logger.log('profile:              ' + JSON.stringify(primeiroDeal.profile));
+  Logger.log('deals_links:          ' + JSON.stringify(primeiroDeal.deals_links));
+  Logger.log('media_source:         ' + primeiroDeal.media_source);
+  Logger.log('value:                ' + primeiroDeal.value);
+  Logger.log('interest:             ' + primeiroDeal.interest);
+  Logger.log('contact.name:         ' + (primeiroDeal.contact && primeiroDeal.contact.name));
 }
 
 // Debug: busca deal específico por ID e loga properties_captured + properties_presented
