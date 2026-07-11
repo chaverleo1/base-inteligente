@@ -3813,6 +3813,27 @@ function buscarImovelRevenda_(codigo) {
   return null;
 }
 
+// Busca deal completo via /deal/{db_key} — único endpoint que retorna
+// properties_presented[0].property_code (a lista não inclui esse campo).
+function obterDealCompleto_(dbKey, secret) {
+  if (!dbKey || !secret) return null;
+  try {
+    var opts = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
+    var r    = UrlFetchApp.fetch(IMOBZI_BASE + '/deal/' + encodeURIComponent(dbKey), opts);
+    if (r.getResponseCode() !== 200) return null;
+    var data = JSON.parse(r.getContentText());
+    return data.deal || data;
+  } catch(e) { return null; }
+}
+
+// Extrai property_code do array properties_presented de um deal completo.
+function extrairCodigoImovel_(deal) {
+  var arr = Array.isArray(deal.properties_presented) ? deal.properties_presented : [];
+  if (!arr.length) arr = Array.isArray(deal.properties_captured) ? deal.properties_captured : [];
+  var p = arr[0] || {};
+  return String(p.property_code || p.reference_code || p.code || '').trim();
+}
+
 // Busca imóvel na REVENDA por tipo + local + valor quando o código não vem no deal.
 // A API de lista do Imobzi não retorna properties_captured/presented — usamos os
 // dados do título e value para identificar o imóvel por correspondência.
@@ -3897,17 +3918,10 @@ function salvarLeadImobziDeal_(payload) {
   var titulo    = String(deal.title || '').trim();
   var parsed    = parseTituloDeal_(titulo);
 
-  // A API de lista do Imobzi não retorna properties_captured/presented.
-  // Tenta extrair código de campos diretos do deal; se vazio, faz lookup
-  // na REVENDA por tipo + local + valor do título.
-  var propArr_ = (Array.isArray(deal.properties_captured) && deal.properties_captured.length)
-                 ? deal.properties_captured
-                 : (Array.isArray(deal.properties_presented) ? deal.properties_presented : []);
-  var propObj_     = propArr_[0] || {};
-  var codigoImovel = String(propObj_.reference_code || propObj_.code || propObj_.advertiser_code
-                            || propObj_.reference || deal.property_code || '').trim();
+  // Extrai property_code do payload do webhook (deal completo já vem com properties_presented)
+  var codigoImovel = extrairCodigoImovel_(deal);
 
-  // Lookup por código (se disponível); fallback por perfil (tipo + local + valor)
+  // Fallback: busca na REVENDA por tipo + local + valor se código ainda vazio
   var rev_ = buscarImovelRevenda_(codigoImovel)
           || buscarImovelPorPerfil_(parsed.tipo, parsed.local, Number(deal.value));
   if (rev_ && !codigoImovel) codigoImovel = String(rev_.codigo || '').trim();
@@ -4122,12 +4136,10 @@ function sincronizarLeadsImobzi_() {
       var titulo   = String(deal.title || '').trim();
       var parsed   = parseTituloDeal_(titulo);
 
-      var propArr_ = (Array.isArray(deal.properties_captured) && deal.properties_captured.length)
-                     ? deal.properties_captured
-                     : (Array.isArray(deal.properties_presented) ? deal.properties_presented : []);
-      var propObj_ = propArr_[0] || {};
-      var codIm_   = String(propObj_.reference_code || propObj_.code || propObj_.advertiser_code
-                            || propObj_.reference || '').trim();
+      // Lista não traz properties_presented — busca deal completo via db_key
+      var dbKey_  = String(deal.db_key || '').trim();
+      var full_   = dbKey_ ? obterDealCompleto_(dbKey_, secret) : null;
+      var codIm_  = extrairCodigoImovel_(full_ || deal);
 
       // Lookup por código; fallback por perfil (tipo + local + valor)
       var rev__   = buscarImovelRevenda_(codIm_)
