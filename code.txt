@@ -3783,7 +3783,16 @@ function salvarLeadImobzi_(d) {
     var leadObj = {};
     CABECALHO_LEADS_IMOBZI.forEach(function(c, i) { leadObj[c] = row[i]; });
     enviarEmailNovoLeadImobzi_(leadObj);
-  } catch(eEmail) { Logger.log('Email falhou: ' + eEmail); }
+  } catch(eEmail) {
+    Logger.log('Email falhou: ' + eEmail);
+    // Registra no WEBHOOK_LOG para diagnóstico
+    try {
+      var ssLog_ = SpreadsheetApp.openById(SHEET_ID);
+      var logAba_ = ssLog_.getSheetByName('WEBHOOK_LOG') || ssLog_.insertSheet('WEBHOOK_LOG');
+      logAba_.appendRow([Utilities.formatDate(new Date(),'America/Sao_Paulo','dd/MM/yyyy HH:mm:ss'),
+                         'EMAIL_ERRO', String(eEmail), JSON.stringify(leadObj).substring(0,300)]);
+    } catch(eLog_) {}
+  }
 
   return { ok: true, statusBase: statusBase, jaExisteEmBase: statusBase === 'JÁ NA BASE', idClienteBase: idClienteBase };
 }
@@ -3999,7 +4008,10 @@ function salvarLeadImobziDeal_(payload) {
 }
 
 function enviarEmailNovoLeadImobzi_(lead) {
-  var ADMIN_EMAIL = 'chaverleo@mail.com';
+  var props_      = PropertiesService.getScriptProperties();
+  var ADMIN_EMAIL = (props_.getProperty('ADMIN_EMAIL') || '').trim()
+                 || Session.getActiveUser().getEmail()
+                 || 'chaverleo@mail.com';
   var preco = Number(lead.precoImovel) || 0;
   var fmtBRL_ = function(v) {
     if (!v) return '—';
