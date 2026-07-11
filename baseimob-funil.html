@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Configure seu lote — BASE IMOB</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Consultoria de Lote — Líder Imóveis</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -25,6 +25,7 @@ html, body { margin: 0; background: #0F0D09; }
 .delay-3 { animation-delay: .26s; }
 .delay-4 { animation-delay: .38s; }
 .delay-5 { animation-delay: .52s; }
+.delay-6 { animation-delay: .68s; }
 
 .dual-thumb { height: 0; }
 .dual-thumb::-webkit-slider-thumb {
@@ -52,11 +53,36 @@ input[type=range] { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(201,169,110,.2); border-radius: 99px; }
 
 .hidden-tela { display: none; }
+
+/* Ranking */
+.rank-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.rank-row:last-child { border-bottom: none; }
+.rank-row.rank-top {
+  padding: 14px 14px;
+  margin: 0 -14px 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(201,169,110,.15);
+  background: linear-gradient(135deg, rgba(201,169,110,.07), rgba(201,169,110,.02));
+}
+.compat-bar-wrap { width: 52px; height: 3px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; margin-top: 3px; }
+.compat-bar-fill { height: 100%; border-radius: 99px; transition: width 1s cubic-bezier(.16,1,.3,1); }
+.tracao-badge {
+  display: inline-block; font-size: 8px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  background: rgba(201,169,110,.1); color: #C9A96E; padding: 1px 5px; border-radius: 99px;
+  border: 1px solid rgba(201,169,110,.18); margin-left: 4px; vertical-align: middle;
+}
 </style>
 </head>
 <body class="bg-[#0F0D09] text-[#EDE8DF]">
 
-<!-- Glow de fundo (compartilhado por todas as telas) -->
+<!-- Glow de fundo -->
 <div class="fixed inset-0 pointer-events-none overflow-hidden">
   <div class="absolute -top-40 -left-32 w-[36rem] h-[36rem] rounded-full bg-[#C9A96E]/[0.07] blur-[130px]"></div>
   <div class="absolute top-1/2 -right-40 w-[30rem] h-[30rem] rounded-full bg-[#7A9E78]/[0.05] blur-[120px]"></div>
@@ -68,23 +94,26 @@ input[type=range] { background: transparent; }
   <div class="relative w-full min-h-screen flex flex-col items-center px-5 py-10">
     <div class="w-full max-w-lg flex-1 flex flex-col">
 
-      <div class="anim-fadeUp text-center mb-10">
-        <p class="text-[10px] tracking-[0.28em] uppercase text-[#6B5F4C] mb-1">Base Imob · Goiânia</p>
-        <div class="w-6 h-px gold-line mx-auto"></div>
+      <!-- Identidade -->
+      <div class="anim-fadeUp text-center mb-8">
+        <p class="text-[10px] tracking-[0.28em] uppercase text-[#6B5F4C] mb-1">Líder Imóveis · Goiânia</p>
+        <div class="w-6 h-px gold-line mx-auto mb-1"></div>
+        <p class="text-[9px] tracking-[0.22em] uppercase text-[#3A3328]">1ª etapa da sua consultoria</p>
       </div>
 
-      <div class="text-center mb-8 anim-num">
-        <div class="text-[10px] tracking-[0.22em] uppercase text-[#6B5F4C] mb-3">
-          lotes compatíveis com o seu perfil
-        </div>
-        <div id="cnt-compativel" class="font-display leading-none text-[#C9A96E]" style="font-size:clamp(9rem, 40vw, 18rem); letter-spacing:-0.04em">0</div>
+      <!-- PRINCIPAL: investimento estimado -->
+      <div class="text-center mb-2 anim-num">
+        <div class="text-[10px] tracking-[0.22em] uppercase text-[#6B5F4C] mb-3">investimento estimado</div>
+        <div id="lbl-investimento-big" class="font-display text-[#C9A96E]"
+             style="font-size:clamp(3.2rem,16vw,6.5rem);letter-spacing:-0.03em;line-height:1">R$–</div>
       </div>
 
-      <div class="text-center mb-10 anim-fadeUp delay-1">
-        <h1 class="font-display text-2xl md:text-3xl mb-2 leading-snug">Configure o lote que você procura</h1>
-        <p id="config-hint" class="text-sm text-[#6B5F4C] leading-relaxed">Carregando lotes disponíveis...</p>
+      <!-- Secundário: opções compatíveis -->
+      <div class="text-center mb-8 anim-fadeUp delay-1">
+        <p id="cnt-compat-sub" class="text-sm text-[#6B5F4C]">Calculando opções...</p>
       </div>
 
+      <!-- Slider metragem -->
       <div class="bg-white/[0.03] border border-[#C9A96E]/[0.12] rounded-2xl p-7 mb-4 anim-fadeUp delay-2">
         <div class="flex justify-between items-baseline mb-5">
           <span class="text-sm font-medium text-[#A99B82]">Metragem do lote</span>
@@ -102,7 +131,8 @@ input[type=range] { background: transparent; }
         </div>
       </div>
 
-      <div class="bg-white/[0.03] border border-[#7A9E78]/[0.14] rounded-2xl p-7 mb-6 anim-fadeUp delay-3">
+      <!-- Slider preço/m² -->
+      <div class="bg-white/[0.03] border border-[#7A9E78]/[0.14] rounded-2xl p-7 mb-4 anim-fadeUp delay-3">
         <div class="flex justify-between items-baseline mb-5">
           <span class="text-sm font-medium text-[#A99B82]">Preço por m²</span>
           <span id="lbl-precom2" class="font-semibold text-[#7A9E78] tabular-nums">–/m²</span>
@@ -114,10 +144,9 @@ input[type=range] { background: transparent; }
         </div>
       </div>
 
-      <div class="text-center mb-8 anim-fadeUp delay-4">
-        <span class="text-xs text-[#4A4132] tracking-wide">Investimento estimado · </span>
-        <span id="lbl-investimento" class="text-sm font-medium text-[#EDE8DF]">–</span>
-      </div>
+      <p id="config-hint" class="text-xs text-center text-[#4A4132] mb-6 anim-fadeUp delay-4">
+        Carregando lotes disponíveis...
+      </p>
 
       <div class="flex-1"></div>
 
@@ -130,7 +159,7 @@ input[type=range] { background: transparent; }
           Ajuste as faixas para encontrar opções disponíveis.
         </p>
         <p class="text-center text-[10px] text-[#3A3328] mt-4 tracking-wide">
-          Atendimento exclusivo · Sem ligação surpresa
+          Consultoria exclusiva · Sem ligação surpresa
         </p>
       </div>
     </div>
@@ -141,20 +170,23 @@ input[type=range] { background: transparent; }
 <div id="tela-nome" class="hidden-tela min-h-screen w-full relative overflow-hidden">
   <div class="min-h-screen w-full flex flex-col items-center justify-center px-5 py-12 relative">
     <div class="w-full max-w-sm">
-      <button onclick="irPara('config')" class="flex items-center gap-2 text-sm text-[#8A7D66] hover:text-[#C9A96E] transition-all duration-200 self-start">
+      <button onclick="irPara('config')" class="flex items-center gap-2 text-sm text-[#8A7D66] hover:text-[#C9A96E] transition-all duration-200">
         <span class="text-base leading-none">←</span> Voltar
       </button>
       <div class="mt-10 mb-2">
         <p class="text-[10px] tracking-[0.24em] uppercase text-[#6B5F4C] mb-6">Quase lá</p>
         <h1 class="font-display text-4xl leading-tight mb-3">Como podemos<br><em>te chamar?</em></h1>
-        <p class="text-sm text-[#6B5F4C] leading-relaxed mb-10">Vamos personalizar a opção que mais combina com o seu perfil.</p>
+        <p class="text-sm text-[#6B5F4C] leading-relaxed mb-10">
+          Vamos personalizar o ranking de opções que mais combinam com o seu perfil.
+        </p>
       </div>
       <input id="input-nome" autofocus placeholder="Seu nome"
-        class="w-full bg-white/[0.03] border border-white/[0.08] focus:border-[#C9A96E]/50 rounded-xl px-4 py-4 text-lg text-[#EDE8DF] transition-all duration-200 mb-2">
+        class="w-full bg-white/[0.03] border border-white/[0.08] focus:border-[#C9A96E]/50 rounded-xl px-4 py-4 text-lg text-[#EDE8DF] transition-all duration-200 mb-2"
+        onkeydown="if(event.key==='Enter')submitNome()">
       <p id="err-nome" class="text-xs text-[#C9855A] mb-4 hidden-tela"></p>
       <button onclick="submitNome()"
         class="w-full bg-[#C9A96E] hover:bg-[#D9B87E] text-[#0F0D09] rounded-xl py-4 font-semibold text-base tracking-wide transition-all duration-300 mt-5">
-        Revelar minhas opções
+        Revelar meu ranking
       </button>
     </div>
   </div>
@@ -163,59 +195,47 @@ input[type=range] { background: transparent; }
 <!-- ═══ TELA: REVELADO ═══ -->
 <div id="tela-revelado" class="hidden-tela min-h-screen w-full relative overflow-hidden">
   <div class="w-full max-w-xl mx-auto px-5 py-10">
-    <button onclick="irPara('nome')" class="flex items-center gap-2 text-sm text-[#8A7D66] hover:text-[#C9A96E] transition-all duration-200 self-start">
+    <button onclick="irPara('nome')" class="flex items-center gap-2 text-sm text-[#8A7D66] hover:text-[#C9A96E] transition-all duration-200">
       <span class="text-base leading-none">←</span> Voltar
     </button>
 
-    <div class="mt-8 mb-10">
-      <p id="rev-para" class="text-[10px] tracking-[0.24em] uppercase text-[#6B5F4C] mb-4">Para você</p>
-      <h1 class="font-display text-3xl md:text-4xl leading-snug mb-3">
-        Encontramos o lote com maior<br><em>compatibilidade com o seu perfil</em>
-      </h1>
-      <div id="rev-linha-ouro" class="h-px gold-line mt-4"></div>
+    <div class="mt-8 mb-8">
+      <p class="text-[10px] tracking-[0.24em] uppercase text-[#6B5F4C] mb-4">Para você</p>
+      <h1 id="rev-titulo" class="font-display text-3xl md:text-4xl leading-snug mb-4">—</h1>
+      <div class="h-px gold-line"></div>
     </div>
 
-    <div class="bg-white/[0.025] border border-[#C9A96E]/[0.15] rounded-2xl overflow-hidden mb-6">
-      <div class="bg-gradient-to-br from-[#2A2215] to-[#1A1A10] px-7 pt-7 pb-6 border-b border-white/[0.05]">
-        <div class="flex items-start justify-between gap-4 mb-1">
-          <div>
-            <p id="rev-regiao" class="text-[10px] tracking-[0.2em] uppercase text-[#6B5F4C] mb-2">–</p>
-            <h2 id="rev-nome" class="font-display text-3xl text-[#EDE8DF] leading-tight">–</h2>
-          </div>
-          <div class="flex flex-col items-end gap-2 mt-1">
-            <span id="rev-padrao"></span>
-            <span id="rev-score" class="text-[11px] font-semibold text-[#7A9E78] tabular-nums bg-[#7A9E78]/10 px-2.5 py-1 rounded-full border border-[#7A9E78]/20">–</span>
-          </div>
+    <!-- Ranking tabular: top 5, sem nome de condomínio -->
+    <div class="bg-white/[0.025] border border-[#C9A96E]/[0.12] rounded-2xl overflow-hidden mb-5">
+      <!-- Cabeçalho da tabela -->
+      <div class="px-5 pt-5 pb-3 border-b border-white/[0.04]">
+        <div class="rank-row" style="padding:0;border:none;color:#3A3328;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase">
+          <span>#</span>
+          <span>Localização · Área</span>
+          <span style="text-align:right">R$/m²</span>
+          <span style="text-align:right">Compat.</span>
         </div>
       </div>
-
-      <div class="px-7 py-6">
-        <div id="rev-dados" class="grid grid-cols-2 gap-3 mb-6"></div>
-
-        <div id="rev-dispon-wrap" class="bg-white/[0.02] rounded-xl p-4 border border-white/[0.05] mb-6 hidden-tela">
-          <div class="flex justify-between items-baseline mb-2">
-            <span class="text-[10px] tracking-[0.18em] uppercase text-[#6B5F4C]">Disponibilidade</span>
-            <span id="rev-dispon-txt" class="text-[11px] font-semibold tracking-wide"></span>
-          </div>
-          <div class="h-[3px] w-full bg-white/[0.07] rounded-full overflow-hidden">
-            <div id="rev-dispon-bar" class="h-full rounded-full transition-all duration-700"></div>
-          </div>
-          <p id="rev-dispon-alerta" class="text-[10px] text-[#C9855A] mt-1.5 tracking-wide hidden-tela">Últimas unidades disponíveis</p>
-        </div>
-
-        <div id="rev-diferenciais-wrap" class="mb-2 hidden-tela">
-          <p class="text-[10px] tracking-[0.2em] uppercase text-[#4A4132] mb-3">Diferenciais</p>
-          <div id="rev-diferenciais" class="flex flex-col gap-2"></div>
-        </div>
-      </div>
+      <!-- Linhas do ranking -->
+      <div id="rev-ranking" class="px-5 pb-5 pt-3"></div>
     </div>
 
-    <p id="rev-outras" class="text-sm text-center text-[#6B5F4C] mb-6 hidden-tela"></p>
+    <!-- Destaques do 1º colocado -->
+    <div id="rev-difs-wrap" class="hidden-tela bg-white/[0.02] border border-white/[0.05] rounded-2xl px-6 py-5 mb-4">
+      <p class="text-[9px] tracking-[0.2em] uppercase text-[#4A4132] mb-3">Destaques do 1º colocado</p>
+      <div id="rev-difs" class="flex flex-col gap-2.5"></div>
+    </div>
 
+    <!-- Nota estratégica -->
+    <p class="text-xs text-[#3A3328] text-center mb-6 leading-relaxed">
+      Localização exata, condições de pagamento e plantas são apresentadas no atendimento exclusivo.
+    </p>
+
+    <!-- CTA -->
     <div class="bg-[#EDE8DF] text-[#0F0D09] rounded-2xl p-6">
       <p class="font-display text-xl mb-1 leading-snug">Condições de pagamento detalhadas</p>
       <p class="text-sm text-[#6B5F4C] mb-5 leading-relaxed">
-        Um corretor apresenta a tabela completa, fotos e planta do lote pelo WhatsApp.
+        Um consultor apresenta o ranking completo com localização exata, fotos e financiamento disponível pelo WhatsApp.
       </p>
       <button onclick="irPara('captura')"
         class="w-full bg-[#0F0D09] hover:bg-[#1F1C14] text-[#EDE8DF] rounded-xl py-4 font-medium text-base tracking-wide transition-all duration-300">
@@ -232,22 +252,23 @@ input[type=range] { background: transparent; }
 <div id="tela-captura" class="hidden-tela min-h-screen w-full relative overflow-hidden">
   <div class="min-h-screen w-full flex flex-col items-center justify-center px-5 py-12 relative">
     <div class="w-full max-w-sm">
-      <button onclick="irPara('revelado')" class="flex items-center gap-2 text-sm text-[#8A7D66] hover:text-[#C9A96E] transition-all duration-200 self-start">
+      <button onclick="irPara('revelado')" class="flex items-center gap-2 text-sm text-[#8A7D66] hover:text-[#C9A96E] transition-all duration-200">
         <span class="text-base leading-none">←</span> Voltar
       </button>
       <div class="mt-10">
         <p id="cap-titulo" class="text-[10px] tracking-[0.24em] uppercase text-[#6B5F4C] mb-4">Falta pouco</p>
         <h1 class="font-display text-4xl leading-tight mb-3">Para onde te<br><em>chamamos?</em></h1>
         <p class="text-sm text-[#6B5F4C] leading-relaxed mb-10">
-          Informe seu WhatsApp para receber a tabela de condições e as opções do seu perfil.
+          Informe seu WhatsApp para receber o ranking completo com localização e condições de cada opção.
         </p>
         <label class="text-[10px] tracking-[0.18em] uppercase text-[#4A4132] mb-2 block">WhatsApp</label>
         <input id="input-whats" autofocus placeholder="(62) 90000-0000"
-          class="w-full bg-white/[0.03] border border-white/[0.08] focus:border-[#C9A96E]/50 rounded-xl px-4 py-4 text-[#EDE8DF] text-base transition-all duration-200 mb-2">
+          class="w-full bg-white/[0.03] border border-white/[0.08] focus:border-[#C9A96E]/50 rounded-xl px-4 py-4 text-[#EDE8DF] text-base transition-all duration-200 mb-2"
+          onkeydown="if(event.key==='Enter')submitCaptura()">
         <p id="err-whats" class="text-xs text-[#C9855A] mb-2 hidden-tela"></p>
         <button id="btn-solicitar" onclick="submitCaptura()"
           class="w-full bg-[#7A9E78] hover:bg-[#8AB088] disabled:opacity-50 text-[#0F0D09] rounded-xl py-4 font-semibold text-base tracking-wide transition-all duration-300 mt-5">
-          Solicitar atendimento
+          Enviar meu ranking
         </button>
         <p class="text-[10px] text-[#3A3328] text-center mt-4 tracking-wide leading-relaxed">
           Atendimento personalizado · Sem spam · Sem ligações inesperadas
@@ -265,13 +286,17 @@ input[type=range] { background: transparent; }
       <p class="text-[10px] tracking-[0.24em] uppercase text-[#6B5F4C] mb-4">Confirmado</p>
       <h1 id="env-titulo" class="font-display text-4xl leading-tight mb-4">Prontinho</h1>
       <div class="w-8 h-px gold-line mx-auto mb-6"></div>
-      <p id="env-texto1" class="text-sm text-[#6B5F4C] leading-relaxed mb-2"></p>
-      <p class="text-sm text-[#4A4132] leading-relaxed mb-10">
-        Um corretor entra em contato pelo WhatsApp para apresentar as condições de pagamento e tirar todas as suas dúvidas.
+      <p id="env-texto1" class="text-sm text-[#A99B82] leading-relaxed mb-5"></p>
+      <p class="text-sm text-[#6B5F4C] leading-relaxed mb-8">
+        Em até <strong class="text-[#C9A96E] font-semibold">15 minutos</strong> um dos nossos consultores
+        vai te chamar no WhatsApp para agendar uma conversa rápida por vídeo — assim você vê o ranking
+        completo com localização exata e condições de pagamento.
       </p>
       <p id="env-erro" class="text-xs text-[#C9855A] mb-6 leading-relaxed hidden-tela">
         Cadastro confirmado, mas houve uma falha técnica ao registrar. Avise a equipe.
       </p>
+      <div class="h-px gold-line mb-6"></div>
+      <p class="text-[10px] tracking-[0.18em] uppercase text-[#3A3328] mb-5">Líder Imóveis · Goiânia</p>
       <button onclick="resetFunil()" class="text-xs text-[#4A4132] hover:text-[#6B5F4C] tracking-[0.16em] uppercase transition-colors duration-200">
         Fazer nova busca
       </button>
@@ -281,20 +306,6 @@ input[type=range] { background: transparent; }
 
 <script src="config.js"></script>
 <script>
-/* ═══════════════════════════════════════════════════════════════════
-   BASE IMOB — Configurador de Lote (fase 1: teste de interação com a
-   base real). Substitui o array CONDOS mockado do protótipo original
-   (baseimob-funil.jsx) por lançamentos reais: filtra unidades com
-   tipo === 'Lote Condomínio Horizontal' dentro de empreendimentos com
-   tipoEmpreendimento === 'Condomínio Horizontal', agrupadas por
-   idLancamento (mesmo agrupamento usado em lancamentos.html).
-
-   Dois campos do protótipo original (valorizacao/periodo, "12% ao ano")
-   não têm equivalente na base hoje — foram substituídos por "A partir
-   de" (menor preço real do grupo) até a fase de comunicação/design
-   decidir o que fazer com esse dado.
-   ═══════════════════════════════════════════════════════════════════ */
-
 const MATCH_THRESHOLD = 50;
 
 let CONDOS = [];
@@ -304,42 +315,49 @@ let metragemRange = [300, 500];
 let precoM2 = 1100;
 let nomeLead = '';
 let whatsLead = '';
-let compatible = [];
+let ranking = [];   // todos os compatíveis, ordenados
 let melhorLote = null;
-let outrasOpcoes = 0;
 
 function formatBRL(v) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 }
 
 function calcularM2Medio_(unidades) {
-  const m2s = unidades
-    .map(u => { const a = Number(u.areaTerr) || 0; const p = Number(u.precoMedio) || 0; return (a > 0 && p > 0) ? p / a : 0; })
+  const vals = unidades
+    .map(u => { const a = Number(u.areaTerr)||0; const p = Number(u.precoMedio)||0; return (a>0&&p>0)?p/a:0; })
     .filter(v => v > 0);
-  return m2s.length ? m2s.reduce((a, b) => a + b, 0) / m2s.length : 0;
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
 }
 
 function scoreCondo(condo, mRange, precoM2Alvo) {
-  const userMid = (mRange[0] + mRange[1]) / 2;
+  const userMid  = (mRange[0] + mRange[1]) / 2;
   const condoMid = (condo.metragemMin + condo.metragemMax) / 2;
-  const metragemDist = Math.abs(condoMid - userMid) / userMid;
-  const priceDist = Math.abs(condo.precoM2 - precoM2Alvo) / precoM2Alvo;
+  const mDist = Math.abs(condoMid - userMid) / userMid;
+  const pDist = Math.abs(condo.precoM2 - precoM2Alvo) / precoM2Alvo;
   const overlap = condo.metragemMax >= mRange[0] && condo.metragemMin <= mRange[1];
-  let score = 100 - metragemDist * 45 - priceDist * 45;
-  score += overlap ? 12 : -22;
-  return Math.max(0, Math.min(100, Math.round(score)));
+  let s = 100 - mDist * 45 - pDist * 45;
+  s += overlap ? 12 : -22;
+  return Math.max(0, Math.min(100, Math.round(s)));
 }
 
-// ── CARREGAR DADOS REAIS ─────────────────────────────────────────────
+// Score de Tração — mesma lógica do painel em lancamentos.html
+function calcTracaoScore(c) {
+  const precos = CONDOS.map(x => x.precoM2).filter(v => v > 0);
+  const minP = precos.length ? Math.min(...precos) : c.precoM2;
+  const maxP = precos.length ? Math.max(...precos) : c.precoM2;
+  const disp  = c.total > 0 ? (c.disponivel / c.total) * 10 : 5;
+  const trac  = c.total > 0 ? ((c.total - c.disponivel) / c.total) * 10 : 5;
+  const acess = ({'Em planta':10,'Pré-Lançamento':10,'Em obras':7,'Pronto':3,'Entregue':1})[c.status] ?? 5;
+  const atrat = (maxP === minP) ? 5 : 10 * (1 - (c.precoM2 - minP) / (maxP - minP));
+  return disp * 0.3333 + acess * 0.3333 + atrat * 0.2222 + trac * 0.1111;
+}
+
 async function carregarLotes() {
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
     const data = await resp.json();
     const linhas = data.lancamentos || [];
 
-    // Só empreendimentos "Condomínio Horizontal", só unidades "Lote
-    // Condomínio Horizontal" — mesmo par de filtros pedido: base de
-    // produtos "lote em condomínio" + tipo "Condomínios Horizontais".
     const grupos = {};
     linhas.forEach(l => {
       if (l.tipoEmpreendimento !== 'Condomínio Horizontal') return;
@@ -350,21 +368,22 @@ async function carregarLotes() {
     });
 
     CONDOS = Object.values(grupos).map(g => {
-      const areas  = g.unidades.map(u => Number(u.areaTerr) || 0).filter(a => a > 0);
-      const precos = g.unidades.map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(p => p > 0);
-      const lazer  = String(g.lazer || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
+      const areas  = g.unidades.map(u => Number(u.areaTerr)||0).filter(a => a > 0);
+      const precos = g.unidades.map(u => Number(u.precoMin)||Number(u.precoMedio)||0).filter(p => p > 0);
+      const lazer  = String(g.lazer||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,5);
       return {
-        id: g.idLancamento,
-        nome: g.nomeEmpreendimento || '—',
-        regiao: [g.bairro, g.cidade].filter(Boolean).join(' · ') || 'Goiânia',
-        padrao: g.padrao || '',
-        metragemMin: areas.length ? Math.min(...areas) : 0,
-        metragemMax: areas.length ? Math.max(...areas) : 0,
-        precoM2: calcularM2Medio_(g.unidades),
-        precoAPartir: precos.length ? Math.min(...precos) : 0,
-        disponivel: parseInt(g.estoque, 10) || 0,
-        total: parseInt(g.totalUnidades, 10) || 0,
-        diferenciais: lazer,
+        id:          g.idLancamento,
+        nome:        g.nomeEmpreendimento || '—',
+        regiao:      [g.bairro, g.cidade].filter(Boolean).join(' · ') || 'Goiânia',
+        padrao:      g.padrao   || '',
+        status:      g.status   || '',
+        metragemMin: areas.length  ? Math.min(...areas)  : 0,
+        metragemMax: areas.length  ? Math.max(...areas)  : 0,
+        precoM2:     calcularM2Medio_(g.unidades),
+        precoAPartir:precos.length ? Math.min(...precos) : 0,
+        disponivel:  parseInt(g.estoque,10)       || 0,
+        total:       parseInt(g.totalUnidades,10)  || 0,
+        diferenciais:lazer,
       };
     }).filter(c => c.metragemMin > 0 && c.precoM2 > 0);
 
@@ -372,25 +391,24 @@ async function carregarLotes() {
       const metrMins = CONDOS.map(c => c.metragemMin);
       const metrMaxs = CONDOS.map(c => c.metragemMax);
       const precos   = CONDOS.map(c => c.precoM2);
-      METRAGEM_BOUNDS = [Math.floor(Math.min(...metrMins) / 10) * 10, Math.ceil(Math.max(...metrMaxs) / 10) * 10];
-      PRECO_M2_BOUNDS = [Math.floor(Math.min(...precos) / 25) * 25, Math.ceil(Math.max(...precos) / 25) * 25];
+      METRAGEM_BOUNDS = [Math.floor(Math.min(...metrMins)/10)*10, Math.ceil(Math.max(...metrMaxs)/10)*10];
+      PRECO_M2_BOUNDS = [Math.floor(Math.min(...precos)/25)*25,   Math.ceil(Math.max(...precos)/25)*25];
       metragemRange = [METRAGEM_BOUNDS[0], METRAGEM_BOUNDS[1]];
       precoM2 = Math.round((PRECO_M2_BOUNDS[0] + PRECO_M2_BOUNDS[1]) / 2);
     }
 
     document.getElementById('config-hint').textContent = CONDOS.length
-      ? 'O número acima atualiza em tempo real conforme você ajusta.'
-      : 'Nenhum lote em condomínio horizontal cadastrado no momento.';
+      ? 'O investimento estimado atualiza em tempo real conforme você ajusta.'
+      : 'Nenhum lote em condomínio horizontal disponível no momento.';
 
     inicializarSliders();
     recalcularMatch();
-  } catch (e) {
-    document.getElementById('config-hint').textContent = 'Erro ao carregar lotes disponíveis — tente recarregar a página.';
+  } catch(e) {
+    document.getElementById('config-hint').textContent = 'Erro ao carregar lotes — tente recarregar a página.';
     console.error('Erro ao carregar lançamentos:', e);
   }
 }
 
-// ── SLIDERS ───────────────────────────────────────────────────────────
 function inicializarSliders() {
   const sLo = document.getElementById('sldr-metragem-lo');
   const sHi = document.getElementById('sldr-metragem-hi');
@@ -407,25 +425,20 @@ function inicializarSliders() {
 
   document.getElementById('lbl-metragem-min').textContent = METRAGEM_BOUNDS[0] + ' m²';
   document.getElementById('lbl-metragem-max').textContent = METRAGEM_BOUNDS[1] + ' m²';
-  document.getElementById('lbl-precom2-min').textContent = formatBRL(PRECO_M2_BOUNDS[0]) + '/m²';
-  document.getElementById('lbl-precom2-max').textContent = formatBRL(PRECO_M2_BOUNDS[1]) + '/m²';
+  document.getElementById('lbl-precom2-min').textContent  = formatBRL(PRECO_M2_BOUNDS[0]) + '/m²';
+  document.getElementById('lbl-precom2-max').textContent  = formatBRL(PRECO_M2_BOUNDS[1]) + '/m²';
 
   sLo.addEventListener('input', () => {
-    const step = 10;
-    metragemRange[0] = Math.min(+sLo.value, metragemRange[1] - step);
+    metragemRange[0] = Math.min(+sLo.value, metragemRange[1] - 10);
     sLo.value = metragemRange[0];
     atualizarUiMetragem();
   });
   sHi.addEventListener('input', () => {
-    const step = 10;
-    metragemRange[1] = Math.max(+sHi.value, metragemRange[0] + step);
+    metragemRange[1] = Math.max(+sHi.value, metragemRange[0] + 10);
     sHi.value = metragemRange[1];
     atualizarUiMetragem();
   });
-  sP.addEventListener('input', () => {
-    precoM2 = +sP.value;
-    atualizarUiPreco();
-  });
+  sP.addEventListener('input', () => { precoM2 = +sP.value; atualizarUiPreco(); });
 
   atualizarUiMetragem();
   atualizarUiPreco();
@@ -433,11 +446,11 @@ function inicializarSliders() {
 
 function atualizarUiMetragem() {
   const [min, max] = METRAGEM_BOUNDS;
-  const pctLo = ((metragemRange[0] - min) / (max - min)) * 100;
-  const pctHi = ((metragemRange[1] - min) / (max - min)) * 100;
+  const pctLo = ((metragemRange[0]-min)/(max-min))*100;
+  const pctHi = ((metragemRange[1]-min)/(max-min))*100;
   const track = document.getElementById('track-metragem');
-  track.style.left = pctLo + '%';
-  track.style.right = (100 - pctHi) + '%';
+  track.style.left  = pctLo + '%';
+  track.style.right = (100-pctHi) + '%';
   document.getElementById('lbl-metragem').textContent = `${metragemRange[0]}–${metragemRange[1]} m²`;
   recalcularMatch();
 }
@@ -447,51 +460,42 @@ function atualizarUiPreco() {
   recalcularMatch();
 }
 
-// ── MATCH ─────────────────────────────────────────────────────────────
 function recalcularMatch() {
-  const ranked = CONDOS.map(c => ({ ...c, score: scoreCondo(c, metragemRange, precoM2) }))
-                       .sort((a, b) => b.score - a.score);
-  compatible = ranked.filter(c => c.score >= MATCH_THRESHOLD);
-  melhorLote = compatible[0] || ranked[0] || null;
-  outrasOpcoes = Math.max(compatible.length - 1, 0);
-
-  document.getElementById('cnt-compativel').textContent = compatible.length;
-
   const avgMetragem = (metragemRange[0] + metragemRange[1]) / 2;
-  document.getElementById('lbl-investimento').textContent = formatBRL(avgMetragem * precoM2);
+  document.getElementById('lbl-investimento-big').textContent = formatBRL(avgMetragem * precoM2);
 
-  const btn = document.getElementById('btn-ver-opcoes');
+  const scored = CONDOS
+    .map(c => ({ ...c, score: scoreCondo(c, metragemRange, precoM2), tracao: calcTracaoScore(c) }))
+    .sort((a, b) => b.score !== a.score ? b.score - a.score : b.tracao - a.tracao);
+
+  ranking    = scored.filter(c => c.score >= MATCH_THRESHOLD);
+  melhorLote = ranking[0] || scored[0] || null;
+
+  const sub   = document.getElementById('cnt-compat-sub');
+  const btn   = document.getElementById('btn-ver-opcoes');
   const vazio = document.getElementById('config-vazio');
+
   if (!CONDOS.length) {
-    btn.disabled = true;
-    btn.textContent = 'Nenhum lote disponível';
+    sub.textContent = 'Nenhum lote disponível no momento.';
+    btn.disabled = true; btn.textContent = 'Nenhum lote disponível';
     vazio.classList.add('hidden-tela');
-  } else if (compatible.length === 0) {
-    btn.disabled = true;
-    btn.textContent = 'Ver opções';
+  } else if (!ranking.length) {
+    sub.textContent = 'Nenhuma opção compatível com a faixa atual.';
+    btn.disabled = true; btn.textContent = 'Ver opções';
     vazio.classList.remove('hidden-tela');
   } else {
-    btn.disabled = false;
-    btn.textContent = `Ver ${compatible.length} ${compatible.length === 1 ? 'opção compatível' : 'opções compatíveis'}`;
+    const n = ranking.length;
+    sub.textContent = `${n} ${n===1?'opção compatível':'opções compatíveis'} com o seu perfil`;
+    btn.disabled    = false;
+    btn.textContent = `Ver ${n} ${n===1?'opção compatível':'opções compatíveis'}`;
     vazio.classList.add('hidden-tela');
   }
 }
 
-// ── PADRÃO (tag colorida) ────────────────────────────────────────────
-function padraoTagHTML(padrao) {
-  if (!padrao) return '';
-  const dourado = 'bg-[#C9A96E]/[0.12] text-[#C9A96E] border-[#C9A96E]/20';
-  const verde   = 'bg-[#7A9E78]/[0.10] text-[#7A9E78] border-[#7A9E78]/20';
-  const neutro  = 'bg-white/[0.06] text-[#A99B82] border-white/10';
-  const cls = { 'Luxo': dourado, 'Super Luxo': dourado, 'Alto': dourado, 'Médio': verde, 'Popular': neutro }[padrao] || neutro;
-  return `<span class="text-[10px] font-semibold tracking-[0.14em] uppercase px-2.5 py-1 rounded-full border ${cls}">${padrao}</span>`;
-}
-
-// ── NAVEGAÇÃO ────────────────────────────────────────────────────────
 function irPara(tela) {
-  ['config', 'nome', 'revelado', 'captura', 'enviado'].forEach(t => {
-    document.getElementById('tela-' + t).classList.toggle('hidden-tela', t !== tela);
-  });
+  ['config','nome','revelado','captura','enviado'].forEach(t =>
+    document.getElementById('tela-'+t).classList.toggle('hidden-tela', t !== tela)
+  );
   window.scrollTo(0, 0);
   if (tela === 'revelado') renderRevelado();
 }
@@ -506,114 +510,118 @@ function submitNome() {
 }
 
 function renderRevelado() {
-  if (!melhorLote) return;
   const primeiroNome = nomeLead.split(' ')[0];
-  document.getElementById('rev-para').textContent = 'Para ' + primeiroNome;
-  document.getElementById('rev-regiao').textContent = melhorLote.regiao;
-  document.getElementById('rev-nome').textContent = melhorLote.nome;
-  document.getElementById('rev-padrao').innerHTML = padraoTagHTML(melhorLote.padrao);
-  document.getElementById('rev-score').textContent = melhorLote.score + '% compatível';
+  const N = ranking.length;
 
-  const avgMetragem = (metragemRange[0] + metragemRange[1]) / 2;
-  const dados = [
-    { k: 'Metragem', v: `${melhorLote.metragemMin} – ${melhorLote.metragemMax} m²` },
-    { k: 'Preço por m²', v: `${formatBRL(melhorLote.precoM2)}/m²` },
-    { k: 'Investimento estimado', v: formatBRL(avgMetragem * melhorLote.precoM2) },
-    { k: 'A partir de', v: melhorLote.precoAPartir ? formatBRL(melhorLote.precoAPartir) : '—' },
-  ];
-  document.getElementById('rev-dados').innerHTML = dados.map(({ k, v }) => `
-    <div class="bg-white/[0.03] rounded-xl p-4 border border-white/[0.05]">
-      <div class="text-[9px] tracking-[0.16em] uppercase text-[#4A4132] mb-1.5">${k}</div>
-      <div class="text-sm font-medium text-[#C9A96E]">${v}</div>
-    </div>`).join('');
+  document.getElementById('rev-titulo').innerHTML =
+    `<em>${primeiroNome}</em>, encontramos ${N} lote${N===1?'':'s'} compatível${N===1?'':'s'} com o seu perfil`;
+  document.getElementById('cap-titulo').textContent = primeiroNome + ', falta pouco';
 
-  const dispWrap = document.getElementById('rev-dispon-wrap');
-  if (melhorLote.total > 0) {
-    dispWrap.classList.remove('hidden-tela');
-    const pct = Math.round((melhorLote.disponivel / melhorLote.total) * 100);
-    const baixo = pct <= 20;
-    document.getElementById('rev-dispon-txt').textContent = `${melhorLote.disponivel} de ${melhorLote.total} lotes`;
-    document.getElementById('rev-dispon-txt').className = `text-[11px] font-semibold tracking-wide ${baixo ? 'text-[#C9855A]' : 'text-[#7A9E78]'}`;
-    const bar = document.getElementById('rev-dispon-bar');
-    bar.style.width = pct + '%';
-    bar.className = `h-full rounded-full transition-all duration-700 ${baixo ? 'bg-[#C9855A]' : 'bg-[#7A9E78]'}`;
-    document.getElementById('rev-dispon-alerta').classList.toggle('hidden-tela', !baixo);
-  } else {
-    dispWrap.classList.add('hidden-tela');
-  }
+  // Ranking top 5 — sem nome de condomínio
+  const top5 = ranking.slice(0, 5);
+  document.getElementById('rev-ranking').innerHTML = top5.map((c, i) => {
+    const isTop  = i === 0;
+    const corBar = c.score >= 80 ? '#7A9E78' : c.score >= 65 ? '#C9A96E' : '#8A7D66';
+    const badge  = c.tracao >= 7
+      ? '<span class="tracao-badge">Alta tração</span>'
+      : '';
+    const areaStr = c.metragemMin === c.metragemMax
+      ? c.metragemMin + ' m²'
+      : c.metragemMin + '–' + c.metragemMax + ' m²';
+    return `
+    <div class="rank-row${isTop?' rank-top':''}">
+      <div style="font-family:'DM Serif Display',serif;font-size:${isTop?'17':'13'}px;
+                  color:${isTop?'#C9A96E':'#4A4132'};line-height:1;text-align:center">${i+1}</div>
+      <div style="min-width:0">
+        <div style="font-size:${isTop?'13':'12'}px;font-weight:${isTop?'600':'500'};
+                    color:${isTop?'#EDE8DF':'#A99B82'};white-space:nowrap;overflow:hidden;
+                    text-overflow:ellipsis;line-height:1.3">${c.regiao}</div>
+        <div style="font-size:10px;color:#4A4132;margin-top:2px;white-space:nowrap">
+          ${areaStr}${badge}
+        </div>
+      </div>
+      <div style="text-align:right;font-size:${isTop?'13':'11'}px;font-weight:600;
+                  color:${isTop?'#7A9E78':'#5A5040'};white-space:nowrap">
+        ${formatBRL(c.precoM2)}/m²
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span style="font-size:11px;font-weight:700;color:${corBar}">${c.score}%</span>
+        <div class="compat-bar-wrap">
+          <div class="compat-bar-fill" style="width:${c.score}%;background:${corBar}"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 
-  const difWrap = document.getElementById('rev-diferenciais-wrap');
-  if (melhorLote.diferenciais.length) {
+  // Diferenciais do #1
+  const difs    = melhorLote?.diferenciais || [];
+  const difWrap = document.getElementById('rev-difs-wrap');
+  if (difs.length) {
     difWrap.classList.remove('hidden-tela');
-    document.getElementById('rev-diferenciais').innerHTML = melhorLote.diferenciais.map(d => `
-      <div class="flex items-center gap-3 text-sm text-[#A99B82]">
-        <span class="w-1 h-1 rounded-full bg-[#C9A96E] flex-shrink-0"></span>
+    document.getElementById('rev-difs').innerHTML = difs.map(d => `
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#A99B82">
+        <span style="width:4px;height:4px;border-radius:99px;background:#C9A96E;flex-shrink:0;display:inline-block"></span>
         ${d}
       </div>`).join('');
   } else {
     difWrap.classList.add('hidden-tela');
   }
-
-  const outrasEl = document.getElementById('rev-outras');
-  if (outrasOpcoes > 0) {
-    outrasEl.classList.remove('hidden-tela');
-    outrasEl.textContent = `+ ${outrasOpcoes} ${outrasOpcoes === 1 ? 'outro lote' : 'outros lotes'} no seu perfil — apresentados no atendimento.`;
-  } else {
-    outrasEl.classList.add('hidden-tela');
-  }
-
-  document.getElementById('cap-titulo').textContent = primeiroNome + ', falta pouco';
 }
 
-// ── CAPTURA (grava interesse real, mesma rota do BaseImob Total) ──────
 async function submitCaptura() {
-  const digits = document.getElementById('input-whats').value.replace(/\D/g, '');
-  const err = document.getElementById('err-whats');
+  const digits = document.getElementById('input-whats').value.replace(/\D/g,'');
+  const err    = document.getElementById('err-whats');
   if (digits.length < 10) { err.textContent = 'Informe um WhatsApp válido'; err.classList.remove('hidden-tela'); return; }
   err.classList.add('hidden-tela');
   whatsLead = digits;
 
   const btn = document.getElementById('btn-solicitar');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  btn.disabled = true; btn.textContent = 'Enviando...';
 
   const payload = {
-    acao: 'interesse_lancamento',
-    nome: nomeLead,
-    telefone: whatsLead,
-    qtdInteresse: compatible.length,
-    idsInteresse: compatible.map(c => c.id).join(', '),
-    tags: JSON.stringify({ faixaMetragem: metragemRange, precoM2Alvo: precoM2 }),
-    canal: 'BaseImob Funil Lote',
+    acao:         'interesse_lancamento',
+    nome:         nomeLead,
+    telefone:     whatsLead,
+    qtdInteresse: ranking.length,
+    idsInteresse: ranking.map(c => c.id).join(', '),
+    // Ranking detalhado para o consultor abrir a conversa com contexto
+    rankingDetalhado: JSON.stringify(ranking.slice(0,5).map((c,i) => ({
+      rank:     i+1,
+      regiao:   c.regiao,
+      metragem: `${c.metragemMin}-${c.metragemMax}m²`,
+      precoM2:  c.precoM2,
+      compat:   c.score,
+      tracao:   Math.round(c.tracao * 10) / 10,
+    }))),
+    tags:         JSON.stringify({ faixaMetragem: metragemRange, precoM2Alvo: precoM2 }),
+    canal:        'BaseImob Funil Lote',
     tipo_contato: 'LEAD QUENTE',
-    score: 90,
+    score:        90,
   };
 
   let falhou = false;
   try {
     await fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)));
-  } catch (e) {
+  } catch(e) {
     falhou = true;
     console.error('Erro ao enviar interesse:', e);
   }
 
-  document.getElementById('env-titulo').innerHTML = `Prontinho,<br>${nomeLead.split(' ')[0]}`;
-  document.getElementById('env-texto1').innerHTML =
-    `Você solicitou atendimento para o <strong class="text-[#EDE8DF] font-medium">${melhorLote ? melhorLote.nome : ''}</strong>` +
-    (outrasOpcoes > 0 ? ` e as outras ${outrasOpcoes} opções do seu perfil.` : '.');
+  const primeiroNome = nomeLead.split(' ')[0];
+  document.getElementById('env-titulo').innerHTML = `Prontinho,<br>${primeiroNome}`;
+  document.getElementById('env-texto1').textContent =
+    `Você solicitou atendimento para ${ranking.length} ${ranking.length===1?'opção':'opções'} compatíveis com o seu perfil.`;
   document.getElementById('env-erro').classList.toggle('hidden-tela', !falhou);
 
-  btn.disabled = false;
-  btn.textContent = 'Solicitar atendimento';
+  btn.disabled = false; btn.textContent = 'Enviar meu ranking';
   irPara('enviado');
 }
 
 function resetFunil() {
   metragemRange = [METRAGEM_BOUNDS[0], METRAGEM_BOUNDS[1]];
   precoM2 = Math.round((PRECO_M2_BOUNDS[0] + PRECO_M2_BOUNDS[1]) / 2);
-  nomeLead = '';
-  whatsLead = '';
-  document.getElementById('input-nome').value = '';
+  nomeLead = ''; whatsLead = '';
+  document.getElementById('input-nome').value  = '';
   document.getElementById('input-whats').value = '';
   document.getElementById('err-nome').classList.add('hidden-tela');
   document.getElementById('err-whats').classList.add('hidden-tela');
