@@ -3813,6 +3813,38 @@ function buscarImovelRevenda_(codigo) {
   return null;
 }
 
+// Busca imóvel na REVENDA por tipo + local + valor quando o código não vem no deal.
+// A API de lista do Imobzi não retorna properties_captured/presented — usamos os
+// dados do título e value para identificar o imóvel por correspondência.
+function buscarImovelPorPerfil_(tipo, local, valor) {
+  if (!tipo && !local) return null;
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('REVENDA');
+  if (!aba || aba.getLastRow() < 2) return null;
+  var dados = aba.getRange(2, 1, aba.getLastRow() - 1, CABECALHO_REVENDA.length).getValues();
+  var norm = function(s) { return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
+  var nTipo  = norm(tipo);
+  var nLocal = norm(local);
+  var matches = [];
+  dados.forEach(function(row) {
+    var obj = {};
+    CABECALHO_REVENDA.forEach(function(col, j) { obj[col] = row[j]; });
+    var rTipo  = norm(obj.tipo);
+    var rCond  = norm(obj.condominio);
+    var rBairro= norm(obj.bairro);
+    var rPreco = Number(String(obj.valorVenda||'').replace(/\D/g,'')) || 0;
+    var tipoOk  = !nTipo  || rTipo === nTipo || rTipo.indexOf(nTipo) >= 0;
+    var localOk = !nLocal || rCond.indexOf(nLocal) >= 0 || rBairro.indexOf(nLocal) >= 0
+                          || nLocal.indexOf(rCond)  >= 0 || nLocal.indexOf(rBairro)  >= 0;
+    if (!tipoOk || !localOk) return;
+    var diff = (rPreco && valor) ? Math.abs(rPreco - valor) / Math.max(rPreco, valor) : 0.5;
+    matches.push({ obj: obj, diff: diff });
+  });
+  if (!matches.length) return null;
+  matches.sort(function(a, b) { return a.diff - b.diff; });
+  return matches[0].obj;
+}
+
 // Processa payload de webhook deal_created / deal_updated do Imobzi.
 // Estrutura real (confirmada via debug de lista /v1/deals):
 //   deal.contact.name (não fullname!), deal.contact.email (array ou string),
@@ -3865,21 +3897,26 @@ function salvarLeadImobziDeal_(payload) {
   var titulo    = String(deal.title || '').trim();
   var parsed    = parseTituloDeal_(titulo);
 
-  // Imóvel de interesse: site → properties_captured; portais → properties_presented (reference_code)
+  // A API de lista do Imobzi não retorna properties_captured/presented.
+  // Tenta extrair código de campos diretos do deal; se vazio, faz lookup
+  // na REVENDA por tipo + local + valor do título.
   var propArr_ = (Array.isArray(deal.properties_captured) && deal.properties_captured.length)
                  ? deal.properties_captured
                  : (Array.isArray(deal.properties_presented) ? deal.properties_presented : []);
-  var propObj_ = propArr_[0] || {};
+  var propObj_     = propArr_[0] || {};
   var codigoImovel = String(propObj_.reference_code || propObj_.code || propObj_.advertiser_code
                             || propObj_.reference || deal.property_code || '').trim();
 
-  // Enriquece com dados da REVENDA (fonte de verdade)
-  var rev_       = buscarImovelRevenda_(codigoImovel);
-  var nomeImovel = String((rev_ && (rev_.condominio || rev_.endereco)) || propObj_.title || propObj_.name || titulo).trim();
-  var precoImovel= rev_ ? (Number(String(rev_.valorVenda || '').replace(/\D/g,'')) || 0)
-                        : (Number(propObj_.price || propObj_.sale_price || deal.value) || 0);
-  var tipoImovel = String((rev_ && rev_.tipo)   || propObj_.type || propObj_.property_type || '').trim() || parsed.tipo;
-  var bairroIm   = String((rev_ && rev_.bairro) || propObj_.neighborhood || '').trim() || parsed.local;
+  // Lookup por código (se disponível); fallback por perfil (tipo + local + valor)
+  var rev_ = buscarImovelRevenda_(codigoImovel)
+          || buscarImovelPorPerfil_(parsed.tipo, parsed.local, Number(deal.value));
+  if (rev_ && !codigoImovel) codigoImovel = String(rev_.codigo || '').trim();
+
+  var nomeImovel  = String((rev_ && (rev_.condominio || rev_.endereco)) || titulo).trim();
+  var precoImovel = rev_ ? (Number(String(rev_.valorVenda || '').replace(/\D/g,'')) || 0)
+                         : (Number(deal.value) || 0);
+  var tipoImovel  = String((rev_ && rev_.tipo)   || '').trim() || parsed.tipo;
+  var bairroIm    = String((rev_ && rev_.bairro) || '').trim() || parsed.local;
 
   var flat = {
     nome: nome, email: email, telefone: tel,
@@ -4092,13 +4129,16 @@ function sincronizarLeadsImobzi_() {
       var codIm_   = String(propObj_.reference_code || propObj_.code || propObj_.advertiser_code
                             || propObj_.reference || '').trim();
 
-      // Enriquece com dados da REVENDA (fonte de verdade)
-      var rev__    = buscarImovelRevenda_(codIm_);
-      var nomeIm_  = String((rev__ && (rev__.condominio || rev__.endereco)) || propObj_.title || propObj_.name || titulo).trim();
+      // Lookup por código; fallback por perfil (tipo + local + valor)
+      var rev__   = buscarImovelRevenda_(codIm_)
+                 || buscarImovelPorPerfil_(parsed.tipo, parsed.local, Number(deal.value));
+      if (rev__ && !codIm_) codIm_ = String(rev__.codigo || '').trim();
+
+      var nomeIm_  = String((rev__ && (rev__.condominio || rev__.endereco)) || titulo).trim();
       var precoIm_ = rev__ ? (Number(String(rev__.valorVenda || '').replace(/\D/g,'')) || 0)
-                           : (Number(propObj_.price || propObj_.sale_price || deal.value) || 0);
-      var tipoIm_  = String((rev__ && rev__.tipo)   || propObj_.type || propObj_.property_type || '').trim() || parsed.tipo;
-      var bairroI_ = String((rev__ && rev__.bairro) || propObj_.neighborhood || '').trim() || parsed.local;
+                           : (Number(deal.value) || 0);
+      var tipoIm_  = String((rev__ && rev__.tipo)   || '').trim() || parsed.tipo;
+      var bairroI_ = String((rev__ && rev__.bairro) || '').trim() || parsed.local;
 
       var d_ = {
         nome: nome, email: email, telefone: tel,
