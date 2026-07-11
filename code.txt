@@ -650,6 +650,7 @@ function doPost(e) {
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
   if (d.acao === 'listar_leads_imobzi')             return ok(listarLeadsImobzi_(d));
+  if (d.acao === 'sincronizar_imobzi')              return ok(sincronizarLeadsImobzi_());
   if (d.acao === 'atualizar_pipeline_lead_imobzi')  return ok(atualizarPipelineLeadImobzi_(d));
   if (d.acao === 'excluir_lead_imobzi')             return ok(excluirLeadImobzi_(d));
   if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
@@ -3725,7 +3726,174 @@ function salvarLeadImobzi_(d) {
   put('idLeadImobzi',  idImobzi);
 
   abaLeads.appendRow(row);
+
+  // Email de notificação para o ADM
+  try {
+    var leadObj = {};
+    CABECALHO_LEADS_IMOBZI.forEach(function(c, i) { leadObj[c] = row[i]; });
+    enviarEmailNovoLeadImobzi_(leadObj);
+  } catch(eEmail) { Logger.log('Email falhou: ' + eEmail); }
+
   return { ok: true, statusBase: statusBase, jaExisteEmBase: statusBase === 'JÁ NA BASE', idClienteBase: idClienteBase };
+}
+
+function enviarEmailNovoLeadImobzi_(lead) {
+  var ADMIN_EMAIL = 'chaverleo@mail.com';
+  var preco = Number(lead.precoImovel) || 0;
+  var fmtBRL_ = function(v) {
+    if (!v) return '—';
+    return 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+  };
+
+  // Busca imóveis afins na base REVENDA
+  var afins = [];
+  try {
+    var abaRev = SpreadsheetApp.openById(SHEET_ID).getSheetByName('REVENDA');
+    if (abaRev && abaRev.getLastRow() > 1) {
+      var revDados = abaRev.getRange(2, 1, abaRev.getLastRow() - 1, CABECALHO_REVENDA.length).getValues();
+      var iCod  = CABECALHO_REVENDA.indexOf('codigo');
+      var iTipo = CABECALHO_REVENDA.indexOf('tipo');
+      var iBair = CABECALHO_REVENDA.indexOf('bairro');
+      var iVal  = CABECALHO_REVENDA.indexOf('valorVenda');
+      var iCond = CABECALHO_REVENDA.indexOf('condominio');
+      var iEst  = CABECALHO_REVENDA.indexOf('estagio');
+      revDados.forEach(function(r) {
+        if (String(r[iEst]||'').toLowerCase().indexOf('disponível') < 0 &&
+            String(r[iEst]||'').toLowerCase().indexOf('disponivel') < 0 &&
+            String(r[iEst]||'') !== '') return;
+        var venda = Number(r[iVal]) || 0;
+        var tipoBate = !lead.tipoImovel || String(r[iTipo]||'').toLowerCase().indexOf(lead.tipoImovel.toLowerCase()) >= 0;
+        var bairroBate = !lead.bairro || String(r[iBair]||'').toLowerCase().indexOf(lead.bairro.toLowerCase()) >= 0;
+        var precoBate = !preco || !venda || (venda >= preco * 0.65 && venda <= preco * 1.40);
+        if ((tipoBate || bairroBate) && precoBate) {
+          afins.push({ codigo: r[iCod], tipo: r[iTipo], bairro: r[iBair], preco: venda, cond: r[iCond] });
+        }
+      });
+      afins = afins.slice(0, 6);
+    }
+  } catch(e) { Logger.log('Afins falhou: ' + e); }
+
+  var afinsRows = afins.length
+    ? afins.map(function(a) {
+        return '<tr><td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-weight:600;color:#1d4ed8">' + (a.codigo||'—') + '</td>' +
+               '<td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">' + (a.tipo||'—') + '</td>' +
+               '<td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">' + (a.bairro||'—') + '</td>' +
+               '<td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#059669;font-weight:600">' + fmtBRL_(a.preco) + '</td>' +
+               '<td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">' + (a.cond||'—') + '</td></tr>';
+      }).join('')
+    : '<tr><td colspan="5" style="padding:10px;color:#6b7280;text-align:center">Nenhum imóvel afim identificado</td></tr>';
+
+  var jaBase = lead.statusBase === 'JÁ NA BASE'
+    ? '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:10px 14px;margin-bottom:16px;color:#92400e;font-weight:600">⚠ Este cliente já existe na base de contatos ('+lead.idClienteBase+')</div>'
+    : '';
+
+  var html = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;color:#111827;max-width:680px;margin:0 auto;padding:20px">' +
+    '<div style="background:#1e3a5f;color:#fff;padding:18px 24px;border-radius:8px 8px 0 0">' +
+    '<h2 style="margin:0;font-size:18px">🎯 Novo Lead Imobzi</h2>' +
+    '<p style="margin:4px 0 0;font-size:13px;opacity:.8">' + (lead.dataCadastro||'') + ' · Origem: ' + (lead.canal||'Imobzi') + '</p></div>' +
+
+    '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;padding:20px 24px">' +
+    jaBase +
+
+    '<h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin:0 0 10px">Dados do cliente</h3>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:20px">' +
+    '<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;width:120px">Nome</td>' +
+    '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:600">' + (lead.nome||'—') + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280">Telefone</td>' +
+    '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">' + (lead.telefone||'—') + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;font-size:12px;color:#6b7280">E-mail</td>' +
+    '<td style="padding:8px 12px">' + (lead.email||'—') + '</td></tr></table>' +
+
+    '<h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin:0 0 10px">Imóvel de interesse</h3>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:20px">' +
+    '<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280;width:120px">Código</td>' +
+    '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:700;color:#1d4ed8">' + (lead.codigoImovel||'—') + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280">Empreendimento</td>' +
+    '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">' + (lead.nomeImovel||'—') + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280">Tipo</td>' +
+    '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">' + (lead.tipoImovel||'—') + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280">Bairro</td>' +
+    '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">' + (lead.bairro||'—') + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280">Finalidade</td>' +
+    '<td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">' + (lead.finalidade||'—') + '</td></tr>' +
+    '<tr><td style="padding:8px 12px;font-size:12px;color:#6b7280">Preço</td>' +
+    '<td style="padding:8px 12px;font-weight:700;color:#059669">' + fmtBRL_(preco) + '</td></tr></table>' +
+
+    (lead.mensagem ? '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1e40af">💬 <em>"' + lead.mensagem + '"</em></div>' : '') +
+
+    '<h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin:0 0 10px">Imóveis afins na base (até 6 opções)</h3>' +
+    '<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden">' +
+    '<thead><tr style="background:#f3f4f6">' +
+    '<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280">Código</th>' +
+    '<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280">Tipo</th>' +
+    '<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280">Bairro</th>' +
+    '<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280">Valor</th>' +
+    '<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280">Condomínio</th>' +
+    '</tr></thead><tbody>' + afinsRows + '</tbody></table>' +
+
+    '<p style="margin-top:24px;font-size:12px;color:#9ca3af;text-align:center">BASE INTELIGENTE · Lídder Imobiliária · Goiânia</p>' +
+    '</div></body></html>';
+
+  var assunto = '🎯 Novo Lead Imobzi: ' + (lead.nome||'sem nome') + (lead.codigoImovel ? ' — ' + lead.codigoImovel : '');
+  MailApp.sendEmail({ to: ADMIN_EMAIL, subject: assunto, htmlBody: html });
+}
+
+// ── Sincroniza leads novos da API Imobzi (polling) ────────────────────────────
+// Chamada manual pelo ADM ou por trigger de tempo (a cada 10 min)
+function sincronizarLeadsImobzi_() {
+  var props  = PropertiesService.getScriptProperties();
+  var secret = props.getProperty('IMOBZI_SECRET');
+  if (!secret) return { ok: false, erro: 'IMOBZI_SECRET nao configurado — acesse Apps Script > Propriedades do projeto e adicione a chave' };
+
+  var url  = 'https://api.imobzi.app/v1/leads';
+  var opts = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
+
+  var resp;
+  try { resp = UrlFetchApp.fetch(url, opts); }
+  catch(e) { return { ok: false, erro: 'Erro de rede: ' + e.message }; }
+
+  if (resp.getResponseCode() !== 200) {
+    return { ok: false, erro: 'Imobzi retornou ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0,300) };
+  }
+
+  var data;
+  try { data = JSON.parse(resp.getContentText()); } catch(e) { return { ok: false, erro: 'JSON inválido' }; }
+
+  // A API retorna array ou {contacts:[...]} dependendo da versão
+  var leads = Array.isArray(data) ? data : (data.contacts || data.leads || []);
+  // Filtra apenas contact_type === 'lead'
+  leads = leads.filter(function(l) { return l.contact_type === 'lead'; });
+
+  var novos = 0, duplic = 0;
+  leads.forEach(function(l) {
+    // Mapeia campos da API Imobzi para nosso formato
+    var cel   = l.cellphone || {};
+    var props_ = Array.isArray(l.properties) ? l.properties : [];
+    var p0    = props_[0] || {};
+    var d_ = {
+      nome:         l.fullname || l.name || '',
+      email:        l.email || '',
+      telefone:     cel.number || l.phone || '',
+      codigoImovel: p0.reference || p0.code || p0.codigo || '',
+      nomeImovel:   p0.name || p0.nome || '',
+      precoImovel:  p0.price || p0.valor || p0.valorVenda || 0,
+      tipoImovel:   p0.type || p0.tipo || '',
+      bairro:       p0.neighborhood || p0.bairro || '',
+      finalidade:   p0.usage || p0.finalidade || '',
+      mensagem:     l.message || l.mensagem || '',
+      canal:        l.media_source || 'Imobzi',
+      idLeadImobzi: l.contact_id || l.db_id || l.code || String(l.db_id) || '',
+    };
+    var r = salvarLeadImobzi_(d_);
+    if (r.duplicado) duplic++; else novos++;
+  });
+
+  return { ok: true, novos: novos, duplicados: duplic, total: leads.length };
+}
+
+// Acionado pelo trigger de tempo — não precisa de token
+function rodarSyncImobziTrigger() {
+  try { sincronizarLeadsImobzi_(); } catch(e) { Logger.log('Sync Imobzi falhou: ' + e); }
 }
 
 function listarLeadsImobzi_(d) {

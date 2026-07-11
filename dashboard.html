@@ -890,6 +890,14 @@
           </td>
           <td class="adm-td-desc">Roda os <b>testes unitários</b> do motor de matching e exibe quantos casos passaram ou falharam. Usar para diagnóstico quando os resultados do matching parecerem incorretos ou inconsistentes.</td>
         </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" style="background:#1e3a5f" data-orig="▶ Sync Imobzi" onclick="syncImobziManual(this)">▶ Sync Imobzi</button>
+            <code class="adm-code">sincronizarLeadsImobzi_()</code>
+            <span class="adm-status" id="admStatus_sincronizar_imobzi"></span>
+          </td>
+          <td class="adm-td-desc">Busca novos leads da <b>API Imobzi</b> e importa para a aba LEADS_IMOBZI. Envia e-mail de notificação para cada lead novo. Requer <b>IMOBZI_SECRET</b> configurado em Propriedades do projeto no Apps Script.</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -3681,6 +3689,31 @@ async function migrarLeadBI(idCliente, btn) {
     alert('Erro de conexão: ' + e.message);
     btn.disabled = false; btn.textContent = 'Migrar → Contatos';
   }
+}
+
+async function syncImobziManual(btn) {
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '⟳ Sincronizando...';
+  const status = document.getElementById('admStatus_sincronizar_imobzi');
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'sincronizar_imobzi', token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      status.textContent = `✅ ${r.novos} novo(s) · ${r.duplicados} já existiam`;
+      status.style.color = 'var(--accent2)';
+      if (r.novos > 0) carregarLeadsImobzi();
+    } else {
+      status.textContent = '❌ ' + (r.erro || JSON.stringify(r));
+      status.style.color = '#e05a3a';
+    }
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+    status.style.color = '#e05a3a';
+  }
+  btn.disabled = false; btn.textContent = orig;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
