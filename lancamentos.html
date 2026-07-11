@@ -230,10 +230,10 @@ select.form-input option { background: var(--surface2); }
 .tracao-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden}
 .tracao-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;gap:12px}
 .tracao-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.tracao-row{display:grid;grid-template-columns:28px 1fr repeat(3,60px) 52px auto;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid rgba(42,48,80,.4)}
+.tracao-row{display:grid;grid-template-columns:28px 1fr repeat(4,60px) 52px auto;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid rgba(42,48,80,.4)}
 .tracao-row:last-child{border-bottom:none}
 .tracao-row:hover{background:var(--surface2)}
-@media(max-width:700px){.tracao-row{grid-template-columns:22px 1fr repeat(3,52px) 44px}}
+@media(max-width:700px){.tracao-row{grid-template-columns:22px 1fr repeat(4,52px) 44px}}
 .tracao-rank{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--text3);text-align:center}
 .tracao-rank.top3{color:var(--amber)}
 .tracao-nome{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -246,6 +246,7 @@ select.form-input option { background: var(--surface2); }
 .bar-atrat{background:var(--accent)}
 .bar-disp{background:var(--accent2)}
 .bar-trac{background:var(--amber,#f5a623)}
+.bar-acess{background:#a78bfa}
 .tracao-score-col{display:flex;flex-direction:column;align-items:center}
 .tracao-score-num{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;line-height:1}
 .tracao-score-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-top:2px}
@@ -605,7 +606,7 @@ select.form-input option { background: var(--surface2); }
     <div class="tracao-header" onclick="toggleRankingTracao()">
       <div class="tracao-title">
         🎯 Ranking de Tração — Top 10
-        <span style="font-size:11px;font-weight:400;color:var(--text3)">Atratividade 33,3% · Disponibilidade 50% · Tração 16,7%</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text3)">Disponib. 33,3% · Acessib. 33,3% · Atrativ. 22,2% · Tração 11,1%</span>
       </div>
       <span id="rankingToggleIcon" style="color:var(--text3);font-size:14px;flex-shrink:0">▲</span>
     </div>
@@ -1755,14 +1756,15 @@ function calcularScoreTracao(emps) {
     const atrat   = semDados ? 0 : (maxM2 === minM2 ? 5 : 10 * (1 - (m2 - minM2) / (maxM2 - minM2)));
     const disp    = total > 0 ? (estoque / total) * 10 : 0;
     const trac    = total > 0 ? ((total - estoque) / total) * 10 : 0;
-    const comp    = semDados ? 0 : (atrat * 0.3333 + disp * 0.50 + trac * 0.1667);
+    const acess   = {'Em planta':10,'Pré-Lançamento':10,'Em obras':7,'Pronto':3,'Entregue':1}[e.status] ?? 5;
+    const comp    = semDados ? 0 : (disp * 0.3333 + acess * 0.3333 + atrat * 0.2222 + trac * 0.1111);
     const pctDisp = total > 0 ? estoque / total : 1;
     let perfil, perfilCls;
     if (semDados)           { perfil = 'Sem dados';      perfilCls = 'tp-cold'; }
     else if (comp >= 7)     { perfil = 'Carro-chefe';    perfilCls = 'tp-hot';  }
     else if (pctDisp < 0.15){ perfil = 'Quase esgotado'; perfilCls = 'tp-esgot';}
     else                    { perfil = 'Investigar';     perfilCls = 'tp-warm'; }
-    return { e, atrat, disp, trac, comp, perfil, perfilCls };
+    return { e, atrat, disp, trac, acess, comp, perfil, perfilCls };
   }).sort((a, b) => b.comp - a.comp);
 }
 
@@ -1782,8 +1784,9 @@ function renderRankingTracao(emps) {
     return `<div class="tracao-row">
       <div class="${rnkCls}">${rank}</div>
       <div class="tracao-nome-col"><div class="tracao-nome">${nome}</div>${sub ? `<div class="tracao-sub">${sub}</div>` : ''}</div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Atrativ.</div>${bar(s.atrat,'bar-atrat')}<div class="tracao-eixo-val">${s.atrat.toFixed(1)}</div></div>
       <div class="tracao-eixo"><div class="tracao-eixo-lbl">Dispon.</div>${bar(s.disp,'bar-disp')}<div class="tracao-eixo-val">${s.disp.toFixed(1)}</div></div>
+      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Acessib.</div>${bar(s.acess,'bar-acess')}<div class="tracao-eixo-val">${s.acess.toFixed(1)}</div></div>
+      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Atrativ.</div>${bar(s.atrat,'bar-atrat')}<div class="tracao-eixo-val">${s.atrat.toFixed(1)}</div></div>
       <div class="tracao-eixo"><div class="tracao-eixo-lbl">Tração</div>${bar(s.trac,'bar-trac')}<div class="tracao-eixo-val">${s.trac.toFixed(1)}</div></div>
       <div class="tracao-score-col"><div class="tracao-score-num ${cCls}">${s.comp.toFixed(1)}</div><div class="tracao-score-lbl">score</div></div>
       <div><span class="tracao-perfil ${s.perfilCls}">${s.perfil}</span></div>
