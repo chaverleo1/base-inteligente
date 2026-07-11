@@ -3967,37 +3967,47 @@ function debugSyncImobzi() {
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
   var base   = IMOBZI_BASE;
 
-  function testar(label, url) {
-    var r = UrlFetchApp.fetch(url, opts);
-    var body = r.getContentText();
-    Logger.log(label + ' [' + r.getResponseCode() + ']: ' + body.substring(0, 300));
-    return r;
+  // 1) Perfil do usuário autenticado → pega o db_id
+  var rProfile = UrlFetchApp.fetch(base + '/user/profile', opts);
+  Logger.log('/user/profile [' + rProfile.getResponseCode() + ']: ' + rProfile.getContentText().substring(0, 500));
+
+  // 2) Lista de usuários filtrando pelo email → pega db_id
+  var rUser = UrlFetchApp.fetch(base + '/users?user_email=leonardoviana%40lidderimobiliaria.com.br', opts);
+  var userId = '';
+  try {
+    var du = JSON.parse(rUser.getContentText());
+    var users = Array.isArray(du) ? du : (du.users || []);
+    Logger.log('users por email → total: ' + users.length);
+    users.forEach(function(u) { Logger.log('  ' + u.email + ' | db_id=' + u.db_id + ' | database=' + u.database); });
+    if (users[0]) userId = users[0].db_id;
+  } catch(e) { Logger.log('users err: ' + rUser.getContentText().substring(0,200)); }
+
+  // 3) Tenta filtrar contatos pelo db_id do usuário
+  if (userId) {
+    var eps = [
+      '/contacts?contact_type=lead&responsible_id=' + userId,
+      '/contacts?contact_type=lead&manager_id='     + userId,
+      '/contacts?contact_type=lead&user_id='        + userId,
+      '/contacts?responsible_id=' + userId + '&limit=3'
+    ];
+    eps.forEach(function(ep) {
+      var r = UrlFetchApp.fetch(base + ep, opts);
+      var d = JSON.parse(r.getContentText());
+      var arr = d.contacts || d;
+      Logger.log(ep + ' → ' + r.getResponseCode() + ' | total: ' + (Array.isArray(arr) ? arr.length : '?'));
+    });
   }
 
-  // 1) Filtros por tag
-  testar('?tags=lead',         base + '/contacts?tags=lead&limit=5');
-  testar('?tag=lead',          base + '/contacts?tag=lead&limit=5');
-  testar('?tags[]=lead',       base + '/contacts?tags[]=lead&limit=5');
-
-  // 2) type=lead (retornou resultado diferente de contact_type=lead)
-  var r2 = UrlFetchApp.fetch(base + '/contacts?type=lead', opts);
+  // 4) Leads mais recentes (contact_type=all, últimas 24h) — ver se o lead de teste chegou
+  var r4 = UrlFetchApp.fetch(base + '/contacts?contact_type=all', opts);
   try {
-    var d2 = JSON.parse(r2.getContentText());
-    var arr2 = d2.contacts || [];
-    Logger.log('type=lead → total: ' + arr2.length);
-    arr2.forEach(function(c,i) {
-      Logger.log('  ['+i+'] '+c.fullname+' | tags='+JSON.stringify(c.tags)+' | media_source='+c.media_source);
-    });
-  } catch(e) {}
-
-  // 3) contact_type=lead — mostrar tags e media_source
-  var r3 = UrlFetchApp.fetch(base + '/contacts?contact_type=lead', opts);
-  try {
-    var d3 = JSON.parse(r3.getContentText());
-    var arr3 = d3.contacts || [];
-    Logger.log('contact_type=lead → total: ' + arr3.length);
-    arr3.forEach(function(c,i) {
-      Logger.log('  ['+i+'] '+c.fullname+' | tags='+JSON.stringify(c.tags)+' | media_source='+c.media_source);
+    var d4  = JSON.parse(r4.getContentText());
+    var arr4 = d4.contacts || [];
+    var corte = Date.now() - (24 * 60 * 60 * 1000);
+    var recentes = arr4.filter(function(c) { return c.created_at && new Date(c.created_at).getTime() > corte; });
+    Logger.log('Criados nas últimas 24h: ' + recentes.length);
+    recentes.forEach(function(c) {
+      Logger.log('  ' + c.fullname + ' | tags=' + JSON.stringify(c.tags) + ' | source=' + c.media_source + ' | created=' + c.created_at);
     });
   } catch(e) {}
 }
