@@ -3943,24 +3943,29 @@ function debugSyncImobzi() {
   var secret = obterImobziToken_();
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
 
-  // Todos os tipos para ver o que existe
-  var endpoints = [
-    '/contacts?limit=3',
-    '/contacts?contact_type=lead&limit=3',
-    '/contacts?contact_type=Lead&limit=3'
-  ];
-  endpoints.forEach(function(ep) {
-    var r = UrlFetchApp.fetch(IMOBZI_BASE + ep, opts);
-    Logger.log(ep + ' → ' + r.getResponseCode());
-    // Mostra contact_type de cada item para ver os valores reais
-    try {
-      var d = JSON.parse(r.getContentText());
-      var arr = d.contacts || d;
-      arr.forEach(function(c, i) {
-        Logger.log('  [' + i + '] contact_type=' + c.contact_type + ' | name=' + (c.fullname||c.name) + ' | id=' + c.contact_id);
-      });
-    } catch(e) { Logger.log('  parse error: ' + r.getContentText().substring(0,200)); }
-  });
+  // 1) Quantos leads existem com contact_type=lead
+  var r1 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?contact_type=lead', opts);
+  try {
+    var d1  = JSON.parse(r1.getContentText());
+    var arr1 = d1.contacts || d1;
+    Logger.log('contact_type=lead → total: ' + arr1.length);
+    arr1.forEach(function(c, i) {
+      Logger.log('  [' + i + '] ' + (c.fullname||c.name) + ' | contact_type=' + c.contact_type + ' | created=' + (c.created_at||'?') + ' | id=' + c.contact_id);
+    });
+  } catch(e) { Logger.log('lead parse err: ' + r1.getContentText().substring(0,300)); }
+
+  // 2) Todos os tipos — ver os mais recentes (sem filtro)
+  var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?contact_type=all', opts);
+  try {
+    var d2  = JSON.parse(r2.getContentText());
+    var arr2 = d2.contacts || d2;
+    Logger.log('contact_type=all → total: ' + arr2.length);
+    // Ordena por created_at DESC para ver os mais recentes
+    arr2.sort(function(a,b){ return (b.created_at||'') > (a.created_at||'') ? 1 : -1; });
+    arr2.slice(0,5).forEach(function(c, i) {
+      Logger.log('  recente[' + i + '] ' + (c.fullname||c.name) + ' | type=' + c.contact_type + ' | created=' + (c.created_at||'?'));
+    });
+  } catch(e) { Logger.log('all parse err: ' + r2.getContentText().substring(0,300)); }
 }
 
 function instalarTriggerSyncImobzi() {
