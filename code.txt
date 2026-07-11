@@ -3821,23 +3821,28 @@ function buscarImovelRevenda_(codigo) {
 }
 
 // Busca imóveis afins na REVENDA para leads Imobzi.
-// Critério único: proximidade de preço. Ordena do mais próximo ao mais distante.
-// Imóveis sem preço vão ao fim. Retorna os 6 mais próximos (exceto o próprio imóvel).
+// Ordena por: 1º tipo igual, 2º proximidade de preço. Imóveis sem preço vão ao fim.
 function buscarAfinsImovelRevenda_(cod, bairro, tipo, preco) {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('REVENDA');
   if (!aba || aba.getLastRow() < 2) return [];
   var dados = aba.getRange(2, 1, aba.getLastRow() - 1, CABECALHO_REVENDA.length).getValues();
+  var norm  = function(s) { return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
+  var nTipo = norm(tipo);
   var results = [];
   dados.forEach(function(row) {
     var obj = {};
     CABECALHO_REVENDA.forEach(function(col, j) { obj[col] = row[j]; });
-    if (String(obj.codigo || '').trim() === cod) return; // exclui o próprio
+    if (String(obj.codigo || '').trim() === cod) return;
     var rPreco    = Number(String(obj.valorVenda||'').replace(/\D/g,'')) || 0;
     var priceDiff = (preco && rPreco) ? Math.abs(rPreco - preco) / Math.max(rPreco, preco) : 1;
-    results.push({ obj: obj, priceDiff: priceDiff });
+    var tipoMatch = nTipo && norm(obj.tipo) === nTipo ? 0 : 1; // 0 = mesmo tipo, 1 = tipo diferente
+    results.push({ obj: obj, tipoMatch: tipoMatch, priceDiff: priceDiff });
   });
-  results.sort(function(a, b) { return a.priceDiff - b.priceDiff; });
+  results.sort(function(a, b) {
+    if (a.tipoMatch !== b.tipoMatch) return a.tipoMatch - b.tipoMatch;
+    return a.priceDiff - b.priceDiff;
+  });
   return results.slice(0, 6).map(function(r) {
     var o = r.obj;
     return {
