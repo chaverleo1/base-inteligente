@@ -896,7 +896,15 @@
             <code class="adm-code">sincronizarLeadsImobzi_()</code>
             <span class="adm-status" id="admStatus_sincronizar_imobzi"></span>
           </td>
-          <td class="adm-td-desc">Busca novos leads da <b>API Imobzi</b> e importa para a aba LEADS_IMOBZI. Envia e-mail de notificação para cada lead novo. Requer <b>IMOBZI_SECRET</b> configurado em Propriedades do projeto no Apps Script.</td>
+          <td class="adm-td-desc">Busca novos leads da <b>API Imobzi</b> e importa para a aba LEADS_IMOBZI. Envia e-mail de notificação para cada lead novo.</td>
+        </tr>
+        <tr>
+          <td class="adm-td-btn">
+            <button class="adm-btn" style="background:#1a3a2a" data-orig="▶ Gatilho Imobzi" onclick="admAcao('instalar_gatilho_imobzi', this)">▶ Gatilho Imobzi</button>
+            <code class="adm-code">instalarTriggerSyncImobzi()</code>
+            <span class="adm-status" id="admStatus_instalar_gatilho_imobzi"></span>
+          </td>
+          <td class="adm-td-desc">Instala trigger de <b>5 minutos</b> para sincronizar leads do Imobzi automaticamente. Rodar uma vez — reinstala se já existir.</td>
         </tr>
       </tbody>
     </table>
@@ -3292,7 +3300,9 @@ async function admAtivarTodos() {
     'criar_gatilho_revenda',
     'criar_gatilho_matching',
     'rodar_matching',
-    'testar_matching'
+    'testar_matching',
+    'sincronizar_imobzi',
+    'instalar_gatilho_imobzi'
   ];
   const NOMES = {
     migrar_cabecalho_lancamentos: 'Migrar Cabeçalho',
@@ -3301,7 +3311,9 @@ async function admAtivarTodos() {
     criar_gatilho_revenda:        'Gatilho Revenda (6h)',
     criar_gatilho_matching:       'Gatilho Matching (12h)',
     rodar_matching:               'Rodar Matching',
-    testar_matching:              'Testar Motor'
+    testar_matching:              'Testar Motor',
+    sincronizar_imobzi:           'Sync Imobzi',
+    instalar_gatilho_imobzi:      'Gatilho Imobzi (5min)'
   };
 
   const btnTodos = document.getElementById('btnAtivarTodos');
@@ -3688,6 +3700,26 @@ async function migrarLeadBI(idCliente, btn) {
   } catch(e) {
     alert('Erro de conexão: ' + e.message);
     btn.disabled = false; btn.textContent = 'Migrar → Contatos';
+  }
+}
+
+async function admAcao(acao, btn) {
+  const orig = btn.dataset.orig || btn.textContent;
+  const statusEl = document.getElementById('admStatus_' + acao);
+  btn.disabled = true; btn.textContent = '⟳';
+  if (statusEl) { statusEl.textContent = '⏳ executando...'; statusEl.className = 'adm-status'; }
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_' + acao + '&token=' + encodeURIComponent(tokenSessao()));
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (statusEl) {
+      statusEl.textContent = r.status === 'ok' ? '✔ ' + (r.msg || 'ok') : '✖ ' + (r.motivo || 'erro');
+      statusEl.className = 'adm-status ' + (r.status === 'ok' ? 'adm-ok' : 'adm-err');
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.textContent = '✖ ' + e.message; statusEl.className = 'adm-status adm-err'; }
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
   }
 }
 

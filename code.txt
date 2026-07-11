@@ -218,6 +218,16 @@ function doGet(e) {
     try { criarGatilhoRevenda(); return ok({ status: 'ok', msg: 'Gatilho sincronizarRevenda (6h) criado.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
+  if (acao === 'adm_sincronizar_imobzi') {
+    try {
+      var r = sincronizarLeadsImobzi_();
+      return ok({ status: 'ok', msg: 'Sync Imobzi: ' + (r.novos||0) + ' novos, ' + (r.duplicados||0) + ' duplicados.' });
+    } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_instalar_gatilho_imobzi') {
+    try { instalarTriggerSyncImobzi(); return ok({ status: 'ok', msg: 'Gatilho Imobzi (5min) instalado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
   if (acao === 'adm_preencher_ids_faltantes') {
     try { preencherIdOfertaFaltantes(); return ok({ status: 'ok', msg: 'idOfertas preenchidos.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
