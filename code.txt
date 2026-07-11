@@ -3889,16 +3889,17 @@ function sincronizarLeadsImobzi_() {
   // Janela de 30 dias — contatos criados antes disso não são novos leads
   var corteMs = Date.now() - (30 * 24 * 60 * 60 * 1000);
 
-  // Busca apenas contact_type=lead (leads de portais/formulários atribuídos à conta).
-  // contact_type=all foi removido — puxa toda a base da empresa (outros agentes).
-  // Leads adicionados manualmente no Imobzi chegam via webhook (lead_created).
+  // db_id do usuário leonardoviana@ na API Imobzi (obtido via /users?user_email=...).
+  // Filtro responsible_id garante somente leads atribuídos ao Leonardo, independente
+  // de outros agentes da Lidder que compartilham o mesmo database.
+  var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
   var CONTA   = 'leonardoviana@lidderimobiliaria.com.br';
   var filtros = ['lead'];
   filtros.forEach(function(tipo) {
     var cursor = null;
     var pagina = 0;
     do {
-      var url = IMOBZI_BASE + '/contacts?contact_type=' + tipo + '&limit=' + IMOBZI_LIMIT;
+      var url = IMOBZI_BASE + '/contacts?contact_type=' + tipo + '&responsible_id=' + RESPONSAVEL_ID + '&limit=' + IMOBZI_LIMIT;
       if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
       var resp;
       try { resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true }); }
