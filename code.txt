@@ -3943,20 +3943,21 @@ function registrarWebhookImobzi() {
   var secret    = obterImobziToken_();
   var scriptUrl = ScriptApp.getService().getUrl();
 
-  var eventos = ['lead_created', 'lead_updated'];
-  eventos.forEach(function(evento) {
-    var payload = JSON.stringify({ url: scriptUrl, event: evento });
-    var resp = UrlFetchApp.fetch(IMOBZI_BASE + '/webhooks', {
-      method: 'post',
-      headers: {
-        'X-Imobzi-Secret': secret,
-        'Content-Type': 'application/json'
-      },
-      payload: payload,
-      muteHttpExceptions: true
-    });
-    Logger.log(evento + ' → ' + resp.getResponseCode() + ': ' + resp.getContentText());
+  // Imobzi espera "events" (array), não "event" (string)
+  var payload = JSON.stringify({
+    url:    scriptUrl,
+    events: ['lead_created', 'lead_updated']
   });
+  var resp = UrlFetchApp.fetch(IMOBZI_BASE + '/webhooks', {
+    method: 'post',
+    headers: {
+      'X-Imobzi-Secret': secret,
+      'Content-Type': 'application/json'
+    },
+    payload: payload,
+    muteHttpExceptions: true
+  });
+  Logger.log(resp.getResponseCode() + ': ' + resp.getContentText());
 }
 
 function listarLeadsImobzi_(d) {
