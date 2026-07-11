@@ -3939,9 +3939,21 @@ function listarWebhooksImobzi() {
   Logger.log(resp.getContentText());
 }
 
+function deletarWebhookImobzi(dbId) {
+  var secret = obterImobziToken_();
+  var resp = UrlFetchApp.fetch(IMOBZI_BASE + '/webhooks/' + dbId, {
+    method: 'delete',
+    headers: { 'X-Imobzi-Secret': secret },
+    muteHttpExceptions: true
+  });
+  Logger.log(resp.getResponseCode() + ': ' + resp.getContentText());
+}
+
 function registrarWebhookImobzi() {
   var secret    = obterImobziToken_();
-  var scriptUrl = ScriptApp.getService().getUrl();
+  // URL fixa de produção (/exec) — ScriptApp.getService().getUrl() retorna /dev
+  // quando rodado no editor e o Imobzi não consegue autenticar nessa URL.
+  var scriptUrl = 'https://script.google.com/macros/s/AKfycbxxlKelRh51vwcPq86z8pIWRF4YSwAE6K8b7Gh7Isu1ia8J4xiRAW_8EAOMI6sEmJd5/exec';
 
   // Imobzi espera "events" (array), não "event" (string)
   var payload = JSON.stringify({
