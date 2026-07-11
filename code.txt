@@ -3644,6 +3644,17 @@ function obterAbaLeadsImobzi_() {
 function salvarLeadImobzi_(d) {
   // Aceita payload direto OU payload no formato webhook Imobzi (lead.*)
   var lead    = d.lead || d;
+
+  // Filtra leads de outras contas: apenas processa leads onde o gestor
+  // responsável seja leonardoviana@lidderimobiliaria.com.br.
+  // Se o campo manager.user não vier no payload (ex: sync manual), aceita.
+  var CONTA_IMOBZI = 'leonardoviana@lidderimobiliaria.com.br';
+  var mgr       = lead.manager && lead.manager.user ? lead.manager.user : {};
+  var mgrEmail  = String(mgr.email || mgr.login || mgr.username || '').trim().toLowerCase();
+  if (mgrEmail && mgrEmail !== CONTA_IMOBZI) {
+    return { ok: false, ignorado: true, motivo: 'lead de outra conta: ' + mgrEmail };
+  }
+
   var nome    = String(lead.name    || lead.nome    || '').trim();
   var email   = String(lead.email   || '').trim().toLowerCase();
   var tel     = String(lead.phone   || lead.telefone|| '').replace(/\D/g,'');
