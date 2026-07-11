@@ -225,6 +225,37 @@ select.form-input option { background: var(--surface2); }
 }
 .lista-count { font-size: 12px; color: var(--text3); margin-top: 4px; }
 .lista-count b { color: var(--accent2); font-size: 16px; }
+
+/* ── RANKING DE TRAÇÃO ── */
+.tracao-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden}
+.tracao-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;gap:12px}
+.tracao-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tracao-row{display:grid;grid-template-columns:28px 1fr repeat(3,60px) 52px auto;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid rgba(42,48,80,.4)}
+.tracao-row:last-child{border-bottom:none}
+.tracao-row:hover{background:var(--surface2)}
+@media(max-width:700px){.tracao-row{grid-template-columns:22px 1fr repeat(3,52px) 44px}}
+.tracao-rank{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--text3);text-align:center}
+.tracao-rank.top3{color:var(--amber)}
+.tracao-nome{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tracao-sub{font-size:10px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tracao-eixo{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tracao-eixo-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
+.tracao-eixo-val{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;line-height:1}
+.tracao-bar-wrap{width:100%;height:3px;background:var(--border);border-radius:99px;margin-top:1px}
+.tracao-bar-fill{height:100%;border-radius:99px;transition:width .4s}
+.bar-atrat{background:var(--accent)}
+.bar-disp{background:var(--accent2)}
+.bar-trac{background:var(--amber,#f5a623)}
+.tracao-score-col{display:flex;flex-direction:column;align-items:center}
+.tracao-score-num{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;line-height:1}
+.tracao-score-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-top:2px}
+.tracao-perfil{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap;border:1px solid transparent}
+.tp-hot{background:rgba(0,212,170,.15);color:var(--accent2);border-color:rgba(0,212,170,.3)}
+.tp-warm{background:rgba(245,159,11,.15);color:var(--amber);border-color:rgba(245,159,11,.3)}
+.tp-esgot{background:rgba(255,90,90,.12);color:var(--danger);border-color:rgba(255,90,90,.25)}
+.tp-cold{background:rgba(74,84,112,.1);color:var(--text3);border-color:var(--border)}
+.tracao-legend{display:flex;gap:12px;flex-wrap:wrap;padding:8px 20px 12px;border-top:1px solid var(--border)}
+.tracao-legend-item{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px}
 .filtro-bar { display: flex; gap: 6px; flex-wrap: wrap; }
 .filtro-chip {
   padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border);
@@ -568,6 +599,27 @@ select.form-input option { background: var(--surface2); }
 
   <!-- LISTA -->
   <div id="tabPainelLista" class="tab-panel">
+
+  <!-- RANKING DE TRAÇÃO -->
+  <div id="rankingTracao" class="tracao-panel" style="display:none">
+    <div class="tracao-header" onclick="toggleRankingTracao()">
+      <div class="tracao-title">
+        🎯 Ranking de Tração — Top 10
+        <span style="font-size:11px;font-weight:400;color:var(--text3)">Atratividade 30% · Disponibilidade 35% · Tração 35%</span>
+      </div>
+      <span id="rankingToggleIcon" style="color:var(--text3);font-size:14px;flex-shrink:0">▲</span>
+    </div>
+    <div id="rankingTracaoBody">
+      <div id="rankingTracaoRows"></div>
+      <div class="tracao-legend">
+        <span class="tracao-legend-item"><span class="tracao-perfil tp-hot">Carro-chefe</span> Score alto · investir agora</span>
+        <span class="tracao-legend-item"><span class="tracao-perfil tp-warm">Investigar</span> Alta disponib. · baixa tração</span>
+        <span class="tracao-legend-item"><span class="tracao-perfil tp-esgot">Quase esgotado</span> Estoque &lt; 15%</span>
+        <span class="tracao-legend-item"><span class="tracao-perfil tp-cold">Sem dados</span> Estoque/preço não cadastrado</span>
+      </div>
+    </div>
+  </div>
+
   <div class="lista-header">
     <div>
       <div class="sec-title">Empreendimentos cadastrados</div>
@@ -1636,6 +1688,8 @@ function renderLista(lista) {
   const emps = _emps;
   cnt.innerHTML = `<b>${emps.length}</b> empreendimento${emps.length !== 1 ? 's' : ''}`;
 
+  renderRankingTracao(emps);
+
   grid.innerHTML = emps.map((e, i) => {
     const tips   = [...new Set(e.unidades.map(u => u.tipologia).filter(Boolean))];
     const stCls  = { 'Em obras':'st-obras','Em planta':'st-planta','Pronto':'st-pronto','Entregue':'st-entregue' }[e.status] || 'st-planta';
@@ -1687,6 +1741,62 @@ function renderLista(lista) {
       <div class="emp-panel" id="ep-${i}">${renderPanel(e.unidades)}</div>
     </div>`;
   }).join('');
+}
+
+function calcularScoreTracao(emps) {
+  const m2s = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
+  const minM2 = m2s.length ? Math.min(...m2s) : 0;
+  const maxM2 = m2s.length ? Math.max(...m2s) : 1;
+  return emps.map(e => {
+    const total   = Number(e.totalUnidades) || 0;
+    const estoque = Number(e.estoque) || 0;
+    const m2      = calcularM2Medio(e.unidades) || 0;
+    const semDados = (total === 0 || m2 === 0);
+    const atrat   = semDados ? 0 : (maxM2 === minM2 ? 5 : 10 * (1 - (m2 - minM2) / (maxM2 - minM2)));
+    const disp    = total > 0 ? (estoque / total) * 10 : 0;
+    const trac    = total > 0 ? ((total - estoque) / total) * 10 : 0;
+    const comp    = semDados ? 0 : (atrat * 0.30 + disp * 0.35 + trac * 0.35);
+    const pctDisp = total > 0 ? estoque / total : 1;
+    let perfil, perfilCls;
+    if (semDados)           { perfil = 'Sem dados';      perfilCls = 'tp-cold'; }
+    else if (comp >= 7)     { perfil = 'Carro-chefe';    perfilCls = 'tp-hot';  }
+    else if (pctDisp < 0.15){ perfil = 'Quase esgotado'; perfilCls = 'tp-esgot';}
+    else                    { perfil = 'Investigar';     perfilCls = 'tp-warm'; }
+    return { e, atrat, disp, trac, comp, perfil, perfilCls };
+  }).sort((a, b) => b.comp - a.comp);
+}
+
+function renderRankingTracao(emps) {
+  const panel = document.getElementById('rankingTracao');
+  const rows  = document.getElementById('rankingTracaoRows');
+  if (!emps || emps.length === 0) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  const scored = calcularScoreTracao(emps).slice(0, 10);
+  const bar = (v, cls) => `<div class="tracao-bar-wrap"><div class="tracao-bar-fill ${cls}" style="width:${Math.round(v*10)}%"></div></div>`;
+  rows.innerHTML = scored.map((s, i) => {
+    const rank   = i + 1;
+    const nome   = s.e.nomeEmpreendimento || '—';
+    const sub    = [s.e.construtora, s.e.bairro].filter(Boolean).join(' · ') || '';
+    const rnkCls = rank <= 3 ? 'tracao-rank top3' : 'tracao-rank';
+    const cCls   = s.comp >= 7 ? 'tp-hot' : s.comp >= 5 ? 'tp-warm' : s.comp >= 3 ? 'tp-esgot' : 'tp-cold';
+    return `<div class="tracao-row">
+      <div class="${rnkCls}">${rank}</div>
+      <div class="tracao-nome-col"><div class="tracao-nome">${nome}</div>${sub ? `<div class="tracao-sub">${sub}</div>` : ''}</div>
+      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Atrativ.</div>${bar(s.atrat,'bar-atrat')}<div class="tracao-eixo-val">${s.atrat.toFixed(1)}</div></div>
+      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Dispon.</div>${bar(s.disp,'bar-disp')}<div class="tracao-eixo-val">${s.disp.toFixed(1)}</div></div>
+      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Tração</div>${bar(s.trac,'bar-trac')}<div class="tracao-eixo-val">${s.trac.toFixed(1)}</div></div>
+      <div class="tracao-score-col"><div class="tracao-score-num ${cCls}">${s.comp.toFixed(1)}</div><div class="tracao-score-lbl">score</div></div>
+      <div><span class="tracao-perfil ${s.perfilCls}">${s.perfil}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function toggleRankingTracao() {
+  const body = document.getElementById('rankingTracaoBody');
+  const icon = document.getElementById('rankingToggleIcon');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  icon.textContent   = open ? '▼' : '▲';
 }
 
 function renderPanel(unidades) {
