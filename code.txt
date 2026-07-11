@@ -3781,60 +3781,57 @@ function salvarLeadImobzi_(d) {
 }
 
 // Processa payload de webhook deal_created / deal_updated do Imobzi.
-// Estrutura: { event: "deal_created", deal: { db_id, contact:{fullname,email,cellphone,phones[]},
-//   responsible:{email,...}, property:{code,name,...}, media_source, created_at, ... } }
+// Doc: GET /v1/deals — deal.user / deal.user_id = corretor responsável
+//      deal.contact = objeto do lead (fullname, email, cellphone, phones[])
+//      deal.profile[] = perfil de busca do cliente (tipo, bairro, valor...)
+//      deal.properties_presented[] = imóveis apresentados
 function salvarLeadImobziDeal_(payload) {
   var deal = payload.deal || payload;
   var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
   var CONTA_IMOBZI   = 'leonardoviana@lidderimobiliaria.com.br';
 
-  // Filtro de conta: responsável pelo deal
-  var resp       = deal.responsible || deal.manager || {};
-  var respUser   = resp.user || resp;
-  var respEmail  = String(respUser.email || respUser.login || respUser.username || '').trim().toLowerCase();
-  var respId     = String(deal.responsible_id || deal.manager_id || respUser.db_id || '').trim();
-  // Aceita se: email bate, OU db_id bate, OU nenhum dos dois foi informado
-  var temResponsavel = respEmail || respId;
-  if (temResponsavel) {
-    var emailOk = respEmail && respEmail === CONTA_IMOBZI;
-    var idOk    = respId    && respId    === RESPONSAVEL_ID;
+  // Filtro: user = corretor responsável pelo deal (campo user / user_id conforme doc)
+  var user_     = deal.user || {};
+  var userEmail = String(user_.email || user_.login || '').trim().toLowerCase();
+  var userId    = String(deal.user_id || user_.db_id || user_.id || '').trim();
+  var temUser   = userEmail || userId;
+  if (temUser) {
+    var emailOk = userEmail && userEmail === CONTA_IMOBZI;
+    var idOk    = userId    && userId    === RESPONSAVEL_ID;
     if (!emailOk && !idOk) {
-      return { ok: false, ignorado: true, motivo: 'deal de outro responsavel: ' + (respEmail || respId) };
+      return { ok: false, ignorado: true, motivo: 'deal de outro usuario: ' + (userEmail || userId) };
     }
   }
 
-  // Extrai dados do contato dentro do deal
-  var contato = deal.contact || deal.person || {};
-  var nome    = String(contato.fullname || contato.name || deal.contact_name || '').trim();
-  var email   = String(contato.email    || deal.contact_email || '').trim().toLowerCase();
-
-  // Telefone: cellphone.number OU phones[] OU campo flat
+  // Contato (lead) dentro do deal
+  var contato = deal.contact || {};
+  var nome    = String(contato.fullname || contato.name || '').trim();
+  var email   = String(contato.email   || '').trim().toLowerCase();
   var cel_    = contato.cellphone || {};
   var phones_ = Array.isArray(contato.phones) ? contato.phones : [];
-  var tel     = String(cel_.number || (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || deal.contact_phone || '').replace(/\D/g,'');
+  var tel     = String(cel_.number || (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '').replace(/\D/g,'');
 
-  var msg     = String(deal.message || deal.description || contato.message || '').trim();
-  var idDeal  = String(deal.db_id || deal.deal_id || deal.id || '').trim();
-  var canal   = String(deal.media_source || deal.source || contato.media_source || 'Imobzi').trim();
-
-  // Imóvel de interesse dentro do deal
-  var prop    = deal.property || deal.properties_interest || {};
-  if (Array.isArray(prop)) prop = prop[0] || {};
-  var codIm   = String(prop.reference || prop.code || prop.codigo || deal.property_code || '').trim();
-  var nomeIm  = String(prop.name      || prop.address || deal.property_name || '').trim();
-  var precoIm = Number(prop.price     || prop.value   || deal.property_value || 0);
-  var tipoIm  = String(prop.type      || prop.category || deal.property_type || '').trim();
-  var bairro  = String(prop.neighborhood || prop.bairro || deal.property_neighborhood || '').trim();
-  var final   = String(prop.usage     || prop.finalidade || deal.property_usage || '').trim();
+  var idDeal  = String(deal.db_id || deal.deal_id || '').trim();
+  var canal   = String(deal.media_source || contato.media_source || 'Imobzi').trim();
+  var msg     = String(deal.description || contato.message || '').trim();
 
   if (!nome) return { ok: false, erro: 'deal sem nome de contato' };
 
-  // Monta objeto flat e reutiliza salvarLeadImobzi_ que já tem dedup + append
+  // Perfil de busca do cliente: deal.profile[] (critérios) OU deal.properties_presented[0]
+  var perfil   = (Array.isArray(deal.profile) && deal.profile[0]) || {};
+  var propApres = (Array.isArray(deal.properties_presented) && deal.properties_presented[0]) || {};
+  var codIm   = String(propApres.reference || propApres.code || '').trim();
+  var nomeIm  = String(propApres.name      || propApres.address || '').trim();
+  var precoIm = Number(perfil.max_value    || perfil.value   || deal.value || 0);
+  var tipoIm  = String(perfil.type         || propApres.type || '').trim();
+  var bairro  = String(perfil.neighborhood || propApres.neighborhood || '').trim();
+  var final   = String(deal.interest       || perfil.finality || '').trim();
+
   var flat = {
     nome: nome, email: email, telefone: tel, mensagem: msg,
     idLeadImobzi: idDeal, canal: canal,
     codigoImovel: codIm, nomeImovel: nomeIm,
-    precoImovel:  precoIm, tipoImovel: tipoIm,
+    precoImovel: precoIm, tipoImovel: tipoIm,
     bairro: bairro, finalidade: final
   };
   return salvarLeadImobzi_(flat);
@@ -3953,9 +3950,11 @@ function sincronizarLeadsImobzi_() {
   var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
   var CONTA = 'leonardoviana@lidderimobiliaria.com.br';
 
+  // Doc: GET /v1/deals — filtro por user_id (corretor responsável), não responsible_id
+  // Resposta: { deals: [], cursor: "...", count: N, total: N }
   var cursor = null, pagina = 0;
   do {
-    var url = IMOBZI_BASE + '/deals?responsible_id=' + RESPONSAVEL_ID + '&limit=' + IMOBZI_LIMIT;
+    var url = IMOBZI_BASE + '/deals?user_id=' + RESPONSAVEL_ID + '&limit=' + IMOBZI_LIMIT;
     if (cursor) url += '&cursor=' + encodeURIComponent(cursor);
     var resp;
     try { resp = UrlFetchApp.fetch(url, { method: 'get', headers: headers, muteHttpExceptions: true }); }
@@ -3968,47 +3967,47 @@ function sincronizarLeadsImobzi_() {
     var data;
     try { data = JSON.parse(resp.getContentText()); } catch(e) { break; }
 
-    var deals = Array.isArray(data) ? data : (data.deals || data.data || []);
+    var deals = Array.isArray(data) ? data : (data.deals || []);
     cursor = (data && data.cursor) || null;
     pagina++;
 
     deals.forEach(function(deal) {
-      // Confirma que o responsável é o Leonardo (double-check além do filtro da URL)
-      var resp_      = deal.responsible || deal.manager || {};
-      var respUser_  = resp_.user || resp_;
-      var respEmail_ = String(respUser_.email || respUser_.login || '').trim().toLowerCase();
-      var respId_    = String(deal.responsible_id || deal.manager_id || '').trim();
-      if ((respEmail_ && respEmail_ !== CONTA) && (respId_ && respId_ !== RESPONSAVEL_ID)) return;
+      // Double-check: user = corretor responsável (deal.user / deal.user_id)
+      var user_     = deal.user || {};
+      var userEmail = String(user_.email || user_.login || '').trim().toLowerCase();
+      var userId_   = String(deal.user_id || user_.db_id || '').trim();
+      if ((userEmail && userEmail !== CONTA) && (userId_ && userId_ !== RESPONSAVEL_ID)) return;
 
       totalVisto++;
 
-      // Contato dentro do deal
-      var contato = deal.contact || deal.person || {};
-      var nome    = String(contato.fullname || contato.name || deal.contact_name || '').trim();
+      // Contato (lead) dentro do deal
+      var contato = deal.contact || {};
+      var nome    = String(contato.fullname || contato.name || '').trim();
       if (!nome) return;
 
-      var email   = String(contato.email    || deal.contact_email || '').trim().toLowerCase();
+      var email   = String(contato.email || '').trim().toLowerCase();
       var cel_    = contato.cellphone || {};
       var phones_ = Array.isArray(contato.phones) ? contato.phones : [];
       var tel     = String(cel_.number || (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '').replace(/\D/g,'');
-      var idDeal  = String(deal.db_id || deal.deal_id || deal.id || '').trim();
+      var idDeal  = String(deal.db_id || deal.deal_id || '').trim();
       var canal   = String(deal.media_source || contato.media_source || 'Imobzi').trim();
 
-      var prop    = deal.property || deal.properties_interest || {};
-      if (Array.isArray(prop)) prop = prop[0] || {};
-      var codIm   = String(prop.reference || prop.code   || '').trim();
-      var nomeIm  = String(prop.name      || prop.address || '').trim();
-      var precoIm = Number(prop.price     || prop.value   || 0);
-      var tipoIm  = String(prop.type      || prop.category || '').trim();
-      var bairro  = String(prop.neighborhood || '').trim();
-      var final   = String(prop.usage     || '').trim();
+      // Perfil de busca: deal.profile[] = critérios / deal.properties_presented[0] = imóvel específico
+      var perfil    = (Array.isArray(deal.profile) && deal.profile[0]) || {};
+      var propApres = (Array.isArray(deal.properties_presented) && deal.properties_presented[0]) || {};
+      var codIm   = String(propApres.reference || propApres.code || '').trim();
+      var nomeIm  = String(propApres.name      || propApres.address || '').trim();
+      var precoIm = Number(perfil.max_value    || deal.value || 0);
+      var tipoIm  = String(perfil.type         || propApres.type || '').trim();
+      var bairro  = String(perfil.neighborhood || propApres.neighborhood || '').trim();
+      var final   = String(deal.interest       || perfil.finality || '').trim();
 
       var d_ = {
         nome: nome, email: email, telefone: tel,
         codigoImovel: codIm, nomeImovel: nomeIm,
         precoImovel: precoIm, tipoImovel: tipoIm,
         bairro: bairro, finalidade: final,
-        mensagem: String(deal.message || deal.description || '').trim(),
+        mensagem: String(deal.description || '').trim(),
         canal: canal, idLeadImobzi: idDeal
       };
       var r = salvarLeadImobzi_(d_);
@@ -4027,28 +4026,19 @@ function rodarSyncImobziTrigger() {
 
 // Roda UMA VEZ no editor para instalar o trigger de 5 minutos.
 // Após isso, leads novos do Imobzi chegam automaticamente a cada 5 min.
-// Debug: sonda a API de Deals e loga estrutura dos primeiros resultados
+// Debug: sonda a API de Deals — GET /v1/deals (doc: user_id para filtrar por corretor)
 function debugDealsImobzi() {
   var secret = obterImobziToken_();
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
-  var RESPONSAVEL_ID = 'pFdAIcTEWta4I3476I4HkjMWaul1';
+  var RESPONSAVEL_ID = PropertiesService.getScriptProperties().getProperty('IMOBZI_USER_DB_ID') || 'pFdAIcTEWta4I3476I4HkjMWaul1';
 
-  // 1) Deals sem filtro (ver estrutura)
-  var r1 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?limit=3', opts);
-  Logger.log('/deals?limit=3 [' + r1.getResponseCode() + ']: ' + r1.getContentText().substring(0, 2000));
+  // 1) Deals filtrado pelo user_id (conforme documentação /v1/deals)
+  var r1 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?user_id=' + RESPONSAVEL_ID + '&limit=3', opts);
+  Logger.log('/deals?user_id [' + r1.getResponseCode() + ']: ' + r1.getContentText().substring(0, 3000));
 
-  // 2) Deals filtrado pelo responsável
-  var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?responsible_id=' + RESPONSAVEL_ID + '&limit=5', opts);
-  Logger.log('/deals?responsible_id [' + r2.getResponseCode() + ']: ' + r2.getContentText().substring(0, 2000));
-
-  // 3) Tenta variações de endpoint caso /deals não exista
-  var alts = ['/negocios', '/pipeline/deals', '/pipelines/deals'];
-  alts.forEach(function(ep) {
-    var r = UrlFetchApp.fetch(IMOBZI_BASE + ep + '?limit=1', opts);
-    if (r.getResponseCode() !== 404) {
-      Logger.log(ep + ' [' + r.getResponseCode() + ']: ' + r.getContentText().substring(0, 500));
-    }
-  });
+  // 2) Deals recentes sem filtro (ver estrutura bruta)
+  var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/deals?limit=2', opts);
+  Logger.log('/deals?limit=2 [' + r2.getResponseCode() + ']: ' + r2.getContentText().substring(0, 3000));
 }
 
 // Debug legado — mantido para referência
