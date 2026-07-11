@@ -3926,6 +3926,22 @@ function rodarSyncImobziTrigger() {
 
 // Roda UMA VEZ no editor para instalar o trigger de 5 minutos.
 // Após isso, leads novos do Imobzi chegam automaticamente a cada 5 min.
+// Roda no editor para ver o que a API retorna — diagnóstico
+function debugSyncImobzi() {
+  var secret = obterImobziToken_();
+  var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
+
+  // Testa /leads
+  var r1 = UrlFetchApp.fetch(IMOBZI_BASE + '/leads', opts);
+  Logger.log('/leads → status: ' + r1.getResponseCode());
+  Logger.log('/leads → body (500 chars): ' + r1.getContentText().substring(0, 500));
+
+  // Testa /contacts?contact_type=lead (alternativa comum)
+  var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?contact_type=lead&limit=5', opts);
+  Logger.log('/contacts?contact_type=lead → status: ' + r2.getResponseCode());
+  Logger.log('/contacts?contact_type=lead → body (500 chars): ' + r2.getContentText().substring(0, 500));
+}
+
 function instalarTriggerSyncImobzi() {
   ScriptApp.getProjectTriggers().forEach(function(t) {
     if (t.getHandlerFunction() === 'rodarSyncImobziTrigger') ScriptApp.deleteTrigger(t);
