@@ -250,40 +250,32 @@ input[type=range] { background: transparent; }
       <div class="px-5 pt-5 pb-3 border-b border-white/[0.04]">
         <div class="rank-row" style="padding:0;border:none;color:#3A3328;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase">
           <span>#</span>
-          <span>Localização · Área</span>
+          <span>Investimento Est.</span>
+          <span style="text-align:right">% Oferta</span>
           <span style="text-align:right">R$/m²</span>
-          <span style="text-align:right">Compat.</span>
         </div>
       </div>
       <!-- Linhas do ranking -->
       <div id="rev-ranking" class="px-5 pb-5 pt-3"></div>
     </div>
 
-    <!-- Destaques do 1º colocado -->
-    <div id="rev-difs-wrap" class="hidden-tela bg-white/[0.02] border border-white/[0.05] rounded-2xl px-6 py-5 mb-4">
-      <p class="text-[9px] tracking-[0.2em] uppercase text-[#4A4132] mb-3">Destaques do 1º colocado</p>
-      <div id="rev-difs" class="flex flex-col gap-2.5"></div>
+    <!-- Nota condições de pagamento -->
+    <div style="display:flex;align-items:flex-start;gap:12px;background:rgba(122,158,120,.07);border:1px solid rgba(122,158,120,.18);border-radius:16px;padding:16px 18px;margin-bottom:20px">
+      <span style="font-size:18px;flex-shrink:0;line-height:1.2">✅</span>
+      <p style="font-size:13px;color:#A99B82;line-height:1.6;margin:0">
+        Todas as opções acima têm <strong style="color:#7A9E78;font-weight:600">boas condições de pagamento</strong> —
+        com entrada parcelada e prestações acessíveis. Os detalhes de cada opção são apresentados pelo consultor.
+      </p>
     </div>
 
-    <!-- Nota estratégica -->
-    <p class="text-xs text-[#3A3328] text-center mb-6 leading-relaxed">
-      Localização exata, condições de pagamento e plantas são apresentadas no atendimento exclusivo.
+    <!-- CTA standalone -->
+    <button onclick="irPara('captura')"
+      class="w-full bg-[#C9A96E] hover:bg-[#D9B87E] text-[#0F0D09] rounded-2xl py-4 font-semibold text-base tracking-wide transition-all duration-300 mb-3">
+      Solicitar atendimento exclusivo
+    </button>
+    <p class="text-[10px] text-[#3A3328] text-center tracking-wide">
+      Sem ligação surpresa · Resposta pelo WhatsApp
     </p>
-
-    <!-- CTA -->
-    <div class="bg-[#EDE8DF] text-[#0F0D09] rounded-2xl p-6">
-      <p class="font-display text-xl mb-1 leading-snug">Condições de pagamento detalhadas</p>
-      <p class="text-sm text-[#6B5F4C] mb-5 leading-relaxed">
-        Um consultor apresenta o ranking completo com localização exata, fotos e financiamento disponível pelo WhatsApp.
-      </p>
-      <button onclick="irPara('captura')"
-        class="w-full bg-[#0F0D09] hover:bg-[#1F1C14] text-[#EDE8DF] rounded-xl py-4 font-medium text-base tracking-wide transition-all duration-300">
-        Solicitar atendimento exclusivo
-      </button>
-      <p class="text-[10px] text-[#8A7D66] text-center mt-3 tracking-wide">
-        Sem ligação surpresa · Resposta pelo WhatsApp
-      </p>
-    </div>
   </div>
 </div>
 
@@ -572,55 +564,38 @@ function renderRevelado() {
     `<em>${primeiroNome}</em>, encontramos ${N} lote${N===1?'':'s'} compatível${N===1?'':'s'} com o seu perfil`;
   document.getElementById('cap-titulo').textContent = primeiroNome + ', falta pouco';
 
-  // Ranking top 5 — sem nome de condomínio
+  // Ranking top 5 — colunas: Investimento Est. | % Oferta | R$/m²
   const top5 = ranking.slice(0, 5);
   document.getElementById('rev-ranking').innerHTML = top5.map((c, i) => {
-    const isTop  = i === 0;
-    const corBar = c.score >= 80 ? '#7A9E78' : c.score >= 65 ? '#C9A96E' : '#8A7D66';
-    const badge  = c.tracao >= 7
-      ? '<span class="tracao-badge">Alta tração</span>'
-      : '';
-    const areaStr = c.metragemMin === c.metragemMax
-      ? c.metragemMin + ' m²'
-      : c.metragemMin + '–' + c.metragemMax + ' m²';
+    const isTop    = i === 0;
+    const avgM2    = (c.metragemMin + c.metragemMax) / 2 || c.metragemMin || 250;
+    const invest   = formatBRL(avgM2 * c.precoM2);
+    const pctOfert = c.total > 0 ? Math.round(c.disponivel / c.total * 100) : 0;
+    const corOfert = pctOfert >= 60 ? '#7A9E78' : pctOfert >= 30 ? '#C9A96E' : '#C9855A';
+    const badge    = c.tracao >= 7 ? '<span class="tracao-badge">Alta tração</span>' : '';
     return `
     <div class="rank-row${isTop?' rank-top':''}">
       <div style="font-family:'DM Serif Display',serif;font-size:${isTop?'17':'13'}px;
                   color:${isTop?'#C9A96E':'#4A4132'};line-height:1;text-align:center">${i+1}</div>
       <div style="min-width:0">
-        <div style="font-size:${isTop?'13':'12'}px;font-weight:${isTop?'600':'500'};
-                    color:${isTop?'#EDE8DF':'#A99B82'};white-space:nowrap;overflow:hidden;
-                    text-overflow:ellipsis;line-height:1.3">${c.regiao}</div>
-        <div style="font-size:10px;color:#4A4132;margin-top:2px;white-space:nowrap">
-          ${areaStr}${badge}
+        <div style="font-size:${isTop?'14':'12'}px;font-weight:${isTop?'700':'500'};
+                    color:${isTop?'#EDE8DF':'#A99B82'};white-space:nowrap;line-height:1.2">${invest}</div>
+        <div style="font-size:9px;color:#4A4132;margin-top:2px;white-space:nowrap">
+          estimado${badge}
         </div>
       </div>
-      <div style="text-align:right;font-size:${isTop?'13':'11'}px;font-weight:600;
-                  color:${isTop?'#7A9E78':'#5A5040'};white-space:nowrap">
-        ${formatBRL(c.precoM2)}/m²
+      <div style="text-align:right">
+        <div style="font-size:${isTop?'13':'11'}px;font-weight:700;color:${corOfert};white-space:nowrap">${pctOfert}%</div>
+        <div style="font-size:9px;color:#4A4132;margin-top:2px">disponível</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-        <span style="font-size:11px;font-weight:700;color:${corBar}">${c.score}%</span>
-        <div class="compat-bar-wrap">
-          <div class="compat-bar-fill" style="width:${c.score}%;background:${corBar}"></div>
+      <div style="text-align:right">
+        <div style="font-size:${isTop?'12':'10'}px;font-weight:600;color:${isTop?'#C9A96E':'#5A5040'};white-space:nowrap">
+          ${formatBRL(c.precoM2)}
         </div>
+        <div style="font-size:9px;color:#4A4132;margin-top:2px">/m²</div>
       </div>
     </div>`;
   }).join('');
-
-  // Diferenciais do #1
-  const difs    = melhorLote?.diferenciais || [];
-  const difWrap = document.getElementById('rev-difs-wrap');
-  if (difs.length) {
-    difWrap.classList.remove('hidden-tela');
-    document.getElementById('rev-difs').innerHTML = difs.map(d => `
-      <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#A99B82">
-        <span style="width:4px;height:4px;border-radius:99px;background:#C9A96E;flex-shrink:0;display:inline-block"></span>
-        ${d}
-      </div>`).join('');
-  } else {
-    difWrap.classList.add('hidden-tela');
-  }
 }
 
 async function submitCaptura() {
