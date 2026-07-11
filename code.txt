@@ -3873,7 +3873,8 @@ function sincronizarLeadsImobzi_() {
   var secret;
   try { secret = obterImobziToken_(); } catch(e) { return { ok: false, erro: e.message }; }
 
-  var url  = IMOBZI_BASE + '/leads';
+  // Endpoint correto é /contacts (não /leads — retorna 400)
+  var url  = IMOBZI_BASE + '/contacts?contact_type=lead&limit=50';
   var opts = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
 
   var resp;
@@ -3887,21 +3888,22 @@ function sincronizarLeadsImobzi_() {
   var data;
   try { data = JSON.parse(resp.getContentText()); } catch(e) { return { ok: false, erro: 'JSON inválido' }; }
 
-  // A API retorna array ou {contacts:[...]} dependendo da versão
+  // Imobzi retorna {contacts:[...]}
   var leads = Array.isArray(data) ? data : (data.contacts || data.leads || []);
-  // Filtra apenas contact_type === 'lead'
-  leads = leads.filter(function(l) { return l.contact_type === 'lead'; });
 
   var novos = 0, duplic = 0;
   leads.forEach(function(l) {
-    // Mapeia campos da API Imobzi para nosso formato
-    var cel   = l.cellphone || {};
-    var props_ = Array.isArray(l.properties) ? l.properties : [];
-    var p0    = props_[0] || {};
+    // Imobzi usa phones[] array, não cellphone{}
+    var phones_ = Array.isArray(l.phones) ? l.phones : [];
+    var tel     = (phones_[0] && (phones_[0].number_plain || phones_[0].number)) || '';
+    // Imobzi usa emails[] array ou email string
+    var emailVal = (Array.isArray(l.emails) && l.emails[0]) ? l.emails[0] : (l.email || '');
+    var props_   = Array.isArray(l.properties) ? l.properties : [];
+    var p0       = props_[0] || {};
     var d_ = {
       nome:         l.fullname || l.name || '',
-      email:        l.email || '',
-      telefone:     cel.number || l.phone || '',
+      email:        emailVal,
+      telefone:     tel,
       codigoImovel: p0.reference || p0.code || p0.codigo || '',
       nomeImovel:   p0.name || p0.nome || '',
       precoImovel:  p0.price || p0.valor || p0.valorVenda || 0,
@@ -3910,7 +3912,7 @@ function sincronizarLeadsImobzi_() {
       finalidade:   p0.usage || p0.finalidade || '',
       mensagem:     l.message || l.mensagem || '',
       canal:        l.media_source || 'Imobzi',
-      idLeadImobzi: l.contact_id || l.db_id || l.code || String(l.db_id) || '',
+      idLeadImobzi: l.contact_id || l.db_id || l.code || '',
     };
     var r = salvarLeadImobzi_(d_);
     if (r.duplicado) duplic++; else novos++;
@@ -3931,15 +3933,24 @@ function debugSyncImobzi() {
   var secret = obterImobziToken_();
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
 
-  // Testa /leads
-  var r1 = UrlFetchApp.fetch(IMOBZI_BASE + '/leads', opts);
-  Logger.log('/leads → status: ' + r1.getResponseCode());
-  Logger.log('/leads → body (500 chars): ' + r1.getContentText().substring(0, 500));
-
-  // Testa /contacts?contact_type=lead (alternativa comum)
-  var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?contact_type=lead&limit=5', opts);
-  Logger.log('/contacts?contact_type=lead → status: ' + r2.getResponseCode());
-  Logger.log('/contacts?contact_type=lead → body (500 chars): ' + r2.getContentText().substring(0, 500));
+  // Todos os tipos para ver o que existe
+  var endpoints = [
+    '/contacts?limit=3',
+    '/contacts?contact_type=lead&limit=3',
+    '/contacts?contact_type=Lead&limit=3'
+  ];
+  endpoints.forEach(function(ep) {
+    var r = UrlFetchApp.fetch(IMOBZI_BASE + ep, opts);
+    Logger.log(ep + ' → ' + r.getResponseCode());
+    // Mostra contact_type de cada item para ver os valores reais
+    try {
+      var d = JSON.parse(r.getContentText());
+      var arr = d.contacts || d;
+      arr.forEach(function(c, i) {
+        Logger.log('  [' + i + '] contact_type=' + c.contact_type + ' | name=' + (c.fullname||c.name) + ' | id=' + c.contact_id);
+      });
+    } catch(e) { Logger.log('  parse error: ' + r.getContentText().substring(0,200)); }
+  });
 }
 
 function instalarTriggerSyncImobzi() {
