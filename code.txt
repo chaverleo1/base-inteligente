@@ -3820,29 +3820,20 @@ function buscarImovelRevenda_(codigo) {
   return null;
 }
 
-// Busca imóveis afins na REVENDA com base em tipo, bairro e preço.
-// Ordena por proximidade de preço (diff absoluta); exige ao menos tipo ou bairro coincidente.
+// Busca imóveis afins na REVENDA para leads Imobzi.
+// Critério único: proximidade de preço. Ordena do mais próximo ao mais distante.
+// Imóveis sem preço vão ao fim. Retorna os 6 mais próximos (exceto o próprio imóvel).
 function buscarAfinsImovelRevenda_(cod, bairro, tipo, preco) {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('REVENDA');
   if (!aba || aba.getLastRow() < 2) return [];
   var dados = aba.getRange(2, 1, aba.getLastRow() - 1, CABECALHO_REVENDA.length).getValues();
-  var norm = function(s) { return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
-  var nTipo   = norm(tipo);
-  var nBairro = norm(bairro);
   var results = [];
   dados.forEach(function(row) {
     var obj = {};
     CABECALHO_REVENDA.forEach(function(col, j) { obj[col] = row[j]; });
     if (String(obj.codigo || '').trim() === cod) return; // exclui o próprio
-    var rTipo   = norm(obj.tipo);
-    var rBairro = norm(obj.bairro);
-    var rCond   = norm(obj.condominio);
-    var rPreco  = Number(String(obj.valorVenda||'').replace(/\D/g,'')) || 0;
-    var tipoOk   = nTipo   && (rTipo === nTipo || rTipo.indexOf(nTipo) >= 0 || nTipo.indexOf(rTipo) >= 0);
-    var bairroOk = nBairro && (rBairro.indexOf(nBairro) >= 0 || rCond.indexOf(nBairro) >= 0 || nBairro.indexOf(rBairro) >= 0);
-    if (!tipoOk && !bairroOk) return; // exige ao menos tipo ou bairro compatível
-    // Diff de preço: 0 = idêntico, 1 = sem preço em algum lado (ordena no fim)
+    var rPreco    = Number(String(obj.valorVenda||'').replace(/\D/g,'')) || 0;
     var priceDiff = (preco && rPreco) ? Math.abs(rPreco - preco) / Math.max(rPreco, preco) : 1;
     results.push({ obj: obj, priceDiff: priceDiff });
   });
