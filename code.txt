@@ -3968,19 +3968,27 @@ function debugSyncImobzi() {
   var secret = obterImobziToken_();
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
 
-  // Mostra os 10 mais recentes com campo manager para entender a estrutura
+  // 1) Busca o contato mais recente da lista
   var r = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?contact_type=all', opts);
-  try {
-    var d   = JSON.parse(r.getContentText());
-    var arr = d.contacts || d;
-    arr.sort(function(a,b){ return (b.created_at||'') > (a.created_at||'') ? 1 : -1; });
-    Logger.log('Total contatos retornados: ' + arr.length);
-    arr.slice(0, 10).forEach(function(c, i) {
-      var mgr      = (c.manager && c.manager.user) ? c.manager.user : null;
-      var mgrEmail = mgr ? (mgr.email || mgr.login || mgr.username || 'sem email') : 'SEM MANAGER';
-      Logger.log('[' + i + '] ' + (c.fullname||c.name) + ' | created=' + (c.created_at||'?') + ' | manager=' + mgrEmail);
-    });
-  } catch(e) { Logger.log('err: ' + r.getContentText().substring(0,300)); }
+  var d = JSON.parse(r.getContentText());
+  var arr = d.contacts || d;
+  arr.sort(function(a,b){ return (b.created_at||'') > (a.created_at||'') ? 1 : -1; });
+  var primeiroId = arr[0] && arr[0].contact_id;
+  Logger.log('Primeiro ID da lista: ' + primeiroId);
+
+  // 2) Busca esse contato individualmente para ver TODOS os campos
+  if (primeiroId) {
+    var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts/' + primeiroId, opts);
+    Logger.log('GET /contacts/' + primeiroId + ' → ' + r2.getResponseCode());
+    Logger.log(r2.getContentText().substring(0, 1500));
+  }
+
+  // 3) Testa se a API aceita filtro por manager/responsible
+  var r3 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?responsible=leonardoviana@lidderimobiliaria.com.br&limit=3', opts);
+  Logger.log('?responsible= → ' + r3.getResponseCode() + ': ' + r3.getContentText().substring(0,200));
+
+  var r4 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?manager=leonardoviana@lidderimobiliaria.com.br&limit=3', opts);
+  Logger.log('?manager= → ' + r4.getResponseCode() + ': ' + r4.getContentText().substring(0,200));
 }
 
 function instalarTriggerSyncImobzi() {
