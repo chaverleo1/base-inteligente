@@ -3965,28 +3965,35 @@ function rodarSyncImobziTrigger() {
 function debugSyncImobzi() {
   var secret = obterImobziToken_();
   var opts   = { method: 'get', headers: { 'X-Imobzi-Secret': secret }, muteHttpExceptions: true };
+  var base   = IMOBZI_BASE;
 
-  // 1) Busca o contato mais recente da lista
-  var r = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?contact_type=all', opts);
-  var d = JSON.parse(r.getContentText());
-  var arr = d.contacts || d;
-  arr.sort(function(a,b){ return (b.created_at||'') > (a.created_at||'') ? 1 : -1; });
-  var primeiroId = arr[0] && arr[0].contact_id;
-  Logger.log('Primeiro ID da lista: ' + primeiroId);
-
-  // 2) Busca esse contato individualmente para ver TODOS os campos
-  if (primeiroId) {
-    var r2 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts/' + primeiroId, opts);
-    Logger.log('GET /contacts/' + primeiroId + ' → ' + r2.getResponseCode());
-    Logger.log(r2.getContentText().substring(0, 1500));
+  function testar(label, url) {
+    var r = UrlFetchApp.fetch(url, opts);
+    var body = r.getContentText();
+    Logger.log(label + ' → ' + r.getResponseCode() + ': ' + body.substring(0, 400));
   }
 
-  // 3) Testa se a API aceita filtro por manager/responsible
-  var r3 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?responsible=leonardoviana@lidderimobiliaria.com.br&limit=3', opts);
-  Logger.log('?responsible= → ' + r3.getResponseCode() + ': ' + r3.getContentText().substring(0,200));
+  // 1) Quem é o usuário autenticado?
+  testar('GET /me',           base + '/me');
+  testar('GET /users/me',     base + '/users/me');
+  testar('GET /account',      base + '/account');
+  testar('GET /account/me',   base + '/account/me');
 
-  var r4 = UrlFetchApp.fetch(IMOBZI_BASE + '/contacts?manager=leonardoviana@lidderimobiliaria.com.br&limit=3', opts);
-  Logger.log('?manager= → ' + r4.getResponseCode() + ': ' + r4.getContentText().substring(0,200));
+  // 2) Endpoints alternativos de leads
+  testar('GET /leads?limit=3',               base + '/leads?limit=3');
+  testar('GET /pipeline_leads?limit=3',      base + '/pipeline_leads?limit=3');
+  testar('GET /contacts?type=lead&limit=3',  base + '/contacts?type=lead&limit=3');
+
+  // 3) JSON completo do 1o lead de contact_type=lead (ver TODOS os campos)
+  var r2 = UrlFetchApp.fetch(base + '/contacts?contact_type=lead', opts);
+  try {
+    var d2  = JSON.parse(r2.getContentText());
+    var arr = d2.contacts || d2;
+    if (arr.length > 0) {
+      Logger.log('--- JSON completo do 1o lead ---');
+      Logger.log(JSON.stringify(arr[0]).substring(0, 2000));
+    }
+  } catch(e) {}
 }
 
 function instalarTriggerSyncImobzi() {
