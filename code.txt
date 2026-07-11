@@ -637,8 +637,11 @@ function doPost(e) {
   // além do GET com ?dados=, caso o front mande assim no futuro.
   if (d.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(d));
   if (d.acao === 'interesse_lancamento') return ok(salvarInteresse_(d));
-  // Imobzi webhook — público (vem do sistema externo sem sessão)
-  if (d.acao === 'receber_lead_imobzi')  return ok(salvarLeadImobzi_(d));
+  // Imobzi webhook — público (vem do sistema externo sem sessão).
+  // O Imobzi NÃO envia campo 'acao'; detectar pelo contact_type ou cellphone.
+  if (d.acao === 'receber_lead_imobzi' || d.contact_type === 'lead' || d.cellphone) {
+    return ok(salvarLeadImobzi_(d));
+  }
 
   if (!sessaoValida_(d.token)) return ok({ status: 'nao_autenticado' });
 
@@ -3655,21 +3658,25 @@ function salvarLeadImobzi_(d) {
     return { ok: false, ignorado: true, motivo: 'lead de outra conta: ' + mgrEmail };
   }
 
-  var nome    = String(lead.name    || lead.nome    || '').trim();
-  var email   = String(lead.email   || '').trim().toLowerCase();
-  var tel     = String(lead.phone   || lead.telefone|| '').replace(/\D/g,'');
-  var msg     = String(lead.message || lead.mensagem|| '').trim();
-  var idImobzi = String(lead.id     || lead.idLeadImobzi || '').trim();
+  // Suporta tanto payload nativo do webhook Imobzi quanto nosso formato interno flat.
+  // Imobzi usa: fullname, cellphone.number, properties[] (array), contact_id, media_source.
+  var nome     = String(lead.fullname || lead.name  || lead.nome    || '').trim();
+  var email    = String(lead.email    || '').trim().toLowerCase();
+  var cel_     = lead.cellphone || {};
+  var tel      = String(cel_.number || lead.phone || lead.telefone || '').replace(/\D/g,'');
+  var msg      = String(lead.message || lead.mensagem || '').trim();
+  var idImobzi = String(lead.contact_id || lead.id || lead.idLeadImobzi || '').trim();
+  var canal    = String(lead.media_source || lead.source || lead.canal || 'Imobzi').trim();
 
-  // Dados do imóvel — pode vir em lead.property ou lead flat
-  var prop    = lead.property || {};
-  var codIm   = String(prop.reference || prop.codigo || lead.codigoImovel || '').trim();
-  var nomeIm  = String(prop.name      || prop.nome   || lead.nomeImovel   || '').trim();
+  // Imóvel: Imobzi envia 'properties' (array); formato interno usa 'property' (objeto)
+  var props_  = Array.isArray(lead.properties) ? lead.properties : [];
+  var prop    = props_[0] || lead.property || {};
+  var codIm   = String(prop.reference || prop.code || prop.codigo || lead.codigoImovel || '').trim();
+  var nomeIm  = String(prop.name      || prop.nome || lead.nomeImovel   || '').trim();
   var precoIm = Number(prop.price     || lead.precoImovel || 0);
   var tipoIm  = String(prop.type      || lead.tipoImovel  || '').trim();
   var bairro  = String(prop.neighborhood || prop.bairro || lead.bairro || '').trim();
   var final   = String(prop.usage     || lead.finalidade  || '').trim();
-  var canal   = String(lead.source    || lead.canal       || 'Imobzi').trim();
 
   if (!nome && !tel && !email) return { ok: false, erro: 'dados insuficientes' };
 
