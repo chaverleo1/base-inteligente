@@ -274,7 +274,12 @@ input[type=range] { background: transparent; }
           Um consultor vai te chamar no WhatsApp para agendar uma conversa rápida por vídeo — você vê localização, plantas e condições de cada opção direto na tela, sem sair de casa.
         </p>
         <label class="block mb-2" style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#48484E">Seu WhatsApp</label>
-        <input id="input-whats" autofocus placeholder="(62) 90000-0000"
+        <input id="input-whats" autofocus placeholder="(62) 90000-0000" type="tel"
+          class="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-4 text-[#F0F0F0] text-base transition-all duration-200 mb-4"
+          onfocus="this.style.borderColor='rgba(212,98,42,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'"
+          onkeydown="if(event.key==='Enter')document.getElementById('input-whats2').focus()">
+        <label class="block mb-2" style="font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#48484E">Confirme o número</label>
+        <input id="input-whats2" placeholder="(62) 90000-0000" type="tel"
           class="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-4 text-[#F0F0F0] text-base transition-all duration-200 mb-2"
           onfocus="this.style.borderColor='rgba(212,98,42,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.08)'"
           onkeydown="if(event.key==='Enter')submitCaptura()">
@@ -569,9 +574,11 @@ function renderRevelado() {
 }
 
 async function submitCaptura() {
-  const digits = document.getElementById('input-whats').value.replace(/\D/g,'');
-  const err    = document.getElementById('err-whats');
+  const digits  = document.getElementById('input-whats').value.replace(/\D/g,'');
+  const digits2 = document.getElementById('input-whats2').value.replace(/\D/g,'');
+  const err     = document.getElementById('err-whats');
   if (digits.length < 10) { err.textContent = 'Informe um WhatsApp válido'; err.classList.remove('hidden-tela'); return; }
+  if (digits !== digits2) { err.textContent = 'Os números não coincidem — confira a confirmação'; err.classList.remove('hidden-tela'); return; }
   err.classList.add('hidden-tela');
   whatsLead = digits;
 
@@ -628,7 +635,8 @@ function resetFunil() {
   precoM2 = Math.round((PRECO_M2_BOUNDS[0] + PRECO_M2_BOUNDS[1]) / 2);
   nomeLead = ''; whatsLead = '';
   document.getElementById('input-nome').value  = '';
-  document.getElementById('input-whats').value = '';
+  document.getElementById('input-whats').value  = '';
+  document.getElementById('input-whats2').value = '';
   document.getElementById('err-nome').classList.add('hidden-tela');
   document.getElementById('err-whats').classList.add('hidden-tela');
   inicializarSliders();
