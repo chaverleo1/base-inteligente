@@ -1,5 +1,17 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Cards de Leads Imobzi: avatar vermelho/azul, código em destaque, remove endereço e WhatsApp
+
+Coluna de leads Imobzi no dashboard:
+
+- **Avatar (círculo com a inicial)**: vermelho enquanto o lead não foi aberto; muda pra azul assim
+  que o corretor clica no card pra ver o imóvel de interesse — sinal visual de "já olhei este
+  aqui". Não é gravado na planilha, é só estado da sessão atual no navegador.
+- **Código do imóvel de interesse** movido pra logo depois do nome do cliente, em destaque (badge
+  azul monoespaçado), em vez de aparecer numa linha separada com o nome do imóvel.
+- Removida a linha de endereço/nome do imóvel abaixo do nome do cliente.
+- Removido o botão de WhatsApp do card (o telefone já aparece na linha de baixo).
+
 ## 2026-07-09 — Fix: formato de data dos leads Imobzi não mudava com dados reais
 
 **Bug**: a ordenação/destaque de data implementados no commit anterior funcionavam nos meus testes
