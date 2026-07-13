@@ -3110,7 +3110,7 @@ function excluirLancamento_(dados) {
 var CABECALHO_REVENDAS_CONSTRUTORAS = [
   'dataCadastro', 'idImovel', 'unidade', 'empreendimento', 'tipo',
   'areaUtil', 'areaTerreno', 'quartos', 'suites', 'vagas',
-  'valorVenda', 'bairro', 'textoOriginal'
+  'valorVenda', 'bairro', 'textoOriginal', 'construtora'
 ];
 
 function obterAbaRevendasConstrutoras_() {
@@ -3143,6 +3143,12 @@ function importarRevendasConstrutoras_(dados) {
   var imoveis = (dados && dados.imoveis) || [];
   if (!imoveis.length) return { ok: false, erro: 'nenhum imovel informado' };
 
+  // Construtora vem uma vez só por importação (o lote inteiro colado costuma
+  // ser da mesma construtora parceira, ex: "CITY") — aplicada em toda linha
+  // do lote, a não ser que a própria linha já traga uma (não usado pelo
+  // parser atual, mas deixa a porta aberta pra um futuro CSV com coluna própria).
+  var construtoraLote = String((dados && dados.construtora) || '').trim();
+
   var aba   = obterAbaRevendasConstrutoras_();
   var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
 
@@ -3166,6 +3172,7 @@ function importarRevendasConstrutoras_(dados) {
       return CABECALHO_REVENDAS_CONSTRUTORAS.map(function(col) {
         if (col === 'dataCadastro') return agora;
         if (col === 'idImovel')     return id;
+        if (col === 'construtora') return imo.construtora || construtoraLote;
         return imo[col] !== undefined ? imo[col] : '';
       });
     });
@@ -3223,7 +3230,7 @@ function revendaConstrutoraParaImovel_(row) {
     estagio:      '',
     foto:         '',
     urlSite:      '',
-    construtora:  '',
+    construtora:  row.construtora  || '',
     dataEntrega:  '',
     fonte:        'REVENDA_CONSTRUTORA'
   };

@@ -70,6 +70,13 @@ textarea.motor-input {
 }
 textarea.motor-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,124,255,.1); }
 textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans-serif; }
+.form-input-rc {
+  width:100%; max-width:320px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); color:var(--text); font-size:14px; font-family:'Inter',sans-serif;
+  padding:10px 12px; outline:none; transition:border .2s;
+}
+.form-input-rc:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,124,255,.1); }
+.form-input-rc::placeholder { color:var(--text3); }
 .motor-actions { display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
 .btn-extrair { padding:11px 22px; border-radius:var(--radius-sm); background:var(--accent); color:#fff; border:none;
                font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; }
@@ -86,7 +93,7 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 .preview-badge { font-size:11px; padding:3px 10px; border-radius:4px; font-weight:700; background:rgba(0,212,170,.15); color:var(--accent2); }
 
 .detail-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:auto; }
-.detail-table { width:100%; border-collapse:collapse; min-width:820px; }
+.detail-table { width:100%; border-collapse:collapse; min-width:1020px; }
 .detail-table th {
   padding:10px 14px; text-align:left; font-size:10px; font-weight:700;
   text-transform:uppercase; letter-spacing:.8px; color:var(--text3);
@@ -165,6 +172,8 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
         <div class="sec-title">Colar dados</div>
         <div class="sec-sub">Cole aqui o CSV organizado pelo assistente ORGANIZADOR — colunas: <code>Unidade, Empreendimento / Imóvel, Área, Configuração, Valor</code>. A primeira linha (cabeçalho) é detectada e ignorada automaticamente.</div>
       </div>
+      <div class="motor-label">Construtora <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(origem desse lote — ex: CITY)</span></div>
+      <input type="text" class="form-input-rc" id="inputConstrutoraRC" placeholder="Ex: CITY" style="margin-bottom:16px">
       <div class="motor-label">CSV</div>
       <textarea class="motor-input" id="txtRC" placeholder="Unidade,Empreendimento / Imóvel,Área,Configuração,Valor&#10;AP 2802,Cobertura Torre Del Parc (Mobiliada),310 m²,4 suítes • 5 vagas,R$ 3.900.000&#10;..."></textarea>
       <div class="motor-actions">
@@ -389,18 +398,21 @@ function renderPreviewRC() {
 
 async function importarRC() {
   if (!_previewRC.length) { showToast('Nada pra importar.', 'erro'); return; }
+  const construtora = document.getElementById('inputConstrutoraRC').value.trim();
+  if (!construtora) { showToast('Informe a construtora desse lote antes de importar.', 'erro'); return; }
   const btn = document.getElementById('btnImportarRC');
   btn.disabled = true; btn.textContent = '⏳ Importando...';
   try {
     const body = new URLSearchParams({ dados: JSON.stringify({
-      acao: 'importar_revendas_construtoras', token: tokenSessao(), imoveis: _previewRC
+      acao: 'importar_revendas_construtoras', token: tokenSessao(), construtora, imoveis: _previewRC
     })});
     const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
     const json = await resp.json();
     if (trataNaoAutenticado(json)) return;
     if (json.ok) {
-      showToast(`✓ ${json.importados} imóve${json.importados===1?'l':'is'} importado${json.importados===1?'':'s'}!`, 'ok');
+      showToast(`✓ ${json.importados} imóve${json.importados===1?'l':'is'} importado${json.importados===1?'':'s'} (${construtora})!`, 'ok');
       document.getElementById('txtRC').value = '';
+      document.getElementById('inputConstrutoraRC').value = '';
       document.getElementById('previewBoxRC').style.display = 'none';
       _previewRC = [];
       _listaCarregada = false;
@@ -430,6 +442,14 @@ async function carregarListaRC() {
   }
 }
 
+// "Importado em" mostra só a data (dd/MM/yyyy) — dataCadastro grava
+// data+hora (dd/MM/yyyy HH:mm), mas o pedido do usuário foi especificamente
+// "a Data do dia da importação".
+function fmtDataImportada_(dataCadastro) {
+  const m = String(dataCadastro || '').match(/^(\d{2}\/\d{2}\/\d{4})/);
+  return m ? m[1] : (dataCadastro || '—');
+}
+
 function renderListaRC(lista) {
   const root = document.getElementById('rootListaRC');
   if (!lista.length) { root.innerHTML = '<div class="empty">Nenhum imóvel cadastrado ainda.</div>'; return; }
@@ -440,14 +460,16 @@ function renderListaRC(lista) {
       <td class="td-nome">${imo.unidade || '—'}</td>
       <td>${imo.empreendimento || '—'}</td>
       <td>${imo.tipo ? `<span class="badge badge-blue">${imo.tipo}</span>` : '<span class="badge badge-muted">Indefinido</span>'}</td>
+      <td>${imo.construtora ? `<span class="badge badge-blue">${imo.construtora}</span>` : '<span class="badge badge-muted">—</span>'}</td>
       <td>${fmtArea_(imo.areaUtil, imo.areaTerreno)}</td>
       <td class="td-valor">${fmtBRL_(imo.valorVenda)}</td>
+      <td>${fmtDataImportada_(imo.dataCadastro)}</td>
       <td><button class="btn-excluir" onclick="excluirRC(${imo._linha}, this)">🗑️ Excluir</button></td>
     </tr>`).join('');
   root.innerHTML = `
     <div class="count-info">${lista.length} imóve${lista.length===1?'l':'is'} cadastrado${lista.length===1?'':'s'}</div>
     <div class="detail-wrap"><table class="detail-table">
-      <thead><tr><th>Código</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Valor</th><th>Ação</th></tr></thead>
+      <thead><tr><th>Código</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Construtora</th><th>Área</th><th>Valor</th><th>Importado em</th><th>Ação</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }

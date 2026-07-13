@@ -81,6 +81,8 @@ a { text-decoration:none; color:inherit; }
 .fonte-rev{background:rgba(79,124,255,.12);color:var(--accent)}
 .fonte-const{background:rgba(0,212,170,.12);color:var(--accent2)}
 .fonte-lanc{background:rgba(245,166,35,.12);color:#f5a623}
+.fonte-revconst{background:rgba(167,139,250,.15);color:#a78bfa}
+.imovel-construtora-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
 .imovel-attrs{display:flex;gap:8px;padding:0 12px 10px;flex-wrap:wrap}
 .imovel-attr{font-size:11px;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:4px}
 .imovel-actions{display:flex;justify-content:flex-end;padding:0 12px 10px;gap:8px}
@@ -216,8 +218,9 @@ function render() {
     return;
   }
   const cards = _favoritos.map((f, idx) => {
-    const isConst = f.fonte === 'CONSTRUTORA';
-    const isLanc  = f.fonte === 'LANCAMENTO';
+    const isConst    = f.fonte === 'CONSTRUTORA';
+    const isLanc     = f.fonte === 'LANCAMENTO';
+    const isRevConst = f.fonte === 'REVENDA_CONSTRUTORA';
     const local   = [f.imoCondominio, f.imoBairro].filter(Boolean).join(' — ');
     const attrs = [
       f.imoQuartos  ? f.imoQuartos  + ' qtos'  : '',
@@ -228,13 +231,14 @@ function render() {
     ].filter(Boolean);
     const foto = f.imoFoto && f.imoFoto.startsWith('http')
       ? `<img class="imovel-foto" src="${f.imoFoto}" onerror="this.style.display='none'">`
-      : `<div class="imovel-foto-placeholder">${isLanc ? '🚀' : isConst ? '🏗️' : '🏠'}</div>`;
+      : `<div class="imovel-foto-placeholder">${isLanc ? '🚀' : isConst ? '🏗️' : isRevConst ? '🏢' : '🏠'}</div>`;
     return `<div class="imovel-card" id="fcard_${idx}">
       <div class="imovel-card-top">
         <div class="imovel-check"><input type="checkbox" title="Selecionar para PDF" onclick="toggleSelecionado(${idx}, this)"></div>
         ${foto}
         <div class="imovel-info">
-          <span class="imovel-fonte-badge ${isLanc?'fonte-lanc':isConst?'fonte-const':'fonte-rev'}">${isLanc?'🚀 Lançamento':isConst?'🏗️ Construtora':'🔑 Revenda'}</span>
+          <span class="imovel-fonte-badge ${isLanc?'fonte-lanc':isConst?'fonte-const':isRevConst?'fonte-revconst':'fonte-rev'}">${isLanc?'🚀 Lançamento':isConst?'🏗️ Construtora':isRevConst?'🏢 REV-CONSTRUTORA':'🔑 Revenda'}</span>
+          ${isRevConst && f.imoConstrutora ? `<span class="imovel-construtora-badge">${f.imoConstrutora}</span>` : ''}
           <div class="imovel-tipo">${f.imoTipo||'Imóvel'}</div>
           <div class="imovel-local">${local||'—'}</div>
           ${f.imoCodigo ? `<div class="imovel-codigo">Código: ${f.imoCodigo}</div>` : ''}
@@ -333,8 +337,9 @@ function gerarHtmlPDF(lista) {
       f.imoAreaUtil ? `${f.imoAreaUtil}m²` : '',
       f.imoPadrao   || '',
     ].filter(Boolean).join(' · ');
-    const isConst = f.fonte === 'CONSTRUTORA';
-    const isLancT = f.fonte === 'LANCAMENTO';
+    const isConst    = f.fonte === 'CONSTRUTORA';
+    const isLancT    = f.fonte === 'LANCAMENTO';
+    const isRevConst = f.fonte === 'REVENDA_CONSTRUTORA';
     const bg = i % 2 === 1 ? 'background:#f9fafc' : '';
     const localL1 = [f.imoCodigo, f.imoCondominio, f.imoBairro].filter(Boolean).join(' — ');
     const localL2 = f.imoEndereco || '';
@@ -351,7 +356,7 @@ function gerarHtmlPDF(lista) {
         <div style="font-size:13px;font-weight:800;color:#00b894;white-space:nowrap">${fmt_(f.imoValorVenda) || '—'}</div>
       </td>
       <td style="padding:6px 7px;text-align:center;width:52px">
-        <span style="background:${isLancT ? '#e67e001a' : isConst ? '#4f7cff1a' : '#00b8941a'};color:${isLancT ? '#e67e00' : isConst ? '#4f7cff' : '#00b894'};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${isLancT ? 'LANÇ' : isConst ? 'CONST' : 'REV'}</span>
+        <span style="background:${isLancT ? '#e67e001a' : isConst ? '#4f7cff1a' : isRevConst ? '#a78bfa1a' : '#00b8941a'};color:${isLancT ? '#e67e00' : isConst ? '#4f7cff' : isRevConst ? '#a78bfa' : '#00b894'};padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${isLancT ? 'LANÇ' : isConst ? 'CONST' : isRevConst ? 'REV-C' : 'REV'}</span>
       </td>
     </tr>`;
   }).join('');

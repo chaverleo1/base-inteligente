@@ -1,5 +1,48 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 6) — Campo "Construtora" + badge "REV-CONSTRUTORA" + coluna "Importado em"
+
+Complemento da área Revendas-Construtoras (parte 5): agora cada lote importado registra de qual
+construtora parceira ele veio (ex: "CITY"), e isso aparece tanto na listagem quanto nos cards de
+match do cliente — igual já acontecia com os badges "Revenda"/"Construtora"/"Lançamento".
+
+**`revendas-construtoras.html`**:
+- Novo campo "Construtora" na aba "Colar / Extrair" — preenchido uma vez por importação (o lote
+  colado costuma ser inteiro da mesma construtora), obrigatório antes de importar.
+- Aba "Lista de Imóveis": novas colunas "Construtora" e "**Importado em**" (data do dia da
+  importação, extraída de `dataCadastro` — só a data, sem hora, conforme pedido).
+
+**Backend (`code.txt`)**: coluna `construtora` adicionada ao final de
+`CABECALHO_REVENDAS_CONSTRUTORAS` (convenção do projeto — nunca inserir no meio). O valor do campo
+é aplicado a todas as linhas do lote em `importarRevendasConstrutoras_()`, e `revendaConstrutoraParaImovel_()`
+agora propaga `row.construtora` pro motor de matching (antes ficava sempre vazio).
+
+**Cards de match** (`contatos.html`, `dashboard.html` — 3 pontos de renderização —, `favoritos.html`
+— 2 pontos, incluindo a tabela do PDF exportado): novo caso `isRevConst` ao lado de
+`isConst`/`isLanc` já existentes, com:
+- Badge de fonte **"🏢 REV-CONSTRUTORA"** (cor lilás, nova classe `.fonte-revconst`), no lugar de
+  "🔑 Revenda"/"🏗️ Construtora"/"🚀 Lançamento".
+- Badge separado com o nome da construtora (`.imovel-construtora-badge`) quando presente — ex:
+  "CITY" — ao lado do badge de fonte.
+- Ícone de placeholder (sem foto) trocado pra 🏢, borda do card em lilás
+  (`.imovel-card-revconst`), e o "🏢 nome" que já aparecia nas condições de pagamento pra qualquer
+  fonte com `imoConstrutora` preenchido passou a ser suprimido quando `isRevConst` (evita duplicar
+  a mesma informação — agora aparece só como badge, não mais como linha de texto também).
+
+Fora do escopo desta mudança (não alterado): `busca.html` — os badges de fonte ali existem pra
+resultados de uma busca ao vivo (`buscaAberta_` no backend), que ainda não inclui
+REVENDAS_CONSTRUTORAS como fonte. Só os imóveis que aparecem via MATCHES (cards de cliente/dashboard/
+favoritos) mostram o novo badge por enquanto.
+
+Testado: payload de importação confirmado com `construtora` no corpo do POST; renderização da
+Lista de Imóveis confirmada com colunas Construtora/Importado em corretas; renderização do card de
+match em `contatos.html` confirmada via harness Node (badge REV-CONSTRUTORA, badge CITY, classe do
+card e ícone — todos corretos). `dashboard.html`/`favoritos.html` receberam o mesmo padrão de
+código, verificado por sintaxe e revisão (não reexecutado em harness isolado, por serem arquivos
+maiores com o mesmo template já validado em contatos.html).
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-13 (parte 5) — Nova área "Revendas-Construtoras"
 
 Nova fonte de imóveis: revendas captadas por construtoras parceiras, coladas em CSV já organizado
