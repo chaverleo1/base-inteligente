@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 — Fix: chip de "Tipo de imóvel" desmarcava ao reabrir cadastro pra edição
+
+Bug relatado: ao editar um contato já salvo (abrindo pelo link "Editar" do Dashboard) para
+acrescentar mais um tipo de imóvel de interesse, o(s) tipo(s) já salvo(s) apareciam **sem** o
+botão marcado — mesmo o valor estando correto na planilha.
+
+Causa: desde que o campo "Tipo de imóvel" passou a ser dinâmico (carregado via `opcoes_filtro`,
+ver entrada de 2026-07-09), o carregamento dos botões (`carregarTiposImovel()`) e o carregamento
+do contato pela URL (`carregarClienteDaUrl()` → `carregarContato()`) passaram a ser dois fetches
+assíncronos independentes, correndo em paralelo. Se o contato terminava de carregar **antes** dos
+botões existirem no DOM, `ativarChip('segmento', ...)` gravava o valor certo em `chipState` mas não
+achava nenhum botão pra marcar visualmente (ainda só existia o placeholder "Carregando tipos...").
+Quando os botões de verdade chegavam logo depois, nenhum vinha marcado — o valor ficava certo por
+baixo dos panos, mas visualmente parecia que tinha "desmarcado".
+
+Fix: nova função `sincronizarSelecaoSegmento_()`, chamada ao final de `carregarTiposImovel()` (depois
+que os botões são renderizados), que reaplica a classe `.selected` em cima do `chipState` atual —
+cobre as duas ordens possíveis da corrida. Testado simulando ambas as ordens (contato antes dos
+tipos e tipos antes do contato) no preview: o tipo salvo aparece marcado corretamente nos dois casos.
+
 ## 2026-07-09 — Tipo de imóvel dinâmico no Formulário + "Lead Imobzi" só nas caixas de listagem
 
 **Item 9**: o campo "Tipo de imóvel" do Formulário tinha 6 botões fixos digitados à mão (Casa,

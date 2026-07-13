@@ -753,6 +753,23 @@
   // tipos que existem de verdade na base, sem precisar manter duas listas
   // sincronizadas manualmente. "Indefinido" continua sempre disponível
   // (sentinela usado em updateScore, não é um tipo real de imóvel).
+  // Reaplica a classe "selected" nos chips de tipo de imóvel a partir do
+  // chipState atual — chamada tanto depois que os chips terminam de carregar
+  // quanto depois de carregar um contato, porque os dois acontecem em
+  // paralelo (fetches assíncronos independentes) e podem terminar em
+  // qualquer ordem. Sem isso: se carregarContato() rodar ANTES do fetch de
+  // opcoes_filtro terminar, ativarChip('segmento', ...) grava o valor certo
+  // em chipState mas não acha nenhum elemento <div class="chip"> pra marcar
+  // (a lista ainda só tem o placeholder "Carregando tipos..."), e quando os
+  // chips de verdade chegam depois, nenhum aparece marcado — o valor fica
+  // certo por baixo dos panos, mas visualmente parece que "desmarcou".
+  function sincronizarSelecaoSegmento_() {
+    const valores = (chipState['segmento'] || '').split(',').map(s => s.trim()).filter(Boolean);
+    document.querySelectorAll('#chips-segmento .chip').forEach(chip => {
+      chip.classList.toggle('selected', valores.includes(chip.textContent.trim()));
+    });
+  }
+
   async function carregarTiposImovel() {
     const el = document.getElementById('chips-segmento');
     try {
@@ -762,6 +779,7 @@
       el.innerHTML = tipos.map(t =>
         `<div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">${t}</div>`
       ).join('');
+      sincronizarSelecaoSegmento_();
     } catch(e) {
       el.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar tipos</span>';
     }
