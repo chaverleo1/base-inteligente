@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 11) — Campo "Construtora" em Colar/Extrair vira lista de seleção
+
+Na aba "Colar / Extrair" de `revendas-construtoras.html`, o campo "Construtora" era um texto livre
+— trocado por um `<select>` ("caixa de lista"), populado com as construtoras já cadastradas na aba
+"Construtoras". Evita nomes divergentes ("CITY" x "City" x "city ltda") que fariam a contagem de
+imóveis por construtora (feita no backend por comparação normalizada) não bater direito, e elimina
+o risco de digitar errado o nome de uma construtora que já existe.
+
+Se a construtora ainda não estiver cadastrada, um aviso abaixo do campo linka direto pra aba
+"Construtoras" pra cadastrá-la primeiro — não dá mais pra digitar um nome novo direto na hora da
+importação.
+
+A lista do select é populada reaproveitando a mesma chamada que já carrega a aba "Construtoras"
+(`listar_construtoras_parceiras`), sem fetch duplicado — atualizada automaticamente sempre que uma
+construtora é cadastrada/editada, preservando a seleção atual se ela continuar na lista.
+
+Testado no preview: select populado corretamente e ordenado por nome; seleção preservada depois de
+recarregar a lista (mesmo com uma construtora nova adicionada); link "Cadastre primeiro" troca pra
+aba Construtoras corretamente.
+
 ## 2026-07-13 (parte 10) — Fix: 2º pedido de interesse do mesmo cliente Imobzi era descartado
 
 Bug relatado pelo usuário: quando o mesmo cliente manifestava interesse em um imóvel e, depois, em

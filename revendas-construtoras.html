@@ -251,8 +251,11 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
         <div class="sec-title">Colar dados</div>
         <div class="sec-sub">Cole aqui o CSV organizado pelo assistente ORGANIZADOR — colunas: <code>Unidade, Empreendimento / Imóvel, Área, Configuração, Valor</code>. A primeira linha (cabeçalho) é detectada e ignorada automaticamente.</div>
       </div>
-      <div class="motor-label">Construtora <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(origem desse lote — ex: CITY)</span></div>
-      <input type="text" class="form-input-rc" id="inputConstrutoraRC" placeholder="Ex: CITY" style="margin-bottom:16px">
+      <div class="motor-label">Construtora <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(origem desse lote)</span></div>
+      <select class="form-input-rc" id="inputConstrutoraRC" style="margin-bottom:16px">
+        <option value="">Selecione a construtora...</option>
+      </select>
+      <div class="motor-hint" style="margin:-8px 0 16px">Não encontrou? Cadastre primeiro na aba <a href="#" onclick="mostrarSubtabRC('construtoras');return false" style="color:var(--accent)">Construtoras</a>.</div>
       <div class="motor-label">CSV</div>
       <textarea class="motor-input" id="txtRC" placeholder="Unidade,Empreendimento / Imóvel,Área,Configuração,Valor&#10;AP 2802,Cobertura Torre Del Parc (Mobiliada),310 m²,4 suítes • 5 vagas,R$ 3.900.000&#10;..."></textarea>
       <div class="motor-actions">
@@ -619,10 +622,29 @@ async function carregarConstrutorasRC() {
     const json = await resp.json();
     if (trataNaoAutenticado(json)) return;
     _construtorasCarregadas = true;
-    renderConstrutorasRC(json.construtoras || []);
+    const lista = json.construtoras || [];
+    renderConstrutorasRC(lista);
+    popularSelectConstrutorasRC(lista);
   } catch(e) {
     root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
   }
+}
+
+// Preenche o <select> "Construtora" da aba Colar/Extrair com as construtoras
+// já cadastradas (aba Construtoras) — sem digitação livre, pra evitar nomes
+// divergentes ("CITY" x "City" x "city ltda") que quebrariam a contagem de
+// imóveis por construtora feita no backend (comparação normalizada, mas
+// ainda assim melhor nunca depender de digitação igual). Preserva a seleção
+// atual (se ainda existir na lista) — a mesma função roda de novo toda vez
+// que uma construtora é cadastrada/editada, pra manter a lista sempre atual.
+function popularSelectConstrutorasRC(lista) {
+  const select = document.getElementById('inputConstrutoraRC');
+  if (!select) return;
+  const atual = select.value;
+  const ordenada = [...lista].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  select.innerHTML = '<option value="">Selecione a construtora...</option>' +
+    ordenada.map(c => `<option value="${(c.nome||'').replace(/"/g,'&quot;')}">${c.nome || '—'}</option>`).join('');
+  if (atual && ordenada.some(c => c.nome === atual)) select.value = atual;
 }
 
 function renderConstrutorasRC(lista) {
