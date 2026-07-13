@@ -4465,9 +4465,19 @@ function atualizarPipelineLeadImobzi_(d) {
       putC('email',        String(leadObj.email    || '').trim());
       putC('telefone',     String(leadObj.telefone || '').trim());
       putC('pipeline',     novoPipeline);
-      putC('canal',        String(leadObj.canal    || 'Imobzi').trim());
+      // Canal de Origem precisa bater EXATAMENTE com o texto do chip
+      // "Imobzi / CRM" em formulario.html pra ativarChip() marcar o botão
+      // como selecionado ao reabrir o cadastro (ver ativarChip() — só ativa
+      // com igualdade exata de string, não por palavra-chave). O
+      // media_source bruto que vem da Imobzi (Facebook Ads, Portal, etc.)
+      // não bate com nenhum chip existente e ficava sem nenhum selecionado;
+      // esse detalhe mais fino continua preservado em "observacoes" abaixo.
+      putC('canal',        'Imobzi / CRM');
       putC('tipo_contato', 'LEAD IMOBZI');
-      putC('obs',          'Lead Imobzi ' + (leadObj.codigoImovel ? '- Imóvel: ' + leadObj.codigoImovel : '') + (leadObj.mensagem ? ' | ' + leadObj.mensagem : ''));
+      // Coluna em CONTATOS chama "observacoes", não "obs" — putC() ignora
+      // silenciosamente nomes de coluna que não existem (achado ao testar
+      // este fix: o texto de origem/mensagem do lead nunca era gravado).
+      putC('observacoes',  'Lead Imobzi ' + (leadObj.canal ? '(' + leadObj.canal + ') ' : '') + (leadObj.codigoImovel ? '- Imóvel: ' + leadObj.codigoImovel : '') + (leadObj.mensagem ? ' | ' + leadObj.mensagem : ''));
       var novoId = 'CLI-' + new Date().getTime();
       putC('idCliente', novoId);
       getAba().appendRow(novaLinha);

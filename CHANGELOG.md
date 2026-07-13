@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Fix: migração de lead Imobzi não ativava o chip "Imobzi / CRM"
+
+**Pedido**: ao migrar um lead Imobzi pra CONTATOS (mudando o pipeline), o campo "Canal de Origem"
+do cadastro deve ficar gravado como "Imobzi / CRM" — o mesmo botão/chip que já existe no
+formulário — e esse botão deve aparecer ativado ao abrir o cadastro depois.
+
+**Causa raiz**: a migração gravava o `canal` bruto vindo da API do Imobzi (ex: "Facebook Ads",
+"Portal") ou o texto genérico "Imobzi" como fallback — nenhum dos dois batia com o texto exato do
+chip "Imobzi / CRM" (a função `ativarChip()` do formulário só ativa por igualdade exata de string).
+Resultado: nenhum chip de canal aparecia selecionado nesses cadastros.
+
+**Fix**: `atualizarPipelineLeadImobzi_` agora grava `canal` como o literal `'Imobzi / CRM'`, sempre.
+O canal mais específico que veio da Imobzi (Facebook Ads, Portal, etc.) continua preservado no
+campo Observações, junto com o código do imóvel e a mensagem do lead.
+
+**Bônus (achado testando o fix acima)**: o mesmo trecho gravava numa coluna chamada `obs`, que não
+existe em CONTATOS (o nome real é `observacoes`) — o texto de origem/mensagem do lead nunca era
+salvo, silenciosamente. Corrigido junto. ⚠️ precisa reimplantar o Apps Script.
+
 ## 2026-07-09 — Cards de Leads Imobzi: avatar vermelho/azul, código em destaque, remove endereço e WhatsApp
 
 Coluna de leads Imobzi no dashboard:
