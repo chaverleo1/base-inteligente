@@ -257,7 +257,7 @@ a { text-decoration:none; color:inherit; }
     <a href="busca.html"       class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
     <a href="dashboard.html?secao=baseimob"   class="nav-tab">BaseImob</a>
-    <a href="dashboard.html?secao=imobzi"   class="nav-tab">Leads Imobzi</a>
+    <a href="leads-imobzi.html"   class="nav-tab">Leads Imobzi</a>
     <a href="dashboard.html?secao=adm"   class="nav-tab">ADM</a>
   </div>
   <button class="refresh-btn" onclick="window.location.href='dashboard.html'">← Voltar ao Dashboard</button>
@@ -422,6 +422,16 @@ async function salvarPipelineRapido(sel) {
     const res  = await fetch(WEBHOOK_URL, { method: 'POST', body });
     const json = await res.json();
     if (json.ok) {
+      // Leads e Contatos são bases separadas — levar o pipeline de volta pra
+      // "Lead Imobzi" tira o cadastro de CONTATOS de vez (ver
+      // reverterContatoParaLeadImobzi_ no backend). O card some da lista
+      // aqui, já que o registro não existe mais nessa base.
+      if (json.revertidoParaLeadImobzi) {
+        _contatos = _contatos.filter(c => c.idCliente !== idCliente);
+        render(_contatos);
+        showToast('Contato voltou pra Leads Imobzi (re-lead)', 'ok');
+        return;
+      }
       sel.classList.add('saved');
       setTimeout(() => sel.classList.remove('saved'), 1800);
       showToast('Pipeline atualizado', 'ok');

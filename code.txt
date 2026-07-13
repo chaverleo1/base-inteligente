@@ -193,6 +193,7 @@ function doGet(e) {
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
+  if (acao === 'listar_todos_leads_imobzi') return ok(listarLeadsImobzi_({todos:true}));
   if (acao === 'buscar_afins_imovel') {
     var afCod    = String(e.parameter.cod    || '').trim();
     var afBairro = String(e.parameter.bairro || '').trim();
@@ -778,6 +779,30 @@ function excluir_(d) {
   return { status: 'excluido', linha: lin };
 }
 
+// Leads e Contatos são bases separadas (decisão do usuário, 2026-07) — não
+// uma extensão uma da outra. Quando o corretor leva o pipeline de um contato
+// JÁ EXISTENTE de volta pro estágio "Lead Imobzi", o cadastro sai de CONTATOS
+// de vez (sem preservar observações/histórico — decisão explícita do
+// usuário) e volta a existir em LEADS_IMOBZI com o status "RE-LEAD-IMOBZI",
+// reaparecendo na lista de leads pendentes de triagem. Não gera cascata de
+// limpeza em FAVORITOS/MATCHES, mesmo comportamento de excluir_().
+function reverterContatoParaLeadImobzi_(nome, telefone, email) {
+  var abaLeads = obterAbaLeadsImobzi_();
+  var agora    = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var linha = CABECALHO_LEADS_IMOBZI.map(function(col) {
+    if (col === 'dataCadastro') return agora;
+    if (col === 'nome')         return String(nome     || '').trim();
+    if (col === 'telefone')     return String(telefone || '').trim();
+    if (col === 'email')        return String(email    || '').trim();
+    if (col === 'pipeline')     return 'LEAD';
+    if (col === 'statusBase')   return 'RE-LEAD-IMOBZI';
+    if (col === 'canal')        return 'Imobzi / CRM';
+    if (col === 'idLeadImobzi') return Utilities.getUuid();
+    return '';
+  });
+  abaLeads.appendRow(linha);
+}
+
 function salvarPipeline_(d) {
   if (!d.idCliente && !d._linha) return {ok: false, motivo: 'sem identificador'};
   var aba   = getAba();
@@ -799,10 +824,19 @@ function salvarPipeline_(d) {
   var iPip     = garantirColuna_('pipeline');
   var iPipData = garantirColuna_('pipelineData');
 
-  var iId = cab.indexOf('idCliente');
+  var iId    = cab.indexOf('idCliente');
+  var iNome  = cab.indexOf('nome');
+  var iTel   = cab.indexOf('telefone');
+  var iEmail = cab.indexOf('email');
   for (var i = 1; i < dados.length; i++) {
     var match = d.idCliente ? String(dados[i][iId] || '') === String(d.idCliente) : (i + 1 === parseInt(d._linha));
     if (match) {
+      var pipelineAtual = String(dados[i][iPip] || '');
+      if (d.pipeline === 'Lead Imobzi' && pipelineAtual !== 'Lead Imobzi') {
+        reverterContatoParaLeadImobzi_(dados[i][iNome], dados[i][iTel], iEmail >= 0 ? dados[i][iEmail] : '');
+        aba.deleteRow(i + 1);
+        return { ok: true, revertidoParaLeadImobzi: true };
+      }
       aba.getRange(i + 1, iPip + 1).setValue(d.pipeline || '');
       // Toda troca de estágio por aqui reinicia a contagem de dias — é
       // sempre uma mudança intencional (select de pipeline sendo trocado).
@@ -835,6 +869,19 @@ function atualizar(d) {
   var proxAcaoAtual     = String(existente[CABECALHO.indexOf('proximaAcao')] || '');
   var proxAcaoDataAtual = existente[CABECALHO.indexOf('proximaAcaoData')];
   var agora     = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  // Mesma regra de salvarPipeline_: levar o pipeline de volta pra "Lead
+  // Imobzi" pelo formulário completo também tira o cadastro de CONTATOS e
+  // devolve pra LEADS_IMOBZI — ver reverterContatoParaLeadImobzi_.
+  if (d.pipeline === 'Lead Imobzi' && String(pipelineAtual || '') !== 'Lead Imobzi') {
+    reverterContatoParaLeadImobzi_(
+      existente[CABECALHO.indexOf('nome')],
+      existente[CABECALHO.indexOf('telefone')],
+      existente[CABECALHO.indexOf('email')]
+    );
+    aba.deleteRow(lin);
+    return { status: 'revertido_lead_imobzi', linha: lin };
+  }
   var linha = CABECALHO.map(function(col) {
     if (col === 'dataCadastro') return dataCad;
     // Toda edição conta como atualização "fresca" — diferente de dataCadastro,
@@ -4416,7 +4463,12 @@ function listarLeadsImobzi_(d) {
       }
     }
     return obj;
-  }).filter(function(l) { return String(l.pipeline || '') !== 'MIGRADO'; });
+  }).filter(function(l) {
+    // d.todos (usado pela página "Todos os Leads Imobzi") mostra tudo,
+    // inclusive já migrados — a lista rápida do Dashboard continua só com
+    // os pendentes de triagem.
+    return (d && d.todos) ? true : String(l.pipeline || '') !== 'MIGRADO';
+  });
   return { leads: leads };
 }
 

@@ -202,7 +202,7 @@
     <a href="busca.html"       class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
     <a href="dashboard.html?secao=baseimob"   class="nav-tab">BaseImob</a>
-    <a href="dashboard.html?secao=imobzi"   class="nav-tab">Leads Imobzi</a>
+    <a href="leads-imobzi.html"   class="nav-tab">Leads Imobzi</a>
     <a href="dashboard.html?secao=adm"   class="nav-tab">ADM</a>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
@@ -1125,6 +1125,16 @@
       const res  = await fetch(WEBHOOK_URL, {method:'POST', body});
       const json = await res.json();
       if (json.ok) {
+        // Leads e Contatos são bases separadas — levar o pipeline de volta
+        // pra "Lead Imobzi" tira o cadastro de CONTATOS de vez (ver
+        // reverterContatoParaLeadImobzi_ no backend). A linha some do
+        // resultado de busca, já que o registro não existe mais aqui.
+        if (json.revertidoParaLeadImobzi) {
+          const row = sel.closest('div[onclick]');
+          if (row) row.remove();
+          showToast('Contato voltou pra Leads Imobzi (re-lead)', 'ok');
+          return;
+        }
         sel.style.borderColor = 'var(--accent2)';
         setTimeout(() => { sel.style.borderColor = ''; }, 1800);
         // atualiza badge ao lado do nome

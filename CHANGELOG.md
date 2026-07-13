@@ -1,5 +1,36 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — "Re-lead Imobzi" + nova página "Todos os Leads Imobzi"
+
+**Item 8 — reversão automática pra Lead Imobzi**: quando o corretor leva o pipeline de um contato
+já existente de volta pro estágio "Lead Imobzi" (pelo select rápido ou pelo formulário completo),
+o cadastro sai de CONTATOS de vez e volta a existir em LEADS_IMOBZI, reaparecendo na lista de leads
+pendentes — identificado com o status **"RE-LEAD-IMOBZI"**. O círculo com a inicial do nome (avatar)
+fica **amarelo** nesse caso, com prioridade sobre o esquema vermelho/azul de novo/já visto.
+
+Novo backend: `reverterContatoParaLeadImobzi_` (integrado em `salvarPipeline_` e `atualizar`) —
+detecta a transição de qualquer estágio PARA "Lead Imobzi" e faz a troca de base. Não preserva
+observações/histórico do CONTATOS (decisão explícita), nem faz cascata de limpeza em
+FAVORITOS/MATCHES (mesmo comportamento de excluir_ contato).
+
+**Item 9 — nova página dedicada `leads-imobzi.html`**: "Todos os Leads Imobzi" — lista completa
+(pendentes, migrados e re-leads, com filtros), busca, edição (nome/telefone/email) e exclusão.
+Leads e Contatos são bases conceitualmente separadas, não uma extensão uma da outra — por isso uma
+página própria em vez de reaproveitar `contatos.html`.
+
+- O botão "✏️ Editar" nos cards de lead do Dashboard agora abre essa página nesse lead específico
+  (`leads-imobzi.html?id=...`) em vez do drawer embutido no Dashboard, que foi removido.
+- O link "Leads Imobzi" no cabeçalho das outras páginas agora aponta pra cá (antes ia pra
+  `dashboard.html?secao=imobzi`); a seção rápida do Dashboard continua existindo, com um novo link
+  "📋 Ver todos os leads Imobzi →" pra esta página.
+
+**Backend**: `listarLeadsImobzi_` aceita `{todos:true}` (rota GET `listar_todos_leads_imobzi`) pra
+retornar tudo, inclusive migrados — a lista rápida do Dashboard continua só com pendentes.
+
+Testado de ponta a ponta no preview: reversão em `salvarPipeline_`/`atualizar` (harness Node),
+carregamento/ordenação/filtros/busca/edição/exclusão/deep-link `?id=` na nova página. ⚠️ precisa
+reimplantar o Apps Script.
+
 ## 2026-07-09 — Novo estágio "Lead Imobzi" no Pipeline de Negociações
 
 Novo estágio **"Lead Imobzi"** — todo lead com origem Imobzi entra primeiro nesse estágio ao ser
