@@ -1,5 +1,20 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Fix: formato de data dos leads Imobzi não mudava com dados reais
+
+**Bug**: a ordenação/destaque de data implementados no commit anterior funcionavam nos meus testes
+(dados simulados), mas continuavam aparecendo no formato antigo com os leads reais.
+
+**Causa raiz**: `dataCadastro` é gravado como texto "dd/MM/yyyy HH:mm", mas o Google Sheets pode
+reconhecer esse texto como data ao salvar e converter a célula sozinho — nesse caso o Apps Script
+devolve um `Date` de verdade, que vira string ISO ("2026-07-13T22:25:00.000Z") ao passar por
+`JSON.stringify`, não mais "dd/MM/yyyy HH:mm". O parser só reconhecia o formato BR — pra qualquer
+lead cuja célula tivesse sido auto-convertida, caía no `null` e mostrava o texto cru.
+
+**Fix**: `parseDataCadastroBR_` tenta o formato BR primeiro e cai pro parser nativo do JS (`new
+Date(str)`, entende ISO e a maioria dos outros formatos) como fallback. Testado com uma lista
+misturando os dois formatos (BR e ISO) — ordenação e "Em dd/MM/aa - HH:mm" corretos nos dois casos.
+
 ## 2026-07-09 — Leads Imobzi: ordenação por mais recente + data em destaque
 
 Coluna de novos leads Imobzi no dashboard:

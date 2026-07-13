@@ -3793,13 +3793,20 @@ async function carregarLeadsImobzi() {
   }
 }
 
-// dataCadastro chega do backend como "dd/MM/yyyy HH:mm" (Utilities.formatDate
-// padrão do projeto) — parseia pra Date pra poder ordenar, e formata pro
-// destaque "Em dd/MM/aa - HH:mm" pedido pra coluna de leads novos.
+// dataCadastro é gravado como string "dd/MM/yyyy HH:mm" (Utilities.formatDate
+// padrão do projeto), mas o Sheets pode reconhecer esse texto como data ao
+// gravar e converter a célula sozinho — nesse caso o Apps Script devolve um
+// Date de verdade, que vira string ISO ("2026-07-13T22:25:00.000Z") ao passar
+// por JSON.stringify, não "dd/MM/yyyy HH:mm". Tenta o formato BR primeiro e
+// cai pro parser nativo do JS (entende ISO e a maioria dos outros formatos)
+// como fallback, em vez de simplesmente desistir.
 function parseDataCadastroBR_(str) {
-  const m = String(str || '').match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
-  if (!m) return null;
-  return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+  const s = String(str || '').trim();
+  if (!s) return null;
+  const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 function formatEntradaDestaque_(str) {
