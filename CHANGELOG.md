@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Fix: excluir lead Imobzi deslogava em vez de excluir
+
+**Bug**: clicar em excluir um lead na aba Imobzi do dashboard tirava o usuário da página e mostrava
+a tela de login, sem excluir nada e sem qualquer confirmação visível de erro.
+
+**Causa raiz**: `excluirLeadImobzi_` (e outras ~6 chamadas do dashboard/contatos, ex: `migrarLead`,
+`excluirCliente_`) montam o corpo do POST com `new FormData()`, que o navegador envia como
+`multipart/form-data`. O backend (`doPost`) só sabia interpretar JSON puro ou
+`application/x-www-form-urlencoded` (via `parseBody(e.postData.contents)`) — pra multipart, esse
+conteúdo bruto vem delimitado por boundary e é ilegível por esse parser, então `d` virava `{}`,
+`d.token` ficava `undefined`, e a checagem de sessão barrava a chamada como se o usuário não
+estivesse logado — daí o "logout" ao clicar em excluir.
+
+**Fix**: `doPost` agora prioriza `e.parameter.dados` quando presente — o Apps Script já popula esse
+campo automaticamente pra POSTs `multipart/form-data` (mesmo mecanismo que já usa pro `doGet`),
+então não precisa reparsear o corpo bruto. JSON puro e `URLSearchParams` continuam passando pelo
+`parseBody(contents)` de sempre, sem mudança de comportamento. Testado via harness Node nos 4
+cenários (multipart válido, urlencoded válido, token inválido, multipart sem `e.parameter`) — todos
+corretos, nenhuma regressão na rejeição de token realmente inválido. ⚠️ precisa reimplantar o Apps
+Script — esse fix corrige de uma vez TODAS as chamadas via `FormData` no projeto, não só a de
+excluir lead Imobzi.
+
 ## 2026-07-09 — Aba "Landing Pages" na página ADM
 
 Nova sub-aba **"🌐 Landing Pages"** ao lado de "ATIVAR FUNÇÕES" e "Links Úteis" — catálogo das

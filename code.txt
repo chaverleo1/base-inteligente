@@ -654,7 +654,24 @@ function doPost(e) {
       contents
     ]);
   } catch(logErr) {}
-  var d = parseBody(contents);
+  // Requisições enviadas via `new FormData()` (várias telas do dashboard.html/
+  // contatos.html, ex: excluirLeadImobzi_, migrarLead) chegam como
+  // multipart/form-data — pra esse content-type o Apps Script já parseia os
+  // campos em e.parameter (igual faz pro doGet), então postData.contents vem
+  // como o corpo bruto delimitado por boundary, ilegível pelo parser de
+  // x-www-form-urlencoded de parseBody(). Sem esse fallback, TODA chamada via
+  // FormData caía em d={} (token undefined) e tomava "nao_autenticado" —
+  // consequência visível: clicar em "excluir lead" deslogava o usuário em vez
+  // de excluir. JSON puro (Content-Type: application/json) e POSTs via
+  // URLSearchParams continuam passando por parseBody(contents) normalmente,
+  // já que nenhum dos dois preenche e.parameter.dados do jeito que o
+  // multipart preenche.
+  var d;
+  if (e.parameter && e.parameter.dados) {
+    try { d = JSON.parse(e.parameter.dados); } catch(errParseParam) { d = parseBody(contents); }
+  } else {
+    d = parseBody(contents);
+  }
 
   // 'salvar_senha' fica de fora — pertence ao fluxo de redefinição de senha
   // (protegido pelo próprio token de reset de validarToken_/salvarSenhaReset_,
