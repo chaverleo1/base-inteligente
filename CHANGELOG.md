@@ -1,5 +1,36 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 10) — Fix: 2º pedido de interesse do mesmo cliente Imobzi era descartado
+
+Bug relatado pelo usuário: quando o mesmo cliente manifestava interesse em um imóvel e, depois, em
+OUTRO imóvel diferente, o segundo pedido desaparecia — o sistema reconhecia "mesmo telefone/email"
+e descartava como duplicado, mesmo sendo um imóvel completamente diferente.
+
+**Causa** (`salvarLeadImobzi_` em `code.txt`, chamada tanto pelo fluxo de "Deal" quanto pelo
+legado "contact_type=lead"): a checagem de duplicidade em LEADS_IMOBZI comparava só telefone/email
+— achar QUALQUER lead anterior do mesmo cliente (por tel/email) já retornava `duplicado: true` e
+descartava o novo lead inteiro, independente de qual imóvel fosse.
+
+**Fix**: duplicado de verdade agora é só:
+1. **Mesmo negócio** (`idLeadImobzi` igual — a Imobzi reenviando o webhook do mesmo deal), OU
+2. **Mesmo cliente + mesmo imóvel** (telefone/email batem E `codigoImovel` bate, com fallback pra
+   `nomeImovel` quando nenhum dos dois lados tem código).
+
+Mesmo cliente + imóvel DIFERENTE deixa de ser descartado — vira uma nova linha em LEADS_IMOBZI, e
+os dois (ou mais) imóveis de interesse desse cliente passam a aparecer como leads separados nas
+telas de Leads Imobzi (cada linha já é renderizada como um card próprio — não precisou de UI nova).
+
+Testado via smoke test em Node com 3 cenários:
+- Cliente novo, interesse no imóvel A → grava normalmente.
+- Mesmo deal reenviado (mesmo `idLeadImobzi`) → duplicado, não duplica a linha.
+- Mesmo cliente, imóvel B diferente (deal novo) → grava como lead novo (não descarta). Resultado:
+  2 leads gravados, um pra cada imóvel.
+- Cenário extra: mesmo cliente, MESMO imóvel mas com `idLeadImobzi` diferente (Imobzi recriando o
+  deal pro mesmo interesse) → ainda reconhecido como duplicado corretamente (evita lead repetido
+  só porque o deal mudou de ID).
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-13 (parte 9) — Coluna "Última Atualização" + destaque de cadastro desatualizado (>45 dias)
 
 **Item 1**: nova coluna **"Última Atualização"** na tabela da aba "Construtoras" — data da importação

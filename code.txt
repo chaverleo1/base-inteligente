@@ -4120,23 +4120,43 @@ function salvarLeadImobzi_(d) {
     }
   }
 
-  // Verifica duplicidade em LEADS_IMOBZI (mesmo idLeadImobzi ou tel/email)
+  // Verifica duplicidade em LEADS_IMOBZI — duplicado de VERDADE é o mesmo
+  // negócio (mesmo idLeadImobzi, ex: Imobzi reenviando o webhook do mesmo
+  // deal) OU o mesmo cliente manifestando interesse no MESMO imóvel de novo.
+  // Achar o cliente por tel/email SOZINHO não basta: antes disso descartava
+  // qualquer novo lead desse cliente pra um imóvel DIFERENTE, escondendo um
+  // segundo (ou mais) pedido de interesse genuíno — o cliente que pede um
+  // apto e depois pede uma casa, por exemplo, precisa aparecer com os DOIS
+  // imóveis na lista de leads, não só o primeiro.
   var abaLeads = obterAbaLeadsImobzi_();
   var lr = abaLeads.getLastRow();
   if (lr > 1) {
-    var ld     = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_IMOBZI.length).getValues();
-    var iIdIm  = CABECALHO_LEADS_IMOBZI.indexOf('idLeadImobzi');
-    var iLTel  = CABECALHO_LEADS_IMOBZI.indexOf('telefone');
-    var iLEm   = CABECALHO_LEADS_IMOBZI.indexOf('email');
+    var ld       = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_IMOBZI.length).getValues();
+    var iIdIm    = CABECALHO_LEADS_IMOBZI.indexOf('idLeadImobzi');
+    var iLTel    = CABECALHO_LEADS_IMOBZI.indexOf('telefone');
+    var iLEm     = CABECALHO_LEADS_IMOBZI.indexOf('email');
+    var iLCod    = CABECALHO_LEADS_IMOBZI.indexOf('codigoImovel');
+    var iLNomeIm = CABECALHO_LEADS_IMOBZI.indexOf('nomeImovel');
+    var codNovo  = codIm.trim().toLowerCase();
+    var nomeNovo = nomeIm.trim().toLowerCase();
     for (var j = 0; j < ld.length; j++) {
       var tLd = String(ld[j][iLTel] || '').replace(/\D/g,'');
       var eLd = String(ld[j][iLEm]  || '').trim().toLowerCase();
       var iLd = String(ld[j][iIdIm] || '').trim();
-      if ((idImobzi && iLd === idImobzi) ||
-          (tel && tLd === tel) ||
-          (email && eLd === email)) {
+      var mesmoNegocio = idImobzi && iLd === idImobzi;
+      var mesmoCliente = (tel && tLd === tel) || (email && eLd === email);
+      if (!mesmoNegocio && !mesmoCliente) continue;
+
+      var codLd    = String(ld[j][iLCod]    || '').trim().toLowerCase();
+      var nomeLdIm = String(ld[j][iLNomeIm] || '').trim().toLowerCase();
+      var mesmoImovel = (codNovo && codLd === codNovo) ||
+                         (!codNovo && !codLd && nomeNovo && nomeLdIm === nomeNovo);
+
+      if (mesmoNegocio || (mesmoCliente && mesmoImovel)) {
         return { ok: true, duplicado: true, statusBase: statusBase, msg: 'lead ja existe' };
       }
+      // Mesmo cliente, imóvel diferente — não é duplicado, segue o fluxo
+      // normal e grava como um novo lead (nova linha) pra esse cliente.
     }
   }
 
