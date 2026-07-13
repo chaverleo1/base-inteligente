@@ -995,6 +995,34 @@
   </div>
 </div>
 
+<!-- DRAWER EDITAR LEAD IMOBZI -->
+<div class="drawer-overlay" id="drawerOverlayEditarLeadImobzi" onclick="fecharDrawerEditarLeadImobzi()"></div>
+<div class="drawer" id="drawerEditarLeadImobzi">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-nome">Editar Lead Imobzi</div>
+      <div class="drawer-cod">Corrige nome/telefone/email vindos da sincronização</div>
+    </div>
+    <button class="drawer-close" onclick="fecharDrawerEditarLeadImobzi()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <input type="hidden" id="editLeadImobziUid">
+    <div class="link-form-group">
+      <label class="link-form-label">Nome</label>
+      <input class="link-form-input" id="editLeadImobziNome" placeholder="Nome do cliente">
+    </div>
+    <div class="link-form-group">
+      <label class="link-form-label">Telefone</label>
+      <input class="link-form-input" id="editLeadImobziTelefone" placeholder="(62) 99999-9999">
+    </div>
+    <div class="link-form-group">
+      <label class="link-form-label">Email</label>
+      <input class="link-form-input" id="editLeadImobziEmail" placeholder="cliente@email.com">
+    </div>
+    <button class="adm-btn" style="width:100%" id="btnSalvarEdicaoLeadImobzi" onclick="salvarEdicaoLeadImobzi()">💾 Salvar</button>
+  </div>
+</div>
+
 <!-- DRAWER IMOVEL (matches) -->
 <div class="drawer-overlay" id="imovelDrawerOverlay" onclick="fecharImovelDrawer()"></div>
 <div class="drawer" id="imovelDrawer">
@@ -3888,11 +3916,60 @@ function renderLeadsImobzi(leads) {
       <div class="bi-actions" onclick="event.stopPropagation()">
         <button class="bi-btn" style="background:var(--surface2);color:var(--text2);font-size:11px"
           onclick="selecionarLeadImobzi('${uid}')">Ver ›</button>
+        <button class="bi-btn" style="background:var(--surface2);color:var(--accent);font-size:11px" title="Editar"
+          onclick="abrirDrawerEditarLeadImobzi('${uid}')">✏️</button>
         <button class="bi-btn" style="background:#3a1a1a;color:#e05a3a;font-size:13px" title="Excluir"
           onclick="excluirLeadImobzi_('${uid}',this)">🗑</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function abrirDrawerEditarLeadImobzi(uid) {
+  const l = _imobziLeadsMap[uid];
+  if (!l) return;
+  document.getElementById('editLeadImobziUid').value      = uid;
+  document.getElementById('editLeadImobziNome').value     = l.nome     || '';
+  document.getElementById('editLeadImobziTelefone').value = l.telefone || '';
+  document.getElementById('editLeadImobziEmail').value    = l.email    || '';
+  document.getElementById('drawerEditarLeadImobzi').classList.add('open');
+  document.getElementById('drawerOverlayEditarLeadImobzi').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharDrawerEditarLeadImobzi() {
+  document.getElementById('drawerEditarLeadImobzi').classList.remove('open');
+  document.getElementById('drawerOverlayEditarLeadImobzi').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function salvarEdicaoLeadImobzi() {
+  const uid      = document.getElementById('editLeadImobziUid').value;
+  const nome     = document.getElementById('editLeadImobziNome').value.trim();
+  const telefone = document.getElementById('editLeadImobziTelefone').value.trim();
+  const email    = document.getElementById('editLeadImobziEmail').value.trim();
+  if (!nome) { showToast('Nome é obrigatório.', 'erro'); return; }
+
+  const btn = document.getElementById('btnSalvarEdicaoLeadImobzi');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'atualizar_lead_imobzi', idLeadImobzi: uid, nome, telefone, email, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (!r.ok) throw new Error(r.erro || 'Erro desconhecido');
+    // Atualiza local sem precisar recarregar tudo da planilha
+    const l = _imobziLeadsMap[uid];
+    if (l) { l.nome = nome; l.telefone = telefone; l.email = email; }
+    fecharDrawerEditarLeadImobzi();
+    renderLeadsImobzi(Object.values(_imobziLeadsMap));
+    showToast('Lead atualizado.', 'ok');
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Salvar';
+  }
 }
 
 function fmtBRL(v) {

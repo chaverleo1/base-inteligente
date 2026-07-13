@@ -706,6 +706,7 @@ function doPost(e) {
   if (d.acao === 'sincronizar_imobzi')              return ok(sincronizarLeadsImobzi_());
   if (d.acao === 'atualizar_pipeline_lead_imobzi')  return ok(atualizarPipelineLeadImobzi_(d));
   if (d.acao === 'excluir_lead_imobzi')             return ok(excluirLeadImobzi_(d));
+  if (d.acao === 'atualizar_lead_imobzi')           return ok(atualizarLeadImobzi_(d));
   if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
   if (d.acao === 'adicionar_favorito')    return ok(adicionarFavorito_(d));
   if (d.acao === 'salvar_pipeline')       return ok(salvarPipeline_(d));
@@ -4506,6 +4507,33 @@ function excluirLeadImobzi_(d) {
   for (var i = 0; i < dados.length; i++) {
     if (String(dados[i][iIdIm]) === idLeadImobzi) {
       aba.deleteRow(i + 2);
+      return { ok: true };
+    }
+  }
+  return { ok: false, erro: 'lead nao encontrado' };
+}
+
+// Corrige nome/telefone/email de um lead Imobzi direto na planilha — dados
+// que vêm da sincronização com a API externa às vezes chegam incompletos ou
+// com erro de digitação, e antes só dava pra corrigir abrindo a planilha na
+// mão. Não mexe nos outros campos (codigoImovel, pipeline, etc.).
+function atualizarLeadImobzi_(d) {
+  var idLeadImobzi = String(d.idLeadImobzi || '').trim();
+  if (!idLeadImobzi) return { ok: false, erro: 'idLeadImobzi obrigatorio' };
+  var aba = obterAbaLeadsImobzi_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'lead nao encontrado' };
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_LEADS_IMOBZI.length).getValues();
+  var iIdIm = CABECALHO_LEADS_IMOBZI.indexOf('idLeadImobzi');
+  var iNome = CABECALHO_LEADS_IMOBZI.indexOf('nome');
+  var iTel  = CABECALHO_LEADS_IMOBZI.indexOf('telefone');
+  var iEm   = CABECALHO_LEADS_IMOBZI.indexOf('email');
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][iIdIm]) === idLeadImobzi) {
+      var linha = i + 2;
+      if (d.nome     !== undefined) aba.getRange(linha, iNome + 1).setValue(String(d.nome).trim());
+      if (d.telefone !== undefined) aba.getRange(linha, iTel  + 1).setValue(String(d.telefone).trim());
+      if (d.email    !== undefined) aba.getRange(linha, iEm   + 1).setValue(String(d.email).trim());
       return { ok: true };
     }
   }

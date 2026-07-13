@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Botão "Editar" nos cards de Leads Imobzi
+
+Cada card na coluna de novos leads Imobzi ganha um botão **"✏️ Editar"**, que abre uma janela
+lateral pra corrigir Nome/Telefone/Email direto — útil quando esses dados chegam incompletos ou
+com erro de digitação da sincronização com a API do Imobzi. Salva sem precisar recarregar a lista
+inteira.
+
+**Backend** (`code.txt`): nova função `atualizarLeadImobzi_` + rota `atualizar_lead_imobzi`
+(POST). Só altera nome/telefone/email — não mexe em pipeline, código do imóvel ou outros campos.
+⚠️ precisa reimplantar o Apps Script.
+
 ## 2026-07-09 — Fix: link "Leads Imobzi" faltava no cabeçalho das outras páginas
 
 A aba "Leads Imobzi" só existia no cabeçalho do próprio `dashboard.html` — Formulário, Busca
