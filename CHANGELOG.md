@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 9) — Coluna "Última Atualização" + destaque de cadastro desatualizado (>45 dias)
+
+**Item 1**: nova coluna **"Última Atualização"** na tabela da aba "Construtoras" — data da importação
+mais recente daquela construtora (a mais nova entre os imóveis dela em REVENDAS_CONSTRUTORAS).
+Calculada no backend (`listarConstrutorasParceiras_`, junto com a contagem de `totalImoveis` que já
+existia), reaproveitando `diasDesdeData_` (helper já existente, usado em outros lugares do projeto
+pra "dias desde uma data BR"). A mesma data de atualização/importação também aparece por imóvel no
+drawer (coluna "Importado em", que já existia) — em ambos os lugares, **destaque em vermelho** quando
+passar de **45 dias** sem reextração (`.data-antiga-rc`).
+
+**Item 2**: o card "Revendas-Construtoras" na Visão Geral do Dashboard, que mostrava "novas" como
+"importados nas últimas 12h", mudou pra **"importados nos últimos 45 dias"** — mesmo limiar usado
+no destaque de desatualização do item 1, pra manter os dois conceitos consistentes (um imóvel que
+já passou da janela de "novo" também é candidato a aparecer como "desatualizado" se ninguém
+reextraiu a construtora dele). Legenda do card atualizada de "(12h)" pra "(45 dias)".
+
+Testado: smoke test em Node confirma `diasDesdeUltimaAtualizacao`/`diasDesdeCadastro` corretos
+(construtora com importação há 50 dias → 50; há 5 dias → 5). No preview: tabela de Construtoras
+mostra a data certa com vermelho só na desatualizada; drawer de imóveis também destaca em vermelho
+o imóvel de 50 dias; card do Dashboard testado com o mesmo exemplo do usuário (120 total, 5 dentro
+da janela de 45 dias, 115 fora) → "120 | 5" com legenda "(45 dias)".
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-13 (parte 8) — Card no Dashboard + reestruturação das abas de Revendas-Construtoras
 
 **Card "🏢 Revendas-Construtoras" na Visão Geral do Dashboard** ("item 2" do pedido): mostra

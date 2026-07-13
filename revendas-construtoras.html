@@ -145,6 +145,7 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 .td-nome { font-weight:600; }
 .td-valor { font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--accent2); white-space:nowrap; }
 .td-acoes { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.data-antiga-rc { color:var(--hot); font-weight:700; }
 
 .tipo-select {
   background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text);
@@ -554,6 +555,14 @@ function fmtDataImportada_(dataCadastro) {
   return m ? m[1] : (dataCadastro || '—');
 }
 
+// Cadastro com mais de 45 dias sem reextração fica destacado em vermelho —
+// dias já vem calculado do backend (diasDesdeCadastro/diasDesdeUltimaAtualizacao,
+// via diasDesdeData_), pra não duplicar parser de data BR/ISO no front.
+const LIMITE_DIAS_DESATUALIZADO_RC = 45;
+function classeDataRC_(dias) {
+  return (dias !== null && dias !== undefined && dias > LIMITE_DIAS_DESATUALIZADO_RC) ? 'data-antiga-rc' : '';
+}
+
 function renderListaRC(lista) {
   const root = document.getElementById('rootListaRC');
   if (!lista.length) { root.innerHTML = '<div class="empty">Nenhum imóvel dessa construtora.</div>'; return; }
@@ -566,7 +575,7 @@ function renderListaRC(lista) {
       <td>${imo.tipo ? `<span class="badge badge-blue">${imo.tipo}</span>` : '<span class="badge badge-muted">Indefinido</span>'}</td>
       <td>${fmtArea_(imo.areaUtil, imo.areaTerreno)}</td>
       <td class="td-valor">${fmtBRL_(imo.valorVenda)}</td>
-      <td>${fmtDataImportada_(imo.dataCadastro)}</td>
+      <td class="${classeDataRC_(imo.diasDesdeCadastro)}">${fmtDataImportada_(imo.dataCadastro)}</td>
       <td><button class="btn-excluir" onclick="excluirRC(${imo._linha}, this)">🗑️ Excluir</button></td>
     </tr>`).join('');
   root.innerHTML = `
@@ -629,6 +638,7 @@ function renderConstrutorasRC(lista) {
         <button class="construtora-total-btn" onclick="abrirImoveisConstrutoraRC('${(c.nome||'').replace(/'/g,"\\'")}')"
           title="Ver imóveis dessa construtora">${c.totalImoveis || 0}</button>
       </td>
+      <td class="${classeDataRC_(c.diasDesdeUltimaAtualizacao)}">${fmtDataImportada_(c.ultimaAtualizacao)}</td>
       <td class="td-acoes">
         <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
         ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 PDF</a>` : ''}
@@ -637,7 +647,7 @@ function renderConstrutorasRC(lista) {
   root.innerHTML = `
     <div class="count-info">${lista.length} construtora${lista.length===1?'':'s'} cadastrada${lista.length===1?'':'s'}</div>
     <div class="detail-wrap"><table class="detail-table">
-      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Última Atualização</th><th>Ações</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }

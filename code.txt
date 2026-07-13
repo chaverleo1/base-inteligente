@@ -3198,6 +3198,9 @@ function listarRevendasConstrutoras_() {
       if (!dados[i][0]) continue; // linha vazia
       var obj = { _linha: i + 2 };
       CABECALHO_REVENDAS_CONSTRUTORAS.forEach(function(col, j) { obj[col] = dados[i][j]; });
+      // Dias desde a importação — usado no front pra destacar em vermelho
+      // cadastro com mais de 45 dias (ver renderListaRC em revendas-construtoras.html).
+      obj.diasDesdeCadastro = diasDesdeData_(obj.dataCadastro);
       imoveis.push(obj);
     }
     return { imoveis: imoveis };
@@ -3345,12 +3348,21 @@ function listarConstrutorasParceiras_() {
 
     // Contagem de imóveis por construtora (normalizado) — uma passada só na
     // aba REVENDAS_CONSTRUTORAS, reaproveitada pra todas as construtoras.
+    // "Última atualização" = data da importação mais recente daquela
+    // construtora (menor "dias desde", já que cada importação em lote grava
+    // o mesmo dataCadastro pra todo o lote) — usada no front pra destacar em
+    // vermelho quando passar de 45 dias sem reextração.
     var imoveis = lerAba_('REVENDAS_CONSTRUTORAS');
     var contagem = {};
+    var ultimaAtualizacao = {};
     imoveis.forEach(function(r) {
       var key = norm_(r.construtora);
       if (!key) return;
       contagem[key] = (contagem[key] || 0) + 1;
+      var dias = diasDesdeData_(r.dataCadastro);
+      if (dias !== null && (!(key in ultimaAtualizacao) || dias < ultimaAtualizacao[key].dias)) {
+        ultimaAtualizacao[key] = { data: r.dataCadastro, dias: dias };
+      }
     });
 
     var construtoras = [];
@@ -3358,7 +3370,11 @@ function listarConstrutorasParceiras_() {
       if (!dados[i][0]) continue;
       var obj = { _linha: i + 2 };
       CABECALHO_CONSTRUTORAS_PARCEIRAS.forEach(function(col, j) { obj[col] = dados[i][j]; });
-      obj.totalImoveis = contagem[norm_(obj.nome)] || 0;
+      var key      = norm_(obj.nome);
+      var ua       = ultimaAtualizacao[key];
+      obj.totalImoveis              = contagem[key] || 0;
+      obj.ultimaAtualizacao         = ua ? ua.data : '';
+      obj.diasDesdeUltimaAtualizacao = ua ? ua.dias : null;
       construtoras.push(obj);
     }
     return { construtoras: construtoras };

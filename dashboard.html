@@ -1747,9 +1747,11 @@ async function carregarLancamentosDash() {
 }
 
 // Card "Revendas-Construtoras" na Visão Geral — mostra "atuais | novas",
-// onde "novas" conta quantos imóveis foram importados nas últimas 12h
-// (dataCadastro dentro dessa janela). Reaproveita parseDataCadastroBR_
-// (já trata o formato BR e o fallback ISO que o Sheets pode gerar sozinho).
+// onde "novas" conta quantos imóveis foram importados nos últimos 45 dias
+// (dataCadastro dentro dessa janela — antes era 12h, ajustado pelo usuário
+// pra bater com o mesmo limiar de "desatualizado" usado na página
+// revendas-construtoras.html). Reaproveita parseDataCadastroBR_ (já trata o
+// formato BR e o fallback ISO que o Sheets pode gerar sozinho).
 async function carregarRevendasConstrutorasDash() {
   const val = document.getElementById('cardVGRevConstValue');
   const sub = document.getElementById('cardVGRevConstSub');
@@ -1758,14 +1760,14 @@ async function carregarRevendasConstrutorasDash() {
     const json = await resp.json();
     const lista = json.imoveis || [];
     const total = lista.length;
-    const DOZE_HORAS_MS = 12 * 60 * 60 * 1000;
+    const QUARENTA_CINCO_DIAS_MS = 45 * 24 * 60 * 60 * 1000;
     const agora = Date.now();
     const novas = lista.filter(imo => {
       const d = parseDataCadastroBR_(imo.dataCadastro);
-      return d && (agora - d.getTime()) <= DOZE_HORAS_MS;
+      return d && (agora - d.getTime()) <= QUARENTA_CINCO_DIAS_MS;
     }).length;
     if (val) val.textContent = total + ' | ' + novas;
-    if (sub) sub.textContent = 'atuais | novas (12h)';
+    if (sub) sub.textContent = 'atuais | novas (45 dias)';
   } catch(e) {
     if (val) val.textContent = '—';
     if (sub) sub.textContent = 'erro ao carregar';
