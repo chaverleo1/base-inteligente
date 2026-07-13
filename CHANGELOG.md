@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Aba "Landing Pages" na página ADM
+
+Nova sub-aba **"🌐 Landing Pages"** ao lado de "ATIVAR FUNÇÕES" e "Links Úteis" — catálogo das
+páginas BaseImob, uma por tipo de produto. Cadastro fixo no HTML (não é um CRUD do corretor, é uma
+lista que a própria equipe atualiza ao publicar uma nova landing page), com botão **"👁 Ver"** que
+abre a página em outra aba.
+
+Primeira entrada: **Lote em Condomínio** → `baseimob-funil.html`.
+
 ## 2026-07-09 — Novo BaseImob: Configurador de Lote (`baseimob-funil.html`), fase 1
 
 Nova página, separada de `baseimob-landing.html`/`baseimob-total.html` (não mexe nas que já
