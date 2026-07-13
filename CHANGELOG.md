@@ -1,5 +1,38 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 8) — Card no Dashboard + reestruturação das abas de Revendas-Construtoras
+
+**Card "🏢 Revendas-Construtoras" na Visão Geral do Dashboard** ("item 2" do pedido): mostra
+"atuais | novas" (ex: `120 | 5`) — atuais é o total de imóveis cadastrados na aba
+REVENDAS_CONSTRUTORAS, novas é quantos desses têm `dataCadastro` dentro das últimas 12 horas.
+Botão "Ver →" leva pra `revendas-construtoras.html`. Cálculo 100% no front-end
+(`carregarRevendasConstrutorasDash()`), reaproveitando `parseDataCadastroBR_` (já existente, trata
+o formato BR e o fallback ISO que o Sheets pode gerar sozinho) — sem rota nova no backend.
+
+**Reestruturação de `revendas-construtoras.html`** — só 2 abas agora, nessa ordem:
+1. **"Construtoras"** (1ª aba, antes "Cadastrar", movida pra frente): mesmo formulário de cadastro
+   (Nome/Gerente Comercial/Fone/URL/Obs), mas a listagem virou **tabela** (Nome, Gerente Comercial,
+   Fone, Total de imóveis, Ações) em vez dos cards anteriores. O número na coluna "Total de
+   imóveis" agora é **clicável** — abre um drawer lateral (deslizando da direita, mesmo padrão
+   visual já usado em `contatos.html`/`leads-imobzi.html`) com a lista de imóveis só daquela
+   construtora, cada um com botão de excluir.
+2. **"Colar / Extrair"** (2ª aba, sem mudanças na lógica de extração/importação).
+
+**Removida**: a aba "Lista de Imóveis" (que mostrava todos os imóveis de todas as construtoras
+juntos) deixou de existir como aba separada — sua função foi absorvida pelo drawer acima, que já
+nasce filtrado por construtora (não existe mais visão "todos os imóveis sem filtro").
+
+Achado durante o teste no preview: a aba "Construtoras" virou a primeira/padrão da página, mas
+nada chamava `carregarConstrutorasRC()` no carregamento inicial (antes, cada aba só carregava
+dados quando clicada) — sem isso a tabela ficava travada em "Carregando construtoras..." pra
+sempre no primeiro acesso. Corrigido com uma chamada de bootstrap no fim do script.
+
+Testado no preview: card do Dashboard confirmado com o exemplo exato do usuário (120 total, 5
+novas nas últimas 12h → "120 | 5"); tabela de Construtoras renderiza ordenada por nome com botões
+corretos; clicar no Total abre o drawer já filtrado (testado com imóveis de 2 construtoras
+diferentes — só os da construtora clicada aparecem); fechar o drawer funciona; troca entre as 2
+abas funciona. Nenhum erro de console.
+
 ## 2026-07-13 (parte 7) — Nova aba "Cadastrar" em Revendas-Construtoras
 
 Terceira aba em `revendas-construtoras.html`, ao lado de "Colar / Extrair" e "Lista de Imóveis" —

@@ -85,24 +85,37 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 .field-rc .form-input-rc { max-width:none; }
 @media(max-width:640px) { .form-grid-rc { grid-template-columns:1fr; } .field-rc.span2-rc { grid-column:span 1; } }
 
-/* ── CARDS DE CONSTRUTORA (aba "Cadastrar") ── */
-.construtoras-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:24px; }
-.construtora-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
-.construtora-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
-.construtora-nome { font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:var(--text); }
-.construtora-info { font-size:12.5px; color:var(--text2); display:flex; align-items:center; gap:6px; margin-bottom:6px; }
-.construtora-total { font-size:13px; color:var(--accent2); font-weight:700; margin:10px 0; }
-.construtora-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
-.construtora-actions a, .construtora-actions button {
-  flex:1; min-width:110px; text-align:center; padding:8px 10px; border-radius:var(--radius-xs);
-  font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; border:none; transition:all .18s;
+/* ── TABELA DE CONSTRUTORAS (aba "Construtoras") ── */
+.construtora-nome { font-weight:700; color:var(--text); }
+.construtora-total-btn {
+  background:none; border:none; padding:0; font-family:'Space Grotesk',sans-serif; font-size:15px;
+  font-weight:700; color:var(--accent2); cursor:pointer; text-decoration:underline; text-underline-offset:2px;
 }
-.btn-ver-imoveis-rc { background:rgba(0,212,170,.1); color:var(--accent2); border:1px solid rgba(0,212,170,.25) !important; }
-.btn-ver-imoveis-rc:hover { background:rgba(0,212,170,.2); }
-.btn-editar-rc { background:rgba(79,124,255,.1); color:var(--accent); border:1px solid rgba(79,124,255,.25) !important; }
+.construtora-total-btn:hover { color:#00ffcc; }
+.btn-editar-rc { background:rgba(79,124,255,.1); color:var(--accent); border:1px solid rgba(79,124,255,.25);
+  border-radius:var(--radius-xs); padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer;
+  font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap; }
 .btn-editar-rc:hover { background:rgba(79,124,255,.2); }
-.btn-url-rc { background:var(--surface2); color:var(--text2); border:1px solid var(--border) !important; }
-.btn-url-rc:hover { border-color:var(--accent) !important; color:var(--accent); }
+.btn-url-rc { background:var(--surface2); color:var(--text2); border:1px solid var(--border);
+  border-radius:var(--radius-xs); padding:5px 12px; font-size:12px; font-weight:600; text-decoration:none;
+  white-space:nowrap; transition:all .18s; display:inline-block; }
+.btn-url-rc:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ── DRAWER: imóveis de uma construtora ── */
+.drawer-overlay-rc { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:500; opacity:0; pointer-events:none; transition:opacity .25s; }
+.drawer-overlay-rc.open { opacity:1; pointer-events:all; }
+.drawer-rc { position:fixed; top:0; right:0; height:100vh; width:640px; max-width:100vw; background:var(--surface);
+  border-left:1px solid var(--border); z-index:501; overflow-y:auto; transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
+.drawer-rc.open { transform:translateX(0); }
+.drawer-rc-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center;
+  justify-content:space-between; gap:12px; position:sticky; top:0; background:var(--surface); z-index:1; }
+.drawer-rc-titulo { font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:var(--text); }
+.drawer-rc-titulo span { color:var(--accent2); }
+.drawer-rc-close { background:transparent; border:none; color:var(--text3); font-size:22px; cursor:pointer; padding:0 4px; line-height:1; }
+.drawer-rc-close:hover { color:var(--text); }
+.drawer-rc-body { padding:18px 22px; flex:1; }
+@media(max-width:680px) { .drawer-rc { width:100vw; } }
 .motor-actions { display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
 .btn-extrair { padding:11px 22px; border-radius:var(--radius-sm); background:var(--accent); color:#fff; border:none;
                font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; }
@@ -131,6 +144,7 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 .td-cod { font-family:monospace; color:var(--text2); font-size:12px; }
 .td-nome { font-weight:600; }
 .td-valor { font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--accent2); white-space:nowrap; }
+.td-acoes { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
 .tipo-select {
   background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text);
@@ -182,67 +196,17 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
   <div class="page-header">
     <div>
       <div class="page-title">Revendas-Construtoras</div>
-      <div class="page-sub">Imóveis de revenda captados por construtoras parceiras — cole o texto organizado pelo assistente ORGANIZADOR e extraia em lote.</div>
+      <div class="page-sub">Imóveis de revenda captados por construtoras parceiras — cadastre a construtora e cole o texto organizado pelo assistente ORGANIZADOR pra importar os imóveis em lote.</div>
     </div>
   </div>
 
   <div class="rc-subtabs">
-    <button class="rc-subtab active" id="subtabExtrair" onclick="mostrarSubtabRC('extrair')">Colar / Extrair</button>
-    <button class="rc-subtab" id="subtabLista" onclick="mostrarSubtabRC('lista')">Lista de Imóveis</button>
-    <button class="rc-subtab" id="subtabCadastrar" onclick="mostrarSubtabRC('cadastrar')">Cadastrar</button>
+    <button class="rc-subtab active" id="subtabConstrutoras" onclick="mostrarSubtabRC('construtoras')">Construtoras</button>
+    <button class="rc-subtab" id="subtabExtrair" onclick="mostrarSubtabRC('extrair')">Colar / Extrair</button>
   </div>
 
-  <!-- COLAR / EXTRAIR -->
-  <div id="secaoExtrairRC">
-    <div class="motor-box">
-      <div class="sec-header">
-        <div class="sec-title">Colar dados</div>
-        <div class="sec-sub">Cole aqui o CSV organizado pelo assistente ORGANIZADOR — colunas: <code>Unidade, Empreendimento / Imóvel, Área, Configuração, Valor</code>. A primeira linha (cabeçalho) é detectada e ignorada automaticamente.</div>
-      </div>
-      <div class="motor-label">Construtora <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(origem desse lote — ex: CITY)</span></div>
-      <input type="text" class="form-input-rc" id="inputConstrutoraRC" placeholder="Ex: CITY" style="margin-bottom:16px">
-      <div class="motor-label">CSV</div>
-      <textarea class="motor-input" id="txtRC" placeholder="Unidade,Empreendimento / Imóvel,Área,Configuração,Valor&#10;AP 2802,Cobertura Torre Del Parc (Mobiliada),310 m²,4 suítes • 5 vagas,R$ 3.900.000&#10;..."></textarea>
-      <div class="motor-actions">
-        <button class="btn-extrair" id="btnExtrairRC" onclick="extrairRC()">⚡ Extrair Dados</button>
-        <button class="btn-sec" onclick="document.getElementById('txtRC').value=''">✕ Limpar</button>
-        <span class="motor-hint">Revise o "Tipo" de cada linha antes de importar — a detecção automática pode errar em nomes ambíguos.</span>
-      </div>
-    </div>
-
-    <div class="preview-box" id="previewBoxRC" style="display:none">
-      <div class="preview-header">
-        <div class="preview-title">Prévia da extração</div>
-        <span class="preview-badge" id="previewBadgeRC"></span>
-      </div>
-      <div class="detail-wrap">
-        <table class="detail-table">
-          <thead><tr>
-            <th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Quartos</th><th>Suítes</th><th>Vagas</th><th>Valor</th>
-          </tr></thead>
-          <tbody id="previewBodyRC"></tbody>
-        </table>
-      </div>
-      <div class="motor-actions" style="margin-top:16px">
-        <button class="btn-extrair" id="btnImportarRC" onclick="importarRC()">✓ Importar todos</button>
-        <button class="btn-sec" onclick="document.getElementById('previewBoxRC').style.display='none'">✕ Cancelar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- LISTA -->
-  <div id="secaoListaRC" style="display:none">
-    <div id="filtroConstrutoraRC" style="display:none;margin-bottom:14px">
-      <span class="badge badge-blue" style="font-size:13px;padding:6px 12px">
-        Filtrando por: <b id="filtroConstrutoraNomeRC"></b>
-        <span style="cursor:pointer;margin-left:8px;font-weight:700" onclick="limparFiltroConstrutoraRC()">✕</span>
-      </span>
-    </div>
-    <div id="rootListaRC"><div class="empty">Carregando imóveis...</div></div>
-  </div>
-
-  <!-- CADASTRAR -->
-  <div id="secaoCadastrarRC" style="display:none">
+  <!-- CONSTRUTORAS (1ª aba) -->
+  <div id="secaoConstrutorasRC">
     <div class="motor-box">
       <div class="sec-header">
         <div class="sec-title" id="tituloFormConstrutoraRC">Cadastrar construtora</div>
@@ -278,6 +242,54 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 
     <div id="rootConstrutorasRC"><div class="empty">Carregando construtoras...</div></div>
   </div>
+
+  <!-- COLAR / EXTRAIR (2ª aba) -->
+  <div id="secaoExtrairRC" style="display:none">
+    <div class="motor-box">
+      <div class="sec-header">
+        <div class="sec-title">Colar dados</div>
+        <div class="sec-sub">Cole aqui o CSV organizado pelo assistente ORGANIZADOR — colunas: <code>Unidade, Empreendimento / Imóvel, Área, Configuração, Valor</code>. A primeira linha (cabeçalho) é detectada e ignorada automaticamente.</div>
+      </div>
+      <div class="motor-label">Construtora <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(origem desse lote — ex: CITY)</span></div>
+      <input type="text" class="form-input-rc" id="inputConstrutoraRC" placeholder="Ex: CITY" style="margin-bottom:16px">
+      <div class="motor-label">CSV</div>
+      <textarea class="motor-input" id="txtRC" placeholder="Unidade,Empreendimento / Imóvel,Área,Configuração,Valor&#10;AP 2802,Cobertura Torre Del Parc (Mobiliada),310 m²,4 suítes • 5 vagas,R$ 3.900.000&#10;..."></textarea>
+      <div class="motor-actions">
+        <button class="btn-extrair" id="btnExtrairRC" onclick="extrairRC()">⚡ Extrair Dados</button>
+        <button class="btn-sec" onclick="document.getElementById('txtRC').value=''">✕ Limpar</button>
+        <span class="motor-hint">Revise o "Tipo" de cada linha antes de importar — a detecção automática pode errar em nomes ambíguos.</span>
+      </div>
+    </div>
+
+    <div class="preview-box" id="previewBoxRC" style="display:none">
+      <div class="preview-header">
+        <div class="preview-title">Prévia da extração</div>
+        <span class="preview-badge" id="previewBadgeRC"></span>
+      </div>
+      <div class="detail-wrap">
+        <table class="detail-table">
+          <thead><tr>
+            <th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Quartos</th><th>Suítes</th><th>Vagas</th><th>Valor</th>
+          </tr></thead>
+          <tbody id="previewBodyRC"></tbody>
+        </table>
+      </div>
+      <div class="motor-actions" style="margin-top:16px">
+        <button class="btn-extrair" id="btnImportarRC" onclick="importarRC()">✓ Importar todos</button>
+        <button class="btn-sec" onclick="document.getElementById('previewBoxRC').style.display='none'">✕ Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DRAWER: imóveis de uma construtora (aberto ao clicar no Total da tabela) -->
+<div class="drawer-overlay-rc" id="drawerOverlayRC" onclick="fecharDrawerImoveisRC()"></div>
+<div class="drawer-rc" id="drawerImoveisRC">
+  <div class="drawer-rc-header">
+    <div class="drawer-rc-titulo">Imóveis — <span id="drawerConstrutoraNomeRC"></span></div>
+    <button class="drawer-rc-close" onclick="fecharDrawerImoveisRC()">✕</button>
+  </div>
+  <div class="drawer-rc-body" id="rootListaRC"><div class="empty">Carregando imóveis...</div></div>
 </div>
 
 <script>
@@ -304,17 +316,13 @@ function showToast(msg, tipo) {
 })();
 
 // ── SUB-ABAS ─────────────────────────────────────────────────────────────
-let _listaCarregada = false;
 let _construtorasCarregadas = false;
 function mostrarSubtabRC(tab) {
+  document.getElementById('subtabConstrutoras').classList.toggle('active', tab === 'construtoras');
   document.getElementById('subtabExtrair').classList.toggle('active', tab === 'extrair');
-  document.getElementById('subtabLista').classList.toggle('active', tab === 'lista');
-  document.getElementById('subtabCadastrar').classList.toggle('active', tab === 'cadastrar');
-  document.getElementById('secaoExtrairRC').style.display   = tab === 'extrair'   ? '' : 'none';
-  document.getElementById('secaoListaRC').style.display     = tab === 'lista'     ? '' : 'none';
-  document.getElementById('secaoCadastrarRC').style.display = tab === 'cadastrar' ? '' : 'none';
-  if (tab === 'lista' && !_listaCarregada) carregarListaRC();
-  if (tab === 'cadastrar' && !_construtorasCarregadas) carregarConstrutorasRC();
+  document.getElementById('secaoConstrutorasRC').style.display = tab === 'construtoras' ? '' : 'none';
+  document.getElementById('secaoExtrairRC').style.display      = tab === 'extrair'      ? '' : 'none';
+  if (tab === 'construtoras' && !_construtorasCarregadas) carregarConstrutorasRC();
 }
 
 // ── PARSER — CSV colado (ver revendas_city_jul_2026.csv, exemplo do usuário) ──
@@ -490,8 +498,8 @@ async function importarRC() {
       document.getElementById('inputConstrutoraRC').value = '';
       document.getElementById('previewBoxRC').style.display = 'none';
       _previewRC = [];
-      _listaCarregada = false;
-      mostrarSubtabRC('lista');
+      _construtorasCarregadas = false;
+      mostrarSubtabRC('construtoras');
     } else {
       showToast('Erro ao importar: ' + (json.erro || 'desconhecido'), 'erro');
     }
@@ -502,52 +510,40 @@ async function importarRC() {
   }
 }
 
-// ── LISTA DE IMÓVEIS JÁ IMPORTADOS ────────────────────────────────────────
-let _todosImoveisRC = [];
-let _filtroConstrutoraRC = '';
+// ── DRAWER: IMÓVEIS DE UMA CONSTRUTORA ────────────────────────────────────
+// Substituiu a aba "Lista de Imóveis" — clicar no total (na tabela de
+// Construtoras) abre esse drawer já filtrado pra aquela construtora, em vez
+// de navegar pra uma aba separada com todos os imóveis de todas.
+let _construtoraAbertaRC = '';
 
-async function carregarListaRC() {
+async function abrirImoveisConstrutoraRC(nome) {
+  _construtoraAbertaRC = nome;
+  document.getElementById('drawerConstrutoraNomeRC').textContent = nome;
+  document.getElementById('drawerOverlayRC').classList.add('open');
+  document.getElementById('drawerImoveisRC').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  await carregarImoveisConstrutoraRC();
+}
+
+function fecharDrawerImoveisRC() {
+  document.getElementById('drawerOverlayRC').classList.remove('open');
+  document.getElementById('drawerImoveisRC').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function carregarImoveisConstrutoraRC() {
   const root = document.getElementById('rootListaRC');
   root.innerHTML = '<div class="empty">Carregando imóveis...</div>';
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=listar_revendas_construtoras&token=' + encodeURIComponent(tokenSessao()));
     const json = await resp.json();
     if (trataNaoAutenticado(json)) return;
-    _listaCarregada = true;
-    _todosImoveisRC = json.imoveis || [];
-    aplicarFiltroConstrutoraRC();
+    const alvo = _construtoraAbertaRC.toLowerCase().trim();
+    const filtrados = (json.imoveis || []).filter(i => String(i.construtora || '').toLowerCase().trim() === alvo);
+    renderListaRC(filtrados);
   } catch(e) {
     root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
   }
-}
-
-// Aplica o filtro por construtora (setado via "Ver todos os imóveis" na aba
-// Cadastrar) sobre a lista já carregada — não precisa de nova chamada ao
-// backend, só filtra o array em memória.
-function aplicarFiltroConstrutoraRC() {
-  const badge = document.getElementById('filtroConstrutoraRC');
-  if (_filtroConstrutoraRC) {
-    badge.style.display = '';
-    document.getElementById('filtroConstrutoraNomeRC').textContent = _filtroConstrutoraRC;
-    const alvo = _filtroConstrutoraRC.toLowerCase().trim();
-    renderListaRC(_todosImoveisRC.filter(i => String(i.construtora || '').toLowerCase().trim() === alvo));
-  } else {
-    badge.style.display = 'none';
-    renderListaRC(_todosImoveisRC);
-  }
-}
-
-function limparFiltroConstrutoraRC() {
-  _filtroConstrutoraRC = '';
-  aplicarFiltroConstrutoraRC();
-}
-
-// Chamado pelo botão "Ver todos os imóveis" no card da construtora (aba
-// Cadastrar) — muda pra aba Lista já filtrada por essa construtora.
-function verImoveisConstrutora(nome) {
-  _filtroConstrutoraRC = nome;
-  mostrarSubtabRC('lista');
-  if (_listaCarregada) aplicarFiltroConstrutoraRC();
 }
 
 // "Importado em" mostra só a data (dd/MM/yyyy) — dataCadastro grava
@@ -560,7 +556,7 @@ function fmtDataImportada_(dataCadastro) {
 
 function renderListaRC(lista) {
   const root = document.getElementById('rootListaRC');
-  if (!lista.length) { root.innerHTML = '<div class="empty">Nenhum imóvel cadastrado ainda.</div>'; return; }
+  if (!lista.length) { root.innerHTML = '<div class="empty">Nenhum imóvel dessa construtora.</div>'; return; }
   const ordenada = [...lista].reverse();
   const rows = ordenada.map(imo => `
     <tr>
@@ -568,7 +564,6 @@ function renderListaRC(lista) {
       <td class="td-nome">${imo.unidade || '—'}</td>
       <td>${imo.empreendimento || '—'}</td>
       <td>${imo.tipo ? `<span class="badge badge-blue">${imo.tipo}</span>` : '<span class="badge badge-muted">Indefinido</span>'}</td>
-      <td>${imo.construtora ? `<span class="badge badge-blue">${imo.construtora}</span>` : '<span class="badge badge-muted">—</span>'}</td>
       <td>${fmtArea_(imo.areaUtil, imo.areaTerreno)}</td>
       <td class="td-valor">${fmtBRL_(imo.valorVenda)}</td>
       <td>${fmtDataImportada_(imo.dataCadastro)}</td>
@@ -577,7 +572,7 @@ function renderListaRC(lista) {
   root.innerHTML = `
     <div class="count-info">${lista.length} imóve${lista.length===1?'l':'is'} cadastrado${lista.length===1?'':'s'}</div>
     <div class="detail-wrap"><table class="detail-table">
-      <thead><tr><th>Código</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Construtora</th><th>Área</th><th>Valor</th><th>Importado em</th><th>Ação</th></tr></thead>
+      <thead><tr><th>Código</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Valor</th><th>Importado em</th><th>Ação</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
 }
@@ -592,8 +587,10 @@ async function excluirRC(linha, btnEl) {
     if (trataNaoAutenticado(json)) return;
     if (json.ok) {
       showToast('Imóvel excluído.', 'ok');
-      _listaCarregada = false;
-      carregarListaRC();
+      carregarImoveisConstrutoraRC();
+      // Total da tabela de construtoras mudou — atualiza em segundo plano.
+      _construtorasCarregadas = false;
+      carregarConstrutorasRC();
     } else {
       showToast('Erro ao excluir: ' + (json.erro || 'desconhecido'), 'erro');
       btnEl.disabled = false;
@@ -623,21 +620,26 @@ function renderConstrutorasRC(lista) {
   const root = document.getElementById('rootConstrutorasRC');
   if (!lista.length) { root.innerHTML = '<div class="empty">Nenhuma construtora cadastrada ainda.</div>'; return; }
   const ordenada = [...lista].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-  root.innerHTML = `<div class="construtoras-grid">${ordenada.map(c => `
-    <div class="construtora-card">
-      <div class="construtora-card-header">
-        <div class="construtora-nome">${c.nome || '—'}</div>
-      </div>
-      ${c.gerenteComercial ? `<div class="construtora-info">👤 ${c.gerenteComercial}</div>` : ''}
-      ${c.fone ? `<div class="construtora-info">📞 ${c.fone}</div>` : ''}
-      ${c.obs ? `<div class="construtora-info">📝 ${c.obs}</div>` : ''}
-      <div class="construtora-total">🏠 ${c.totalImoveis || 0} imóve${c.totalImoveis===1?'l':'is'} cadastrado${c.totalImoveis===1?'':'s'}</div>
-      <div class="construtora-actions">
-        <button class="btn-ver-imoveis-rc" onclick="verImoveisConstrutora('${(c.nome||'').replace(/'/g,"\\'")}')">📋 Ver todos</button>
+  const rows = ordenada.map(c => `
+    <tr>
+      <td class="construtora-nome">${c.nome || '—'}</td>
+      <td>${c.gerenteComercial || '—'}</td>
+      <td>${c.fone || '—'}</td>
+      <td>
+        <button class="construtora-total-btn" onclick="abrirImoveisConstrutoraRC('${(c.nome||'').replace(/'/g,"\\'")}')"
+          title="Ver imóveis dessa construtora">${c.totalImoveis || 0}</button>
+      </td>
+      <td class="td-acoes">
         <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
-        ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 Ver PDF</a>` : ''}
-      </div>
-    </div>`).join('')}</div>`;
+        ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 PDF</a>` : ''}
+      </td>
+    </tr>`).join('');
+  root.innerHTML = `
+    <div class="count-info">${lista.length} construtora${lista.length===1?'':'s'} cadastrada${lista.length===1?'':'s'}</div>
+    <div class="detail-wrap"><table class="detail-table">
+      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Ações</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
 }
 
 async function salvarConstrutoraRC() {
@@ -695,6 +697,10 @@ function cancelarEdicaoConstrutoraRC() {
   document.getElementById('tituloFormConstrutoraRC').textContent = 'Cadastrar construtora';
   document.getElementById('btnCancelarEdicaoRC').style.display = 'none';
 }
+
+// "Construtoras" é a aba padrão (primeira) — carrega assim que a página abre,
+// diferente das outras abas, que só carregam quando clicadas.
+carregarConstrutorasRC();
 </script>
 </body>
 </html>

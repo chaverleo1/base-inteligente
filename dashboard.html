@@ -1129,6 +1129,7 @@ async function carregarDados() {
     console.error(err);
   }
   carregarLancamentosDash();
+  carregarRevendasConstrutorasDash();
   carregarInsightsExtended();
   carregarPipeline();
   carregarRevendaDiff();
@@ -1745,6 +1746,32 @@ async function carregarLancamentosDash() {
   }
 }
 
+// Card "Revendas-Construtoras" na Visão Geral — mostra "atuais | novas",
+// onde "novas" conta quantos imóveis foram importados nas últimas 12h
+// (dataCadastro dentro dessa janela). Reaproveita parseDataCadastroBR_
+// (já trata o formato BR e o fallback ISO que o Sheets pode gerar sozinho).
+async function carregarRevendasConstrutorasDash() {
+  const val = document.getElementById('cardVGRevConstValue');
+  const sub = document.getElementById('cardVGRevConstSub');
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_revendas_construtoras&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    const lista = json.imoveis || [];
+    const total = lista.length;
+    const DOZE_HORAS_MS = 12 * 60 * 60 * 1000;
+    const agora = Date.now();
+    const novas = lista.filter(imo => {
+      const d = parseDataCadastroBR_(imo.dataCadastro);
+      return d && (agora - d.getTime()) <= DOZE_HORAS_MS;
+    }).length;
+    if (val) val.textContent = total + ' | ' + novas;
+    if (sub) sub.textContent = 'atuais | novas (12h)';
+  } catch(e) {
+    if (val) val.textContent = '—';
+    if (sub) sub.textContent = 'erro ao carregar';
+  }
+}
+
 // ── RENDERIZAR ────────────────────────────────────────────────────────────────
 
 function renderDados(json) {
@@ -1791,6 +1818,14 @@ function renderDados(json) {
       <div class="card-sub" id="cardVGLancSub">carregando…</div>
       <a href="lancamentos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
          color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+         border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+    </div>
+    <div class="card" style="position:relative" id="cardVGRevConst">
+      <div class="card-label">🏢 Revendas-Construtoras</div>
+      <div class="card-value" style="color:#a78bfa" id="cardVGRevConstValue">— | —</div>
+      <div class="card-sub" id="cardVGRevConstSub">carregando…</div>
+      <a href="revendas-construtoras.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+         color:#a78bfa;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);
          border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
     </div>
     <div class="card" style="position:relative" id="cardNovoLeads">
