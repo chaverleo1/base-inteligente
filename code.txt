@@ -786,18 +786,25 @@ function excluir_(d) {
 // usuário) e volta a existir em LEADS_IMOBZI com o status "RE-LEAD-IMOBZI",
 // reaparecendo na lista de leads pendentes de triagem. Não gera cascata de
 // limpeza em FAVORITOS/MATCHES, mesmo comportamento de excluir_().
-function reverterContatoParaLeadImobzi_(nome, telefone, email) {
+//
+// idClienteBase carrega o idCliente ORIGINAL pra frente: um re-lead-imobzi
+// não é um lead novo nem um cliente novo, é o MESMO cliente numa configuração
+// diferente (de volta pra base de leads) — sem isso, quando o lead fosse
+// migrado de volta pra CONTATOS (ver atualizarPipelineLeadImobzi_), ele
+// ganharia um idCliente novo e viraria, pro sistema, uma pessoa diferente.
+function reverterContatoParaLeadImobzi_(nome, telefone, email, idCliente) {
   var abaLeads = obterAbaLeadsImobzi_();
   var agora    = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
   var linha = CABECALHO_LEADS_IMOBZI.map(function(col) {
-    if (col === 'dataCadastro') return agora;
-    if (col === 'nome')         return String(nome     || '').trim();
-    if (col === 'telefone')     return String(telefone || '').trim();
-    if (col === 'email')        return String(email    || '').trim();
-    if (col === 'pipeline')     return 'LEAD';
-    if (col === 'statusBase')   return 'RE-LEAD-IMOBZI';
-    if (col === 'canal')        return 'Imobzi / CRM';
-    if (col === 'idLeadImobzi') return Utilities.getUuid();
+    if (col === 'dataCadastro')  return agora;
+    if (col === 'nome')          return String(nome       || '').trim();
+    if (col === 'telefone')      return String(telefone   || '').trim();
+    if (col === 'email')         return String(email      || '').trim();
+    if (col === 'pipeline')      return 'LEAD';
+    if (col === 'statusBase')    return 'RE-LEAD-IMOBZI';
+    if (col === 'idClienteBase') return String(idCliente   || '').trim();
+    if (col === 'canal')         return 'Imobzi / CRM';
+    if (col === 'idLeadImobzi')  return Utilities.getUuid();
     return '';
   });
   abaLeads.appendRow(linha);
@@ -833,7 +840,7 @@ function salvarPipeline_(d) {
     if (match) {
       var pipelineAtual = String(dados[i][iPip] || '');
       if (d.pipeline === 'Lead Imobzi' && pipelineAtual !== 'Lead Imobzi') {
-        reverterContatoParaLeadImobzi_(dados[i][iNome], dados[i][iTel], iEmail >= 0 ? dados[i][iEmail] : '');
+        reverterContatoParaLeadImobzi_(dados[i][iNome], dados[i][iTel], iEmail >= 0 ? dados[i][iEmail] : '', dados[i][iId]);
         aba.deleteRow(i + 1);
         return { ok: true, revertidoParaLeadImobzi: true };
       }
@@ -877,7 +884,8 @@ function atualizar(d) {
     reverterContatoParaLeadImobzi_(
       existente[CABECALHO.indexOf('nome')],
       existente[CABECALHO.indexOf('telefone')],
-      existente[CABECALHO.indexOf('email')]
+      existente[CABECALHO.indexOf('email')],
+      idAtual
     );
     aba.deleteRow(lin);
     return { status: 'revertido_lead_imobzi', linha: lin };
@@ -4509,9 +4517,17 @@ function atualizarPipelineLeadImobzi_(d) {
 
   // Se saiu do estágio LEAD → migra para CONTATOS automaticamente
   if (novoPipeline !== 'LEAD') {
-    var idClienteBase = String(leadObj.idClienteBase || '').trim();
-    if (!idClienteBase) {
-      // Cria novo contato em CONTATOS
+    var idClienteBase   = String(leadObj.idClienteBase || '').trim();
+    var statusBaseAtual = String(leadObj.statusBase    || '').trim();
+    // "JÁ NA BASE" (achado por telefone/email no webhook) é o único caso em
+    // que o contato AINDA existe de verdade em CONTATOS — não recria. Já um
+    // "RE-LEAD-IMOBZI" teve a linha original APAGADA de CONTATOS quando
+    // voltou pra base de leads (ver reverterContatoParaLeadImobzi_), então
+    // precisa recriar a linha sim, só que reaproveitando o mesmo idCliente
+    // (idClienteBase) em vez de gerar um código novo — continua sendo o
+    // mesmo cliente, só numa configuração diferente.
+    if (!idClienteBase || statusBaseAtual === 'RE-LEAD-IMOBZI') {
+      // Cria (ou recria) o contato em CONTATOS
       var novaLinha = new Array(CABECALHO.length).fill('');
       var putC = function(col, val) {
         var idx = CABECALHO.indexOf(col);
@@ -4542,7 +4558,7 @@ function atualizarPipelineLeadImobzi_(d) {
       // silenciosamente nomes de coluna que não existem (achado ao testar
       // este fix: o texto de origem/mensagem do lead nunca era gravado).
       putC('observacoes',  'Lead Imobzi ' + (leadObj.canal ? '(' + leadObj.canal + ') ' : '') + (leadObj.codigoImovel ? '- Imóvel: ' + leadObj.codigoImovel : '') + (leadObj.mensagem ? ' | ' + leadObj.mensagem : ''));
-      var novoId = 'CLI-' + new Date().getTime();
+      var novoId = idClienteBase || ('CLI-' + new Date().getTime());
       putC('idCliente', novoId);
       getAba().appendRow(novaLinha);
       idClienteBase = novoId;

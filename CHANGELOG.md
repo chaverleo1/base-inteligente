@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 3) — Fix: "re-lead-imobzi" perdia o idCliente original
+
+Correção do usuário: um "re-lead-imobzi" **não é um lead novo nem um cliente novo** — é o MESMO
+cliente numa configuração diferente (de volta pra base de leads pra ser requalificado). O sistema
+não estava preservando essa identidade.
+
+Causa: `reverterContatoParaLeadImobzi_()` (chamada quando o corretor leva o pipeline de um contato
+de volta pro estágio "Lead Imobzi") apagava a linha de CONTATOS e criava uma linha nova em
+LEADS_IMOBZI sem gravar `idClienteBase` — o vínculo com o `idCliente` original se perdia. Quando
+esse lead fosse futuramente migrado de volta pra CONTATOS (`atualizarPipelineLeadImobzi_`), como
+não havia `idClienteBase`, o sistema tratava como cliente novo e gerava um `idCliente` novo
+(`CLI-<timestamp>`) — o cliente virava, pro sistema, uma pessoa diferente da que ele era antes.
+
+Fix:
+- `reverterContatoParaLeadImobzi_()` agora recebe o `idCliente` do contato e grava em
+  `idClienteBase` na linha nova de LEADS_IMOBZI.
+- `atualizarPipelineLeadImobzi_()`: a condição que decide se recria a linha em CONTATOS mudou de
+  "não tem `idClienteBase`" pra "não tem `idClienteBase` **OU** `statusBase === 'RE-LEAD-IMOBZI'`"
+  — porque só o caso "JÁ NA BASE" (achado por telefone/email no webhook) tem o contato genuinamente
+  ainda existindo em CONTATOS; um "RE-LEAD-IMOBZI" teve a linha apagada e precisa ser recriada, só
+  que reaproveitando o `idClienteBase` como `idCliente` em vez de gerar um código novo.
+
+Testado com smoke test em Node simulando o ciclo completo: contato `CLI-99999` → vira lead (Lead
+Imobzi) → migra de volta pra CONTATOS. Resultado: `idCliente` final continua `CLI-99999` (mesmo de
+antes) e não há duplicação de linha em CONTATOS.
+
+⚠️ Precisa reimplantar o Apps Script (mudança só no backend, `code.txt`).
+
 ## 2026-07-13 (parte 2) — Fix: "Lote" e "Lote Comercial" tratados como o mesmo tipo no match
 
 Bug relatado: na coluna 2 de "Matches do momento" no Dashboard, um imóvel do tipo "Lote Comercial"
