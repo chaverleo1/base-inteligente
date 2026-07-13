@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 2) — Fix: "Lote" e "Lote Comercial" tratados como o mesmo tipo no match
+
+Bug relatado: na coluna 2 de "Matches do momento" no Dashboard, um imóvel do tipo "Lote Comercial"
+aparecia como match para clientes que só tinham interesse em lote residencial (e vice-versa) — os
+dois tipos não estavam sendo diferenciados no score.
+
+Causa: `extrairTipo_()` (`code.txt`) testa o texto do tipo contra uma sequência de regex em ordem,
+retornando no primeiro que bater. O teste de `\blote\b` vinha ANTES do teste de `\bcomercial\b`, e
+"Lote Comercial" contém a palavra "lote" — então caía sempre no grupo `'lote'` (mesmo grupo de
+Terreno/Lote em cond., que é residencial) antes mesmo de chegar no teste comercial. "Lote Comercial"
+já era reconhecido como categoria própria em outro lugar do sistema (faixas de R$/m², ver entrada
+2026-07-03 pt.4), só a extração usada no match cliente×imóvel não diferenciava.
+
+Fix: teste de `comercial` (sala/loja/comercial) movido pra ANTES do teste de `lote` em
+`extrairTipo_()` — "Lote Comercial" agora cai no grupo `'comercial'` (junto com Sala/Loja comercial),
+separado do grupo `'terra'` (Lote/Terreno residencial). Testado via smoke test em Node:
+"Lote Comercial" x cliente que quer "Lote em cond." → score 0 (antes dava 25/compatível);
+"Lote Comercial" x cliente que quer "Sala comercial" → score 25 (compatível, correto);
+casos já validados antes (Lote em cond. x Terreno, Lote em cond. x Lote em Condomínio Horizontal)
+seguem com score 25, sem regressão.
+
+⚠️ Precisa reimplantar o Apps Script (mudança só no backend, `code.txt`).
+
 ## 2026-07-13 — Fix: chip de "Tipo de imóvel" desmarcava ao reabrir cadastro pra edição
 
 Bug relatado: ao editar um contato já salvo (abrindo pelo link "Editar" do Dashboard) para

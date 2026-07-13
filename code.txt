@@ -1585,8 +1585,12 @@ function extrairTipo_(texto) {
   if (/casa\s*cond|\bcasa\s*de\s*cond/.test(t))  return 'casa condominio';
   if (/\bsobrado\b|\bsob\b/.test(t))             return 'sobrado';
   if (/\bcasa\b|\bcs\b/.test(t))                 return 'casa';
-  if (/\blote\b|\blt\b|\bterreno\b/.test(t))     return 'lote';
+  // Checado ANTES do "lote" genérico: "Lote Comercial" tem escala de mercado e
+  // uso completamente diferentes de um lote residencial (ver CHANGELOG
+  // 2026-07-03 pt.4) — sem essa ordem, `\blote\b` casava primeiro e um cliente
+  // que quer lote residencial aparecia como match de lote comercial (e vice-versa).
   if (/\bsala\b|\bcomercial\b|\bloja\b/.test(t)) return 'comercial';
+  if (/\blote\b|\blt\b|\bterreno\b/.test(t))     return 'lote';
   if (/\bch[aá]cara\b|\bs[ií]tio\b/.test(t))    return 'chacara';
   return '';
 }
