@@ -1,5 +1,18 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Novo estágio "Lead Imobzi" no Pipeline de Negociações
+
+Novo estágio **"Lead Imobzi"** — todo lead com origem Imobzi entra primeiro nesse estágio ao ser
+migrado pra CONTATOS, independente do que o corretor selecionar no dropdown "Estágio do pipeline"
+do painel de detalhe (esse select continua servindo só pra disparar a migração). Fica como a
+primeira coluna do funil no Dashboard; o corretor move manualmente pra outro estágio depois de
+qualificar o lead.
+
+Atualizado em todos os lugares onde os estágios são enumerados: array do funil + grid CSS (6
+colunas) e mapa de cores no `dashboard.html`; `stages_`/`keyMap_` no backend; `PIP_STAGES`/
+`PIP_COLORS` e os selects em `contatos.html` e `formulario.html`. ⚠️ precisa reimplantar o Apps
+Script.
+
 ## 2026-07-09 — Botão "Editar" nos cards de Leads Imobzi
 
 Cada card na coluna de novos leads Imobzi ganha um botão **"✏️ Editar"**, que abre uma janela

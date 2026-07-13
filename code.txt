@@ -596,7 +596,7 @@ function doGet(e) {
       var iPip_     = cab_.indexOf('pipeline');
       var iPipData_ = cab_.indexOf('pipelineData');
       var iSeg_     = cab_.indexOf('segmento');
-      var stages_ = {fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],potencial:[],preAtendimento:[],ganhos:[]};
+      var stages_ = {leadImobzi:[],fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],potencial:[],preAtendimento:[],ganhos:[]};
       // "Perda" de propósito não entra aqui — não tem card no funil do
       // Dashboard, só existe como opção nas caixas de seleção (pipSelectHtml)
       // pra registrar o motivo sem perder o dado, servindo de base pra
@@ -604,7 +604,7 @@ function doGet(e) {
       // abaixo e simplesmente não aparece em nenhuma coluna do funil.
       // "Ganhos" também não aparece como coluna no funil — está no keyMap_ mas
       // é exibido como card separado na seção "Visão geral" do Dashboard.
-      var keyMap_ = {'Fechamento':'fechamento','Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Potencial':'potencial','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
+      var keyMap_ = {'Lead Imobzi':'leadImobzi','Fechamento':'fechamento','Urgentes':'urgentes','Pós-Visita':'posVisita','Agendar Visita':'agendarVisita','Potencial':'potencial','Pré-Atendimento':'preAtendimento','Ganhos':'ganhos'};
       // Contagem de favoritos por idCliente — mostrada ao lado do nome no funil
       var favCounts_ = {};
       var abaFav_ = ss_.getSheetByName('FAVORITOS');
@@ -635,7 +635,7 @@ function doGet(e) {
         }
       }
       return ok({stages: stages_});
-    } catch(err) { return ok({stages:{fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],potencial:[],preAtendimento:[],ganhos:[]}}); }
+    } catch(err) { return ok({stages:{leadImobzi:[],fechamento:[],urgentes:[],posVisita:[],agendarVisita:[],potencial:[],preAtendimento:[],ganhos:[]}}); }
   }
 
   return ok({ status: 'acao desconhecida' });
@@ -4465,7 +4465,14 @@ function atualizarPipelineLeadImobzi_(d) {
       putC('nome',         String(leadObj.nome     || '').trim());
       putC('email',        String(leadObj.email    || '').trim());
       putC('telefone',     String(leadObj.telefone || '').trim());
-      putC('pipeline',     novoPipeline);
+      // Todo lead com origem Imobzi entra primeiro no estágio "Lead Imobzi"
+      // (novo, dedicado) ao ser migrado — independente do que o corretor
+      // selecionou no dropdown "Estágio do pipeline" do painel de detalhe
+      // (esse select só serve pra DISPARAR a migração, saindo do valor
+      // especial "LEAD"). Fica visível como a 1ª coluna do funil no
+      // Dashboard; o corretor move manualmente pra outro estágio depois de
+      // qualificar o lead.
+      putC('pipeline',     'Lead Imobzi');
       // Canal de Origem precisa bater EXATAMENTE com o texto do chip
       // "Imobzi / CRM" em formulario.html pra ativarChip() marcar o botão
       // como selecionado ao reabrir o cadastro (ver ativarChip() — só ativa
