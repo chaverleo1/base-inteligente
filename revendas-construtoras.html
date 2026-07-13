@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revendas-Construtoras — BASE INTELIGENTE</title>
+<script src="config.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg:#0f1117; --surface:#181c27; --surface2:#1e2335; --surface3:#242840;
+  --border:#2a3050; --border2:#343d60; --accent:#4f7cff; --accent2:#00d4aa;
+  --text:#e8ecf4; --text2:#8892aa; --text3:#4a5470;
+  --radius:12px; --radius-sm:8px; --radius-xs:6px;
+  --hot:#ff5a5a; --warm:#f5a623; --cold:#4f7cff; --danger:#ff5a5a;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; min-height:100vh; }
+a { text-decoration:none; color:inherit; }
+
+.header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.logo { font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:var(--accent); letter-spacing:-.3px; flex-shrink:0; }
+.logo span { color:var(--text2); font-weight:400; }
+.nav-tabs { display:flex; background:var(--bg); border-radius:8px; padding:3px; gap:2px;
+            overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; min-width:0; }
+.nav-tabs::-webkit-scrollbar { display:none; }
+.nav-tab { padding:6px 16px; border-radius:6px; border:none; background:transparent; color:var(--text2);
+           font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif;
+           text-decoration:none; display:inline-block; flex-shrink:0; }
+.nav-tab:hover { color:var(--text); }
+.nav-tab.active { background:var(--accent); color:#fff; }
+.refresh-btn { background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--text2);
+               padding:6px 14px; font-size:13px; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; flex-shrink:0; }
+.refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
+@media (max-width:640px) {
+  .header { padding:12px 14px; gap:8px; }
+  .logo { font-size:13px; }
+  .nav-tab { padding:6px 11px; font-size:12px; }
+  .container { padding:20px 14px; }
+}
+
+.container { max-width:1200px; margin:0 auto; padding:28px 24px; }
+
+.page-header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+.page-title { font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; }
+.page-sub { font-size:13px; color:var(--text3); margin-top:3px; }
+
+.rc-subtabs { display:flex; gap:2px; background:var(--surface2); border-radius:10px; padding:4px; margin-bottom:20px; width:fit-content; }
+.rc-subtab { padding:8px 18px; border-radius:8px; border:none; background:transparent; color:var(--text2);
+             font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
+.rc-subtab.active { background:var(--accent); color:#fff; }
+.rc-subtab:hover:not(.active) { color:var(--text); }
+@media(max-width:560px) { .rc-subtabs { width:100%; } .rc-subtab { flex:1; text-align:center; padding:8px 6px; } }
+
+.sec-header { margin-bottom:14px; }
+.sec-title { font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; }
+.sec-sub { font-size:12px; color:var(--text3); margin-top:3px; }
+
+.motor-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:28px; }
+.motor-label { font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.8px; margin-bottom:8px; }
+textarea.motor-input {
+  width:100%; background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); color:var(--text); font-size:13px; font-family:monospace;
+  padding:12px; outline:none; resize:vertical; min-height:200px; line-height:1.55; transition:border .2s;
+}
+textarea.motor-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,124,255,.1); }
+textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans-serif; }
+.motor-actions { display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
+.btn-extrair { padding:11px 22px; border-radius:var(--radius-sm); background:var(--accent); color:#fff; border:none;
+               font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; }
+.btn-extrair:hover { background:#3d6aee; }
+.btn-extrair:disabled { opacity:.5; cursor:default; }
+.btn-sec { padding:11px 16px; border-radius:var(--radius-sm); background:var(--surface2); color:var(--text2);
+           border:1px solid var(--border); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; }
+.btn-sec:hover { border-color:var(--border2); color:var(--text); }
+.motor-hint { font-size:12px; color:var(--text3); }
+
+.preview-box { background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); padding:20px; margin-top:20px; }
+.preview-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px; }
+.preview-title { font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:var(--accent); }
+.preview-badge { font-size:11px; padding:3px 10px; border-radius:4px; font-weight:700; background:rgba(0,212,170,.15); color:var(--accent2); }
+
+.detail-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:auto; }
+.detail-table { width:100%; border-collapse:collapse; min-width:820px; }
+.detail-table th {
+  padding:10px 14px; text-align:left; font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.8px; color:var(--text3);
+  background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.detail-table td { padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+.detail-table tr:last-child td { border-bottom:none; }
+.detail-table tr:hover td { background:rgba(255,255,255,.02); }
+.td-cod { font-family:monospace; color:var(--text2); font-size:12px; }
+.td-nome { font-weight:600; }
+.td-valor { font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--accent2); white-space:nowrap; }
+
+.tipo-select {
+  background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text);
+  font-size:12px; font-weight:600; padding:5px 8px; font-family:'Inter',sans-serif; cursor:pointer; outline:none;
+  transition:border-color .2s; min-width:140px;
+}
+.tipo-select:hover, .tipo-select:focus { border-color:var(--accent); }
+.tipo-select.vazio { border-color:rgba(245,166,35,.5); color:var(--warm); }
+
+.badge { display:inline-block; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:600; border:1px solid; }
+.badge-blue { background:rgba(79,124,255,.12); color:var(--accent); border-color:rgba(79,124,255,.2); }
+.badge-muted { background:rgba(74,84,112,.1); color:var(--text3); border-color:var(--border); }
+
+.btn-excluir { background:rgba(255,90,90,.1); border:1px solid rgba(255,90,90,.25); color:var(--hot);
+               border-radius:var(--radius-xs); padding:5px 12px; font-size:12px; font-weight:600;
+               cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap; }
+.btn-excluir:hover { background:rgba(255,90,90,.2); }
+
+.empty { text-align:center; padding:48px; color:var(--text3); }
+.count-info { font-size:12px; color:var(--text3); margin-bottom:14px; }
+
+.toast { position:fixed; top:72px; left:50%; transform:translateX(-50%) translateY(-20px); padding:12px 24px;
+         border-radius:99px; font-weight:600; font-size:14px; opacity:0; transition:all .3s; z-index:9999; white-space:nowrap; }
+.toast.ok { background:var(--accent2); color:#0f1117; }
+.toast.erro { background:var(--danger); color:#fff; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="contatos.html"    class="nav-tab">Contatos</a>
+    <a href="dashboard.html"   class="nav-tab">Dashboard</a>
+    <a href="busca.html"       class="nav-tab">Busca Aberta</a>
+    <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <a href="revendas-construtoras.html" class="nav-tab active">Revendas-Construtoras</a>
+    <a href="dashboard.html?secao=baseimob"   class="nav-tab">BaseImob</a>
+    <a href="leads-imobzi.html"   class="nav-tab">Leads Imobzi</a>
+    <a href="dashboard.html?secao=adm"   class="nav-tab">ADM</a>
+  </div>
+  <button class="refresh-btn" onclick="window.location.href='dashboard.html'">← Voltar ao Dashboard</button>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Revendas-Construtoras</div>
+      <div class="page-sub">Imóveis de revenda captados por construtoras parceiras — cole o texto organizado pelo assistente ORGANIZADOR e extraia em lote.</div>
+    </div>
+  </div>
+
+  <div class="rc-subtabs">
+    <button class="rc-subtab active" id="subtabExtrair" onclick="mostrarSubtabRC('extrair')">Colar / Extrair</button>
+    <button class="rc-subtab" id="subtabLista" onclick="mostrarSubtabRC('lista')">Lista de Imóveis</button>
+  </div>
+
+  <!-- COLAR / EXTRAIR -->
+  <div id="secaoExtrairRC">
+    <div class="motor-box">
+      <div class="sec-header">
+        <div class="sec-title">Colar dados</div>
+        <div class="sec-sub">Cole aqui o CSV organizado pelo assistente ORGANIZADOR — colunas: <code>Unidade, Empreendimento / Imóvel, Área, Configuração, Valor</code>. A primeira linha (cabeçalho) é detectada e ignorada automaticamente.</div>
+      </div>
+      <div class="motor-label">CSV</div>
+      <textarea class="motor-input" id="txtRC" placeholder="Unidade,Empreendimento / Imóvel,Área,Configuração,Valor&#10;AP 2802,Cobertura Torre Del Parc (Mobiliada),310 m²,4 suítes • 5 vagas,R$ 3.900.000&#10;..."></textarea>
+      <div class="motor-actions">
+        <button class="btn-extrair" id="btnExtrairRC" onclick="extrairRC()">⚡ Extrair Dados</button>
+        <button class="btn-sec" onclick="document.getElementById('txtRC').value=''">✕ Limpar</button>
+        <span class="motor-hint">Revise o "Tipo" de cada linha antes de importar — a detecção automática pode errar em nomes ambíguos.</span>
+      </div>
+    </div>
+
+    <div class="preview-box" id="previewBoxRC" style="display:none">
+      <div class="preview-header">
+        <div class="preview-title">Prévia da extração</div>
+        <span class="preview-badge" id="previewBadgeRC"></span>
+      </div>
+      <div class="detail-wrap">
+        <table class="detail-table">
+          <thead><tr>
+            <th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Quartos</th><th>Suítes</th><th>Vagas</th><th>Valor</th>
+          </tr></thead>
+          <tbody id="previewBodyRC"></tbody>
+        </table>
+      </div>
+      <div class="motor-actions" style="margin-top:16px">
+        <button class="btn-extrair" id="btnImportarRC" onclick="importarRC()">✓ Importar todos</button>
+        <button class="btn-sec" onclick="document.getElementById('previewBoxRC').style.display='none'">✕ Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LISTA -->
+  <div id="secaoListaRC" style="display:none">
+    <div id="rootListaRC"><div class="empty">Carregando imóveis...</div></div>
+  </div>
+</div>
+
+<script>
+const SESS_KEY  = 'bi_session';
+const TOKEN_KEY = 'bi_session_token';
+function tokenSessao() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
+
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { window.location.href = 'index.html'; return true; }
+  return false;
+}
+
+function showToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + (tipo || 'ok');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+(function init() {
+  if (sessionStorage.getItem(SESS_KEY) !== 'ok') { window.location.href = 'index.html'; return; }
+})();
+
+// ── SUB-ABAS ─────────────────────────────────────────────────────────────
+let _listaCarregada = false;
+function mostrarSubtabRC(tab) {
+  document.getElementById('subtabExtrair').classList.toggle('active', tab === 'extrair');
+  document.getElementById('subtabLista').classList.toggle('active', tab === 'lista');
+  document.getElementById('secaoExtrairRC').style.display = tab === 'extrair' ? '' : 'none';
+  document.getElementById('secaoListaRC').style.display   = tab === 'lista'   ? '' : 'none';
+  if (tab === 'lista' && !_listaCarregada) carregarListaRC();
+}
+
+// ── PARSER — CSV colado (ver revendas_city_jul_2026.csv, exemplo do usuário) ──
+// Formato: Unidade,Empreendimento / Imóvel,Área,Configuração,Valor — uma linha
+// por imóvel (lotes/terrenos/casas/salas vêm sem Configuração, já que não têm
+// quartos/vagas). Parser roda 100% no front-end, mesmo padrão da aba "Outros"
+// de Lançamentos (extrairOutrosFormato) — o back-end só recebe o array já
+// estruturado (ver importarRevendasConstrutoras_ no code.txt).
+const TIPOS_RC = ['Apartamento', 'Casa', 'Casa condominio', 'Sobrado', 'Lote em cond.', 'Terreno', 'Sala comercial', 'Chácara', 'Indefinido'];
+
+// Parser de linha CSV com suporte a campos entre aspas (necessário pra valores
+// como "41,6 m²" — a vírgula decimal fica DENTRO do campo, não é separador).
+function parseCSVLinha_(linha) {
+  const result = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < linha.length; i++) {
+    const c = linha[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (linha[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { result.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  result.push(cur);
+  return result.map(s => s.trim());
+}
+
+// Deriva o tipo/segmento a partir do prefixo da "Unidade" (AP/Casa/Lote/
+// Área/Sala) ou, quando ambíguo (ex: "QD.13 LT.08"), de palavras-chave no
+// nome do empreendimento ("Sobrado ..."). Sem informação suficiente, fica
+// "" (Indefinido) — o usuário corrige na prévia antes de importar.
+function detectarTipoRC_(unidade, empreendimento) {
+  const u = (unidade || '').toLowerCase().trim();
+  const e = (empreendimento || '').toLowerCase();
+  if (/^ap\b|^apto\b/.test(u) || /cobertura/.test(e)) return 'Apartamento';
+  if (/sobrado/.test(e)) return 'Sobrado';
+  if (/^casa\b/.test(u) || /^casa\b/.test(e)) return 'Casa';
+  if (/^lote\b/.test(u) || /^lote\b/.test(e)) return 'Lote em cond.';
+  if (/^área\b|^area\b/.test(u)) return 'Terreno';
+  if (/^sala\b/.test(u) || /^sala\b/.test(e)) return 'Sala comercial';
+  return '';
+}
+
+// "310 m²" -> {areaUtil:310, areaTerreno:0} | "387/286 m²" -> {areaTerreno:387,
+// areaUtil:286} (ordem terreno/construção, mesma convenção do texto de
+// referência do usuário: "387 m² terreno / 286 m² construção").
+function parseAreaRC_(areaRaw, isTerra) {
+  const limpo = (areaRaw || '').replace(/m²/gi, '').replace(/\./g, '').trim();
+  if (!limpo) return { areaUtil: 0, areaTerreno: 0 };
+  if (limpo.includes('/')) {
+    const [a, b] = limpo.split('/').map(s => parseFloat(s.replace(',', '.')) || 0);
+    return { areaTerreno: a, areaUtil: b };
+  }
+  const v = parseFloat(limpo.replace(',', '.')) || 0;
+  return isTerra ? { areaUtil: 0, areaTerreno: v } : { areaUtil: v, areaTerreno: 0 };
+}
+
+// "4 suítes • 5 vagas" -> {quartos:4, suites:4, vagas:5} (sem "quartos"
+// explícito, assume que todas as suítes contam como quarto — convenção do
+// próprio texto de origem, onde só existe "suítes", nunca quartos+suítes
+// juntos nesses casos).
+function parseConfigRC_(configRaw) {
+  const c = configRaw || '';
+  const suitesM  = c.match(/(\d+)\s*su[ií]tes?/i);
+  const quartosM = c.match(/(\d+)\s*quartos?/i);
+  const vagasM   = c.match(/(\d+)\s*vagas?/i);
+  const suites  = suitesM  ? parseInt(suitesM[1])  : 0;
+  const quartos = quartosM ? parseInt(quartosM[1]) : suites;
+  const vagas   = vagasM   ? parseInt(vagasM[1])   : 0;
+  return { quartos, suites, vagas };
+}
+
+function parseValorRC_(valorRaw) {
+  return parseInt((valorRaw || '').replace(/[^\d]/g, '')) || 0;
+}
+
+function extrairRevendasConstrutoras(txt) {
+  const linhas = txt.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
+  const dataLinhas = linhas.filter(l => !/^unidade\s*,/i.test(l.trim()));
+  return dataLinhas.map(linhaRaw => {
+    const cols = parseCSVLinha_(linhaRaw);
+    const [unidade, empreendimento, areaRaw, configRaw, valorRaw] = cols;
+    if (!unidade && !empreendimento) return null;
+    const tipo = detectarTipoRC_(unidade, empreendimento);
+    const isTerra = tipo === 'Lote em cond.' || tipo === 'Terreno';
+    const { areaUtil, areaTerreno } = parseAreaRC_(areaRaw, isTerra);
+    const { quartos, suites, vagas } = parseConfigRC_(configRaw);
+    const valorVenda = parseValorRC_(valorRaw);
+    return {
+      unidade: unidade || '', empreendimento: empreendimento || '', tipo,
+      areaUtil, areaTerreno, quartos, suites, vagas, valorVenda,
+      bairro: '', textoOriginal: linhaRaw
+    };
+  }).filter(Boolean);
+}
+
+// ── UI: EXTRAIR + PRÉVIA ──────────────────────────────────────────────────
+let _previewRC = [];
+
+function fmtBRL_(v) {
+  const n = parseInt(v) || 0;
+  return n ? 'R$ ' + n.toLocaleString('pt-BR') : '—';
+}
+function fmtArea_(u, t) {
+  if (u) return u + ' m² (útil)';
+  if (t) return t + ' m² (terreno)';
+  return '—';
+}
+
+function extrairRC() {
+  const txt = document.getElementById('txtRC').value.trim();
+  if (!txt) { showToast('Cole o CSV primeiro.', 'erro'); return; }
+  const btn = document.getElementById('btnExtrairRC');
+  btn.disabled = true; btn.textContent = '⏳ Extraindo...';
+  setTimeout(() => {
+    try {
+      _previewRC = extrairRevendasConstrutoras(txt);
+      renderPreviewRC();
+      const semTipo = _previewRC.filter(i => !i.tipo).length;
+      const badge = document.getElementById('previewBadgeRC');
+      badge.textContent = `${_previewRC.length} imóve${_previewRC.length===1?'l':'is'} detectado${_previewRC.length===1?'':'s'}` + (semTipo ? ` · ${semTipo} sem tipo identificado` : '');
+      document.getElementById('previewBoxRC').style.display = '';
+    } catch(e) {
+      showToast('Erro ao extrair: ' + e.message, 'erro');
+    } finally {
+      btn.disabled = false; btn.textContent = '⚡ Extrair Dados';
+    }
+  }, 50);
+}
+
+function renderPreviewRC() {
+  const tbody = document.getElementById('previewBodyRC');
+  tbody.innerHTML = _previewRC.map((imo, idx) => `
+    <tr>
+      <td class="td-nome">${imo.unidade || '—'}</td>
+      <td>${imo.empreendimento || '—'}</td>
+      <td>
+        <select class="tipo-select${imo.tipo ? '' : ' vazio'}" onchange="_previewRC[${idx}].tipo=this.value; this.classList.toggle('vazio', !this.value)">
+          <option value="" ${!imo.tipo?'selected':''}>Selecione...</option>
+          ${TIPOS_RC.map(t => `<option value="${t}" ${imo.tipo===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </td>
+      <td>${fmtArea_(imo.areaUtil, imo.areaTerreno)}</td>
+      <td>${imo.quartos || '—'}</td>
+      <td>${imo.suites || '—'}</td>
+      <td>${imo.vagas || '—'}</td>
+      <td class="td-valor">${fmtBRL_(imo.valorVenda)}</td>
+    </tr>`).join('');
+}
+
+async function importarRC() {
+  if (!_previewRC.length) { showToast('Nada pra importar.', 'erro'); return; }
+  const btn = document.getElementById('btnImportarRC');
+  btn.disabled = true; btn.textContent = '⏳ Importando...';
+  try {
+    const body = new URLSearchParams({ dados: JSON.stringify({
+      acao: 'importar_revendas_construtoras', token: tokenSessao(), imoveis: _previewRC
+    })});
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) {
+      showToast(`✓ ${json.importados} imóve${json.importados===1?'l':'is'} importado${json.importados===1?'':'s'}!`, 'ok');
+      document.getElementById('txtRC').value = '';
+      document.getElementById('previewBoxRC').style.display = 'none';
+      _previewRC = [];
+      _listaCarregada = false;
+      mostrarSubtabRC('lista');
+    } else {
+      showToast('Erro ao importar: ' + (json.erro || 'desconhecido'), 'erro');
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Importar todos';
+  }
+}
+
+// ── LISTA DE IMÓVEIS JÁ IMPORTADOS ────────────────────────────────────────
+async function carregarListaRC() {
+  const root = document.getElementById('rootListaRC');
+  root.innerHTML = '<div class="empty">Carregando imóveis...</div>';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_revendas_construtoras&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    _listaCarregada = true;
+    renderListaRC(json.imoveis || []);
+  } catch(e) {
+    root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
+  }
+}
+
+function renderListaRC(lista) {
+  const root = document.getElementById('rootListaRC');
+  if (!lista.length) { root.innerHTML = '<div class="empty">Nenhum imóvel cadastrado ainda.</div>'; return; }
+  const ordenada = [...lista].reverse();
+  const rows = ordenada.map(imo => `
+    <tr>
+      <td class="td-cod">${imo.idImovel || '—'}</td>
+      <td class="td-nome">${imo.unidade || '—'}</td>
+      <td>${imo.empreendimento || '—'}</td>
+      <td>${imo.tipo ? `<span class="badge badge-blue">${imo.tipo}</span>` : '<span class="badge badge-muted">Indefinido</span>'}</td>
+      <td>${fmtArea_(imo.areaUtil, imo.areaTerreno)}</td>
+      <td class="td-valor">${fmtBRL_(imo.valorVenda)}</td>
+      <td><button class="btn-excluir" onclick="excluirRC(${imo._linha}, this)">🗑️ Excluir</button></td>
+    </tr>`).join('');
+  root.innerHTML = `
+    <div class="count-info">${lista.length} imóve${lista.length===1?'l':'is'} cadastrado${lista.length===1?'':'s'}</div>
+    <div class="detail-wrap"><table class="detail-table">
+      <thead><tr><th>Código</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Valor</th><th>Ação</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+async function excluirRC(linha, btnEl) {
+  if (!confirm('Excluir este imóvel permanentemente?')) return;
+  btnEl.disabled = true;
+  try {
+    const body = new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_revenda_construtora', token: tokenSessao(), _linha: linha }) });
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) {
+      showToast('Imóvel excluído.', 'ok');
+      _listaCarregada = false;
+      carregarListaRC();
+    } else {
+      showToast('Erro ao excluir: ' + (json.erro || 'desconhecido'), 'erro');
+      btnEl.disabled = false;
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+    btnEl.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

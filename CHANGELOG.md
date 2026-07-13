@@ -1,5 +1,56 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 5) — Nova área "Revendas-Construtoras"
+
+Nova fonte de imóveis: revendas captadas por construtoras parceiras, coladas em CSV já organizado
+por um assistente de IA externo ("ORGANIZADOR"), mesmo espírito da aba "Outros" de Lançamentos
+(colar texto → extrair → revisar → salvar), mas em lote (múltiplos imóveis de uma vez, sem tela
+de edição individual) e com cada imóvel ganhando um **código único** (`RC-NNNNN`) e sendo
+identificado pelo seu **segmento** (tipo de imóvel).
+
+**Formato escolhido**: CSV (`Unidade,Empreendimento / Imóvel,Área,Configuração,Valor`) em vez do
+formato de tabela markdown alternativo — uma linha por imóvel, delimitador único, muito mais
+simples e confiável de parsear que múltiplas tabelas markdown misturadas com texto solto.
+
+**Nova página `revendas-construtoras.html`** (decisão do usuário: página nova e dedicada, não aba
+dentro de Lançamentos):
+- Aba "Colar / Extrair": textarea pra colar o CSV + botão "Extrair Dados" → parser 100% no
+  front-end (`extrairRevendasConstrutoras()`, mesmo padrão de `extrairOutrosFormato()` em
+  lancamentos.html — o back-end só recebe o array já estruturado). Prévia em tabela antes de
+  importar, com um `<select>` de tipo por linha pra corrigir a detecção automática quando o nome
+  do imóvel é ambíguo (ex: "Country Ville" não indica sozinho se é apartamento, casa etc.).
+- Aba "Lista de Imóveis": tabela com todos os imóveis já importados (código, unidade,
+  empreendimento, tipo, área, valor) + botão excluir por linha.
+
+**Parser** (`extrairRevendasConstrutoras`): parser de CSV com suporte a campos entre aspas
+(necessário pra valores como `"41,6 m²"`, onde a vírgula é separador decimal, não de coluna).
+Deriva o tipo pelo prefixo da "Unidade" (AP→Apartamento, Casa→Casa, Lote→Lote em cond.,
+Área→Terreno, Sala→Sala comercial) ou por palavra-chave no nome do empreendimento quando a
+unidade é ambígua (ex: "QD.13 LT.08" + "Sobrado Jardins Madri" → Sobrado). Área com "/"
+(`"387/286 m²"`) vira `areaTerreno`/`areaUtil` separados (ordem terreno/construção, mesma
+convenção do texto de referência do usuário). Configuração tipo "4 suítes • 5 vagas" (sem
+"quartos" explícito) assume quartos = suítes. Testado com o CSV real de exemplo do usuário: as 23
+linhas parseiam corretamente (só "Country Ville" fica sem tipo detectado — nome não indica
+segmento, corrigível na prévia).
+
+**Backend (`code.txt`)**: aba nova `REVENDAS_CONSTRUTORAS`, rotas `importar_revendas_construtoras`
+(POST, recebe array já parseado), `listar_revendas_construtoras` (GET), `excluir_revenda_construtora`
+(POST). Participa do motor de matching (`rodarMatching()`) como uma 4ª fonte de imóvel, ao lado de
+REVENDA/CONSTRUTORA-APARTAMENTOS/LANÇAMENTOS (decisão do usuário) — `revendaConstrutoraParaImovel_()`
+mapeia pro mesmo formato usado por `calcularMatch_`.
+
+**Bug encontrado e corrigido no smoke test**: a numeração `RC-NNNNN` inicialmente chamava "próximo
+código disponível" (reescaneando a planilha) DENTRO do loop de importação — como nenhuma linha
+nova tinha sido gravada ainda quando a linha seguinte perguntava "qual o maior número atual", todo
+o lote saía com o MESMO código. Corrigido lendo o maior número usado UMA VEZ antes do loop (sob
+lock) e incrementando um contador local por linha — testado importando 3 imóveis: códigos
+`RC-00001`/`RC-00002`/`RC-00003`, todos únicos.
+
+Cabeçalho: nova aba "Revendas-Construtoras" adicionada nas 9 páginas (entre "Lançamentos" e
+"BaseImob"), auditada item a item pra confirmar mesma ordem/destino/estado "active" em todas.
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-13 (parte 4) — "Formulário" vira aba dentro de "Contatos"; cabeçalho unificado
 
 Pedido do usuário: tirar o botão "Formulário" do cabeçalho e colocar no lugar um botão "Contatos"

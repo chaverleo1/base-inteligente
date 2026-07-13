@@ -191,6 +191,7 @@ function doGet(e) {
   if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
+  if (acao === 'listar_revendas_construtoras') return ok(listarRevendasConstrutoras_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
   if (acao === 'listar_todos_leads_imobzi') return ok(listarLeadsImobzi_({todos:true}));
@@ -700,6 +701,8 @@ function doPost(e) {
   if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
+  if (d.acao === 'importar_revendas_construtoras') return ok(importarRevendasConstrutoras_(d.dados || d));
+  if (d.acao === 'excluir_revenda_construtora')     return ok(excluirRevendaConstrutora_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
@@ -2241,17 +2244,20 @@ function rodarMatching() {
   var revenda     = lerAba_('REVENDA');
   var construtora = lerAba_('CONSTRUTORA-APARTAMENTOS');
   var lancamentos = lerAba_('LANCAMENTOS');
+  var revendasConst = lerAba_('REVENDAS_CONSTRUTORAS');
 
   var imoveisRevenda = revenda.map(function(r) { r.fonte = 'REVENDA'; return r; });
   var imoveisConst   = construtora.map(function(r) { return constutoraParaImovel_(r); });
   var imoveisLanc    = lancamentos.map(lancamentoParaImovel_);
+  var imoveisRC      = revendasConst.map(revendaConstrutoraParaImovel_);
 
   Logger.log('Contatos: ' + contatos.length +
              ' | Revenda: ' + revenda.length +
              ' | Construtora: ' + construtora.length +
-             ' | Lançamentos: ' + lancamentos.length);
+             ' | Lançamentos: ' + lancamentos.length +
+             ' | Revendas-Construtoras: ' + revendasConst.length);
 
-  if (contatos.length === 0 || (imoveisRevenda.length === 0 && imoveisConst.length === 0 && imoveisLanc.length === 0)) {
+  if (contatos.length === 0 || (imoveisRevenda.length === 0 && imoveisConst.length === 0 && imoveisLanc.length === 0 && imoveisRC.length === 0)) {
     Logger.log('Dados insuficientes.'); return;
   }
 
@@ -2270,6 +2276,7 @@ function rodarMatching() {
     var paresRev   = [];
     var paresConst = [];
     var paresLanc  = [];
+    var paresRC    = [];
 
     imoveisRevenda.forEach(function(imo) {
       var res = calcularMatch_(c, imo);
@@ -2286,12 +2293,19 @@ function rodarMatching() {
       if (res.score >= 70) paresLanc.push({ imo: imo, score: res.score, det: res.detalhes });
     });
 
+    imoveisRC.forEach(function(imo) {
+      var res = calcularMatch_(c, imo);
+      if (res.score >= 70) paresRC.push({ imo: imo, score: res.score, det: res.detalhes });
+    });
+
     paresRev.sort(function(a, b)   { return b.score - a.score; });
     paresConst.sort(function(a, b) { return b.score - a.score; });
     paresLanc.sort(function(a, b)  { return b.score - a.score; });
+    paresRC.sort(function(a, b)    { return b.score - a.score; });
 
-    // Top 5 REVENDA + top 5 CONSTRUTORA + top 5 LANCAMENTO, reordenados por score
-    var pares = paresRev.slice(0, 5).concat(paresConst.slice(0, 5)).concat(paresLanc.slice(0, 5));
+    // Top 5 REVENDA + top 5 CONSTRUTORA + top 5 LANCAMENTO + top 5
+    // REVENDA_CONSTRUTORA, reordenados por score
+    var pares = paresRev.slice(0, 5).concat(paresConst.slice(0, 5)).concat(paresLanc.slice(0, 5)).concat(paresRC.slice(0, 5));
     pares.sort(function(a, b) { return b.score - a.score; });
 
     pares.forEach(function(par) { empurrarMatch_(matches, c, par, agora); });
@@ -3081,6 +3095,138 @@ function salvarLancamento_(dados) {
 // O imóvel continua na planilha e nos resultados de busca (com badge excluído).
 function excluirLancamento_(dados) {
   return setStatusImovel_({ fonte: 'LANCAMENTO', codigo: dados.idLancamento, nomeEmpreendimento: dados.nomeEmpreendimento, statusAtivo: 'Excluído' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REVENDAS-CONSTRUTORAS — imóveis de revenda captados por construtoras
+// parceiras, colados já organizados (CSV) na página revendas-construtoras.html
+// (parser roda no front-end, igual a aba "Outros" de Lançamentos — aqui só
+// chega o array já estruturado). Cadastro em lote, sem tela de edição
+// individual (2026-07): cada linha vira um imóvel com código único
+// (RC-NNNNN), identificado pelo seu segmento (tipo), e participa do motor
+// de matching como mais uma fonte (ver rodarMatching()/revendaConstrutoraParaImovel_).
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_REVENDAS_CONSTRUTORAS = [
+  'dataCadastro', 'idImovel', 'unidade', 'empreendimento', 'tipo',
+  'areaUtil', 'areaTerreno', 'quartos', 'suites', 'vagas',
+  'valorVenda', 'bairro', 'textoOriginal'
+];
+
+function obterAbaRevendasConstrutoras_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('REVENDAS_CONSTRUTORAS');
+  if (!aba) {
+    aba = ss.insertSheet('REVENDAS_CONSTRUTORAS');
+    aba.appendRow(CABECALHO_REVENDAS_CONSTRUTORAS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_REVENDAS_CONSTRUTORAS.length)
+       .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+  }
+  return aba;
+}
+
+// dados.imoveis: array já parseado no front-end (ver extrairRevendasConstrutoras()
+// em revendas-construtoras.html) — cada item com unidade/empreendimento/tipo/
+// areaUtil/areaTerreno/quartos/suites/vagas/valorVenda. Grava tudo de uma vez
+// (uma chamada de setValues) em vez de appendRow por linha, mais rápido pra
+// importações de dezenas de imóveis.
+//
+// Numeração RC-NNNNN: o maior número já usado é lido UMA VEZ (sob lock) antes
+// do loop, e cada linha do lote pega proximoNum++ localmente — gerar chamando
+// "próximo código disponível" dentro do .map() (reescaneando a planilha a
+// cada linha) dava o MESMO código pra todo o lote, porque nenhuma linha nova
+// tinha sido gravada ainda quando a linha seguinte perguntava "qual o maior
+// número atual" (bug encontrado no smoke test: 3 imóveis importados, todos
+// com RC-00001).
+function importarRevendasConstrutoras_(dados) {
+  var imoveis = (dados && dados.imoveis) || [];
+  if (!imoveis.length) return { ok: false, erro: 'nenhum imovel informado' };
+
+  var aba   = obterAbaRevendasConstrutoras_();
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var lr     = aba.getLastRow();
+    var maxNum = 0;
+    if (lr >= 2) {
+      var idxId = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('idImovel') + 1;
+      var vals  = aba.getRange(2, idxId, lr - 1, 1).getValues().flat();
+      vals.forEach(function(v) {
+        var m = String(v || '').match(/(\d+)$/);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+      });
+    }
+    var proximoNum = maxNum + 1;
+
+    var linhas = imoveis.map(function(imo) {
+      var id = 'RC-' + String(proximoNum++).padStart(5, '0');
+      return CABECALHO_REVENDAS_CONSTRUTORAS.map(function(col) {
+        if (col === 'dataCadastro') return agora;
+        if (col === 'idImovel')     return id;
+        return imo[col] !== undefined ? imo[col] : '';
+      });
+    });
+
+    aba.getRange(aba.getLastRow() + 1, 1, linhas.length, CABECALHO_REVENDAS_CONSTRUTORAS.length).setValues(linhas);
+    return { ok: true, importados: linhas.length };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listarRevendasConstrutoras_() {
+  try {
+    var aba = obterAbaRevendasConstrutoras_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { imoveis: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_REVENDAS_CONSTRUTORAS.length).getValues();
+    var imoveis = [];
+    for (var i = 0; i < dados.length; i++) {
+      if (!dados[i][0]) continue; // linha vazia
+      var obj = { _linha: i + 2 };
+      CABECALHO_REVENDAS_CONSTRUTORAS.forEach(function(col, j) { obj[col] = dados[i][j]; });
+      imoveis.push(obj);
+    }
+    return { imoveis: imoveis };
+  } catch(e) {
+    return { imoveis: [], erro: e.message };
+  }
+}
+
+function excluirRevendaConstrutora_(dados) {
+  var lin = parseInt(dados && dados._linha);
+  if (!lin) return { ok: false, erro: '_linha obrigatoria' };
+  var aba = obterAbaRevendasConstrutoras_();
+  if (lin < 2 || lin > aba.getLastRow()) return { ok: false, erro: 'linha invalida' };
+  aba.deleteRow(lin);
+  return { ok: true };
+}
+
+// Converte linha de REVENDAS_CONSTRUTORAS para o formato de produto do motor
+// de matching — mesmo padrão de constutoraParaImovel_/lancamentoParaImovel_.
+function revendaConstrutoraParaImovel_(row) {
+  return {
+    codigo:       row.idImovel      || '',
+    tipo:         row.tipo          || '',
+    bairro:       row.bairro        || '',
+    condominio:   row.empreendimento|| '',
+    quartos:      row.quartos       || '',
+    suites:       row.suites        || '',
+    vagas:        row.vagas         || '',
+    areaUtil:     row.areaUtil      || '',
+    areaTerr:     row.areaTerreno   || '',
+    valorVenda:   row.valorVenda    || '',
+    padrao:       '',
+    estagio:      '',
+    foto:         '',
+    urlSite:      '',
+    construtora:  '',
+    dataEntrega:  '',
+    fonte:        'REVENDA_CONSTRUTORA'
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
