@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Leads Imobzi: ordenação por mais recente + data em destaque
+
+Coluna de novos leads Imobzi no dashboard:
+
+- Ordenação agora é do lead **mais recente pro mais antigo** (antes seguia a ordem que vinha do
+  backend, sem garantia de ordem cronológica).
+- Data de entrada exibida em destaque, badge vermelho com o formato pedido:
+  **"Em 13/07/26 - 19:25"** (antes era um texto cinza discreto "13/07/2026 19:25").
+
 ## 2026-07-09 — Fix: excluir lead Imobzi deslogava em vez de excluir
 
 **Bug**: clicar em excluir um lead na aba Imobzi do dashboard tirava o usuário da página e mostrava

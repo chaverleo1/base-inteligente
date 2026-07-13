@@ -3793,9 +3793,38 @@ async function carregarLeadsImobzi() {
   }
 }
 
+// dataCadastro chega do backend como "dd/MM/yyyy HH:mm" (Utilities.formatDate
+// padrão do projeto) — parseia pra Date pra poder ordenar, e formata pro
+// destaque "Em dd/MM/aa - HH:mm" pedido pra coluna de leads novos.
+function parseDataCadastroBR_(str) {
+  const m = String(str || '').match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5]);
+}
+
+function formatEntradaDestaque_(str) {
+  const d = parseDataCadastroBR_(str);
+  if (!d) return str || '—';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const aa = String(d.getFullYear()).slice(-2);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `Em ${dd}/${mm}/${aa} - ${hh}:${mi}`;
+}
+
 function renderLeadsImobzi(leads) {
   _imobziLeadsMap = {};
-  const ativos = leads.filter(l => l.pipeline !== 'MIGRADO');
+  // Mais recente primeiro — leads sem data válida (não deveria acontecer,
+  // mas por segurança) vão pro final em vez de quebrar a ordenação.
+  const ativos = leads.filter(l => l.pipeline !== 'MIGRADO').sort((a, b) => {
+    const da = parseDataCadastroBR_(a.dataCadastro);
+    const db = parseDataCadastroBR_(b.dataCadastro);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db - da;
+  });
   ativos.forEach(l => { _imobziLeadsMap[l.idLeadImobzi || l.dataCadastro] = l; });
 
   // Atualiza badge e card visão geral
@@ -3832,7 +3861,13 @@ function renderLeadsImobzi(leads) {
         </div>
         ${l.telefone ? `<div style="font-size:12px;color:var(--text3);margin-top:3px">📞 ${l.telefone}</div>` : ''}
         ${l.email    ? `<div style="font-size:11px;color:var(--text3);margin-top:1px">✉ ${l.email}</div>` : ''}
-        <div style="font-size:11px;color:var(--text3);margin-top:3px">📅 ${l.dataCadastro || '—'} · ${l.canal || 'Imobzi'}</div>
+        <div style="margin-top:5px">
+          <span style="font-size:11px;font-weight:700;color:#ff5a5a;background:rgba(255,90,90,.1);
+            border:1px solid rgba(255,90,90,.25);border-radius:99px;padding:2px 9px;white-space:nowrap">
+            📅 ${formatEntradaDestaque_(l.dataCadastro)}
+          </span>
+          <span style="font-size:11px;color:var(--text3);margin-left:4px">· ${l.canal || 'Imobzi'}</span>
+        </div>
       </div>
       <div class="bi-actions" onclick="event.stopPropagation()">
         ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬</a>` : ''}
