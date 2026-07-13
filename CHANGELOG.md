@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 12) — Aba "Cadastrar" separada de "Construtoras"
+
+Em `revendas-construtoras.html`, o formulário de cadastro de construtora (Nome/Gerente
+Comercial/Fone/URL/Obs) — que até agora vivia junto com a tabela na aba "Construtoras" — virou uma
+aba própria, "Cadastrar", terceira na ordem pedida pelo usuário:
+
+**Construtoras → Colar/Extrair → Cadastrar**
+
+- Aba **"Construtoras"**: só a tabela agora (nome, gerente, fone, total de imóveis, última
+  atualização, ações) — sem o formulário misturado.
+- Aba **"Cadastrar"** (nova, 3ª): só o formulário de cadastro/edição de construtora.
+- Botão "✏️ Editar" de uma linha da tabela agora troca pra aba "Cadastrar" automaticamente antes de
+  carregar os dados no formulário (antes ficava tudo na mesma aba, só dava scroll pro topo).
+- Depois de salvar uma construtora (nova ou editada), a página volta sozinha pra aba
+  "Construtoras" já atualizada, em vez de ficar na aba "Cadastrar".
+
+Nenhuma mudança de lógica de backend ou nos parsers — só reorganização de onde cada peça de UI
+mora. Verificado por checagem de sintaxe e auditoria de todas as referências de ID (`subtabX`/
+`secaoXRC`) pra garantir que nada ficou órfão após mover o formulário de seção.
+
 ## 2026-07-13 (parte 11) — Campo "Construtora" em Colar/Extrair vira lista de seleção
 
 Na aba "Colar / Extrair" de `revendas-construtoras.html`, o campo "Construtora" era um texto livre

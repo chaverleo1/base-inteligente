@@ -204,43 +204,11 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
   <div class="rc-subtabs">
     <button class="rc-subtab active" id="subtabConstrutoras" onclick="mostrarSubtabRC('construtoras')">Construtoras</button>
     <button class="rc-subtab" id="subtabExtrair" onclick="mostrarSubtabRC('extrair')">Colar / Extrair</button>
+    <button class="rc-subtab" id="subtabCadastrar" onclick="mostrarSubtabRC('cadastrar')">Cadastrar</button>
   </div>
 
   <!-- CONSTRUTORAS (1ª aba) -->
   <div id="secaoConstrutorasRC">
-    <div class="motor-box">
-      <div class="sec-header">
-        <div class="sec-title" id="tituloFormConstrutoraRC">Cadastrar construtora</div>
-        <div class="sec-sub">Dados gerais e contato do gerente comercial responsável — usados pra identificar rapidamente a origem de cada lote de revenda.</div>
-      </div>
-      <div class="form-grid-rc">
-        <div class="field-rc span2-rc">
-          <label class="motor-label">Nome <span style="color:var(--danger)">*</span></label>
-          <input type="text" class="form-input-rc" id="inputNomeConstrutoraRC" placeholder="Ex: CITY">
-        </div>
-        <div class="field-rc">
-          <label class="motor-label">Gerente Comercial</label>
-          <input type="text" class="form-input-rc" id="inputGerenteRC" placeholder="Nome do gerente">
-        </div>
-        <div class="field-rc">
-          <label class="motor-label">Fone</label>
-          <input type="text" class="form-input-rc" id="inputFoneRC" placeholder="(62) 99999-9999">
-        </div>
-        <div class="field-rc span2-rc">
-          <label class="motor-label">URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(pra acessar online o PDF)</span></label>
-          <input type="text" class="form-input-rc" id="inputUrlRC" placeholder="https://...">
-        </div>
-        <div class="field-rc span2-rc">
-          <label class="motor-label">Obs:</label>
-          <textarea class="form-input-rc" id="inputObsRC" style="min-height:70px;resize:vertical" placeholder="Observações gerais sobre a parceria..."></textarea>
-        </div>
-      </div>
-      <div class="motor-actions">
-        <button class="btn-extrair" id="btnSalvarConstrutoraRC" onclick="salvarConstrutoraRC()">💾 Salvar construtora</button>
-        <button class="btn-sec" id="btnCancelarEdicaoRC" onclick="cancelarEdicaoConstrutoraRC()" style="display:none">✕ Cancelar edição</button>
-      </div>
-    </div>
-
     <div id="rootConstrutorasRC"><div class="empty">Carregando construtoras...</div></div>
   </div>
 
@@ -284,6 +252,42 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
       </div>
     </div>
   </div>
+
+  <!-- CADASTRAR (3ª aba) -->
+  <div id="secaoCadastrarRC" style="display:none">
+    <div class="motor-box">
+      <div class="sec-header">
+        <div class="sec-title" id="tituloFormConstrutoraRC">Cadastrar construtora</div>
+        <div class="sec-sub">Dados gerais e contato do gerente comercial responsável — usados pra identificar rapidamente a origem de cada lote de revenda.</div>
+      </div>
+      <div class="form-grid-rc">
+        <div class="field-rc span2-rc">
+          <label class="motor-label">Nome <span style="color:var(--danger)">*</span></label>
+          <input type="text" class="form-input-rc" id="inputNomeConstrutoraRC" placeholder="Ex: CITY">
+        </div>
+        <div class="field-rc">
+          <label class="motor-label">Gerente Comercial</label>
+          <input type="text" class="form-input-rc" id="inputGerenteRC" placeholder="Nome do gerente">
+        </div>
+        <div class="field-rc">
+          <label class="motor-label">Fone</label>
+          <input type="text" class="form-input-rc" id="inputFoneRC" placeholder="(62) 99999-9999">
+        </div>
+        <div class="field-rc span2-rc">
+          <label class="motor-label">URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(pra acessar online o PDF)</span></label>
+          <input type="text" class="form-input-rc" id="inputUrlRC" placeholder="https://...">
+        </div>
+        <div class="field-rc span2-rc">
+          <label class="motor-label">Obs:</label>
+          <textarea class="form-input-rc" id="inputObsRC" style="min-height:70px;resize:vertical" placeholder="Observações gerais sobre a parceria..."></textarea>
+        </div>
+      </div>
+      <div class="motor-actions">
+        <button class="btn-extrair" id="btnSalvarConstrutoraRC" onclick="salvarConstrutoraRC()">💾 Salvar construtora</button>
+        <button class="btn-sec" id="btnCancelarEdicaoRC" onclick="cancelarEdicaoConstrutoraRC()" style="display:none">✕ Cancelar edição</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- DRAWER: imóveis de uma construtora (aberto ao clicar no Total da tabela) -->
@@ -324,8 +328,10 @@ let _construtorasCarregadas = false;
 function mostrarSubtabRC(tab) {
   document.getElementById('subtabConstrutoras').classList.toggle('active', tab === 'construtoras');
   document.getElementById('subtabExtrair').classList.toggle('active', tab === 'extrair');
+  document.getElementById('subtabCadastrar').classList.toggle('active', tab === 'cadastrar');
   document.getElementById('secaoConstrutorasRC').style.display = tab === 'construtoras' ? '' : 'none';
   document.getElementById('secaoExtrairRC').style.display      = tab === 'extrair'      ? '' : 'none';
+  document.getElementById('secaoCadastrarRC').style.display    = tab === 'cadastrar'    ? '' : 'none';
   if (tab === 'construtoras' && !_construtorasCarregadas) carregarConstrutorasRC();
 }
 
@@ -696,7 +702,7 @@ async function salvarConstrutoraRC() {
       showToast(json.atualizado ? '✓ Construtora atualizada!' : '✓ Construtora cadastrada!', 'ok');
       cancelarEdicaoConstrutoraRC();
       _construtorasCarregadas = false;
-      carregarConstrutorasRC();
+      mostrarSubtabRC('construtoras');
     } else {
       showToast('Erro ao salvar: ' + (json.erro || 'desconhecido'), 'erro');
     }
@@ -707,9 +713,11 @@ async function salvarConstrutoraRC() {
   }
 }
 
-// Carrega os dados da construtora no formulário pra edição — salvar de novo
+// Carrega os dados da construtora no formulário pra edição (agora na aba
+// "Cadastrar", separada da tabela em "Construtoras") — salvar de novo
 // faz dedup por nome no backend (atualiza em vez de duplicar).
 function editarConstrutoraRC(c) {
+  mostrarSubtabRC('cadastrar');
   document.getElementById('inputNomeConstrutoraRC').value = c.nome || '';
   document.getElementById('inputGerenteRC').value = c.gerenteComercial || '';
   document.getElementById('inputFoneRC').value = c.fone || '';
