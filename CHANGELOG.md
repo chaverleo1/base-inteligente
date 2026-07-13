@@ -1,5 +1,52 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 4) — "Formulário" vira aba dentro de "Contatos"; cabeçalho unificado
+
+Pedido do usuário: tirar o botão "Formulário" do cabeçalho e colocar no lugar um botão "Contatos"
+(abre `contatos.html`), sem mais os botões "Novo"/"Buscar" separados no cabeçalho — em vez disso,
+`contatos.html` ganhou 3 abas internas: **"Todos os contatos"**, **"Criar NOVO"** e **"Buscar"**.
+
+**O que mudou:**
+- `formulario.html` (cadastro novo + busca/edição, ~1300 linhas de wizard) foi **incorporado
+  inteiro dentro de `contatos.html`**, como as abas "Criar NOVO"/"Buscar" — mesmo padrão de seções
+  alternáveis via JS já usado em `dashboard.html` (Dashboard/BaseImob/Leads Imobzi/ADM), em vez de
+  duas páginas separadas. As duas abas reaproveitam o MESMO wizard (mesmo HTML/JS) — a única
+  diferença é o modo inicial (`setMode('novo')` vs `setMode('atualizar')`), já que era exatamente
+  assim que "Novo"/"Buscar" funcionavam dentro do formulário original.
+- `formulario.html` virou um **redirect fino**: só existe pra não quebrar links/favoritos antigos
+  (inclusive com `?linha=X`, usado pelos links de "Editar"), redirecionando na hora pra
+  `contatos.html` (`?linha=X` ou `?tab=novo`).
+- Ao mesclar os dois arquivos, várias classes/IDs/consts colidiam entre si e precisaram ser
+  renomeados ou consolidados pra não quebrar nada (`const` duplicado no mesmo escopo é
+  `SyntaxError` e mata o script inteiro — mesmo bug do `top` reservado visto antes nesta sessão):
+  - `.search-bar`/`.search-icon`/`#searchInput` (usados por `contatos.html` no filtro da lista
+    "Todos") → renomeados pra `.wiz-search-bar`/`.wiz-search-icon`/`#wizSearchInput` dentro do
+    wizard, pra não colidir.
+  - `.score-num` (usado por `contatos.html` nas cores quente/morno/frio da tabela) → renomeado pra
+    `.wiz-score-num` dentro do círculo de score do wizard.
+  - `PIP_STAGES`/`PIP_COLORS`/`pipSelectHtml`/`salvarPipelineRapido` — eram quase idênticos nos
+    dois arquivos; mantida só a versão de `contatos.html` (com pequeno ajuste: `pipSelectHtml` ganhou
+    `onclick="event.stopPropagation()"`, necessário pros cards de resultado de busca do wizard, que
+    ficam dentro de um `onclick` do card inteiro).
+  - Todo o bloco de login-overlay/autenticação próprio do `formulario.html` (`SESS_TOKEN_KEY`,
+    `entrar()`, `sair()`, etc.) foi descartado — `contatos.html` já usa o padrão mais simples de
+    redirecionar pra `index.html` quando não autenticado, igual as outras páginas.
+- Os 4 links de "Editar" que apontavam pra `formulario.html?linha=X` (2 em `contatos.html`, 2 em
+  `dashboard.html`) agora apontam pra `contatos.html?linha=X` — a página detecta o parâmetro na URL,
+  abre direto na aba "Buscar" e já carrega o contato.
+- Cabeçalho ("Formulário" → "Contatos") atualizado nas 8 páginas que têm o menu completo:
+  `contatos.html`, `dashboard.html`, `busca.html`, `favoritos.html`, `insight-detail.html`,
+  `lancamentos.html`, `lancamentos-editar.html`, `leads-imobzi.html` — auditado item a item pra
+  confirmar que as 7 abas (Contatos/Dashboard/Busca Aberta/Lançamentos/BaseImob/Leads
+  Imobzi/ADM) batem em ordem, destino e estado "active" em todas.
+
+Testado no preview: as 3 abas de `contatos.html` alternam corretamente (Todos/Criar NOVO/Buscar),
+busca + seleção de contato preenche o wizard com os chips certos (inclusive múltipla escolha,
+ex: "Casa, Apartamento" — os dois marcados), resumo/score no step 5 funciona, a lista "Todos os
+contatos" continua funcionando, o link `?linha=X` abre direto na aba Buscar com o contato carregado,
+e o redirect de `formulario.html?linha=X` chega corretamente em `contatos.html?linha=X` (confirmado
+pelo rastro de requisições de rede). Nenhum erro no console em nenhum dos fluxos.
+
 ## 2026-07-13 (parte 3) — Fix: "re-lead-imobzi" perdia o idCliente original
 
 Correção do usuário: um "re-lead-imobzi" **não é um lead novo nem um cliente novo** — é o MESMO
