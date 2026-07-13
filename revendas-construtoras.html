@@ -77,6 +77,32 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 }
 .form-input-rc:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,124,255,.1); }
 .form-input-rc::placeholder { color:var(--text3); }
+
+/* ── FORM "Cadastrar" (construtora) ── */
+.form-grid-rc { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:4px; }
+.field-rc { display:flex; flex-direction:column; gap:6px; }
+.field-rc.span2-rc { grid-column:span 2; }
+.field-rc .form-input-rc { max-width:none; }
+@media(max-width:640px) { .form-grid-rc { grid-template-columns:1fr; } .field-rc.span2-rc { grid-column:span 1; } }
+
+/* ── CARDS DE CONSTRUTORA (aba "Cadastrar") ── */
+.construtoras-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:24px; }
+.construtora-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; }
+.construtora-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.construtora-nome { font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:var(--text); }
+.construtora-info { font-size:12.5px; color:var(--text2); display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.construtora-total { font-size:13px; color:var(--accent2); font-weight:700; margin:10px 0; }
+.construtora-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.construtora-actions a, .construtora-actions button {
+  flex:1; min-width:110px; text-align:center; padding:8px 10px; border-radius:var(--radius-xs);
+  font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; border:none; transition:all .18s;
+}
+.btn-ver-imoveis-rc { background:rgba(0,212,170,.1); color:var(--accent2); border:1px solid rgba(0,212,170,.25) !important; }
+.btn-ver-imoveis-rc:hover { background:rgba(0,212,170,.2); }
+.btn-editar-rc { background:rgba(79,124,255,.1); color:var(--accent); border:1px solid rgba(79,124,255,.25) !important; }
+.btn-editar-rc:hover { background:rgba(79,124,255,.2); }
+.btn-url-rc { background:var(--surface2); color:var(--text2); border:1px solid var(--border) !important; }
+.btn-url-rc:hover { border-color:var(--accent) !important; color:var(--accent); }
 .motor-actions { display:flex; gap:10px; margin-top:12px; align-items:center; flex-wrap:wrap; }
 .btn-extrair { padding:11px 22px; border-radius:var(--radius-sm); background:var(--accent); color:#fff; border:none;
                font-size:14px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; }
@@ -163,6 +189,7 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
   <div class="rc-subtabs">
     <button class="rc-subtab active" id="subtabExtrair" onclick="mostrarSubtabRC('extrair')">Colar / Extrair</button>
     <button class="rc-subtab" id="subtabLista" onclick="mostrarSubtabRC('lista')">Lista de Imóveis</button>
+    <button class="rc-subtab" id="subtabCadastrar" onclick="mostrarSubtabRC('cadastrar')">Cadastrar</button>
   </div>
 
   <!-- COLAR / EXTRAIR -->
@@ -205,7 +232,51 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 
   <!-- LISTA -->
   <div id="secaoListaRC" style="display:none">
+    <div id="filtroConstrutoraRC" style="display:none;margin-bottom:14px">
+      <span class="badge badge-blue" style="font-size:13px;padding:6px 12px">
+        Filtrando por: <b id="filtroConstrutoraNomeRC"></b>
+        <span style="cursor:pointer;margin-left:8px;font-weight:700" onclick="limparFiltroConstrutoraRC()">✕</span>
+      </span>
+    </div>
     <div id="rootListaRC"><div class="empty">Carregando imóveis...</div></div>
+  </div>
+
+  <!-- CADASTRAR -->
+  <div id="secaoCadastrarRC" style="display:none">
+    <div class="motor-box">
+      <div class="sec-header">
+        <div class="sec-title" id="tituloFormConstrutoraRC">Cadastrar construtora</div>
+        <div class="sec-sub">Dados gerais e contato do gerente comercial responsável — usados pra identificar rapidamente a origem de cada lote de revenda.</div>
+      </div>
+      <div class="form-grid-rc">
+        <div class="field-rc span2-rc">
+          <label class="motor-label">Nome <span style="color:var(--danger)">*</span></label>
+          <input type="text" class="form-input-rc" id="inputNomeConstrutoraRC" placeholder="Ex: CITY">
+        </div>
+        <div class="field-rc">
+          <label class="motor-label">Gerente Comercial</label>
+          <input type="text" class="form-input-rc" id="inputGerenteRC" placeholder="Nome do gerente">
+        </div>
+        <div class="field-rc">
+          <label class="motor-label">Fone</label>
+          <input type="text" class="form-input-rc" id="inputFoneRC" placeholder="(62) 99999-9999">
+        </div>
+        <div class="field-rc span2-rc">
+          <label class="motor-label">URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(pra acessar online o PDF)</span></label>
+          <input type="text" class="form-input-rc" id="inputUrlRC" placeholder="https://...">
+        </div>
+        <div class="field-rc span2-rc">
+          <label class="motor-label">Obs:</label>
+          <textarea class="form-input-rc" id="inputObsRC" style="min-height:70px;resize:vertical" placeholder="Observações gerais sobre a parceria..."></textarea>
+        </div>
+      </div>
+      <div class="motor-actions">
+        <button class="btn-extrair" id="btnSalvarConstrutoraRC" onclick="salvarConstrutoraRC()">💾 Salvar construtora</button>
+        <button class="btn-sec" id="btnCancelarEdicaoRC" onclick="cancelarEdicaoConstrutoraRC()" style="display:none">✕ Cancelar edição</button>
+      </div>
+    </div>
+
+    <div id="rootConstrutorasRC"><div class="empty">Carregando construtoras...</div></div>
   </div>
 </div>
 
@@ -234,12 +305,16 @@ function showToast(msg, tipo) {
 
 // ── SUB-ABAS ─────────────────────────────────────────────────────────────
 let _listaCarregada = false;
+let _construtorasCarregadas = false;
 function mostrarSubtabRC(tab) {
   document.getElementById('subtabExtrair').classList.toggle('active', tab === 'extrair');
   document.getElementById('subtabLista').classList.toggle('active', tab === 'lista');
-  document.getElementById('secaoExtrairRC').style.display = tab === 'extrair' ? '' : 'none';
-  document.getElementById('secaoListaRC').style.display   = tab === 'lista'   ? '' : 'none';
+  document.getElementById('subtabCadastrar').classList.toggle('active', tab === 'cadastrar');
+  document.getElementById('secaoExtrairRC').style.display   = tab === 'extrair'   ? '' : 'none';
+  document.getElementById('secaoListaRC').style.display     = tab === 'lista'     ? '' : 'none';
+  document.getElementById('secaoCadastrarRC').style.display = tab === 'cadastrar' ? '' : 'none';
   if (tab === 'lista' && !_listaCarregada) carregarListaRC();
+  if (tab === 'cadastrar' && !_construtorasCarregadas) carregarConstrutorasRC();
 }
 
 // ── PARSER — CSV colado (ver revendas_city_jul_2026.csv, exemplo do usuário) ──
@@ -428,6 +503,9 @@ async function importarRC() {
 }
 
 // ── LISTA DE IMÓVEIS JÁ IMPORTADOS ────────────────────────────────────────
+let _todosImoveisRC = [];
+let _filtroConstrutoraRC = '';
+
 async function carregarListaRC() {
   const root = document.getElementById('rootListaRC');
   root.innerHTML = '<div class="empty">Carregando imóveis...</div>';
@@ -436,10 +514,40 @@ async function carregarListaRC() {
     const json = await resp.json();
     if (trataNaoAutenticado(json)) return;
     _listaCarregada = true;
-    renderListaRC(json.imoveis || []);
+    _todosImoveisRC = json.imoveis || [];
+    aplicarFiltroConstrutoraRC();
   } catch(e) {
     root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
   }
+}
+
+// Aplica o filtro por construtora (setado via "Ver todos os imóveis" na aba
+// Cadastrar) sobre a lista já carregada — não precisa de nova chamada ao
+// backend, só filtra o array em memória.
+function aplicarFiltroConstrutoraRC() {
+  const badge = document.getElementById('filtroConstrutoraRC');
+  if (_filtroConstrutoraRC) {
+    badge.style.display = '';
+    document.getElementById('filtroConstrutoraNomeRC').textContent = _filtroConstrutoraRC;
+    const alvo = _filtroConstrutoraRC.toLowerCase().trim();
+    renderListaRC(_todosImoveisRC.filter(i => String(i.construtora || '').toLowerCase().trim() === alvo));
+  } else {
+    badge.style.display = 'none';
+    renderListaRC(_todosImoveisRC);
+  }
+}
+
+function limparFiltroConstrutoraRC() {
+  _filtroConstrutoraRC = '';
+  aplicarFiltroConstrutoraRC();
+}
+
+// Chamado pelo botão "Ver todos os imóveis" no card da construtora (aba
+// Cadastrar) — muda pra aba Lista já filtrada por essa construtora.
+function verImoveisConstrutora(nome) {
+  _filtroConstrutoraRC = nome;
+  mostrarSubtabRC('lista');
+  if (_listaCarregada) aplicarFiltroConstrutoraRC();
 }
 
 // "Importado em" mostra só a data (dd/MM/yyyy) — dataCadastro grava
@@ -494,6 +602,98 @@ async function excluirRC(linha, btnEl) {
     showToast('Erro de conexão: ' + e.message, 'erro');
     btnEl.disabled = false;
   }
+}
+
+// ── CADASTRAR CONSTRUTORA ──────────────────────────────────────────────
+async function carregarConstrutorasRC() {
+  const root = document.getElementById('rootConstrutorasRC');
+  root.innerHTML = '<div class="empty">Carregando construtoras...</div>';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_construtoras_parceiras&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    _construtorasCarregadas = true;
+    renderConstrutorasRC(json.construtoras || []);
+  } catch(e) {
+    root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
+  }
+}
+
+function renderConstrutorasRC(lista) {
+  const root = document.getElementById('rootConstrutorasRC');
+  if (!lista.length) { root.innerHTML = '<div class="empty">Nenhuma construtora cadastrada ainda.</div>'; return; }
+  const ordenada = [...lista].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  root.innerHTML = `<div class="construtoras-grid">${ordenada.map(c => `
+    <div class="construtora-card">
+      <div class="construtora-card-header">
+        <div class="construtora-nome">${c.nome || '—'}</div>
+      </div>
+      ${c.gerenteComercial ? `<div class="construtora-info">👤 ${c.gerenteComercial}</div>` : ''}
+      ${c.fone ? `<div class="construtora-info">📞 ${c.fone}</div>` : ''}
+      ${c.obs ? `<div class="construtora-info">📝 ${c.obs}</div>` : ''}
+      <div class="construtora-total">🏠 ${c.totalImoveis || 0} imóve${c.totalImoveis===1?'l':'is'} cadastrado${c.totalImoveis===1?'':'s'}</div>
+      <div class="construtora-actions">
+        <button class="btn-ver-imoveis-rc" onclick="verImoveisConstrutora('${(c.nome||'').replace(/'/g,"\\'")}')">📋 Ver todos</button>
+        <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
+        ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 Ver PDF</a>` : ''}
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+async function salvarConstrutoraRC() {
+  const nome = document.getElementById('inputNomeConstrutoraRC').value.trim();
+  if (!nome) { showToast('Informe o nome da construtora.', 'erro'); return; }
+  const btn = document.getElementById('btnSalvarConstrutoraRC');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    const payload = {
+      acao: 'cadastrar_construtora_parceira', token: tokenSessao(),
+      nome,
+      gerenteComercial: document.getElementById('inputGerenteRC').value.trim(),
+      fone: document.getElementById('inputFoneRC').value.trim(),
+      url: document.getElementById('inputUrlRC').value.trim(),
+      obs: document.getElementById('inputObsRC').value.trim(),
+    };
+    const body = new URLSearchParams({ dados: JSON.stringify(payload) });
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) {
+      showToast(json.atualizado ? '✓ Construtora atualizada!' : '✓ Construtora cadastrada!', 'ok');
+      cancelarEdicaoConstrutoraRC();
+      _construtorasCarregadas = false;
+      carregarConstrutorasRC();
+    } else {
+      showToast('Erro ao salvar: ' + (json.erro || 'desconhecido'), 'erro');
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Salvar construtora';
+  }
+}
+
+// Carrega os dados da construtora no formulário pra edição — salvar de novo
+// faz dedup por nome no backend (atualiza em vez de duplicar).
+function editarConstrutoraRC(c) {
+  document.getElementById('inputNomeConstrutoraRC').value = c.nome || '';
+  document.getElementById('inputGerenteRC').value = c.gerenteComercial || '';
+  document.getElementById('inputFoneRC').value = c.fone || '';
+  document.getElementById('inputUrlRC').value = c.url || '';
+  document.getElementById('inputObsRC').value = c.obs || '';
+  document.getElementById('tituloFormConstrutoraRC').textContent = 'Editando: ' + (c.nome || '');
+  document.getElementById('btnCancelarEdicaoRC').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelarEdicaoConstrutoraRC() {
+  document.getElementById('inputNomeConstrutoraRC').value = '';
+  document.getElementById('inputGerenteRC').value = '';
+  document.getElementById('inputFoneRC').value = '';
+  document.getElementById('inputUrlRC').value = '';
+  document.getElementById('inputObsRC').value = '';
+  document.getElementById('tituloFormConstrutoraRC').textContent = 'Cadastrar construtora';
+  document.getElementById('btnCancelarEdicaoRC').style.display = 'none';
 }
 </script>
 </body>

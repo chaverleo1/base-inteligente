@@ -192,6 +192,7 @@ function doGet(e) {
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
   if (acao === 'listar_revendas_construtoras') return ok(listarRevendasConstrutoras_());
+  if (acao === 'listar_construtoras_parceiras') return ok(listarConstrutorasParceiras_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
   if (acao === 'listar_todos_leads_imobzi') return ok(listarLeadsImobzi_({todos:true}));
@@ -703,6 +704,8 @@ function doPost(e) {
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'importar_revendas_construtoras') return ok(importarRevendasConstrutoras_(d.dados || d));
   if (d.acao === 'excluir_revenda_construtora')     return ok(excluirRevendaConstrutora_(d));
+  if (d.acao === 'cadastrar_construtora_parceira')  return ok(cadastrarConstrutoraParceira_(d.dados || d));
+  if (d.acao === 'excluir_construtora_parceira')    return ok(excluirConstrutoraParceira_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
@@ -3234,6 +3237,143 @@ function revendaConstrutoraParaImovel_(row) {
     dataEntrega:  '',
     fonte:        'REVENDA_CONSTRUTORA'
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONSTRUTORAS PARCEIRAS — cadastro das construtoras que mandam revenda
+// (aba "Cadastrar" em revendas-construtoras.html). Guarda dados gerais +
+// contato do gerente comercial; o "total de imóveis" de cada uma é contado
+// na hora, cruzando com REVENDAS_CONSTRUTORAS pelo campo "construtora"
+// (texto livre, então a contagem é por igualdade normalizada — minúsculo +
+// sem espaço nas pontas — pra "CITY" e "city " contarem juntos).
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_CONSTRUTORAS_PARCEIRAS = [
+  'dataCadastro', 'idConstrutora', 'nome', 'gerenteComercial', 'fone', 'url', 'obs'
+];
+
+function obterAbaConstrutorasParceiras_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('CONSTRUTORAS_PARCEIRAS');
+  if (!aba) {
+    aba = ss.insertSheet('CONSTRUTORAS_PARCEIRAS');
+    aba.appendRow(CABECALHO_CONSTRUTORAS_PARCEIRAS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_CONSTRUTORAS_PARCEIRAS.length)
+       .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+  }
+  return aba;
+}
+
+// Nome é a chave de dedup (uma construtora só deve existir uma vez) — se já
+// existe um cadastro com o mesmo nome (comparação normalizada), atualiza em
+// vez de duplicar, preservando idConstrutora e dataCadastro originais. Mesmo
+// padrão de salvarLancamento_ (dedup por nome quando não vem um ID explícito).
+function cadastrarConstrutoraParceira_(dados) {
+  var nome = String((dados && dados.nome) || '').trim();
+  if (!nome) return { ok: false, erro: 'nome obrigatorio' };
+
+  var aba = obterAbaConstrutorasParceiras_();
+  var lr  = aba.getLastRow();
+  var nomeNorm = norm_(nome);
+  var linhaExistente = -1;
+  var idExistente = '';
+  var dataCadExistente = '';
+
+  if (lr >= 2) {
+    var dadosAtuais = aba.getRange(2, 1, lr - 1, CABECALHO_CONSTRUTORAS_PARCEIRAS.length).getValues();
+    var iNome = CABECALHO_CONSTRUTORAS_PARCEIRAS.indexOf('nome');
+    for (var i = 0; i < dadosAtuais.length; i++) {
+      if (norm_(dadosAtuais[i][iNome]) === nomeNorm) {
+        linhaExistente   = i + 2;
+        idExistente      = dadosAtuais[i][CABECALHO_CONSTRUTORAS_PARCEIRAS.indexOf('idConstrutora')];
+        dataCadExistente = dadosAtuais[i][CABECALHO_CONSTRUTORAS_PARCEIRAS.indexOf('dataCadastro')];
+        break;
+      }
+    }
+  }
+
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var id    = idExistente || proximoIdConstrutoraParceira_();
+
+  var linha = CABECALHO_CONSTRUTORAS_PARCEIRAS.map(function(col) {
+    if (col === 'dataCadastro')     return dataCadExistente || agora;
+    if (col === 'idConstrutora')    return id;
+    if (col === 'nome')             return nome;
+    if (col === 'gerenteComercial') return String(dados.gerenteComercial || '').trim();
+    if (col === 'fone')             return String(dados.fone || '').trim();
+    if (col === 'url')              return String(dados.url || '').trim();
+    if (col === 'obs')              return String(dados.obs || '').trim();
+    return '';
+  });
+
+  if (linhaExistente > 0) {
+    aba.getRange(linhaExistente, 1, 1, CABECALHO_CONSTRUTORAS_PARCEIRAS.length).setValues([linha]);
+  } else {
+    aba.appendRow(linha);
+  }
+  return { ok: true, idConstrutora: id, atualizado: linhaExistente > 0 };
+}
+
+function proximoIdConstrutoraParceira_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba    = obterAbaConstrutorasParceiras_();
+    var lr     = aba.getLastRow();
+    var maxNum = 0;
+    if (lr >= 2) {
+      var idxId = CABECALHO_CONSTRUTORAS_PARCEIRAS.indexOf('idConstrutora') + 1;
+      var vals  = aba.getRange(2, idxId, lr - 1, 1).getValues().flat();
+      vals.forEach(function(v) {
+        var m = String(v || '').match(/(\d+)$/);
+        if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+      });
+    }
+    return 'CP-' + String(maxNum + 1).padStart(5, '0');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listarConstrutorasParceiras_() {
+  try {
+    var aba = obterAbaConstrutorasParceiras_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { construtoras: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_CONSTRUTORAS_PARCEIRAS.length).getValues();
+
+    // Contagem de imóveis por construtora (normalizado) — uma passada só na
+    // aba REVENDAS_CONSTRUTORAS, reaproveitada pra todas as construtoras.
+    var imoveis = lerAba_('REVENDAS_CONSTRUTORAS');
+    var contagem = {};
+    imoveis.forEach(function(r) {
+      var key = norm_(r.construtora);
+      if (!key) return;
+      contagem[key] = (contagem[key] || 0) + 1;
+    });
+
+    var construtoras = [];
+    for (var i = 0; i < dados.length; i++) {
+      if (!dados[i][0]) continue;
+      var obj = { _linha: i + 2 };
+      CABECALHO_CONSTRUTORAS_PARCEIRAS.forEach(function(col, j) { obj[col] = dados[i][j]; });
+      obj.totalImoveis = contagem[norm_(obj.nome)] || 0;
+      construtoras.push(obj);
+    }
+    return { construtoras: construtoras };
+  } catch(e) {
+    return { construtoras: [], erro: e.message };
+  }
+}
+
+function excluirConstrutoraParceira_(dados) {
+  var lin = parseInt(dados && dados._linha);
+  if (!lin) return { ok: false, erro: '_linha obrigatoria' };
+  var aba = obterAbaConstrutorasParceiras_();
+  if (lin < 2 || lin > aba.getLastRow()) return { ok: false, erro: 'linha invalida' };
+  aba.deleteRow(lin);
+  return { ok: true };
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -1,5 +1,39 @@
 # Changelog — Base Inteligente
 
+## 2026-07-13 (parte 7) — Nova aba "Cadastrar" em Revendas-Construtoras
+
+Terceira aba em `revendas-construtoras.html`, ao lado de "Colar / Extrair" e "Lista de Imóveis" —
+cadastro das construtoras parceiras propriamente ditas (dados gerais + contato), separado do
+cadastro em lote dos imóveis.
+
+**Formulário** ("item 13" do pedido): Nome*, Gerente Comercial, Fone, URL (pra acessar o PDF
+online) e Obs — mesmo padrão visual dos outros formulários do projeto. Nome é a chave de dedup: se
+já existe uma construtora com esse nome (comparação normalizada — minúsculo, sem espaço nas
+pontas), salvar de novo **atualiza** o cadastro em vez de duplicar (mesmo padrão de
+`salvarLancamento_`), preservando `idConstrutora` e a data de cadastro original.
+
+**Cards abaixo do formulário** (um por construtora, grid responsivo — "semelhante ao cadastro de
+empreendimentos" pedido pelo usuário): nome, gerente comercial, fone, observações, **total de
+imóveis cadastrados** (contado cruzando com a aba REVENDAS_CONSTRUTORAS pelo campo `construtora`,
+calculado no backend), botão **"📋 Ver todos"** (muda pra aba "Lista de Imóveis" já filtrada só com
+os imóveis dessa construtora — filtro em memória, sem nova chamada ao servidor), botão **"✏️
+Editar"** (carrega os dados no formulário pra atualizar) e link **"🔗 Ver PDF"** quando a URL foi
+informada.
+
+**Backend (`code.txt`)**: nova aba `CONSTRUTORAS_PARCEIRAS` (`dataCadastro`, `idConstrutora` —
+`CP-NNNNN` —, `nome`, `gerenteComercial`, `fone`, `url`, `obs`). Rotas
+`cadastrar_construtora_parceira` (POST, com dedup por nome), `listar_construtoras_parceiras` (GET,
+já retorna `totalImoveis` calculado), `excluir_construtora_parceira` (POST).
+
+Testado via smoke test em Node: cadastro novo (`CP-00001`), contagem de imóveis correta (3),
+re-cadastro com nome em case/espaçamento diferente (`"  city  "`) atualiza em vez de duplicar
+(preserva `idConstrutora`), exclusão funciona. No navegador: card renderiza com todos os campos e
+botões corretos, "Editar" recarrega o formulário certo, e "Ver todos" troca de aba e filtra
+corretamente (testado com 2 imóveis de construtoras diferentes — só o da construtora certa aparece
+depois do filtro, e "✕" no filtro volta a mostrar todos).
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-13 (parte 6) — Campo "Construtora" + badge "REV-CONSTRUTORA" + coluna "Importado em"
 
 Complemento da área Revendas-Construtoras (parte 5): agora cada lote importado registra de qual
