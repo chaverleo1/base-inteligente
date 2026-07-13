@@ -1,5 +1,13 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Fix: link "Leads Imobzi" faltava no cabeçalho das outras páginas
+
+A aba "Leads Imobzi" só existia no cabeçalho do próprio `dashboard.html` — Formulário, Busca
+Aberta, Lançamentos, Editar Lançamento, Contatos, Favoritos e Insight nunca ganharam esse link
+quando a seção Imobzi foi criada. Adicionado nas 7 páginas, entre "BaseImob" e "ADM", apontando
+pra `dashboard.html?secao=imobzi` — mesmo padrão já usado por "BaseImob" e "ADM" (o dashboard já
+sabia abrir direto na seção Imobzi com esse parâmetro, só faltava o link apontando pra lá).
+
 ## 2026-07-09 — Fix: migração de lead Imobzi não ativava o chip "Imobzi / CRM"
 
 **Pedido**: ao migrar um lead Imobzi pra CONTATOS (mudando o pipeline), o campo "Canal de Origem"
