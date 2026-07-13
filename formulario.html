@@ -340,13 +340,8 @@
     <div class="step-desc">Essas informações definem o score de match com produtos disponíveis.</div>
     <div class="field-group">
       <div class="field"><label>Tipo de imóvel <span class="req">*</span></label>
-        <div class="chip-group">
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Casa</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Sobrado</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Apartamento</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Lote em cond.</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Sala comercial</div>
-          <div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">Indefinido</div>
+        <div class="chip-group" id="chips-segmento">
+          <span style="font-size:12px;color:var(--text3)">Carregando tipos...</span>
         </div>
       </div>
 
@@ -648,7 +643,7 @@
   const stepNames = ['Identificação','Localização','Perfil de compra','Histórico','Resumo'];
 
   // ── INIT ───────────────────────────────────────────────────────────────────
-  function init() { renderDots(); updateNav(); updateCamposImovel(); updateAreaUtilLabel(); }
+  function init() { renderDots(); updateNav(); updateCamposImovel(); updateAreaUtilLabel(); carregarTiposImovel(); }
 
   function renderDots() {
     const c = document.getElementById('stepDots');
@@ -751,10 +746,39 @@
     }
   }
 
+  // ── TIPO DE IMÓVEL (dinâmico, mesma fonte de dados da Busca Aberta) ─────────
+  // Antes era uma lista fixa de 6 chips digitados à mão (Casa/Sobrado/
+  // Apartamento/Lote em cond./Sala comercial/Indefinido) — trocado por
+  // opcoes_filtro (mesma rota que busca.html já usa) pra sempre refletir os
+  // tipos que existem de verdade na base, sem precisar manter duas listas
+  // sincronizadas manualmente. "Indefinido" continua sempre disponível
+  // (sentinela usado em updateScore, não é um tipo real de imóvel).
+  async function carregarTiposImovel() {
+    const el = document.getElementById('chips-segmento');
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=opcoes_filtro&token=' + encodeURIComponent(tokenSessao()));
+      const json = await resp.json();
+      const tipos = (json.tipos || []).concat(['Indefinido']);
+      el.innerHTML = tipos.map(t =>
+        `<div class="chip" onclick="toggleChip(this,'segmento');updateScore();updateCamposImovel()">${t}</div>`
+      ).join('');
+    } catch(e) {
+      el.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar tipos</span>';
+    }
+  }
+
   // ── CARACTERÍSTICAS DO IMÓVEL (condicional por segmento) ────────────────────
+  // Com o tipo agora vindo de dados reais (em vez de 6 rótulos fixos), o
+  // match precisa ser por palavra-chave (contains, case-insensitive) em vez
+  // de igualdade exata — "Lote Condomínio Horizontal", "Cobertura", "Studio"
+  // etc. não bateriam com os valores fixos de antes.
+  function segmentoContemPalavra_(palavras) {
+    const valores = (chipState['segmento'] || '').toLowerCase();
+    return palavras.some(p => valores.includes(p));
+  }
   function updateCamposImovel() {
-    const isApto     = temValor_('segmento', 'Apartamento');
-    const isCasaLote = temValor_('segmento', 'Casa') || temValor_('segmento', 'Sobrado') || temValor_('segmento', 'Lote em cond.');
+    const isApto     = segmentoContemPalavra_(['apartamento', 'cobertura', 'loft', 'studio', 'flat', 'kitnet']);
+    const isCasaLote = segmentoContemPalavra_(['casa', 'sobrado', 'lote', 'terreno', 'chácara', 'sítio']);
     document.querySelectorAll('.campo-apto').forEach(el => el.style.display = isApto ? '' : 'none');
     document.querySelectorAll('.campo-casa').forEach(el => el.style.display = isCasaLote ? '' : 'none');
   }

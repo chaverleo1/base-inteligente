@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-09 — Tipo de imóvel dinâmico no Formulário + "Lead Imobzi" só nas caixas de listagem
+
+**Item 9**: o campo "Tipo de imóvel" do Formulário tinha 6 botões fixos digitados à mão (Casa,
+Sobrado, Apartamento, Lote em cond., Sala comercial, Indefinido) — trocado por uma lista
+**dinâmica**, buscada da mesma rota (`opcoes_filtro`) que a página Busca Aberta já usa, sempre
+refletindo os tipos que existem de verdade na base (ex: Cobertura, Loft, Studio, Terreno, Lote
+Condomínio Horizontal, Comercial — nenhum desses existia como botão antes). "Indefinido" continua
+sempre disponível como opção (sentinela do score, não é um tipo real).
+
+Como o tipo deixou de ser um conjunto fixo de 6 rótulos, a lógica que mostra/esconde campos
+específicos de apartamento (suítes, elevador, andar alto) vs. casa/lote (área de terreno,
+churrasqueira, área adensável) mudou de comparação exata pra correspondência por palavra-chave
+(contains, case-insensitive) — senão "Lote Condomínio Horizontal" ou "Cobertura" nunca bateriam com
+os valores fixos de antes.
+
+**Item 10**: removida a coluna "Lead Imobzi" do funil visual "Pipeline de Negociações" no
+Dashboard (volta a ter 5 colunas) — ela só existia há pouco tempo e passou a poluir o funil
+principal. Continua existindo normalmente como opção nas caixas de listagem (selects de
+contatos.html/formulario.html/dashboard), igual já acontecia com "Ganhos".
+
 ## 2026-07-09 — "Re-lead Imobzi" + nova página "Todos os Leads Imobzi"
 
 **Item 8 — reversão automática pra Lead Imobzi**: quando o corretor leva o pipeline de um contato
