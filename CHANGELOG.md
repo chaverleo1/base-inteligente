@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 10) — Badge Potencial/Oportunidade faltando na tabela compacta de "Matches do momento"
+
+A parte 9 cobriu 4 pontos de renderização de card nos 3 arquivos (contatos/dashboard×2/favoritos),
+mas ficou de fora um 5º ponto: a coluna 2 de "Matches do momento" no dashboard (`#matchTableBody`)
+usa um template de **linha de tabela** próprio e diferente (foto pequena + nome + badges + score +
+valor + estrela), não o `imovel-card` grande — por isso o imóvel RC-00011 (Village do Bosque,
+marcado como Potencial) não mostrava nenhum destaque ali, mesmo já aparecendo corretamente na janela
+de detalhes em Revendas-Construtoras.
+
+**Fix**: mesmo badge colorido/clicável (`⭐ Potencial` / `🔥 Oportunidade`) adicionado nessa linha,
+ao lado do badge de origem. Como a linha inteira já tem `onclick` pra abrir o drawer de detalhes do
+match, o clique no badge usa `event.stopPropagation()` pra não disparar os dois drawers ao mesmo
+tempo.
+
+Testado no navegador: mockei `matches_cliente` retornando o mesmo imóvel do relato do usuário
+(RC-00011, CITY, status Potencial) e chamei `selecionarCliente()` direto — o HTML da linha renderiza
+com a classe `status-rc-badge-potencial` e o texto certo.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 9) — Badge de destaque Potencial/Oportunidade nos cards + imóveis vira página inteira
 
 Dois ajustes pedidos pelo usuário depois de testar a parte 8 ao vivo:
