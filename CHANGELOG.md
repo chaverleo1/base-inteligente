@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 6) — Status de triagem pra imóveis de revenda de construtoras
+
+Novo campo `status` em `REVENDAS_CONSTRUTORAS` (14ª→15ª coluna, apêndice no
+`CABECALHO_REVENDAS_CONSTRUTORAS` — a aba se autocorrige sozinha, ver parte 4 de hoje), com 4
+estágios de triagem: `IMPORTADA` (padrão, entrada de toda importação nova), `VALIDA` (confirmada e
+disponível), `POTENCIAL` (pós-visita, pode ter fotos vinculadas) e `OPORTUNIDADE` (pós-visita,
+excelente negócio). Linha antiga sem valor gravado nessa coluna conta como `IMPORTADA` por padrão
+(`listarRevendasConstrutoras_`), sem precisar de backfill.
+
+**Interface**: nova coluna "Status" na tabela de imóveis do drawer (por construtora), com uma caixa
+de listagem (`<select>`) por linha pra trocar o status na hora (`mudarStatusRC` → nova rota
+`atualizar_status_revenda_construtora` → `atualizarStatusRevendaConstrutora_`), cor por estágio
+(neutro/verde-água/âmbar/vermelho, do menos pro mais "quente").
+
+**Regra de exclusão em lote**: "Excluir todos" (por construtora ou da linha "Sem construtora") agora
+só apaga imóveis com status `IMPORTADA` — uma vez que o usuário mudou manualmente pra Válida/
+Potencial/Oportunidade, esse imóvel só sai individualmente, pelo botão 🗑️ na lista (mesma trava já
+existia pra "sem construtora" vazia, agora combinada com a checagem de status). Efeito colateral
+esperado e correto: um imóvel marcado como "Válida" nunca é apagado por uma reimportação/limpeza em
+lote, então pode aparecer de novo como um registro `IMPORTADA` separado numa reextração futura do
+mesmo lote — não é duplicata a fundir, é o comportamento pretendido (a linha antiga "Válida"
+continua existindo, intacta).
+
+Testado via smoke test em Node: import → status inicial IMPORTADA em todas as linhas; mudança de
+status individual persiste e é lida de volta corretamente; status inválido é rejeitado;
+"excluir todos" preserva a linha marcada como Válida e remove só as duas ainda em Importada.
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`). Não precisa rodar nenhuma
+migração manual — o autoheal do cabeçalho (parte 4) cobre a coluna nova também.
+
 ## 2026-07-14 (parte 5) — Extrator de Colar/Extrair vira genérico por cabeçalho (multi-construtora)
 
 O parser de `extrairRevendasConstrutoras()` só reconhecia UM formato de CSV, fixo por posição

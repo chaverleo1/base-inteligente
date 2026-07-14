@@ -705,6 +705,7 @@ function doPost(e) {
   if (d.acao === 'importar_revendas_construtoras') return ok(importarRevendasConstrutoras_(d.dados || d));
   if (d.acao === 'excluir_revenda_construtora')     return ok(excluirRevendaConstrutora_(d));
   if (d.acao === 'excluir_todos_revendas_construtora') return ok(excluirTodosRevendasConstrutora_(d));
+  if (d.acao === 'atualizar_status_revenda_construtora') return ok(atualizarStatusRevendaConstrutora_(d));
   if (d.acao === 'cadastrar_construtora_parceira')  return ok(cadastrarConstrutoraParceira_(d.dados || d));
   if (d.acao === 'excluir_construtora_parceira')    return ok(excluirConstrutoraParceira_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
@@ -3114,8 +3115,17 @@ function excluirLancamento_(dados) {
 var CABECALHO_REVENDAS_CONSTRUTORAS = [
   'dataCadastro', 'idImovel', 'unidade', 'empreendimento', 'tipo',
   'areaUtil', 'areaTerreno', 'quartos', 'suites', 'vagas',
-  'valorVenda', 'bairro', 'textoOriginal', 'construtora'
+  'valorVenda', 'bairro', 'textoOriginal', 'construtora', 'status'
 ];
+
+// Estágio de triagem do imóvel de revenda, independente de "construtora"
+// (que identifica a origem). Toda importação nova entra como IMPORTADA;
+// os demais estágios só mudam por ação manual do usuário (ver
+// atualizarStatusRevendaConstrutora_). Linhas antigas sem valor gravado
+// na coluna "status" (importadas antes desse campo existir) são tratadas
+// como IMPORTADA por padrão — ver listarRevendasConstrutoras_.
+var STATUS_REVENDA_CONSTRUTORA_PADRAO = 'IMPORTADA';
+var STATUS_REVENDA_CONSTRUTORA_VALIDOS = ['IMPORTADA', 'VALIDA', 'POTENCIAL', 'OPORTUNIDADE'];
 
 function obterAbaRevendasConstrutoras_() {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
@@ -3193,6 +3203,7 @@ function importarRevendasConstrutoras_(dados) {
         if (col === 'dataCadastro') return agora;
         if (col === 'idImovel')     return id;
         if (col === 'construtora') return imo.construtora || construtoraLote;
+        if (col === 'status')      return STATUS_REVENDA_CONSTRUTORA_PADRAO;
         return imo[col] !== undefined ? imo[col] : '';
       });
     });
@@ -3218,6 +3229,9 @@ function listarRevendasConstrutoras_() {
       // Dias desde a importação — usado no front pra destacar em vermelho
       // cadastro com mais de 45 dias (ver renderListaRC em revendas-construtoras.html).
       obj.diasDesdeCadastro = diasDesdeData_(obj.dataCadastro);
+      // Linha antiga sem "status" gravado (importada antes desse campo existir)
+      // conta como IMPORTADA — mesmo estágio inicial de uma importação nova.
+      obj.status = String(obj.status || '').trim().toUpperCase() || STATUS_REVENDA_CONSTRUTORA_PADRAO;
       imoveis.push(obj);
     }
     return { imoveis: imoveis };
@@ -3235,6 +3249,12 @@ function excluirRevendaConstrutora_(dados) {
   return { ok: true };
 }
 
+// "Excluir todos" só apaga imóveis no estágio inicial (IMPORTADA) — uma vez
+// que o usuário mudou o status manualmente (Válida/Potencial/Oportunidade),
+// esse imóvel só pode ser removido individualmente, na lista da construtora
+// (ver excluirRevendaConstrutora_). Isso também explica por que um mesmo
+// imóvel pode reaparecer como IMPORTADA numa reimportação futura: a linha
+// "Válida" antiga nunca foi apagada, só deixou de ser contada aqui.
 function excluirTodosRevendasConstrutora_(dados) {
   var construtora = String(dados && dados.construtora || '').trim();
   var alvoVazio = !!(dados && dados.semConstrutora);
@@ -3243,16 +3263,32 @@ function excluirTodosRevendasConstrutora_(dados) {
   var aba = obterAbaRevendasConstrutoras_();
   var lr = aba.getLastRow();
   if (lr < 2) return { ok: true, removidas: 0 };
-  var iConst = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('construtora') + 1;
-  var vals = aba.getRange(2, iConst, lr - 1, 1).getValues();
+  var iConst  = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('construtora') + 1;
+  var iStatus = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('status') + 1;
+  var valsConst  = aba.getRange(2, iConst, lr - 1, 1).getValues();
+  var valsStatus = aba.getRange(2, iStatus, lr - 1, 1).getValues();
   var linhas = [];
-  for (var i = vals.length - 1; i >= 0; i--) {
-    if (norm_(vals[i][0]) === nomeNorm) linhas.push(i + 2);
+  for (var i = valsConst.length - 1; i >= 0; i--) {
+    var status = String(valsStatus[i][0] || '').trim().toUpperCase() || STATUS_REVENDA_CONSTRUTORA_PADRAO;
+    if (status !== STATUS_REVENDA_CONSTRUTORA_PADRAO) continue;
+    if (norm_(valsConst[i][0]) === nomeNorm) linhas.push(i + 2);
   }
   for (var j = 0; j < linhas.length; j++) {
     aba.deleteRow(linhas[j]);
   }
   return { ok: true, removidas: linhas.length };
+}
+
+function atualizarStatusRevendaConstrutora_(dados) {
+  var lin = parseInt(dados && dados._linha);
+  var status = String(dados && dados.status || '').trim().toUpperCase();
+  if (!lin) return { ok: false, erro: '_linha obrigatoria' };
+  if (STATUS_REVENDA_CONSTRUTORA_VALIDOS.indexOf(status) === -1) return { ok: false, erro: 'status invalido' };
+  var aba = obterAbaRevendasConstrutoras_();
+  if (lin < 2 || lin > aba.getLastRow()) return { ok: false, erro: 'linha invalida' };
+  var iStatus = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('status') + 1;
+  aba.getRange(lin, iStatus, 1, 1).setValue(status);
+  return { ok: true };
 }
 
 // Converte linha de REVENDAS_CONSTRUTORAS para o formato de produto do motor

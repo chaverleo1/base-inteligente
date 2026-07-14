@@ -164,6 +164,13 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
                cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap; }
 .btn-excluir:hover { background:rgba(255,90,90,.2); }
 
+.select-status-rc { font-size:12px; font-weight:600; border-radius:var(--radius-xs); padding:5px 8px;
+                     font-family:'Inter',sans-serif; cursor:pointer; background:var(--surface2); outline:none; }
+.status-importada-rc  { border:1px solid var(--border); color:var(--text2); }
+.status-valida-rc     { border:1px solid rgba(0,212,170,.35); color:var(--accent2); }
+.status-potencial-rc  { border:1px solid rgba(245,166,35,.35); color:var(--warm); }
+.status-oportunidade-rc { border:1px solid rgba(255,90,90,.35); color:var(--hot); font-weight:700; }
+
 .empty { text-align:center; padding:48px; color:var(--text3); }
 .count-info { font-size:12px; color:var(--text3); margin-bottom:14px; }
 
@@ -664,11 +671,20 @@ function classeDataRC_(dias) {
   return (dias !== null && dias !== undefined && dias > LIMITE_DIAS_DESATUALIZADO_RC) ? 'data-antiga-rc' : '';
 }
 
+// Estágio de triagem do imóvel — só muda por ação manual do usuário na lista
+// (ver mudarStatusRC). "Excluir todos" só apaga IMPORTADA (ver excluirTodosRC);
+// os demais só saem individualmente, pelo botão 🗑️ desta mesma lista.
+const STATUS_RC_LABEL = { IMPORTADA: 'Importada', VALIDA: 'Válida', POTENCIAL: 'Potencial', OPORTUNIDADE: 'Oportunidade' };
+const STATUS_RC_CLASSE = { IMPORTADA: 'status-importada-rc', VALIDA: 'status-valida-rc', POTENCIAL: 'status-potencial-rc', OPORTUNIDADE: 'status-oportunidade-rc' };
+
 function renderListaRC(lista) {
   const root = document.getElementById('rootListaRC');
   if (!lista.length) { root.innerHTML = '<div class="empty">Nenhum imóvel dessa construtora.</div>'; return; }
   const ordenada = [...lista].reverse();
-  const rows = ordenada.map(imo => `
+  const rows = ordenada.map(imo => {
+    const status = imo.status || 'IMPORTADA';
+    const opcoesStatus = Object.keys(STATUS_RC_LABEL).map(s => `<option value="${s}" ${s===status?'selected':''}>${STATUS_RC_LABEL[s]}</option>`).join('');
+    return `
     <tr>
       <td class="td-cod">${imo.idImovel || '—'}</td>
       <td class="td-nome">${imo.unidade || '—'}</td>
@@ -677,14 +693,41 @@ function renderListaRC(lista) {
       <td>${fmtArea_(imo.areaUtil, imo.areaTerreno)}</td>
       <td class="td-valor">${fmtBRL_(imo.valorVenda)}</td>
       <td class="${classeDataRC_(imo.diasDesdeCadastro)}">${fmtDataImportada_(imo.dataCadastro)}</td>
+      <td>
+        <select class="select-status-rc ${STATUS_RC_CLASSE[status]}" onchange="mudarStatusRC(${imo._linha}, this)">
+          ${opcoesStatus}
+        </select>
+      </td>
       <td><button class="btn-excluir" onclick="excluirRC(${imo._linha}, this)">🗑️ Excluir</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   root.innerHTML = `
     <div class="count-info">${lista.length} imóve${lista.length===1?'l':'is'} cadastrado${lista.length===1?'':'s'}</div>
     <div class="detail-wrap"><table class="detail-table">
-      <thead><tr><th>Código</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Valor</th><th>Importado em</th><th>Ação</th></tr></thead>
+      <thead><tr><th>Código</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Valor</th><th>Importado em</th><th>Status</th><th>Ação</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
+}
+
+async function mudarStatusRC(linha, selEl) {
+  const novoStatus = selEl.value;
+  selEl.disabled = true;
+  selEl.className = 'select-status-rc ' + STATUS_RC_CLASSE[novoStatus];
+  try {
+    const body = new URLSearchParams({ dados: JSON.stringify({ acao: 'atualizar_status_revenda_construtora', token: tokenSessao(), _linha: linha, status: novoStatus }) });
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) {
+      showToast(`Status alterado para "${STATUS_RC_LABEL[novoStatus]}".`, 'ok');
+    } else {
+      showToast('Erro ao atualizar status: ' + (json.erro || 'desconhecido'), 'erro');
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+  } finally {
+    selEl.disabled = false;
+  }
 }
 
 async function excluirRC(linha, btnEl) {
@@ -802,7 +845,7 @@ function renderConstrutorasRC(lista, semConstrutora) {
 
 async function excluirTodosRC(construtora, total, btnEl, semConstrutora) {
   const label = semConstrutora ? '(Sem construtora)' : construtora;
-  if (!confirm(`Excluir TODOS os ${total} imóveis de "${label}"?\nEsta ação não pode ser desfeita.`)) return;
+  if (!confirm(`Excluir os imóveis com status "Importada" de "${label}"?\nImóveis já marcados como Válida/Potencial/Oportunidade NÃO são apagados em lote — só individualmente, na lista de imóveis.\nEsta ação não pode ser desfeita.`)) return;
   btnEl.disabled = true; btnEl.textContent = '⏳ Excluindo...';
   try {
     const payload = { acao: 'excluir_todos_revendas_construtora', token: tokenSessao(), construtora };
@@ -812,7 +855,7 @@ async function excluirTodosRC(construtora, total, btnEl, semConstrutora) {
     const json = await resp.json();
     if (trataNaoAutenticado(json)) return;
     if (json.ok) {
-      showToast(`✓ ${json.removidas} imóve${json.removidas===1?'l':'is'} de "${label}" excluído${json.removidas===1?'':'s'}.`, 'ok');
+      showToast(`✓ ${json.removidas} imóve${json.removidas===1?'l':'is'} "Importada" de "${label}" excluído${json.removidas===1?'':'s'}.`, 'ok');
       _construtorasCarregadas = false;
       carregarConstrutorasRC();
     } else {
