@@ -469,7 +469,7 @@ function corrigirMojibakeRC_(texto) {
   // da reconstrução geral acima, nunca antes — se rodasse antes, a
   // reconstrução byte-a-byte re-interpretaria o "í" já corrigido aqui como
   // se fosse mais um byte de mojibake e o corromperia de novo): a fonte de
-  // algumas tabelas (ex: BAMBUI) perde de vez o byte do "Í" na palavra
+  // algumas tabelas (ex: REVENDASGYN) perde de vez o byte do "Í" na palavra
   // "suíte" — sobra um "Ã" solto (sem continuação válida) ou, depois da
   // reconstrução acima ter caído no fallback sem "fatal", um "�".
   resultado = resultado.replace(/(su)[Ã�](te)/gi, (m, p1, p2) => p1 + (p1 === p1.toUpperCase() ? 'Í' : 'í') + p2);
@@ -575,9 +575,9 @@ const SINONIMOS_COLUNA_RC = {
   // (a unidade) interessa.
   'endereco/unidade': 'unidadeComposta',
   'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento',
-  // "condominio" é AMBÍGUO entre construtoras: no BAMBUI (1º padrão) é o
-  // NOME do empreendimento (ex: "ORBY FLAMBOYAT"), mas em outro padrão
-  // (BAMBUI 2º) a mesma palavra "CONDOMINIO" é a TAXA mensal em R$ — mesma
+  // "condominio" é AMBÍGUO entre construtoras: no BAMBUI é o NOME do
+  // empreendimento (ex: "ORBY FLAMBOYAT"), mas no padrão da REVENDASGYN
+  // a mesma palavra "CONDOMINIO" é a TAXA mensal em R$ — mesma
   // classe de conflito já resolvida pra "descricao" (ver descricaoLivre
   // logo abaixo). Por isso não mapeia direto pra 'empreendimento': vai pra
   // um bucket à parte, só usado como ÚLTIMO recurso na cascata (quando não
@@ -605,9 +605,10 @@ const SINONIMOS_COLUNA_RC = {
   // reaproveita o mesmo parser de "Configuração" (CTTY) — a regex de
   // quartos/suítes já entende "0N" com zero à esquerda.
   'configuracao': 'config', 'suites_vagas': 'config', 'composicao': 'config',
+  // "dormitorios" (REVENDASGYN, ex: "2Q 1 SUÍTE") — mesmo parser de texto livre.
   'dormitorios': 'config',
   'vagas': 'vagasCol',
-  // "setor" é a forma goianiense de "bairro" (ex: "Setor Bueno") — mesmo bucket.
+  // "setor" (REVENDASGYN) é a forma goianiense de "bairro" (ex: "Setor Bueno") — mesmo bucket.
   'setor': 'bairro',
   // "quartos" avulso (BAMBUI, só o número — sem suítes/vagas juntos, ao
   // contrário de "config") — checado independente de vagasCol, ver cascata
@@ -672,7 +673,7 @@ function parseAreaRC_(areaRaw, isTerra) {
 function parseConfigRC_(configRaw) {
   const c = configRaw || '';
   const suitesM  = c.match(/(\d+)\s*su[ií]tes?/i);
-  // "2Q" (compacto, ex: BAMBUI 2º padrão, "2Q 1 SUÍTE") é sinônimo de "2
+  // "2Q" (compacto, ex: REVENDASGYN, "2Q 1 SUÍTE") é sinônimo de "2
   // quartos" — só tenta esse formato se a palavra "quartos" por extenso
   // não aparecer.
   const quartosM = c.match(/(\d+)\s*quartos?/i) || c.match(/(\d+)\s*q\b/i);
@@ -733,11 +734,11 @@ function extrairRevendasConstrutoras(txtBruto) {
       empreendimento = separado.nome;
     }
     // Último recurso: "descricaoLivre" (ex: CITY) e "condominioNome" (ex:
-    // BAMBUI 1º padrão) só viram nome do empreendimento quando nenhuma
-    // fonte melhor identificou um — nunca sobrepõem 'empreendimento'/
-    // 'imovelComTipo' de formatos onde esse mesmo rótulo de coluna significa
-    // outra coisa (ex: BRASAL 2º padrão pra "descricao"; BAMBUI 2º padrão
-    // pra "condominio", que ali é a taxa em R$, não o nome).
+    // BAMBUI) só viram nome do empreendimento quando nenhuma fonte melhor
+    // identificou um — nunca sobrepõem 'empreendimento'/'imovelComTipo' de
+    // formatos onde esse mesmo rótulo de coluna significa outra coisa (ex:
+    // BRASAL 2º padrão pra "descricao"; REVENDASGYN pra "condominio", que
+    // ali é a taxa em R$, não o nome).
     if (!empreendimento && 'descricaoLivre' in mapaColunas) {
       empreendimento = get('descricaoLivre');
     }
@@ -914,6 +915,14 @@ async function carregarImoveisConstrutoraRC() {
 function fmtDataImportada_(dataCadastro) {
   const m = String(dataCadastro || '').match(/^(\d{2}\/\d{2}\/\d{4})/);
   return m ? m[1] : (dataCadastro || '—');
+}
+
+// Data + hora com hífen entre os dois (ex: "14/07/2026-19:00") — mesmo
+// padrão usado em "Atualizado em" (contatos.html), aplicado aqui na
+// "Última Atualização" da tabela de Construtoras.
+function fmtDataHoraTracoRC_(dataStr) {
+  const m = String(dataStr || '').match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})/);
+  return m ? `${m[1]}-${m[2]}` : (dataStr || '—');
 }
 
 // Cadastro com mais de 45 dias sem reextração fica destacado em vermelho —
@@ -1184,15 +1193,14 @@ function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
   });
   const rows = ordenada.map(c => `
     <tr>
-      <td class="construtora-nome">${c.nome || '—'}</td>
+      <td>
+        <button class="construtora-total-btn construtora-nome" onclick="abrirImoveisConstrutoraRC('${(c.nome||'').replace(/'/g,"\\'")}')"
+          title="Ver todos os imóveis dessa construtora">${c.nome || '—'}</button>
+      </td>
       <td>${c.gerenteComercial || '—'}</td>
       <td>${c.fone || '—'}</td>
-      <td>
-        <button class="construtora-total-btn" onclick="abrirImoveisConstrutoraRC('${(c.nome||'').replace(/'/g,"\\'")}')"
-          title="Ver imóveis dessa construtora">${c.totalImoveis || 0}</button>
-      </td>
       <td>${renderStatusBreakdownRC_(c.nome, c.contagemStatus)}</td>
-      <td class="${classeDataRC_(c.diasDesdeUltimaAtualizacao)}">${fmtDataImportada_(c.ultimaAtualizacao)}</td>
+      <td class="${classeDataRC_(c.diasDesdeUltimaAtualizacao)}">${fmtDataHoraTracoRC_(c.ultimaAtualizacao)}</td>
       <td class="td-acoes">
         <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
         ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 PDF</a>` : ''}
@@ -1207,13 +1215,12 @@ function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
   // construtora cadastrada.
   const rowSemConstrutora = semConstrutora > 0 ? `
     <tr style="background:rgba(245,166,35,.06)">
-      <td class="construtora-nome" style="color:var(--warm)">⚠️ (Sem construtora)</td>
-      <td>—</td>
-      <td>—</td>
       <td>
-        <button class="construtora-total-btn" onclick="abrirImoveisConstrutoraRC('')"
-          title="Ver imóveis sem construtora atribuída">${semConstrutora}</button>
+        <button class="construtora-total-btn construtora-nome" style="color:var(--warm)" onclick="abrirImoveisConstrutoraRC('')"
+          title="Ver todos os imóveis sem construtora atribuída">⚠️ (Sem construtora)</button>
       </td>
+      <td>—</td>
+      <td>—</td>
       <td>${renderStatusBreakdownRC_('', semConstrutoraStatus)}</td>
       <td>—</td>
       <td class="td-acoes">—</td>
@@ -1222,7 +1229,7 @@ function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
   root.innerHTML = `
     <div class="count-info">${lista.length} construtora${lista.length===1?'':'s'} cadastrada${lista.length===1?'':'s'}${semConstrutora ? ` · ${semConstrutora} imóve${semConstrutora===1?'l':'is'} sem construtora atribuída` : ''}</div>
     <div class="detail-wrap"><table class="detail-table">
-      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Status</th><th>Última Atualização</th><th>Ações</th><th>Excluir todos</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Status</th><th>Última Atualização</th><th>Ações</th><th>Excluir todos</th></tr></thead>
       <tbody>${rowSemConstrutora}${rows}</tbody>
     </table></div>`;
 }

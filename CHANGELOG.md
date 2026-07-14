@@ -1,10 +1,32 @@
 # Changelog — Base Inteligente
 
-## 2026-07-14 (parte 16) — 2º padrão BRASAL + fix crítico de mojibake com bytes especiais do CP1252
+## 2026-07-14 (parte 17) — Tabela de Construtoras: remove coluna Total, data com hífen
 
-Novo padrão (17 colunas: `REFERENCIA,GERENTE1,CONTATO1,GERENTE2,CONTATO2,TIPO DE IMOVEL,IMOVEL,
-DORMITORIOS,SETOR,UNIDADE,M2,VALOR,CONDICAO,CONDOMINIO,OCUPACAO,VAGA/BOX,ENDERECO`). Expôs um bug
-real na correção de mojibake que passou despercebido em todos os padrões anteriores.
+Dois ajustes pedidos pelo usuário na tabela de Construtoras (`revendas-construtoras.html`):
+
+**1. Coluna "Total de imóveis" removida** — era redundante com a nova coluna "Status" (parte 13),
+cuja soma já dá o total. Pra não perder a função de "ver todos os imóveis dessa construtora sem
+filtro de status", o próprio nome da construtora virou o botão clicável (reaproveita
+`abrirImoveisConstrutoraRC(nome)` sem 2º argumento = sem filtro). Cabeçalho e linhas ajustados de 8
+pra 7 colunas.
+
+**2. "Última Atualização" no formato `14/07/2026-19:00`** (data-hífen-hora), mesmo padrão da coluna
+"Atualizado em" em contatos.html. Nova `fmtDataHoraTracoRC_()` — o valor já vem gravado como
+"dd/MM/yyyy HH:mm" (espaço) desde o backend, só precisa trocar o separador.
+
+Testado ao vivo no navegador: cabeçalho da tabela sem "Total de imóveis" (7 colunas), data exibida
+como "14/07/2026-19:00", clique no nome "CITY" abre a lista completa de imóveis sem nenhum filtro de
+status aplicado (2 imóveis, status misto).
+
+100% frontend, sem mudança no backend.
+
+## 2026-07-14 (parte 16) — Padrão REVENDASGYN + fix crítico de mojibake com bytes especiais do CP1252
+
+Novo padrão, da empresa parceira **REVENDASGYN** (17 colunas: `REFERENCIA,GERENTE1,CONTATO1,
+GERENTE2,CONTATO2,TIPO DE IMOVEL,IMOVEL,DORMITORIOS,SETOR,UNIDADE,M2,VALOR,CONDICAO,CONDOMINIO,
+OCUPACAO,VAGA/BOX,ENDERECO`) — correção de nome: identificado inicialmente por engano como um "2º
+padrão BAMBUI"; confirmado pelo usuário que é da REVENDASGYN, empresa parceira diferente. Expôs um
+bug real na correção de mojibake que passou despercebido em todos os padrões anteriores.
 
 **BUG achado: mojibake com bytes especiais do Windows-1252 corrompia em vez de corrigir.**
 "VIDA MILÃƒO" devia virar "VIDA MILÃO" — o byte 0x83 (parte da letra "Ã" maiúscula original) vira
@@ -23,8 +45,8 @@ rodando antes, a reconstrução geral reinterpretava o "í" que acabara de ser c
 mais um byte de mojibake, corrompendo de novo (bug que só apareceu ao testar os dois problemas juntos
 no mesmo texto).
 
-**Terceiro problema: "CONDOMINIO" é ambíguo entre construtoras** — no BAMBUI 1º padrão (parte 15,
-hoje) é o nome do empreendimento; neste 2º padrão, a mesma palavra é a TAXA mensal em R$. Mesma
+**Terceiro problema: "CONDOMINIO" é ambíguo entre construtoras** — no BAMBUI (parte 15, hoje) é o
+nome do empreendimento; na REVENDASGYN, a mesma palavra é a TAXA mensal em R$. Mesma
 classe de conflito já resolvida uma vez pra "descricao" (parte 12) — corrigido do mesmo jeito:
 `condominio` vira um bucket à parte (`condominioNome`), só usado como último recurso pro nome do
 empreendimento na cascata, nunca sobrepondo uma fonte melhor (aqui, a coluna "IMOVEL"). Resultado:
