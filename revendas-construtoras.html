@@ -208,7 +208,7 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
     </div>
   </div>
 
-  <div class="rc-subtabs">
+  <div class="rc-subtabs" id="rcSubtabsBar">
     <button class="rc-subtab active" id="subtabConstrutoras" onclick="mostrarSubtabRC('construtoras')">Construtoras</button>
     <button class="rc-subtab" id="subtabExtrair" onclick="mostrarSubtabRC('extrair')">Colar / Extrair</button>
     <button class="rc-subtab" id="subtabCadastrar" onclick="mostrarSubtabRC('cadastrar')">Cadastrar</button>
@@ -295,20 +295,21 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
       </div>
     </div>
   </div>
-</div>
 
-<!-- DRAWER: imóveis de uma construtora (aberto ao clicar no Total da tabela) -->
-<div class="drawer-overlay-rc" id="drawerOverlayRC" onclick="fecharDrawerImoveisRC()"></div>
-<div class="drawer-rc" id="drawerImoveisRC">
-  <div class="drawer-rc-header">
-    <div class="drawer-rc-titulo">Imóveis — <span id="drawerConstrutoraNomeRC"></span></div>
-    <button class="drawer-rc-close" onclick="fecharDrawerImoveisRC()">✕</button>
+  <!-- IMÓVEIS DE UMA CONSTRUTORA — página inteira (drill-down a partir do
+       total clicável na tabela de Construtoras), não é uma aba do rc-subtabs.
+       Substituiu o drawer lateral, a pedido do usuário. -->
+  <div id="secaoImoveisConstrutoraRC" style="display:none">
+    <button class="refresh-btn" style="margin-bottom:16px" onclick="fecharImoveisConstrutoraRC()">← Voltar</button>
+    <div class="sec-header">
+      <div class="sec-title">Imóveis — <span id="tituloImoveisConstrutoraRC"></span></div>
+    </div>
+    <div id="rootListaRC"><div class="empty">Carregando imóveis...</div></div>
   </div>
-  <div class="drawer-rc-body" id="rootListaRC"><div class="empty">Carregando imóveis...</div></div>
 </div>
 
 <!-- DRAWER: detalhes da visita (só imóveis Potencial/Oportunidade) — abre por
-     cima do drawer de imóveis, por isso o z-index mais alto. -->
+     cima da página de imóveis da construtora, por isso o z-index alto. -->
 <div class="drawer-overlay-rc" id="drawerOverlayDetalhesRC" style="z-index:510" onclick="fecharDrawerDetalhesRC()"></div>
 <div class="drawer-rc" id="drawerDetalhesRC" style="z-index:511;width:480px">
   <div class="drawer-rc-header">
@@ -347,6 +348,8 @@ function mostrarSubtabRC(tab) {
   document.getElementById('subtabConstrutoras').classList.toggle('active', tab === 'construtoras');
   document.getElementById('subtabExtrair').classList.toggle('active', tab === 'extrair');
   document.getElementById('subtabCadastrar').classList.toggle('active', tab === 'cadastrar');
+  document.getElementById('rcSubtabsBar').style.display = '';
+  document.getElementById('secaoImoveisConstrutoraRC').style.display = 'none';
   document.getElementById('secaoConstrutorasRC').style.display = tab === 'construtoras' ? '' : 'none';
   document.getElementById('secaoExtrairRC').style.display      = tab === 'extrair'      ? '' : 'none';
   document.getElementById('secaoCadastrarRC').style.display    = tab === 'cadastrar'    ? '' : 'none';
@@ -636,19 +639,26 @@ async function importarRC() {
 // de navegar pra uma aba separada com todos os imóveis de todas.
 let _construtoraAbertaRC = '';
 
+// Página inteira (não drawer lateral, a pedido do usuário) — esconde as
+// abas normais (Construtoras/Colar-Extrair/Cadastrar) e mostra a lista de
+// imóveis daquela construtora, com um "← Voltar" pra retornar à aba
+// Construtoras. O drawer de "Detalhes da visita" (Potencial/Oportunidade)
+// continua sendo um drawer de verdade, aberto por cima desta página.
 async function abrirImoveisConstrutoraRC(nome) {
   _construtoraAbertaRC = nome;
-  document.getElementById('drawerConstrutoraNomeRC').textContent = nome || '(Sem construtora)';
-  document.getElementById('drawerOverlayRC').classList.add('open');
-  document.getElementById('drawerImoveisRC').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.getElementById('tituloImoveisConstrutoraRC').textContent = nome || '(Sem construtora)';
+  document.getElementById('rcSubtabsBar').style.display = 'none';
+  document.getElementById('secaoConstrutorasRC').style.display = 'none';
+  document.getElementById('secaoExtrairRC').style.display = 'none';
+  document.getElementById('secaoCadastrarRC').style.display = 'none';
+  document.getElementById('secaoImoveisConstrutoraRC').style.display = '';
+  window.scrollTo(0, 0);
   await carregarImoveisConstrutoraRC();
 }
 
-function fecharDrawerImoveisRC() {
-  document.getElementById('drawerOverlayRC').classList.remove('open');
-  document.getElementById('drawerImoveisRC').classList.remove('open');
-  document.body.style.overflow = '';
+function fecharImoveisConstrutoraRC() {
+  document.getElementById('secaoImoveisConstrutoraRC').style.display = 'none';
+  mostrarSubtabRC('construtoras');
 }
 
 async function carregarImoveisConstrutoraRC() {
@@ -798,8 +808,7 @@ async function abrirDetalhesVisitaRC(idImovel) {
 function fecharDrawerDetalhesRC() {
   document.getElementById('drawerOverlayDetalhesRC').classList.remove('open');
   document.getElementById('drawerDetalhesRC').classList.remove('open');
-  // Só libera o scroll do body se o drawer de imóveis (por baixo) também não estiver aberto.
-  if (!document.getElementById('drawerImoveisRC').classList.contains('open')) document.body.style.overflow = '';
+  document.body.style.overflow = '';
   _imovelDetalhesRC = null;
 }
 

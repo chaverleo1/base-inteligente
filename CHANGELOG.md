@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 9) — Badge de destaque Potencial/Oportunidade nos cards + imóveis vira página inteira
+
+Dois ajustes pedidos pelo usuário depois de testar a parte 8 ao vivo:
+
+**1. Badge de destaque nos cards de match** — o botão "🔍" que indicava Potencial/Oportunidade nos
+cards de match (Contatos, Dashboard, Favoritos) era pequeno demais e passava despercebido; o usuário
+marcou um imóvel como "Potencial" e não viu nenhuma mudança visível no card. Substituído por um badge
+colorido e clicável, ao lado do badge de origem ("🏢 revenda-CITY"): `⭐ Potencial` (âmbar) ou
+`🔥 Oportunidade` (vermelho) — mesmo esquema de cor da tabela de imóveis em Revendas-Construtoras.
+Clicar no badge abre o mesmo drawer de detalhes da visita de antes. Aplicado nos 4 pontos de
+renderização de card (contatos.html, dashboard.html × 2, favoritos.html).
+
+**2. "Total" de imóveis da construtora abre página inteira, não mais drawer lateral** — o drawer
+lateral escondia a tabela de Construtoras atrás de uma sobreposição estreita; trocado por uma
+"página" própria dentro da mesma tela (esconde as abas Construtoras/Colar-Extrair/Cadastrar, mostra
+a lista de imóveis em largura total, com um botão "← Voltar" no topo que retorna pra aba
+Construtoras). O drawer de "Detalhes da visita" (Potencial/Oportunidade) continua sendo um drawer de
+verdade — agora abre por cima dessa página em vez de por cima do drawer antigo.
+
+100% frontend, sem mudança no backend. Sintaxe validada nos 4 arquivos; a conversão pra página
+inteira em revendas-construtoras.html não pôde ser testada ao vivo no navegador desta vez (o
+classificador de segurança da ferramenta de preview ficou indisponível durante a sessão) — revisão
+estática completa foi feita (sem IDs duplicados, rastreamento de toda a lógica de mostrar/esconder
+seções), mas vale conferir na tela real depois do deploy.
+
 ## 2026-07-14 (parte 8) — Drawer "Detalhes da visita" pra imóveis Potencial/Oportunidade
 
 Imóveis de revenda-construtora marcados como **Potencial** ou **Oportunidade** (pós-visita) ganham
