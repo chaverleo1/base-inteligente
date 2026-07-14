@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 3) — "Excluir todos" também pra linha "(Sem construtora)"
+
+A coluna "Excluir todos" na tabela de Construtoras mostrava "—" (sem botão) pra linha especial
+"⚠️ (Sem construtora)" — proteção proposital, já que o backend recusava `construtora` vazia como
+guarda contra apagar tudo por engano. Só que com dezenas de imóveis órfãos acumulados (importados
+antes do campo existir), excluir um por um pelo drawer é inviável.
+
+**Fix**: `excluirTodosRevendasConstrutora_()` aceita agora um flag explícito `semConstrutora: true`
+que autoriza o alvo vazio (bypassa só a checagem "obrigatória", o filtro continua batendo
+exatamente com `construtora === ''`, não afeta nenhuma construtora nomeada). A linha "(Sem
+construtora)" na interface ganhou um botão real de "Excluir todos" que manda esse flag.
+
+Testado via smoke test em Node: exclusão em lote dos órfãos remove só as linhas com `construtora`
+vazia, preserva as demais; chamada sem o flag (acidental) continua sendo recusada.
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-14 (parte 2) — Fix: coluna "construtora" invisível na aba REVENDAS_CONSTRUTORAS (cabeçalho desatualizado)
 
 Usuário identificou a causa raiz de tabela de Construtoras aparecer sempre com total zerado e sem
