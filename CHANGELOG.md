@@ -1,5 +1,43 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 8) — Drawer "Detalhes da visita" pra imóveis Potencial/Oportunidade
+
+Imóveis de revenda-construtora marcados como **Potencial** ou **Oportunidade** (pós-visita) ganham
+um botão "🔍 Detalhes" — tanto na linha da tabela de imóveis dentro de Revendas-Construtoras quanto
+nos cards de match em Contatos, Dashboard (2 pontos: "Matches do Momento" e drawer de imóvel) e
+Favoritos. O botão abre uma janela lateral com:
+
+- **Link de fotos/vídeo**
+- **Data da visita**
+- **Observações**
+
+**Sugestão aceita pelo usuário**: "Data da visita" — além dos dois campos pedidos (link + obs),
+ajuda a saber se um Potencial/Oportunidade está ficando desatualizado sem revisita.
+
+**Backend**: `CABECALHO_REVENDAS_CONSTRUTORAS` ganha `linkFotos`, `obsVisita`, `dataVisita`
+(autoheal do cabeçalho, parte 4, cobre a coluna nova sem precisar de nada manual). Duas funções
+novas: `buscarRevendaConstrutoraPorCodigo_()` (leitura ao vivo por `idImovel` — nunca confia em
+dado congelado de MATCHES/FAVORITOS pra esses campos, que mudam com frequência) e
+`atualizarDetalhesVisitaRevendaConstrutora_()` (grava os 3 campos, também por `idImovel`, mais
+robusto que `_linha` porque sobrevive a exclusões de outras linhas). `revendaConstrutoraParaImovel_`
+passa a preencher `foto: row.linkFotos` — reaproveita o slot `imoFoto`/`imoUrl` que MATCHES/FAVORITOS
+já tinham, sem precisar de coluna nova ali.
+
+Pra o botão saber quando aparecer nos cards de match, `CABECALHO_MATCHES` e `CABECALHO_FAVORITOS`
+ganham `imoStatusRC` (sempre no fim do array, nunca inserido no meio). MATCHES é reescrita inteira a
+cada `rodarMatching()`, então pega o campo novo automaticamente; `obterAbaFavoritos_()` ganhou o
+mesmo autoheal de cabeçalho de `obterAbaRevendasConstrutoras_()` (parte 4) — só cosmético (as
+leituras/escritas de FAVORITOS já são por posição, não por nome de cabeçalho), mas mantém a
+planilha legível.
+
+Testado via smoke test em Node (busca por código, atualização de detalhes, mapeamento linkFotos→foto,
+autoheal do cabeçalho de FAVORITOS com dado pré-existente) e ao vivo no navegador em
+revendas-construtoras.html e contatos.html (mock de fetch): botão só aparece pros status certos,
+drawer abre, busca o imóvel certo por código, formulário preenche, salvar manda o payload correto
+com data já convertida BR↔ISO.
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-14 (parte 7) — Status de revenda-construtora agora pesa no score de matches
 
 O status de triagem (parte 6 de hoje) passa a influenciar diretamente a pontuação de match, como

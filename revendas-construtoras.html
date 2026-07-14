@@ -307,6 +307,17 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
   <div class="drawer-rc-body" id="rootListaRC"><div class="empty">Carregando imóveis...</div></div>
 </div>
 
+<!-- DRAWER: detalhes da visita (só imóveis Potencial/Oportunidade) — abre por
+     cima do drawer de imóveis, por isso o z-index mais alto. -->
+<div class="drawer-overlay-rc" id="drawerOverlayDetalhesRC" style="z-index:510" onclick="fecharDrawerDetalhesRC()"></div>
+<div class="drawer-rc" id="drawerDetalhesRC" style="z-index:511;width:480px">
+  <div class="drawer-rc-header">
+    <div class="drawer-rc-titulo">Detalhes da visita — <span id="drawerDetalhesNomeRC"></span></div>
+    <button class="drawer-rc-close" onclick="fecharDrawerDetalhesRC()">✕</button>
+  </div>
+  <div class="drawer-rc-body" id="rootDetalhesRC"></div>
+</div>
+
 <script>
 const SESS_KEY  = 'bi_session';
 const TOKEN_KEY = 'bi_session_token';
@@ -677,6 +688,13 @@ function classeDataRC_(dias) {
 const STATUS_RC_LABEL = { IMPORTADA: 'Importada', VALIDA: 'Válida', POTENCIAL: 'Potencial', OPORTUNIDADE: 'Oportunidade' };
 const STATUS_RC_CLASSE = { IMPORTADA: 'status-importada-rc', VALIDA: 'status-valida-rc', POTENCIAL: 'status-potencial-rc', OPORTUNIDADE: 'status-oportunidade-rc' };
 
+// Só Potencial/Oportunidade (pós-visita) ganham o botão de "Detalhes da
+// visita" — link de fotos/vídeo, observações, data da visita. Ver
+// abrirDetalhesVisitaRC / renderFormDetalhesRC mais abaixo.
+function podeDetalharVisitaRC_(status) {
+  return status === 'POTENCIAL' || status === 'OPORTUNIDADE';
+}
+
 function renderListaRC(lista) {
   const root = document.getElementById('rootListaRC');
   if (!lista.length) { root.innerHTML = '<div class="empty">Nenhum imóvel dessa construtora.</div>'; return; }
@@ -684,6 +702,7 @@ function renderListaRC(lista) {
   const rows = ordenada.map(imo => {
     const status = imo.status || 'IMPORTADA';
     const opcoesStatus = Object.keys(STATUS_RC_LABEL).map(s => `<option value="${s}" ${s===status?'selected':''}>${STATUS_RC_LABEL[s]}</option>`).join('');
+    const codAttr = (imo.idImovel || '').replace(/'/g, "\\'");
     return `
     <tr>
       <td class="td-cod">${imo.idImovel || '—'}</td>
@@ -694,11 +713,14 @@ function renderListaRC(lista) {
       <td class="td-valor">${fmtBRL_(imo.valorVenda)}</td>
       <td class="${classeDataRC_(imo.diasDesdeCadastro)}">${fmtDataImportada_(imo.dataCadastro)}</td>
       <td>
-        <select class="select-status-rc ${STATUS_RC_CLASSE[status]}" onchange="mudarStatusRC(${imo._linha}, this)">
+        <select class="select-status-rc ${STATUS_RC_CLASSE[status]}" onchange="mudarStatusRC(${imo._linha}, this, '${codAttr}')">
           ${opcoesStatus}
         </select>
       </td>
-      <td><button class="btn-excluir" onclick="excluirRC(${imo._linha}, this)">🗑️ Excluir</button></td>
+      <td>
+        ${podeDetalharVisitaRC_(status) ? `<button class="btn-editar-rc" onclick="abrirDetalhesVisitaRC('${codAttr}')">🔍 Detalhes</button>` : ''}
+        <button class="btn-excluir" onclick="excluirRC(${imo._linha}, this)">🗑️ Excluir</button>
+      </td>
     </tr>`;
   }).join('');
   root.innerHTML = `
@@ -709,7 +731,7 @@ function renderListaRC(lista) {
     </table></div>`;
 }
 
-async function mudarStatusRC(linha, selEl) {
+async function mudarStatusRC(linha, selEl, idImovel) {
   const novoStatus = selEl.value;
   selEl.disabled = true;
   selEl.className = 'select-status-rc ' + STATUS_RC_CLASSE[novoStatus];
@@ -720,6 +742,11 @@ async function mudarStatusRC(linha, selEl) {
     if (trataNaoAutenticado(json)) return;
     if (json.ok) {
       showToast(`Status alterado para "${STATUS_RC_LABEL[novoStatus]}".`, 'ok');
+      // Recarrega a linha (mostra/esconde o botão "Detalhes" conforme o novo
+      // status) — e, ao entrar em Potencial/Oportunidade, já abre o drawer
+      // de detalhes da visita pra não exigir um segundo clique.
+      await carregarImoveisConstrutoraRC();
+      if (podeDetalharVisitaRC_(novoStatus) && idImovel) abrirDetalhesVisitaRC(idImovel);
     } else {
       showToast('Erro ao atualizar status: ' + (json.erro || 'desconhecido'), 'erro');
     }
@@ -727,6 +754,107 @@ async function mudarStatusRC(linha, selEl) {
     showToast('Erro de conexão: ' + e.message, 'erro');
   } finally {
     selEl.disabled = false;
+  }
+}
+
+// ── DRAWER: DETALHES DA VISITA (Potencial/Oportunidade) ────────────────────
+// Abre "por cima" do drawer de imóveis (ou direto, se aberto por um card de
+// match em Contatos/Dashboard/Favoritos). Busca ao vivo por idImovel — nunca
+// confia em dado congelado de MATCHES/FAVORITOS pra esses campos, que são
+// editados aqui com frequência.
+let _imovelDetalhesRC = null;
+
+function dataParaInputRC_(dataBR) {
+  const m = String(dataBR || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
+function dataDoInputParaBR_(dataISO) {
+  const m = String(dataISO || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
+async function abrirDetalhesVisitaRC(idImovel) {
+  if (!idImovel) return;
+  document.getElementById('drawerOverlayDetalhesRC').classList.add('open');
+  document.getElementById('drawerDetalhesRC').classList.add('open');
+  document.getElementById('drawerDetalhesNomeRC').textContent = idImovel;
+  document.getElementById('rootDetalhesRC').innerHTML = '<div class="empty">Carregando...</div>';
+  document.body.style.overflow = 'hidden';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=buscar_revenda_construtora&idImovel=' + encodeURIComponent(idImovel) + '&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (!json.ok) {
+      document.getElementById('rootDetalhesRC').innerHTML = `<div class="empty">${json.erro === 'imovel nao encontrado' ? 'Imóvel não encontrado (pode ter sido excluído).' : 'Erro: ' + (json.erro || 'desconhecido')}</div>`;
+      return;
+    }
+    _imovelDetalhesRC = json.imovel;
+    renderFormDetalhesRC(json.imovel);
+  } catch(e) {
+    document.getElementById('rootDetalhesRC').innerHTML = '<div class="empty">Erro de conexão: ' + e.message + '</div>';
+  }
+}
+
+function fecharDrawerDetalhesRC() {
+  document.getElementById('drawerOverlayDetalhesRC').classList.remove('open');
+  document.getElementById('drawerDetalhesRC').classList.remove('open');
+  // Só libera o scroll do body se o drawer de imóveis (por baixo) também não estiver aberto.
+  if (!document.getElementById('drawerImoveisRC').classList.contains('open')) document.body.style.overflow = '';
+  _imovelDetalhesRC = null;
+}
+
+function renderFormDetalhesRC(imo) {
+  document.getElementById('drawerDetalhesNomeRC').textContent = imo.idImovel || '';
+  const status = imo.status || 'IMPORTADA';
+  const root = document.getElementById('rootDetalhesRC');
+  root.innerHTML = `
+    <div style="margin-bottom:18px">
+      <div class="construtora-nome">${imo.unidade || '—'} · ${imo.empreendimento || '—'}</div>
+      <div class="count-info" style="margin-top:4px">
+        <span class="select-status-rc ${STATUS_RC_CLASSE[status]}" style="display:inline-block;cursor:default">${STATUS_RC_LABEL[status] || status}</span>
+      </div>
+    </div>
+    <div class="field-rc" style="margin-bottom:14px">
+      <label class="motor-label">Link de fotos/vídeo</label>
+      <input class="form-input-rc" id="inputLinkFotosRC" style="max-width:none" placeholder="https://..." value="${(imo.linkFotos || '').replace(/"/g, '&quot;')}">
+    </div>
+    <div class="field-rc" style="margin-bottom:14px">
+      <label class="motor-label">Data da visita</label>
+      <input class="form-input-rc" type="date" id="inputDataVisitaRC" style="max-width:220px" value="${dataParaInputRC_(imo.dataVisita)}">
+    </div>
+    <div class="field-rc" style="margin-bottom:18px">
+      <label class="motor-label">Observações</label>
+      <textarea class="motor-input" id="inputObsVisitaRC" style="min-height:140px">${imo.obsVisita || ''}</textarea>
+    </div>
+    <div class="motor-actions">
+      <button class="btn-extrair" id="btnSalvarDetalhesRC" onclick="salvarDetalhesVisitaRC()">💾 Salvar</button>
+    </div>`;
+}
+
+async function salvarDetalhesVisitaRC() {
+  if (!_imovelDetalhesRC) return;
+  const btn = document.getElementById('btnSalvarDetalhesRC');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    const payload = {
+      acao: 'atualizar_visita_revenda_construtora', token: tokenSessao(),
+      idImovel: _imovelDetalhesRC.idImovel,
+      linkFotos: document.getElementById('inputLinkFotosRC').value.trim(),
+      dataVisita: dataDoInputParaBR_(document.getElementById('inputDataVisitaRC').value),
+      obsVisita: document.getElementById('inputObsVisitaRC').value.trim()
+    };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) {
+      showToast('Detalhes da visita salvos.', 'ok');
+    } else {
+      showToast('Erro ao salvar: ' + (json.erro || 'desconhecido'), 'erro');
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Salvar';
   }
 }
 

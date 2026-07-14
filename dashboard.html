@@ -286,6 +286,25 @@
           border-left:1px solid var(--border);z-index:501;overflow-y:auto;transform:translateX(100%);
           transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
   .drawer.open{transform:translateX(0)}
+
+  /* ── DRAWER "Detalhes da visita" (imóveis Potencial/Oportunidade de
+     revenda-construtora) — abre por cima dos outros drawers, daí o
+     z-index mais alto. ── */
+  .drawer-overlay-visita-rc{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:510;opacity:0;pointer-events:none;transition:opacity .25s}
+  .drawer-overlay-visita-rc.open{opacity:1;pointer-events:all}
+  .drawer-visita-rc{position:fixed;top:0;right:0;height:100vh;width:440px;max-width:100vw;background:var(--surface);
+          border-left:1px solid var(--border);z-index:511;overflow-y:auto;transform:translateX(100%);
+          transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+  .drawer-visita-rc.open{transform:translateX(0)}
+  .drawer-visita-rc-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--surface);z-index:1}
+  .drawer-visita-rc-titulo{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text)}
+  .drawer-visita-rc-close{background:transparent;border:none;color:var(--text3);font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+  .drawer-visita-rc-body{padding:18px 22px;flex:1;display:flex;flex-direction:column;gap:14px}
+  .field-rc-visita{display:flex;flex-direction:column;gap:6px}
+  .field-rc-visita label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+  .field-rc-visita input,.field-rc-visita textarea{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm,8px);color:var(--text);font-size:14px;font-family:'Inter',sans-serif;padding:10px 12px;outline:none;width:100%}
+  .field-rc-visita textarea{resize:vertical;min-height:120px;line-height:1.5}
+  @media(max-width:480px){.drawer-visita-rc{width:100vw}}
   .drawer::-webkit-scrollbar{width:5px}
   .drawer::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
   .drawer-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px;position:sticky;top:0;background:var(--surface);z-index:1}
@@ -1002,6 +1021,16 @@
     </div>
     <button class="adm-btn" style="width:100%" id="btnSalvarLink" onclick="salvarNovoLink()">💾 Salvar link</button>
   </div>
+</div>
+
+<!-- DRAWER: detalhes da visita (imóveis Potencial/Oportunidade de revenda-construtora) -->
+<div class="drawer-overlay-visita-rc" id="drawerOverlayDetalhesRC" onclick="fecharDrawerDetalhesRC()"></div>
+<div class="drawer-visita-rc" id="drawerDetalhesRC">
+  <div class="drawer-visita-rc-header">
+    <div class="drawer-visita-rc-titulo">Detalhes da visita — <span id="drawerDetalhesNomeRC"></span></div>
+    <button class="drawer-visita-rc-close" onclick="fecharDrawerDetalhesRC()">✕</button>
+  </div>
+  <div class="drawer-visita-rc-body" id="rootDetalhesRC"></div>
 </div>
 
 <!-- DRAWER IMOVEL (matches) -->
@@ -2499,9 +2528,10 @@ function abrirImovelDrawer(idx, cod, cliNome) {
     ${attrs.length?`<div class="imovel-attrs" style="margin-bottom:10px">${attrs.map(a=>`<span class="imovel-attr" style="font-size:14px;padding:5px 12px;color:var(--text)">${a}</span>`).join('')}</div>`:''}
     ${condPag.length?`<div class="imovel-condpag" style="margin-bottom:10px">${condPag.map(p=>`<div class="imovel-condpag-item">${p}</div>`).join('')}</div>`:''}
     ${det?`<div class="imovel-det" style="margin-bottom:10px">${det}</div>`:''}
-    <div style="display:flex;gap:8px;margin-bottom:14px">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
       <button type="button" class="d-btn d-btn-fav" id="imovelFavBtn"
               onclick="toggleFavoritoImovelDrawer(${idx},'${escAttr(cod)}','${escAttr(cliNome)}',this)">☆ Favoritar</button>
+      ${isRevConst && (m.imoStatusRC === 'POTENCIAL' || m.imoStatusRC === 'OPORTUNIDADE') ? `<button type="button" class="d-btn d-btn-tel" style="flex:none" onclick="abrirDetalhesVisitaRC('${m.imoCodigo}')">🔍 Detalhes da visita</button>` : ''}
       ${m.imoUrl&&m.imoUrl.startsWith('http')?`<a class="d-btn d-btn-tel" href="${m.imoUrl}" target="_blank" style="flex:none">Ver imóvel →</a>`:''}
     </div>
     ${mensagem?`
@@ -2524,6 +2554,103 @@ function fecharImovelDrawer() {
   document.body.style.overflow = '';
 }
 
+// ── DRAWER: DETALHES DA VISITA (imóveis Potencial/Oportunidade de
+// revenda-construtora) — mesmo padrão de revendas-construtoras.html/
+// contatos.html, busca ao vivo por idImovel (nunca confia no imoFoto/
+// imoStatusRC congelado do card de match).
+const STATUS_RC_LABEL_MATCH = { IMPORTADA: 'Importada', VALIDA: 'Válida', POTENCIAL: 'Potencial', OPORTUNIDADE: 'Oportunidade' };
+let _imovelDetalhesRC = null;
+
+function dataParaInputRC_(dataBR) {
+  const m = String(dataBR || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+}
+function dataDoInputParaBR_(dataISO) {
+  const m = String(dataISO || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
+async function abrirDetalhesVisitaRC(idImovel) {
+  if (!idImovel) return;
+  document.getElementById('drawerOverlayDetalhesRC').classList.add('open');
+  document.getElementById('drawerDetalhesRC').classList.add('open');
+  document.getElementById('drawerDetalhesNomeRC').textContent = idImovel;
+  document.getElementById('rootDetalhesRC').innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Carregando...</div>';
+  document.body.style.overflow = 'hidden';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=buscar_revenda_construtora&idImovel=' + encodeURIComponent(idImovel) + '&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (!json.ok) {
+      document.getElementById('rootDetalhesRC').innerHTML = `<div style="color:var(--text3);font-size:13px">${json.erro === 'imovel nao encontrado' ? 'Imóvel não encontrado (pode ter sido excluído).' : 'Erro: ' + (json.erro || 'desconhecido')}</div>`;
+      return;
+    }
+    _imovelDetalhesRC = json.imovel;
+    renderFormDetalhesRC(json.imovel);
+  } catch(e) {
+    document.getElementById('rootDetalhesRC').innerHTML = '<div style="color:var(--text3);font-size:13px">Erro de conexão: ' + e.message + '</div>';
+  }
+}
+
+function fecharDrawerDetalhesRC() {
+  document.getElementById('drawerOverlayDetalhesRC').classList.remove('open');
+  document.getElementById('drawerDetalhesRC').classList.remove('open');
+  const outrosAbertos = document.getElementById('drawer').classList.contains('open') || document.getElementById('imovelDrawer').classList.contains('open');
+  if (!outrosAbertos) document.body.style.overflow = '';
+  _imovelDetalhesRC = null;
+}
+
+function renderFormDetalhesRC(imo) {
+  document.getElementById('drawerDetalhesNomeRC').textContent = imo.idImovel || '';
+  const status = imo.status || 'IMPORTADA';
+  const root = document.getElementById('rootDetalhesRC');
+  root.innerHTML = `
+    <div>
+      <div style="font-weight:700;color:var(--text)">${imo.unidade || '—'} · ${imo.empreendimento || '—'}</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">${STATUS_RC_LABEL_MATCH[status] || status}</div>
+    </div>
+    <div class="field-rc-visita">
+      <label>Link de fotos/vídeo</label>
+      <input type="text" id="inputLinkFotosRC" placeholder="https://..." value="${(imo.linkFotos || '').replace(/"/g, '&quot;')}">
+    </div>
+    <div class="field-rc-visita">
+      <label>Data da visita</label>
+      <input type="date" id="inputDataVisitaRC" value="${dataParaInputRC_(imo.dataVisita)}">
+    </div>
+    <div class="field-rc-visita">
+      <label>Observações</label>
+      <textarea id="inputObsVisitaRC">${imo.obsVisita || ''}</textarea>
+    </div>
+    <button type="button" class="d-btn d-btn-fav" id="btnSalvarDetalhesRC" onclick="salvarDetalhesVisitaRC()">💾 Salvar</button>`;
+}
+
+async function salvarDetalhesVisitaRC() {
+  if (!_imovelDetalhesRC) return;
+  const btn = document.getElementById('btnSalvarDetalhesRC');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    const payload = {
+      acao: 'atualizar_visita_revenda_construtora', token: tokenSessao(),
+      idImovel: _imovelDetalhesRC.idImovel,
+      linkFotos: document.getElementById('inputLinkFotosRC').value.trim(),
+      dataVisita: dataDoInputParaBR_(document.getElementById('inputDataVisitaRC').value),
+      obsVisita: document.getElementById('inputObsVisitaRC').value.trim()
+    };
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) {
+      showToast('Detalhes da visita salvos.', 'ok');
+    } else {
+      showToast('Erro ao salvar: ' + (json.erro || 'desconhecido'), 'erro');
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Salvar';
+  }
+}
+
 async function toggleFavoritoImovelDrawer(idx, cod, cliNome, btnEl) {
   const m = _matchesAtuais[idx];
   if (!m) return;
@@ -2538,7 +2665,8 @@ async function toggleFavoritoImovelDrawer(idx, cod, cliNome, btnEl) {
       imoQuartos: m.imoQuartos||'', imoSuites: m.imoSuites||'', imoVagas: m.imoVagas||'', imoAreaUtil: m.imoAreaUtil||'',
       imoValorVenda: m.imoValorVenda||'', imoPadrao: m.imoPadrao||'', imoEstagio: m.imoEstagio||'',
       imoFoto: m.imoFoto||'', imoUrl: m.imoUrl||'',
-      imoConstrutora: m.imoConstrutora||'', imoEntrega: m.imoEntrega||''
+      imoConstrutora: m.imoConstrutora||'', imoEntrega: m.imoEntrega||'',
+      imoStatusRC: m.imoStatusRC||''
     };
     const resp = await fetch(WEBHOOK_URL, { method:'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
     const r    = await resp.json();
@@ -2839,6 +2967,7 @@ async function carregarMatchesDrawer(cod, cliente) {
           </div>
           <div class="imovel-top-actions">
             <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
+            ${isRevConst && (m.imoStatusRC === 'POTENCIAL' || m.imoStatusRC === 'OPORTUNIDADE') ? `<button type="button" class="imovel-btn-fav" onclick="abrirDetalhesVisitaRC('${m.imoCodigo}')" title="Detalhes da visita (fotos/obs)">🔍</button>` : ''}
             <button type="button" class="imovel-btn-fav${jaFavoritado?' ativo':''}" id="${favId}"
                     onclick="toggleFavoritoClick(${idx}, ${JSON.stringify(cod).replace(/"/g,'&quot;')}, ${JSON.stringify((cliente&&cliente.nome)||'').replace(/"/g,'&quot;')}, this)"
                     title="${jaFavoritado?'Remover dos favoritos':'Marcar como favorito'}">${jaFavoritado?'★':'☆'}</button>
@@ -2878,7 +3007,8 @@ async function toggleFavoritoClick(idx, cod, cliNome, btnEl) {
       imoQuartos: m.imoQuartos || '', imoSuites: m.imoSuites || '', imoVagas: m.imoVagas || '', imoAreaUtil: m.imoAreaUtil || '',
       imoValorVenda: m.imoValorVenda || '', imoPadrao: m.imoPadrao || '', imoEstagio: m.imoEstagio || '',
       imoFoto: m.imoFoto || '', imoUrl: m.imoUrl || '',
-      imoConstrutora: m.imoConstrutora || '', imoEntrega: m.imoEntrega || ''
+      imoConstrutora: m.imoConstrutora || '', imoEntrega: m.imoEntrega || '',
+      imoStatusRC: m.imoStatusRC || ''
     };
     const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: new URLSearchParams({ dados: JSON.stringify(payload) }) });
     const texto = await resp.text();

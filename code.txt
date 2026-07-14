@@ -192,6 +192,7 @@ function doGet(e) {
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
   if (acao === 'listar_revendas_construtoras') return ok(listarRevendasConstrutoras_());
+  if (acao === 'buscar_revenda_construtora') return ok(buscarRevendaConstrutoraPorCodigo_(e.parameter));
   if (acao === 'listar_construtoras_parceiras') return ok(listarConstrutorasParceiras_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
@@ -706,6 +707,7 @@ function doPost(e) {
   if (d.acao === 'excluir_revenda_construtora')     return ok(excluirRevendaConstrutora_(d));
   if (d.acao === 'excluir_todos_revendas_construtora') return ok(excluirTodosRevendasConstrutora_(d));
   if (d.acao === 'atualizar_status_revenda_construtora') return ok(atualizarStatusRevendaConstrutora_(d));
+  if (d.acao === 'atualizar_visita_revenda_construtora') return ok(atualizarDetalhesVisitaRevendaConstrutora_(d));
   if (d.acao === 'cadastrar_construtora_parceira')  return ok(cadastrarConstrutoraParceira_(d.dados || d));
   if (d.acao === 'excluir_construtora_parceira')    return ok(excluirConstrutoraParceira_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
@@ -1559,7 +1561,8 @@ var CABECALHO_MATCHES = [
   'imoEntradaPerc','imoEntradaValor','imoSinalPerc','imoSinalValor',
   'imoComissaoPerc','imoComissaoValor','imoCorretorPerc','imoCorretorValor',
   'imoTabela','imoDataTabela','imoStatusTabela',
-  'scoreMatch','detalheMatch','dataMatch'
+  'scoreMatch','detalheMatch','dataMatch',
+  'imoStatusRC'
 ];
 
 function lerAba_(nomeAba) {
@@ -2252,7 +2255,8 @@ function empurrarMatch_(matches, c, par, agora) {
     imo.tabela       || '',
     imo.dataTabela   || '',
     imo.statusTabela || '',
-    par.score, par.det, agora
+    par.score, par.det, agora,
+    imo.statusRC || ''
   ]);
 }
 
@@ -3132,7 +3136,8 @@ function excluirLancamento_(dados) {
 var CABECALHO_REVENDAS_CONSTRUTORAS = [
   'dataCadastro', 'idImovel', 'unidade', 'empreendimento', 'tipo',
   'areaUtil', 'areaTerreno', 'quartos', 'suites', 'vagas',
-  'valorVenda', 'bairro', 'textoOriginal', 'construtora', 'status'
+  'valorVenda', 'bairro', 'textoOriginal', 'construtora', 'status',
+  'linkFotos', 'obsVisita', 'dataVisita'
 ];
 
 // Estágio de triagem do imóvel de revenda, independente de "construtora"
@@ -3308,6 +3313,57 @@ function atualizarStatusRevendaConstrutora_(dados) {
   return { ok: true };
 }
 
+// Localiza a linha (1-based, com cabeçalho) de um imóvel pelo código
+// idImovel (RC-NNNNN) — identificador estável, ao contrário de _linha
+// (índice de posição, muda se outra linha for excluída antes dela).
+// Usado pelos "Detalhes da visita" abertos a partir de um card de match
+// (Contatos/Dashboard/Favoritos), onde só o código do imóvel sobrevive
+// no MATCHES/FAVORITOS denormalizados — nunca o índice de linha original.
+function encontrarLinhaRevendaConstrutoraPorCodigo_(aba, codigo) {
+  var lr = aba.getLastRow();
+  if (lr < 2) return -1;
+  var iId  = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('idImovel') + 1;
+  var vals = aba.getRange(2, iId, lr - 1, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0] || '').trim() === codigo) return i + 2;
+  }
+  return -1;
+}
+
+// Busca "ao vivo" um imóvel específico pelo código — usada ao abrir o
+// drawer de "Detalhes da visita", pra sempre carregar status/obs/link
+// atuais em vez de confiar no que ficou congelado no MATCHES/FAVORITOS
+// da última vez que o matching rodou (podem estar desatualizados,
+// principalmente logo depois de o próprio usuário editar esses campos).
+function buscarRevendaConstrutoraPorCodigo_(dados) {
+  var codigo = String(dados && dados.idImovel || '').trim();
+  if (!codigo) return { ok: false, erro: 'idImovel obrigatorio' };
+  var imoveis = listarRevendasConstrutoras_().imoveis;
+  for (var i = 0; i < imoveis.length; i++) {
+    if (imoveis[i].idImovel === codigo) return { ok: true, imovel: imoveis[i] };
+  }
+  return { ok: false, erro: 'imovel nao encontrado' };
+}
+
+// Grava link de fotos/vídeo, observações e data da visita pra um imóvel —
+// pensado pros estágios POTENCIAL/OPORTUNIDADE (pós-visita), mas não
+// restringe por status: a interface é que só mostra o botão de editar
+// nesses dois estágios, o backend só grava o que vier.
+function atualizarDetalhesVisitaRevendaConstrutora_(dados) {
+  var codigo = String(dados && dados.idImovel || '').trim();
+  if (!codigo) return { ok: false, erro: 'idImovel obrigatorio' };
+  var aba = obterAbaRevendasConstrutoras_();
+  var lin = encontrarLinhaRevendaConstrutoraPorCodigo_(aba, codigo);
+  if (lin === -1) return { ok: false, erro: 'imovel nao encontrado' };
+  var iLink = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('linkFotos') + 1;
+  aba.getRange(lin, iLink, 1, 3).setValues([[
+    String(dados.linkFotos  || '').trim(),
+    String(dados.obsVisita  || '').trim(),
+    String(dados.dataVisita || '').trim()
+  ]]);
+  return { ok: true };
+}
+
 // Converte linha de REVENDAS_CONSTRUTORAS para o formato de produto do motor
 // de matching — mesmo padrão de constutoraParaImovel_/lancamentoParaImovel_.
 function revendaConstrutoraParaImovel_(row) {
@@ -3324,7 +3380,7 @@ function revendaConstrutoraParaImovel_(row) {
     valorVenda:   row.valorVenda    || '',
     padrao:       '',
     estagio:      '',
-    foto:         '',
+    foto:         row.linkFotos    || '',
     urlSite:      '',
     construtora:  row.construtora  || '',
     statusRC:     row.status       || '',
@@ -3699,19 +3755,35 @@ var CABECALHO_FAVORITOS = [
   'imoQuartos', 'imoSuites', 'imoVagas', 'imoAreaUtil',
   'imoValorVenda', 'imoPadrao', 'imoEstagio', 'imoFoto', 'imoUrl',
   'imoConstrutora', 'imoEntrega',
-  'dataFavoritado'
+  'dataFavoritado', 'imoStatusRC'
 ];
 
 function obterAbaFavoritos_() {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('FAVORITOS');
+  var cab = CABECALHO_FAVORITOS;
+  var nCols = cab.length;
   if (!aba) {
     aba = ss.insertSheet('FAVORITOS');
     aba.setTabColor('#f5a623');
-    aba.appendRow(CABECALHO_FAVORITOS);
+    aba.appendRow(cab);
     aba.setFrozenRows(1);
-    aba.getRange(1, 1, 1, CABECALHO_FAVORITOS.length)
+    aba.getRange(1, 1, 1, nCols)
        .setFontWeight('bold').setBackground('#f5a623').setFontColor('#1a1a2e');
+  } else {
+    // Mesma autocorreção de cabeçalho de obterAbaRevendasConstrutoras_ —
+    // FAVORITOS só cresce por appendRow posicional, então a linha 1 fica
+    // desatualizada quando um campo novo é adicionado a CABECALHO_FAVORITOS
+    // depois da aba já existir. Leitura/escrita aqui são todas por posição
+    // (não pelo nome do cabeçalho), então isso é só cosmético — mas mantém
+    // a planilha legível pra quem abre direto no Google Sheets.
+    var headerAtual = aba.getRange(1, 1, 1, nCols).getValues()[0];
+    if (headerAtual.join('|') !== cab.join('|')) {
+      if (aba.getLastColumn() < nCols) aba.insertColumnsAfter(aba.getLastColumn(), nCols - aba.getLastColumn());
+      aba.getRange(1, 1, 1, nCols).setValues([cab]);
+      aba.getRange(1, 1, 1, nCols)
+         .setFontWeight('bold').setBackground('#f5a623').setFontColor('#1a1a2e');
+    }
   }
   return aba;
 }
