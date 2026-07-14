@@ -1,5 +1,45 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 12) — Padrão CITY: TAB como separador, "Casa condominio", área terreno/construção com rótulo
+
+Usuário mandou um novo padrão de tabela, da construtora CITY (10 colunas: `Sessao,Unidade_Endereco,
+Descricao,m2,Suites_Vagas,Valor,Valor_m2,Taxa_Cond,Vagas,Tipo_Imovel`), colado direto de uma planilha
+— **separado por TAB, não vírgula**. O parser só entendia vírgula até agora; colar esse formato
+faria a linha inteira virar um campo só, sem nenhuma coluna reconhecida.
+
+**Fix 1 — delimitador automático**: `detectarDelimitadorRC_()` conta quantos TABs vs. vírgulas
+aparecem na linha de cabeçalho e usa o que for mais frequente — não precisa perguntar ao usuário
+qual é nem ele escolher manualmente. `parseCSVLinha_()` ganhou um parâmetro de delimitador.
+
+**Fix 2 — "CASA DE CONDOMINIO" virava "Casa" genérico**: a coluna "Tipo_Imovel" desse formato traz
+o tipo explícito, mas o reconhecedor de palavra-chave (`mapTipoExplicitoRC_`) testava `/^casa\b/`
+antes de checar "condomínio" — qualquer coisa começando com "casa" virava só "Casa", nunca "Casa
+condominio" (que é um dos tipos válidos do sistema). Checagem de "casa + condomínio" movida pra
+antes da checagem genérica de "casa".
+
+**Fix 3 — área terreno/construção com rótulo de letra** (`"387 T / 286 C"`, T=terreno/C=construção)
+— formato diferente do "387/286 m²" (CTTY) já suportado. `parseAreaRC_` agora remove rótulos de
+letra isolada antes de separar pelo "/", tratando os dois formatos com a mesma lógica.
+
+**Fix 4 — conflito de rótulo ambíguo entre construtoras**: ao adicionar suporte à coluna
+"Descrição" da CITY (que de fato é o nome do empreendimento, ex: "COBERTURA Mobiliada - TORRE DEL
+PARC"), quebrei sem querer o 2º padrão BRASAL (parte 11, hoje) — lá "Descrição" é só uma observação
+solta ("murado do lado esquerdo"), sem relação com o empreendimento. Corrigido tratando "descricao"
+como um bucket próprio (`descricaoLivre`), usado como **último recurso** pro nome do empreendimento
+— só entra em ação quando nenhuma fonte melhor (`empreendimento`/`imovelComTipo`) já preencheu isso,
+então nunca sobrepõe o BRASAL. Suíte de regressão com os 4 padrões (CTTY, BRASAL 1º e 2º, CITY)
+criada e passando, exatamente pra pegar esse tipo de conflito antes de virar bug em produção de novo.
+
+**Confirmado com o usuário**: sem coluna "Código" na tabela de origem (caso da CITY), `codigoFonte`
+fica em branco — comportamento esperado, não é erro.
+
+Testado com os dados reais enviados: TAB detectado corretamente, tipo "Apartamento"/"Casa
+condominio" certo pelas 3 linhas, área terreno/construção separada (387/286), quartos/suítes/vagas
+extraídos do texto livre "Suites_Vagas" (reaproveitando `parseConfigRC_`, sem mudança), valor sem
+bug de centavos (formato CITY não usa centavos, então já funcionava, só confirmado).
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 11) — 2º padrão BRASAL: código fonte, mojibake e bug de centavos no valor
 
 Usuário mandou um novo padrão de tabela da BRASAL (10 colunas: `CODIGO,IMOVEL,UNIDADE,ENDERECO,

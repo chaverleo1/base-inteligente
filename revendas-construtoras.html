@@ -381,9 +381,23 @@ function mostrarSubtabRC(tab) {
 //      chave) precisa de uma entrada nova em SINONIMOS_COLUNA_RC, apontando
 //      pro campo interno certo: 'unidade', 'empreendimento', 'area',
 //      'tipoExplicito' (coluna que já diz o tipo direto, tipo "Lote"/
-//      "Apartamento"), 'config' (texto livre tipo "4 suítes • 5 vagas") ou
+//      "Apartamento"), 'config' (texto livre tipo "4 suítes • 5 vagas"),
 //      'vagasCol' (coluna numérica só de vagas, sem quartos/suítes — casos
-//      de lote/terreno).
+//      de lote/terreno), 'imovelComTipo' (tipo+nome grudados numa coluna só,
+//      ex: "Lote Residencial X" — separado à parte, ver separarTipoNomeRC_)
+//      ou 'codigoFonte' (código do imóvel NA TABELA DA CONSTRUTORA — não é
+//      o RC-NNNNN interno, nunca pode se perder mesmo que fique em branco
+//      quando a tabela de origem não tiver essa coluna).
+//      CUIDADO com rótulos ambíguos entre construtoras (ex: "Descrição"
+//      pode ser observação solta numa construtora e o nome do empreendimento
+//      em outra) — NÃO mapeie um rótulo assim direto pra 'empreendimento';
+//      crie um bucket próprio e use como fallback de ÚLTIMO recurso (só
+//      preenche empreendimento se nada melhor identificou um), senão um
+//      formato quebra o outro. Ver 'descricaoLivre' como exemplo.
+//   3b. O texto colado pode vir separado por vírgula (CSV) OU por TAB
+//      (comum ao colar direto de Excel/planilha) — detectarDelimitadorRC_()
+//      já escolhe automaticamente contando qual aparece mais no cabeçalho,
+//      não precisa perguntar ao usuário qual é.
 //   4. Se o formato tiver um jeito de compor área/valor/tipo que os helpers
 //      atuais (parseAreaRC_, parseValorRC_, mapTipoExplicitoRC_,
 //      detectarTipoRC_) não cobrem (ex: um separador diferente de "/" pra
@@ -420,7 +434,8 @@ function corrigirMojibakeRC_(texto) {
 
 // Parser de linha CSV com suporte a campos entre aspas (necessário pra valores
 // como "41,6 m²" — a vírgula decimal fica DENTRO do campo, não é separador).
-function parseCSVLinha_(linha) {
+function parseCSVLinha_(linha, delimitador) {
+  delimitador = delimitador || ',';
   const result = [];
   let cur = '';
   let inQuotes = false;
@@ -433,12 +448,21 @@ function parseCSVLinha_(linha) {
       } else cur += c;
     } else {
       if (c === '"') inQuotes = true;
-      else if (c === ',') { result.push(cur); cur = ''; }
+      else if (c === delimitador) { result.push(cur); cur = ''; }
       else cur += c;
     }
   }
   result.push(cur);
   return result.map(s => s.trim());
+}
+
+// Colado direto de planilha/Excel usa TAB entre colunas; CSV exportado usa
+// vírgula. Conta qual aparece mais vezes na linha de cabeçalho e usa esse
+// como delimitador — evita precisar perguntar/configurar isso manualmente.
+function detectarDelimitadorRC_(linhaCabecalho) {
+  const tabs = (linhaCabecalho.match(/\t/g) || []).length;
+  const virgulas = (linhaCabecalho.match(/,/g) || []).length;
+  return tabs > virgulas ? '\t' : ',';
 }
 
 // Deriva o tipo/segmento a partir do prefixo da "Unidade" (AP/Casa/Lote/
@@ -465,6 +489,9 @@ function mapTipoExplicitoRC_(tipoRaw) {
   if (!t) return '';
   if (/^ap\b|^apto\b|^apart/.test(t) || /cobertura/.test(t)) return 'Apartamento';
   if (/sobrado/.test(t)) return 'Sobrado';
+  // Precisa vir antes do "casa" genérico — "CASA DE CONDOMINIO" (CITY) é um
+  // dos valores válidos de TIPOS_RC, diferente de "Casa" avulsa.
+  if (/casa.*condom|condom.*casa/.test(t)) return 'Casa condominio';
   if (/^casa\b/.test(t)) return 'Casa';
   if (/^lote\b/.test(t)) return 'Lote em cond.';
   if (/^terreno\b/.test(t)) return 'Terreno';
@@ -488,20 +515,30 @@ function separarTipoNomeRC_(bruto) {
 // pro mesmo dado — pra suportar um novo padrão, normalmente basta adicionar
 // o(s) rótulo(s) novo(s) aqui, sem tocar no resto do extrator.
 const SINONIMOS_COLUNA_RC = {
-  'tipo': 'tipoExplicito',
-  'unidade': 'unidade',
+  'tipo': 'tipoExplicito', 'tipo_imovel': 'tipoExplicito',
+  'unidade': 'unidade', 'unidade_endereco': 'unidade',
   'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento',
   // "imovel" (BRASAL, 2º padrão) traz tipo + nome grudados numa coluna só
   // (ex: "Lote Residencial Flor do Ipê II") — tratado à parte em
   // extrairRevendasConstrutoras pra separar o prefixo de tipo do nome.
   'imovel': 'imovelComTipo',
-  'area': 'area', 'area_privativa': 'area',
-  'configuracao': 'config',
+  // "descricao" NÃO pode virar sinônimo direto de 'empreendimento': no
+  // BRASAL (2º padrão) é uma observação solta ("murado", "terreno plano"),
+  // sem relação com o nome do empreendimento (que já vem certo por
+  // "imovelComTipo"); só na CITY é que a descrição de fato identifica o
+  // imóvel ("COBERTURA Mobiliada - TORRE DEL PARC"). Por isso vai pra um
+  // bucket à parte, só usado como ÚLTIMO recurso pro nome do empreendimento
+  // (ver cascata em extrairRevendasConstrutoras) — quando não há
+  // 'empreendimento' nem 'imovelComTipo' de fonte melhor.
+  'descricao': 'descricaoLivre',
+  'area': 'area', 'area_privativa': 'area', 'm2': 'area',
+  'configuracao': 'config', 'suites_vagas': 'config',
   'vagas': 'vagasCol',
   'valor': 'valor', 'preco': 'valor', 'valor_total': 'valor',
   // Código do imóvel na tabela de origem da construtora — não é o mesmo
   // código interno (RC-NNNNN) que o sistema gera; guardado à parte pra não
-  // se perder (ver codigoFonte no CABECALHO_REVENDAS_CONSTRUTORAS).
+  // se perder (ver codigoFonte no CABECALHO_REVENDAS_CONSTRUTORAS). Sem essa
+  // coluna na tabela de origem, fica em branco (ex: padrão CITY).
   'codigo': 'codigoFonte'
 };
 function normHeaderRC_(s) {
@@ -513,7 +550,11 @@ function normHeaderRC_(s) {
 // areaUtil:286} (ordem terreno/construção, mesma convenção do texto de
 // referência do usuário: "387 m² terreno / 286 m² construção").
 function parseAreaRC_(areaRaw, isTerra) {
-  const limpo = (areaRaw || '').replace(/m²/gi, '').replace(/\./g, '').trim();
+  let limpo = (areaRaw || '').replace(/m²/gi, '').replace(/\./g, '').trim();
+  // "387 T / 286 C" (CITY: T=terreno, C=construção) -> remove os rótulos de
+  // letra isolada antes de separar; vira "387 / 286", mesma convenção do
+  // "/" simples logo abaixo (terreno/construção).
+  limpo = limpo.replace(/\b[A-Za-zÀ-ÿ]\b/g, '').replace(/\s+/g, ' ').trim();
   if (!limpo) return { areaUtil: 0, areaTerreno: 0 };
   if (limpo.includes('/')) {
     const [a, b] = limpo.split('/').map(s => parseFloat(s.replace(',', '.')) || 0);
@@ -559,7 +600,8 @@ function extrairRevendasConstrutoras(txtBruto) {
   const linhas = txt.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
   if (!linhas.length) return [];
 
-  const headerCols = parseCSVLinha_(linhas[0]).map(normHeaderRC_);
+  const delimitador = detectarDelimitadorRC_(linhas[0]);
+  const headerCols = parseCSVLinha_(linhas[0], delimitador).map(normHeaderRC_);
   const mapaColunas = {};
   headerCols.forEach((h, i) => {
     const campo = SINONIMOS_COLUNA_RC[h];
@@ -569,7 +611,7 @@ function extrairRevendasConstrutoras(txtBruto) {
   const dataLinhas = temCabecalho ? linhas.slice(1) : linhas;
 
   return dataLinhas.map(linhaRaw => {
-    const cols = parseCSVLinha_(linhaRaw);
+    const cols = parseCSVLinha_(linhaRaw, delimitador);
     const get = campo => (campo in mapaColunas) ? (cols[mapaColunas[campo]] || '') : '';
     const unidade = get('unidade');
     let empreendimento = get('empreendimento');
@@ -578,6 +620,13 @@ function extrairRevendasConstrutoras(txtBruto) {
       const separado = separarTipoNomeRC_(get('imovelComTipo'));
       tipoDoNomeCombinado = separado.tipo;
       empreendimento = separado.nome;
+    }
+    // Último recurso: "descricaoLivre" (ex: CITY) só vira nome do
+    // empreendimento quando nenhuma fonte melhor identificou um — nunca
+    // sobrepõe 'empreendimento'/'imovelComTipo' de formatos onde a
+    // descrição é só uma observação solta (ex: BRASAL 2º padrão).
+    if (!empreendimento && 'descricaoLivre' in mapaColunas) {
+      empreendimento = get('descricaoLivre');
     }
     if (!unidade && !empreendimento) return null;
     const tipo = mapTipoExplicitoRC_(get('tipoExplicito')) || tipoDoNomeCombinado || detectarTipoRC_(unidade, empreendimento);
