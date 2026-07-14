@@ -515,6 +515,15 @@ function separarTipoNomeRC_(bruto) {
   return { tipo: mapTipoExplicitoRC_(m[1]), nome: m[2].trim() };
 }
 
+// "ENDERECO/UNIDADE" (BAMBUI) traz vários dados grudados, separados por "|"
+// (ex: "UNIDADE 501 | BOX 71/71A | Rua 12-A, Vila São João, Goiânia-GO —
+// CEP: 74075130") — só o 1º trecho interessa (a unidade em si); o prefixo
+// "UNIDADE " é redundante com o próprio significado do campo, então sai.
+function extrairUnidadeCompostaRC_(bruto) {
+  const primeiroTrecho = String(bruto || '').split('|')[0].trim();
+  return primeiroTrecho.replace(/^unidade\s*/i, '').trim();
+}
+
 // Cabeçalho -> campo interno, comparado já sem acento/maiúsculas (ver
 // normHeaderRC_). Construtoras diferentes usam nomes de coluna diferentes
 // pro mesmo dado — pra suportar um novo padrão, normalmente basta adicionar
@@ -522,7 +531,15 @@ function separarTipoNomeRC_(bruto) {
 const SINONIMOS_COLUNA_RC = {
   'tipo': 'tipoExplicito', 'tipo_imovel': 'tipoExplicito', 'tipo de imovel': 'tipoExplicito',
   'unidade': 'unidade', 'unidade_endereco': 'unidade',
+  // "endereco/unidade" (BAMBUI) traz unidade + box + endereço grudados por
+  // "|" — tratado à parte em extrairUnidadeCompostaRC_, só o 1º trecho
+  // (a unidade) interessa.
+  'endereco/unidade': 'unidadeComposta',
   'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento',
+  // "condominio" (BAMBUI) é o NOME do empreendimento (ex: "ORBY FLAMBOYAT"),
+  // não confundir com "condominio (r$)" — chave diferente, é a taxa mensal,
+  // deliberadamente não mapeada (só fica em textoOriginal).
+  'condominio': 'empreendimento',
   // "imovel" (BRASAL, 2º padrão) traz tipo + nome grudados numa coluna só
   // (ex: "Lote Residencial Flor do Ipê II") — tratado à parte em
   // extrairRevendasConstrutoras pra separar o prefixo de tipo do nome.
@@ -542,7 +559,13 @@ const SINONIMOS_COLUNA_RC = {
   // quartos/suítes já entende "0N" com zero à esquerda.
   'configuracao': 'config', 'suites_vagas': 'config', 'composicao': 'config',
   'vagas': 'vagasCol',
+  // "quartos" avulso (BAMBUI, só o número — sem suítes/vagas juntos, ao
+  // contrário de "config") — checado independente de vagasCol, ver cascata
+  // em extrairRevendasConstrutoras.
+  'quartos': 'quartosCol',
+  'bairro': 'bairro',
   'valor': 'valor', 'preco': 'valor', 'valor_total': 'valor', 'valor total': 'valor',
+  'valor de venda': 'valor',
   // Código do imóvel na tabela de origem da construtora — não é o mesmo
   // código interno (RC-NNNNN) que o sistema gera; guardado à parte pra não
   // se perder (ver codigoFonte no CABECALHO_REVENDAS_CONSTRUTORAS). Sem essa
@@ -641,7 +664,14 @@ function extrairRevendasConstrutoras(txtBruto) {
   return dataLinhas.map(linhaRaw => {
     const cols = parseCSVLinha_(linhaRaw, delimitador);
     const get = campo => (campo in mapaColunas) ? (cols[mapaColunas[campo]] || '') : '';
-    const unidade = get('unidade');
+    let unidade = get('unidade');
+    // "ENDERECO/UNIDADE" (BAMBUI) traz unidade + box + endereço completo
+    // grudados, separados por "|" (ex: "UNIDADE 501 | BOX 71/71A | Rua...")
+    // — só a unidade interessa; extraiUnidadeCompostaRC_ pega o 1º trecho
+    // e tira o prefixo "UNIDADE ".
+    if (!unidade && 'unidadeComposta' in mapaColunas) {
+      unidade = extrairUnidadeCompostaRC_(get('unidadeComposta'));
+    }
     let empreendimento = get('empreendimento');
     let tipoDoNomeCombinado = '';
     if (!empreendimento && 'imovelComTipo' in mapaColunas) {
@@ -663,14 +693,18 @@ function extrairRevendasConstrutoras(txtBruto) {
     let quartos = 0, suites = 0, vagas = 0;
     if ('config' in mapaColunas) {
       ({ quartos, suites, vagas } = parseConfigRC_(get('config')));
-    } else if ('vagasCol' in mapaColunas) {
-      vagas = parseInt(get('vagasCol')) || 0;
+    } else {
+      // Sem "Configuração" em texto livre: colunas numéricas avulsas de
+      // quartos (BAMBUI) e/ou vagas (BRASAL), quando existirem — checadas
+      // independente uma da outra, já que um formato pode ter só uma delas.
+      if ('quartosCol' in mapaColunas) quartos = parseInt(get('quartosCol')) || 0;
+      if ('vagasCol' in mapaColunas) vagas = parseInt(get('vagasCol')) || 0;
     }
     const valorVenda = parseValorRC_(get('valor'));
     return {
       unidade: unidade || '', empreendimento: empreendimento || '', tipo,
       areaUtil, areaTerreno, quartos, suites, vagas, valorVenda,
-      bairro: '', textoOriginal: linhaRaw,
+      bairro: get('bairro') || '', textoOriginal: linhaRaw,
       codigoFonte: get('codigoFonte') || ''
     };
   }).filter(Boolean);

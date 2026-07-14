@@ -1,5 +1,41 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 15) — Padrão BAMBUI: bairro de verdade, quartos avulso, unidade embutida em campo composto
+
+Novo padrão da construtora BAMBUI (14 colunas: `REFERENCIA,GERENTE DE REVENDAS,CONTATO,COMISSAO
+PERMUTA,TIPO,CIDADE,BAIRRO,QUARTOS,CONDOMINIO,AREA,VALOR DE VENDA,CONDOMINIO (R$),OCUPACAO,
+ENDERECO/UNIDADE`). Duas novidades reais em relação a tudo suportado até aqui:
+
+**1. Primeiro padrão com "Bairro" de verdade** — nenhum formato anterior tinha essa coluna; o campo
+sempre saía vazio (`bairro: ''` fixo no retorno do extrator, nunca lido de lugar nenhum). Agora
+`bairro` é lido normalmente como qualquer outro campo mapeado. Efeito prático: `scoreBairro_()` no
+motor de matching usa `imovel.bairro` pra pontuar compatibilidade de localização — pra imóveis desse
+formato, o matching passa a considerar bairro de verdade em vez de cair sempre no caso neutro (sem
+info = pontuação neutra).
+
+**2. "ENDERECO/UNIDADE" combina 3 informações numa coluna só**, separadas por `|` — ex: `"UNIDADE
+501 | BOX 71/71A | Rua 12-A, Vila São João, Goiânia-GO - CEP: 74075130"`. Nova função
+`extrairUnidadeCompostaRC_()`: pega só o 1º trecho (antes do primeiro `|`) e tira o prefixo
+"UNIDADE " — vira só "501" (ou "1203 B", incluindo sufixo de bloco/torre quando presente). Mesma
+cascata de prioridade já usada pra empreendimento (só entra em ação quando não há coluna "Unidade"
+mais direta).
+
+**3. "CONDOMINIO" (sem sufixo) é o NOME do empreendimento** (ex: "ORBY FLAMBOYAT"), diferente de
+"CONDOMINIO (R$)" (a taxa mensal, string de cabeçalho diferente, continua não mapeada de propósito).
+`"QUARTOS"` — coluna numérica avulsa, sem suítes/vagas — mapeada à parte, checada independente de
+`vagasCol`/`config` (que outros formatos usam), já que aqui as duas nunca vêm juntas.
+
+Campos não mapeados de propósito (ficam só em `textoOriginal`, mesma lógica de sempre pra info sem
+uso claro no sistema ainda): `GERENTE DE REVENDAS`, `CONTATO`, `COMISSAO PERMUTA`, `CIDADE`,
+`OCUPACAO` — se algum desses vier a ser útil como campo de primeira classe, é só pedir.
+
+Testado com os dados exatos do usuário: unidade "501"/"1203 B" extraída certa do campo composto,
+empreendimento "ORBY FLAMBOYAT"/"MOOVE" da coluna Condominio, bairro preenchido pela primeira vez
+("Vila São João...", "Bueno"), 3/2 quartos, valores corretos, mojibake resolvido em tudo. Suíte de
+regressão completa (CTTY, BRASAL 1º/2º, CITY, AVALON) rodada de novo — nenhuma quebra.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 14) — Padrão "print de tabela" livre: área com ponto decimal, tipo/composição em colunas próprias
 
 Usuário mandou mais um padrão pro extrator de Colar/Extrair, dessa vez sem origem em PDF — um print
