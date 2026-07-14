@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 22) — Seção "Novas ofertas" renomeada pra "Novidades" + painel de portfólio movido pra dentro
+
+Rebatiza a seção "Novas ofertas" para "Novidades" (id interno `novasOfertasSection` mantido, só o
+texto visível mudou). O bloco "Imóveis novos" continua aparecendo só quando há novidades nos últimos
+3 dias (comportamento já existente, preservado).
+
+Move o painel "📋 Atualização do portfólio" (antes solto lá embaixo, dentro de "Portfólio de
+revendas") pra dentro da seção "Novidades", logo abaixo do bloco "Imóveis novos" — mas o painel
+continua **sempre visível**, independente de haver imóveis novos ou não, porque é ele quem dá acesso
+ao botão "Sincronizar revenda" (não pode ficar escondido).
+
+Painel comprimido em ~50% de altura: paddings/margens/fontes reduzidos (`.revenda-diff`,
+`.revenda-diff-tbl`, `.diff-box`) e as 2 linhas de meta-informação (última sincronização + registro
+"Último" congelado) viraram uma linha só, sem perder nenhum dado. O badge de matches (`⋯`/contagem)
+ficou menor só DENTRO deste painel (`.revenda-diff .diff-match-badge`), sem afetar o mesmo badge
+usado nas linhas de "Imóveis novos" (compartilhava a mesma classe base).
+
+Testado ao vivo no navegador: com sincronização mas sem imóveis novos, "Imóveis novos" some e o
+painel de portfólio continua visível; com os dois presentes, aparecem juntos na ordem correta;
+título "Novidades" confirmado; meta-info numa linha só confirmada.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 21) — Ajustes em "Top favoritos" (dashboard)
 
 Dois ajustes pedidos na seção "Top favoritos": (1) coluna 1 não mostra mais o score do imóvel
