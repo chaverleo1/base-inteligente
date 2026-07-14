@@ -1,5 +1,36 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 2) — Fix: coluna "construtora" invisível na aba REVENDAS_CONSTRUTORAS (cabeçalho desatualizado)
+
+Usuário identificou a causa raiz de tabela de Construtoras aparecer sempre com total zerado e sem
+data de última atualização, mesmo com dados corretos na planilha: colou o cabeçalho real da aba
+`REVENDAS_CONSTRUTORAS` no Google Sheets e ele tinha só 13 colunas (`dataCadastro` até
+`textoOriginal`) — sem "construtora" como 14ª coluna.
+
+**Causa raiz confirmada**: `obterAbaRevendasConstrutoras_()` só escreve a linha de cabeçalho quando
+a aba é **criada pela primeira vez** (`if (!aba) { aba.appendRow(CABECALHO_REVENDAS_CONSTRUTORAS); ... }`).
+A aba já existia antes de "construtora" ser adicionada ao array `CABECALHO_REVENDAS_CONSTRUTORAS`
+(commit `507efdb`), então a linha 1 da planilha ficou congelada em 13 colunas — mesmo o array no
+código já tendo 14. A importação (`importarRevendasConstrutoras_`) grava os dados corretamente na
+14ª coluna (escreve por posição, usando o tamanho atual do array), mas `listarConstrutorasParceiras_()`
+lê via `lerAba_()`, que mapeia os campos usando os **nomes da linha 1 da planilha** (não o array do
+código) — então `r.construtora` sempre voltava `undefined`, e todo imóvel contava como "sem
+construtora" (`semConstrutora++` disparava pra 100% das linhas).
+
+**Fix**: nova função `migrarCabecalhoRevendasConstrutoras_()`, mesmo padrão já usado pra
+`LANCAMENTOS` (`migrarCabecalhoLancamentos()`) — insere colunas faltantes se necessário e reescreve
+a linha 1 com o array `CABECALHO_REVENDAS_CONSTRUTORAS` atual, sem tocar nas linhas de dados.
+Função de execução manual, única vez, via editor do Apps Script.
+
+Testado com smoke test em Node simulando planilha com cabeçalho de 13 colunas + dados já presentes
+na 14ª coluna: após rodar a migração, `lerAba_()` passa a enxergar `construtora` corretamente em
+todas as linhas, e os dados das outras colunas (idImovel, valorVenda etc.) permanecem intactos.
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`) **e depois** rodar
+`migrarCabecalhoRevendasConstrutoras_()` uma única vez pelo editor do Apps Script (selecionar a
+função no dropdown → Executar). Só depois disso a tabela de Construtoras deve mostrar total e
+última atualização corretos.
+
 ## 2026-07-14 — Fix: imóveis importados antes do campo "Construtora" ficavam invisíveis
 
 Bug relatado pelo usuário: um imóvel específico ("Village do Bosque", `RC-00011`) continuava
