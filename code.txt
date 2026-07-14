@@ -3504,12 +3504,21 @@ function listarConstrutorasParceiras_() {
     // CADASTRADAS — precisa rodar mesmo se ainda não existir nenhuma.
     var imoveis = lerAba_('REVENDAS_CONSTRUTORAS');
     var contagem = {};
+    var contagemStatus = {}; // key -> { IMPORTADA: N, VALIDA: N, POTENCIAL: N, OPORTUNIDADE: N }
     var ultimaAtualizacao = {};
     var semConstrutora = 0;
+    var semConstrutoraStatus = {};
     imoveis.forEach(function(r) {
+      var status = String(r.status || '').trim().toUpperCase() || STATUS_REVENDA_CONSTRUTORA_PADRAO;
       var key = norm_(r.construtora);
-      if (!key) { semConstrutora++; return; }
+      if (!key) {
+        semConstrutora++;
+        semConstrutoraStatus[status] = (semConstrutoraStatus[status] || 0) + 1;
+        return;
+      }
       contagem[key] = (contagem[key] || 0) + 1;
+      if (!contagemStatus[key]) contagemStatus[key] = {};
+      contagemStatus[key][status] = (contagemStatus[key][status] || 0) + 1;
       var dias = diasDesdeData_(r.dataCadastro);
       if (dias !== null && (!(key in ultimaAtualizacao) || dias < ultimaAtualizacao[key].dias)) {
         ultimaAtualizacao[key] = { data: r.dataCadastro, dias: dias };
@@ -3518,7 +3527,7 @@ function listarConstrutorasParceiras_() {
 
     var aba = obterAbaConstrutorasParceiras_();
     var lr  = aba.getLastRow();
-    if (lr < 2) return { construtoras: [], semConstrutora: semConstrutora };
+    if (lr < 2) return { construtoras: [], semConstrutora: semConstrutora, semConstrutoraStatus: semConstrutoraStatus };
     var dados = aba.getRange(2, 1, lr - 1, CABECALHO_CONSTRUTORAS_PARCEIRAS.length).getValues();
 
     var construtoras = [];
@@ -3529,11 +3538,12 @@ function listarConstrutorasParceiras_() {
       var key      = norm_(obj.nome);
       var ua       = ultimaAtualizacao[key];
       obj.totalImoveis              = contagem[key] || 0;
+      obj.contagemStatus            = contagemStatus[key] || {};
       obj.ultimaAtualizacao         = ua ? ua.data : '';
       obj.diasDesdeUltimaAtualizacao = ua ? ua.dias : null;
       construtoras.push(obj);
     }
-    return { construtoras: construtoras, semConstrutora: semConstrutora };
+    return { construtoras: construtoras, semConstrutora: semConstrutora, semConstrutoraStatus: semConstrutoraStatus };
   } catch(e) {
     return { construtoras: [], semConstrutora: 0, erro: e.message };
   }

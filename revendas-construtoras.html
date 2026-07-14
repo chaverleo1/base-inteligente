@@ -171,6 +171,11 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
 .status-potencial-rc  { border:1px solid rgba(245,166,35,.35); color:var(--warm); }
 .status-oportunidade-rc { border:1px solid rgba(255,90,90,.35); color:var(--hot); font-weight:700; }
 
+.status-rc-count-btn { display:inline-block; font-size:11px; font-weight:600; border-radius:var(--radius-xs);
+                        padding:3px 8px; font-family:'Inter',sans-serif; cursor:pointer; background:var(--surface2);
+                        margin:2px 3px 2px 0; text-decoration:underline; text-underline-offset:2px; }
+.status-rc-count-btn:hover { filter:brightness(1.3); }
+
 .empty { text-align:center; padding:48px; color:var(--text3); }
 .count-info { font-size:12px; color:var(--text3); margin-bottom:14px; }
 
@@ -745,9 +750,16 @@ let _construtoraAbertaRC = '';
 // imóveis daquela construtora, com um "← Voltar" pra retornar à aba
 // Construtoras. O drawer de "Detalhes da visita" (Potencial/Oportunidade)
 // continua sendo um drawer de verdade, aberto por cima desta página.
-async function abrirImoveisConstrutoraRC(nome) {
+// statusFiltro (opcional): quando vem de um dos contadores da coluna
+// "Status" (ver renderConstrutorasRC), mostra só imóveis daquele estágio;
+// vindo do total geral (sem 2º argumento), mostra todos.
+let _statusFiltroRC = '';
+
+async function abrirImoveisConstrutoraRC(nome, statusFiltro) {
   _construtoraAbertaRC = nome;
-  document.getElementById('tituloImoveisConstrutoraRC').textContent = nome || '(Sem construtora)';
+  _statusFiltroRC = statusFiltro || '';
+  const sufixoTitulo = _statusFiltroRC ? ` · ${STATUS_RC_LABEL[_statusFiltroRC] || _statusFiltroRC}` : '';
+  document.getElementById('tituloImoveisConstrutoraRC').textContent = (nome || '(Sem construtora)') + sufixoTitulo;
   document.getElementById('rcSubtabsBar').style.display = 'none';
   document.getElementById('secaoConstrutorasRC').style.display = 'none';
   document.getElementById('secaoExtrairRC').style.display = 'none';
@@ -759,6 +771,7 @@ async function abrirImoveisConstrutoraRC(nome) {
 
 function fecharImoveisConstrutoraRC() {
   document.getElementById('secaoImoveisConstrutoraRC').style.display = 'none';
+  _statusFiltroRC = '';
   mostrarSubtabRC('construtoras');
 }
 
@@ -770,7 +783,10 @@ async function carregarImoveisConstrutoraRC() {
     const json = await resp.json();
     if (trataNaoAutenticado(json)) return;
     const alvo = _construtoraAbertaRC.toLowerCase().trim();
-    const filtrados = (json.imoveis || []).filter(i => String(i.construtora || '').toLowerCase().trim() === alvo);
+    let filtrados = (json.imoveis || []).filter(i => String(i.construtora || '').toLowerCase().trim() === alvo);
+    if (_statusFiltroRC) {
+      filtrados = filtrados.filter(i => (i.status || 'IMPORTADA') === _statusFiltroRC);
+    }
     renderListaRC(filtrados);
   } catch(e) {
     root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
@@ -1002,7 +1018,7 @@ async function carregarConstrutorasRC() {
     if (trataNaoAutenticado(json)) return;
     _construtorasCarregadas = true;
     const lista = json.construtoras || [];
-    renderConstrutorasRC(lista, json.semConstrutora || 0);
+    renderConstrutorasRC(lista, json.semConstrutora || 0, json.semConstrutoraStatus || {});
     popularSelectConstrutorasRC(lista);
   } catch(e) {
     root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
@@ -1026,7 +1042,20 @@ function popularSelectConstrutorasRC(lista) {
   if (atual && ordenada.some(c => c.nome === atual)) select.value = atual;
 }
 
-function renderConstrutorasRC(lista, semConstrutora) {
+// Coluna "Status": um botãozinho clicável por estágio com imóveis (ex:
+// "Válida: 2"), na cor já usada em toda a página pra cada status. Clicar
+// abre a mesma página de imóveis, já filtrada pra aquele estágio.
+function renderStatusBreakdownRC_(nome, contagemStatus) {
+  const nomeAttr = String(nome || '').replace(/'/g, "\\'");
+  const partes = Object.keys(STATUS_RC_LABEL).map(s => {
+    const n = (contagemStatus && contagemStatus[s]) || 0;
+    if (!n) return '';
+    return `<button class="status-rc-count-btn ${STATUS_RC_CLASSE[s]}" onclick="abrirImoveisConstrutoraRC('${nomeAttr}', '${s}')" title="Ver imóveis ${STATUS_RC_LABEL[s]}">${STATUS_RC_LABEL[s]}: ${n}</button>`;
+  }).filter(Boolean).join('');
+  return partes || '<span style="color:var(--text3)">—</span>';
+}
+
+function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
   const root = document.getElementById('rootConstrutorasRC');
   if (!lista.length && !semConstrutora) { root.innerHTML = '<div class="empty">Nenhuma construtora cadastrada ainda.</div>'; return; }
   // Ordena pela atualização mais recente (menos dias desde) → mais antiga no final; sem imóveis vai pro final
@@ -1047,6 +1076,7 @@ function renderConstrutorasRC(lista, semConstrutora) {
         <button class="construtora-total-btn" onclick="abrirImoveisConstrutoraRC('${(c.nome||'').replace(/'/g,"\\'")}')"
           title="Ver imóveis dessa construtora">${c.totalImoveis || 0}</button>
       </td>
+      <td>${renderStatusBreakdownRC_(c.nome, c.contagemStatus)}</td>
       <td class="${classeDataRC_(c.diasDesdeUltimaAtualizacao)}">${fmtDataImportada_(c.ultimaAtualizacao)}</td>
       <td class="td-acoes">
         <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
@@ -1069,6 +1099,7 @@ function renderConstrutorasRC(lista, semConstrutora) {
         <button class="construtora-total-btn" onclick="abrirImoveisConstrutoraRC('')"
           title="Ver imóveis sem construtora atribuída">${semConstrutora}</button>
       </td>
+      <td>${renderStatusBreakdownRC_('', semConstrutoraStatus)}</td>
       <td>—</td>
       <td class="td-acoes">—</td>
       <td><button class="btn-excluir" onclick="excluirTodosRC('', ${semConstrutora}, this, true)">Excluir todos</button></td>
@@ -1076,7 +1107,7 @@ function renderConstrutorasRC(lista, semConstrutora) {
   root.innerHTML = `
     <div class="count-info">${lista.length} construtora${lista.length===1?'':'s'} cadastrada${lista.length===1?'':'s'}${semConstrutora ? ` · ${semConstrutora} imóve${semConstrutora===1?'l':'is'} sem construtora atribuída` : ''}</div>
     <div class="detail-wrap"><table class="detail-table">
-      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Última Atualização</th><th>Ações</th><th>Excluir todos</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Status</th><th>Última Atualização</th><th>Ações</th><th>Excluir todos</th></tr></thead>
       <tbody>${rowSemConstrutora}${rows}</tbody>
     </table></div>`;
 }

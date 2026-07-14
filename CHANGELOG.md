@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 13) — Coluna "Status" na tabela de Construtoras (breakdown por estágio)
+
+Nova coluna "Status" na tabela de Construtoras (`revendas-construtoras.html`), mostrando — por
+construtora — quantos imóveis tem em cada estágio de triagem (Importada/Válida/Potencial/
+Oportunidade), como contadores clicáveis coloridos (mesma cor já usada em toda a página pra cada
+status). Clicar em qualquer um abre a mesma página de imóveis (já com "← Voltar" desde a parte 9),
+só que **filtrada** só pro estágio clicado — o título mostra o filtro aplicado (ex: "CITY · Válida").
+Clicar no "Total de imóveis" continua abrindo sem filtro, como antes.
+
+**Backend**: `listarConstrutorasParceiras_()` agora calcula `contagemStatus` (por construtora) e
+`semConstrutoraStatus` (pra linha "Sem construtora") numa mesma passada que já existia pra contar o
+total — sem leitura extra da planilha. Linha antiga sem status gravado conta como IMPORTADA, mesma
+regra já usada em `listarRevendasConstrutoras_`.
+
+**Frontend**: `abrirImoveisConstrutoraRC(nome, statusFiltro)` ganhou um 2º parâmetro opcional;
+`carregarImoveisConstrutoraRC()` aplica o filtro de status além do filtro de construtora já
+existente; "Voltar" limpa o filtro.
+
+Testado em Node (backend: contagem por status batendo certo pra 2 construtoras com estágios
+diferentes) e ao vivo no navegador (frontend: os 3 contadores aparecem com as cores certas, clicar
+em "Válida: 1" filtra a lista pra só esse imóvel com o título certo, "Voltar" limpa o filtro e volta
+pra aba Construtoras, "Total" continua mostrando todos sem filtro).
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-14 (parte 12) — Padrão CITY: TAB como separador, "Casa condominio", área terreno/construção com rótulo
 
 Usuário mandou um novo padrão de tabela, da construtora CITY (10 colunas: `Sessao,Unidade_Endereco,
