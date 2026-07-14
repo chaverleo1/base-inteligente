@@ -425,16 +425,55 @@ const TIPOS_RC = ['Apartamento', 'Casa', 'Casa condominio', 'Sobrado', 'Lote em 
 // esse padrão — texto já correto passa direto, sem risco de estragar acentos
 // que já estavam certos.
 function pareceMojibakeRC_(texto) {
-  return /[ÃÂ][-¿]/.test(texto || '');
+  // Windows-1252 (não Latin-1 puro) remapeia os bytes 0x80-0x9F pra símbolos
+  // fora do intervalo Latin-1 direto (ex: byte 0x83 vira "ƒ" U+0192, não
+  // U+0083) — sem cobrir esses símbolos aqui, um caso como "MILÃƒO" nunca é
+  // detectado como mojibake e fica sem correção.
+  return /[ÃÂ][-¿€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/.test(texto || '');
 }
+// Windows-1252 remapeia 0x80-0x9F pra códigos que não são os mesmos bytes
+// (ex: byte 0x83 vira "ƒ" U+0192) — sem essa tabela reversa, reconstruir o
+// byte original só com "codePointAt & 0xFF" erra esses casos e CORROMPE em
+// vez de corrigir (ex: "MILÃƒO" viraria "MILÒO" em vez do correto "MILÃO").
+const CP1252_ESPECIAIS_RC = {
+  0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85, 0x2020: 0x86,
+  0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A, 0x2039: 0x8B, 0x0152: 0x8C,
+  0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92, 0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95,
+  0x2013: 0x96, 0x2014: 0x97, 0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B,
+  0x0153: 0x9C, 0x017E: 0x9E, 0x0178: 0x9F
+};
 function corrigirMojibakeRC_(texto) {
-  if (!pareceMojibakeRC_(texto)) return texto;
-  try {
-    const bytes = Uint8Array.from(texto, c => c.charCodeAt(0) & 0xFF);
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch(e) {
-    return texto; // não decodificou como UTF-8 válido -> não era mojibake, mantém original
+  texto = String(texto || '');
+  let resultado = texto;
+  if (pareceMojibakeRC_(texto)) {
+    const reconstroi = c => {
+      const cod = c.codePointAt(0);
+      return CP1252_ESPECIAIS_RC[cod] !== undefined ? CP1252_ESPECIAIS_RC[cod] : (cod & 0xFF);
+    };
+    try {
+      const bytes = Uint8Array.from(texto, reconstroi);
+      resultado = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch(e) {
+      // Sequência inválida (ex: byte perdido na fonte original) -> decodifica
+      // sem "fatal", trocando só o trecho não reconstruível por "�" em vez
+      // de desistir da correção pro texto inteiro.
+      try {
+        const bytes = Uint8Array.from(texto, reconstroi);
+        resultado = new TextDecoder('utf-8').decode(bytes);
+      } catch(e2) {
+        resultado = texto;
+      }
+    }
   }
+  // Caso específico e NÃO reconstruível por byte, tratado À PARTE (depois
+  // da reconstrução geral acima, nunca antes — se rodasse antes, a
+  // reconstrução byte-a-byte re-interpretaria o "í" já corrigido aqui como
+  // se fosse mais um byte de mojibake e o corromperia de novo): a fonte de
+  // algumas tabelas (ex: BAMBUI) perde de vez o byte do "Í" na palavra
+  // "suíte" — sobra um "Ã" solto (sem continuação válida) ou, depois da
+  // reconstrução acima ter caído no fallback sem "fatal", um "�".
+  resultado = resultado.replace(/(su)[Ã�](te)/gi, (m, p1, p2) => p1 + (p1 === p1.toUpperCase() ? 'Í' : 'í') + p2);
+  return resultado;
 }
 
 // Parser de linha CSV com suporte a campos entre aspas (necessário pra valores
@@ -536,10 +575,18 @@ const SINONIMOS_COLUNA_RC = {
   // (a unidade) interessa.
   'endereco/unidade': 'unidadeComposta',
   'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento',
-  // "condominio" (BAMBUI) é o NOME do empreendimento (ex: "ORBY FLAMBOYAT"),
-  // não confundir com "condominio (r$)" — chave diferente, é a taxa mensal,
-  // deliberadamente não mapeada (só fica em textoOriginal).
-  'condominio': 'empreendimento',
+  // "condominio" é AMBÍGUO entre construtoras: no BAMBUI (1º padrão) é o
+  // NOME do empreendimento (ex: "ORBY FLAMBOYAT"), mas em outro padrão
+  // (BAMBUI 2º) a mesma palavra "CONDOMINIO" é a TAXA mensal em R$ — mesma
+  // classe de conflito já resolvida pra "descricao" (ver descricaoLivre
+  // logo abaixo). Por isso não mapeia direto pra 'empreendimento': vai pra
+  // um bucket à parte, só usado como ÚLTIMO recurso na cascata (quando não
+  // há 'empreendimento'/'imovelComTipo' de fonte melhor) — assim, num
+  // formato onde "Condominio" é taxa (não nome), ele nunca chega a ser
+  // usado, porque a coluna "Imovel"/"Empreendimento" já resolveu antes.
+  // "condominio (r$)" é uma chave DIFERENTE (com o "(r$)" no texto do
+  // cabeçalho) — nunca colide com esta, deliberadamente não mapeada.
+  'condominio': 'condominioNome',
   // "imovel" (BRASAL, 2º padrão) traz tipo + nome grudados numa coluna só
   // (ex: "Lote Residencial Flor do Ipê II") — tratado à parte em
   // extrairRevendasConstrutoras pra separar o prefixo de tipo do nome.
@@ -558,7 +605,10 @@ const SINONIMOS_COLUNA_RC = {
   // reaproveita o mesmo parser de "Configuração" (CTTY) — a regex de
   // quartos/suítes já entende "0N" com zero à esquerda.
   'configuracao': 'config', 'suites_vagas': 'config', 'composicao': 'config',
+  'dormitorios': 'config',
   'vagas': 'vagasCol',
+  // "setor" é a forma goianiense de "bairro" (ex: "Setor Bueno") — mesmo bucket.
+  'setor': 'bairro',
   // "quartos" avulso (BAMBUI, só o número — sem suítes/vagas juntos, ao
   // contrário de "config") — checado independente de vagasCol, ver cascata
   // em extrairRevendasConstrutoras.
@@ -622,7 +672,10 @@ function parseAreaRC_(areaRaw, isTerra) {
 function parseConfigRC_(configRaw) {
   const c = configRaw || '';
   const suitesM  = c.match(/(\d+)\s*su[ií]tes?/i);
-  const quartosM = c.match(/(\d+)\s*quartos?/i);
+  // "2Q" (compacto, ex: BAMBUI 2º padrão, "2Q 1 SUÍTE") é sinônimo de "2
+  // quartos" — só tenta esse formato se a palavra "quartos" por extenso
+  // não aparecer.
+  const quartosM = c.match(/(\d+)\s*quartos?/i) || c.match(/(\d+)\s*q\b/i);
   const vagasM   = c.match(/(\d+)\s*vagas?/i);
   const suites  = suitesM  ? parseInt(suitesM[1])  : 0;
   const quartos = quartosM ? parseInt(quartosM[1]) : suites;
@@ -679,12 +732,17 @@ function extrairRevendasConstrutoras(txtBruto) {
       tipoDoNomeCombinado = separado.tipo;
       empreendimento = separado.nome;
     }
-    // Último recurso: "descricaoLivre" (ex: CITY) só vira nome do
-    // empreendimento quando nenhuma fonte melhor identificou um — nunca
-    // sobrepõe 'empreendimento'/'imovelComTipo' de formatos onde a
-    // descrição é só uma observação solta (ex: BRASAL 2º padrão).
+    // Último recurso: "descricaoLivre" (ex: CITY) e "condominioNome" (ex:
+    // BAMBUI 1º padrão) só viram nome do empreendimento quando nenhuma
+    // fonte melhor identificou um — nunca sobrepõem 'empreendimento'/
+    // 'imovelComTipo' de formatos onde esse mesmo rótulo de coluna significa
+    // outra coisa (ex: BRASAL 2º padrão pra "descricao"; BAMBUI 2º padrão
+    // pra "condominio", que ali é a taxa em R$, não o nome).
     if (!empreendimento && 'descricaoLivre' in mapaColunas) {
       empreendimento = get('descricaoLivre');
+    }
+    if (!empreendimento && 'condominioNome' in mapaColunas) {
+      empreendimento = get('condominioNome');
     }
     if (!unidade && !empreendimento) return null;
     const tipo = mapTipoExplicitoRC_(get('tipoExplicito')) || tipoDoNomeCombinado || detectarTipoRC_(unidade, empreendimento);

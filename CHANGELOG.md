@@ -1,5 +1,49 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 16) — 2º padrão BRASAL + fix crítico de mojibake com bytes especiais do CP1252
+
+Novo padrão (17 colunas: `REFERENCIA,GERENTE1,CONTATO1,GERENTE2,CONTATO2,TIPO DE IMOVEL,IMOVEL,
+DORMITORIOS,SETOR,UNIDADE,M2,VALOR,CONDICAO,CONDOMINIO,OCUPACAO,VAGA/BOX,ENDERECO`). Expôs um bug
+real na correção de mojibake que passou despercebido em todos os padrões anteriores.
+
+**BUG achado: mojibake com bytes especiais do Windows-1252 corrompia em vez de corrigir.**
+"VIDA MILÃƒO" devia virar "VIDA MILÃO" — o byte 0x83 (parte da letra "Ã" maiúscula original) vira
+"ƒ" (U+0192) quando mal-interpretado como Windows-1252, não um caractere Latin-1 comum. Minha
+correção anterior só sabia reconstruir bytes na faixa Latin-1 direta (0x80-0xBF); pra esse caso
+específico, ela reconstruía o byte errado e **corrompia o nome pra "MILÒO"** em vez de corrigir —
+pior que não tentar nada. Nova tabela `CP1252_ESPECIAIS_RC` mapeia de volta os ~27 símbolos que o
+Windows-1252 remapeia nesses bytes (€, ", ', •, ƒ, etc.) — cobre esse caso e qualquer outro símbolo
+dessa faixa que aparecer no futuro.
+
+**Segundo problema, relacionado: "SUÃTE" não tinha como ser reconstruído por byte** (perdeu o byte
+do "Í" de vez na fonte, não sobrou informação suficiente) — precisou de um patch específico pra essa
+palavra (comum em composição de imóveis), preservando maiúsculas/minúsculas. Descoberta importante
+de ORDEM: esse patch específico precisa rodar DEPOIS da reconstrução geral por bytes, nunca antes —
+rodando antes, a reconstrução geral reinterpretava o "í" que acabara de ser corrigido como se fosse
+mais um byte de mojibake, corrompendo de novo (bug que só apareceu ao testar os dois problemas juntos
+no mesmo texto).
+
+**Terceiro problema: "CONDOMINIO" é ambíguo entre construtoras** — no BAMBUI 1º padrão (parte 15,
+hoje) é o nome do empreendimento; neste 2º padrão, a mesma palavra é a TAXA mensal em R$. Mesma
+classe de conflito já resolvida uma vez pra "descricao" (parte 12) — corrigido do mesmo jeito:
+`condominio` vira um bucket à parte (`condominioNome`), só usado como último recurso pro nome do
+empreendimento na cascata, nunca sobrepondo uma fonte melhor (aqui, a coluna "IMOVEL"). Resultado:
+funciona certo nos dois formatos sem um quebrar o outro.
+
+**Novos mapeamentos**: `"TIPO DE IMOVEL"` (já suportado, parte 14) → tipo; `"SETOR"` → bairro (forma
+goianiense de "bairro", ex: "Setor Bueno"); `"DORMITORIOS"` → reaproveita o parser de texto livre
+(`config`), com um ajuste novo: aceita "2Q" como sinônimo compacto de "2 quartos" (só tenta esse
+padrão quando a palavra "quartos" por extenso não aparece). `"VAGA/BOX"`, `"CONDICAO"`, `"OCUPACAO"`,
+`"GERENTE1/2"`, `"CONTATO1/2"` deliberadamente não mapeados (texto solto demais pra extrair com
+segurança, ou sem uso claro no sistema ainda).
+
+Testado com os dados exatos do usuário: "VIDA MILÃO" corrigido certo (não mais "MILÒO"), "SUÍTE"
+recuperado corretamente (suítes=1), unidade/bairro/quartos/valor certos nas 2 linhas. Suíte de
+regressão completa (CTTY, BRASAL 1º, CITY, AVALON, BAMBUI 1º) rodada de novo depois da reordenação
+da correção de mojibake — nenhuma quebra.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 15) — Padrão BAMBUI: bairro de verdade, quartos avulso, unidade embutida em campo composto
 
 Novo padrão da construtora BAMBUI (14 colunas: `REFERENCIA,GERENTE DE REVENDAS,CONTATO,COMISSAO
