@@ -345,6 +345,37 @@ function mostrarSubtabRC(tab) {
 // Roda 100% no front-end, mesmo padrão da aba "Outros" de Lançamentos
 // (extrairOutrosFormato) — o back-end só recebe o array já estruturado
 // (ver importarRevendasConstrutoras_ no code.txt).
+//
+// PROCEDIMENTO — incorporar um padrão de tabela de construtora NOVO (pra
+// qualquer sessão/máquina que for mexer nisso, inclusive uma sessão futura
+// sem contexto desta conversa):
+//   1. Peça pro usuário colar aqui o cabeçalho + 1-2 linhas de exemplo reais
+//      do CSV/tabela dessa construtora (não invente um formato hipotético).
+//   2. Normalize os nomes de coluna com normHeaderRC_() (minúsculo, sem
+//      acento) e compare com as chaves já existentes em SINONIMOS_COLUNA_RC.
+//      Rótulos com o MESMO sentido de uma chave já existente (ex: "Preço"
+//      == "Valor", "Cód." == não precisa mapear, não é usado) não exigem
+//      nada novo — o parser já entende.
+//   3. Só rótulo GENUINAMENTE novo (nome de coluna que não bate com nenhuma
+//      chave) precisa de uma entrada nova em SINONIMOS_COLUNA_RC, apontando
+//      pro campo interno certo: 'unidade', 'empreendimento', 'area',
+//      'tipoExplicito' (coluna que já diz o tipo direto, tipo "Lote"/
+//      "Apartamento"), 'config' (texto livre tipo "4 suítes • 5 vagas") ou
+//      'vagasCol' (coluna numérica só de vagas, sem quartos/suítes — casos
+//      de lote/terreno).
+//   4. Se o formato tiver um jeito de compor área/valor/tipo que os helpers
+//      atuais (parseAreaRC_, parseValorRC_, mapTipoExplicitoRC_,
+//      detectarTipoRC_) não cobrem (ex: um separador diferente de "/" pra
+//      área terreno/construção, ou uma palavra-chave de tipo que essas
+//      funções não reconhecem), ajuste o helper específico — não crie um
+//      extrator paralelo pra essa construtora.
+//   5. Teste antes de commitar: um teste rápido em Node (eval do trecho de
+//      código entre "const TIPOS_RC" e "// ── UI: EXTRAIR + PRÉVIA", depois
+//      chamar extrairRevendasConstrutoras(txtDeExemplo) e conferir o JSON)
+//      já é suficiente — não precisa de backend nem deploy, é 100% front-end.
+//   6. Documente no CHANGELOG.md (mesmo padrão das entradas anteriores) e
+//      dê commit/push — sem mudança no code.txt, não precisa reimplantar o
+//      Apps Script.
 const TIPOS_RC = ['Apartamento', 'Casa', 'Casa condominio', 'Sobrado', 'Lote em cond.', 'Terreno', 'Sala comercial', 'Chácara', 'Indefinido'];
 
 // Parser de linha CSV com suporte a campos entre aspas (necessário pra valores
