@@ -3361,29 +3361,38 @@ function proximoIdConstrutoraParceira_() {
 
 function listarConstrutorasParceiras_() {
   try {
-    var aba = obterAbaConstrutorasParceiras_();
-    var lr  = aba.getLastRow();
-    if (lr < 2) return { construtoras: [] };
-    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_CONSTRUTORAS_PARCEIRAS.length).getValues();
-
     // Contagem de imóveis por construtora (normalizado) — uma passada só na
     // aba REVENDAS_CONSTRUTORAS, reaproveitada pra todas as construtoras.
     // "Última atualização" = data da importação mais recente daquela
     // construtora (menor "dias desde", já que cada importação em lote grava
     // o mesmo dataCadastro pra todo o lote) — usada no front pra destacar em
     // vermelho quando passar de 45 dias sem reextração.
+    //
+    // semConstrutora: imóveis com a coluna "construtora" vazia — acontece com
+    // lotes importados antes desse campo existir na aba Colar/Extrair. Sem
+    // essa contagem, esses imóveis ficam invisíveis na UI (não aparecem no
+    // total de nenhuma construtora registrada, e não tinham como ser vistos/
+    // excluídos desde que a aba "Lista de Imóveis" foi removida). Calculada
+    // ANTES do "if (lr < 2)" de baixo, que é só sobre a aba de construtoras
+    // CADASTRADAS — precisa rodar mesmo se ainda não existir nenhuma.
     var imoveis = lerAba_('REVENDAS_CONSTRUTORAS');
     var contagem = {};
     var ultimaAtualizacao = {};
+    var semConstrutora = 0;
     imoveis.forEach(function(r) {
       var key = norm_(r.construtora);
-      if (!key) return;
+      if (!key) { semConstrutora++; return; }
       contagem[key] = (contagem[key] || 0) + 1;
       var dias = diasDesdeData_(r.dataCadastro);
       if (dias !== null && (!(key in ultimaAtualizacao) || dias < ultimaAtualizacao[key].dias)) {
         ultimaAtualizacao[key] = { data: r.dataCadastro, dias: dias };
       }
     });
+
+    var aba = obterAbaConstrutorasParceiras_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { construtoras: [], semConstrutora: semConstrutora };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_CONSTRUTORAS_PARCEIRAS.length).getValues();
 
     var construtoras = [];
     for (var i = 0; i < dados.length; i++) {
@@ -3397,9 +3406,9 @@ function listarConstrutorasParceiras_() {
       obj.diasDesdeUltimaAtualizacao = ua ? ua.dias : null;
       construtoras.push(obj);
     }
-    return { construtoras: construtoras };
+    return { construtoras: construtoras, semConstrutora: semConstrutora };
   } catch(e) {
-    return { construtoras: [], erro: e.message };
+    return { construtoras: [], semConstrutora: 0, erro: e.message };
   }
 }
 

@@ -528,7 +528,7 @@ let _construtoraAbertaRC = '';
 
 async function abrirImoveisConstrutoraRC(nome) {
   _construtoraAbertaRC = nome;
-  document.getElementById('drawerConstrutoraNomeRC').textContent = nome;
+  document.getElementById('drawerConstrutoraNomeRC').textContent = nome || '(Sem construtora)';
   document.getElementById('drawerOverlayRC').classList.add('open');
   document.getElementById('drawerImoveisRC').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -629,7 +629,7 @@ async function carregarConstrutorasRC() {
     if (trataNaoAutenticado(json)) return;
     _construtorasCarregadas = true;
     const lista = json.construtoras || [];
-    renderConstrutorasRC(lista);
+    renderConstrutorasRC(lista, json.semConstrutora || 0);
     popularSelectConstrutorasRC(lista);
   } catch(e) {
     root.innerHTML = '<div class="empty">Erro ao carregar: ' + e.message + '</div>';
@@ -653,9 +653,9 @@ function popularSelectConstrutorasRC(lista) {
   if (atual && ordenada.some(c => c.nome === atual)) select.value = atual;
 }
 
-function renderConstrutorasRC(lista) {
+function renderConstrutorasRC(lista, semConstrutora) {
   const root = document.getElementById('rootConstrutorasRC');
-  if (!lista.length) { root.innerHTML = '<div class="empty">Nenhuma construtora cadastrada ainda.</div>'; return; }
+  if (!lista.length && !semConstrutora) { root.innerHTML = '<div class="empty">Nenhuma construtora cadastrada ainda.</div>'; return; }
   // Ordena pela atualização mais recente (menos dias desde) → mais antiga no final; sem imóveis vai pro final
   const ordenada = [...lista].sort((a, b) => {
     const dA = a.diasDesdeUltimaAtualizacao;
@@ -683,11 +683,30 @@ function renderConstrutorasRC(lista) {
         ? `<button class="btn-excluir" onclick="excluirTodosRC('${(c.nome||'').replace(/'/g,"\\'")}', ${c.totalImoveis || 0}, this)">Excluir todos</button>`
         : '<span style="color:var(--text3)">—</span>'}</td>
     </tr>`).join('');
+  // Linha extra pra imóveis com a coluna "construtora" vazia (ex: importados
+  // antes desse campo existir no formulário de Colar/Extrair) — sem essa
+  // linha eles ficam invisíveis, já que não batem com o filtro de nenhuma
+  // construtora cadastrada. "Excluir todos" não se aplica aqui de propósito
+  // (o backend recusa construtora vazia como proteção contra apagar tudo por
+  // engano) — exclusão é só individual, pelo botão 🗑️ dentro do drawer.
+  const rowSemConstrutora = semConstrutora > 0 ? `
+    <tr style="background:rgba(245,166,35,.06)">
+      <td class="construtora-nome" style="color:var(--warm)">⚠️ (Sem construtora)</td>
+      <td>—</td>
+      <td>—</td>
+      <td>
+        <button class="construtora-total-btn" onclick="abrirImoveisConstrutoraRC('')"
+          title="Ver imóveis sem construtora atribuída">${semConstrutora}</button>
+      </td>
+      <td>—</td>
+      <td class="td-acoes">—</td>
+      <td><span style="color:var(--text3)" title="Exclua individualmente pelo drawer — não dá pra excluir em lote sem construtora definida">—</span></td>
+    </tr>` : '';
   root.innerHTML = `
-    <div class="count-info">${lista.length} construtora${lista.length===1?'':'s'} cadastrada${lista.length===1?'':'s'}</div>
+    <div class="count-info">${lista.length} construtora${lista.length===1?'':'s'} cadastrada${lista.length===1?'':'s'}${semConstrutora ? ` · ${semConstrutora} imóve${semConstrutora===1?'l':'is'} sem construtora atribuída` : ''}</div>
     <div class="detail-wrap"><table class="detail-table">
       <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Última Atualização</th><th>Ações</th><th>Excluir todos</th></tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rowSemConstrutora}${rows}</tbody>
     </table></div>`;
 }
 

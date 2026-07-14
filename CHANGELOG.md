@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 — Fix: imóveis importados antes do campo "Construtora" ficavam invisíveis
+
+Bug relatado pelo usuário: um imóvel específico ("Village do Bosque", `RC-00011`) continuava
+mostrando o badge "🏢 REVENDA-CONSTRUTORA" (fallback genérico) em vez do nome real da construtora,
+mesmo depois de reimplantar o Apps Script e rodar o matching de novo. Investigação (com smoke test
+em Node cobrindo `revendaConstrutoraParaImovel_` → `empurrarMatch_` → `MATCHES`) confirmou que o
+código está correto ponta a ponta — o problema era um dado real: esse imóvel foi importado **antes**
+do campo "Construtora" existir na aba Colar/Extrair, então a coluna `construtora` dele na planilha
+REVENDAS_CONSTRUTORAS está genuinamente vazia (não é cache nem falta de deploy).
+
+**Problema maior descoberto**: não havia NENHUMA forma de ver esses imóveis pela interface — a aba
+"Lista de Imóveis" foi removida numa mudança anterior (substituída pelo drawer por construtora), e
+um imóvel com `construtora` vazia não bate com o filtro de nenhuma construtora cadastrada. Ficava
+invisível — sem forma de identificar ou excluir pra reimportar corretamente.
+
+**Fix**: `listarConstrutorasParceiras_()` agora também conta quantos imóveis têm a coluna
+`construtora` vazia (`semConstrutora`) — cálculo movido pra ANTES do early-return de "nenhuma
+construtora cadastrada ainda", porque esses imóveis órfãos podem existir mesmo sem nenhuma
+construtora registrada. Na aba "Construtoras", uma linha extra em destaque (âmbar) **"⚠️ (Sem
+construtora)"** aparece no topo da tabela quando há algum, com o total clicável abrindo o mesmo
+drawer já usado pras outras construtoras (o filtro por string vazia já funcionava sem mudança —
+`String(imo.construtora||'') === ''` bate certinho). De lá, cada imóvel pode ser excluído
+individualmente pelo botão 🗑️ já existente — "Excluir todos" fica desabilitado nessa linha de
+propósito, pois o backend recusa apagar em lote sem uma construtora definida (proteção contra
+apagar tudo por engano).
+
+Testado via smoke test em Node: `semConstrutora: 1` contado corretamente com 1 imóvel órfão + 2 da
+CITY; e no preview: linha "(Sem construtora)" renderiza com o total certo, abre o drawer filtrado
+mostrando só o imóvel órfão (excluindo os de construtora definida).
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-13 (parte 12) — Aba "Cadastrar" separada de "Construtoras"
 
 Em `revendas-construtoras.html`, o formulário de cadastro de construtora (Nome/Gerente
