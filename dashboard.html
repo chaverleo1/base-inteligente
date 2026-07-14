@@ -2414,7 +2414,7 @@ async function selecionarCliente(cod, nome) {
         ? `<img src="${m.imoFoto}" style="width:77px;height:61px;object-fit:cover;border-radius:6px;display:block" onerror="this.style.display='none'">`
         : `<div style="width:77px;height:61px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px">${icon}</div>`;
       const fonteCls  = isLanc ? 'fonte-lanc' : isConst ? 'fonte-const' : isRevConst ? 'fonte-revconst' : 'fonte-rev';
-      const fonteTxt  = isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : isRevConst ? '🏢 REV-CONSTRUTORA' : '🔑 Revenda';
+      const fonteTxt  = isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : isRevConst ? '🏢 revenda-' + (m.imoConstrutora || 'CONSTRUTORA') : '🔑 Revenda';
       return `<tr data-idx="${idx}" onclick="abrirImovelDrawer(${idx},'${escAttr(cod)}','${escAttr(nome)}')">
         <td style="padding:4px 6px;vertical-align:middle;width:83px">${fotoHtml}</td>
         <td style="width:100%;padding-left:6px">
@@ -2422,7 +2422,6 @@ async function selecionarCliente(cod, nome) {
           <div style="font-size:10px;color:var(--text3);margin-top:1px">${m.imoTipo||''}</div>
           <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
             <span class="imovel-fonte-badge ${fonteCls}">${fonteTxt}</span>
-            ${isRevConst && m.imoConstrutora ? `<span class="imovel-construtora-badge">${m.imoConstrutora}</span>` : ''}
             ${m.imoCodigo?`<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">#${m.imoCodigo}</span>`:''}
           </div>
         </td>
@@ -2490,8 +2489,7 @@ function abrirImovelDrawer(idx, cod, cliNome) {
       ${foto}
       <div style="flex:1;min-width:0">
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-          <span class="imovel-fonte-badge ${isLanc?'fonte-lanc':isConst?'fonte-const':isRevConst?'fonte-revconst':'fonte-rev'}">${isLanc?'🚀 Lançamento':isConst?'🏗️ Construtora':isRevConst?'🏢 REV-CONSTRUTORA':'🔑 Revenda'}</span>
-          ${isRevConst && m.imoConstrutora ? `<span class="imovel-construtora-badge">${m.imoConstrutora}</span>` : ''}
+          <span class="imovel-fonte-badge ${isLanc?'fonte-lanc':isConst?'fonte-const':isRevConst?'fonte-revconst':'fonte-rev'}">${isLanc?'🚀 Lançamento':isConst?'🏗️ Construtora':isRevConst?'🏢 revenda-'+(m.imoConstrutora||'CONSTRUTORA'):'🔑 Revenda'}</span>
           <span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span>
         </div>
         <div class="imovel-valor">${fmt_(m.imoValorVenda)||'—'}</div>
@@ -2832,8 +2830,7 @@ async function carregarMatchesDrawer(cod, cliente) {
           ${foto}
           <div class="imovel-info">
             <div class="imovel-fonte-row">
-              <span class="imovel-fonte-badge ${isLanc ? 'fonte-lanc' : isConst ? 'fonte-const' : isRevConst ? 'fonte-revconst' : 'fonte-rev'}">${isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : isRevConst ? '🏢 REV-CONSTRUTORA' : '🔑 Revenda'}</span>
-              ${isRevConst && m.imoConstrutora ? `<span class="imovel-construtora-badge">${m.imoConstrutora}</span>` : ''}
+              <span class="imovel-fonte-badge ${isLanc ? 'fonte-lanc' : isConst ? 'fonte-const' : isRevConst ? 'fonte-revconst' : 'fonte-rev'}">${isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : isRevConst ? '🏢 revenda-' + (m.imoConstrutora || 'CONSTRUTORA') : '🔑 Revenda'}</span>
             </div>
             <div class="imovel-tipo">${m.imoTipo||'Imóvel'}</div>
             <div class="imovel-local">${local||'—'}</div>
