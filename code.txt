@@ -3120,28 +3120,30 @@ var CABECALHO_REVENDAS_CONSTRUTORAS = [
 function obterAbaRevendasConstrutoras_() {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('REVENDAS_CONSTRUTORAS');
-  if (!aba) {
-    aba = ss.insertSheet('REVENDAS_CONSTRUTORAS');
-    aba.appendRow(CABECALHO_REVENDAS_CONSTRUTORAS);
-    aba.setFrozenRows(1);
-    aba.getRange(1, 1, 1, CABECALHO_REVENDAS_CONSTRUTORAS.length)
-       .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
-  }
-  return aba;
-}
-
-function migrarCabecalhoRevendasConstrutoras_() {
-  var ss  = SpreadsheetApp.openById(SHEET_ID);
-  var aba = ss.getSheetByName('REVENDAS_CONSTRUTORAS');
-  if (!aba) { Logger.log('Aba REVENDAS_CONSTRUTORAS não encontrada.'); return; }
   var cab = CABECALHO_REVENDAS_CONSTRUTORAS;
   var nCols = cab.length;
-  var atualCols = aba.getLastColumn();
-  if (atualCols < nCols) aba.insertColumnsAfter(atualCols, nCols - atualCols);
-  aba.getRange(1, 1, 1, nCols).setValues([cab]);
-  aba.getRange(1, 1, 1, nCols)
-     .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
-  Logger.log('Cabeçalho REVENDAS_CONSTRUTORAS atualizado: ' + nCols + ' colunas.');
+  if (!aba) {
+    aba = ss.insertSheet('REVENDAS_CONSTRUTORAS');
+    aba.appendRow(cab);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, nCols)
+       .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+  } else {
+    // Autocorrige cabeçalho desatualizado (ex: coluna "construtora" adicionada
+    // ao array depois da aba já existir na planilha) — compara o conteúdo real
+    // da linha 1 com o array esperado (getLastColumn() não serve aqui, porque
+    // linhas de dados já gravadas por posição podem ter mais colunas do que o
+    // próprio cabeçalho rotulado). Roda sozinho na próxima vez que a aba for
+    // acessada, sem precisar de função manual no editor do Apps Script.
+    var headerAtual = aba.getRange(1, 1, 1, nCols).getValues()[0];
+    if (headerAtual.join('|') !== cab.join('|')) {
+      if (aba.getLastColumn() < nCols) aba.insertColumnsAfter(aba.getLastColumn(), nCols - aba.getLastColumn());
+      aba.getRange(1, 1, 1, nCols).setValues([cab]);
+      aba.getRange(1, 1, 1, nCols)
+         .setFontWeight('bold').setBackground('#1e2335').setFontColor('#e8ecf4');
+    }
+  }
+  return aba;
 }
 
 // dados.imoveis: array já parseado no front-end (ver extrairRevendasConstrutoras()

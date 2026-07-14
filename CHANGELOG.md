@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 4) — Cabeçalho da REVENDAS_CONSTRUTORAS se autocorrige sozinho (sem função manual)
+
+A função de migração manual `migrarCabecalhoRevendasConstrutoras_()` (parte 2, hoje) não estava
+aparecendo no dropdown "Executar" do editor do Apps Script pro usuário, mesmo com o código já colado
+— provável staleness do próprio editor do Google, que não é confiável de pedir pra recarregar toda
+vez. Substituída por uma correção que roda sozinha, sem depender do editor.
+
+**Fix**: `obterAbaRevendasConstrutoras_()` — chamada em toda ação que toca essa aba (listar,
+importar, excluir, matching) — agora compara o conteúdo real da linha 1 da planilha com o array
+`CABECALHO_REVENDAS_CONSTRUTORAS` esperado. Se divergir (cabeçalho desatualizado), reescreve a
+linha 1 automaticamente, sem tocar nas linhas de dados. Roda de forma idempotente — só reescreve
+quando realmente diverge, senão é só uma leitura extra e barata.
+
+Detalhe da primeira tentativa (corrigido antes de commitar): comparar `aba.getLastColumn()` não
+funciona pra esse caso, porque linhas de dados já gravadas por posição (a importação escreve por
+índice do array, não pelo nome do cabeçalho) já tinham mais colunas do que a linha 1 rotulada —
+`getLastColumn()` olha a planilha inteira, não só o cabeçalho. Trocado por comparação direta do
+conteúdo da linha 1 contra o array esperado.
+
+Testado via smoke test em Node simulando exatamente o cenário real (cabeçalho de 13 colunas, dado
+real já gravado na 14ª coluna por uma importação anterior): uma única chamada normal (ex: listar)
+já corrige a linha 1 sozinha, `lerAba_()` passa a enxergar `construtora` corretamente, e uma segunda
+chamada não reescreve de novo (idempotente).
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`). Depois disso, **nenhuma ação
+manual extra é necessária** — a correção acontece sozinha na primeira vez que a página de
+Revendas-Construtoras for aberta.
+
 ## 2026-07-14 (parte 3) — "Excluir todos" também pra linha "(Sem construtora)"
 
 A coluna "Excluir todos" na tabela de Construtoras mostrava "—" (sem botão) pra linha especial
