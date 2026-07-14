@@ -1,5 +1,21 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 21) — Ajustes em "Top favoritos" (dashboard)
+
+Dois ajustes pedidos na seção "Top favoritos": (1) coluna 1 não mostra mais o score do imóvel
+(`melhorScore`) — no lugar, destaca o total de clientes que marcaram aquele imóvel como favorito,
+num badge maior/em negrito (`.tf-fav-count`/`.tf-fav-label`, com "favorito"/"favoritos" no singular/
+plural); (2) proporção das colunas mudou de 40/60 (herdada de "Novas ofertas") para 60/40 — nova
+classe `.tf-layout` (grid `3fr 2fr`) isolada de `.no-layout`, pra não afetar "Novas ofertas" nem o
+outro uso de `.no-layout` no dashboard.
+
+Testado ao vivo no navegador: colunas renderizando em 441px/294px (60%/40% exatos), badge de
+favoritos aparecendo no lugar do score, singular/plural corretos ("1 favorito" vs "7 favoritos").
+`melhorScore` continua calculado no backend (ainda usado como critério de desempate no ranking),
+só não é mais exibido.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 20) — Novo padrão REVENDASGYN (variante "casa") no extrator Colar/Extrair
 
 Terceiro padrão de tabela enviado pela REVENDASGYN (empresa parceira) — desta vez uma variante pra

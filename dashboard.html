@@ -140,6 +140,13 @@
   /* ── NOVAS OFERTAS ── */
   .no-layout{display:grid;grid-template-columns:2fr 3fr;grid-template-rows:480px;margin-bottom:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
   @media(max-width:700px){.no-layout{grid-template-columns:1fr;grid-template-rows:none}}
+
+  /* ── TOP FAVORITOS — mesma estrutura de "Novas ofertas", mas 60/40 (mais
+     espaço pro ranking de imóveis do que pra lista de clientes) ── */
+  .tf-layout{display:grid;grid-template-columns:3fr 2fr;grid-template-rows:480px;margin-bottom:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  @media(max-width:700px){.tf-layout{grid-template-columns:1fr;grid-template-rows:none}}
+  .tf-fav-count{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;color:var(--accent2);line-height:1}
+  .tf-fav-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;white-space:nowrap}
   .no-imoveis-col{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;overflow:hidden}
   @media(max-width:700px){.no-imoveis-col{border-right:none;border-bottom:1px solid var(--border)}}
   .no-imoveis-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--text2)}
@@ -768,7 +775,7 @@
   <!-- TOP FAVORITOS -->
   <div id="topFavoritosSection" style="display:none">
   <div class="section-title">Top favoritos <span style="font-size:12px;font-weight:400;color:var(--text3);margin-left:8px">imóveis mais marcados como favorito pelos clientes</span></div>
-  <div class="no-layout">
+  <div class="tf-layout">
     <div class="no-imoveis-col">
       <div class="no-imoveis-header">
         <span>⭐ Ranking de favoritos</span>
@@ -1546,20 +1553,17 @@ function renderTopFavoritosImoveis() {
       : `<div style="width:72px;height:57px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px">${icon}</div>`;
     const local = [o.imoCondominio, o.imoBairro].filter(Boolean).join(' · ') || '—';
     const specs = [o.imoQuartos?o.imoQuartos+' qto':'', o.imoAreaUtil?o.imoAreaUtil+' m²':'', o.imoPadrao||''].filter(Boolean).join(' · ');
-    const scCls = o.melhorScore >= 80 ? 'score-hot' : o.melhorScore >= 70 ? 'score-warm' : 'score-cold';
     return `<tr id="tf-imo-${i}" style="cursor:pointer" onclick="selecionarImovelTF(${i})">
       <td style="padding:4px 6px;vertical-align:middle;width:78px">${fotoHtml}</td>
       <td style="width:100%;padding-left:6px">
         <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${local}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:1px">${o.imoTipo||''}${specs?' · '+specs:''}</div>
       </td>
-      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
-        ${o.melhorScore > 0 ? `<span class="mt-score ${scCls}">${o.melhorScore}</span>` : ''}
+      <td style="text-align:center;padding:0 10px;vertical-align:middle">
+        <div class="tf-fav-count">⭐ ${o.totalFavoritos}</div>
+        <div class="tf-fav-label">favorito${o.totalFavoritos === 1 ? '' : 's'}</div>
       </td>
       <td class="mt-valor" style="white-space:nowrap;vertical-align:middle">${fmt_(o.imoValorVenda)||'—'}</td>
-      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
-        <span class="diff-match-badge has-match">⭐ ${o.totalFavoritos}</span>
-      </td>
     </tr>`;
   }).join('');
   listEl.innerHTML = `<table class="match-table"><tbody>${rows}</tbody></table>`;
