@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 20) — Novo padrão REVENDASGYN (variante "casa") no extrator Colar/Extrair
+
+Terceiro padrão de tabela enviado pela REVENDASGYN (empresa parceira) — desta vez uma variante pra
+casas em loteamento, com colunas diferentes do padrão de apartamento já suportado: `TIPO DE IMOVEL`,
+`IMOVEL`, `DORMITORIOS` (ex: "3Q 1 SUÍTE"), `CONSTRUCAO M2` e `TERRENO M2` **separadas** (ao
+contrário do formato combinado "387 T / 286 C" da CITY, que fica num campo só), `QD/LT` (identifica a
+unidade dentro do loteamento, ex: "QD. 09 LT. 16") e `VAGAS`.
+
+Rótulos novos incorporados em `SINONIMOS_COLUNA_RC`: `construcao m2`/`terreno m2` → dois buckets
+próprios (`areaConstrucaoCol`/`areaTerrenoCol`), checados independente um do outro (mesmo padrão de
+`quartosCol`/`vagasCol`) quando não há o campo combinado `area`; `qd/lt` → bucket `unidade` (mesmo
+papel que tem nos outros padrões). `TIPO DE IMOVEL`, `IMOVEL` e `DORMITORIOS` já eram reconhecidos
+pelo extrator (nenhuma mudança neles).
+
+A mojibake do texto de exemplo ("TÃ‰RREA", "SUÃTE") já é coberta pelo tratamento existente (bytes
+especiais CP1252 + correção pontual de "su[í]te") — nenhum ajuste novo necessário aí.
+
+Testado em Node com o exemplo real enviado: tipo "Casa", 97,71 m² de construção, 150 m² de terreno,
+3 quartos, 1 suíte, R$ 450.000, unidade "QD. 09 LT. 16", mojibake corrigido — e reconfirmado que os
+padrões anteriores (CTTY, BRASAL v1/v2, CITY) continuam OK (suite de regressão).
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 19) — Redesign da "Visão geral" (dashboard): painel unificado, mais largura que altura
 
 Redesign completo dos 7 blocos de resumo do topo do dashboard (Contatos/Novos leads/Ganhos/

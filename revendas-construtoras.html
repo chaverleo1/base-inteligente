@@ -601,6 +601,13 @@ const SINONIMOS_COLUNA_RC = {
   // 'empreendimento' nem 'imovelComTipo' de fonte melhor.
   'descricao': 'descricaoLivre',
   'area': 'area', 'area_privativa': 'area', 'm2': 'area',
+  // "construcao m2"/"terreno m2" (REVENDASGYN, padrão casa) trazem área
+  // construída e área de terreno em DUAS colunas separadas, ao contrário do
+  // formato combinado "387 T / 286 C" (CITY) que cai no bucket único 'area'
+  // — checadas independente uma da outra na cascata (mesmo padrão de
+  // 'quartosCol'/'vagasCol'), pra suportar tanto casa (as duas) quanto um
+  // formato futuro que só tenha uma delas.
+  'construcao m2': 'areaConstrucaoCol', 'terreno m2': 'areaTerrenoCol',
   // "composicao" (texto livre tipo "03 quartos sendo 01 suíte, 01 banho...")
   // reaproveita o mesmo parser de "Configuração" (CTTY) — a regex de
   // quartos/suítes já entende "0N" com zero à esquerda.
@@ -617,6 +624,10 @@ const SINONIMOS_COLUNA_RC = {
   'bairro': 'bairro',
   'valor': 'valor', 'preco': 'valor', 'valor_total': 'valor', 'valor total': 'valor',
   'valor de venda': 'valor',
+  // "qd/lt" (REVENDASGYN, padrão casa) identifica a unidade dentro do
+  // loteamento (ex: "QD. 09 LT. 16") — mesmo papel de 'unidade' nos outros
+  // padrões (distinguir qual unidade específica do imóvel).
+  'qd/lt': 'unidade',
   // Código do imóvel na tabela de origem da construtora — não é o mesmo
   // código interno (RC-NNNNN) que o sistema gera; guardado à parte pra não
   // se perder (ver codigoFonte no CABECALHO_REVENDAS_CONSTRUTORAS). Sem essa
@@ -748,7 +759,15 @@ function extrairRevendasConstrutoras(txtBruto) {
     if (!unidade && !empreendimento) return null;
     const tipo = mapTipoExplicitoRC_(get('tipoExplicito')) || tipoDoNomeCombinado || detectarTipoRC_(unidade, empreendimento);
     const isTerra = tipo === 'Lote em cond.' || tipo === 'Terreno';
-    const { areaUtil, areaTerreno } = parseAreaRC_(get('area'), isTerra);
+    let areaUtil = 0, areaTerreno = 0;
+    if ('area' in mapaColunas) {
+      ({ areaUtil, areaTerreno } = parseAreaRC_(get('area'), isTerra));
+    } else {
+      // "Construção m²"/"Terreno m²" em colunas separadas (REVENDASGYN, casa)
+      // — checadas independente uma da outra, mesmo padrão de quartosCol/vagasCol.
+      if ('areaConstrucaoCol' in mapaColunas) areaUtil = parseNumeroFlexivelRC_(get('areaConstrucaoCol'));
+      if ('areaTerrenoCol' in mapaColunas) areaTerreno = parseNumeroFlexivelRC_(get('areaTerrenoCol'));
+    }
     let quartos = 0, suites = 0, vagas = 0;
     if ('config' in mapaColunas) {
       ({ quartos, suites, vagas } = parseConfigRC_(get('config')));
