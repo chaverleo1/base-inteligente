@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 18) — Nova seção "Top favoritos" no Dashboard
+
+Nova seção no Dashboard, logo abaixo de "Novas ofertas" e com a mesma estrutura visual (2 colunas):
+coluna 1 = ranking de imóveis por total de favoritos (1º critério) e, empatado, pelo melhor
+`scoreMatch` já visto pra esse imóvel em qualquer cliente (2º critério, desempate); coluna 2 = ao
+clicar num imóvel do ranking, lista os clientes que o favoritaram, ordenada pelo score ATUAL de cada
+cliente (busca ao vivo em CONTATOS — não confia no score congelado em FAVORITOS/MATCHES).
+
+**Backend**: nova `listarTopFavoritos_()` — agrupa a aba FAVORITOS por (fonte + imoCodigo), conta
+quantos clientes favoritaram cada imóvel, cruza com MATCHES pra achar o melhor scoreMatch de cada
+imóvel e com CONTATOS pra pegar o score atual de cada cliente favoritador. Nova rota
+`listar_top_favoritos`. Limitado aos 15 primeiros do ranking.
+
+**Frontend**: HTML/CSS 100% reaproveitados de "Novas ofertas" (`.no-layout`, `.no-imoveis-col`,
+`.match-table`, `.match-row`, etc.) — mesma "cara" da seção existente, só invertendo o que cada
+coluna representa (lá é imóvel→clientes com perfil; aqui é imóvel→clientes que favoritaram).
+`carregarTopFavoritos()` chamada no bootstrap do dashboard, junto das outras seções independentes.
+
+Testado em Node (backend: 2 imóveis com 3 e 2 favoritos — o de 3 fica em 1º mesmo tendo score menor
+que o de 2, confirmando que total de favoritos manda mais que score; clientes de cada imóvel
+corretamente ordenados por score) e ao vivo no navegador (seção renderiza, contadores corretos,
+clicar em cada imóvel troca a coluna de clientes com a ordenação certa).
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`).
+
 ## 2026-07-14 (parte 17) — Tabela de Construtoras: remove coluna Total, data com hífen
 
 Dois ajustes pedidos pelo usuário na tabela de Construtoras (`revendas-construtoras.html`):

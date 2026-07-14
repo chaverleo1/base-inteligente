@@ -188,6 +188,7 @@ function doGet(e) {
   if (acao === 'matches_cliente')       return matchesCliente_(e.parameter.cod);
   if (acao === 'matches_imoveis_batch') return matchesImoveisBatch_(e.parameter.codigos);
   if (acao === 'listar_favoritos') return ok(listarFavoritos_(e.parameter.cod));
+  if (acao === 'listar_top_favoritos') return ok(listarTopFavoritos_());
   if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
@@ -3891,6 +3892,86 @@ function listarFavoritos_(idCliente) {
     }
   });
   return res;
+}
+
+// Ranking de imóveis por total de favoritos (1º critério) e, empatado,
+// pelo melhor scoreMatch já visto pra esse imóvel em qualquer cliente (2º
+// critério) — usado no dashboard, seção "Top favoritos". Pra cada imóvel do
+// ranking, também devolve a lista de clientes que favoritaram, ordenada
+// pelo score ATUAL do cliente (busca ao vivo em CONTATOS, não confia no
+// que ficou congelado em FAVORITOS/MATCHES da última vez que rodaram).
+function listarTopFavoritos_() {
+  try {
+    var aba = obterAbaFavoritos_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { imoveis: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FAVORITOS.length).getValues();
+
+    var grupos = {};
+    for (var i = 0; i < dados.length; i++) {
+      var obj = {};
+      CABECALHO_FAVORITOS.forEach(function(col, j) { obj[col] = dados[i][j]; });
+      if (!obj.imoCodigo) continue;
+      var key = (obj.fonte || '') + '|' + obj.imoCodigo;
+      if (!grupos[key]) {
+        grupos[key] = {
+          imoCodigo: obj.imoCodigo, fonte: obj.fonte || '',
+          imoTipo: obj.imoTipo || '', imoBairro: obj.imoBairro || '', imoCondominio: obj.imoCondominio || '',
+          imoEndereco: obj.imoEndereco || '', imoQuartos: obj.imoQuartos || '', imoSuites: obj.imoSuites || '',
+          imoVagas: obj.imoVagas || '', imoAreaUtil: obj.imoAreaUtil || '', imoValorVenda: obj.imoValorVenda || '',
+          imoPadrao: obj.imoPadrao || '', imoEstagio: obj.imoEstagio || '', imoFoto: obj.imoFoto || '',
+          imoUrl: obj.imoUrl || '', imoConstrutora: obj.imoConstrutora || '', imoEntrega: obj.imoEntrega || '',
+          imoStatusRC: obj.imoStatusRC || '',
+          clientes: []
+        };
+      }
+      grupos[key].clientes.push({ idCliente: obj.idCliente, nome: obj.cliNome || '' });
+    }
+
+    var contatos = lerAba_('CONTATOS');
+    var scorePorCliente = {};
+    contatos.forEach(function(c) {
+      if (c.idCliente) scorePorCliente[c.idCliente] = parseInt(c.score) || 0;
+    });
+
+    var ss   = SpreadsheetApp.openById(SHEET_ID);
+    var abaM = ss.getSheetByName('MATCHES');
+    var melhorScorePorImovel = {};
+    if (abaM) {
+      var lrM = abaM.getLastRow();
+      if (lrM >= 2) {
+        var dadosM  = abaM.getRange(1, 1, lrM, CABECALHO_MATCHES.length).getValues();
+        var cabM    = dadosM[0];
+        var iCod    = cabM.indexOf('imoCodigo');
+        var iFonte  = cabM.indexOf('fonte');
+        var iScore  = cabM.indexOf('scoreMatch');
+        for (var k = 1; k < dadosM.length; k++) {
+          var keyM = (dadosM[k][iFonte] || '') + '|' + dadosM[k][iCod];
+          var scM  = parseInt(dadosM[k][iScore]) || 0;
+          if (!(keyM in melhorScorePorImovel) || scM > melhorScorePorImovel[keyM]) melhorScorePorImovel[keyM] = scM;
+        }
+      }
+    }
+
+    var lista = Object.keys(grupos).map(function(key) {
+      var g = grupos[key];
+      g.totalFavoritos = g.clientes.length;
+      g.melhorScore = melhorScorePorImovel[key] || 0;
+      g.clientes = g.clientes.map(function(cl) {
+        return { idCliente: cl.idCliente, nome: cl.nome, score: scorePorCliente[cl.idCliente] || 0 };
+      }).sort(function(a, b) { return b.score - a.score; });
+      return g;
+    });
+
+    lista.sort(function(a, b) {
+      if (b.totalFavoritos !== a.totalFavoritos) return b.totalFavoritos - a.totalFavoritos;
+      return b.melhorScore - a.melhorScore;
+    });
+
+    return { imoveis: lista.slice(0, 15) };
+  } catch(e) {
+    return { imoveis: [], erro: e.message };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════

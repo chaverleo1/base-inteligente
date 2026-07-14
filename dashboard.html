@@ -738,6 +738,33 @@
   </div>
   </div><!-- /novasOfertasSection -->
 
+  <!-- TOP FAVORITOS -->
+  <div id="topFavoritosSection" style="display:none">
+  <div class="section-title">Top favoritos <span style="font-size:12px;font-weight:400;color:var(--text3);margin-left:8px">imóveis mais marcados como favorito pelos clientes</span></div>
+  <div class="no-layout">
+    <div class="no-imoveis-col">
+      <div class="no-imoveis-header">
+        <span>⭐ Ranking de favoritos</span>
+        <span class="match-clients-count" id="tfImoveisCount">—</span>
+      </div>
+      <div class="no-imoveis-body" id="tfImoveisList">
+        <div class="empty-state dot-anim">Carregando</div>
+      </div>
+    </div>
+    <div class="no-clientes-col">
+      <div class="no-clientes-header" id="tfClientesHeader">
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">👥 Clientes interessados</span>
+        <span style="font-size:11px;color:var(--text3)">Selecione um imóvel para ver os clientes</span>
+      </div>
+      <div class="no-clientes-placeholder" id="tfClientesPlaceholder">
+        <span style="font-size:28px">⭐</span>
+        <span>Selecione um imóvel pra ver quem marcou como favorito</span>
+      </div>
+      <div class="no-clientes-body" id="tfClientesList" style="display:none"></div>
+    </div>
+  </div>
+  </div><!-- /topFavoritosSection -->
+
   <!-- GRÁFICOS -->
   <div class="section-title">Composição da base de clientes</div>
   <div class="cards-row" id="cardsTemperatura" style="margin-bottom:16px">
@@ -1166,6 +1193,7 @@ async function carregarDados() {
   carregarPipeline();
   carregarRevendaDiff();
   carregarLeadsImobzi();
+  carregarTopFavoritos();
 }
 
 // ── REVENDA DIFF ──────────────────────────────────────────────────────────────
@@ -1444,6 +1472,122 @@ async function toggleFavoritoNO(codCli, nomeCli, btnEl) {
     showToast('Erro ao favoritar: ' + e.message, 'erro');
   } finally {
     btnEl.disabled = false;
+  }
+}
+// ───────────────────────────────────────────────────────────────────────────
+
+// ── TOP FAVORITOS ────────────────────────────────────────────────────────────
+// Mesmo padrão visual/estrutural de "Novas ofertas" (2 colunas: ranking de
+// imóveis à esquerda, clientes do imóvel selecionado à direita) — mas
+// invertido: aqui o ranking é de IMÓVEIS (por total de favoritos, empate
+// desfeito pelo melhor score já visto pra esse imóvel), e a coluna da
+// direita lista os CLIENTES que favoritaram o imóvel selecionado, ordenados
+// pelo score atual de cada cliente. Dado já vem pronto do backend
+// (listarTopFavoritos_) — o front só renderiza e trata o clique.
+let _tfImoveis = [], _tfSelected = -1;
+
+async function carregarTopFavoritos() {
+  const section = document.getElementById('topFavoritosSection');
+  const listEl  = document.getElementById('tfImoveisList');
+  const countEl = document.getElementById('tfImoveisCount');
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_top_favoritos&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    _tfImoveis = json.imoveis || [];
+    if (!_tfImoveis.length) { if (section) section.style.display = 'none'; return; }
+    if (section) section.style.display = '';
+    if (countEl) countEl.textContent = _tfImoveis.length;
+    _tfSelected = -1;
+    _tfResetClientes_();
+    renderTopFavoritosImoveis();
+  } catch(e) {
+    if (listEl) listEl.innerHTML = '<div class="empty-state">Erro ao carregar.</div>';
+  }
+}
+
+function renderTopFavoritosImoveis() {
+  const listEl = document.getElementById('tfImoveisList');
+  if (!listEl) return;
+  const rows = _tfImoveis.map((o, i) => {
+    const isLanc     = o.fonte === 'LANCAMENTO';
+    const isConst    = o.fonte === 'CONSTRUTORA';
+    const isRevConst = o.fonte === 'REVENDA_CONSTRUTORA';
+    const icon = isLanc ? '🚀' : isConst ? '🏗️' : isRevConst ? '🏢' : '🔑';
+    const fotoHtml = o.imoFoto && o.imoFoto.startsWith('http')
+      ? `<img src="${o.imoFoto}" style="width:72px;height:57px;object-fit:cover;border-radius:6px;display:block" onerror="this.style.display='none'">`
+      : `<div style="width:72px;height:57px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px">${icon}</div>`;
+    const local = [o.imoCondominio, o.imoBairro].filter(Boolean).join(' · ') || '—';
+    const specs = [o.imoQuartos?o.imoQuartos+' qto':'', o.imoAreaUtil?o.imoAreaUtil+' m²':'', o.imoPadrao||''].filter(Boolean).join(' · ');
+    const scCls = o.melhorScore >= 80 ? 'score-hot' : o.melhorScore >= 70 ? 'score-warm' : 'score-cold';
+    return `<tr id="tf-imo-${i}" style="cursor:pointer" onclick="selecionarImovelTF(${i})">
+      <td style="padding:4px 6px;vertical-align:middle;width:78px">${fotoHtml}</td>
+      <td style="width:100%;padding-left:6px">
+        <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${local}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:1px">${o.imoTipo||''}${specs?' · '+specs:''}</div>
+      </td>
+      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
+        ${o.melhorScore > 0 ? `<span class="mt-score ${scCls}">${o.melhorScore}</span>` : ''}
+      </td>
+      <td class="mt-valor" style="white-space:nowrap;vertical-align:middle">${fmt_(o.imoValorVenda)||'—'}</td>
+      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
+        <span class="diff-match-badge has-match">⭐ ${o.totalFavoritos}</span>
+      </td>
+    </tr>`;
+  }).join('');
+  listEl.innerHTML = `<table class="match-table"><tbody>${rows}</tbody></table>`;
+}
+
+function _tfResetClientes_() {
+  const hdr  = document.getElementById('tfClientesHeader');
+  const ph   = document.getElementById('tfClientesPlaceholder');
+  const body = document.getElementById('tfClientesList');
+  if (hdr)  hdr.innerHTML = `<span>👥 Clientes interessados</span><span class="match-clients-count">—</span>`;
+  if (ph)   { ph.style.display = ''; ph.innerHTML = '<span style="font-size:28px">⭐</span><span>Selecione um imóvel pra ver quem marcou como favorito</span>'; }
+  if (body) body.style.display = 'none';
+}
+
+function selecionarImovelTF(idx) {
+  if (_tfSelected >= 0) {
+    const prev = document.getElementById('tf-imo-' + _tfSelected);
+    if (prev) prev.classList.remove('selected');
+  }
+  _tfSelected = idx;
+  const rowEl = document.getElementById('tf-imo-' + idx);
+  if (rowEl) rowEl.classList.add('selected');
+
+  const o = _tfImoveis[idx];
+  if (!o) return;
+  const clientes = o.clientes || [];
+  const local = [o.imoCondominio, o.imoBairro].filter(Boolean).join(' — ') || o.imoBairro || o.imoCodigo || 'Imóvel';
+
+  const hdr  = document.getElementById('tfClientesHeader');
+  const ph   = document.getElementById('tfClientesPlaceholder');
+  const body = document.getElementById('tfClientesList');
+
+  if (hdr) hdr.innerHTML = `
+    <span style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+      ⭐ ${local}${o.imoCodigo ? ' <span style="font-weight:400;color:var(--text3)">#'+o.imoCodigo+'</span>' : ''}
+    </span>
+    <span class="match-clients-count">${clientes.length || '0'}</span>`;
+
+  if (!clientes.length) {
+    if (ph)   { ph.style.display = ''; ph.innerHTML = '<span style="font-size:24px">—</span><span>Nenhum cliente favoritou esse imóvel</span>'; }
+    if (body) body.style.display = 'none';
+    return;
+  }
+
+  if (ph)   ph.style.display = 'none';
+  if (body) {
+    body.style.display = '';
+    body.innerHTML = clientes.map(cl => {
+      const sc  = cl.score || 0;
+      const cls = sc >= 80 ? 'score-hot' : sc >= 70 ? 'score-warm' : 'score-cold';
+      return `<div class="match-row" style="gap:8px">
+        <div class="match-row-name">${cl.nome || '—'}</div>
+        <div class="match-row-score ${cls}">${sc}</div>
+      </div>`;
+    }).join('');
   }
 }
 // ───────────────────────────────────────────────────────────────────────────
