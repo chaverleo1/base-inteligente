@@ -520,7 +520,7 @@ function separarTipoNomeRC_(bruto) {
 // pro mesmo dado — pra suportar um novo padrão, normalmente basta adicionar
 // o(s) rótulo(s) novo(s) aqui, sem tocar no resto do extrator.
 const SINONIMOS_COLUNA_RC = {
-  'tipo': 'tipoExplicito', 'tipo_imovel': 'tipoExplicito',
+  'tipo': 'tipoExplicito', 'tipo_imovel': 'tipoExplicito', 'tipo de imovel': 'tipoExplicito',
   'unidade': 'unidade', 'unidade_endereco': 'unidade',
   'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento',
   // "imovel" (BRASAL, 2º padrão) traz tipo + nome grudados numa coluna só
@@ -537,9 +537,12 @@ const SINONIMOS_COLUNA_RC = {
   // 'empreendimento' nem 'imovelComTipo' de fonte melhor.
   'descricao': 'descricaoLivre',
   'area': 'area', 'area_privativa': 'area', 'm2': 'area',
-  'configuracao': 'config', 'suites_vagas': 'config',
+  // "composicao" (texto livre tipo "03 quartos sendo 01 suíte, 01 banho...")
+  // reaproveita o mesmo parser de "Configuração" (CTTY) — a regex de
+  // quartos/suítes já entende "0N" com zero à esquerda.
+  'configuracao': 'config', 'suites_vagas': 'config', 'composicao': 'config',
   'vagas': 'vagasCol',
-  'valor': 'valor', 'preco': 'valor', 'valor_total': 'valor',
+  'valor': 'valor', 'preco': 'valor', 'valor_total': 'valor', 'valor total': 'valor',
   // Código do imóvel na tabela de origem da construtora — não é o mesmo
   // código interno (RC-NNNNN) que o sistema gera; guardado à parte pra não
   // se perder (ver codigoFonte no CABECALHO_REVENDAS_CONSTRUTORAS). Sem essa
@@ -554,18 +557,38 @@ function normHeaderRC_(s) {
 // "310 m²" -> {areaUtil:310, areaTerreno:0} | "387/286 m²" -> {areaTerreno:387,
 // areaUtil:286} (ordem terreno/construção, mesma convenção do texto de
 // referência do usuário: "387 m² terreno / 286 m² construção").
+// Detecta se "." é separador decimal (ex: "81.78", formato internacional —
+// visto em print de tabela/planilha) ou de milhar (convenção BR, ex:
+// "1.234") comparando com a posição da vírgula: o separador mais à direita
+// na string é sempre o decimal, o outro (se aparecer) é milhar e é
+// descartado. Funciona pros dois formatos sem precisar saber de antemão
+// qual a fonte está usando.
+function parseNumeroFlexivelRC_(bruto) {
+  let s = String(bruto || '').trim();
+  if (!s) return 0;
+  const iVirgula = s.lastIndexOf(',');
+  const iPonto = s.lastIndexOf('.');
+  if (iVirgula === -1 && iPonto === -1) return parseFloat(s) || 0;
+  if (iVirgula > iPonto) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else {
+    s = s.replace(/,/g, '');
+  }
+  return parseFloat(s) || 0;
+}
+
 function parseAreaRC_(areaRaw, isTerra) {
-  let limpo = (areaRaw || '').replace(/m²/gi, '').replace(/\./g, '').trim();
+  let limpo = (areaRaw || '').replace(/m²/gi, '').trim();
   // "387 T / 286 C" (CITY: T=terreno, C=construção) -> remove os rótulos de
   // letra isolada antes de separar; vira "387 / 286", mesma convenção do
   // "/" simples logo abaixo (terreno/construção).
   limpo = limpo.replace(/\b[A-Za-zÀ-ÿ]\b/g, '').replace(/\s+/g, ' ').trim();
   if (!limpo) return { areaUtil: 0, areaTerreno: 0 };
   if (limpo.includes('/')) {
-    const [a, b] = limpo.split('/').map(s => parseFloat(s.replace(',', '.')) || 0);
+    const [a, b] = limpo.split('/').map(s => parseNumeroFlexivelRC_(s));
     return { areaTerreno: a, areaUtil: b };
   }
-  const v = parseFloat(limpo.replace(',', '.')) || 0;
+  const v = parseNumeroFlexivelRC_(limpo);
   return isTerra ? { areaUtil: 0, areaTerreno: v } : { areaUtil: v, areaTerreno: 0 };
 }
 

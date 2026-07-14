@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 14) — Padrão "print de tabela" livre: área com ponto decimal, tipo/composição em colunas próprias
+
+Usuário mandou mais um padrão pro extrator de Colar/Extrair, dessa vez sem origem em PDF — um print
+de tabela colado (11 colunas: `EMPREENDIMENTO,UNIDADE,TIPO DE IMOVEL,AREA,MES SINAL,VALOR SINAL,
+FINANCIAMENTO,VALOR FINANCIAMENTO,VALOR TOTAL,COMPOSICAO,ENDERECO`). Confirmado com o usuário: mesmo
+tendo campos de condição de pagamento (sinal/financiamento, mais típicos de tabela de lançamento),
+fica dentro do extrator de Revendas-Construtoras mesmo — só os campos que o sistema já usa
+(tipo/área/valor/composição) alimentam o motor de matching; sinal/financiamento ficam preservados
+só no `textoOriginal`, sem virar campo novo.
+
+**Bug novo encontrado: área com ponto decimal** ("81.78 m²", formato internacional/planilha) —
+`parseAreaRC_` removia TODO ponto assumindo que era sempre separador de milhar (convenção BR),
+transformando 81.78 m² em 8178 m² (100x maior). Nova função `parseNumeroFlexivelRC_()`: detecta
+qual separador (`,` ou `.`) aparece mais à direita na string — esse é o decimal, o outro (se
+aparecer antes) é milhar e é descartado. Funciona pros dois formatos (BR: "347,12" | internacional:
+"81.78") sem precisar saber de antemão qual a fonte está usando — usada agora em toda a lógica de
+área, incluindo o caso "387 T / 286 C" (CITY, parte 12) que também depende dela.
+
+**Novos mapeamentos**: `"TIPO DE IMOVEL"` → tipo explícito (mesmo bucket de `"Tipo"`/`"Tipo_Imovel"`
+já suportados); `"VALOR TOTAL"` (com espaço, diferente do `"valor_total"` com underscore da BRASAL
+2º padrão) → valor; `"COMPOSICAO"` → reaproveita o mesmo parser de "Configuração" (CTTY) pra extrair
+quartos/suítes de texto livre — a regex já entendia números com zero à esquerda ("03 quartos",
+"01 suíte"), não precisou de ajuste.
+
+Testado com os dados exatos do usuário: área 81.78 preservada certinha (não virou 8178), tipo
+"Apartamento" direto da coluna, 3 quartos/1 suíte extraídos da composição em texto livre, valor
+390000 (centavos descartados certo), mojibake corrigido em todos os campos (inclusive dentro do
+texto livre de composição/endereço). Suíte de regressão completa (CTTY, BRASAL 1º/2º, CITY) rodada
+de novo depois da mudança no parser de área — nenhuma quebra.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 13) — Coluna "Status" na tabela de Construtoras (breakdown por estágio)
 
 Nova coluna "Status" na tabela de Construtoras (`revendas-construtoras.html`), mostrando — por
