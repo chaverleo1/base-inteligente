@@ -704,6 +704,7 @@ function doPost(e) {
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'importar_revendas_construtoras') return ok(importarRevendasConstrutoras_(d.dados || d));
   if (d.acao === 'excluir_revenda_construtora')     return ok(excluirRevendaConstrutora_(d));
+  if (d.acao === 'excluir_todos_revendas_construtora') return ok(excluirTodosRevendasConstrutora_(d));
   if (d.acao === 'cadastrar_construtora_parceira')  return ok(cadastrarConstrutoraParceira_(d.dados || d));
   if (d.acao === 'excluir_construtora_parceira')    return ok(excluirConstrutoraParceira_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
@@ -3216,6 +3217,25 @@ function excluirRevendaConstrutora_(dados) {
   if (lin < 2 || lin > aba.getLastRow()) return { ok: false, erro: 'linha invalida' };
   aba.deleteRow(lin);
   return { ok: true };
+}
+
+function excluirTodosRevendasConstrutora_(dados) {
+  var construtora = String(dados && dados.construtora || '').trim();
+  if (!construtora) return { ok: false, erro: 'construtora obrigatoria' };
+  var nomeNorm = norm_(construtora);
+  var aba = obterAbaRevendasConstrutoras_();
+  var lr = aba.getLastRow();
+  if (lr < 2) return { ok: true, removidas: 0 };
+  var iConst = CABECALHO_REVENDAS_CONSTRUTORAS.indexOf('construtora') + 1;
+  var vals = aba.getRange(2, iConst, lr - 1, 1).getValues();
+  var linhas = [];
+  for (var i = vals.length - 1; i >= 0; i--) {
+    if (norm_(vals[i][0]) === nomeNorm) linhas.push(i + 2);
+  }
+  for (var j = 0; j < linhas.length; j++) {
+    aba.deleteRow(linhas[j]);
+  }
+  return { ok: true, removidas: linhas.length };
 }
 
 // Converte linha de REVENDAS_CONSTRUTORAS para o formato de produto do motor

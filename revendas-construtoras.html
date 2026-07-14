@@ -656,7 +656,15 @@ function popularSelectConstrutorasRC(lista) {
 function renderConstrutorasRC(lista) {
   const root = document.getElementById('rootConstrutorasRC');
   if (!lista.length) { root.innerHTML = '<div class="empty">Nenhuma construtora cadastrada ainda.</div>'; return; }
-  const ordenada = [...lista].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+  // Ordena pela atualização mais recente (menos dias desde) → mais antiga no final; sem imóveis vai pro final
+  const ordenada = [...lista].sort((a, b) => {
+    const dA = a.diasDesdeUltimaAtualizacao;
+    const dB = b.diasDesdeUltimaAtualizacao;
+    if (dA === null && dB === null) return (a.nome || '').localeCompare(b.nome || '');
+    if (dA === null) return 1;
+    if (dB === null) return -1;
+    return dA - dB;
+  });
   const rows = ordenada.map(c => `
     <tr>
       <td class="construtora-nome">${c.nome || '—'}</td>
@@ -671,13 +679,38 @@ function renderConstrutorasRC(lista) {
         <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
         ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 PDF</a>` : ''}
       </td>
+      <td>${(c.totalImoveis || 0) > 0
+        ? `<button class="btn-excluir" onclick="excluirTodosRC('${(c.nome||'').replace(/'/g,"\\'")}', ${c.totalImoveis || 0}, this)">Excluir todos</button>`
+        : '<span style="color:var(--text3)">—</span>'}</td>
     </tr>`).join('');
   root.innerHTML = `
     <div class="count-info">${lista.length} construtora${lista.length===1?'':'s'} cadastrada${lista.length===1?'':'s'}</div>
     <div class="detail-wrap"><table class="detail-table">
-      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Última Atualização</th><th>Ações</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Total de imóveis</th><th>Última Atualização</th><th>Ações</th><th>Excluir todos</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
+}
+
+async function excluirTodosRC(construtora, total, btnEl) {
+  if (!confirm(`Excluir TODOS os ${total} imóveis de "${construtora}"?\nEsta ação não pode ser desfeita.`)) return;
+  btnEl.disabled = true; btnEl.textContent = '⏳ Excluindo...';
+  try {
+    const body = new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_todos_revendas_construtora', token: tokenSessao(), construtora }) });
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) {
+      showToast(`✓ ${json.removidas} imóve${json.removidas===1?'l':'is'} de "${construtora}" excluído${json.removidas===1?'':'s'}.`, 'ok');
+      _construtorasCarregadas = false;
+      carregarConstrutorasRC();
+    } else {
+      showToast('Erro ao excluir: ' + (json.erro || 'desconhecido'), 'erro');
+      btnEl.disabled = false; btnEl.textContent = 'Excluir todos';
+    }
+  } catch(e) {
+    showToast('Erro de conexão: ' + e.message, 'erro');
+    btnEl.disabled = false; btnEl.textContent = 'Excluir todos';
+  }
 }
 
 async function salvarConstrutoraRC() {
