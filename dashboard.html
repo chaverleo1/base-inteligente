@@ -60,6 +60,33 @@
   .card-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;padding-right:56px}
   .card-value{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;color:var(--text);line-height:1}
   .card-sub{font-size:12px;color:var(--text3);margin-top:6px}
+
+  /* ── VISÃO GERAL — painel unificado (só #cardsRow; blocos compactos, sem
+     gaps largos entre si — divisórias de 1px em vez de cards soltos, pra
+     aproveitar largura em vez de altura e caber mais blocos no futuro sem
+     rediscutir o layout). ── */
+  .vg-panel{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:1px; background:var(--border); border:1px solid var(--border);
+    border-radius:var(--radius); overflow:hidden; margin-bottom:28px;
+  }
+  .vg-stat{
+    background:var(--surface); padding:12px 14px; position:relative;
+    transition:background .15s;
+  }
+  .vg-stat:hover{background:rgba(255,255,255,.03)}
+  .vg-stat-top{display:flex; align-items:center; gap:5px; margin-bottom:6px; padding-right:34px}
+  .vg-stat-icon{font-size:13px; line-height:1; flex-shrink:0}
+  .vg-stat-label{font-size:10px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.5px;
+                 white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .vg-stat-value{font-family:'Space Grotesk',sans-serif; font-size:21px; font-weight:700; color:var(--text); line-height:1.1}
+  .vg-stat-sub{font-size:10px; color:var(--text3); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .vg-stat-link{position:absolute; top:10px; right:10px; font-size:10px; font-weight:700;
+                border-radius:5px; padding:2px 7px; text-decoration:none; cursor:pointer; border:1px solid; white-space:nowrap}
+  @media(max-width:640px){
+    .vg-panel{grid-template-columns:repeat(2,1fr)}
+    .vg-stat-value{font-size:19px}
+  }
   .card-value.hot{color:var(--hot)}
   .card-value.warm{color:var(--warm)}
   .card-value.cold{color:var(--cold)}
@@ -603,7 +630,7 @@
 
   <!-- TOTAIS -->
   <div class="section-title">Visão geral</div>
-  <div class="cards-row" id="cardsRow">
+  <div class="vg-panel" id="cardsRow">
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando dados</div>
   </div>
 
@@ -1692,9 +1719,8 @@ function atualizarCardNovidades_(d) {
     cardEl.style.cursor = 'pointer';
     cardEl.onclick = verNovidades;
     if (!cardEl.querySelector('.novidades-verbtn')) {
-      cardEl.insertAdjacentHTML('beforeend', `<span class="novidades-verbtn" style="cursor:pointer;position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-        color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-        border-radius:6px;padding:3px 10px">Ver →</span>`);
+      cardEl.insertAdjacentHTML('beforeend', `<span class="novidades-verbtn vg-stat-link" style="cursor:pointer;
+        color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</span>`);
     }
   }
 }
@@ -1973,56 +1999,53 @@ function renderDados(json) {
      border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</span>`;
 
   // ── Cards totais
+  // Ordem pensada como leitura em 2 blocos lógicos: primeiro o funil de
+  // CLIENTES (base → leads novos → convertidos), depois o INVENTÁRIO de
+  // imóveis (revenda → lançamentos → revendas-construtoras → novidades).
+  // Painel único (.vg-panel/.vg-stat) em vez de cards soltos com gap largo
+  // — divisórias de 1px entre os blocos, mais larguras que altura, e a
+  // grid (auto-fit) já aceita blocos extras no futuro sem precisar mexer
+  // no CSS de novo.
   document.getElementById('cardsRow').innerHTML = `
-    <div class="card" style="position:relative">
-      <div class="card-label">Total de contatos</div>
-      <div class="card-value">${total.toLocaleString('pt-BR')}</div>
-      <div class="card-sub">na base atual</div>
-      <a href="contatos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-         color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-         border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">👥</span><span class="vg-stat-label">Contatos</span></div>
+      <div class="vg-stat-value">${total.toLocaleString('pt-BR')}</div>
+      <div class="vg-stat-sub">na base atual</div>
+      <a href="contatos.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
     </div>
-    <div class="card" style="position:relative">
-      <div class="card-label">🔑 Total de revendas</div>
-      <div class="card-value green">${prodTotal}</div>
-      <div class="card-sub">disponíveis para venda</div>
-      <a href="busca.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-         color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-         border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+    <div class="vg-stat" id="cardNovoLeads">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🎯</span><span class="vg-stat-label">Novos leads</span></div>
+      <div class="vg-stat-value" id="cardNovoLeadsValue" style="color:#ff5a5a">—</div>
+      <div class="vg-stat-sub">Imobzi aguardando</div>
+      <button onclick="mostrarImobzi()" class="vg-stat-link" style="color:#ff5a5a;background:rgba(255,90,90,.1);border-color:rgba(255,90,90,.25);font-family:inherit">Ver →</button>
     </div>
-    <div class="card" style="position:relative" id="cardVGLanc">
-      <div class="card-label">🚀 Empreendimentos</div>
-      <div class="card-value" style="color:var(--accent2)" id="cardVGLancValue">—</div>
-      <div class="card-sub" id="cardVGLancSub">carregando…</div>
-      <a href="lancamentos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-         color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-         border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+    <div class="vg-stat" id="cardGanhos">
+      <div class="vg-stat-top"><span class="vg-stat-icon">✅</span><span class="vg-stat-label">Ganhos</span></div>
+      <div class="vg-stat-value" id="cardGanhosValue" style="color:#1a9ed4">—</div>
+      <div class="vg-stat-sub">clientes convertidos</div>
     </div>
-    <div class="card" style="position:relative" id="cardVGRevConst">
-      <div class="card-label">🏢 Revendas-Construtoras</div>
-      <div class="card-value" style="color:#a78bfa" id="cardVGRevConstValue">— | —</div>
-      <div class="card-sub" id="cardVGRevConstSub">carregando…</div>
-      <a href="revendas-construtoras.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-         color:#a78bfa;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);
-         border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🔑</span><span class="vg-stat-label">Revendas</span></div>
+      <div class="vg-stat-value green">${prodTotal}</div>
+      <div class="vg-stat-sub">disponíveis p/ venda</div>
+      <a href="busca.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
     </div>
-    <div class="card" style="position:relative" id="cardNovoLeads">
-      <div class="card-label">🎯 Novos Leads</div>
-      <div class="card-value" id="cardNovoLeadsValue" style="color:#ff5a5a">—</div>
-      <div class="card-sub">leads Imobzi aguardando atendimento</div>
-      <button onclick="mostrarImobzi()" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-         color:#ff5a5a;background:rgba(255,90,90,.1);border:1px solid rgba(255,90,90,.2);
-         border-radius:6px;padding:3px 10px;cursor:pointer">Ver →</button>
+    <div class="vg-stat" id="cardVGLanc">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🚀</span><span class="vg-stat-label">Empreendimentos</span></div>
+      <div class="vg-stat-value" style="color:var(--accent2)" id="cardVGLancValue">—</div>
+      <div class="vg-stat-sub" id="cardVGLancSub">carregando…</div>
+      <a href="lancamentos.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
     </div>
-    <div class="card" style="position:relative" id="cardNovidades">
-      <div class="card-label">🆕 Novos Imóveis</div>
-      <div class="card-value" id="cardNovidadesValue" style="color:var(--accent2)">—</div>
-      <div class="card-sub">novos ou modificados (revenda)</div>
+    <div class="vg-stat" id="cardVGRevConst">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🏢</span><span class="vg-stat-label">Rev.-construtoras</span></div>
+      <div class="vg-stat-value" style="color:#a78bfa" id="cardVGRevConstValue">— | —</div>
+      <div class="vg-stat-sub" id="cardVGRevConstSub">carregando…</div>
+      <a href="revendas-construtoras.html" class="vg-stat-link" style="color:#a78bfa;background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.25)">Ver →</a>
     </div>
-    <div class="card" style="position:relative" id="cardGanhos">
-      <div class="card-label">✅ Ganhos</div>
-      <div class="card-value" id="cardGanhosValue" style="color:#1a9ed4">—</div>
-      <div class="card-sub">clientes convertidos</div>
+    <div class="vg-stat" id="cardNovidades">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🆕</span><span class="vg-stat-label">Novos imóveis</span></div>
+      <div class="vg-stat-value" id="cardNovidadesValue" style="color:var(--accent2)">—</div>
+      <div class="vg-stat-sub">novos/modificados</div>
     </div>`;
 
   // ── Cards temperatura (Quentes / Mornos / Frios) — seção Composição

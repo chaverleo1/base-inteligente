@@ -1,5 +1,41 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 19) — Redesign da "Visão geral" (dashboard): painel unificado, mais largura que altura
+
+Redesign completo dos 7 blocos de resumo do topo do dashboard (Contatos/Novos leads/Ganhos/
+Revendas/Empreendimentos/Revendas-construtoras/Novos imóveis) — antes 5 "cards" soltos por linha
+(grid `repeat(5,1fr)`), sobravam 2 numa 2ª linha quase vazia. Escopo isolado só em `#cardsRow`; as
+outras seções que reaproveitam `.cards-row`/`.card` (Composição, Portfólio de revendas, Lançamentos)
+não foram tocadas.
+
+**Painel único em vez de cards soltos** (`.vg-panel`/`.vg-stat`, novas classes): grid com
+`auto-fit`+`minmax(140px,1fr)` e `gap:1px` (a cor do fundo do container vira as linhas divisórias
+finas entre os blocos, sem precisar gerenciar borda por célula) — os 7 blocos cabem numa linha só em
+telas normais, em vez de sobrar espaço vazio numa 2ª linha. Em telas estreitas (< 640px), cai pra 2
+colunas automaticamente.
+
+**Tamanho reduzido**: padding 20×18px → 12×14px, valor 32px → 21px, label/sub também menores —
+somado ao fim da 2ª linha vazia, o espaço vertical total ocupado cai bem mais que 50% na prática.
+
+**Leitura reorganizada em 2 blocos lógicos**: primeiro o funil de CLIENTES (Contatos → Novos leads →
+Ganhos, uma sequência de base→entrada→resultado), depois o INVENTÁRIO de imóveis (Revendas →
+Empreendimentos → Revendas-construtoras → Novos imóveis) —ždantes a ordem misturava os dois
+assuntos sem critério aparente.
+
+**Extensível de propósito**: `auto-fit` reflui sozinho se blocos novos forem adicionados no futuro
+(não precisa mexer no CSS de novo pra caber um 8º/9º bloco).
+
+**Melhorias extras**: ícone 👥 adicionado no card "Contatos" (não tinha nenhum antes, agora todo
+bloco tem um, mais consistente visualmente); botão "Ver →" injetado dinamicamente em "Novos imóveis"
+(só aparece quando há novidades) ajustado pro mesmo padrão compacto dos outros.
+
+Testado ao vivo no navegador: 7 blocos cabem numa única linha em desktop (confirmado via
+`getComputedStyle` — 7 colunas de ~149px), altura por bloco caiu de ~110px pra 82px, ordem lógica
+confirmada (Contatos → Novos leads → Ganhos → Revendas → Empreendimentos → Rev.-construtoras → Novos
+imóveis), responsivo em mobile (375px: cai pra 2 colunas, sem overflow horizontal).
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-14 (parte 18) — Nova seção "Top favoritos" no Dashboard
 
 Nova seção no Dashboard, logo abaixo de "Novas ofertas" e com a mesma estrutura visual (2 colunas):
