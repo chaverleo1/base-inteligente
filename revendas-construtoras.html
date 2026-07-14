@@ -217,7 +217,7 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
     <div class="motor-box">
       <div class="sec-header">
         <div class="sec-title">Colar dados</div>
-        <div class="sec-sub">Cole aqui o CSV organizado pelo assistente ORGANIZADOR — colunas: <code>Unidade, Empreendimento / Imóvel, Área, Configuração, Valor</code>. A primeira linha (cabeçalho) é detectada e ignorada automaticamente.</div>
+        <div class="sec-sub">Cole aqui o CSV organizado pelo assistente ORGANIZADOR. A primeira linha deve ser o cabeçalho — colunas reconhecidas: <code>Unidade, Empreendimento / Imóvel, Área, Configuração, Valor</code> ou <code>Tipo, Empreendimento / Imóvel, Unidade, Área, Vagas, Valor</code> (outros padrões de cabeçalho, avise pra adicionar).</div>
       </div>
       <div class="motor-label">Construtora <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(origem desse lote)</span></div>
       <select class="form-input-rc" id="inputConstrutoraRC" style="margin-bottom:16px">
@@ -335,12 +335,16 @@ function mostrarSubtabRC(tab) {
   if (tab === 'construtoras' && !_construtorasCarregadas) carregarConstrutorasRC();
 }
 
-// ── PARSER — CSV colado (ver revendas_city_jul_2026.csv, exemplo do usuário) ──
-// Formato: Unidade,Empreendimento / Imóvel,Área,Configuração,Valor — uma linha
-// por imóvel (lotes/terrenos/casas/salas vêm sem Configuração, já que não têm
-// quartos/vagas). Parser roda 100% no front-end, mesmo padrão da aba "Outros"
-// de Lançamentos (extrairOutrosFormato) — o back-end só recebe o array já
-// estruturado (ver importarRevendasConstrutoras_ no code.txt).
+// ── PARSER — CSV colado, por cabeçalho (mapeamento em SINONIMOS_COLUNA_RC) ──
+// Cada construtora exporta com um conjunto/ordem de colunas diferente (ex:
+// CTTY manda "Configuração" com quartos/suítes/vagas em texto livre; BRASAL
+// manda "Tipo" e "Vagas" em colunas separadas, sem quartos/suítes por serem
+// só lotes). O parser lê a 1ª linha como cabeçalho e monta cada linha pelos
+// nomes de coluna reconhecidos, não por posição fixa — um padrão novo normalmente
+// só exige adicionar o rótulo em SINONIMOS_COLUNA_RC, não um parser novo.
+// Roda 100% no front-end, mesmo padrão da aba "Outros" de Lançamentos
+// (extrairOutrosFormato) — o back-end só recebe o array já estruturado
+// (ver importarRevendasConstrutoras_ no code.txt).
 const TIPOS_RC = ['Apartamento', 'Casa', 'Casa condominio', 'Sobrado', 'Lote em cond.', 'Terreno', 'Sala comercial', 'Chácara', 'Indefinido'];
 
 // Parser de linha CSV com suporte a campos entre aspas (necessário pra valores
@@ -382,6 +386,40 @@ function detectarTipoRC_(unidade, empreendimento) {
   return '';
 }
 
+// Mesmas palavras-chave de detectarTipoRC_, aplicadas a uma coluna "Tipo"
+// explícita quando a construtora já informa o tipo direto (ex: BRASAL manda
+// "Lote" numa coluna própria, em vez de embutir no nome da unidade).
+function mapTipoExplicitoRC_(tipoRaw) {
+  const t = (tipoRaw || '').toLowerCase().trim();
+  if (!t) return '';
+  if (/^ap\b|^apto\b|^apart/.test(t) || /cobertura/.test(t)) return 'Apartamento';
+  if (/sobrado/.test(t)) return 'Sobrado';
+  if (/^casa\b/.test(t)) return 'Casa';
+  if (/^lote\b/.test(t)) return 'Lote em cond.';
+  if (/^terreno\b/.test(t)) return 'Terreno';
+  if (/^sala\b/.test(t)) return 'Sala comercial';
+  if (/ch[aá]cara/.test(t)) return 'Chácara';
+  return '';
+}
+
+// Cabeçalho -> campo interno, comparado já sem acento/maiúsculas (ver
+// normHeaderRC_). Construtoras diferentes usam nomes de coluna diferentes
+// pro mesmo dado — pra suportar um novo padrão, normalmente basta adicionar
+// o(s) rótulo(s) novo(s) aqui, sem tocar no resto do extrator.
+const SINONIMOS_COLUNA_RC = {
+  'tipo': 'tipoExplicito',
+  'unidade': 'unidade',
+  'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento', 'imovel': 'empreendimento',
+  'area': 'area',
+  'configuracao': 'config',
+  'vagas': 'vagasCol',
+  'valor': 'valor', 'preco': 'valor'
+};
+function normHeaderRC_(s) {
+  return (s || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 // "310 m²" -> {areaUtil:310, areaTerreno:0} | "387/286 m²" -> {areaTerreno:387,
 // areaUtil:286} (ordem terreno/construção, mesma convenção do texto de
 // referência do usuário: "387 m² terreno / 286 m² construção").
@@ -415,18 +453,41 @@ function parseValorRC_(valorRaw) {
   return parseInt((valorRaw || '').replace(/[^\d]/g, '')) || 0;
 }
 
+// Lê a 1ª linha como cabeçalho e mapeia cada coluna reconhecida (ver
+// SINONIMOS_COLUNA_RC) pro campo interno correspondente — funciona pra
+// qualquer construtora cujo CSV use esses rótulos, em qualquer ordem,
+// com colunas extras ou faltando. Suporta tanto "Configuração" (texto
+// livre com quartos/suítes/vagas, ex: CTTY) quanto uma coluna "Vagas"
+// separada e sem quartos/suítes (ex: BRASAL, só lotes).
 function extrairRevendasConstrutoras(txt) {
   const linhas = txt.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
-  const dataLinhas = linhas.filter(l => !/^unidade\s*,/i.test(l.trim()));
+  if (!linhas.length) return [];
+
+  const headerCols = parseCSVLinha_(linhas[0]).map(normHeaderRC_);
+  const mapaColunas = {};
+  headerCols.forEach((h, i) => {
+    const campo = SINONIMOS_COLUNA_RC[h];
+    if (campo && !(campo in mapaColunas)) mapaColunas[campo] = i;
+  });
+  const temCabecalho = Object.keys(mapaColunas).length >= 2;
+  const dataLinhas = temCabecalho ? linhas.slice(1) : linhas;
+
   return dataLinhas.map(linhaRaw => {
     const cols = parseCSVLinha_(linhaRaw);
-    const [unidade, empreendimento, areaRaw, configRaw, valorRaw] = cols;
+    const get = campo => (campo in mapaColunas) ? (cols[mapaColunas[campo]] || '') : '';
+    const unidade = get('unidade');
+    const empreendimento = get('empreendimento');
     if (!unidade && !empreendimento) return null;
-    const tipo = detectarTipoRC_(unidade, empreendimento);
+    const tipo = mapTipoExplicitoRC_(get('tipoExplicito')) || detectarTipoRC_(unidade, empreendimento);
     const isTerra = tipo === 'Lote em cond.' || tipo === 'Terreno';
-    const { areaUtil, areaTerreno } = parseAreaRC_(areaRaw, isTerra);
-    const { quartos, suites, vagas } = parseConfigRC_(configRaw);
-    const valorVenda = parseValorRC_(valorRaw);
+    const { areaUtil, areaTerreno } = parseAreaRC_(get('area'), isTerra);
+    let quartos = 0, suites = 0, vagas = 0;
+    if ('config' in mapaColunas) {
+      ({ quartos, suites, vagas } = parseConfigRC_(get('config')));
+    } else if ('vagasCol' in mapaColunas) {
+      vagas = parseInt(get('vagasCol')) || 0;
+    }
+    const valorVenda = parseValorRC_(get('valor'));
     return {
       unidade: unidade || '', empreendimento: empreendimento || '', tipo,
       areaUtil, areaTerreno, quartos, suites, vagas, valorVenda,

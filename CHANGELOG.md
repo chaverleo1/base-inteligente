@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 5) — Extrator de Colar/Extrair vira genérico por cabeçalho (multi-construtora)
+
+O parser de `extrairRevendasConstrutoras()` só reconhecia UM formato de CSV, fixo por posição
+(`[unidade, empreendimento, areaRaw, configRaw, valorRaw]`) — exatamente o padrão da CTTY. Colar o
+CSV de outra construtora com colunas diferentes (ex: BRASAL, que manda `Código, Tipo, Empreendimento
+/ Imóvel, Unidade, Área, Vagas, Valor, Situação`) produzia dados todos errados, e nem a linha de
+cabeçalho era reconhecida (a checagem de header só testava `/^unidade\s*,/i`).
+
+**Fix**: extrator reescrito pra ler a 1ª linha como cabeçalho e mapear cada coluna reconhecida (via
+novo dicionário `SINONIMOS_COLUNA_RC`) pro campo interno certo, em vez de depender da posição/ordem
+fixa. Suporta tanto uma coluna "Configuração" com quartos/suítes/vagas embutidos em texto livre
+(CTTY) quanto colunas "Tipo" e "Vagas" separadas, sem quartos/suítes (BRASAL — só lotes). Tipo agora
+usa a coluna "Tipo" explícita quando existe (`mapTipoExplicitoRC_`), caindo pra detecção por
+palavra-chave (`detectarTipoRC_`) só quando não há essa coluna.
+
+Combinar formatos de construtoras novas no futuro deve normalmente exigir só adicionar o(s) rótulo(s)
+de coluna novo(s) em `SINONIMOS_COLUNA_RC`, não reescrever o parser inteiro — desde que o CSV sempre
+venha com uma linha de cabeçalho na primeira linha.
+
+Testado via smoke test em Node com os dois formatos reais colados pelo usuário (BRASAL e CTTY):
+ambos extraem corretamente tipo, área (incluindo área com vírgula decimal entre aspas e área
+terreno/construção separada por "/"), configuração/vagas e valor.
+
+Mudança 100% front-end (`revendas-construtoras.html`) — não precisa reimplantar o Apps Script.
+
 ## 2026-07-14 (parte 4) — Cabeçalho da REVENDAS_CONSTRUTORAS se autocorrige sozinho (sem função manual)
 
 A função de migração manual `migrarCabecalhoRevendasConstrutoras_()` (parte 2, hoje) não estava
