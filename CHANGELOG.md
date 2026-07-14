@@ -1,5 +1,52 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 11) — 2º padrão BRASAL: código fonte, mojibake e bug de centavos no valor
+
+Usuário mandou um novo padrão de tabela da BRASAL (10 colunas: `CODIGO,IMOVEL,UNIDADE,ENDERECO,
+VAGAS,AREA_PRIVATIVA,VALOR_TOTAL,SITUACAO,VALOR_CONDOMINIO,DESCRICAO`) pra testar. Três problemas
+reais apareceram nesse teste, além de um pedido explícito:
+
+**1. Mojibake (texto colado com acentuação corrompida)** — "IpÃª" devia ser "Ipê", "GoiÃ¢nia" devia
+ser "Goiânia", "mÂ²" devia ser "m²" — clássico UTF-8 lido como Latin-1/CP1252 (comum quando o texto
+vem de extração de PDF colada no navegador). Nova função `corrigirMojibakeRC_()`: detecta o padrão
+característico ("Ã"/"Â" seguido de outro caractere alto) e, só quando encontra, reconstrói o texto
+correto (reinterpreta os caracteres como bytes e decodifica como UTF-8) — texto já correto passa
+direto, sem risco de estragar acentos que já estavam certos. Aplicado no início da extração, cobre
+cabeçalho e todas as linhas de uma vez.
+
+**2. BUG real e grave: `parseValorRC_` multiplicava o valor por ~100 quando tinha centavos.**
+"R$ 80.000,00" virava 8.000.000 em vez de 80.000 — o parser antigo removia TODO caractere não-dígito
+(incluindo a vírgula) e concatenava os "00" de centavos como se fossem parte do valor. Corrigido:
+mantém a vírgula na limpeza e corta nela antes de converter — "R$ 3.900.000" (formato antigo, sem
+centavos) continua funcionando igual. Esse bug já existia desde os primeiros padrões suportados,
+só não tinha aparecido porque nenhum exemplo anterior tinha centavos.
+
+**3. Coluna "IMOVEL" combinada (tipo + nome grudados, ex: "Lote Residencial Flor do Ipê II")** — novo
+padrão não separa Tipo do nome do empreendimento como o 1º padrão BRASAL fazia. Nova função
+`separarTipoNomeRC_()`: reconhece um prefixo de tipo (mesmas palavras de `mapTipoExplicitoRC_`) e
+separa do resto do nome — resultado: tipo "Lote em cond." detectado corretamente, e o nome do
+empreendimento mostrado limpo ("Residencial Flor do Ipê II", sem o "Lote" grudado).
+
+**4. Pedido explícito do usuário: não perder o código do imóvel na tabela de origem** ("CODIGO" —
+DF1020, BR2020 — diferente do código interno RC-NNNNN que o sistema gera). Novo campo
+`codigoFonte` em `CABECALHO_REVENDAS_CONSTRUTORAS` (aba se autocorrige sozinha, mesmo mecanismo já
+existente), capturado pelo extrator e **exibido**, não só guardado: nova coluna "Cód. construtora"
+na prévia de extração, e como linha secundária abaixo do código interno na lista de imóveis
+importados de cada construtora.
+
+Testado com os dados exatos enviados pelo usuário: mojibake corrigido em todos os campos, tipo
+"Lote em cond." detectado e nome limpo, área com vírgula decimal correta (250 / 347,12 / 373,3),
+valor correto (80000 / 165000 / 195000 — não mais ×100), código fonte capturado (DF1020/BR2020).
+Reconfirmado sem regressão nos dois padrões anteriores (BRASAL 1º padrão e CTTY) — como bônus, o 1º
+padrão BRASAL (que também tinha coluna "Código") passa a capturar `codigoFonte` também, que antes
+só ficava em `textoOriginal`.
+
+Mojibake, bug de centavos e separação de tipo são 100% frontend, funcionam sem reimplantar nada.
+⚠️ Mas o campo `codigoFonte` só é GRAVADO na planilha depois de reimplantar o Apps Script (o backend
+antigo não conhece essa coluna nova e descarta o valor silenciosamente ao importar) — a prévia
+mostra o código certo de qualquer forma, mas ele só sobrevive ao "Importar" com o backend
+atualizado. Mesma auto-correção de cabeçalho já existente cobre a coluna nova, sem migração manual.
+
 ## 2026-07-14 (parte 10) — Badge Potencial/Oportunidade faltando na tabela compacta de "Matches do momento"
 
 A parte 9 cobriu 4 pontos de renderização de card nos 3 arquivos (contatos/dashboard×2/favoritos),

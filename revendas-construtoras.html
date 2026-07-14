@@ -248,7 +248,7 @@ textarea.motor-input::placeholder { color:var(--text3); font-family:'Inter',sans
       <div class="detail-wrap">
         <table class="detail-table">
           <thead><tr>
-            <th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Quartos</th><th>Suítes</th><th>Vagas</th><th>Valor</th>
+            <th>Cód. construtora</th><th>Unidade</th><th>Empreendimento</th><th>Tipo</th><th>Área</th><th>Quartos</th><th>Suítes</th><th>Vagas</th><th>Valor</th>
           </tr></thead>
           <tbody id="previewBodyRC"></tbody>
         </table>
@@ -399,6 +399,25 @@ function mostrarSubtabRC(tab) {
 //      Apps Script.
 const TIPOS_RC = ['Apartamento', 'Casa', 'Casa condominio', 'Sobrado', 'Lote em cond.', 'Terreno', 'Sala comercial', 'Chácara', 'Indefinido'];
 
+// Corrige mojibake de UTF-8 lido como Latin-1/CP1252 (comum em texto extraído
+// de PDF e colado no navegador) — ex: "IpÃª" devia ser "Ipê", "mÂ²" devia ser
+// "m²". Detecta pelo padrão "Ã"/"Â" seguido de outro caractere alto (assinatura
+// de byte de continuação UTF-8 mal interpretado) e só tenta corrigir se achar
+// esse padrão — texto já correto passa direto, sem risco de estragar acentos
+// que já estavam certos.
+function pareceMojibakeRC_(texto) {
+  return /[ÃÂ][-¿]/.test(texto || '');
+}
+function corrigirMojibakeRC_(texto) {
+  if (!pareceMojibakeRC_(texto)) return texto;
+  try {
+    const bytes = Uint8Array.from(texto, c => c.charCodeAt(0) & 0xFF);
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch(e) {
+    return texto; // não decodificou como UTF-8 válido -> não era mojibake, mantém original
+  }
+}
+
 // Parser de linha CSV com suporte a campos entre aspas (necessário pra valores
 // como "41,6 m²" — a vírgula decimal fica DENTRO do campo, não é separador).
 function parseCSVLinha_(linha) {
@@ -454,6 +473,16 @@ function mapTipoExplicitoRC_(tipoRaw) {
   return '';
 }
 
+// Coluna "IMOVEL" combinada (BRASAL, 2º padrão) mistura tipo + nome do
+// empreendimento (ex: "Lote Residencial Flor do Ipê II") — separa o prefixo
+// de tipo reconhecido do resto do nome, pra não mostrar "Lote" grudado no
+// nome do empreendimento na prévia/lista.
+function separarTipoNomeRC_(bruto) {
+  const m = String(bruto || '').match(/^(apartamento|apto|casa|sobrado|lote|terreno|sala|ch[aá]cara)\b\s*(.*)$/i);
+  if (!m) return { tipo: '', nome: String(bruto || '').trim() };
+  return { tipo: mapTipoExplicitoRC_(m[1]), nome: m[2].trim() };
+}
+
 // Cabeçalho -> campo interno, comparado já sem acento/maiúsculas (ver
 // normHeaderRC_). Construtoras diferentes usam nomes de coluna diferentes
 // pro mesmo dado — pra suportar um novo padrão, normalmente basta adicionar
@@ -461,11 +490,19 @@ function mapTipoExplicitoRC_(tipoRaw) {
 const SINONIMOS_COLUNA_RC = {
   'tipo': 'tipoExplicito',
   'unidade': 'unidade',
-  'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento', 'imovel': 'empreendimento',
-  'area': 'area',
+  'empreendimento': 'empreendimento', 'empreendimento / imovel': 'empreendimento',
+  // "imovel" (BRASAL, 2º padrão) traz tipo + nome grudados numa coluna só
+  // (ex: "Lote Residencial Flor do Ipê II") — tratado à parte em
+  // extrairRevendasConstrutoras pra separar o prefixo de tipo do nome.
+  'imovel': 'imovelComTipo',
+  'area': 'area', 'area_privativa': 'area',
   'configuracao': 'config',
   'vagas': 'vagasCol',
-  'valor': 'valor', 'preco': 'valor'
+  'valor': 'valor', 'preco': 'valor', 'valor_total': 'valor',
+  // Código do imóvel na tabela de origem da construtora — não é o mesmo
+  // código interno (RC-NNNNN) que o sistema gera; guardado à parte pra não
+  // se perder (ver codigoFonte no CABECALHO_REVENDAS_CONSTRUTORAS).
+  'codigo': 'codigoFonte'
 };
 function normHeaderRC_(s) {
   return (s || '').toString().trim().toLowerCase()
@@ -501,8 +538,14 @@ function parseConfigRC_(configRaw) {
   return { quartos, suites, vagas };
 }
 
+// "R$ 3.900.000" (sem centavos) e "R$ 80.000,00" (com centavos) precisam de
+// tratamento diferente: no primeiro, todo dígito é parte do valor; no
+// segundo, os 2 dígitos depois da última vírgula são centavos e descartados
+// — remover todo caractere não-dígito/vírgula primeiro (isso já apaga os
+// pontos de milhar) e cortar na vírgula resolve os dois casos.
 function parseValorRC_(valorRaw) {
-  return parseInt((valorRaw || '').replace(/[^\d]/g, '')) || 0;
+  const semMoeda = String(valorRaw || '').replace(/[^\d,]/g, '');
+  return parseInt(semMoeda.split(',')[0]) || 0;
 }
 
 // Lê a 1ª linha como cabeçalho e mapeia cada coluna reconhecida (ver
@@ -511,7 +554,8 @@ function parseValorRC_(valorRaw) {
 // com colunas extras ou faltando. Suporta tanto "Configuração" (texto
 // livre com quartos/suítes/vagas, ex: CTTY) quanto uma coluna "Vagas"
 // separada e sem quartos/suítes (ex: BRASAL, só lotes).
-function extrairRevendasConstrutoras(txt) {
+function extrairRevendasConstrutoras(txtBruto) {
+  const txt = corrigirMojibakeRC_(txtBruto);
   const linhas = txt.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
   if (!linhas.length) return [];
 
@@ -528,9 +572,15 @@ function extrairRevendasConstrutoras(txt) {
     const cols = parseCSVLinha_(linhaRaw);
     const get = campo => (campo in mapaColunas) ? (cols[mapaColunas[campo]] || '') : '';
     const unidade = get('unidade');
-    const empreendimento = get('empreendimento');
+    let empreendimento = get('empreendimento');
+    let tipoDoNomeCombinado = '';
+    if (!empreendimento && 'imovelComTipo' in mapaColunas) {
+      const separado = separarTipoNomeRC_(get('imovelComTipo'));
+      tipoDoNomeCombinado = separado.tipo;
+      empreendimento = separado.nome;
+    }
     if (!unidade && !empreendimento) return null;
-    const tipo = mapTipoExplicitoRC_(get('tipoExplicito')) || detectarTipoRC_(unidade, empreendimento);
+    const tipo = mapTipoExplicitoRC_(get('tipoExplicito')) || tipoDoNomeCombinado || detectarTipoRC_(unidade, empreendimento);
     const isTerra = tipo === 'Lote em cond.' || tipo === 'Terreno';
     const { areaUtil, areaTerreno } = parseAreaRC_(get('area'), isTerra);
     let quartos = 0, suites = 0, vagas = 0;
@@ -543,7 +593,8 @@ function extrairRevendasConstrutoras(txt) {
     return {
       unidade: unidade || '', empreendimento: empreendimento || '', tipo,
       areaUtil, areaTerreno, quartos, suites, vagas, valorVenda,
-      bairro: '', textoOriginal: linhaRaw
+      bairro: '', textoOriginal: linhaRaw,
+      codigoFonte: get('codigoFonte') || ''
     };
   }).filter(Boolean);
 }
@@ -586,6 +637,7 @@ function renderPreviewRC() {
   const tbody = document.getElementById('previewBodyRC');
   tbody.innerHTML = _previewRC.map((imo, idx) => `
     <tr>
+      <td class="td-cod">${imo.codigoFonte || '—'}</td>
       <td class="td-nome">${imo.unidade || '—'}</td>
       <td>${imo.empreendimento || '—'}</td>
       <td>
@@ -715,7 +767,7 @@ function renderListaRC(lista) {
     const codAttr = (imo.idImovel || '').replace(/'/g, "\\'");
     return `
     <tr>
-      <td class="td-cod">${imo.idImovel || '—'}</td>
+      <td class="td-cod">${imo.idImovel || '—'}${imo.codigoFonte ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">Cód. construtora: ${imo.codigoFonte}</div>` : ''}</td>
       <td class="td-nome">${imo.unidade || '—'}</td>
       <td>${imo.empreendimento || '—'}</td>
       <td>${imo.tipo ? `<span class="badge badge-blue">${imo.tipo}</span>` : '<span class="badge badge-muted">Indefinido</span>'}</td>
