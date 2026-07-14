@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 7) — Status de revenda-construtora agora pesa no score de matches
+
+O status de triagem (parte 6 de hoje) passa a influenciar diretamente a pontuação de match, como
+pedido: quanto mais avançado o estágio, maior o bônus, `IMPORTADA` sem bônus nenhum (nível mais
+baixo) até `OPORTUNIDADE` com o bônus máximo (nível mais alto).
+
+**Fix/feature**: nova função `scoreStatusRC_(statusRC)`, com tabela de pontos
+`PONTOS_STATUS_REVENDA_CONSTRUTORA = { IMPORTADA:0, VALIDA:3, POTENCIAL:6, OPORTUNIDADE:10 }` —
+escala parecida com os outros sub-scores existentes (bairro chega a 15, padrão a 10), pra ser um
+empurrão real sem dominar tipo/preço, que continuam os fatores principais. `calcularMatch_()` soma
+esse bônus ao total (antes do cap em 100) e expõe no `detalheMatch` (ex: `statusRC:6`), mesmo padrão
+de tipo/preco/quartos/bairro/padrao já expostos ali. `revendaConstrutoraParaImovel_()` agora repassa
+`statusRC: row.status || ''` no objeto de produto usado pelo motor de matching.
+
+Produtos de outras origens (REVENDA normal, CONSTRUTORA-APARTAMENTOS, LANCAMENTOS) não têm esse
+campo — `imovel.statusRC` vem `undefined`, `scoreStatusRC_` retorna 0, zero efeito nesses matches.
+Imóvel de revenda-construtora com status vazio (legado, antes do campo existir) também pontua 0 —
+mesmo efeito de estar em `IMPORTADA`, sem precisar de nenhum tratamento especial extra.
+
+Testado via smoke test em Node: mesmo imóvel/cliente, variando só o status — score sobe
+75→78→81→85 conforme Importada→Válida→Potencial→Oportunidade; imóvel sem `statusRC` (outra origem)
+mantém score idêntico ao caso Importada/vazio, confirmando que não há efeito colateral.
+
+⚠️ Precisa reimplantar o Apps Script (mudança no backend, `code.txt`). Depois de reimplantado, rodar
+"↻ Atualizar" pra recalcular o `MATCHES` com a pontuação nova.
+
 ## 2026-07-14 (parte 6) — Status de triagem pra imóveis de revenda de construtoras
 
 Novo campo `status` em `REVENDAS_CONSTRUTORAS` (14ª→15ª coluna, apêndice no

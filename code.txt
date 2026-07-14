@@ -1814,6 +1814,21 @@ function scorePadrao_(pCli, pImo) {
   return melhor;
 }
 
+// ── Score de status de triagem (só revendas de construtoras) ─────────
+//
+// Bônus adicional no match pro estágio de triagem do imóvel de revenda de
+// construtora (ver STATUS_REVENDA_CONSTRUTORA_VALIDOS) — IMPORTADA (recém
+// captado, ainda não revisado) não ganha bônus nenhum; VALIDA/POTENCIAL/
+// OPORTUNIDADE ganham cada vez mais, refletindo que um imóvel já visitado e
+// confirmado como bom negócio deve aparecer na frente de um lote ainda cru.
+// Produtos de outras origens (REVENDA normal, CONSTRUTORA-APARTAMENTOS,
+// LANCAMENTOS) não têm esse campo — imovel.statusRC vem vazio e a função
+// retorna 0, sem afetar o score deles.
+var PONTOS_STATUS_REVENDA_CONSTRUTORA = { 'IMPORTADA': 0, 'VALIDA': 3, 'POTENCIAL': 6, 'OPORTUNIDADE': 10 };
+function scoreStatusRC_(statusRC) {
+  return PONTOS_STATUS_REVENDA_CONSTRUTORA[String(statusRC || '').toUpperCase()] || 0;
+}
+
 // ── Cálculo de match ──────────────────────────────────────────
 
 function calcularMatch_(contato, imovel) {
@@ -1835,10 +1850,11 @@ function calcularMatch_(contato, imovel) {
     return { score: 0, detalhes: 'tipo incompatível' };
   }
 
-  var ptPreco   = scorePreco_(valorImo, contato.precoLimite, contato.margem_preco);
-  var ptQuartos = scoreQuartos_(textoFull, imovel.quartos, contato.quartos);
-  var ptBairro  = scoreBairro_(contato.bairroInteresse, imovel.bairro, imovel.cidade);
-  var ptPadrao  = scorePadrao_(contato.padrao, imovel.padrao);
+  var ptPreco    = scorePreco_(valorImo, contato.precoLimite, contato.margem_preco);
+  var ptQuartos  = scoreQuartos_(textoFull, imovel.quartos, contato.quartos);
+  var ptBairro   = scoreBairro_(contato.bairroInteresse, imovel.bairro, imovel.cidade);
+  var ptPadrao   = scorePadrao_(contato.padrao, imovel.padrao);
+  var ptStatusRC = scoreStatusRC_(imovel.statusRC);
 
   var bonus = 0;
   var t  = norm_(textoFull);
@@ -1854,15 +1870,16 @@ function calcularMatch_(contato, imovel) {
   // margem de 30% existir). O valor de 0-100 continua exposto no detalheMatch.
   var ptPrecoContrib = ptPreco * 0.3;
 
-  var total = ptTipo + ptPrecoContrib + ptQuartos + ptBairro + ptPadrao + bonus;
+  var total = ptTipo + ptPrecoContrib + ptQuartos + ptBairro + ptPadrao + ptStatusRC + bonus;
 
   var det = [];
-  if (ptTipo    > 0) det.push('tipo:'    + ptTipo);
-  if (ptPreco   > 0) det.push('preco:'   + ptPreco);
-  if (ptQuartos > 0) det.push('quartos:' + ptQuartos);
-  if (ptBairro  > 0) det.push('bairro:'  + ptBairro);
-  if (ptPadrao  > 0) det.push('padrao:'  + ptPadrao);
-  if (bonus     > 0) det.push('bonus:'   + bonus);
+  if (ptTipo     > 0) det.push('tipo:'     + ptTipo);
+  if (ptPreco    > 0) det.push('preco:'    + ptPreco);
+  if (ptQuartos  > 0) det.push('quartos:'  + ptQuartos);
+  if (ptBairro   > 0) det.push('bairro:'   + ptBairro);
+  if (ptPadrao   > 0) det.push('padrao:'   + ptPadrao);
+  if (ptStatusRC > 0) det.push('statusRC:' + ptStatusRC);
+  if (bonus      > 0) det.push('bonus:'    + bonus);
 
   return { score: Math.round(Math.min(total, 100)), detalhes: det.join(' | ') };
 }
@@ -3310,6 +3327,7 @@ function revendaConstrutoraParaImovel_(row) {
     foto:         '',
     urlSite:      '',
     construtora:  row.construtora  || '',
+    statusRC:     row.status       || '',
     dataEntrega:  '',
     fonte:        'REVENDA_CONSTRUTORA'
   };
