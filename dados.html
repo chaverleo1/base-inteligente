@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dados — BASE INTELIGENTE</title>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+:root {
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2335;--border:#2a3050;
+  --accent:#4f7cff;--accent2:#00d4aa;--text:#e8ecf4;--text2:#8892aa;
+  --text3:#4a5470;--danger:#ff5a5a;--success:#00d4aa;--radius:12px;--radius-sm:8px;
+  --hot:#ff5a5a;--warm:#f5a623;--cold:#4f7cff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;min-height:100vh}
+a{text-decoration:none;color:inherit}
+
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-20px);padding:12px 24px;
+       border-radius:99px;font-weight:600;font-size:14px;opacity:0;transition:all .3s;z-index:9999;white-space:nowrap}
+.toast.ok{background:var(--accent2);color:#0f1117}
+.toast.erro{background:var(--danger);color:#fff}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 24px;
+        display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--accent);letter-spacing:-0.3px;flex-shrink:0}
+.logo span{color:var(--text2);font-weight:400}
+.nav-tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px;
+          overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;min-width:0}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{padding:6px 16px;border-radius:6px;border:none;background:transparent;color:var(--text2);
+          font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;
+          text-decoration:none;display:inline-block;flex-shrink:0}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{background:var(--accent);color:#fff}
+.refresh-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);
+              padding:6px 14px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;flex-shrink:0}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+@media(max-width:640px){
+  .header{padding:12px 14px;gap:8px}
+  .logo{font-size:14px}
+  .nav-tab{padding:6px 11px;font-size:12px}
+}
+
+.page{max-width:1100px;margin:0 auto;padding:28px 24px 60px}
+.dashboard-footer{text-align:center;color:var(--text3);font-size:12px;padding:24px 0 8px}
+.section-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;
+                color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;
+                display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.cards-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:32px}
+@media(max-width:420px){.cards-row{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px}
+.card-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;padding-right:56px}
+.card-value{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;color:var(--text);line-height:1}
+.card-sub{font-size:12px;color:var(--text3);margin-top:6px}
+.card-value.hot{color:var(--hot)}
+.card-value.warm{color:var(--warm)}
+.card-value.cold{color:var(--cold)}
+.card-value.green{color:var(--accent2)}
+
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+@media(max-width:700px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.chart-wrap{position:relative;height:220px}
+
+.loading{text-align:center;padding:48px;color:var(--text3);font-size:14px}
+.dot-anim::after{content:'...';animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%,20%{content:'.'}40%{content:'..'}60%,100%{content:'...'}}
+
+.insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+@media(max-width:800px){.insight-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.insight-grid{grid-template-columns:1fr}}
+.insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+              padding:18px 20px;border-left:3px solid var(--ic,var(--accent));position:relative;overflow:hidden}
+.insight-card::before{content:'';position:absolute;inset:0;background:var(--ic,var(--accent));opacity:.04;pointer-events:none}
+.insight-icon{font-size:18px;margin-bottom:10px;display:block}
+.insight-num{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;
+             color:var(--ic,var(--accent));line-height:1;margin-bottom:6px}
+.insight-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.insight-action{font-size:11px;color:var(--text3);line-height:1.5;padding-top:8px;
+                border-top:1px solid var(--border);margin-top:8px}
+.insight-ver-num{cursor:pointer;text-decoration:underline dotted;text-underline-offset:4px}
+.insight-ver-num:hover{opacity:.75}
+.insight-ver-btn{cursor:pointer;color:var(--ic,var(--accent));font-weight:700;margin-left:8px;white-space:nowrap}
+.insight-ver-btn:hover{opacity:.75}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="contatos.html" class="nav-tab">Contatos</a>
+    <a href="dashboard.html" class="nav-tab">Dashboard</a>
+    <a href="dados.html" class="nav-tab active">Dados</a>
+    <a href="busca.html" class="nav-tab">Busca Aberta</a>
+    <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <a href="revendas-construtoras.html" class="nav-tab">Revendas-Construtoras</a>
+    <a href="dashboard.html?secao=baseimob" class="nav-tab">BaseImob</a>
+    <a href="leads-imobzi.html" class="nav-tab">Leads Imobzi</a>
+    <a href="dashboard.html?secao=adm" class="nav-tab">ADM</a>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+    <button class="refresh-btn" onclick="sair()"
+      style="border-color:transparent;color:var(--text3)"
+      onmouseover="this.style.borderColor='#ff5a5a';this.style.color='#ff5a5a'"
+      onmouseout="this.style.borderColor='transparent';this.style.color='var(--text3)'">Sair</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="section-title">Composição da base de clientes</div>
+  <div class="cards-row" id="cardsTemperatura" style="margin-bottom:16px">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Por segmento</div>
+      <div class="chart-wrap"><canvas id="chartSegmento"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Por padrão</div>
+      <div class="chart-wrap"><canvas id="chartPadrao"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-title">Portfólio de revendas</div>
+  <div class="cards-row" id="cardsRevenda">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+  </div>
+  <div class="charts-row" style="margin-bottom:32px">
+    <div class="chart-card">
+      <div class="chart-title">Imóveis por tipo</div>
+      <div class="chart-wrap"><canvas id="chartTipo"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Imóveis por faixa de preço</div>
+      <div class="chart-wrap"><canvas id="chartFaixa"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-title">🚀 Lançamentos</div>
+  <div class="cards-row" id="cardsLancamentos">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+  </div>
+  <div class="charts-row" style="margin-bottom:32px">
+    <div class="chart-card">
+      <div class="chart-title">Por status</div>
+      <div class="chart-wrap"><canvas id="chartLancStatus"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Por padrão</div>
+      <div class="chart-wrap"><canvas id="chartLancPadrao"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-title">💡 Insights</div>
+  <div class="insight-grid" id="insightGrid">
+    <div class="loading dot-anim" style="grid-column:1/-1">Calculando insights</div>
+  </div>
+
+  <div class="dashboard-footer" id="dashboardFooter"></div>
+
+</div>
+
+<script>
+const SESS_KEY  = 'bi_session';
+const TOKEN_KEY = 'bi_session_token';
+function tokenSessao() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { window.location.href = 'index.html'; return true; }
+  return false;
+}
+function showToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + (tipo || 'ok');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+function sair() {
+  sessionStorage.removeItem(SESS_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  window.location.href = 'index.html';
+}
+(function init() {
+  if (sessionStorage.getItem(SESS_KEY) !== 'ok') { window.location.href = 'index.html'; }
+})();
+
+let chartSeg = null, chartPad = null;
+let chartTipo = null, chartFaixa = null;
+let chartLancStatus = null, chartLancPadrao = null;
+let _dashData = null;
+
+async function carregarDados() {
+  try {
+    const res  = await fetch(WEBHOOK_URL + '?acao=dashboard&token=' + encodeURIComponent(tokenSessao()));
+    const json = await res.json();
+    if (trataNaoAutenticado(json)) return;
+    renderDados(json);
+  } catch(err) {
+    document.getElementById('cardsTemperatura').innerHTML =
+      `<div style="grid-column:1/-1;color:var(--danger);padding:16px">Erro ao carregar dados: ${err.message}</div>`;
+  }
+  carregarLancamentosDash();
+  carregarInsightsExtended();
+}
+
+function renderDados(json) {
+  const quentes = json.quentes || [];
+  const mornos  = json.mornos  || [];
+  const frios   = json.frios   || [];
+
+  window._insightDetails = window._insightDetails || {};
+  window._insightDetails['cardQuentes'] = {title:'Clientes Quentes (score ≥ 80)', icon:'🔴', color:'#ff5a5a', type:'clientes', items:quentes};
+  window._insightDetails['cardMornos']  = {title:'Clientes Mornos (score 70–79)', icon:'🟡', color:'#f5a623', type:'clientes', items:mornos};
+  window._insightDetails['cardFrios']   = {title:'Clientes Frios (score 60–69)',  icon:'🔵', color:'#4f7cff', type:'clientes', items:frios};
+
+  const verBtn_ = (id) =>
+    `<span onclick="verInsight('${id}')" style="cursor:pointer;position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+       color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+       border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</span>`;
+
+  document.getElementById('cardsTemperatura').innerHTML = `
+    <div class="card" style="position:relative">
+      <div class="card-label">🔴 Quentes (score ≥80)</div>
+      <div class="card-value hot">${quentes.length}</div>
+      <div class="card-sub">prioridade máxima</div>
+      ${verBtn_('cardQuentes')}
+    </div>
+    <div class="card" style="position:relative">
+      <div class="card-label">🟡 Mornos (70–79)</div>
+      <div class="card-value warm">${mornos.length}</div>
+      <div class="card-sub">potencial de conversão</div>
+      ${verBtn_('cardMornos')}
+    </div>
+    <div class="card" style="position:relative">
+      <div class="card-label">🔵 Frios (60–69)</div>
+      <div class="card-value cold">${frios.length}</div>
+      <div class="card-sub">nurturing / aguardar</div>
+      ${verBtn_('cardFrios')}
+    </div>`;
+
+  const pr       = json.produtos || {};
+  const porTipo  = pr.porTipo  || {};
+  const porFaixa = pr.porFaixa || {};
+  document.getElementById('cardsRevenda').innerHTML = `
+    <div class="card">
+      <div class="card-label">Total de imóveis</div>
+      <div class="card-value green">${pr.total||0}</div>
+      <div class="card-sub">disponíveis para venda</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Até R$ 300k</div>
+      <div class="card-value cold">${porFaixa['Ate 300k']||0}</div>
+      <div class="card-sub">faixa popular</div>
+    </div>
+    <div class="card">
+      <div class="card-label">R$ 300k – 700k</div>
+      <div class="card-value" style="color:var(--accent2)">${porFaixa['300k-700k']||0}</div>
+      <div class="card-sub">faixa média</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Acima de R$ 700k</div>
+      <div class="card-value warm">${(porFaixa['700k-1.5M']||0)+(porFaixa['Acima 1.5M']||0)}</div>
+      <div class="card-sub">alto e luxo</div>
+    </div>`;
+
+  renderGrafico('chartTipo',  chartTipo,  Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).slice(0,8),
+                c => { chartTipo  = c; }, 'imóveis');
+  renderGrafico('chartFaixa', chartFaixa, Object.entries(porFaixa),
+                c => { chartFaixa = c; }, 'imóveis');
+  renderGrafico('chartSegmento', chartSeg,
+                Object.entries(json.segmentos||{}).sort((a,b)=>b[1]-a[1]),
+                c => { chartSeg = c; }, 'clientes');
+  renderGrafico('chartPadrao', chartPad,
+                Object.entries(json.padroes||{}).sort((a,b)=>b[1]-a[1]),
+                c => { chartPad = c; }, 'clientes');
+
+  const agora = new Date();
+  document.getElementById('dashboardFooter').textContent =
+    'Última atualização: ' + agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
+
+  _dashData = json;
+  renderInsights(json, null);
+}
+
+async function carregarLancamentosDash() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    const lista = data.lancamentos || [];
+
+    const empIds = new Set(lista.map(l => l.idLancamento).filter(Boolean));
+    const total  = lista.length;
+
+    const precos = lista.map(l => {
+      const v = (l.precoMedio || l.preco || '').toString().replace(/[^\d]/g, '');
+      return v ? parseInt(v) : 0;
+    }).filter(p => p > 0);
+    const ticketMedio = precos.length ? Math.round(precos.reduce((a,b) => a+b,0) / precos.length) : 0;
+
+    const porStatus = {}, porPadrao = {};
+    lista.forEach(l => {
+      const s = l.status || 'Não informado';
+      const p = l.padrao || 'Não informado';
+      porStatus[s] = (porStatus[s]||0) + 1;
+      porPadrao[p] = (porPadrao[p]||0) + 1;
+    });
+
+    const fmtPreco = v => v >= 1000000
+      ? 'R$ ' + (v/1000000).toFixed(1).replace('.',',') + 'M'
+      : 'R$ ' + Math.round(v/1000) + 'k';
+
+    const statusTop = Object.entries(porStatus).sort((a,b)=>b[1]-a[1]);
+    const s1 = statusTop[0] || ['—', 0];
+    const s2 = statusTop[1] || ['—', 0];
+
+    document.getElementById('cardsLancamentos').innerHTML = `
+      <div class="card" style="position:relative">
+        <div class="card-label">Empreendimentos</div>
+        <div class="card-value" style="color:var(--accent2)">${empIds.size}</div>
+        <div class="card-sub">${total} tipologias cadastradas</div>
+        <a href="lancamentos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+           color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+           border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+      </div>
+      <div class="card">
+        <div class="card-label">Ticket médio</div>
+        <div class="card-value" style="color:var(--accent)">${ticketMedio ? fmtPreco(ticketMedio) : '—'}</div>
+        <div class="card-sub">${precos.length} com preço informado</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s1[0]}</div>
+        <div class="card-value warm">${s1[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s2[0]}</div>
+        <div class="card-value cold">${s2[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>`;
+
+    renderGrafico('chartLancStatus', chartLancStatus,
+      Object.entries(porStatus).sort((a,b)=>b[1]-a[1]),
+      c => { chartLancStatus = c; }, 'tipologias');
+    renderGrafico('chartLancPadrao', chartLancPadrao,
+      Object.entries(porPadrao).sort((a,b)=>b[1]-a[1]),
+      c => { chartLancPadrao = c; }, 'tipologias');
+
+    if (_dashData) renderInsights(_dashData, lista);
+
+  } catch(e) {
+    document.getElementById('cardsLancamentos').innerHTML =
+      '<div style="color:var(--text3);font-size:13px;padding:16px">Erro ao carregar lançamentos.</div>';
+  }
+}
+
+function renderInsights(json, lancamentos) {
+  window._insightDetails = window._insightDetails || {};
+  const quentes = json.quentes || [];
+  const mornos  = json.mornos  || [];
+  const frios   = json.frios   || [];
+  const todos   = [...quentes, ...mornos, ...frios];
+  const ativos  = [...quentes, ...mornos];
+
+  const listPipeline  = quentes.filter(c => (c.urg||'').match(/Imediata/i) && c.mc80 > 0);
+  const listMornos    = mornos.filter(c => c.mc80 > 0);
+  const listSemMatch  = todos.filter(c => c.mc80 === 0 && c.mc70 === 0);
+  const listQuebrados = ativos.filter(c => !c.seg || !c.pad);
+
+  const padQ = {};
+  quentes.forEach(c => { const p = c.pad||'Não def.'; padQ[p] = (padQ[p]||0)+1; });
+  const topPad     = Object.entries(padQ).sort((a,b)=>b[1]-a[1])[0] || ['—',0];
+  const listTopPad = quentes.filter(c => (c.pad||'Não def.') === topPad[0]);
+  const pctTopPad  = quentes.length ? Math.round(topPad[1]/quentes.length*100) : 0;
+
+  let listLancExp = null, listLancSem = null;
+  if (lancamentos !== null) {
+    listLancExp = lancamentos.filter(l => {
+      if (!l.previsaoEntrega) return false;
+      const diff = (new Date(l.previsaoEntrega) - new Date()) / 86400000;
+      return diff >= 0 && diff <= 180;
+    });
+    const demPads = new Set(ativos.map(c=>(c.pad||'').toLowerCase()).filter(Boolean));
+    const lancPads = [...new Set(lancamentos.map(l=>(l.padrao||'').toLowerCase()).filter(Boolean))];
+    listLancSem = lancPads.filter(p => !demPads.has(p)).map(p => ({padrao: p}));
+  }
+
+  const pctSemMat = todos.length ? Math.round(listSemMatch.length / todos.length * 100) : 0;
+
+  window._insightDetails['insPipeline']  = {title:'Pipeline de fechamento hoje', icon:'🎯', color:'#00d4aa', type:'clientes', items:listPipeline};
+  window._insightDetails['insMornos']    = {title:'Mornos com match forte', icon:'🔑', color:'#f5a623', type:'clientes', items:listMornos};
+  window._insightDetails['insSemMatch']  = {title:'Base sem cobertura de estoque', icon:'📉', color:'#ff5a5a', type:'clientes', items:listSemMatch};
+  window._insightDetails['insQuebrados'] = {title:'Perfis incompletos (sem tipo/padrão)', icon:'🧩', color:'#a78bfa', type:'clientes', items:listQuebrados};
+  window._insightDetails['insTopPad']    = {title:`Pipeline quente — padrão "${topPad[0]}"`, icon:'📊', color:'#4f7cff', type:'clientes', items:listTopPad};
+  if (listLancExp) window._insightDetails['insLancExp'] = {title:'Lançamentos com entrega ≤ 180 dias', icon:'⏱️', color:'#f5a623', type:'lancamentos', items:listLancExp};
+  if (listLancSem) window._insightDetails['insLancSem'] = {title:'Padrões em lançamentos sem demanda', icon:'👻', color:'#ff5a5a', type:'pads', items:listLancSem};
+
+  function ic(color, icon, num, label, action, detId) {
+    const d = detId && window._insightDetails[detId];
+    const hasItems = d && d.items && d.items.length > 0;
+    const numHtml = hasItems
+      ? `<div class="insight-num insight-ver-num" onclick="verInsight('${detId}')">${num}</div>`
+      : `<div class="insight-num">${num}</div>`;
+    const verBtn = hasItems
+      ? ` <span class="insight-ver-btn" onclick="verInsight('${detId}')">Ver →</span>`
+      : '';
+    return `<div class="insight-card" style="--ic:${color}">`
+      + `<span class="insight-icon">${icon}</span>`
+      + numHtml
+      + `<div class="insight-label">${label}</div>`
+      + `<div class="insight-action">→ ${action}${verBtn}</div></div>`;
+  }
+
+  const pendente = (id, icon, label) =>
+    `<div class="insight-card insight-pending" id="${id}" style="--ic:#4a5470">`
+    +`<span class="insight-icon">${icon}</span>`
+    +`<div class="insight-num" style="font-size:20px;color:var(--text3)">—</div>`
+    +`<div class="insight-label">${label}</div>`
+    +`<div class="insight-action" style="color:var(--text3)">→ Aguardando dados...</div></div>`;
+
+  const lancExp    = listLancExp ? listLancExp.length  : null;
+  const lancSemDem = listLancSem ? listLancSem.length  : null;
+
+  const listUrgSemMatch   = todos.filter(c => (c.urg||'').match(/Imediata|Curto/i) && c.mc80 === 0 && c.mc70 === 0);
+  const listQuentesSemMat = quentes.filter(c => c.mc80 === 0 && c.mc70 === 0);
+  const listFriosReativos = frios.filter(c => (parseInt(c.score)||0) >= 50);
+  const listQuentesComMat = quentes.filter(c => c.mc80 > 0);
+  const pctComMatch       = quentes.length ? Math.round(listQuentesComMat.length / quentes.length * 100) : 0;
+  const segs              = Object.entries(json.segmentos || {}).sort((a,b) => b[1]-a[1]);
+  const topSeg            = segs[0] || ['—', 0];
+  let   listAlinhados     = null;
+  if (lancamentos) {
+    const padrLanc = new Set(lancamentos.map(l => (l.padrao||'').toLowerCase()).filter(Boolean));
+    listAlinhados  = ativos.filter(c => padrLanc.has((c.pad||'').toLowerCase()));
+  }
+
+  window._insightDetails['insUrgSemMatch']   = {title:'Urgentes sem produto disponível', icon:'⏱️', color:'#ff5a5a', type:'clientes', items:listUrgSemMatch};
+  window._insightDetails['insQuentesSemMat'] = {title:'Clientes quentes sem match no estoque', icon:'🔥', color:'#f5a623', type:'clientes', items:listQuentesSemMat};
+  window._insightDetails['insFriosReativos'] = {title:'Frios com potencial de reativação', icon:'💤', color:'#4f7cff', type:'clientes', items:listFriosReativos};
+  window._insightDetails['insQuentesComMat'] = {title:'Clientes quentes com match forte', icon:'🎯', color:'#00d4aa', type:'clientes', items:listQuentesComMat};
+  if (listAlinhados) window._insightDetails['insAlinhados'] = {title:'Clientes alinhados ao perfil dos lançamentos', icon:'🚀', color:'#00d4aa', type:'clientes', items:listAlinhados};
+
+  const divider = txt =>
+    `<div style="grid-column:1/-1;padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px;
+                 font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase">${txt}</div>`;
+
+  document.getElementById('insightGrid').innerHTML =
+    ic('#00d4aa','🎯', listPipeline.length,
+       'clientes para fechar hoje — urgência imediata + match forte',
+       listPipeline.length > 0 ? 'Ligar agora — comprador ativo com produto compatível' : 'Nenhum no momento — acompanhar urgentes',
+       'insPipeline') +
+
+    ic('#f5a623','🔑', listMornos.length,
+       'clientes mornos com match ≥80 aguardando apresentação',
+       listMornos.length > 0 ? 'Uma reunião pode fechar — não deixe esfriar' : 'Ampliar inventário para os mornos',
+       'insMornos') +
+
+    ic('#ff5a5a','📉', pctSemMat+'%',
+       'da base inteira nunca será atendida com o estoque atual',
+       pctSemMat > 50 ? 'Gap crítico — esse é o teto real de conversão' : 'Cobertura razoável — manter estoque ativo',
+       'insSemMatch') +
+
+    ic('#a78bfa','🧩', listQuebrados.length,
+       'clientes ativos sem tipo ou padrão definido',
+       listQuebrados.length > 0 ? 'Cadastro incompleto = matching impossível. Qualificar agora' : 'Todos os ativos estão bem qualificados',
+       'insQuebrados') +
+
+    ic('#4f7cff','📊', pctTopPad+'%',
+       `dos clientes quentes buscam "${topPad[0]}" — padrão dominante`,
+       'Concentre captação de imóveis nesse padrão. Pipeline concentrado aqui',
+       'insTopPad') +
+
+    (lancamentos !== null
+      ? ic('#f5a623','⏱️', lancExp??'—',
+           'tipologias em lançamentos com entrega em até 180 dias',
+           (lancExp??0) > 0 ? 'Janela de vendas fecha em breve — cruzar com clientes compatíveis' : 'Nenhum com entrega próxima no momento',
+           'insLancExp')
+      : pendente('insLancExp','⏱️','Lançamentos com entrega próxima')) +
+
+    (lancamentos !== null
+      ? ic('#ff5a5a','👻', lancSemDem??'—',
+           'padrões nos lançamentos sem clientes cadastrados para o perfil',
+           (lancSemDem??0) > 0 ? 'Captar leads para esses perfis ou reavaliar o produto' : 'Todos os lançamentos têm demanda cadastrada',
+           'insLancSem')
+      : pendente('insLancSem','👻','Lançamentos sem demanda cadastrada')) +
+
+    pendente('insDormentes','😴','clientes sem contato há mais de 90 dias') +
+    pendente('insEsfriando','🥶','cadastros entre 15 e 30 dias sem atualização') +
+    pendente('insBairro',   '📍','bairro mais procurado pelos clientes') +
+    pendente('insCanal',    '📡','canal de origem que traz clientes de maior valor') +
+    pendente('insLeads',    '🎪','leads BaseImob pendentes de qualificação') +
+
+    divider('Insights v1') +
+
+    ic('#ff5a5a','⏱️', listUrgSemMatch.length,
+       'urgentes sem nenhum match — perda de venda iminente',
+       listUrgSemMatch.length > 0 ? 'Buscar ativamente imóveis para esses perfis agora' : 'Todos os urgentes têm pelo menos um match',
+       'insUrgSemMatch') +
+
+    ic('#f5a623','🔥', listQuentesSemMat.length,
+       'clientes quentes aguardam estoque — pipeline parado',
+       listQuentesSemMat.length > 0 ? 'Ampliar inventário ou revisar critérios de matching' : 'Todos os quentes têm match disponível',
+       'insQuentesSemMat') +
+
+    ic('#4f7cff','💤', listFriosReativos.length,
+       'frios com score ≥ 50 prontos para reativar',
+       listFriosReativos.length > 0 ? 'Retomar contato com lançamentos e novas ofertas' : 'Nenhum frio com score relevante no momento',
+       'insFriosReativos') +
+
+    ic('#00d4aa','🎯', pctComMatch+'%',
+       'dos clientes quentes têm match forte (≥80)',
+       pctComMatch < 50 ? 'Abaixo de 50% — gap crítico no inventário' : 'Boa cobertura — manter estoque atualizado',
+       'insQuentesComMat') +
+
+    ic('#a78bfa','🏆', topSeg[1],
+       `clientes buscam "${topSeg[0]}" — segmento mais demandado`,
+       'Priorizar captação desse segmento no inventário') +
+
+    (lancamentos !== null
+      ? ic('#00d4aa','🚀', listAlinhados ? listAlinhados.length : '—',
+           'clientes ativos alinhados com o perfil dos lançamentos',
+           listAlinhados && listAlinhados.length > 0 ? 'Apresentar tabelas de preço e condições de pagamento' : 'Nenhum cliente compatível com os lançamentos atuais',
+           'insAlinhados')
+      : ic('#00d4aa','🚀','—','clientes alinhados com o perfil dos lançamentos','Carregando lançamentos...'));
+}
+
+async function carregarInsightsExtended() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=adm_dados_insights&token=' + encodeURIComponent(tokenSessao()));
+    const data = await resp.json();
+    if (data.status === 'nao_autenticado') return;
+    atualizarInsightsExtended(data);
+  } catch(e) { /* silent */ }
+}
+
+function atualizarInsightsExtended(data) {
+  window._insightDetails = window._insightDetails || {};
+  const topB  = (data.topBairros||[])[0] || {bairro:'—', n:0};
+  const canal = data.canalTop || {nome:'—', media:0};
+
+  window._insightDetails['insAcoes']     = {title:'Ações planejadas (hoje ou atrasadas)', icon:'📅', color:'#00d4aa', type:'acoes', items:data.acoesPlanejadas||[]};
+  window._insightDetails['insDormentes'] = {title:'Clientes dormentes (>90 dias sem contato)', icon:'😴', color:'#ff5a5a', type:'clientes', items:data.dormentes||[]};
+  window._insightDetails['insEsfriando'] = {title:'Cadastros esfriando (15–30 dias sem atualização)', icon:'🥶', color:'#f5a623', type:'clientes', items:data.esfriandoList||[]};
+  window._insightDetails['insBairro']    = {title:`Clientes buscando "${topB.bairro}"`, icon:'📍', color:'#4f7cff', type:'clientes', items:data.bairroTopClientes||[]};
+  window._insightDetails['insCanal']     = {title:`Clientes via "${canal.nome}" — canal top`, icon:'📡', color:'#00d4aa', type:'clientes', items:data.canalTopClientes||[]};
+  window._insightDetails['insLeads']     = {title:'Leads BaseImob pendentes', icon:'🎪', color:'#a78bfa', type:'leads', items:data.leadsList||[]};
+
+  function upd(id, color, icon, num, label, action) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.setProperty('--ic', color);
+    el.classList.remove('insight-pending');
+    const d = window._insightDetails[id];
+    const hasItems = d && d.items && d.items.length > 0;
+    const numHtml = hasItems
+      ? `<div class="insight-num insight-ver-num" onclick="verInsight('${id}')">${num}</div>`
+      : `<div class="insight-num">${num}</div>`;
+    const verBtn = hasItems
+      ? ` <span class="insight-ver-btn" onclick="verInsight('${id}')">Ver →</span>`
+      : '';
+    el.innerHTML = `<span class="insight-icon">${icon}</span>`
+      + numHtml
+      + `<div class="insight-label">${label}</div>`
+      + `<div class="insight-action">→ ${action}${verBtn}</div>`;
+  }
+
+  const dorm     = data.semContato90 || 0;
+  const esfriando = data.esfriando15 || 0;
+  const leads    = data.leadsPendentes || 0;
+  upd('insDormentes','#ff5a5a','😴', dorm,
+    'clientes sem contato há mais de 90 dias',
+    dorm > 0 ? 'Base esquecida. Reativar com oferta segmentada' : 'Todos os clientes foram contactados recentemente');
+  upd('insEsfriando','#f5a623','🥶', esfriando,
+    'cadastros entre 15 e 30 dias sem atualização — score efetivo caindo, ainda dá pra reverter',
+    esfriando > 0 ? 'Revisar e reatualizar o cadastro antes que vire Frio (>30 dias)' : 'Nenhum cadastro na janela de risco agora');
+  upd('insBairro','#4f7cff','📍', topB.n,
+    `clientes buscam "${topB.bairro}" — bairro mais procurado`,
+    'Captar imóveis nesse bairro. Maior concentração de demanda');
+  upd('insCanal','#00d4aa','📡', canal.media > 0 ? canal.media : '—',
+    `score médio via "${canal.nome}" — canal mais lucrativo`,
+    canal.media > 0 ? `Investir mais nesse canal. Traz clientes com score ${canal.media}` : 'Dados insuficientes para análise');
+  upd('insLeads','#a78bfa','🎪', leads,
+    `leads BaseImob ainda não qualificados como contatos (${data.leadsTotal||0} total)`,
+    leads > 0 ? 'Leads pagos esquecidos na fila. Qualificar e migrar para base' : 'Todos os leads foram qualificados');
+}
+
+function verInsight(id) {
+  if (!window._insightDetails || !window._insightDetails[id]) return;
+  sessionStorage.setItem('bi_insight_detail', JSON.stringify(window._insightDetails[id]));
+  window.location.href = 'insight-detail.html';
+}
+
+function renderGrafico(canvasId, chartInst, entries, setChart, unidade) {
+  const existing = Chart.getChart(canvasId);
+  if (existing) existing.destroy();
+  else if (chartInst) chartInst.destroy();
+  if (!entries || !entries.length) return;
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const colors = ['#4f7cff','#00d4aa','#f5a623','#ff5a5a','#a78bfa','#34d399','#fb923c','#60a5fa'];
+  const c = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: entries.map(([k])=>k),
+      datasets: [{ data: entries.map(([,v])=>v),
+                   backgroundColor: colors.slice(0, entries.length),
+                   borderRadius:6, borderSkipped:false }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{
+        label: ctx => ` ${ctx.parsed.x} ${unidade||''}`
+      }}},
+      scales:{
+        x:{ grid:{color:'rgba(42,48,80,.6)'}, ticks:{color:'#8892aa'} },
+        y:{ grid:{display:false}, ticks:{color:'#e8ecf4',font:{size:12}} }
+      }
+    }
+  });
+  setChart(c);
+}
+
+document.addEventListener('DOMContentLoaded', carregarDados);
+</script>
+</body>
+</html>

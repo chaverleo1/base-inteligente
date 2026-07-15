@@ -624,6 +624,7 @@
   <div class="nav-tabs">
     <a href="contatos.html" class="nav-tab">Contatos</a>
     <button class="nav-tab active" id="btnTabDash" onclick="mostrarDashboard()">Dashboard</button>
+    <a href="dados.html" class="nav-tab">Dados</a>
     <a href="busca.html" class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
     <a href="revendas-construtoras.html" class="nav-tab">Revendas-Construtoras</a>
@@ -809,61 +810,14 @@
   </div>
   </div><!-- /topFavoritosSection -->
 
-  <!-- GRÁFICOS -->
-  <div class="section-title">Composição da base de clientes</div>
-  <div class="cards-row" id="cardsTemperatura" style="margin-bottom:16px">
-    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
-  </div>
-  <div class="charts-row">
-    <div class="chart-card">
-      <div class="chart-title">Por segmento</div>
-      <div class="chart-wrap"><canvas id="chartSegmento"></canvas></div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+              padding:18px 20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;margin-bottom:4px">📊 Dados analíticos</div>
+      <div style="font-size:12px;color:var(--text3)">Composição de clientes, portfólio de revendas, lançamentos e insights foram movidos para a aba Dados.</div>
     </div>
-    <div class="chart-card">
-      <div class="chart-title">Por padrão</div>
-      <div class="chart-wrap"><canvas id="chartPadrao"></canvas></div>
-    </div>
+    <a href="dados.html" style="padding:8px 18px;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0">Ver Dados →</a>
   </div>
-
-  <!-- PRODUTOS -->
-  <div class="section-title">Portfólio de revendas</div>
-  <div class="cards-row" id="cardsRevenda">
-    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
-  </div>
-  <div class="charts-row" style="margin-bottom:32px">
-    <div class="chart-card">
-      <div class="chart-title">Imóveis por tipo</div>
-      <div class="chart-wrap"><canvas id="chartTipo"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Imóveis por faixa de preço</div>
-      <div class="chart-wrap"><canvas id="chartFaixa"></canvas></div>
-    </div>
-  </div>
-
-  <!-- LANÇAMENTOS -->
-  <div class="section-title">🚀 Lançamentos</div>
-  <div class="cards-row" id="cardsLancamentos">
-    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
-  </div>
-  <div class="charts-row" style="margin-bottom:32px">
-    <div class="chart-card">
-      <div class="chart-title">Por status</div>
-      <div class="chart-wrap"><canvas id="chartLancStatus"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Por padrão</div>
-      <div class="chart-wrap"><canvas id="chartLancPadrao"></canvas></div>
-    </div>
-  </div>
-
-  <!-- INSIGHTS -->
-  <div class="section-title">💡 Insights</div>
-  <div class="insight-grid" id="insightGrid">
-    <div class="loading dot-anim" style="grid-column:1/-1">Calculando insights</div>
-  </div>
-
-  <div class="dashboard-footer" id="dashboardFooter"></div>
 
 </div>
 
@@ -1940,44 +1894,7 @@ async function carregarLancamentosDash() {
     if (vgVal) vgVal.textContent = empIds.size;
     if (vgSub) vgSub.textContent = total + ' tipologias cadastradas';
 
-    document.getElementById('cardsLancamentos').innerHTML = `
-      <div class="card" style="position:relative">
-        <div class="card-label">Empreendimentos</div>
-        <div class="card-value" style="color:var(--accent2)">${empIds.size}</div>
-        <div class="card-sub">${total} tipologias cadastradas</div>
-        <a href="lancamentos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-           color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-           border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
-      </div>
-      <div class="card">
-        <div class="card-label">Ticket médio</div>
-        <div class="card-value" style="color:var(--accent)">${ticketMedio ? fmtPreco(ticketMedio) : '—'}</div>
-        <div class="card-sub">${precos.length} com preço informado</div>
-      </div>
-      <div class="card">
-        <div class="card-label">${s1[0]}</div>
-        <div class="card-value warm">${s1[1]}</div>
-        <div class="card-sub">tipologias</div>
-      </div>
-      <div class="card">
-        <div class="card-label">${s2[0]}</div>
-        <div class="card-value cold">${s2[1]}</div>
-        <div class="card-sub">tipologias</div>
-      </div>`;
-
-    renderGrafico('chartLancStatus', chartLancStatus,
-      Object.entries(porStatus).sort((a,b)=>b[1]-a[1]),
-      c => { chartLancStatus = c; }, 'tipologias');
-    renderGrafico('chartLancPadrao', chartLancPadrao,
-      Object.entries(porPadrao).sort((a,b)=>b[1]-a[1]),
-      c => { chartLancPadrao = c; }, 'tipologias');
-
-    if (_dashData) renderInsights(_dashData, lista);
-
-  } catch(e) {
-    document.getElementById('cardsLancamentos').innerHTML =
-      '<div style="color:var(--text3);font-size:13px;padding:16px">Erro ao carregar lançamentos.</div>';
-  }
+  } catch(e) { /* silent */ }
 }
 
 // Card "Revendas-Construtoras" na Visão Geral — mostra "atuais | novas",
@@ -2016,19 +1933,6 @@ function renderDados(json) {
   const mornos     = json.mornos  || [];
   const frios      = json.frios   || [];
   const prodTotal  = (json.produtos || {}).total || 0;
-
-  // "Ver →" das colunas Quentes/Mornos/Frios reaproveita o mesmo mecanismo
-  // dos cards de Insight (window._insightDetails + verInsight() +
-  // insight-detail.html) em vez de criar 3 páginas novas do zero — já é
-  // exatamente uma página de "listagem de nomes qualificados" genérica.
-  window._insightDetails = window._insightDetails || {};
-  window._insightDetails['cardQuentes'] = {title:'Clientes Quentes (score ≥ 80)', icon:'🔴', color:'#ff5a5a', type:'clientes', items:quentes};
-  window._insightDetails['cardMornos']  = {title:'Clientes Mornos (score 70–79)', icon:'🟡', color:'#f5a623', type:'clientes', items:mornos};
-  window._insightDetails['cardFrios']   = {title:'Clientes Frios (score 60–69)',  icon:'🔵', color:'#4f7cff', type:'clientes', items:frios};
-
-  const verBtn_ = (id) => `<span onclick="verInsight('${id}')" style="cursor:pointer;position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
-     color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-     border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</span>`;
 
   // ── Cards totais
   // Ordem pensada como leitura em 2 blocos lógicos: primeiro o funil de
@@ -2080,78 +1984,10 @@ function renderDados(json) {
       <div class="vg-stat-sub">novos/modificados</div>
     </div>`;
 
-  // ── Cards temperatura (Quentes / Mornos / Frios) — seção Composição
-  document.getElementById('cardsTemperatura').innerHTML = `
-    <div class="card" style="position:relative">
-      <div class="card-label">🔴 Quentes (score ≥80)</div>
-      <div class="card-value hot">${quentes.length}</div>
-      <div class="card-sub">prioridade máxima</div>
-      ${verBtn_('cardQuentes')}
-    </div>
-    <div class="card" style="position:relative">
-      <div class="card-label">🟡 Mornos (70–79)</div>
-      <div class="card-value warm">${mornos.length}</div>
-      <div class="card-sub">potencial de conversão</div>
-      ${verBtn_('cardMornos')}
-    </div>
-    <div class="card" style="position:relative">
-      <div class="card-label">🔵 Frios (60–69)</div>
-      <div class="card-value cold">${frios.length}</div>
-      <div class="card-sub">nurturing / aguardar</div>
-      ${verBtn_('cardFrios')}
-    </div>`;
-
   // ── Matches
   renderMatchesSection(quentes, mornos);
 
-  // ── Cards REVENDA
-  const pr       = json.produtos || {};
-  const porTipo  = pr.porTipo  || {};
-  const porFaixa = pr.porFaixa || {};
-  document.getElementById('cardsRevenda').innerHTML = `
-    <div class="card">
-      <div class="card-label">Total de imóveis</div>
-      <div class="card-value green">${pr.total||0}</div>
-      <div class="card-sub">disponíveis para venda</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Até R$ 300k</div>
-      <div class="card-value cold">${porFaixa['Ate 300k']||0}</div>
-      <div class="card-sub">faixa popular</div>
-    </div>
-    <div class="card">
-      <div class="card-label">R$ 300k – 700k</div>
-      <div class="card-value" style="color:var(--accent2)">${porFaixa['300k-700k']||0}</div>
-      <div class="card-sub">faixa média</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Acima de R$ 700k</div>
-      <div class="card-value warm">${(porFaixa['700k-1.5M']||0)+(porFaixa['Acima 1.5M']||0)}</div>
-      <div class="card-sub">alto e luxo</div>
-    </div>`;
-
-  // ── Gráficos REVENDA (objeto → entries)
-  renderGrafico('chartTipo',  chartTipo,  Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).slice(0,8),
-                c => { chartTipo  = c; }, 'imóveis');
-  renderGrafico('chartFaixa', chartFaixa, Object.entries(porFaixa),
-                c => { chartFaixa = c; }, 'imóveis');
-
-
-  // ── Gráficos clientes (objeto → entries)
-  renderGrafico('chartSegmento', chartSeg,
-                Object.entries(json.segmentos||{}).sort((a,b)=>b[1]-a[1]),
-                c => { chartSeg = c; }, 'clientes');
-  renderGrafico('chartPadrao', chartPad,
-                Object.entries(json.padroes||{}).sort((a,b)=>b[1]-a[1]),
-                c => { chartPad = c; }, 'clientes');
-
-  // ── Rodapé com timestamp da última atualização
-  const agora = new Date();
-  document.getElementById('dashboardFooter').textContent =
-    'Última atualização: ' + agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
-
   _dashData = json;
-  renderInsights(json, null);
 }
 
 function renderInsights(json, lancamentos) {
