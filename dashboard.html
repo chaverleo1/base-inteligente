@@ -147,6 +147,8 @@
   @media(max-width:700px){.tf-layout{grid-template-columns:1fr;grid-template-rows:none}}
   .tf-fav-count{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;color:var(--accent2);line-height:1}
   .tf-fav-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;white-space:nowrap}
+  .no-match-count{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;color:var(--accent);line-height:1}
+  .no-match-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;white-space:nowrap}
   .no-imoveis-col{border-right:1px solid var(--border);display:flex;flex-direction:column;min-width:0;overflow:hidden}
   @media(max-width:700px){.no-imoveis-col{border-right:none;border-bottom:1px solid var(--border)}}
   .no-imoveis-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;font-size:12px;font-weight:600;color:var(--text2)}
@@ -1437,6 +1439,15 @@ function renderNovasOfertas() {
     return !dt || dt >= tresDiasAtras;
   });
 
+  _noOfertasImoveis.sort((a, b) => {
+    const ma = (a._computedMatches || []).length;
+    const mb = (b._computedMatches || []).length;
+    if (mb !== ma) return mb - ma;
+    const sa = a._bestScore || (a._computedMatches && a._computedMatches.length ? Math.max(...a._computedMatches.map(m => m.score)) : 0);
+    const sb = b._bestScore || (b._computedMatches && b._computedMatches.length ? Math.max(...b._computedMatches.map(m => m.score)) : 0);
+    return sb - sa;
+  });
+
   const section = document.getElementById('novasOfertasSection');
   const countEl = document.getElementById('noImoveisCount');
   const listEl  = document.getElementById('noImoveisList');
@@ -1479,10 +1490,10 @@ function renderNovasOfertas() {
         ${bestScore > 0 ? `<span class="mt-score ${scCls}">${bestScore}</span>` : ''}
       </td>
       <td class="mt-valor" style="white-space:nowrap;vertical-align:middle">${fmt_(o.valorVenda)||'—'}</td>
-      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
+      <td style="text-align:center;padding:0 10px;vertical-align:middle">
         ${matches.length > 0
-          ? `<span class="diff-match-badge has-match">🎯 ${matches.length}</span>`
-          : `<span class="diff-match-badge no-match">—</span>`}
+          ? `<div class="no-match-count">🎯 ${matches.length}</div><div class="no-match-label">match${matches.length === 1 ? '' : 'es'}</div>`
+          : `<div class="no-match-count" style="color:var(--text3);font-size:14px">—</div>`}
       </td>
     </tr>`;
   }).join('');
