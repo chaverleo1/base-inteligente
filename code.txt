@@ -495,6 +495,10 @@ function doGet(e) {
       var sync_rd   = props_rd.getProperty('bi_revenda_ultima_sync') || '—';
       var ancoraMs_rd = parseInt(props_rd.getProperty('bi_revenda_ancora_ts') || '0', 10);
       var antesDesde_rd = ancoraMs_rd ? Utilities.formatDate(new Date(ancoraMs_rd), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm') : '—';
+      var imobziLastIso_rd = props_rd.getProperty('IMOBZI_LAST_SYNC') || '';
+      var ultimaSyncImobziLeads_rd = imobziLastIso_rd
+        ? Utilities.formatDate(new Date(imobziLastIso_rd), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm')
+        : '—';
       var ss_rd    = SpreadsheetApp.openById(SHEET_ID);
       var antesObjs_rd  = linhasComoObjetos_(ss_rd.getSheetByName('REVENDA_ANTERIOR'));
       var depoisObjs_rd = linhasComoObjetos_(ss_rd.getSheetByName('REVENDA'));
@@ -579,6 +583,7 @@ function doGet(e) {
 
       return ok({
         ultimaSync: sync_rd,
+        ultimaSyncImobziLeads: ultimaSyncImobziLeads_rd,
         antesDesde: antesDesde_rd,
         totalAntes: antesObjs_rd.length,
         totalDepois: depoisObjs_rd.length,
@@ -587,7 +592,7 @@ function doGet(e) {
         removidos: removidos_rd,
         modificados: modificados_rd
       });
-    } catch(err) { return ok({ultimaSync:'—', antesDesde:'—', totalAntes:0, totalDepois:0, delta:[], adicionados:[], removidos:[], modificados:[]}); }
+    } catch(err) { return ok({ultimaSync:'—', ultimaSyncImobziLeads:'—', antesDesde:'—', totalAntes:0, totalDepois:0, delta:[], adicionados:[], removidos:[], modificados:[]}); }
   }
 
   if (acao === 'pipeline_dados') {
