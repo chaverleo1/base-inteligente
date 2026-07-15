@@ -297,7 +297,7 @@ function doGet(e) {
   }
 
   // ── Módulo Perfil do Vendedor ────────────────────────────────
-  if (acao === 'getPerfilVendedor')           return ok(obterPerfilVendedor_(e.parameter.codigo));
+  if (acao === 'getPerfilVendedor')           return ok(obterPerfilVendedor_(e.parameter.codigo, e.parameter.origemImovel));
   if (acao === 'listarTriangulosOportunidade') return ok(listarTriangulosOportunidade_());
   if (acao === 'listarFacaHoje')              return ok(listarFacaHoje_());
   if (acao === 'listarJanelaAberta')          return ok(listarJanelaAberta_());
@@ -5332,16 +5332,20 @@ function migrarLeadBaseimob_(d) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MÓDULO: PERFIL DO VENDEDOR — Score de Urgência
+// MÓDULO: PERFIL DO VENDEDOR — Score de Urgência (Multi-Categoria v2.0)
+// Categorias: PF | PJ | CONSTRUTORA | CORRETOR
+// Chave: (codigo, origemImovel) — cobre REVENDA e REVENDAS_CONSTRUTORAS
 // ═══════════════════════════════════════════════════════════════
 
+// 14 colunas comuns + camposEspecificos (JSON por categoria) + score/margem/prazo
 var CABECALHO_VENDEDORES_PERFIL = [
-  'codigo','dataCadastro','dataAtualizacao',
-  'origemContato','motivoVenda','motivoVendaObs',
-  'perfilVendedor',
-  'precoAnuncio','reducoes','diasNaMercado',
-  'aceitaFGTS','aceitaPermuta','aceitaFinanciamento','aceitaParcelamento','condicoesObs',
-  'scoreVendedor','margemEstimada','prazoDeclarado'
+  'codigo', 'origemImovel', 'categoriaVendedor',
+  'dataCadastro', 'dataAtualizacao',
+  'origemContato',
+  'precoAnuncio', 'reducoes', 'diasNaMercado',
+  'aceitaFGTS', 'aceitaPermuta', 'aceitaFinanciamento', 'aceitaParcelamento', 'condicoesObs',
+  'camposEspecificos',
+  'scoreVendedor', 'margemEstimada', 'prazoDeclarado'
 ];
 
 function migrarCabecalhoVendedoresPerfil() {
@@ -5353,7 +5357,7 @@ function migrarCabecalhoVendedoresPerfil() {
     aba.getRange(1, 1, 1, CABECALHO_VENDEDORES_PERFIL.length)
        .setFontWeight('bold').setBackground('#1a1a2e').setFontColor('#ffffff');
     aba.setFrozenRows(1);
-    Logger.log('Aba VENDEDORES_PERFIL criada com ' + CABECALHO_VENDEDORES_PERFIL.length + ' colunas.');
+    Logger.log('Aba VENDEDORES_PERFIL v2.0 criada com ' + CABECALHO_VENDEDORES_PERFIL.length + ' colunas.');
     return;
   }
   var cabAtual = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(String);
@@ -5365,64 +5369,148 @@ function migrarCabecalhoVendedoresPerfil() {
   });
 }
 
-// Função pura (sem I/O). Retorna {scoreVendedor, margemEstimada, urgenciaNivel}
-function calcularScoreVendedor_(dados) {
+// ── Helpers comuns ────────────────────────────────────────────
+function parseBool_(v) { return v === true || v === 'sim'; }
+function parseReducoes_(rv) {
+  var r = [];
+  try { if (rv) r = typeof rv === 'string' ? JSON.parse(rv) : rv; } catch(e) {}
+  return Array.isArray(r) ? r : [];
+}
+function fonteParaOrigemImovel_(fonte) {
+  return String(fonte) === 'REVENDA_CONSTRUTORA' ? 'REVENDAS_CONSTRUTORAS' : 'REVENDA';
+}
+
+// ── Score PF ─────────────────────────────────────────────────
+function calcularScoreVendedor_PF_(ce, ctx) {
   var score = 0;
+  if (String(ctx.origemContato || '') === 'Me procurou') score += 25;
+  var m = String(ce.motivoVenda || '');
+  if      (m === 'Dívida / liquidez')                              score += 20;
+  else if (m === 'Divórcio / separação' || m === 'Inventário / herança') score += 20;
+  else if (m === 'Mudança de cidade')                              score += 15;
+  else if (m === 'Troca de imóvel')                                score += 10;
+  else if (m === 'Investidor realizando lucro')                     score -= 8;
+  if      (ctx._dias > 90)  score += 15;
+  else if (ctx._dias >= 45) score += 8;
+  if      (ctx._nr >= 2) score += 18;
+  else if (ctx._nr === 1) score += 12;
+  if (ctx.prazoDeclarado) score += 10;
+  var p = String(ce.perfilProprietario || '');
+  if (p === 'Único (mora no imóvel)' || p === 'Único (vazio)') score += 5;
+  if (p === 'Investidor grande portfólio (6+)')                  score -= 12;
+  if (parseBool_(ctx.aceitaFGTS))         score += 4;
+  if (parseBool_(ctx.aceitaPermuta))      score += 4;
+  if (parseBool_(ctx.aceitaParcelamento)) score += 4;
+  return score;
+}
 
-  // Origem do contato
-  if (String(dados.origemContato || '') === 'Vendedor me procurou') score += 25;
+// ── Score PJ ─────────────────────────────────────────────────
+function calcularScoreVendedor_PJ_(ce, ctx) {
+  var score = 0;
+  var total = parseInt(ce.unidadesTotais) || 0;
+  var rest  = parseInt(ce.unidadesRestantes) || 0;
+  var pctR  = total > 0 ? (rest / total * 100) : 0;
+  if      (pctR > 50)  score += 20;
+  else if (pctR >= 20) score += 10;
+  var meses = parseInt(ce.mesesDesdeHabiteSe) || 0;
+  if      (meses > 18) score += 18;
+  else if (meses >= 6) score += 8;
+  if (String(ce.statusObra || '') === 'Em obra atrasada') score += 15;
+  if (ce.financiamentoObraAtivo === 'sim')                score += 15;
+  if (ce.campanhaComercialAtiva === 'sim')                score += 10;
+  if (ce.metaComercialObs || ctx.prazoDeclarado)          score += 10;
+  if      (ctx._nr >= 2) score += 18;
+  else if (ctx._nr === 1) score += 12;
+  if (rest > 0 && rest < 5) score += 8;
+  if (ce.tabelaFlexivel === 'não') score -= 10;
+  return score;
+}
 
-  // Motivo de venda
-  var motivo = String(dados.motivoVenda || '');
-  if (motivo === 'Precisa de liquidez (dívida)')                    score += 20;
-  else if (motivo === 'Divórcio / separação' ||
-           motivo === 'Inventário / herança')                        score += 20;
-  else if (motivo === 'Mudança de cidade')                          score += 15;
-  else if (motivo === 'Troca de imóvel')                            score += 10;
-  else if (motivo === 'Investidor realizando lucro')                 score -= 8;
+// ── Score CONSTRUTORA ─────────────────────────────────────────
+function calcularScoreVendedor_CONSTRUTORA_(ce, ctx) {
+  var score = 0;
+  if (ce.fechamentoResultadoProximo === 'sim') score += 25;
+  if (String(ce.faseEmpreendimento || '') === 'Pronto há mais de 24 meses') score += 20;
+  var pctV = parseInt(ce.percentualVendidoEmpreendimento) || 0;
+  if      (pctV < 70) score += 15;
+  else if (pctV <= 90) score += 8;
+  if (ce.unidadeDecoradaParada === 'sim') score += 10;
+  if (ce.campanhaPorBlocoTorre === 'sim') score += 15;
+  if (ce.prazoEntregaObra) {
+    var prazo = new Date(String(ce.prazoEntregaObra));
+    var mesesR = (prazo - new Date()) / (1000 * 60 * 60 * 24 * 30);
+    if (!isNaN(mesesR) && mesesR >= 0 && mesesR < 6 && pctV < 100) score += 15;
+  }
+  if (String(ce.politicaComercial || '') === 'Tabela fechada') score -= 15;
+  return score;
+}
 
-  // Dias no mercado
-  var dias = parseInt(dados.diasNaMercado) || 0;
-  if      (dias > 90) score += 15;
-  else if (dias >= 45) score += 8;
+// ── Score CORRETOR ────────────────────────────────────────────
+function calcularScoreVendedor_CORRETOR_(ce, ctx) {
+  var score = 0;
+  var excl = String(ce.exclusividade || '');
+  if (excl === 'Exclusivo com você/sua imobiliária') score += 20;
+  if (ce.comissaoNegociavel === 'sim')               score += 15;
+  if (ce.relacionamentoHistorico === 'sim')          score += 15;
+  var diasR = parseInt(ce.diasDesdeUltimaResposta);
+  if (!isNaN(diasR)) {
+    if (diasR < 2)  score += 15;
+    if (diasR > 30) score -= 10;
+  }
+  if (String(ce.vendedorOriginalUrgente || '') === 'Sim (sinalizado pelo corretor)') score += 15;
+  if (excl === 'Compartilhado (múltiplas imobiliárias)') score -= 10;
+  return score;
+}
 
-  // Histórico de reduções de preço
-  var reducoes = [];
-  try {
-    var rv = dados.reducoes;
-    if (rv) reducoes = typeof rv === 'string' ? JSON.parse(rv) : rv;
-  } catch(e) {}
-  if (!Array.isArray(reducoes)) reducoes = [];
-  if      (reducoes.length >= 2) score += 18;
-  else if (reducoes.length === 1) score += 12;
+// ── Dispatcher — Função pura (sem I/O) ───────────────────────
+// Retorna {scoreVendedor, margemEstimada, urgenciaNivel, categoriaVendedor}
+function calcularScoreVendedor_(dados) {
+  var cat = String(dados.categoriaVendedor || 'PF');
+  var reducoes = parseReducoes_(dados.reducoes);
+  var ce;
+  try { ce = typeof dados.camposEspecificos === 'string'
+    ? JSON.parse(dados.camposEspecificos) : (dados.camposEspecificos || {}); } catch(e) { ce = {}; }
 
-  // Prazo declarado
-  if (dados.prazoDeclarado) score += 10;
+  var ctx = {
+    origemContato:    dados.origemContato,
+    prazoDeclarado:   dados.prazoDeclarado,
+    aceitaFGTS:       dados.aceitaFGTS,
+    aceitaPermuta:    dados.aceitaPermuta,
+    aceitaParcelamento: dados.aceitaParcelamento,
+    _dias: parseInt(dados.diasNaMercado) || 0,
+    _nr:   reducoes.length
+  };
 
-  // Perfil do vendedor
-  var perfil = String(dados.perfilVendedor || '');
-  if (perfil === 'Proprietário único (mora no imóvel)' ||
-      perfil === 'Proprietário único (imóvel vazio)')               score += 5;
-  if (perfil === 'Investidor com portfólio grande (6+)')            score -= 12;
-
-  // Condições especiais
-  if (dados.aceitaFGTS        === 'sim' || dados.aceitaFGTS        === true) score += 4;
-  if (dados.aceitaPermuta     === 'sim' || dados.aceitaPermuta     === true) score += 4;
-  if (dados.aceitaParcelamento === 'sim' || dados.aceitaParcelamento === true) score += 4;
+  var score;
+  if      (cat === 'PF')          score = calcularScoreVendedor_PF_(ce, ctx);
+  else if (cat === 'PJ')          score = calcularScoreVendedor_PJ_(ce, ctx);
+  else if (cat === 'CONSTRUTORA') score = calcularScoreVendedor_CONSTRUTORA_(ce, ctx);
+  else if (cat === 'CORRETOR')    score = calcularScoreVendedor_CORRETOR_(ce, ctx);
+  else                             score = 0;
 
   score = Math.max(0, Math.min(100, score));
 
-  // Margem estimada
   var margem = 5;
   if (reducoes.length > 0) margem += 3;
-  if (motivo === 'Precisa de liquidez (dívida)' || motivo === 'Divórcio / separação' ||
-      motivo === 'Inventário / herança'          || motivo === 'Mudança de cidade') margem += 2;
-  if (score >= 70) margem += 3;
-  if (dias > 90)   margem += 2;
+  if (score >= 70)         margem += 3;
+  if (cat === 'PF') {
+    var m = String(ce.motivoVenda || '');
+    if (m === 'Dívida / liquidez' || m === 'Divórcio / separação' ||
+        m === 'Inventário / herança' || m === 'Mudança de cidade') margem += 2;
+    if (ctx._dias > 90) margem += 2;
+  } else if (cat === 'PJ') {
+    if (ce.financiamentoObraAtivo === 'sim') margem += 2;
+    if (ctx._dias > 90) margem += 2;
+  } else if (cat === 'CONSTRUTORA') {
+    if (ce.fechamentoResultadoProximo === 'sim') margem += 2;
+    if ((parseInt(ce.percentualVendidoEmpreendimento)||100) < 70) margem += 2;
+  } else if (cat === 'CORRETOR') {
+    if (String(ce.vendedorOriginalUrgente||'') === 'Sim (sinalizado pelo corretor)') margem += 2;
+  }
   margem = Math.min(20, margem);
 
   var urgenciaNivel = score >= 70 ? 'ALTA' : score >= 40 ? 'MEDIA' : 'BAIXA';
-  return { scoreVendedor: score, margemEstimada: margem, urgenciaNivel: urgenciaNivel };
+  return { scoreVendedor: score, margemEstimada: margem, urgenciaNivel: urgenciaNivel, categoriaVendedor: cat };
 }
 
 function urgenciaCompradorParaScore_(urgencia) {
@@ -5440,21 +5528,23 @@ function calcularScoreTriplo_(scoreMatch, scoreVendedor, urgenciaComprador) {
   return Math.round(scoreMatch * 0.50 + scoreVendedor * 0.30 + urgenciaComprador * 0.20);
 }
 
-function obterPerfilVendedor_(codigo) {
+function obterPerfilVendedor_(codigo, origemImovel) {
   if (!codigo) return null;
+  var ori = String(origemImovel || 'REVENDA');
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('VENDEDORES_PERFIL');
   if (!aba || aba.getLastRow() < 2) return null;
-  var dados = aba.getDataRange().getValues();
-  var cab   = dados[0];
-  var idxCod = cab.indexOf('codigo');
+  var dados  = aba.getDataRange().getValues();
+  var cab    = dados[0];
+  var iCod   = cab.indexOf('codigo');
+  var iOri   = cab.indexOf('origemImovel');
   for (var i = 1; i < dados.length; i++) {
-    if (String(dados[i][idxCod]) === String(codigo)) {
+    if (String(dados[i][iCod]) === String(codigo) &&
+        (iOri < 0 || String(dados[i][iOri]) === ori)) {
       var obj = {};
       cab.forEach(function(c, j) { obj[c] = dados[i][j]; });
-      try {
-        if (typeof obj.reducoes === 'string' && obj.reducoes) obj.reducoes = JSON.parse(obj.reducoes);
-      } catch(e) {}
+      try { if (typeof obj.reducoes === 'string' && obj.reducoes) obj.reducoes = JSON.parse(obj.reducoes); } catch(e) {}
+      try { if (typeof obj.camposEspecificos === 'string' && obj.camposEspecificos) obj.camposEspecificos = JSON.parse(obj.camposEspecificos); } catch(e) {}
       if (!Array.isArray(obj.reducoes)) obj.reducoes = [];
       var sv = parseInt(obj.scoreVendedor) || 0;
       obj.urgenciaNivel = sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA';
@@ -5465,65 +5555,70 @@ function obterPerfilVendedor_(codigo) {
 }
 
 function salvarPerfilVendedor_(payload) {
-  var codigo = String(payload.codigo || '').trim();
-  if (!codigo)                return { status: 'erro', motivo: 'codigo obrigatorio' };
+  var codigo       = String(payload.codigo       || '').trim();
+  var origemImovel = String(payload.origemImovel || 'REVENDA').trim();
+  var cat          = String(payload.categoriaVendedor || '').trim();
+  if (!codigo)  return { status: 'erro', motivo: 'codigo obrigatorio' };
+  if (!cat)     return { status: 'erro', motivo: 'categoriaVendedor obrigatorio' };
   if (!payload.origemContato) return { status: 'erro', motivo: 'origemContato obrigatorio' };
-  if (!payload.motivoVenda)   return { status: 'erro', motivo: 'motivoVenda obrigatorio' };
 
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('VENDEDORES_PERFIL');
   if (!aba) { migrarCabecalhoVendedoresPerfil(); aba = ss.getSheetByName('VENDEDORES_PERFIL'); }
 
   var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
-
   var reducoes = payload.reducoes || [];
   var reducoesStr = typeof reducoes === 'string' ? reducoes : JSON.stringify(reducoes);
+  var ceRaw = payload.camposEspecificos || {};
+  var ceStr = typeof ceRaw === 'string' ? ceRaw : JSON.stringify(ceRaw);
 
   var calculado = calcularScoreVendedor_({
-    origemContato:    payload.origemContato,
-    motivoVenda:      payload.motivoVenda,
-    diasNaMercado:    parseInt(payload.diasNaMercado) || 0,
-    reducoes:         reducoesStr,
-    prazoDeclarado:   payload.prazoDeclarado,
-    perfilVendedor:   payload.perfilVendedor,
-    aceitaFGTS:           payload.aceitaFGTS,
-    aceitaPermuta:        payload.aceitaPermuta,
-    aceitaParcelamento:   payload.aceitaParcelamento
+    categoriaVendedor: cat,
+    origemContato:     payload.origemContato,
+    diasNaMercado:     parseInt(payload.diasNaMercado) || 0,
+    reducoes:          reducoesStr,
+    prazoDeclarado:    payload.prazoDeclarado,
+    aceitaFGTS:        payload.aceitaFGTS,
+    aceitaPermuta:     payload.aceitaPermuta,
+    aceitaParcelamento: payload.aceitaParcelamento,
+    camposEspecificos: ceStr
   });
 
   function boolStr_(v) { return (v === true || v === 'sim') ? 'sim' : 'não'; }
 
-  // Encontra linha existente para update, ou append
   var dados = aba.getDataRange().getValues();
   var cab   = dados[0];
-  var idxCod = cab.indexOf('codigo');
+  var iCod  = cab.indexOf('codigo');
+  var iOri  = cab.indexOf('origemImovel');
   var linhaExistente = -1;
   for (var i = 1; i < dados.length; i++) {
-    if (String(dados[i][idxCod]) === codigo) { linhaExistente = i + 1; break; }
+    if (String(dados[i][iCod]) === codigo &&
+        (iOri < 0 || String(dados[i][iOri]) === origemImovel)) {
+      linhaExistente = i + 1; break;
+    }
   }
-  var dataCriacao = (linhaExistente > 0)
-    ? dados[linhaExistente - 1][cab.indexOf('dataCadastro')]
-    : agora;
+  var dataCriacao = linhaExistente > 0
+    ? dados[linhaExistente - 1][cab.indexOf('dataCadastro')] : agora;
 
   var novaLinha = CABECALHO_VENDEDORES_PERFIL.map(function(col) {
-    if (col === 'codigo')             return codigo;
-    if (col === 'dataCadastro')       return dataCriacao;
-    if (col === 'dataAtualizacao')    return agora;
-    if (col === 'origemContato')      return String(payload.origemContato  || '');
-    if (col === 'motivoVenda')        return String(payload.motivoVenda    || '');
-    if (col === 'motivoVendaObs')     return String(payload.motivoVendaObs || '');
-    if (col === 'perfilVendedor')     return String(payload.perfilVendedor || '');
-    if (col === 'precoAnuncio')       return payload.precoAnuncio || '';
-    if (col === 'reducoes')           return reducoesStr;
-    if (col === 'diasNaMercado')      return parseInt(payload.diasNaMercado) || 0;
-    if (col === 'aceitaFGTS')         return boolStr_(payload.aceitaFGTS);
-    if (col === 'aceitaPermuta')      return boolStr_(payload.aceitaPermuta);
+    if (col === 'codigo')              return codigo;
+    if (col === 'origemImovel')        return origemImovel;
+    if (col === 'categoriaVendedor')   return cat;
+    if (col === 'dataCadastro')        return dataCriacao;
+    if (col === 'dataAtualizacao')     return agora;
+    if (col === 'origemContato')       return String(payload.origemContato  || '');
+    if (col === 'precoAnuncio')        return payload.precoAnuncio || '';
+    if (col === 'reducoes')            return reducoesStr;
+    if (col === 'diasNaMercado')       return parseInt(payload.diasNaMercado) || 0;
+    if (col === 'aceitaFGTS')          return boolStr_(payload.aceitaFGTS);
+    if (col === 'aceitaPermuta')       return boolStr_(payload.aceitaPermuta);
     if (col === 'aceitaFinanciamento') return boolStr_(payload.aceitaFinanciamento);
-    if (col === 'aceitaParcelamento') return boolStr_(payload.aceitaParcelamento);
-    if (col === 'condicoesObs')       return String(payload.condicoesObs  || '');
-    if (col === 'scoreVendedor')      return calculado.scoreVendedor;
-    if (col === 'margemEstimada')     return calculado.margemEstimada;
-    if (col === 'prazoDeclarado')     return payload.prazoDeclarado || '';
+    if (col === 'aceitaParcelamento')  return boolStr_(payload.aceitaParcelamento);
+    if (col === 'condicoesObs')        return String(payload.condicoesObs   || '');
+    if (col === 'camposEspecificos')   return ceStr;
+    if (col === 'scoreVendedor')       return calculado.scoreVendedor;
+    if (col === 'margemEstimada')      return calculado.margemEstimada;
+    if (col === 'prazoDeclarado')      return payload.prazoDeclarado || '';
     return '';
   });
 
@@ -5533,30 +5628,41 @@ function salvarPerfilVendedor_(payload) {
     aba.appendRow(novaLinha);
   }
 
-  return {
-    status: 'ok',
-    scoreVendedor:  calculado.scoreVendedor,
-    margemEstimada: calculado.margemEstimada,
-    urgenciaNivel:  calculado.urgenciaNivel
-  };
+  return { status: 'ok', scoreVendedor: calculado.scoreVendedor,
+           margemEstimada: calculado.margemEstimada, urgenciaNivel: calculado.urgenciaNivel,
+           categoriaVendedor: calculado.categoriaVendedor };
+}
+
+// ── Helpers de listagem ───────────────────────────────────────
+function construirPerfisMap_() {
+  var perfis = lerAba_('VENDEDORES_PERFIL');
+  var map = {};
+  perfis.forEach(function(p) {
+    if (!p.codigo) return;
+    map[String(p.codigo) + '|' + String(p.origemImovel || 'REVENDA')] = p;
+  });
+  return map;
+}
+function perfilDoMatch_(m, perfisMap) {
+  var ori = fonteParaOrigemImovel_(m.fonte);
+  return perfisMap[String(m.imoCodigo || '') + '|' + ori] || null;
 }
 
 function listarTriangulosOportunidade_() {
-  var contatos = lerAba_('CONTATOS');
-  var perfis   = lerAba_('VENDEDORES_PERFIL');
-  var matches  = lerAba_('MATCHES');
+  var contatos  = lerAba_('CONTATOS');
+  var matches   = lerAba_('MATCHES');
+  var perfisMap = construirPerfisMap_();
 
   var contatosMap = {};
   contatos.forEach(function(c) { if (c.idCliente) contatosMap[String(c.idCliente)] = c; });
-  var perfisMap = {};
-  perfis.forEach(function(p) { if (p.codigo) perfisMap[String(p.codigo)] = p; });
 
   var hoje = new Date();
   var resultados = [];
 
+  var fontesValidas = ['REVENDA', 'REVENDA_CONSTRUTORA'];
   matches.forEach(function(m) {
-    if (String(m.fonte) !== 'REVENDA') return;
-    var perfil = perfisMap[String(m.imoCodigo || '')];
+    if (fontesValidas.indexOf(String(m.fonte)) < 0) return;
+    var perfil = perfilDoMatch_(m, perfisMap);
     if (!perfil) return;
 
     var scoreVendedor = parseInt(perfil.scoreVendedor) || 0;
@@ -5577,11 +5683,12 @@ function listarTriangulosOportunidade_() {
     resultados.push({
       scoreTriplo: scoreTriplo, scoreMatch: scoreMatch,
       scoreVendedor: scoreVendedor, urgenciaComprador: urgScore,
-      imoCodigo: m.imoCodigo, imoTipo: m.imoTipo,
-      imoBairro: m.imoBairro, imoCondominio: m.imoCondominio,
-      imoValorVenda: m.imoValorVenda, imoFoto: m.imoFoto, imoUrl: m.imoUrl,
+      categoriaVendedor: perfil.categoriaVendedor,
+      imoCodigo: m.imoCodigo, imoTipo: m.imoTipo, imoBairro: m.imoBairro,
+      imoCondominio: m.imoCondominio, imoValorVenda: m.imoValorVenda,
+      imoFoto: m.imoFoto, imoUrl: m.imoUrl, fonte: m.fonte,
       vendedorUrgenciaNivel: scoreVendedor >= 70 ? 'ALTA' : scoreVendedor >= 40 ? 'MEDIA' : 'BAIXA',
-      motivoVenda: perfil.motivoVenda, diasNaMercado: parseInt(perfil.diasNaMercado) || 0,
+      diasNaMercado: parseInt(perfil.diasNaMercado) || 0,
       margemEstimada: perfil.margemEstimada,
       aceitaFGTS: perfil.aceitaFGTS, aceitaPermuta: perfil.aceitaPermuta,
       aceitaFinanciamento: perfil.aceitaFinanciamento,
@@ -5595,24 +5702,19 @@ function listarTriangulosOportunidade_() {
 }
 
 function listarFacaHoje_() {
-  var contatos = lerAba_('CONTATOS');
-  var matches  = lerAba_('MATCHES');
-  var perfis   = lerAba_('VENDEDORES_PERFIL');
-
-  var perfisMap = {};
-  perfis.forEach(function(p) { if (p.codigo) perfisMap[String(p.codigo)] = p; });
-
+  var contatos  = lerAba_('CONTATOS');
+  var matches   = lerAba_('MATCHES');
+  var perfisMap = construirPerfisMap_();
   var matchesByCli = {};
   matches.forEach(function(m) {
     var cod = String(m.cliCodigo || '');
     if (!matchesByCli[cod]) matchesByCli[cod] = [];
     matchesByCli[cod].push(m);
   });
-
   var hoje = new Date();
   var urgenciasAltas = ['Imediata (até 30 dias)', 'Curto prazo (até 3 meses)'];
+  var fontesValidas  = ['REVENDA', 'REVENDA_CONSTRUTORA'];
   var resultados = [];
-
   contatos.forEach(function(c) {
     if (!c.idCliente) return;
     if ((parseInt(c.score) || 0) < 70) return;
@@ -5621,37 +5723,33 @@ function listarFacaHoje_() {
       ? c.ultimoContato : (c.ultimoContato ? new Date(String(c.ultimoContato)) : null);
     var dias = (uc && !isNaN(uc.getTime())) ? Math.round((hoje - uc) / 86400000) : 9999;
     if (dias < 7) return;
-
     var cliMatches = (matchesByCli[String(c.idCliente)] || []).slice();
     if (!cliMatches.length) return;
     cliMatches.sort(function(a, b) { return (parseInt(b.scoreMatch)||0) - (parseInt(a.scoreMatch)||0); });
     var mm = cliMatches[0];
-
-    var scoreVendedor = null, scoreTriplo = null;
-    if (String(mm.fonte) === 'REVENDA') {
-      var p = perfisMap[String(mm.imoCodigo || '')];
+    var scoreVendedor = null, scoreTriplo = null, catVendedor = null;
+    if (fontesValidas.indexOf(String(mm.fonte)) >= 0) {
+      var p = perfilDoMatch_(mm, perfisMap);
       if (p) {
         scoreVendedor = parseInt(p.scoreVendedor) || 0;
-        scoreTriplo = calcularScoreTriplo_(
+        catVendedor   = p.categoriaVendedor;
+        scoreTriplo   = calcularScoreTriplo_(
           parseInt(mm.scoreMatch) || 0, scoreVendedor,
           urgenciaCompradorParaScore_(String(c.urgencia || ''))
         );
       }
     }
-
     resultados.push({
       cliCodigo: String(c.idCliente), cliNome: c.nome,
-      cliScore: parseInt(c.score) || 0, urgencia: c.urgencia,
-      diasSemContato: dias,
+      cliScore: parseInt(c.score) || 0, urgencia: c.urgencia, diasSemContato: dias,
       melhorMatch: {
         imoCodigo: mm.imoCodigo, imoTipo: mm.imoTipo, imoBairro: mm.imoBairro,
         imoCondominio: mm.imoCondominio, imoValorVenda: mm.imoValorVenda,
         imoFoto: mm.imoFoto, scoreMatch: parseInt(mm.scoreMatch) || 0, fonte: mm.fonte
       },
-      scoreVendedor: scoreVendedor, scoreTriplo: scoreTriplo
+      scoreVendedor: scoreVendedor, scoreTriplo: scoreTriplo, categoriaVendedor: catVendedor
     });
   });
-
   resultados.sort(function(a, b) {
     var ta = a.scoreTriplo || 0, tb = b.scoreTriplo || 0;
     return ta !== tb ? tb - ta : b.cliScore - a.cliScore;
@@ -5660,43 +5758,37 @@ function listarFacaHoje_() {
 }
 
 function listarJanelaAberta_() {
-  var revenda = lerAba_('REVENDA');
-  var perfis  = lerAba_('VENDEDORES_PERFIL');
-  var matches = lerAba_('MATCHES');
-
-  var perfisMap = {};
-  perfis.forEach(function(p) { if (p.codigo) perfisMap[String(p.codigo)] = p; });
-
-  var matchesByImo = {};
+  var revenda  = lerAba_('REVENDA');
+  var rc       = lerAba_('REVENDAS_CONSTRUTORAS');
+  var matches  = lerAba_('MATCHES');
+  var perfisMap = construirPerfisMap_();
+  var matchesByKey = {};
   matches.forEach(function(m) {
-    if (String(m.fonte) !== 'REVENDA') return;
-    var cod = String(m.imoCodigo || '');
-    if (!matchesByImo[cod]) matchesByImo[cod] = [];
-    matchesByImo[cod].push(m);
+    var fonte = String(m.fonte);
+    if (fonte !== 'REVENDA' && fonte !== 'REVENDA_CONSTRUTORA') return;
+    var key = String(m.imoCodigo || '') + '|' + fonte;
+    if (!matchesByKey[key]) matchesByKey[key] = [];
+    matchesByKey[key].push(m);
   });
-
   var hoje = new Date();
   var limite = new Date(hoje.getTime() - 7 * 86400000);
   var resultados = [];
-
-  revenda.forEach(function(r) {
-    var dataCad = r.dataCadastro instanceof Date
-      ? r.dataCadastro : (r.dataCadastro ? new Date(String(r.dataCadastro)) : null);
-    if (!dataCad || isNaN(dataCad.getTime()) || dataCad < limite) return;
-
-    var codigo = String(r.codigo || '');
-    var p = perfisMap[codigo];
-    var diasEntrou = Math.round((hoje - dataCad) / 86400000);
-    var sv = p ? (parseInt(p.scoreVendedor) || 0) : null;
-
-    var imoMatches = (matchesByImo[codigo] || []).slice();
+  function processarItem_(codigo, tipo, bairro, condominio, valorVenda, foto, dataCad, fonteStr) {
+    var dc = dataCad instanceof Date ? dataCad : (dataCad ? new Date(String(dataCad)) : null);
+    if (!dc || isNaN(dc.getTime()) || dc < limite) return;
+    var ori = fonteParaOrigemImovel_(fonteStr);
+    var p   = perfisMap[codigo + '|' + ori];
+    var sv  = p ? (parseInt(p.scoreVendedor) || 0) : null;
+    var diasEntrou = Math.round((hoje - dc) / 86400000);
+    var key = codigo + '|' + fonteStr;
+    var imoMatches = (matchesByKey[key] || []).slice();
     imoMatches.sort(function(a, b) { return (parseInt(b.scoreMatch)||0) - (parseInt(a.scoreMatch)||0); });
-
     resultados.push({
-      codigo: codigo, tipo: r.tipo, bairro: r.bairro, condominio: r.condominio,
-      valorVenda: r.valorVenda, foto: r.foto, diasEntrou: diasEntrou,
+      codigo: codigo, tipo: tipo, bairro: bairro, condominio: condominio,
+      valorVenda: valorVenda, foto: foto, diasEntrou: diasEntrou, fonte: fonteStr,
       scoreVendedor: sv,
       urgenciaNivel: sv !== null ? (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA') : null,
+      categoriaVendedor: p ? p.categoriaVendedor : null,
       margemEstimada: p ? p.margemEstimada : null,
       aceitaFGTS: p ? p.aceitaFGTS : null,
       topMatches: imoMatches.slice(0, 5).map(function(m) {
@@ -5705,8 +5797,15 @@ function listarJanelaAberta_() {
       }),
       totalMatches: imoMatches.length
     });
+  }
+  revenda.forEach(function(r) {
+    processarItem_(String(r.codigo||''), r.tipo, r.bairro, r.condominio,
+                   r.valorVenda, r.foto, r.dataCadastro, 'REVENDA');
   });
-
+  rc.forEach(function(r) {
+    processarItem_(String(r.idImovel||''), r.tipo, r.bairro, r.empreendimento,
+                   r.valorVenda, '', r.dataCadastro, 'REVENDA_CONSTRUTORA');
+  });
   resultados.sort(function(a, b) { return a.diasEntrou - b.diasEntrou; });
   return resultados.slice(0, 3);
 }
