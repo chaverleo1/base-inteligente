@@ -112,7 +112,9 @@
     </div>
   </div>
 </div>`;
-  document.body.insertAdjacentHTML('beforeend', html);
+  function _pvInject_() { document.body.insertAdjacentHTML('beforeend', html); }
+  if (document.body) { _pvInject_(); }
+  else { document.addEventListener('DOMContentLoaded', _pvInject_); }
 })();
 
 // ── Estado global do módulo ───────────────────────────────────────────────────
