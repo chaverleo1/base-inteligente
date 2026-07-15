@@ -738,6 +738,33 @@
   </div>
   </div><!-- /novasOfertasSection -->
 
+  <!-- NOVOS LEADS IMOBZI -->
+  <div id="novosLeadsSection" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 0 6px;border-top:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">🎯 Novos Leads Imobzi</span>
+      <span class="no-filter-tag">últimos 3 dias</span>
+      <span id="novosLeadsCount" class="match-clients-count">—</span>
+      <a href="leads-imobzi.html" style="margin-left:auto;font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap">Ver todos →</a>
+    </div>
+    <div class="no-layout no-layout-auto" style="margin-bottom:18px">
+      <div class="no-imoveis-col">
+        <div class="no-imoveis-header"><span>👤 Leads novos</span></div>
+        <div class="no-imoveis-body" id="novosLeadsLista"></div>
+      </div>
+      <div class="no-clientes-col">
+        <div class="no-clientes-header" id="novosLeadsDetalheHeader">
+          <span style="font-size:12px;font-weight:600;color:var(--text2)">🏠 Imóvel de interesse</span>
+          <span style="font-size:11px;color:var(--text3)">Selecione um lead para ver detalhes</span>
+        </div>
+        <div class="no-clientes-placeholder" id="novosLeadsPlaceholder">
+          <span style="font-size:28px">🎯</span>
+          <span>Selecione um lead para ver o imóvel e afins</span>
+        </div>
+        <div id="novosLeadsDetalheBody" style="display:none;overflow-y:auto;flex:1;padding:14px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- PIPELINE -->
   <div class="section-title">🔥 Pipeline de Negociações</div>
   <div class="pipeline-funnel" id="pipelineFunnel">
@@ -2064,7 +2091,7 @@ function renderDados(json) {
       <div class="vg-stat-top"><span class="vg-stat-icon">🔑</span><span class="vg-stat-label">Revendas</span></div>
       <div class="vg-stat-value green">${prodTotal}</div>
       <div class="vg-stat-sub">disponíveis p/ venda</div>
-      <a href="busca.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
+      <a href="revendas-lista.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
     </div>
     <div class="vg-stat" id="cardVGLanc">
       <div class="vg-stat-top"><span class="vg-stat-icon">🚀</span><span class="vg-stat-label">Empreendimentos</span></div>
@@ -4182,6 +4209,7 @@ function formatEntradaDestaque_(str) {
 
 function renderLeadsImobzi(leads) {
   _imobziLeadsMap = {};
+  renderNovosLeadsNovidades(leads);
   // Mais recente primeiro — leads sem data válida (não deveria acontecer,
   // mas por segurança) vão pro final em vez de quebrar a ordenação.
   const ativos = leads.filter(l => l.pipeline !== 'MIGRADO').sort((a, b) => {
@@ -4557,6 +4585,181 @@ async function excluirLeadImobzi_(uid, btn) {
   } catch(e) {
     alert('Erro de conexão: ' + e.message);
     btn.disabled = false; btn.textContent = '🗑';
+  }
+}
+
+// ── NOVOS LEADS IMOBZI — Novidades ─────────────────────────────────────────
+var _novosLeadsMap = {};
+
+function renderNovosLeadsNovidades(leads) {
+  const agora  = new Date();
+  const limiar = new Date(agora.getTime() - 3 * 24 * 60 * 60 * 1000);
+  const novos = (leads || []).filter(l => {
+    if (String(l.pipeline || '') === 'MIGRADO') return false;
+    const d = parseDataCadastroBR_(l.dataCadastro);
+    return d && d >= limiar;
+  }).sort((a, b) => {
+    const da = parseDataCadastroBR_(a.dataCadastro);
+    const db = parseDataCadastroBR_(b.dataCadastro);
+    if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+    return db - da;
+  });
+  _novosLeadsMap = {};
+  novos.forEach(l => { _novosLeadsMap[l.idLeadImobzi || l.dataCadastro] = l; });
+
+  const section = document.getElementById('novosLeadsSection');
+  if (!section) return;
+  if (!novos.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const countEl = document.getElementById('novosLeadsCount');
+  if (countEl) countEl.textContent = novos.length;
+
+  const listEl = document.getElementById('novosLeadsLista');
+  if (!listEl) return;
+  listEl.innerHTML = novos.map(l => {
+    const uid    = l.idLeadImobzi || l.dataCadastro;
+    const jaBase = l.statusBase === 'JÁ NA BASE';
+    const reLead = l.statusBase === 'RE-LEAD-IMOBZI';
+    const si = reLead ? { cor: '#ffc107', bg: 'rgba(255,193,7,.15)', txt: '🔁 Re-lead' }
+             : jaBase ? { cor: '#ffc107', bg: 'rgba(255,184,0,.15)', txt: '⚠ Já na base' }
+             :           { cor: '#ff5a5a', bg: 'rgba(255,90,90,.15)', txt: '🎯 Lead' };
+    const safeUid = String(uid).replace(/[^a-zA-Z0-9]/g, '');
+    const jUid = JSON.stringify(String(uid)).replace(/"/g, '&quot;');
+    return `<div class="no-imo-row" data-nluid="${safeUid}" onclick="selecionarNovoLead_(${jUid})">
+      <div style="width:30px;height:30px;border-radius:50%;background:${si.bg};border:2px solid ${si.cor};
+          display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:${si.cor};flex-shrink:0">
+        ${(l.nome||'?')[0].toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0;margin:0 8px">
+        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.nome||'Sem nome'}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:2px;flex-wrap:wrap">
+          <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;background:${si.bg};color:${si.cor}">${si.txt}</span>
+          ${l.telefone ? `<span style="font-size:10px;color:var(--text3)">📞 ${l.telefone}</span>` : ''}
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${formatEntradaDestaque_(l.dataCadastro)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;min-width:36px">
+        <div class="no-match-count" id="nl_m_${safeUid}" style="font-size:16px;color:var(--text3)">—</div>
+        <div class="no-match-label">afins</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selecionarNovoLead_(uid) {
+  const safeUid = String(uid).replace(/[^a-zA-Z0-9]/g, '');
+  document.querySelectorAll('#novosLeadsLista .no-imo-row').forEach(r => {
+    r.style.background = r.dataset.nluid === safeUid ? 'rgba(79,124,255,.07)' : '';
+  });
+  const l = _novosLeadsMap[uid];
+  if (!l) return;
+
+  const header = document.getElementById('novosLeadsDetalheHeader');
+  if (header) header.innerHTML = `
+    <div style="font-size:12px;font-weight:700;color:var(--text)">${l.nome || '—'}</div>
+    <div style="font-size:11px;color:var(--text3)">${l.telefone || ''}${l.email ? ' · ' + l.email : ''}</div>`;
+
+  const ph   = document.getElementById('novosLeadsPlaceholder');
+  const body = document.getElementById('novosLeadsDetalheBody');
+  if (ph) ph.style.display = 'none';
+  if (!body) return;
+  body.style.display = '';
+
+  const preco = Number(l.precoImovel) || 0;
+  const foto  = (l._foto && l._foto.startsWith('http'))
+    ? `<img class="imovel-foto" src="${escAttr(l._foto)}" onerror="this.style.display='none'">`
+    : `<div class="imovel-foto-placeholder">🏠</div>`;
+  const attrs = [
+    l._quartos ? l._quartos + ' qtos'   : '',
+    l._suites  ? l._suites  + ' suítes' : '',
+    l._vagas   ? l._vagas   + ' vagas'  : '',
+    l._area    ? l._area    + ' m²'     : '',
+    l._padrao  || ''
+  ].filter(Boolean);
+  const local = [l.nomeImovel, l.bairro].filter(Boolean).join(' — ');
+
+  body.innerHTML = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">🏠 Imóvel de interesse</div>
+      <div class="imovel-card">
+        <div class="imovel-card-top">
+          ${foto}
+          <div class="imovel-info">
+            <div class="imovel-fonte-row"><span class="imovel-fonte-badge fonte-rev">🔑 Revenda</span></div>
+            <div class="imovel-tipo">${l.tipoImovel || 'Imóvel'}</div>
+            <div class="imovel-local">${local || '—'}</div>
+            ${l.codigoImovel ? `<div class="imovel-codigo">Código: ${l.codigoImovel}</div>` : ''}
+            <div class="imovel-valor">${preco > 0 ? fmtBRL(preco) : '—'}</div>
+          </div>
+        </div>
+        ${attrs.length ? `<div class="imovel-attrs">${attrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+        ${l.mensagem ? `<div class="imovel-det">💬 "${l.mensagem}"</div>` : ''}
+        ${(l._urlSite && l._urlSite.startsWith('http')) ? `<a class="imovel-link" href="${escAttr(l._urlSite)}" target="_blank">Ver imóvel completo →</a>` : ''}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">🔍 Imóveis afins na base</div>
+      <div id="nl_afins_${safeUid}"><div class="loading dot-anim" style="font-size:12px">Buscando afins</div></div>
+    </div>`;
+
+  if (l.codigoImovel || l.bairro || preco > 0) {
+    buscarAfinsNovoLead_(uid, l, safeUid);
+  } else {
+    const el = document.getElementById('nl_afins_' + safeUid);
+    if (el) el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Sem dados de imóvel para buscar afins.</div>';
+  }
+}
+
+async function buscarAfinsNovoLead_(uid, l, safeUid) {
+  const el = document.getElementById('nl_afins_' + safeUid);
+  if (!el) return;
+  try {
+    const params = new URLSearchParams({
+      acao:   'buscar_afins_imovel',
+      cod:    l.codigoImovel || '',
+      bairro: l.bairro       || '',
+      tipo:   l.tipoImovel   || '',
+      preco:  Number(l.precoImovel) || '',
+      token:  tokenSessao()
+    });
+    const resp  = await fetch(WEBHOOK_URL + '?' + params);
+    const afins = await resp.json();
+    if (trataNaoAutenticado(afins)) return;
+    const cnt = Array.isArray(afins) ? afins.length : 0;
+    const matchEl = document.getElementById('nl_m_' + safeUid);
+    if (matchEl) { matchEl.textContent = cnt; matchEl.style.color = cnt > 0 ? 'var(--accent)' : 'var(--text3)'; }
+    if (!cnt) { el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Nenhum imóvel afim encontrado.</div>'; return; }
+    el.innerHTML = `<div class="imovel-cards">${afins.map(m => {
+      const sc  = m.scoreMatch || 0;
+      const cls = sc >= 70 ? 'd-badge-hot' : sc >= 40 ? 'd-badge-warm' : 'd-badge-cold';
+      const mFoto = (m.imoFoto && m.imoFoto.startsWith('http'))
+        ? `<img class="imovel-foto" src="${escAttr(m.imoFoto)}" onerror="this.style.display='none'">`
+        : `<div class="imovel-foto-placeholder">🏠</div>`;
+      const mLocal = [m.imoCondominio, m.imoBairro].filter(Boolean).join(' — ');
+      const mAttrs = [
+        m.imoQuartos  ? m.imoQuartos  + ' qtos'   : '',
+        m.imoSuites   ? m.imoSuites   + ' suítes' : '',
+        m.imoVagas    ? m.imoVagas    + ' vagas'  : '',
+        m.imoAreaUtil ? m.imoAreaUtil + ' m²'     : ''
+      ].filter(Boolean);
+      return `<div class="imovel-card">
+        <div class="imovel-card-top">
+          ${mFoto}
+          <div class="imovel-info">
+            <div class="imovel-fonte-row"><span class="imovel-fonte-badge fonte-rev">🔑 Revenda</span></div>
+            <div class="imovel-tipo">${m.imoTipo || 'Imóvel'}</div>
+            <div class="imovel-local">${mLocal || '—'}</div>
+            <div class="imovel-valor">${fmt_(m.imoValorVenda) || '—'}</div>
+          </div>
+          <div class="imovel-top-actions"><span class="imovel-score-badge d-badge ${cls}">⭐ ${sc}</span></div>
+        </div>
+        ${mAttrs.length ? `<div class="imovel-attrs">${mAttrs.map(a=>`<span class="imovel-attr">${a}</span>`).join('')}</div>` : ''}
+        ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${escAttr(m.imoUrl)}" target="_blank">Ver imóvel →</a>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Erro ao buscar afins.</div>';
   }
 }
 

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revendas — BASE INTELIGENTE</title>
+<script src="config.js"></script>
+<script src="perfil-vendedor.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg:#0f1117; --surface:#181c27; --surface2:#1e2335; --surface3:#242840;
+  --border:#2a3050; --border2:#343d60; --accent:#4f7cff; --accent2:#00d4aa;
+  --text:#e8ecf4; --text2:#8892aa; --text3:#4a5470;
+  --radius:12px; --radius-sm:8px; --radius-xs:6px;
+  --hot:#ff5a5a; --warm:#f5a623; --cold:#4f7cff; --danger:#ff5a5a;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; min-height:100vh; }
+a { text-decoration:none; color:inherit; }
+
+.header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 24px;
+  display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+.logo { font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:700; color:var(--accent); letter-spacing:-.3px; flex-shrink:0; }
+.logo span { color:var(--text2); font-weight:400; }
+.nav-tabs { display:flex; background:var(--bg); border-radius:8px; padding:3px; gap:2px;
+            overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.nav-tabs::-webkit-scrollbar { display:none; }
+.nav-tab { padding:6px 16px; border-radius:6px; border:none; background:transparent; color:var(--text2);
+           font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; font-family:'Inter',sans-serif;
+           text-decoration:none; display:inline-block; flex-shrink:0; }
+.nav-tab:hover { color:var(--text); }
+.nav-tab.active { background:var(--accent); color:#fff; }
+.back-btn { background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--text2);
+            padding:6px 14px; font-size:13px; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; flex-shrink:0; }
+.back-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.container { max-width:1300px; margin:0 auto; padding:24px 24px; }
+
+.page-header { display:flex; align-items:center; gap:14px; margin-bottom:18px; flex-wrap:wrap; }
+.page-title { font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; }
+.page-sub { font-size:12px; color:var(--text3); margin-top:2px; }
+
+.tipo-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+.tipo-tab { padding:5px 14px; border-radius:99px; border:1px solid var(--border);
+  background:var(--surface2); color:var(--text2); font-size:12px; font-weight:500;
+  cursor:pointer; transition:all .15s; font-family:'Inter',sans-serif; white-space:nowrap; }
+.tipo-tab.on { background:rgba(79,124,255,.15); border-color:var(--accent); color:var(--accent); }
+.tipo-tab:hover { border-color:var(--border2); color:var(--text); }
+
+.search-bar { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:10px 14px; display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.search-bar input { background:transparent; border:none; color:var(--text); font-size:14px;
+  font-family:'Inter',sans-serif; width:100%; outline:none; }
+.search-icon { color:var(--text3); font-size:15px; }
+
+.stats-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+.stat-chip { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:8px 14px; font-size:12px; }
+.stat-chip strong { font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; display:block; }
+
+.table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  overflow:auto; }
+table { width:100%; border-collapse:collapse; min-width:900px; }
+thead th { background:var(--surface2); color:var(--text3); font-size:10px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.5px; padding:10px 12px; text-align:left;
+  border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
+thead th.th-num { text-align:right; }
+tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:default; }
+tbody tr:hover { background:rgba(255,255,255,.025); }
+tbody tr:last-child { border-bottom:none; }
+td { padding:9px 12px; font-size:12px; vertical-align:middle; }
+.td-foto { width:52px; padding:8px 8px; }
+.td-foto img { width:44px; height:35px; object-fit:cover; border-radius:5px; display:block; }
+.td-foto .foto-ph { width:44px; height:35px; border-radius:5px; background:var(--surface2);
+  display:flex; align-items:center; justify-content:center; font-size:17px; }
+.td-cod { color:var(--text3); font-family:monospace; font-size:11px; white-space:nowrap; }
+.td-tipo { white-space:nowrap; }
+.td-local { max-width:180px; }
+.local-cond { font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.local-bairro { font-size:10px; color:var(--text3); margin-top:1px; }
+.td-val { white-space:nowrap; font-weight:600; }
+.td-attrs { white-space:nowrap; color:var(--text2); font-size:11px; }
+.td-num { text-align:right; }
+
+.score-badge { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px;
+  padding:2px 8px; border-radius:99px; display:inline-block; white-space:nowrap; }
+.score-hot  { background:rgba(255,90,90,.15);    color:var(--hot);     border:1px solid rgba(255,90,90,.25); }
+.score-warm { background:rgba(245,166,35,.15);   color:var(--warm);    border:1px solid rgba(245,166,35,.25); }
+.score-cold { background:rgba(79,124,255,.12);   color:var(--accent);  border:1px solid rgba(79,124,255,.2); }
+.score-none { background:var(--surface2);        color:var(--text3);   border:1px solid var(--border); }
+
+.match-badge { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px;
+  color:var(--accent2); display:block; }
+.match-zero { color:var(--text3); }
+
+.td-actions { white-space:nowrap; }
+.btn-sm { padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;
+  border:1px solid; font-family:'Inter',sans-serif; transition:all .18s; }
+.btn-vend { background:rgba(79,124,255,.1); color:var(--accent); border-color:rgba(79,124,255,.25); }
+.btn-vend:hover { background:rgba(79,124,255,.22); }
+.btn-del  { background:rgba(255,90,90,.08); color:var(--danger); border-color:rgba(255,90,90,.2); }
+.btn-del:hover  { background:rgba(255,90,90,.18); }
+
+.empty-msg { text-align:center; padding:48px; color:var(--text3); font-size:14px; }
+.loading-msg { text-align:center; padding:48px; color:var(--text3); font-size:14px; }
+.loading-msg::after { content:'...'; animation:dots 1.2s steps(3,end) infinite; }
+@keyframes dots { 0%,33%{content:'.'}34%,66%{content:'..'}67%,100%{content:'...'} }
+
+.toast { position:fixed; top:72px; left:50%; transform:translateX(-50%) translateY(-20px);
+  padding:12px 24px; border-radius:99px; font-weight:600; font-size:14px;
+  opacity:0; transition:all .3s; z-index:9999; white-space:nowrap; }
+.toast.ok   { background:var(--accent2); color:#0f1117; }
+.toast.erro { background:var(--danger);  color:#fff; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+@media(max-width:640px){
+  .header { padding:12px 14px; }
+  .container { padding:16px 12px; }
+  .nav-tab { padding:6px 10px; font-size:12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="contatos.html" class="nav-tab">Contatos</a>
+    <a href="dashboard.html" class="nav-tab">Dashboard</a>
+    <a href="dados.html" class="nav-tab">Dados</a>
+    <a href="busca.html" class="nav-tab">Busca</a>
+    <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <a href="revendas-construtoras.html" class="nav-tab">Rev.-Construtoras</a>
+    <a href="revendas-lista.html" class="nav-tab active">Revendas</a>
+    <a href="leads-imobzi.html" class="nav-tab">Leads Imobzi</a>
+  </div>
+  <a href="dashboard.html" class="back-btn">← Dashboard</a>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🔑 Revendas</div>
+      <div class="page-sub">Todos os imóveis disponíveis para venda · integrado via API</div>
+    </div>
+    <button class="back-btn" onclick="carregarDados()" style="border-color:var(--accent2);color:var(--accent2)">↻ Recarregar</button>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-chip">
+      <strong id="statTotal" style="color:var(--accent2)">—</strong>
+      total na base
+    </div>
+    <div class="stat-chip">
+      <strong id="statVendedor" style="color:var(--accent)">—</strong>
+      com vendedor cadastrado
+    </div>
+    <div class="stat-chip">
+      <strong id="statMatches" style="color:var(--warm)">—</strong>
+      com matches ativos
+    </div>
+  </div>
+
+  <div class="tipo-tabs" id="tipoTabs"></div>
+
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Buscar por código, bairro, condomínio, tipo…" oninput="renderTabela()">
+  </div>
+
+  <div class="table-wrap">
+    <table id="tabelaRevendas">
+      <thead>
+        <tr>
+          <th class="td-foto"></th>
+          <th>Código</th>
+          <th>Tipo</th>
+          <th>Local</th>
+          <th class="th-num">Valor</th>
+          <th>Atributos</th>
+          <th class="th-num" title="Média dos scores de match dos clientes">Score Imóvel</th>
+          <th class="th-num" title="Score do vendedor cadastrado">Score Vendedor</th>
+          <th class="th-num">Matches</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyRevendas">
+        <tr><td colspan="10" class="loading-msg">Carregando</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const SESS_KEY  = 'bi_session';
+const TOKEN_KEY = 'bi_session_token';
+function tokenSessao() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
+
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { window.location.href = 'index.html'; return true; }
+  return false;
+}
+
+(function(){ if (sessionStorage.getItem(SESS_KEY) !== 'ok') window.location.href = 'index.html'; })();
+
+function showToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast ' + (tipo || 'ok');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function fmt(v) {
+  const n = Number(String(v||'').replace(/\D/g,''));
+  if (!n) return '—';
+  return 'R$ ' + n.toLocaleString('pt-BR');
+}
+
+let _imoveis = [];
+let _tipoAtual = 'todos';
+
+async function carregarDados() {
+  document.getElementById('tbodyRevendas').innerHTML =
+    '<tr><td colspan="10" class="loading-msg">Carregando</td></tr>';
+  document.getElementById('statsRow').style.display = 'none';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_revenda_lista&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    _imoveis = json.imoveis || [];
+    construirTipoTabs();
+    atualizarStats();
+    renderTabela();
+  } catch(e) {
+    document.getElementById('tbodyRevendas').innerHTML =
+      '<tr><td colspan="10" class="empty-msg">Erro ao carregar dados.</td></tr>';
+  }
+}
+
+function construirTipoTabs() {
+  const contagem = {};
+  _imoveis.forEach(im => {
+    const t = im.tipo || 'Outros';
+    contagem[t] = (contagem[t]||0) + 1;
+  });
+  const tipos = Object.entries(contagem).sort((a,b) => b[1]-a[1]);
+
+  const bar = document.getElementById('tipoTabs');
+  bar.innerHTML = `<button class="tipo-tab on" data-t="todos" onclick="mudarTipo('todos')">Todos (${_imoveis.length})</button>`
+    + tipos.map(([t,n]) =>
+        `<button class="tipo-tab" data-t="${escHtml(t)}" onclick="mudarTipo(${JSON.stringify(t)})">${escHtml(t)} (${n})</button>`
+      ).join('');
+}
+
+function mudarTipo(t) {
+  _tipoAtual = t;
+  document.querySelectorAll('.tipo-tab').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  renderTabela();
+}
+
+function atualizarStats() {
+  const comVend = _imoveis.filter(im => im.scoreVendedor > 0).length;
+  const comMatch = _imoveis.filter(im => im.matchTotal > 0).length;
+  document.getElementById('statTotal').textContent    = _imoveis.length;
+  document.getElementById('statVendedor').textContent = comVend;
+  document.getElementById('statMatches').textContent  = comMatch;
+  document.getElementById('statsRow').style.display   = '';
+}
+
+function renderTabela() {
+  const termo = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  const lista = _imoveis.filter(im => {
+    if (_tipoAtual !== 'todos' && (im.tipo||'Outros') !== _tipoAtual) return false;
+    if (!termo) return true;
+    return [im.codigo, im.tipo, im.bairro, im.condominio, im.padrao]
+      .some(v => String(v||'').toLowerCase().includes(termo));
+  });
+
+  const tbody = document.getElementById('tbodyRevendas');
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-msg">Nenhum imóvel encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map(im => {
+    const fotoHtml = im.foto && im.foto.startsWith('http')
+      ? `<img src="${escHtml(im.foto)}" onerror="this.parentNode.innerHTML='<div class=\\'foto-ph\\'>🏠</div>'">`
+      : `<div class="foto-ph">🏠</div>`;
+
+    const attrs = [
+      im.quartos  ? im.quartos  + ' qtos'  : '',
+      im.suites   ? im.suites   + ' suítes': '',
+      im.vagas    ? im.vagas    + ' vagas' : '',
+      im.areaUtil ? im.areaUtil + ' m²'   : ''
+    ].filter(Boolean).join(' · ') || '—';
+
+    const local = im.condominio || im.bairro || '—';
+    const bairro = im.condominio && im.bairro ? im.bairro : '';
+
+    const sc = im.scoreImovel;
+    const scCls = sc >= 70 ? 'score-hot' : sc >= 40 ? 'score-warm' : sc > 0 ? 'score-cold' : 'score-none';
+    const scTxt = sc > 0 ? sc : '—';
+
+    const sv = im.scoreVendedor;
+    const svCls = sv >= 70 ? 'score-hot' : sv >= 40 ? 'score-warm' : sv > 0 ? 'score-cold' : 'score-none';
+    const svTxt = sv > 0 ? sv : '—';
+
+    const jCod = JSON.stringify(im.codigo);
+    const jTip = JSON.stringify(im.tipo || im.condominio || im.bairro || 'Revenda');
+
+    return `<tr>
+      <td class="td-foto">${fotoHtml}</td>
+      <td class="td-cod">${escHtml(im.codigo)}</td>
+      <td class="td-tipo">${escHtml(im.tipo || '—')}</td>
+      <td class="td-local">
+        <div class="local-cond">${escHtml(local)}</div>
+        ${bairro ? `<div class="local-bairro">${escHtml(bairro)}</div>` : ''}
+      </td>
+      <td class="td-val td-num">${fmt(im.valorVenda)}</td>
+      <td class="td-attrs">${escHtml(attrs)}</td>
+      <td class="td-num">
+        ${sc > 0 ? `<span class="score-badge ${scCls}">${scTxt}</span>` : `<span style="color:var(--text3);font-size:11px">—</span>`}
+      </td>
+      <td class="td-num">
+        ${sv > 0 ? `<span class="score-badge ${svCls}">${svTxt}</span>` : `<span style="color:var(--text3);font-size:11px">—</span>`}
+      </td>
+      <td class="td-num">
+        <span class="match-badge ${im.matchTotal > 0 ? '' : 'match-zero'}">${im.matchTotal || '—'}</span>
+      </td>
+      <td class="td-actions">
+        <button class="btn-sm btn-vend" onclick="abrirPerfilVendedor_(${jCod},'REVENDA',['PF','PJ','CORRETOR'],${jTip},null)">🏷️ Vendedor</button>
+        <button class="btn-sm btn-del" style="margin-left:4px" onclick="excluirImovel_(${jCod},this)">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function excluirImovel_(codigo, btn) {
+  if (!confirm(`Excluir o imóvel ${codigo} permanentemente da base?\n\nOs dados do vendedor e favoritos também serão removidos.\nEsta ação não pode ser desfeita.`)) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'excluir_revenda_imovel', codigo, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      _imoveis = _imoveis.filter(im => im.codigo !== codigo);
+      construirTipoTabs();
+      atualizarStats();
+      renderTabela();
+      showToast('Imóvel ' + codigo + ' excluído.', 'ok');
+    } else {
+      alert('Erro: ' + (r.erro || JSON.stringify(r)));
+      btn.disabled = false; btn.textContent = '🗑';
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+    btn.disabled = false; btn.textContent = '🗑';
+  }
+}
+
+carregarDados();
+</script>
+</body>
+</html>
