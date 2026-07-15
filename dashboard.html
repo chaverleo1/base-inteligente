@@ -2582,6 +2582,14 @@ async function selecionarCliente(cod, nome) {
         : `<div style="width:77px;height:61px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px">${icon}</div>`;
       const fonteCls  = isLanc ? 'fonte-lanc' : isConst ? 'fonte-const' : isRevConst ? 'fonte-revconst' : 'fonte-rev';
       const fonteTxt  = isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : isRevConst ? '🏢 revenda-' + (m.imoConstrutora || 'CONSTRUTORA') : '🔑 Revenda';
+      const pvBtnT = (() => {
+        if (isConst) return '';
+        const pvChave  = (isLanc || isRevConst) ? (m.imoConstrutora || m.imoCodigo || '') : (m.imoCodigo || '');
+        const pvOrigem = isLanc ? 'LANCAMENTOS' : isRevConst ? 'REVENDAS_CONSTRUTORAS' : 'REVENDA';
+        const pvLabel  = (isLanc || isRevConst) ? (m.imoConstrutora || local || m.imoTipo || 'Construtora') : (local || m.imoTipo || 'Revenda');
+        const j = s => JSON.stringify(s).replace(/"/g, '&quot;');
+        return `<button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${j(pvChave)},${j(pvOrigem)},${j(pvLabel)})">🏷️ Vendedor</button>`;
+      })();
       return `<tr data-idx="${idx}" onclick="abrirImovelDrawer(${idx},'${escAttr(cod)}','${escAttr(nome)}')">
         <td style="padding:4px 6px;vertical-align:middle;width:83px">${fotoHtml}</td>
         <td style="width:100%;padding-left:6px">
@@ -2591,7 +2599,7 @@ async function selecionarCliente(cod, nome) {
             <span class="imovel-fonte-badge ${fonteCls}">${fonteTxt}</span>
             ${isRevConst && (m.imoStatusRC === 'POTENCIAL' || m.imoStatusRC === 'OPORTUNIDADE') ? `<button type="button" class="status-rc-badge status-rc-badge-${m.imoStatusRC.toLowerCase()}" onclick="event.stopPropagation();abrirDetalhesVisitaRC('${m.imoCodigo}')" title="Ver/editar detalhes da visita">${m.imoStatusRC === 'OPORTUNIDADE' ? '🔥 Oportunidade' : '⭐ Potencial'}</button>` : ''}
             ${m.imoCodigo?`<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">#${m.imoCodigo}</span>`:''}
-            ${!isConst && !isLanc && !isRevConst ? `<button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${JSON.stringify(m.imoCodigo||'').replace(/"/g,'&quot;')},${JSON.stringify(local||m.imoTipo||'Revenda').replace(/"/g,'&quot;')})">🏷️ Vendedor</button>` : ''}
+            ${pvBtnT}
           </div>
         </td>
         <td style="white-space:nowrap;padding-left:4px"><span class="mt-score ${cls}">${sc}</span></td>
@@ -3093,6 +3101,14 @@ async function carregarMatchesDrawer(cod, cliente) {
           ` A entrada é de apenas ${m.imoEntradaPerc}% — e as condições de pagamento são bem facilitadas. Posso te mandar a tabela completa?`);
       }
       const wppHref = tel && mensagem ? `https://wa.me/55${tel}?text=${encodeURIComponent(mensagem)}` : null;
+      const pvBtnD = (() => {
+        if (isConst) return '';
+        const pvChave  = (isLanc || isRevConst) ? (m.imoConstrutora || m.imoCodigo || '') : (m.imoCodigo || '');
+        const pvOrigem = isLanc ? 'LANCAMENTOS' : isRevConst ? 'REVENDAS_CONSTRUTORAS' : 'REVENDA';
+        const pvLabel  = (isLanc || isRevConst) ? (m.imoConstrutora || local || m.imoTipo || 'Construtora') : (local || m.imoTipo || 'Revenda');
+        const j = s => JSON.stringify(s).replace(/"/g, '&quot;');
+        return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${j(pvChave)},${j(pvOrigem)},${j(pvLabel)})">🏷️ Perfil do Vendedor</button></div>`;
+      })();
 
       return `<div class="imovel-card${isLanc ? ' imovel-card-lanc' : isConst ? ' imovel-card-const' : isRevConst ? ' imovel-card-revconst' : ''}">
         <div class="imovel-card-top">
@@ -3126,7 +3142,7 @@ async function carregarMatchesDrawer(cod, cliente) {
             <button type="button" class="d-btn imovel-btn-copiar" onclick="copiarTexto_('${msgId}', this)">📋 Copiar</button>
           </div>
         </div>` : ''}
-        ${!isConst && !isLanc && !isRevConst ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${JSON.stringify(m.imoCodigo||'').replace(/"/g,'&quot;')},${JSON.stringify(local||m.imoTipo||'Revenda').replace(/"/g,'&quot;')})">🏷️ Perfil do Vendedor</button></div>` : ''}
+        ${pvBtnD}
         ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>`;
     }).join('')}</div>${rodapeDrawerCliente_(cliente)}`;
@@ -4574,8 +4590,11 @@ async function excluirLeadBI(idCliente, btn) {
 }
 
 // ── PERFIL DO VENDEDOR — Matches ──────────────────────────────────────────
-function abrirPvDash_(codigo, label) {
-  abrirPerfilVendedor_(codigo, 'REVENDA', ['PF','PJ','CORRETOR'], label, null);
+function abrirPvDash_(codigo, origemImovel, label) {
+  const cats = origemImovel === 'LANCAMENTOS'           ? ['PJ','CONSTRUTORA']
+             : origemImovel === 'REVENDAS_CONSTRUTORAS'  ? ['PJ','CONSTRUTORA','CORRETOR']
+             :                                             ['PF','PJ','CORRETOR'];
+  abrirPerfilVendedor_(codigo, origemImovel, cats, label, null);
 }
 
 // ── INTELIGÊNCIA DE VENDAS ─────────────────────────────────────────────────
