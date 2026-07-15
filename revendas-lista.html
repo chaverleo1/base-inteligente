@@ -314,8 +314,8 @@ function renderTabela() {
     const svCls = sv >= 70 ? 'score-hot' : sv >= 40 ? 'score-warm' : sv > 0 ? 'score-cold' : 'score-none';
     const svTxt = sv > 0 ? sv : '—';
 
-    const jCod = JSON.stringify(im.codigo);
-    const jTip = JSON.stringify(im.tipo || im.condominio || im.bairro || 'Revenda');
+    const eCod = escHtml(im.codigo);
+    const eTip = escHtml(im.tipo || im.condominio || im.bairro || 'Revenda');
 
     return `<tr>
       <td class="td-foto">${fotoHtml}</td>
@@ -335,14 +335,24 @@ function renderTabela() {
         <span class="match-badge ${im.matchTotal > 0 ? '' : 'match-zero'}">${im.matchTotal || '—'}</span>
       </td>
       <td class="td-actions">
-        <button class="btn-sm btn-vend" onclick="abrirPerfilVendedor_(${jCod},'REVENDA',['PF','PJ','CORRETOR'],${jTip},null)">🏷️ Vendedor</button>
-        <button class="btn-sm btn-del" style="margin-left:4px" onclick="excluirImovel_(${jCod},this)">🗑</button>
+        <button class="btn-sm btn-vend" data-cod="${eCod}" data-tip="${eTip}" onclick="abrirVendedorRevenda_(this)">🏷️ Vendedor</button>
+        <button class="btn-sm btn-del" data-cod="${eCod}" onclick="excluirImovelBtn_(this)">🗑</button>
       </td>
     </tr>`;
   }).join('');
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function abrirVendedorRevenda_(btn) {
+  const cod = btn.dataset.cod;
+  const tip = btn.dataset.tip;
+  abrirPerfilVendedor_(cod, 'REVENDA', ['PF','PJ','CORRETOR'], tip, null);
+}
+
+function excluirImovelBtn_(btn) {
+  excluirImovel_(btn.dataset.cod, btn);
+}
 
 async function excluirImovel_(codigo, btn) {
   if (!confirm(`Excluir o imóvel ${codigo} permanentemente da base?\n\nOs dados do vendedor e favoritos também serão removidos.\nEsta ação não pode ser desfeita.`)) return;
