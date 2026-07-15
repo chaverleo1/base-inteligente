@@ -89,6 +89,23 @@ a{text-decoration:none;color:inherit}
 .insight-ver-num:hover{opacity:.75}
 .insight-ver-btn{cursor:pointer;color:var(--ic,var(--accent));font-weight:700;margin-left:8px;white-space:nowrap}
 .insight-ver-btn:hover{opacity:.75}
+
+/* ── DADOS GERAIS — painel compacto igual ao vg-panel do dashboard ── */
+.vg-panel{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  gap:1px;background:var(--border);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;margin-bottom:24px}
+.vg-stat{background:var(--surface);padding:12px 14px;position:relative;transition:background .15s}
+.vg-stat:hover{background:rgba(255,255,255,.03)}
+.vg-stat-top{display:flex;align-items:center;gap:5px;margin-bottom:6px;padding-right:34px}
+.vg-stat-icon{font-size:13px;line-height:1;flex-shrink:0}
+.vg-stat-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;
+  letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vg-stat-value{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;
+  color:var(--text);line-height:1.1}
+.vg-stat-sub{font-size:10px;color:var(--text3);margin-top:4px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.vg-stat-link{position:absolute;top:10px;right:10px;font-size:10px;font-weight:700;
+  border-radius:5px;padding:2px 7px;text-decoration:none;cursor:pointer;border:1px solid;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -103,6 +120,7 @@ a{text-decoration:none;color:inherit}
     <a href="dados.html" class="nav-tab active">Dados</a>
     <a href="busca.html" class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <a href="revendas-lista.html" class="nav-tab">Revendas</a>
     <a href="revendas-construtoras.html" class="nav-tab">Revendas-Construtoras</a>
     <a href="dashboard.html?secao=baseimob" class="nav-tab">BaseImob</a>
     <a href="leads-imobzi.html" class="nav-tab">Leads Imobzi</a>
@@ -117,6 +135,11 @@ a{text-decoration:none;color:inherit}
 </div>
 
 <div class="page">
+
+  <div class="section-title">Dados gerais</div>
+  <div class="vg-panel" id="dadosGeraisRow">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+  </div>
 
   <div class="section-title">Composição da base de clientes</div>
   <div class="cards-row" id="cardsTemperatura" style="margin-bottom:16px">
@@ -214,12 +237,47 @@ async function carregarDados() {
   }
   carregarLancamentosDash();
   carregarInsightsExtended();
+  carregarRevendasConstrutorasDados();
 }
 
 function renderDados(json) {
-  const quentes = json.quentes || [];
-  const mornos  = json.mornos  || [];
-  const frios   = json.frios   || [];
+  const quentes   = json.quentes || [];
+  const mornos    = json.mornos  || [];
+  const frios     = json.frios   || [];
+  const total     = json.total   || 0;
+  const prodTotal = (json.produtos || {}).total || 0;
+  const ganhos    = ((json.stages || {}).ganhos || []).length;
+
+  document.getElementById('dadosGeraisRow').innerHTML = `
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">👥</span><span class="vg-stat-label">Contatos</span></div>
+      <div class="vg-stat-value">${total.toLocaleString('pt-BR')}</div>
+      <div class="vg-stat-sub">na base atual</div>
+      <a href="contatos.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">✅</span><span class="vg-stat-label">Ganhos</span></div>
+      <div class="vg-stat-value" style="color:#1a9ed4">${ganhos}</div>
+      <div class="vg-stat-sub">clientes convertidos</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🔑</span><span class="vg-stat-label">Revendas</span></div>
+      <div class="vg-stat-value" style="color:var(--accent2)">${prodTotal}</div>
+      <div class="vg-stat-sub">disponíveis p/ venda</div>
+      <a href="revendas-lista.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🚀</span><span class="vg-stat-label">Empreendimentos</span></div>
+      <div class="vg-stat-value" style="color:var(--accent2)" id="dgEmpValue">—</div>
+      <div class="vg-stat-sub" id="dgEmpSub">carregando…</div>
+      <a href="lancamentos.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🏢</span><span class="vg-stat-label">Rev.-Construtoras</span></div>
+      <div class="vg-stat-value" style="color:#a78bfa" id="dgRcValue">— | —</div>
+      <div class="vg-stat-sub" id="dgRcSub">carregando…</div>
+      <a href="revendas-construtoras.html" class="vg-stat-link" style="color:#a78bfa;background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.25)">Ver →</a>
+    </div>`;
 
   window._insightDetails = window._insightDetails || {};
   window._insightDetails['cardQuentes'] = {title:'Clientes Quentes (score ≥ 80)', icon:'🔴', color:'#ff5a5a', type:'clientes', items:quentes};
@@ -358,11 +416,40 @@ async function carregarLancamentosDash() {
       Object.entries(porPadrao).sort((a,b)=>b[1]-a[1]),
       c => { chartLancPadrao = c; }, 'tipologias');
 
+    const dgVal = document.getElementById('dgEmpValue');
+    const dgSub = document.getElementById('dgEmpSub');
+    if (dgVal) dgVal.textContent = empIds.size;
+    if (dgSub) dgSub.textContent = total + ' tipologias cadastradas';
+
     if (_dashData) renderInsights(_dashData, lista);
 
   } catch(e) {
     document.getElementById('cardsLancamentos').innerHTML =
       '<div style="color:var(--text3);font-size:13px;padding:16px">Erro ao carregar lançamentos.</div>';
+  }
+}
+
+async function carregarRevendasConstrutorasDados() {
+  const val = document.getElementById('dgRcValue');
+  const sub = document.getElementById('dgRcSub');
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_revendas_construtoras&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    const lista = json.imoveis || [];
+    const tot   = lista.length;
+    const LIMIT = 45 * 24 * 60 * 60 * 1000;
+    const agora = Date.now();
+    const novas = lista.filter(imo => {
+      const s = String(imo.dataCadastro || '');
+      const p = s.split('/');
+      const d = p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(s);
+      return !isNaN(d) && (agora - d.getTime()) <= LIMIT;
+    }).length;
+    if (val) val.textContent = tot + ' | ' + novas;
+    if (sub) sub.textContent = 'atuais | novas (45 dias)';
+  } catch(e) {
+    if (val) val.textContent = '—';
+    if (sub) sub.textContent = 'erro ao carregar';
   }
 }
 
