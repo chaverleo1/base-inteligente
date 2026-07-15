@@ -61,31 +61,31 @@ a { text-decoration:none; color:inherit; }
 .stat-chip strong { font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:700; display:block; }
 
 .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-  overflow:auto; }
-table { width:100%; border-collapse:collapse; min-width:900px; }
+  overflow-x:auto; }
+table { width:100%; border-collapse:collapse; table-layout:auto; }
 thead th { background:var(--surface2); color:var(--text3); font-size:10px; font-weight:700;
-  text-transform:uppercase; letter-spacing:.5px; padding:10px 12px; text-align:left;
+  text-transform:uppercase; letter-spacing:.5px; padding:8px 10px; text-align:left;
   border-bottom:1px solid var(--border); white-space:nowrap; position:sticky; top:0; z-index:2; }
 thead th.th-num { text-align:right; }
 tbody tr { border-bottom:1px solid var(--border); transition:background .15s; cursor:default; }
 tbody tr:hover { background:rgba(255,255,255,.025); }
 tbody tr:last-child { border-bottom:none; }
-td { padding:9px 12px; font-size:12px; vertical-align:middle; }
-.td-foto { width:52px; padding:8px 8px; }
-.td-foto img { width:44px; height:35px; object-fit:cover; border-radius:5px; display:block; }
-.td-foto .foto-ph { width:44px; height:35px; border-radius:5px; background:var(--surface2);
-  display:flex; align-items:center; justify-content:center; font-size:17px; }
-.td-cod { color:var(--text3); font-family:monospace; font-size:11px; white-space:nowrap; }
-.td-tipo { white-space:nowrap; }
-.td-local { max-width:180px; }
-.local-cond { font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+td { padding:7px 10px; font-size:12px; vertical-align:middle; }
+.td-foto { width:46px; padding:6px 6px; }
+.td-foto img { width:40px; height:32px; object-fit:cover; border-radius:4px; display:block; }
+.td-foto .foto-ph { width:40px; height:32px; border-radius:4px; background:var(--surface2);
+  display:flex; align-items:center; justify-content:center; font-size:15px; }
+.td-cod { color:var(--text3); font-family:monospace; font-size:10px; white-space:nowrap; width:1%; }
+.td-tipo { white-space:nowrap; width:1%; }
+.td-local { width:auto; min-width:120px; }
+.local-cond { font-size:11px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; }
 .local-bairro { font-size:10px; color:var(--text3); margin-top:1px; }
-.td-val { white-space:nowrap; font-weight:600; }
-.td-attrs { white-space:nowrap; color:var(--text2); font-size:11px; }
-.td-num { text-align:right; }
+.td-val { white-space:nowrap; font-weight:600; width:1%; }
+.td-attrs { color:var(--text2); font-size:10px; width:1%; }
+.td-num { text-align:right; white-space:nowrap; width:1%; }
 
-.score-badge { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px;
-  padding:2px 8px; border-radius:99px; display:inline-block; white-space:nowrap; }
+.score-badge { font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:11px;
+  padding:1px 6px; border-radius:99px; display:inline-block; white-space:nowrap; }
 .score-hot  { background:rgba(255,90,90,.15);    color:var(--hot);     border:1px solid rgba(255,90,90,.25); }
 .score-warm { background:rgba(245,166,35,.15);   color:var(--warm);    border:1px solid rgba(245,166,35,.25); }
 .score-cold { background:rgba(79,124,255,.12);   color:var(--accent);  border:1px solid rgba(79,124,255,.2); }
@@ -95,7 +95,7 @@ td { padding:9px 12px; font-size:12px; vertical-align:middle; }
   color:var(--accent2); display:block; }
 .match-zero { color:var(--text3); }
 
-.td-actions { white-space:nowrap; }
+.td-actions { white-space:nowrap; width:1%; }
 .btn-sm { padding:4px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;
   border:1px solid; font-family:'Inter',sans-serif; transition:all .18s; }
 .btn-vend { background:rgba(79,124,255,.1); color:var(--accent); border-color:rgba(79,124,255,.25); }
@@ -182,14 +182,13 @@ td { padding:9px 12px; font-size:12px; vertical-align:middle; }
           <th>Local</th>
           <th class="th-num">Valor</th>
           <th>Atributos</th>
-          <th class="th-num" title="Média dos scores de match dos clientes">Score Imóvel</th>
-          <th class="th-num" title="Score do vendedor cadastrado">Score Vendedor</th>
+          <th class="th-num" title="Score imóvel (média matches) / Score vendedor">Scores</th>
           <th class="th-num">Matches</th>
           <th>Ações</th>
         </tr>
       </thead>
       <tbody id="tbodyRevendas">
-        <tr><td colspan="10" class="loading-msg">Carregando</td></tr>
+        <tr><td colspan="9" class="loading-msg">Carregando</td></tr>
       </tbody>
     </table>
   </div>
@@ -288,7 +287,7 @@ function renderTabela() {
 
   const tbody = document.getElementById('tbodyRevendas');
   if (!lista.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="empty-msg">Nenhum imóvel encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-msg">Nenhum imóvel encontrado.</td></tr>';
     return;
   }
 
@@ -328,11 +327,9 @@ function renderTabela() {
       </td>
       <td class="td-val td-num">${fmt(im.valorVenda)}</td>
       <td class="td-attrs">${escHtml(attrs)}</td>
-      <td class="td-num">
-        ${sc > 0 ? `<span class="score-badge ${scCls}">${scTxt}</span>` : `<span style="color:var(--text3);font-size:11px">—</span>`}
-      </td>
-      <td class="td-num">
-        ${sv > 0 ? `<span class="score-badge ${svCls}">${svTxt}</span>` : `<span style="color:var(--text3);font-size:11px">—</span>`}
+      <td class="td-num" style="white-space:nowrap">
+        <div title="Score imóvel">${sc > 0 ? `<span class="score-badge ${scCls}">${scTxt}</span>` : `<span style="color:var(--text3);font-size:10px">—</span>`}</div>
+        <div title="Score vendedor" style="margin-top:2px">${sv > 0 ? `<span class="score-badge ${svCls}">${svTxt}</span>` : `<span style="color:var(--text3);font-size:10px">—</span>`}</div>
       </td>
       <td class="td-num">
         <span class="match-badge ${im.matchTotal > 0 ? '' : 'match-zero'}">${im.matchTotal || '—'}</span>
