@@ -296,6 +296,16 @@ function doGet(e) {
     } catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
 
+  // ── Módulo Perfil do Vendedor ────────────────────────────────
+  if (acao === 'getPerfilVendedor')           return ok(obterPerfilVendedor_(e.parameter.codigo));
+  if (acao === 'listarTriangulosOportunidade') return ok(listarTriangulosOportunidade_());
+  if (acao === 'listarFacaHoje')              return ok(listarFacaHoje_());
+  if (acao === 'listarJanelaAberta')          return ok(listarJanelaAberta_());
+  if (acao === 'adm_migrar_cabecalho_vendedores_perfil') {
+    try { migrarCabecalhoVendedoresPerfil(); return ok({ status: 'ok', msg: 'VENDEDORES_PERFIL criado/atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+
   if (acao === 'adm_dados_insights') {
     try {
       // getActiveSpreadsheet() devolve null quando o script roda como Web App
@@ -730,6 +740,7 @@ function doPost(e) {
   if (d.acao === 'desativar_acao_planejada') return ok(desativarAcaoPlanejada_(d));
   if (d.acao === 'salvar_link_util')      return ok(salvarLinkUtil_(d));
   if (d.acao === 'excluir_link_util')     return ok(excluirLinkUtil_(d));
+  if (d.acao === 'salvar_perfil_vendedor') return ok(salvarPerfilVendedor_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -5318,6 +5329,386 @@ function migrarLeadBaseimob_(d) {
   }
 
   return { ok: true, idClienteNovo: result.idCliente, produtoOrigem: contatoData.produtoOrigem };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO: PERFIL DO VENDEDOR — Score de Urgência
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_VENDEDORES_PERFIL = [
+  'codigo','dataCadastro','dataAtualizacao',
+  'origemContato','motivoVenda','motivoVendaObs',
+  'perfilVendedor',
+  'precoAnuncio','reducoes','diasNaMercado',
+  'aceitaFGTS','aceitaPermuta','aceitaFinanciamento','aceitaParcelamento','condicoesObs',
+  'scoreVendedor','margemEstimada','prazoDeclarado'
+];
+
+function migrarCabecalhoVendedoresPerfil() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('VENDEDORES_PERFIL');
+  if (!aba) {
+    aba = ss.insertSheet('VENDEDORES_PERFIL');
+    aba.getRange(1, 1, 1, CABECALHO_VENDEDORES_PERFIL.length).setValues([CABECALHO_VENDEDORES_PERFIL]);
+    aba.getRange(1, 1, 1, CABECALHO_VENDEDORES_PERFIL.length)
+       .setFontWeight('bold').setBackground('#1a1a2e').setFontColor('#ffffff');
+    aba.setFrozenRows(1);
+    Logger.log('Aba VENDEDORES_PERFIL criada com ' + CABECALHO_VENDEDORES_PERFIL.length + ' colunas.');
+    return;
+  }
+  var cabAtual = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(String);
+  CABECALHO_VENDEDORES_PERFIL.forEach(function(col) {
+    if (cabAtual.indexOf(col) < 0) {
+      aba.getRange(1, aba.getLastColumn() + 1).setValue(col).setFontWeight('bold');
+      Logger.log('VENDEDORES_PERFIL — coluna adicionada: ' + col);
+    }
+  });
+}
+
+// Função pura (sem I/O). Retorna {scoreVendedor, margemEstimada, urgenciaNivel}
+function calcularScoreVendedor_(dados) {
+  var score = 0;
+
+  // Origem do contato
+  if (String(dados.origemContato || '') === 'Vendedor me procurou') score += 25;
+
+  // Motivo de venda
+  var motivo = String(dados.motivoVenda || '');
+  if (motivo === 'Precisa de liquidez (dívida)')                    score += 20;
+  else if (motivo === 'Divórcio / separação' ||
+           motivo === 'Inventário / herança')                        score += 20;
+  else if (motivo === 'Mudança de cidade')                          score += 15;
+  else if (motivo === 'Troca de imóvel')                            score += 10;
+  else if (motivo === 'Investidor realizando lucro')                 score -= 8;
+
+  // Dias no mercado
+  var dias = parseInt(dados.diasNaMercado) || 0;
+  if      (dias > 90) score += 15;
+  else if (dias >= 45) score += 8;
+
+  // Histórico de reduções de preço
+  var reducoes = [];
+  try {
+    var rv = dados.reducoes;
+    if (rv) reducoes = typeof rv === 'string' ? JSON.parse(rv) : rv;
+  } catch(e) {}
+  if (!Array.isArray(reducoes)) reducoes = [];
+  if      (reducoes.length >= 2) score += 18;
+  else if (reducoes.length === 1) score += 12;
+
+  // Prazo declarado
+  if (dados.prazoDeclarado) score += 10;
+
+  // Perfil do vendedor
+  var perfil = String(dados.perfilVendedor || '');
+  if (perfil === 'Proprietário único (mora no imóvel)' ||
+      perfil === 'Proprietário único (imóvel vazio)')               score += 5;
+  if (perfil === 'Investidor com portfólio grande (6+)')            score -= 12;
+
+  // Condições especiais
+  if (dados.aceitaFGTS        === 'sim' || dados.aceitaFGTS        === true) score += 4;
+  if (dados.aceitaPermuta     === 'sim' || dados.aceitaPermuta     === true) score += 4;
+  if (dados.aceitaParcelamento === 'sim' || dados.aceitaParcelamento === true) score += 4;
+
+  score = Math.max(0, Math.min(100, score));
+
+  // Margem estimada
+  var margem = 5;
+  if (reducoes.length > 0) margem += 3;
+  if (motivo === 'Precisa de liquidez (dívida)' || motivo === 'Divórcio / separação' ||
+      motivo === 'Inventário / herança'          || motivo === 'Mudança de cidade') margem += 2;
+  if (score >= 70) margem += 3;
+  if (dias > 90)   margem += 2;
+  margem = Math.min(20, margem);
+
+  var urgenciaNivel = score >= 70 ? 'ALTA' : score >= 40 ? 'MEDIA' : 'BAIXA';
+  return { scoreVendedor: score, margemEstimada: margem, urgenciaNivel: urgenciaNivel };
+}
+
+function urgenciaCompradorParaScore_(urgencia) {
+  var u = String(urgencia || '');
+  if (u === 'Imediata (até 30 dias)')    return 100;
+  if (u === 'Curto prazo (até 3 meses)') return 70;
+  if (u === 'Médio prazo (até 6 meses)') return 40;
+  if (u === 'Longo prazo / sem pressa')  return 10;
+  return 20;
+}
+
+// Retorna null quando scoreVendedor não disponível (imóvel sem perfil).
+function calcularScoreTriplo_(scoreMatch, scoreVendedor, urgenciaComprador) {
+  if (scoreVendedor === null || scoreVendedor === undefined) return null;
+  return Math.round(scoreMatch * 0.50 + scoreVendedor * 0.30 + urgenciaComprador * 0.20);
+}
+
+function obterPerfilVendedor_(codigo) {
+  if (!codigo) return null;
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('VENDEDORES_PERFIL');
+  if (!aba || aba.getLastRow() < 2) return null;
+  var dados = aba.getDataRange().getValues();
+  var cab   = dados[0];
+  var idxCod = cab.indexOf('codigo');
+  for (var i = 1; i < dados.length; i++) {
+    if (String(dados[i][idxCod]) === String(codigo)) {
+      var obj = {};
+      cab.forEach(function(c, j) { obj[c] = dados[i][j]; });
+      try {
+        if (typeof obj.reducoes === 'string' && obj.reducoes) obj.reducoes = JSON.parse(obj.reducoes);
+      } catch(e) {}
+      if (!Array.isArray(obj.reducoes)) obj.reducoes = [];
+      var sv = parseInt(obj.scoreVendedor) || 0;
+      obj.urgenciaNivel = sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA';
+      return obj;
+    }
+  }
+  return null;
+}
+
+function salvarPerfilVendedor_(payload) {
+  var codigo = String(payload.codigo || '').trim();
+  if (!codigo)                return { status: 'erro', motivo: 'codigo obrigatorio' };
+  if (!payload.origemContato) return { status: 'erro', motivo: 'origemContato obrigatorio' };
+  if (!payload.motivoVenda)   return { status: 'erro', motivo: 'motivoVenda obrigatorio' };
+
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('VENDEDORES_PERFIL');
+  if (!aba) { migrarCabecalhoVendedoresPerfil(); aba = ss.getSheetByName('VENDEDORES_PERFIL'); }
+
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  var reducoes = payload.reducoes || [];
+  var reducoesStr = typeof reducoes === 'string' ? reducoes : JSON.stringify(reducoes);
+
+  var calculado = calcularScoreVendedor_({
+    origemContato:    payload.origemContato,
+    motivoVenda:      payload.motivoVenda,
+    diasNaMercado:    parseInt(payload.diasNaMercado) || 0,
+    reducoes:         reducoesStr,
+    prazoDeclarado:   payload.prazoDeclarado,
+    perfilVendedor:   payload.perfilVendedor,
+    aceitaFGTS:           payload.aceitaFGTS,
+    aceitaPermuta:        payload.aceitaPermuta,
+    aceitaParcelamento:   payload.aceitaParcelamento
+  });
+
+  function boolStr_(v) { return (v === true || v === 'sim') ? 'sim' : 'não'; }
+
+  // Encontra linha existente para update, ou append
+  var dados = aba.getDataRange().getValues();
+  var cab   = dados[0];
+  var idxCod = cab.indexOf('codigo');
+  var linhaExistente = -1;
+  for (var i = 1; i < dados.length; i++) {
+    if (String(dados[i][idxCod]) === codigo) { linhaExistente = i + 1; break; }
+  }
+  var dataCriacao = (linhaExistente > 0)
+    ? dados[linhaExistente - 1][cab.indexOf('dataCadastro')]
+    : agora;
+
+  var novaLinha = CABECALHO_VENDEDORES_PERFIL.map(function(col) {
+    if (col === 'codigo')             return codigo;
+    if (col === 'dataCadastro')       return dataCriacao;
+    if (col === 'dataAtualizacao')    return agora;
+    if (col === 'origemContato')      return String(payload.origemContato  || '');
+    if (col === 'motivoVenda')        return String(payload.motivoVenda    || '');
+    if (col === 'motivoVendaObs')     return String(payload.motivoVendaObs || '');
+    if (col === 'perfilVendedor')     return String(payload.perfilVendedor || '');
+    if (col === 'precoAnuncio')       return payload.precoAnuncio || '';
+    if (col === 'reducoes')           return reducoesStr;
+    if (col === 'diasNaMercado')      return parseInt(payload.diasNaMercado) || 0;
+    if (col === 'aceitaFGTS')         return boolStr_(payload.aceitaFGTS);
+    if (col === 'aceitaPermuta')      return boolStr_(payload.aceitaPermuta);
+    if (col === 'aceitaFinanciamento') return boolStr_(payload.aceitaFinanciamento);
+    if (col === 'aceitaParcelamento') return boolStr_(payload.aceitaParcelamento);
+    if (col === 'condicoesObs')       return String(payload.condicoesObs  || '');
+    if (col === 'scoreVendedor')      return calculado.scoreVendedor;
+    if (col === 'margemEstimada')     return calculado.margemEstimada;
+    if (col === 'prazoDeclarado')     return payload.prazoDeclarado || '';
+    return '';
+  });
+
+  if (linhaExistente > 0) {
+    aba.getRange(linhaExistente, 1, 1, CABECALHO_VENDEDORES_PERFIL.length).setValues([novaLinha]);
+  } else {
+    aba.appendRow(novaLinha);
+  }
+
+  return {
+    status: 'ok',
+    scoreVendedor:  calculado.scoreVendedor,
+    margemEstimada: calculado.margemEstimada,
+    urgenciaNivel:  calculado.urgenciaNivel
+  };
+}
+
+function listarTriangulosOportunidade_() {
+  var contatos = lerAba_('CONTATOS');
+  var perfis   = lerAba_('VENDEDORES_PERFIL');
+  var matches  = lerAba_('MATCHES');
+
+  var contatosMap = {};
+  contatos.forEach(function(c) { if (c.idCliente) contatosMap[String(c.idCliente)] = c; });
+  var perfisMap = {};
+  perfis.forEach(function(p) { if (p.codigo) perfisMap[String(p.codigo)] = p; });
+
+  var hoje = new Date();
+  var resultados = [];
+
+  matches.forEach(function(m) {
+    if (String(m.fonte) !== 'REVENDA') return;
+    var perfil = perfisMap[String(m.imoCodigo || '')];
+    if (!perfil) return;
+
+    var scoreVendedor = parseInt(perfil.scoreVendedor) || 0;
+    var scoreMatch    = parseInt(m.scoreMatch) || 0;
+    var contato       = contatosMap[String(m.cliCodigo || '')];
+    var urgencia      = contato ? String(contato.urgencia || '') : '';
+    var urgScore      = urgenciaCompradorParaScore_(urgencia);
+    var scoreTriplo   = calcularScoreTriplo_(scoreMatch, scoreVendedor, urgScore);
+    if (!scoreTriplo || scoreTriplo < 75) return;
+
+    var diasSemContato = 9999;
+    if (contato && contato.ultimoContato) {
+      var uc = contato.ultimoContato instanceof Date
+        ? contato.ultimoContato : new Date(String(contato.ultimoContato));
+      if (!isNaN(uc.getTime())) diasSemContato = Math.round((hoje - uc) / 86400000);
+    }
+
+    resultados.push({
+      scoreTriplo: scoreTriplo, scoreMatch: scoreMatch,
+      scoreVendedor: scoreVendedor, urgenciaComprador: urgScore,
+      imoCodigo: m.imoCodigo, imoTipo: m.imoTipo,
+      imoBairro: m.imoBairro, imoCondominio: m.imoCondominio,
+      imoValorVenda: m.imoValorVenda, imoFoto: m.imoFoto, imoUrl: m.imoUrl,
+      vendedorUrgenciaNivel: scoreVendedor >= 70 ? 'ALTA' : scoreVendedor >= 40 ? 'MEDIA' : 'BAIXA',
+      motivoVenda: perfil.motivoVenda, diasNaMercado: parseInt(perfil.diasNaMercado) || 0,
+      margemEstimada: perfil.margemEstimada,
+      aceitaFGTS: perfil.aceitaFGTS, aceitaPermuta: perfil.aceitaPermuta,
+      aceitaFinanciamento: perfil.aceitaFinanciamento,
+      cliCodigo: m.cliCodigo, cliNome: m.cliNome, cliScore: m.cliScore,
+      urgencia: urgencia, diasSemContato: diasSemContato, detalheMatch: m.detalheMatch
+    });
+  });
+
+  resultados.sort(function(a, b) { return b.scoreTriplo - a.scoreTriplo; });
+  return resultados.slice(0, 10);
+}
+
+function listarFacaHoje_() {
+  var contatos = lerAba_('CONTATOS');
+  var matches  = lerAba_('MATCHES');
+  var perfis   = lerAba_('VENDEDORES_PERFIL');
+
+  var perfisMap = {};
+  perfis.forEach(function(p) { if (p.codigo) perfisMap[String(p.codigo)] = p; });
+
+  var matchesByCli = {};
+  matches.forEach(function(m) {
+    var cod = String(m.cliCodigo || '');
+    if (!matchesByCli[cod]) matchesByCli[cod] = [];
+    matchesByCli[cod].push(m);
+  });
+
+  var hoje = new Date();
+  var urgenciasAltas = ['Imediata (até 30 dias)', 'Curto prazo (até 3 meses)'];
+  var resultados = [];
+
+  contatos.forEach(function(c) {
+    if (!c.idCliente) return;
+    if ((parseInt(c.score) || 0) < 70) return;
+    if (urgenciasAltas.indexOf(String(c.urgencia || '')) < 0) return;
+    var uc = c.ultimoContato instanceof Date
+      ? c.ultimoContato : (c.ultimoContato ? new Date(String(c.ultimoContato)) : null);
+    var dias = (uc && !isNaN(uc.getTime())) ? Math.round((hoje - uc) / 86400000) : 9999;
+    if (dias < 7) return;
+
+    var cliMatches = (matchesByCli[String(c.idCliente)] || []).slice();
+    if (!cliMatches.length) return;
+    cliMatches.sort(function(a, b) { return (parseInt(b.scoreMatch)||0) - (parseInt(a.scoreMatch)||0); });
+    var mm = cliMatches[0];
+
+    var scoreVendedor = null, scoreTriplo = null;
+    if (String(mm.fonte) === 'REVENDA') {
+      var p = perfisMap[String(mm.imoCodigo || '')];
+      if (p) {
+        scoreVendedor = parseInt(p.scoreVendedor) || 0;
+        scoreTriplo = calcularScoreTriplo_(
+          parseInt(mm.scoreMatch) || 0, scoreVendedor,
+          urgenciaCompradorParaScore_(String(c.urgencia || ''))
+        );
+      }
+    }
+
+    resultados.push({
+      cliCodigo: String(c.idCliente), cliNome: c.nome,
+      cliScore: parseInt(c.score) || 0, urgencia: c.urgencia,
+      diasSemContato: dias,
+      melhorMatch: {
+        imoCodigo: mm.imoCodigo, imoTipo: mm.imoTipo, imoBairro: mm.imoBairro,
+        imoCondominio: mm.imoCondominio, imoValorVenda: mm.imoValorVenda,
+        imoFoto: mm.imoFoto, scoreMatch: parseInt(mm.scoreMatch) || 0, fonte: mm.fonte
+      },
+      scoreVendedor: scoreVendedor, scoreTriplo: scoreTriplo
+    });
+  });
+
+  resultados.sort(function(a, b) {
+    var ta = a.scoreTriplo || 0, tb = b.scoreTriplo || 0;
+    return ta !== tb ? tb - ta : b.cliScore - a.cliScore;
+  });
+  return resultados.slice(0, 5);
+}
+
+function listarJanelaAberta_() {
+  var revenda = lerAba_('REVENDA');
+  var perfis  = lerAba_('VENDEDORES_PERFIL');
+  var matches = lerAba_('MATCHES');
+
+  var perfisMap = {};
+  perfis.forEach(function(p) { if (p.codigo) perfisMap[String(p.codigo)] = p; });
+
+  var matchesByImo = {};
+  matches.forEach(function(m) {
+    if (String(m.fonte) !== 'REVENDA') return;
+    var cod = String(m.imoCodigo || '');
+    if (!matchesByImo[cod]) matchesByImo[cod] = [];
+    matchesByImo[cod].push(m);
+  });
+
+  var hoje = new Date();
+  var limite = new Date(hoje.getTime() - 7 * 86400000);
+  var resultados = [];
+
+  revenda.forEach(function(r) {
+    var dataCad = r.dataCadastro instanceof Date
+      ? r.dataCadastro : (r.dataCadastro ? new Date(String(r.dataCadastro)) : null);
+    if (!dataCad || isNaN(dataCad.getTime()) || dataCad < limite) return;
+
+    var codigo = String(r.codigo || '');
+    var p = perfisMap[codigo];
+    var diasEntrou = Math.round((hoje - dataCad) / 86400000);
+    var sv = p ? (parseInt(p.scoreVendedor) || 0) : null;
+
+    var imoMatches = (matchesByImo[codigo] || []).slice();
+    imoMatches.sort(function(a, b) { return (parseInt(b.scoreMatch)||0) - (parseInt(a.scoreMatch)||0); });
+
+    resultados.push({
+      codigo: codigo, tipo: r.tipo, bairro: r.bairro, condominio: r.condominio,
+      valorVenda: r.valorVenda, foto: r.foto, diasEntrou: diasEntrou,
+      scoreVendedor: sv,
+      urgenciaNivel: sv !== null ? (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA') : null,
+      margemEstimada: p ? p.margemEstimada : null,
+      aceitaFGTS: p ? p.aceitaFGTS : null,
+      topMatches: imoMatches.slice(0, 5).map(function(m) {
+        return { cliCodigo: m.cliCodigo, cliNome: m.cliNome,
+                 cliScore: parseInt(m.cliScore)||0, scoreMatch: parseInt(m.scoreMatch)||0 };
+      }),
+      totalMatches: imoMatches.length
+    });
+  });
+
+  resultados.sort(function(a, b) { return a.diasEntrou - b.diasEntrou; });
+  return resultados.slice(0, 3);
 }
 
 // ═══════════════════════════════════════════════════════════════
