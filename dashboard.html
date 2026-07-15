@@ -686,7 +686,7 @@
   <div class="nav-tabs">
     <a href="contatos.html" class="nav-tab">Contatos</a>
     <button class="nav-tab active" id="btnTabDash" onclick="mostrarDashboard()">Dashboard</button>
-    <a href="dados.html" class="nav-tab">Dados</a>
+
     <a href="busca.html" class="nav-tab">Busca Aberta</a>
     <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
     <a href="revendas-lista.html" class="nav-tab">Revendas</a>
@@ -991,6 +991,7 @@
     <button class="adm-subtab active" id="admSubtabFuncoes" onclick="mostrarAdmSubtab('funcoes')">ATIVAR FUNÇÕES</button>
     <button class="adm-subtab" id="admSubtabLinks" onclick="mostrarAdmSubtab('links')">🔗 Links Úteis</button>
     <button class="adm-subtab" id="admSubtabLandings" onclick="mostrarAdmSubtab('landings')">🌐 Landing Pages</button>
+    <button class="adm-subtab" id="admSubtabDados" onclick="mostrarAdmSubtab('dados')">📊 Dados</button>
   </div>
 
   <div id="admPainelFuncoes">
@@ -1141,6 +1142,46 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- DADOS sub-aba -->
+  <div id="admPainelDados" style="display:none">
+    <div class="section-title">Dados gerais</div>
+    <div class="vg-panel" id="adm_dadosGeraisRow">
+      <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+    </div>
+
+    <div class="section-title">Composição da base de clientes</div>
+    <div class="cards-row" id="adm_cardsTemperatura" style="margin-bottom:16px">
+      <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-title">Por segmento</div><div class="chart-wrap"><canvas id="adm_chartSegmento"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Por padrão</div><div class="chart-wrap"><canvas id="adm_chartPadrao"></canvas></div></div>
+    </div>
+
+    <div class="section-title">Portfólio de revendas</div>
+    <div class="cards-row" id="adm_cardsRevenda">
+      <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+    </div>
+    <div class="charts-row" style="margin-bottom:32px">
+      <div class="chart-card"><div class="chart-title">Imóveis por tipo</div><div class="chart-wrap"><canvas id="adm_chartTipo"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Imóveis por faixa de preço</div><div class="chart-wrap"><canvas id="adm_chartFaixa"></canvas></div></div>
+    </div>
+
+    <div class="section-title">🚀 Lançamentos</div>
+    <div class="cards-row" id="adm_cardsLancamentos">
+      <div class="loading dot-anim" style="grid-column:1/-1">Carregando</div>
+    </div>
+    <div class="charts-row" style="margin-bottom:32px">
+      <div class="chart-card"><div class="chart-title">Por status</div><div class="chart-wrap"><canvas id="adm_chartLancStatus"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Por padrão</div><div class="chart-wrap"><canvas id="adm_chartLancPadrao"></canvas></div></div>
+    </div>
+
+    <div class="section-title">💡 Insights</div>
+    <div class="insight-grid" id="adm_insightGrid">
+      <div class="loading dot-anim" style="grid-column:1/-1">Calculando insights</div>
     </div>
   </div>
 </div>
@@ -3493,10 +3534,219 @@ function mostrarAdmSubtab(nome) {
   document.getElementById('admPainelFuncoes').style.display  = nome === 'funcoes'  ? '' : 'none';
   document.getElementById('admPainelLinks').style.display    = nome === 'links'    ? '' : 'none';
   document.getElementById('admPainelLandings').style.display = nome === 'landings' ? '' : 'none';
+  document.getElementById('admPainelDados').style.display    = nome === 'dados'    ? '' : 'none';
   document.getElementById('admSubtabFuncoes').classList.toggle('active', nome === 'funcoes');
   document.getElementById('admSubtabLinks').classList.toggle('active', nome === 'links');
   document.getElementById('admSubtabLandings').classList.toggle('active', nome === 'landings');
+  document.getElementById('admSubtabDados').classList.toggle('active', nome === 'dados');
   if (nome === 'links') carregarLinksUteis();
+  if (nome === 'dados') carregarDadosAdm_();
+}
+
+// ── ADM: DADOS ────────────────────────────────────────────────────────────────
+let _admDadosCarregado = false;
+let _admDashDataLocal  = null;
+let _admChartSeg = null, _admChartPad = null;
+let _admChartTipo = null, _admChartFaixa = null;
+let _admChartLancStatus = null, _admChartLancPadrao = null;
+
+async function carregarDadosAdm_() {
+  if (_admDadosCarregado) return;
+  _admDadosCarregado = true;
+  const json = _dashData;
+  if (json) {
+    renderDadosAdm_(json);
+  } else {
+    try {
+      const res  = await fetch(WEBHOOK_URL + '?acao=dashboard&token=' + encodeURIComponent(tokenSessao()));
+      const data = await res.json();
+      if (trataNaoAutenticado(data)) { _admDadosCarregado = false; return; }
+      renderDadosAdm_(data);
+    } catch(err) {
+      document.getElementById('adm_cardsTemperatura').innerHTML =
+        `<div style="grid-column:1/-1;color:var(--danger);padding:16px">Erro: ${err.message}</div>`;
+      _admDadosCarregado = false;
+      return;
+    }
+  }
+  carregarLancamentosAdm_();
+  carregarRevendasConstrutorasDados_();
+}
+
+function renderDadosAdm_(json) {
+  const quentes   = json.quentes || [];
+  const mornos    = json.mornos  || [];
+  const frios     = json.frios   || [];
+  const total     = json.total   || 0;
+  const prodTotal = (json.produtos || {}).total || 0;
+  const ganhos    = ((json.stages || {}).ganhos || []).length;
+  const pr        = json.produtos || {};
+  const porTipo   = pr.porTipo  || {};
+  const porFaixa  = pr.porFaixa || {};
+
+  document.getElementById('adm_dadosGeraisRow').innerHTML = `
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">👥</span><span class="vg-stat-label">Contatos</span></div>
+      <div class="vg-stat-value">${total.toLocaleString('pt-BR')}</div>
+      <div class="vg-stat-sub">na base atual</div>
+      <a href="contatos.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">✅</span><span class="vg-stat-label">Ganhos</span></div>
+      <div class="vg-stat-value" style="color:#1a9ed4">${ganhos}</div>
+      <div class="vg-stat-sub">clientes convertidos</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🔑</span><span class="vg-stat-label">Revendas</span></div>
+      <div class="vg-stat-value" style="color:var(--accent2)">${prodTotal}</div>
+      <div class="vg-stat-sub">disponíveis p/ venda</div>
+      <a href="revendas-lista.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🚀</span><span class="vg-stat-label">Empreendimentos</span></div>
+      <div class="vg-stat-value" style="color:var(--accent2)" id="adm_dgEmpValue">—</div>
+      <div class="vg-stat-sub" id="adm_dgEmpSub">carregando…</div>
+      <a href="lancamentos.html" class="vg-stat-link" style="color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25)">Ver →</a>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🏢</span><span class="vg-stat-label">Rev.-Construtoras</span></div>
+      <div class="vg-stat-value" style="color:#a78bfa" id="adm_dgRcValue">— | —</div>
+      <div class="vg-stat-sub" id="adm_dgRcSub">carregando…</div>
+      <a href="revendas-construtoras.html" class="vg-stat-link" style="color:#a78bfa;background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.25)">Ver →</a>
+    </div>`;
+
+  const vb_ = (id) =>
+    `<span onclick="verInsight('${id}')" style="cursor:pointer;position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+       color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);border-radius:6px;padding:3px 10px">Ver →</span>`;
+
+  document.getElementById('adm_cardsTemperatura').innerHTML = `
+    <div class="card" style="position:relative">
+      <div class="card-label">🔴 Quentes (score ≥80)</div>
+      <div class="card-value hot">${quentes.length}</div>
+      <div class="card-sub">prioridade máxima</div>${vb_('cardQuentes')}
+    </div>
+    <div class="card" style="position:relative">
+      <div class="card-label">🟡 Mornos (70–79)</div>
+      <div class="card-value warm">${mornos.length}</div>
+      <div class="card-sub">potencial de conversão</div>${vb_('cardMornos')}
+    </div>
+    <div class="card" style="position:relative">
+      <div class="card-label">🔵 Frios (60–69)</div>
+      <div class="card-value cold">${frios.length}</div>
+      <div class="card-sub">nurturing / aguardar</div>${vb_('cardFrios')}
+    </div>`;
+
+  document.getElementById('adm_cardsRevenda').innerHTML = `
+    <div class="card">
+      <div class="card-label">Total de imóveis</div>
+      <div class="card-value green">${pr.total||0}</div>
+      <div class="card-sub">disponíveis para venda</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Até R$ 300k</div>
+      <div class="card-value cold">${porFaixa['Ate 300k']||0}</div>
+      <div class="card-sub">faixa popular</div>
+    </div>
+    <div class="card">
+      <div class="card-label">R$ 300k – 700k</div>
+      <div class="card-value" style="color:var(--accent2)">${porFaixa['300k-700k']||0}</div>
+      <div class="card-sub">faixa média</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Acima de R$ 700k</div>
+      <div class="card-value warm">${(porFaixa['700k-1.5M']||0)+(porFaixa['Acima 1.5M']||0)}</div>
+      <div class="card-sub">alto e luxo</div>
+    </div>`;
+
+  renderGrafico('adm_chartTipo',     _admChartTipo,  Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).slice(0,8), c=>{_admChartTipo=c;},  'imóveis');
+  renderGrafico('adm_chartFaixa',    _admChartFaixa, Object.entries(porFaixa),                                   c=>{_admChartFaixa=c;}, 'imóveis');
+  renderGrafico('adm_chartSegmento', _admChartSeg,   Object.entries(json.segmentos||{}).sort((a,b)=>b[1]-a[1]), c=>{_admChartSeg=c;},   'clientes');
+  renderGrafico('adm_chartPadrao',   _admChartPad,   Object.entries(json.padroes||{}).sort((a,b)=>b[1]-a[1]),   c=>{_admChartPad=c;},   'clientes');
+
+  _admDashDataLocal = json;
+
+  const srcGrid = document.getElementById('insightGrid');
+  const dstGrid = document.getElementById('adm_insightGrid');
+  if (srcGrid && dstGrid && !srcGrid.querySelector('.loading')) {
+    dstGrid.innerHTML = srcGrid.innerHTML;
+  }
+}
+
+async function carregarLancamentosAdm_() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    const lista = data.lancamentos || [];
+    const empIds = new Set(lista.map(l => l.idLancamento).filter(Boolean));
+    const total  = lista.length;
+    const precos = lista.map(l => {
+      const v = (l.precoMedio || l.preco || '').toString().replace(/[^\d]/g, '');
+      return v ? parseInt(v) : 0;
+    }).filter(p => p > 0);
+    const ticketMedio = precos.length ? Math.round(precos.reduce((a,b)=>a+b,0)/precos.length) : 0;
+    const porStatus = {}, porPadrao = {};
+    lista.forEach(l => {
+      porStatus[l.status||'Não informado'] = (porStatus[l.status||'Não informado']||0) + 1;
+      porPadrao[l.padrao||'Não informado'] = (porPadrao[l.padrao||'Não informado']||0) + 1;
+    });
+    const fmtP = v => v >= 1e6 ? 'R$ '+(v/1e6).toFixed(1).replace('.',',')+'M' : 'R$ '+Math.round(v/1000)+'k';
+    const st = Object.entries(porStatus).sort((a,b)=>b[1]-a[1]);
+    const s1 = st[0]||['—',0], s2 = st[1]||['—',0];
+    const dgV = document.getElementById('adm_dgEmpValue');
+    const dgS = document.getElementById('adm_dgEmpSub');
+    if (dgV) dgV.textContent = empIds.size;
+    if (dgS) dgS.textContent = total + ' tipologias cadastradas';
+    document.getElementById('adm_cardsLancamentos').innerHTML = `
+      <div class="card" style="position:relative">
+        <div class="card-label">Empreendimentos</div>
+        <div class="card-value" style="color:var(--accent2)">${empIds.size}</div>
+        <div class="card-sub">${total} tipologias cadastradas</div>
+        <a href="lancamentos.html" style="position:absolute;top:14px;right:14px;font-size:11px;font-weight:700;
+           color:var(--accent2);background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);border-radius:6px;padding:3px 10px;text-decoration:none">Ver →</a>
+      </div>
+      <div class="card">
+        <div class="card-label">Ticket médio</div>
+        <div class="card-value" style="color:var(--accent)">${ticketMedio ? fmtP(ticketMedio) : '—'}</div>
+        <div class="card-sub">${precos.length} com preço informado</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s1[0]}</div><div class="card-value warm">${s1[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>
+      <div class="card">
+        <div class="card-label">${s2[0]}</div><div class="card-value cold">${s2[1]}</div>
+        <div class="card-sub">tipologias</div>
+      </div>`;
+    renderGrafico('adm_chartLancStatus', _admChartLancStatus, Object.entries(porStatus).sort((a,b)=>b[1]-a[1]), c=>{_admChartLancStatus=c;}, 'tipologias');
+    renderGrafico('adm_chartLancPadrao', _admChartLancPadrao, Object.entries(porPadrao).sort((a,b)=>b[1]-a[1]), c=>{_admChartLancPadrao=c;}, 'tipologias');
+  } catch(e) {
+    document.getElementById('adm_cardsLancamentos').innerHTML =
+      '<div style="color:var(--text3);font-size:13px;padding:16px">Erro ao carregar lançamentos.</div>';
+  }
+}
+
+async function carregarRevendasConstrutorasDados_() {
+  const val = document.getElementById('adm_dgRcValue');
+  const sub = document.getElementById('adm_dgRcSub');
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_revendas_construtoras&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    const lista = json.imoveis || [];
+    const tot   = lista.length;
+    const LIMIT = 45 * 24 * 60 * 60 * 1000;
+    const agora = Date.now();
+    const novas = lista.filter(imo => {
+      const s = String(imo.dataCadastro || '');
+      const p = s.split('/');
+      const d = p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(s);
+      return !isNaN(d) && (agora - d.getTime()) <= LIMIT;
+    }).length;
+    if (val) val.textContent = tot + ' | ' + novas;
+    if (sub) sub.textContent = 'atuais | novas (45 dias)';
+  } catch(e) {
+    if (val) val.textContent = '—';
+    if (sub) sub.textContent = 'erro ao carregar';
+  }
 }
 
 let _linksUteisCache = [];
