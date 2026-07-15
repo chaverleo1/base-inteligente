@@ -252,10 +252,14 @@ function construirTipoTabs() {
   const tipos = Object.entries(contagem).sort((a,b) => b[1]-a[1]);
 
   const bar = document.getElementById('tipoTabs');
-  bar.innerHTML = `<button class="tipo-tab on" data-t="todos" onclick="mudarTipo('todos')">Todos (${_imoveis.length})</button>`
+  bar.innerHTML = `<button class="tipo-tab on" data-t="todos" onclick="mudarTipoBtn(this)">Todos (${_imoveis.length})</button>`
     + tipos.map(([t,n]) =>
-        `<button class="tipo-tab" data-t="${escHtml(t)}" onclick="mudarTipo(${JSON.stringify(t)})">${escHtml(t)} (${n})</button>`
+        `<button class="tipo-tab" data-t="${escHtml(t)}" onclick="mudarTipoBtn(this)">${escHtml(t)} (${n})</button>`
       ).join('');
+}
+
+function mudarTipoBtn(btn) {
+  mudarTipo(btn.dataset.t);
 }
 
 function mudarTipo(t) {
