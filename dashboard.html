@@ -1188,6 +1188,7 @@
 </div>
 
 <script src="config.js"></script>
+<script src="perfil-vendedor.js"></script>
 <script>
 const SESS_KEY       = 'bi_session';
 const SESS_TOKEN_KEY = 'bi_session_token';
@@ -3124,6 +3125,7 @@ async function carregarMatchesDrawer(cod, cliente) {
             <button type="button" class="d-btn imovel-btn-copiar" onclick="copiarTexto_('${msgId}', this)">📋 Copiar</button>
           </div>
         </div>` : ''}
+        ${m.fonte === 'REVENDA' ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${JSON.stringify(m.imoCodigo||'').replace(/"/g,'&quot;')},${JSON.stringify(local||m.imoTipo||'Revenda').replace(/"/g,'&quot;')})">🏷️ Perfil do Vendedor</button></div>` : ''}
         ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>`;
     }).join('')}</div>${rodapeDrawerCliente_(cliente)}`;
@@ -4568,6 +4570,11 @@ async function excluirLeadBI(idCliente, btn) {
     alert('Erro de conexão: ' + e.message);
     btn.disabled = false; btn.textContent = '🗑';
   }
+}
+
+// ── PERFIL DO VENDEDOR — Matches ──────────────────────────────────────────
+function abrirPvDash_(codigo, label) {
+  abrirPerfilVendedor_(codigo, 'REVENDA', ['PF','PJ','CORRETOR'], label, null);
 }
 
 // ── INTELIGÊNCIA DE VENDAS ─────────────────────────────────────────────────
