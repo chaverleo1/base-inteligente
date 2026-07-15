@@ -2591,6 +2591,7 @@ async function selecionarCliente(cod, nome) {
             <span class="imovel-fonte-badge ${fonteCls}">${fonteTxt}</span>
             ${isRevConst && (m.imoStatusRC === 'POTENCIAL' || m.imoStatusRC === 'OPORTUNIDADE') ? `<button type="button" class="status-rc-badge status-rc-badge-${m.imoStatusRC.toLowerCase()}" onclick="event.stopPropagation();abrirDetalhesVisitaRC('${m.imoCodigo}')" title="Ver/editar detalhes da visita">${m.imoStatusRC === 'OPORTUNIDADE' ? '🔥 Oportunidade' : '⭐ Potencial'}</button>` : ''}
             ${m.imoCodigo?`<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">#${m.imoCodigo}</span>`:''}
+            ${!isConst && !isLanc && !isRevConst ? `<button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${JSON.stringify(m.imoCodigo||'').replace(/"/g,'&quot;')},${JSON.stringify(local||m.imoTipo||'Revenda').replace(/"/g,'&quot;')})">🏷️ Vendedor</button>` : ''}
           </div>
         </td>
         <td style="white-space:nowrap;padding-left:4px"><span class="mt-score ${cls}">${sc}</span></td>
@@ -3125,7 +3126,7 @@ async function carregarMatchesDrawer(cod, cliente) {
             <button type="button" class="d-btn imovel-btn-copiar" onclick="copiarTexto_('${msgId}', this)">📋 Copiar</button>
           </div>
         </div>` : ''}
-        ${m.fonte === 'REVENDA' ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${JSON.stringify(m.imoCodigo||'').replace(/"/g,'&quot;')},${JSON.stringify(local||m.imoTipo||'Revenda').replace(/"/g,'&quot;')})">🏷️ Perfil do Vendedor</button></div>` : ''}
+        ${!isConst && !isLanc && !isRevConst ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${JSON.stringify(m.imoCodigo||'').replace(/"/g,'&quot;')},${JSON.stringify(local||m.imoTipo||'Revenda').replace(/"/g,'&quot;')})">🏷️ Perfil do Vendedor</button></div>` : ''}
         ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>`;
     }).join('')}</div>${rodapeDrawerCliente_(cliente)}`;
