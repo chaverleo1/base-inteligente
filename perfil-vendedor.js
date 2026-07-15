@@ -76,6 +76,9 @@
   cursor:pointer;font-family:'Inter',sans-serif;margin-top:16px;transition:opacity .15s}
 .pv-btn-salvar:hover{opacity:.88}
 .pv-btn-salvar:disabled{opacity:.5;cursor:not-allowed}
+.pv-alerta-excluido{background:rgba(255,90,90,.15);border:1px solid rgba(255,90,90,.3);
+  border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;font-weight:700;
+  color:#ff6b6b;display:flex;align-items:center;gap:8px}
 .pv-card-badge{display:none;align-items:center;gap:5px;
   padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;
   margin-top:4px;width:fit-content}
@@ -106,6 +109,7 @@
       <button class="pv-modal-close" onclick="fecharPvModal_()">✕</button>
     </div>
     <div class="pv-modal-body">
+      <div id="pvAlertaExcluido" class="pv-alerta-excluido" style="display:none">⚠️ IMÓVEL EXCLUÍDO NO IMOBZI — os dados do vendedor foram preservados.</div>
       <div id="pvScoreResult" class="pv-score-result"></div>
       <div id="pvCatTabs" class="pv-cat-tabs"></div>
       <div id="pvFormBody"></div>
@@ -142,6 +146,7 @@ function abrirPerfilVendedor_(codigo, origemImovel, categorias, titulo, onSave) 
   _pv.reducoes     = [];
   _pv.onSave       = onSave || null;
   document.getElementById('pvModalTitulo').textContent = 'Perfil do Vendedor — ' + _pv.titulo;
+  document.getElementById('pvAlertaExcluido').style.display = 'none';
   document.getElementById('pvScoreResult').style.display = 'none';
   document.getElementById('pvFormBody').innerHTML = '<div style="color:#8892aa;padding:20px 0;text-align:center">Carregando...</div>';
   document.getElementById('pvCatTabs').innerHTML = '';
@@ -167,6 +172,8 @@ async function _pvCarregarPerfil_() {
       const cat = _pv.perfil.categoriaVendedor;
       if (cat && _pv.categorias.includes(cat)) _pv.catSelecionada = cat;
       _pv.reducoes = Array.isArray(_pv.perfil.reducoes) ? _pv.perfil.reducoes : [];
+      const alertEl = document.getElementById('pvAlertaExcluido');
+      if (alertEl) alertEl.style.display = _pv.perfil.imovelExcluido ? '' : 'none';
     }
     _pvRenderCatTabs_();
     _pvRenderForm_();
