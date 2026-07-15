@@ -1474,23 +1474,18 @@ function renderNovasOfertas() {
     const local    = [o.condominio, o.bairro].filter(Boolean).join(' · ') || '—';
     const specs    = [o.quartos?o.quartos+' qto':'', o.areaUtil?o.areaUtil+' m²':'', o.padrao||''].filter(Boolean).join(' · ');
     const matches  = o._computedMatches || [];
-    const bestScore = o._bestScore || (matches.length ? Math.max(...matches.map(m => m.score)) : 0);
-    const scCls    = bestScore >= 80 ? 'score-hot' : bestScore >= 70 ? 'score-warm' : 'score-cold';
     return `<tr id="no-imo-${i}" style="cursor:pointer" onclick="selecionarImovelNO(${i})">
       <td style="padding:4px 6px;vertical-align:middle;width:78px">${fotoHtml}</td>
       <td style="width:100%;padding-left:6px">
         <div style="font-weight:600;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${local}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:1px">${o.tipo||''}${specs?' · '+specs:''}</div>
-        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center">
           <span class="imovel-fonte-badge fonte-rev">🔑 Revenda</span>
+          ${fmt_(o.valorVenda)?`<span class="mt-valor">${fmt_(o.valorVenda)}</span>`:''}
           ${o.codigo?`<span style="font-size:10px;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px">#${o.codigo}</span>`:''}
         </div>
       </td>
-      <td style="white-space:nowrap;padding-left:4px;vertical-align:middle">
-        ${bestScore > 0 ? `<span class="mt-score ${scCls}">${bestScore}</span>` : ''}
-      </td>
-      <td class="mt-valor" style="white-space:nowrap;vertical-align:middle">${fmt_(o.valorVenda)||'—'}</td>
-      <td style="text-align:center;padding:0 10px;vertical-align:middle">
+      <td style="text-align:center;padding:0 10px;vertical-align:middle;white-space:nowrap">
         ${matches.length > 0
           ? `<div class="no-match-count">🎯 ${matches.length}</div><div class="no-match-label">match${matches.length === 1 ? '' : 'es'}</div>`
           : `<div class="no-match-count" style="color:var(--text3);font-size:14px">—</div>`}
