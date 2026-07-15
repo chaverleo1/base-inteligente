@@ -643,6 +643,7 @@ select.form-input option { background: var(--surface2); }
 <div class="toast" id="toast"></div>
 
 <script src="config.js"></script>
+<script src="perfil-vendedor.js"></script>
 <script>
 const SESS_KEY       = 'bi_session';
 const SESS_TOKEN_KEY = 'bi_session_token';
@@ -1720,8 +1721,11 @@ function renderLista(lista) {
       ? `<div class="emp-gerente"><span class="emp-gerente-nome">👤 ${e.gerenteNome}</span>${gerenteTelLimpo ? `<a class="emp-gerente-wpp" href="https://wa.me/55${gerenteTelLimpo}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}</div>`
       : '';
 
+    const pvId    = (e.idLancamento || '').replace(/"/g,'&quot;');
+    const pvLabel = (e.nomeEmpreendimento || e.idLancamento || '').replace(/'/g,'\\&#39;');
+    const pvIdEsc = (e.idLancamento || '').replace(/'/g,"\\'");
     return `
-    <div class="emp-card" id="ec-${i}">
+    <div class="emp-card" id="ec-${i}" data-pv-badge-lanc="${pvId}">
       <div class="emp-card-header">
         <div class="emp-nome-row">${badgeVendidoHTML(pctVendido, e.estoque)}<div class="emp-nome">${e.nomeEmpreendimento || '—'}</div></div>
         <div class="emp-sub">${[e.construtora, e.bairro].filter(Boolean).join(' · ')}</div>
@@ -1731,6 +1735,7 @@ function renderLista(lista) {
           ${e.prazoMaximo ? `<span class="st-badge st-prazo">⏱ ${e.prazoMaximo} meses</span>` : ''}
           ${tabelaBadge}
           ${urlBadge}
+          <span class="pv-emp-badge" id="pvbadge-lanc-${i}" style="display:none"></span>
         </div>
       </div>
       <div class="emp-card-body">
@@ -1742,11 +1747,53 @@ function renderLista(lista) {
       <div class="emp-card-footer">
         <button class="btn-toggle" onclick="togglePanel(${i})">▶ Ver unidades</button>
         <button class="btn-editar-emp" onclick="editarEmp(${i})">✏️ Editar</button>
+        <button class="pv-btn-emp" onclick="abrirPvLanc('${pvIdEsc}','${pvLabel}',${i})">🏷️ Vendedor</button>
         <button class="btn-del-emp" onclick="excluirEmp('${e.idLancamento||''}','${(e.nomeEmpreendimento||'').replace(/'/g,'\\&apos;')}')">🗑 Excluir</button>
       </div>
       <div class="emp-panel" id="ep-${i}">${renderPanel(e.unidades)}</div>
     </div>`;
   }).join('');
+  carregarPvBadgesLanc_();
+}
+
+function abrirPvLanc(idLancamento, label, idx) {
+  abrirPerfilVendedor_(idLancamento, 'LANCAMENTOS', ['PJ','CONSTRUTORA'], label, function(json) {
+    pvAtualizarBadgeLanc_(idLancamento, json.urgenciaNivel, idx);
+  });
+}
+
+function pvAtualizarBadgeLanc_(idLancamento, nivel, idx) {
+  const u = _pvUrgConf[nivel] || _pvUrgConf.BAIXA;
+  const badgeEl = idx !== undefined ? document.getElementById('pvbadge-lanc-' + idx) : null;
+  if (badgeEl) {
+    badgeEl.textContent = u.emoji + ' Vendedor: urgência ' + u.label;
+    badgeEl.className   = 'pv-emp-badge ' + u.cls;
+    badgeEl.style.display = 'inline-flex';
+  }
+  document.querySelectorAll('[data-pv-badge-lanc="' + idLancamento.replace(/"/g,'&quot;') + '"] .pv-emp-badge').forEach(function(el) {
+    el.textContent    = u.emoji + ' Vendedor: urgência ' + u.label;
+    el.className      = 'pv-emp-badge ' + u.cls;
+    el.style.display  = 'inline-flex';
+  });
+}
+
+async function carregarPvBadgesLanc_() {
+  await pvCarregarBadgesBatch_(
+    '[data-pv-badge-lanc]',
+    function(el) { return el.dataset.pvBadgeLanc; },
+    function()   { return 'LANCAMENTOS'; },
+    function(el, p) {
+      const sv    = parseInt(p.scoreVendedor) || 0;
+      const nivel = p.urgenciaNivel || (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA');
+      const u     = _pvUrgConf[nivel] || _pvUrgConf.BAIXA;
+      const badge = el.querySelector('.pv-emp-badge');
+      if (badge) {
+        badge.textContent   = u.emoji + ' Vendedor: urgência ' + u.label;
+        badge.className     = 'pv-emp-badge ' + u.cls;
+        badge.style.display = 'inline-flex';
+      }
+    }
+  );
 }
 
 function calcularScoreTracao(emps) {

@@ -796,6 +796,7 @@ input[type=range]::-webkit-slider-thumb {
 </div>
 
 <script src="config.js"></script>
+<script src="perfil-vendedor.js"></script>
 <script>
 const SESS_KEY       = 'bi_session';
 const SESS_TOKEN_KEY = 'bi_session_token';
@@ -1392,6 +1393,7 @@ function renderResultados(resultados, filtros, interpretado) {
       ? `<img src="${im.foto}" onerror="this.style.display='none'">`
       : `<div style="font-size:36px;z-index:1">${isLanc ? '🚀' : isConst ? '🏗️' : '🏠'}</div>`;
 
+    const isRevenda = im.fonte === 'REVENDA';
     const card = document.createElement('div');
     card.className = `card${isTop ? ' top' : ''}`;
     card._codigoImovel = im.codigo || '';
@@ -1426,10 +1428,12 @@ function renderResultados(resultados, filtros, interpretado) {
           <div class="tags-match">
             <span class="tag ${isLanc ? 'tag-fonte-lanc' : isConst ? 'tag-fonte-const' : 'tag-fonte-rev'}">${isLanc ? '🚀 Lançamento' : isConst ? '🏗️ Construtora' : '🔑 Revenda'}</span>
             ${im.statusAtivo === 'Excluído' ? '<span class="tag tag-excluido">🚫 Excluído</span>' : ''}
+            ${isRevenda ? `<div class="pv-card-badge" data-pv-badge="${im.codigo}"></div>` : ''}
           </div>
           <div class="card-actions">
             <button class="btn-sm btn-ver" onclick="event.stopPropagation();abrirDetalhe(${JSON.stringify(im).replace(/"/g,'&quot;')})">Ver detalhes e mensagem</button>
             ${im.url && im.url.startsWith('http') ? `<a class="btn-sm btn-link-ext" href="${im.url}" target="_blank" onclick="event.stopPropagation()">Ver anúncio →</a>` : ''}
+            ${isRevenda ? `<button class="pv-btn-card" onclick="event.stopPropagation();abrirPvRevenda_('${im.codigo}','${(im.condominio||im.bairro||im.codigo).replace(/'/g,'\\&#39;')}')">🏷️ Vendedor</button>` : ''}
           </div>
         </div>
       </div>
@@ -1441,6 +1445,35 @@ function renderResultados(resultados, filtros, interpretado) {
   barra.style.display = 'flex';
   document.getElementById('barra-count').textContent = resultados.length;
   document.getElementById('barra-sel').style.display = 'none';
+
+  carregarPvBadgesRevenda_();
+}
+
+function abrirPvRevenda_(codigo, label) {
+  abrirPerfilVendedor_(codigo, 'REVENDA', ['PF','PJ','CORRETOR'], label, function(json) {
+    pvAtualizarBadgeCard_(codigo, json.urgenciaNivel);
+  });
+}
+
+function pvAtualizarBadgeCard_(codigo, nivel) {
+  document.querySelectorAll(`[data-pv-badge="${CSS.escape(codigo)}"]`).forEach(function(el) {
+    const u = _pvUrgConf[nivel] || _pvUrgConf.BAIXA;
+    el.textContent = u.emoji + ' Vendedor: urgência ' + u.label;
+    el.className = 'pv-card-badge ' + u.cls;
+  });
+}
+
+async function carregarPvBadgesRevenda_() {
+  await pvCarregarBadgesBatch_(
+    '[data-pv-badge]',
+    function(el) { return el.dataset.pvBadge; },
+    function()   { return 'REVENDA'; },
+    function(el, p) {
+      const sv    = parseInt(p.scoreVendedor) || 0;
+      const nivel = p.urgenciaNivel || (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA');
+      pvAtualizarBadgeCard_(el.dataset.pvBadge, nivel);
+    }
+  );
 }
 
 // ─── DETALHE / MENSAGEM ────────────────────────────────────────────────────────

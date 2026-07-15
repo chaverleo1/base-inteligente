@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Revendas-Construtoras — BASE INTELIGENTE</title>
 <script src="config.js"></script>
+<script src="perfil-vendedor.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
@@ -1211,11 +1212,16 @@ function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
     if (dB === null) return -1;
     return dA - dB;
   });
-  const rows = ordenada.map(c => `
-    <tr>
+  const rows = ordenada.map(c => {
+    const nomeEsc   = (c.nome||'').replace(/'/g,"\\'");
+    const nomeAttr  = (c.nome||'').replace(/"/g,'&quot;');
+    const pvLabel   = (c.nome||'Construtora').replace(/'/g,'\\&#39;');
+    return `
+    <tr data-pv-rc="${nomeAttr}">
       <td>
-        <button class="construtora-total-btn construtora-nome" onclick="abrirImoveisConstrutoraRC('${(c.nome||'').replace(/'/g,"\\'")}')"
+        <button class="construtora-total-btn construtora-nome" onclick="abrirImoveisConstrutoraRC('${nomeEsc}')"
           title="Ver todos os imóveis dessa construtora">${c.nome || '—'}</button>
+        <div class="pv-card-badge" data-pv-badge-rc="${nomeAttr}" style="margin-top:4px"></div>
       </td>
       <td>${c.gerenteComercial || '—'}</td>
       <td>${c.fone || '—'}</td>
@@ -1224,11 +1230,13 @@ function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
       <td class="td-acoes">
         <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
         ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 PDF</a>` : ''}
+        <button class="pv-btn-card" onclick="abrirPvRC('${nomeEsc}','${pvLabel}')">🏷️ Vendedor</button>
       </td>
       <td>${(c.totalImoveis || 0) > 0
-        ? `<button class="btn-excluir" onclick="excluirTodosRC('${(c.nome||'').replace(/'/g,"\\'")}', ${c.totalImoveis || 0}, this)">Excluir todos</button>`
+        ? `<button class="btn-excluir" onclick="excluirTodosRC('${nomeEsc}', ${c.totalImoveis || 0}, this)">Excluir todos</button>`
         : '<span style="color:var(--text3)">—</span>'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   // Linha extra pra imóveis com a coluna "construtora" vazia (ex: importados
   // antes desse campo existir no formulário de Colar/Extrair) — sem essa
   // linha eles ficam invisíveis, já que não batem com o filtro de nenhuma
@@ -1252,6 +1260,7 @@ function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
       <thead><tr><th>Nome</th><th>Gerente Comercial</th><th>Fone</th><th>Status</th><th>Última Atualização</th><th>Ações</th><th>Excluir todos</th></tr></thead>
       <tbody>${rowSemConstrutora}${rows}</tbody>
     </table></div>`;
+  carregarPvBadgesRC_();
 }
 
 async function excluirTodosRC(construtora, total, btnEl, semConstrutora) {
@@ -1335,6 +1344,33 @@ function cancelarEdicaoConstrutoraRC() {
   document.getElementById('inputObsRC').value = '';
   document.getElementById('tituloFormConstrutoraRC').textContent = 'Cadastrar construtora';
   document.getElementById('btnCancelarEdicaoRC').style.display = 'none';
+}
+
+function abrirPvRC(nome, label) {
+  abrirPerfilVendedor_(nome, 'REVENDAS_CONSTRUTORAS', ['PJ','CONSTRUTORA','CORRETOR'], label, function(json) {
+    pvAtualizarBadgeRC_(nome, json.urgenciaNivel);
+  });
+}
+
+function pvAtualizarBadgeRC_(nome, nivel) {
+  document.querySelectorAll('[data-pv-badge-rc="' + nome.replace(/"/g,'&quot;') + '"]').forEach(function(el) {
+    const u = _pvUrgConf[nivel] || _pvUrgConf.BAIXA;
+    el.textContent = u.emoji + ' Vendedor: urgência ' + u.label;
+    el.className = 'pv-card-badge ' + u.cls;
+  });
+}
+
+async function carregarPvBadgesRC_() {
+  await pvCarregarBadgesBatch_(
+    '[data-pv-badge-rc]',
+    function(el) { return el.dataset.pvBadgeRc; },
+    function()   { return 'REVENDAS_CONSTRUTORAS'; },
+    function(el, p) {
+      const sv    = parseInt(p.scoreVendedor) || 0;
+      const nivel = p.urgenciaNivel || (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA');
+      pvAtualizarBadgeRC_(el.dataset.pvBadgeRc, nivel);
+    }
+  );
 }
 
 // "Construtoras" é a aba padrão (primeira) — carrega assim que a página abre,
