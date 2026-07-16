@@ -2992,7 +2992,14 @@ function listarLancamentos_() {
         var obj = {};
         CABECALHO_LANCAMENTOS.forEach(function(col, i) { obj[col] = r[i]; });
         return obj;
-      });
+      })
+      // Soft-delete (ver excluirLancamento_/setStatusImovel_): sem esse filtro,
+      // o botão "Excluir" gravava statusAtivo='Excluído' na planilha mas o
+      // empreendimento continuava aparecendo aqui — carregarLancamentos()
+      // buscava a lista de novo e o item "excluído" voltava do mesmo jeito,
+      // parecendo que o botão não fazia nada (essa rota também alimenta o
+      // BaseImob público, que não deve mostrar anúncio excluído de jeito nenhum).
+      .filter(function(obj) { return obj.statusAtivo !== 'Excluído'; });
     return { lancamentos: lancamentos };
   } catch(e) {
     return { lancamentos: [], erro: e.message };

@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 26) — Fix: botão "Excluir" de empreendimentos não removia da lista
+
+Bug reportado: em `lancamentos.html`, clicar "🗑 Excluir" num empreendimento cadastrado não tinha
+efeito visível nenhum.
+
+Causa raiz: `excluirEmp()` (frontend) e `excluirLancamento_()`/`setStatusImovel_()` (backend) já
+faziam a parte deles corretamente — gravavam `statusAtivo = 'Excluído'` em todas as linhas daquele
+`idLancamento` na aba LANCAMENTOS (soft-delete, sem apagar a linha de verdade). O problema estava em
+`listarLancamentos_()`: nunca filtrava por `statusAtivo`, então `carregarLancamentos()` (chamado logo
+depois de excluir, pra atualizar a tela) buscava a lista de novo e o empreendimento "excluído" voltava
+do mesmo jeito — o botão parecia não fazer nada.
+
+Fix: `listarLancamentos_()` agora filtra fora qualquer linha com `statusAtivo === 'Excluído'`. Essa
+mesma rota (`listar_lancamentos`) também alimenta o BaseImob público — o bug também fazia anúncios
+excluídos continuarem visíveis lá, o que também fica corrigido.
+
+Testado em Node (mock de planilha): 2 empreendimentos cadastrados (um com 2 linhas/unidades), exclui
+um deles, confirma que ele some da lista COM o outro permanecendo intacto, e confirma que `statusAtivo`
+foi gravado corretamente em ambas as linhas do empreendimento excluído na planilha simulada.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no editor do Apps Script e reimplantar como "Nova
+versão" pra corrigir em produção.
+
 ## 2026-07-16 (parte 25) — Novo padrão LOUVRE: revendas-construtoras + tabela CSV no extrator "Outros" de lançamentos
 
 Padrão de tabela de vendas por unidade da LOUVRE (colunas: Unidade, Area_Total_Apto_m2,
