@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 32) — Score de Tração: novos pesos + renomeação + reordenação dos eixos
+
+Pedido do usuário: novos pesos e nova ordem de exibição pros 5 eixos do ranking (`lancamentos.html`).
+Pesos (partes inteiras, soma agora 15 em vez de 14):
+
+| Eixo (novo nome) | Peso | Nome antigo |
+|---|---|---|
+| Vendedor | 5 | Vendedor (era 4) |
+| Força de Venda | 4 | Tração (era 1) |
+| Atratividade (Preço Médio) | 3 | Atratividade (era 2) |
+| Estoque | 2 | Disponibilidade (era 3) |
+| Prazo de Pgt | 1 | Prazo (era 4) |
+
+Só o RÓTULO e o PESO mudaram — a fórmula de cada eixo (a mesma variável interna, só renomeada na
+tela) continua a mesma das partes 30/31: Vendedor = scoreVendedor/10; "Força de Venda" (antiga
+Tração) = % de unidades já vendidas; Atratividade = m² médio comparado ao lote carregado; Estoque
+(antiga Disponibilidade) = estoque absoluto contra teto por tipo (CV=150/CH=300); Prazo de Pgt
+(antigo Prazo) = prazo máximo contra teto por tipo (CV=36m/CH=240m).
+
+Ordem de exibição no painel (colunas do ranking) também mudou pra bater com a ordem pedida: Vendedor
+→ Força de Venda → Atratividade → Estoque → Prazo de Pgt (era Prazo → Disponib. → Atrativ. → Tração
+→ Vendedor).
+
+Testado em Node (soma de pesos = 15, composto recalculado corretamente com um caso de exemplo
+completo) — a verificação visual ao vivo no navegador não pôde ser concluída nesta rodada
+(instabilidade temporária do classificador de segurança da ferramenta de browser), mas o template
+HTML foi conferido por leitura direta do arquivo (ordem e rótulos das colunas corretos).
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-16 (parte 31) — Score de Tração: eixo Disponibilidade também diferenciado por tipo
 
 Continuação da parte 30, mesmo padrão de teto fixo por tipo de empreendimento aplicado agora ao eixo
