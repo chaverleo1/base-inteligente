@@ -1953,6 +1953,24 @@ function calcularPrazoScoreTracao_(prazo, tipoEmpreendimento) {
   return Math.min(10, 10 * (prazo / teto));
 }
 
+// Disponibilidade (eixo "Dispon."): mesma lógica de teto fixo por tipo, agora
+// pro ESTOQUE (unidades ainda disponíveis) em vez de "% do total daquele
+// empreendimento" (regra antiga) — confirmado com o usuário: Condomínio
+// Vertical costuma ter até 150 unidades no total, Condomínio Horizontal até
+// 300 (loteamentos são maiores) — sem normalizar por tipo, um CV pequeno com
+// metade do estoque vendido parecia "igual" a um CH grande na mesma
+// proporção, mesmo tendo uma escala de risco/tração bem diferente. Estoque
+// alto relativo ao teto típico do tipo = mais unidades ainda por vender = eixo
+// "Disponibilidade" mais alto (isso é esperado: é só quanto ainda tem pra
+// vender, não é bom nem ruim sozinho — quem pondera "vendeu bem" é o eixo
+// Tração, ao lado). Mesmo fallback conservador (Vertical) sem tipo definido.
+const TRACAO_TETO_DISP_ESTOQUE = { 'Condomínio Vertical': 150, 'Condomínio Horizontal': 300 };
+function calcularDispScoreTracao_(estoque, tipoEmpreendimento) {
+  if (estoque <= 0) return 0;
+  const teto = TRACAO_TETO_DISP_ESTOQUE[tipoEmpreendimento] || TRACAO_TETO_DISP_ESTOQUE['Condomínio Vertical'];
+  return Math.min(10, 10 * (estoque / teto));
+}
+
 // mapaScoreVendedor: { idLancamento: scoreVendedor (0-100) }, já buscado em
 // lote por renderRankingTracao() antes de chamar esta função — ver
 // pvCarregarBadgesBatch_ (perfil-vendedor.js), mesmo endpoint usado nos
@@ -1975,7 +1993,7 @@ function calcularScoreTracao(emps, mapaScoreVendedor) {
     const prazo   = Number(e.prazoMaximo) || 0;
     const semDados = (total === 0 || m2 === 0);
     const atrat   = semDados ? 0 : (maxM2 === minM2 ? 5 : 10 * (1 - (m2 - minM2) / (maxM2 - minM2)));
-    const disp    = total > 0 ? (estoque / total) * 10 : 0;
+    const disp    = calcularDispScoreTracao_(estoque, e.tipoEmpreendimento);
     const trac    = total > 0 ? ((total - estoque) / total) * 10 : 0;
     const prazoSc = calcularPrazoScoreTracao_(prazo, e.tipoEmpreendimento);
     const scoreVendedor = parseInt(mapaScoreVendedor[e.idLancamento]) || 0;

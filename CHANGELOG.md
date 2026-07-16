@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 31) — Score de Tração: eixo Disponibilidade também diferenciado por tipo
+
+Continuação da parte 30, mesmo padrão de teto fixo por tipo de empreendimento aplicado agora ao eixo
+"Disponibilidade": antes era `(estoque ÷ total daquele empreendimento) × 10` — um percentual relativo
+só ao próprio empreendimento, que tratava um Condomínio Vertical pequeno e um Condomínio Horizontal
+grande como "iguais" na mesma proporção, mesmo tendo escalas de estoque bem diferentes.
+
+Agora usa o ESTOQUE (unidades ainda disponíveis, valor absoluto) contra um teto fixo por tipo,
+confirmado com o usuário: **Condomínio Vertical = 150 unidades = 100%**, **Condomínio Horizontal =
+300 unidades = 100%** (loteamentos costumam ser maiores). Capado em 10, mesmo fallback conservador
+(teto de Vertical) sem `tipoEmpreendimento` definido — mesmo padrão do eixo Prazo (parte 30).
+
+Peso do eixo (3, dentro do total de 14) não mudou — só a fórmula interna de cálculo.
+
+Testado em Node (teto exato, metade do teto, acima do teto capado, sem tipo definido — pros dois
+tipos) e ao vivo no navegador: CV com 75 de estoque (metade de 150) e CH com 150 de estoque (metade
+de 300) — ambos corretamente normalizados pra 5,0, apesar do CH ter o dobro do estoque absoluto.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-16 (parte 30) — Score de Tração: prazo por tipo de empreendimento + eixo Vendedor (peso 4)
 
 Duas mudanças na regra do "Score de Tração" (lancamentos.html), a pedido do usuário:
