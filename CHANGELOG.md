@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 41) — Perfis Pessoa Física e Corretor reorganizados (mesmo padrão do PJ)
+
+Pedido do usuário: revisar TODOS os critérios de PF e CORRETOR e reorganizar em grupos objetivos/
+subjetivos, mesmo tratamento visual da reorganização do PJ (partes 35/38) — badge de peso ao lado do
+rótulo, grupos temáticos, escala rotulada pros critérios subjetivos.
+
+**Pessoa Física** — reorganizado em 4 grupos: 🏠 Situação do imóvel (Dias no mercado até +15,
+Prazo declarado +10, Histórico de reduções até +18 — campos comuns já existentes, agora com badge de
+peso), ✅ Condições aceitas (FGTS/Permuta/Financiamento/Parcelamento, +4 cada), 📋 Motivação e perfil
+do proprietário (Motivo da venda até +20, Perfil do proprietário até +5 — já existentes), e **3
+critérios subjetivos NOVOS** (esse perfil não tinha nenhum antes): Confiabilidade/cumpre o combinado
+(peso 3), Urgência percebida além dos dias no mercado (peso 3), Facilidade de negociação (peso 2).
+Diferente de PJ, aqui não há duplicação com "dado de produto": PF é dono de UM imóvel só, então
+preço/dias/reduções continuam sendo sinais legítimos do próprio vendedor.
+
+**Corretor** — reorganizado em 4 grupos: 🤝 Parceria e exclusividade (Exclusividade até +20 e
+Relacionamento histórico +15, já existentes, + **Tempo de parceria em meses, novo**, até +10, espelhando
+o campo equivalente de PJ), 💰 Comercial (Comissão negociável +15, já existente, + **Comissão
+oferecida %, novo**, até +15), 📞 Responsividade e urgência (Dias desde última resposta até +15,
+Urgência do vendedor original +15 — já existentes), e **3 critérios subjetivos NOVOS**: Confiabilidade
+(peso 3), Qualidade da comunicação (peso 2), Facilidade de negociação (peso 2).
+
+**Campos comuns "Situação do imóvel"/"Condições aceitas" agora só aparecem pro PF** (antes apareciam
+também pro Corretor, sem função nenhuma — nenhuma das duas fórmulas de score usa esses campos pra
+Corretor, exatamente o mesmo problema já corrigido pra PJ nas partes 35/37): Corretor é perfil de
+PARCEIRO (o outro corretor/imobiliária, não o imóvel que ele representa), mesma lógica de PJ.
+
+Testado em Node: PF vazio → 0; só os 3 subjetivos "Excelente" → 32 (4×3+4×3+4×2); PF completo → 100
+(clampado); Corretor vazio → 0; só os 3 subjetivos "Excelente" → 28 (4×3+4×2+4×2); Corretor completo
+(com os 2 campos novos) → 100 (clampado, soma bruta 133). Testado ao vivo no navegador: PF com 5
+seções e 9 badges de peso; Corretor com 5 seções e 10 badges, sem "Situação do imóvel"/"Condições
+aceitas"; coleta de formulário confirmada nos campos novos dos dois; PJ conferido intacto.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 40) — Correção: quadrado [T|V] no card em vez do botão + remoção do Ranking de Tração
 
 Correção da parte 39, mesmo dia: usuário pediu formato diferente do que eu tinha implementado.

@@ -5554,8 +5554,29 @@ function fonteParaOrigemImovel_(fonte) {
 }
 
 // ── Score PF ─────────────────────────────────────────────────
+// Espelha os grupos do formulário (perfil-vendedor.js, bloco `cat === 'PF'`
+// + seção comum "Situação do imóvel"/"Condições aceitas", só visível pra
+// PF) — reorganizado na mesma rodada de PJ/CORRETOR (2026-07). Diferente de
+// PJ, aqui NÃO há duplicação com dado de produto: PF é o dono de UM imóvel
+// só, então preço/dias no mercado/reduções são sinais legítimos do próprio
+// vendedor, não de um produto de terceiros — por isso continuam pesando
+// normalmente (ver comentário em _pvRenderForm_).
 function calcularScoreVendedor_PF_(ce, ctx) {
   var score = 0;
+
+  // ── 🏠 Situação do imóvel (campos comuns, só visíveis/pesados pra PF) ──
+  if      (ctx._dias > 90)  score += 15;
+  else if (ctx._dias >= 45) score += 8;
+  if (ctx.prazoDeclarado) score += 10;
+  if      (ctx._nr >= 2) score += 18;
+  else if (ctx._nr === 1) score += 12;
+
+  // ── ✅ Condições aceitas (+4 cada) ──
+  if (parseBool_(ctx.aceitaFGTS))         score += 4;
+  if (parseBool_(ctx.aceitaPermuta))      score += 4;
+  if (parseBool_(ctx.aceitaParcelamento)) score += 4;
+
+  // ── 📋 Motivação e perfil do proprietário ──
   if (String(ctx.origemContato || '') === 'Me procurou') score += 25;
   var m = String(ce.motivoVenda || '');
   if      (m === 'Dívida / liquidez')                              score += 20;
@@ -5563,17 +5584,16 @@ function calcularScoreVendedor_PF_(ce, ctx) {
   else if (m === 'Mudança de cidade')                              score += 15;
   else if (m === 'Troca de imóvel')                                score += 10;
   else if (m === 'Investidor realizando lucro')                     score -= 8;
-  if      (ctx._dias > 90)  score += 15;
-  else if (ctx._dias >= 45) score += 8;
-  if      (ctx._nr >= 2) score += 18;
-  else if (ctx._nr === 1) score += 12;
-  if (ctx.prazoDeclarado) score += 10;
   var p = String(ce.perfilProprietario || '');
   if (p === 'Único (mora no imóvel)' || p === 'Único (vazio)') score += 5;
   if (p === 'Investidor grande portfólio (6+)')                  score -= 12;
-  if (parseBool_(ctx.aceitaFGTS))         score += 4;
-  if (parseBool_(ctx.aceitaPermuta))      score += 4;
-  if (parseBool_(ctx.aceitaParcelamento)) score += 4;
+
+  // ── ⭐ Critérios subjetivos (escala rotulada -> pontos, novo 2026-07) ──
+  var pts = function(campo) { return PV_ESCALA_5_PONTOS[String(ce[campo] || '')] || 0; };
+  score += pts('confiabilidadeProprietario') * 3;
+  score += pts('urgenciaPercebida')           * 3;
+  score += pts('facilidadeNegociacaoPF')      * 2;
+
   return score;
 }
 
@@ -5653,19 +5673,44 @@ function calcularScoreVendedor_PJ_(ce, ctx) {
 }
 
 // ── Score CORRETOR ────────────────────────────────────────────
+// Espelha os 4 grupos do formulário (perfil-vendedor.js, bloco
+// `cat === 'CORRETOR'`) — reorganizado na mesma rodada de PJ (2026-07):
+// Corretor também é perfil de PARCEIRO (mede o corretor/imobiliária que traz
+// a oferta, não o imóvel que ele representa) — 2 campos novos espelhando os
+// equivalentes de PJ (comissão %, tempo de parceria) + grupo subjetivo, que
+// esse perfil não tinha nenhum antes.
 function calcularScoreVendedor_CORRETOR_(ce, ctx) {
   var score = 0;
+
+  // ── 🤝 Parceria e exclusividade ──
   var excl = String(ce.exclusividade || '');
-  if (excl === 'Exclusivo com você/sua imobiliária') score += 20;
-  if (ce.comissaoNegociavel === 'sim')               score += 15;
-  if (ce.relacionamentoHistorico === 'sim')          score += 15;
+  if      (excl === 'Exclusivo com você/sua imobiliária')    score += 20;
+  else if (excl === 'Compartilhado (múltiplas imobiliárias)') score -= 10;
+  var tempoParceria = parseInt(ce.tempoParceriaMeses) || 0;
+  if      (tempoParceria > 24) score += 10;
+  else if (tempoParceria >= 6) score += 5;
+  if (ce.relacionamentoHistorico === 'sim') score += 15;
+
+  // ── 💰 Comercial ──
+  var comissaoCorretor = parseFloat(ce.comissaoPercCorretor) || 0;
+  if      (comissaoCorretor >= 6) score += 15;
+  else if (comissaoCorretor >= 3) score += 8;
+  if (ce.comissaoNegociavel === 'sim') score += 15;
+
+  // ── 📞 Responsividade e urgência ──
   var diasR = parseInt(ce.diasDesdeUltimaResposta);
   if (!isNaN(diasR)) {
     if (diasR < 2)  score += 15;
     if (diasR > 30) score -= 10;
   }
   if (String(ce.vendedorOriginalUrgente || '') === 'Sim (sinalizado pelo corretor)') score += 15;
-  if (excl === 'Compartilhado (múltiplas imobiliárias)') score -= 10;
+
+  // ── ⭐ Critérios subjetivos (escala rotulada -> pontos, novo 2026-07) ──
+  var pts = function(campo) { return PV_ESCALA_5_PONTOS[String(ce[campo] || '')] || 0; };
+  score += pts('confiabilidadeCorretor')         * 3;
+  score += pts('qualidadeComunicacao')           * 2;
+  score += pts('facilidadeNegociacaoCorretor')   * 2;
+
   return score;
 }
 

@@ -231,29 +231,50 @@ function _pvRenderForm_() {
   const cat = _pv.catSelecionada;
   const redHtml = _pvRenderReducoes_();
   // Preço anunciado / Dias no mercado / Prazo declarado / Histórico de
-  // reduções são dado de PRODUTO (preço, tempo e urgência do próprio anúncio)
-  // — fazem sentido pro perfil PF (onde são sinais legítimos de urgência do
-  // proprietário, usados em calcularScoreVendedor_PF_) e ficam visíveis pro
-  // CORRETOR também, mas NÃO pro PJ/Construtora: esse perfil mede o vendedor
-  // como parceiro de negócio, não o produto — mesmo motivo por trás de toda a
-  // redefinição do perfil PJ (ver comentário logo abaixo, no bloco `cat === 'PJ'`).
-  const mostrarCamposMercado = cat !== 'PJ';
+  // reduções / Condições aceitas são dado de PRODUTO (preço, tempo e
+  // urgência do próprio anúncio) — só fazem sentido pro perfil PF, onde são
+  // sinais legítimos de urgência do proprietário (usados em
+  // calcularScoreVendedor_PF_). PJ e CORRETOR são perfis de PARCEIRO (a
+  // construtora/o corretor como parceiro de negócio, não o produto) — mesmo
+  // motivo por trás de toda a reorganização de PJ e, agora, de CORRETOR
+  // também (2026-07, 2ª rodada): nenhum dos dois usa esses campos na própria
+  // fórmula de score, então mostrá-los ali era só ruído sem função.
+  const mostrarCamposMercado = cat === 'PF';
 
   const origemMe   = _pvV_('origemContato') === 'Me procurou' ? 'checked' : '';
   const origemEu   = _pvV_('origemContato') === 'Eu acionei'  ? 'checked' : '';
 
   let esp = '';
   if (cat === 'PF') {
+    // Reorganizado (2026-07, mesma rodada de PJ/CORRETOR): critérios
+    // objetivos (motivação declarada, perfil do dono) primeiro, subjetivos
+    // (percepção do corretor) por último — mesmo padrão visual/estrutural
+    // dos outros perfis. Diferente de PJ, aqui NÃO existe duplicação com
+    // "dado de produto": PF é o próprio dono de UM imóvel só, então preço/
+    // dias no mercado/reduções (seção "Situação do imóvel", acima) são sinais
+    // legítimos do vendedor, não do produto de terceiros — por isso
+    // continuam visíveis só pra essa categoria.
     esp = `
-<div class="pv-section-title">Perfil — Pessoa Física</div>
-<div class="pv-row"><label>Motivo da venda</label>
+<div class="pv-section-title">📋 Motivação e perfil do proprietário</div>
+<div class="pv-row"><label>${_pvLbl_('Motivo da venda','até +20')}</label>
   <select id="pvMotivo"><option value="">— selecione —</option>
     ${_pvOpts_(['Dívida / liquidez','Divórcio / separação','Inventário / herança','Mudança de cidade','Troca de imóvel','Investidor realizando lucro','Outro'],'motivoVenda')}
   </select></div>
-<div class="pv-row"><label>Perfil do proprietário</label>
+<div class="pv-row"><label>${_pvLbl_('Perfil do proprietário','até +5')}</label>
   <select id="pvPerfPropr"><option value="">— selecione —</option>
     ${_pvOpts_(['Único (mora no imóvel)','Único (vazio)','Casal / família','Investidor (1-5 imóveis)','Investidor grande portfólio (6+)'],'perfilProprietario')}
-  </select></div>`;
+  </select></div>
+
+<div class="pv-section-title">⭐ Critérios subjetivos <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#8892aa">— avaliação do corretor</span></div>
+<div class="pv-group-desc">Escala Ruim → Excelente; cada nível soma mais pontos, proporcional ao peso do critério.</div>
+<div class="pv-row pv-row-2">
+  <div><label>${_pvLbl_('Confiabilidade / cumpre o combinado','peso 3')}</label>
+    <select id="pvConfiabilidadePF"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'confiabilidadeProprietario')}</select></div>
+  <div><label>${_pvLbl_('Urgência percebida (além dos dias no mercado)','peso 3')}</label>
+    <select id="pvUrgenciaPercPF"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'urgenciaPercebida')}</select></div>
+</div>
+<div class="pv-row"><label>${_pvLbl_('Facilidade de negociação','peso 2')}</label>
+  <select id="pvFacilidadeNegPF"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'facilidadeNegociacaoPF')}</select></div>`;
   } else if (cat === 'PJ') {
     // Perfil único Construtora/Incorporadora (2026-07) — qualifica a
     // CONSTRUTORA COMO PARCEIRA DE NEGÓCIO, não o produto que ela vende (isso
@@ -333,48 +354,76 @@ function _pvRenderForm_() {
 <div class="pv-row"><label>${_pvLbl_('Clima geral da parceria','peso 2')}</label>
   <select id="pvClimaParceria"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'climaParceria')}</select></div>`;
   } else if (cat === 'CORRETOR') {
+    // Reorganizado (2026-07, mesma rodada de PJ) — o Corretor também é um
+    // perfil de PARCEIRO (o outro corretor/imobiliária que traz a oferta),
+    // mesma lógica de PJ: mede a qualidade do parceiro, não o imóvel que ele
+    // representa. 2 campos novos mirando os equivalentes já existentes em
+    // PJ (comissão %, tempo de parceria) + grupo de critérios subjetivos,
+    // que esse perfil não tinha nenhum antes.
     esp = `
-<div class="pv-section-title">Perfil — Corretor / Parceiro</div>
-<div class="pv-row"><label>Exclusividade</label>
+<div class="pv-section-title">🤝 Parceria e exclusividade</div>
+<div class="pv-row"><label>${_pvLbl_('Exclusividade','até +20')}</label>
   <select id="pvExcl"><option value="">— selecione —</option>
     ${_pvOpts_(['Exclusivo com você/sua imobiliária','Compartilhado (múltiplas imobiliárias)','Sem exclusividade'],'exclusividade')}
   </select></div>
-<div class="pv-row"><label>Dias desde última resposta</label>
+<div class="pv-row"><label>${_pvLbl_('Tempo de parceria (meses)','até +10')}</label>
+  <input type="number" id="pvTempoParceria" min="0" value="${_pvCe_('tempoParceriaMeses')}"></div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvRelHist" ${_pvCeChk_('relacionamentoHistorico')}> ${_pvLbl_('Relacionamento histórico','+15')}</label>
+</div>
+
+<div class="pv-section-title">💰 Comercial</div>
+<div class="pv-row"><label>${_pvLbl_('Comissão oferecida (%)','até +15')}</label>
+  <input type="number" id="pvComissaoPercCorretor" min="0" max="100" step="0.5" value="${_pvCe_('comissaoPercCorretor')}"></div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvComissNeg" ${_pvCeChk_('comissaoNegociavel')}> ${_pvLbl_('Comissão negociável','+15')}</label>
+</div>
+
+<div class="pv-section-title">📞 Responsividade e urgência</div>
+<div class="pv-row"><label>${_pvLbl_('Dias desde última resposta','até +15')}</label>
   <input type="number" id="pvDiasResp" min="0" value="${_pvCe_('diasDesdeUltimaResposta')}"></div>
-<div class="pv-row"><label>Urgência do vendedor original</label>
+<div class="pv-row"><label>${_pvLbl_('Urgência do vendedor original','+15')}</label>
   <select id="pvVendUrgente"><option value="">— selecione —</option>
     ${_pvOpts_(['Sim (sinalizado pelo corretor)','Não','Desconhecido'],'vendedorOriginalUrgente')}
   </select></div>
-<div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvComissNeg" ${_pvCeChk_('comissaoNegociavel')}> Comissão negociável</label>
-  <label><input type="checkbox" id="pvRelHist"   ${_pvCeChk_('relacionamentoHistorico')}> Relacionamento histórico</label>
-</div>`;
+
+<div class="pv-section-title">⭐ Critérios subjetivos <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#8892aa">— sua avaliação</span></div>
+<div class="pv-group-desc">Escala Ruim → Excelente; cada nível soma mais pontos, proporcional ao peso do critério.</div>
+<div class="pv-row pv-row-2">
+  <div><label>${_pvLbl_('Confiabilidade','peso 3')}</label>
+    <select id="pvConfiabilidadeCorretor"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'confiabilidadeCorretor')}</select></div>
+  <div><label>${_pvLbl_('Qualidade da comunicação','peso 2')}</label>
+    <select id="pvComunicacaoCorretor"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'qualidadeComunicacao')}</select></div>
+</div>
+<div class="pv-row"><label>${_pvLbl_('Facilidade de negociação','peso 2')}</label>
+  <select id="pvFacilidadeNegCorretor"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'facilidadeNegociacaoCorretor')}</select></div>`;
   }
 
   document.getElementById('pvFormBody').innerHTML = `
 <div class="pv-section-title">Contato e Mercado</div>
-<div class="pv-row"><label>Origem do contato *</label>
+<div class="pv-row"><label>${cat === 'PF' ? _pvLbl_('Origem do contato *', '"Me procurou" +25') : 'Origem do contato *'}</label>
   <div class="pv-radio-group">
     <label><input type="radio" name="pvOrigem" value="Me procurou" ${origemMe}> Me procurou</label>
     <label><input type="radio" name="pvOrigem" value="Eu acionei" ${origemEu}> Eu acionei</label>
   </div></div>
 ${mostrarCamposMercado ? `
+<div class="pv-section-title">🏠 Situação do imóvel</div>
 <div class="pv-row pv-row-2">
   <div><label>Preço anunciado (R$)</label><input type="text" id="pvPreco" placeholder="ex: 850000" value="${_pvV_('precoAnuncio')}"></div>
-  <div><label>Dias no mercado</label><input type="number" id="pvDias" min="0" value="${_pvV_('diasNaMercado')}"></div>
+  <div><label>${_pvLbl_('Dias no mercado','até +15')}</label><input type="number" id="pvDias" min="0" value="${_pvV_('diasNaMercado')}"></div>
 </div>
-<div class="pv-row"><label>Prazo declarado para venda</label>
+<div class="pv-row"><label>${_pvLbl_('Prazo declarado para venda','+10')}</label>
   <input type="text" id="pvPrazo" placeholder="ex: 60 dias, até março..." value="${_pvV_('prazoDeclarado')}"></div>
-<div class="pv-row"><label>Histórico de reduções de preço</label>
+<div class="pv-row"><label>${_pvLbl_('Histórico de reduções de preço','até +18')}</label>
   <div id="pvReducoesList">${redHtml}</div>
-  <button class="pv-btn-add" onclick="pvAddReducao_()" type="button">+ Adicionar redução</button></div>` : ''}
-<div class="pv-section-title">Condições aceitas</div>
+  <button class="pv-btn-add" onclick="pvAddReducao_()" type="button">+ Adicionar redução</button></div>
+<div class="pv-section-title">✅ Condições aceitas <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#8892aa">— +4 cada</span></div>
 <div class="pv-row pv-row-checks">
   <label><input type="checkbox" id="pvFGTS"   ${_pvBool_('aceitaFGTS')}>         Aceita FGTS</label>
   <label><input type="checkbox" id="pvPermuta" ${_pvBool_('aceitaPermuta')}>      Aceita permuta</label>
   <label><input type="checkbox" id="pvFinanc"  ${_pvBool_('aceitaFinanciamento')}> Aceita financiamento</label>
   <label><input type="checkbox" id="pvParcel"  ${_pvBool_('aceitaParcelamento')}> Aceita parcelamento</label>
-</div>
+</div>` : ''}
 <div class="pv-row"><label>Observações sobre condições</label>
   <textarea id="pvCondObs" rows="2">${_pvV_('condicoesObs')}</textarea></div>
 ${esp}
@@ -402,7 +451,11 @@ function _pvColetarEsp_() {
   const cat  = _pv.catSelecionada;
   const g    = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const chk  = id => { const el = document.getElementById(id); return (el && el.checked) ? 'sim' : 'não'; };
-  if (cat === 'PF') return { motivoVenda: g('pvMotivo'), perfilProprietario: g('pvPerfPropr') };
+  if (cat === 'PF') return {
+    motivoVenda: g('pvMotivo'), perfilProprietario: g('pvPerfPropr'),
+    confiabilidadeProprietario: g('pvConfiabilidadePF'), urgenciaPercebida: g('pvUrgenciaPercPF'),
+    facilidadeNegociacaoPF: g('pvFacilidadeNegPF'),
+  };
   if (cat === 'PJ') return {
     comissaoPerc: g('pvComissaoPerc'), tempoRelacionamentoMeses: g('pvTempoRelac'),
     prazoPagamentoComissao: g('pvPrazoComissao'), exclusividadeParceria: g('pvExclParceria'),
@@ -417,7 +470,14 @@ function _pvColetarEsp_() {
     aceitaPermutaFacil: chk('pvPermutaFacil'),
     proximidadeStand: g('pvProximidadeStand'), permitePlantaoDecorado: chk('pvPlantaoDecorado'),
   };
-  if (cat === 'CORRETOR') return { exclusividade: g('pvExcl'), diasDesdeUltimaResposta: g('pvDiasResp'), vendedorOriginalUrgente: g('pvVendUrgente'), comissaoNegociavel: chk('pvComissNeg'), relacionamentoHistorico: chk('pvRelHist') };
+  if (cat === 'CORRETOR') return {
+    exclusividade: g('pvExcl'), diasDesdeUltimaResposta: g('pvDiasResp'),
+    vendedorOriginalUrgente: g('pvVendUrgente'), comissaoNegociavel: chk('pvComissNeg'),
+    relacionamentoHistorico: chk('pvRelHist'),
+    tempoParceriaMeses: g('pvTempoParceria'), comissaoPercCorretor: g('pvComissaoPercCorretor'),
+    confiabilidadeCorretor: g('pvConfiabilidadeCorretor'), qualidadeComunicacao: g('pvComunicacaoCorretor'),
+    facilidadeNegociacaoCorretor: g('pvFacilidadeNegCorretor'),
+  };
   return {};
 }
 
