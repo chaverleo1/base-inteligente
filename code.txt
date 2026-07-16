@@ -198,6 +198,7 @@ function doGet(e) {
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
   if (acao === 'listar_todos_leads_imobzi') return ok(listarLeadsImobzi_({todos:true}));
+  if (acao === 'listar_revenda_lista')      return ok(listarRevendaLista_());
   if (acao === 'buscar_afins_imovel') {
     var afCod    = String(e.parameter.cod    || '').trim();
     var afBairro = String(e.parameter.bairro || '').trim();
@@ -734,6 +735,7 @@ function doPost(e) {
   if (d.acao === 'sincronizar_imobzi')              return ok(sincronizarLeadsImobzi_());
   if (d.acao === 'atualizar_pipeline_lead_imobzi')  return ok(atualizarPipelineLeadImobzi_(d));
   if (d.acao === 'excluir_lead_imobzi')             return ok(excluirLeadImobzi_(d));
+  if (d.acao === 'excluir_revenda_imovel')          return ok(excluirRevendaImovel_(d));
   if (d.acao === 'atualizar_lead_imobzi')           return ok(atualizarLeadImobzi_(d));
   if (d.acao === 'toggle_favorito')       return ok(toggleFavorito_(d));
   if (d.acao === 'adicionar_favorito')    return ok(adicionarFavorito_(d));
@@ -4560,6 +4562,120 @@ function buscarAfinsImovelRevenda_(cod, bairro, tipo, preco) {
   });
 }
 
+// Lista todos os imóveis REVENDA com score do vendedor (VENDEDORES_PERFIL)
+// e total de matches (MATCHES) — usado pela página revendas-lista.html.
+function listarRevendaLista_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+
+  // ── VENDEDORES_PERFIL (apenas origemImovel = 'REVENDA') ──
+  var vendMap = {};
+  var abaVend = ss.getSheetByName('VENDEDORES_PERFIL');
+  if (abaVend && abaVend.getLastRow() > 1) {
+    var vd = abaVend.getDataRange().getValues();
+    var vc = vd[0];
+    var iVCod   = vc.indexOf('codigo');
+    var iVOrig  = vc.indexOf('origemImovel');
+    var iVScore = vc.indexOf('scoreVendedor');
+    var iVCat   = vc.indexOf('categoriaVendedor');
+    for (var v = 1; v < vd.length; v++) {
+      if (String(vd[v][iVOrig]||'').trim() !== 'REVENDA') continue;
+      var vk = String(vd[v][iVCod]||'').trim();
+      if (vk) vendMap[vk] = {
+        scoreVendedor:    Number(vd[v][iVScore]||0),
+        categoriaVendedor: String(vd[v][iVCat] ||'').trim()
+      };
+    }
+  }
+
+  // ── MATCHES (conta por imoCodigo, fonte REVENDA ou vazia) ──
+  var matchCount = {};
+  var matchScore = {};  // soma de scoreMatch por imovel
+  var abaMat = ss.getSheetByName('MATCHES');
+  if (abaMat && abaMat.getLastRow() > 1) {
+    var md = abaMat.getDataRange().getValues();
+    var mc = md[0];
+    var iMCod   = mc.indexOf('imoCodigo');
+    var iMFonte = mc.indexOf('fonte');
+    var iMScore = mc.indexOf('scoreMatch');
+    for (var m = 1; m < md.length; m++) {
+      var mFonte = String(md[m][iMFonte]||'').trim();
+      if (mFonte && mFonte !== 'REVENDA') continue;
+      var mk = String(md[m][iMCod]||'').trim();
+      if (!mk) continue;
+      matchCount[mk] = (matchCount[mk]||0) + 1;
+      matchScore[mk] = (matchScore[mk]||0) + (Number(md[m][iMScore])||0);
+    }
+  }
+
+  // ── REVENDA ──
+  var abaRev = ss.getSheetByName('REVENDA');
+  if (!abaRev || abaRev.getLastRow() < 2) return { imoveis: [] };
+  var rd = abaRev.getDataRange().getValues();
+  var rc = rd[0];
+  var imoveis = [];
+  for (var r = 1; r < rd.length; r++) {
+    var row = rd[r];
+    var obj = {};
+    rc.forEach(function(col, j) { obj[col] = row[j]; });
+    var cod = String(obj.codigo||'').trim();
+    if (!cod) continue;
+    var cnt  = matchCount[cod] || 0;
+    var vend = vendMap[cod] || {};
+    imoveis.push({
+      codigo:            cod,
+      tipo:              String(obj.tipo         ||'').trim(),
+      bairro:            String(obj.bairro        ||'').trim(),
+      condominio:        String(obj.condominio    ||'').trim(),
+      quartos:           String(obj.quartos       ||'').trim(),
+      suites:            String(obj.suites        ||'').trim(),
+      vagas:             String(obj.vagas         ||'').trim(),
+      areaUtil:          String(obj.areaUtil      ||'').trim(),
+      valorVenda:        String(obj.valorVenda    ||'').trim(),
+      padrao:            String(obj.padrao        ||'').trim(),
+      foto:              String(obj.foto          ||'').trim(),
+      urlSite:           String(obj.urlSite       ||'').trim(),
+      dataAtualizacao:   String(obj.dataAtualizacao||'').trim(),
+      matchTotal:        cnt,
+      scoreImovel:       cnt > 0 ? Math.round(matchScore[cod] / cnt) : 0,
+      scoreVendedor:     vend.scoreVendedor    || 0,
+      categoriaVendedor: vend.categoriaVendedor || ''
+    });
+  }
+  return { imoveis: imoveis };
+}
+
+// Remove um imóvel da aba REVENDA e limpa FAVORITOS associados.
+function excluirRevendaImovel_(d) {
+  var codigo = String(d.codigo||'').trim();
+  if (!codigo) return { erro: 'Código obrigatório' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+
+  // Remove da REVENDA
+  var abaRev = ss.getSheetByName('REVENDA');
+  if (abaRev && abaRev.getLastRow() > 1) {
+    var rd = abaRev.getDataRange().getValues();
+    var iCod = rd[0].indexOf('codigo');
+    for (var r = rd.length - 1; r >= 1; r--) {
+      if (String(rd[r][iCod]||'').trim() === codigo) { abaRev.deleteRow(r + 1); break; }
+    }
+  }
+
+  // Limpa FAVORITOS
+  var abaFav = ss.getSheetByName('FAVORITOS');
+  if (abaFav && abaFav.getLastRow() > 1) {
+    var fd = abaFav.getDataRange().getValues();
+    var iFC = fd[0].indexOf('imoCodigo');
+    var iFF = fd[0].indexOf('fonte');
+    for (var f = fd.length - 1; f >= 1; f--) {
+      var fFonte = String(iFF >= 0 ? fd[f][iFF] : '').trim();
+      if (String(fd[f][iFC]||'').trim() === codigo && (!fFonte || fFonte === 'REVENDA')) {
+        abaFav.deleteRow(f + 1);
+      }
+    }
+  }
+  return { ok: true };
+}
+
 // Busca deal completo via /deal/{db_key} — único endpoint que retorna
 // properties_presented[0].property_code (a lista não inclui esse campo).
 function obterDealCompleto_(dbKey, secret) {
@@ -5549,6 +5665,21 @@ function obterPerfilVendedor_(codigo, origemImovel) {
       if (!Array.isArray(obj.reducoes)) obj.reducoes = [];
       var sv = parseInt(obj.scoreVendedor) || 0;
       obj.urgenciaNivel = sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA';
+      // Verifica se o imóvel ainda existe em REVENDA (só para origem REVENDA)
+      if (ori === 'REVENDA') {
+        var abaRev = ss.getSheetByName('REVENDA');
+        var ativo  = false;
+        if (abaRev && abaRev.getLastRow() > 1) {
+          var revVals = abaRev.getDataRange().getValues();
+          var iRCod   = revVals[0].indexOf('codigo');
+          if (iRCod >= 0) {
+            for (var r2 = 1; r2 < revVals.length; r2++) {
+              if (String(revVals[r2][iRCod]).trim() === String(codigo).trim()) { ativo = true; break; }
+            }
+          }
+        }
+        obj.imovelExcluido = !ativo;
+      }
       return obj;
     }
   }
