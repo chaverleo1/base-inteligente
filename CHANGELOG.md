@@ -1,5 +1,42 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 39) — Nota de Tração no card + reload ao salvar vendedor + remove "Prazo declarado" do PJ
+
+**1. "Prazo declarado para venda" sai do perfil PJ** — é dado de PRODUTO (urgência do próprio
+anúncio), mesmo motivo dos outros 3 campos de mercado removidos na parte 37. Entrou no mesmo
+`mostrarCamposMercado` (os 2 blocos condicionais adjacentes viraram um só): continua aparecendo pro
+PF — onde ainda vale +10 em `calcularScoreVendedor_PF_` — e pro CORRETOR.
+
+**2. Salvar o perfil do vendedor fecha o modal e recarrega a página de lançamentos** — feito no
+callback `onSave` de `abrirPvLanc` (lancamentos.html), não em `pvSalvar_`: o módulo é compartilhado
+com busca/revendas-lista/revendas-construtoras/dashboard, que atualizam badge e botão em tempo real
+e não devem recarregar. Motivo do reload: o score do vendedor tem peso 5 no Score de Tração (o
+maior), então salvar muda a nota do card, a posição no ranking e o composto dos OUTROS
+empreendimentos (Preço Médio é relativo ao conjunto) — recarregar é mais confiável que repintar
+cada pedaço. Delay de 1200ms (mesmo padrão de `lancamentos-editar.html`) pra dar tempo de ver o
+score calculado e o toast "✓ Perfil salvo".
+
+**3. Nota de Tração no card, ao lado do nome do vendedor** — badge `🎯 Tração N.N` na linha do
+gerente comercial, com as mesmas cores por faixa do ranking (`tp-hot`/`tp-warm`/`tp-esgot`/`tp-cold`,
+agora via helper compartilhado `classeScoreTracao_`, sem duplicar a regra). Pintado por
+`pvAtualizarTracaoCards_`, chamado de `renderRankingTracao` — que já buscava os scores de vendedor e
+calculava o composto pro Top 10; agora calcula pra todos e só fatia depois. A posição do card vem de
+`emps.indexOf(s.e)`, já que o array pontuado vem reordenado por score. Empreendimento sem dados
+(comp = 0, "Sem dados") não ganha badge — "Tração 0.0" seria ruído. Card sem gerente cadastrado tem a
+linha escondida por padrão e só aparece se a nota vier, pra não abrir espaço vazio.
+
+Testado em Node: (a) render do formulário nas 3 categorias — "Prazo declarado" ausente só no PJ,
+presente em PF/CORRETOR; (b) `pvAtualizarTracaoCards_` com DOM simulado — cada card recebe a nota do
+SEU empreendimento (mapeamento sobrevive à reordenação), card "Sem dados" fica sem badge e com a
+linha escondida, classe de cor correta por faixa.
+
+⚠️ **Não verificado no navegador**: a ferramenta de browser ficou indisponível durante toda esta
+rodada. A lógica foi coberta por testes em Node com DOM simulado e a sintaxe validada, mas o
+resultado visual do badge no card e o fluxo de fechar+recarregar ao salvar não foram vistos rodando —
+vale conferir na tela.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-16 (parte 38) — Perfil do Vendedor (PJ): novo grupo Logística + reorganização completa
 
 **2 critérios novos**, grupo "📍 Logística e operação":

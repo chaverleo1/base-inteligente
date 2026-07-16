@@ -230,13 +230,13 @@ function _pvLbl_(texto, peso) { return `${texto}<span class="pv-peso">${peso}</s
 function _pvRenderForm_() {
   const cat = _pv.catSelecionada;
   const redHtml = _pvRenderReducoes_();
-  // Preço anunciado / Dias no mercado / Histórico de reduções são dado de
-  // PRODUTO (preço e tempo do anúncio) — fazem sentido pro perfil PF (onde
-  // são sinais legítimos de urgência do proprietário, usados em
-  // calcularScoreVendedor_PF_) e ficam visíveis pro CORRETOR também, mas NÃO
-  // pro PJ/Construtora: esse perfil mede o vendedor como parceiro de
-  // negócio, não o produto — mesmo motivo por trás de toda a redefinição do
-  // perfil PJ (ver comentário logo abaixo, no bloco `cat === 'PJ'`).
+  // Preço anunciado / Dias no mercado / Prazo declarado / Histórico de
+  // reduções são dado de PRODUTO (preço, tempo e urgência do próprio anúncio)
+  // — fazem sentido pro perfil PF (onde são sinais legítimos de urgência do
+  // proprietário, usados em calcularScoreVendedor_PF_) e ficam visíveis pro
+  // CORRETOR também, mas NÃO pro PJ/Construtora: esse perfil mede o vendedor
+  // como parceiro de negócio, não o produto — mesmo motivo por trás de toda a
+  // redefinição do perfil PJ (ver comentário logo abaixo, no bloco `cat === 'PJ'`).
   const mostrarCamposMercado = cat !== 'PJ';
 
   const origemMe   = _pvV_('origemContato') === 'Me procurou' ? 'checked' : '';
@@ -362,10 +362,9 @@ ${mostrarCamposMercado ? `
 <div class="pv-row pv-row-2">
   <div><label>Preço anunciado (R$)</label><input type="text" id="pvPreco" placeholder="ex: 850000" value="${_pvV_('precoAnuncio')}"></div>
   <div><label>Dias no mercado</label><input type="number" id="pvDias" min="0" value="${_pvV_('diasNaMercado')}"></div>
-</div>` : ''}
+</div>
 <div class="pv-row"><label>Prazo declarado para venda</label>
   <input type="text" id="pvPrazo" placeholder="ex: 60 dias, até março..." value="${_pvV_('prazoDeclarado')}"></div>
-${mostrarCamposMercado ? `
 <div class="pv-row"><label>Histórico de reduções de preço</label>
   <div id="pvReducoesList">${redHtml}</div>
   <button class="pv-btn-add" onclick="pvAddReducao_()" type="button">+ Adicionar redução</button></div>` : ''}
