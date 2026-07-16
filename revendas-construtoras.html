@@ -1231,7 +1231,7 @@ function renderConstrutorasRC(lista, semConstrutora, semConstrutoraStatus) {
       <td class="td-acoes">
         <button class="btn-editar-rc" onclick='editarConstrutoraRC(${JSON.stringify(c).replace(/'/g,"&apos;")})'>✏️ Editar</button>
         ${c.url ? `<a class="btn-url-rc" href="${c.url}" target="_blank">🔗 PDF</a>` : ''}
-        <button class="pv-btn-card" onclick="abrirPvRC('${nomeEsc}','${pvLabel}')">🏷️ Vendedor</button>
+        <button class="pv-btn-card" onclick="abrirPvRC(this,'${nomeEsc}','${pvLabel}')">🏷️ Vendedor</button>
       </td>
       <td>${(c.totalImoveis || 0) > 0
         ? `<button class="btn-excluir" onclick="excluirTodosRC('${nomeEsc}', ${c.totalImoveis || 0}, this)">Excluir todos</button>`
@@ -1347,9 +1347,10 @@ function cancelarEdicaoConstrutoraRC() {
   document.getElementById('btnCancelarEdicaoRC').style.display = 'none';
 }
 
-function abrirPvRC(nome, label) {
+function abrirPvRC(btn, nome, label) {
   abrirPerfilVendedor_(nome, 'REVENDAS_CONSTRUTORAS', ['PJ','CONSTRUTORA','CORRETOR'], label, function(json) {
     pvAtualizarBadgeRC_(nome, json.urgenciaNivel);
+    pvSetBotaoScore_(btn, '🏷️ Vendedor', json.scoreVendedor);
   });
 }
 
@@ -1370,6 +1371,8 @@ async function carregarPvBadgesRC_() {
       const sv    = parseInt(p.scoreVendedor) || 0;
       const nivel = p.urgenciaNivel || (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA');
       pvAtualizarBadgeRC_(el.dataset.pvBadgeRc, nivel);
+      const btn = el.closest('tr')?.querySelector('.pv-btn-card');
+      pvSetBotaoScore_(btn, '🏷️ Vendedor', sv);
     }
   );
 }

@@ -401,6 +401,17 @@ function pvBadgeHtml_(nivel) {
   return `<span class="pv-emp-badge ${u.cls}">${u.emoji} Vendedor: urgência ${u.label}</span>`;
 }
 
+// Escreve o score do vendedor dentro do próprio botão "Vendedor" (ex: "🏷️
+// Vendedor 83"), em vez de só num badge separado — usado por todo botão que
+// abre abrirPerfilVendedor_ (revendas-lista, busca, lançamentos, revendas-
+// construtoras, dashboard). Sem score (perfil ainda não cadastrado ou 0),
+// mantém só o rótulo base, sem "0" pendurado.
+function pvSetBotaoScore_(btn, baseLabel, score) {
+  if (!btn) return;
+  const sv = parseInt(score) || 0;
+  btn.textContent = sv > 0 ? baseLabel + ' ' + sv : baseLabel;
+}
+
 // Popula badges de perfil nos cards após batch load.
 // Usado por busca.html, lancamentos.html e revendas-construtoras.html com lógica própria.
 async function pvCarregarBadgesBatch_(seletor, getCodigo, getOrigem, atualizarFn) {

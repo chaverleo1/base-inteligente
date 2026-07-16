@@ -1748,7 +1748,7 @@ function renderLista(lista) {
       <div class="emp-card-footer">
         <button class="btn-toggle" onclick="togglePanel(${i})">▶ Ver unidades</button>
         <button class="btn-editar-emp" onclick="editarEmp(${i})">✏️ Editar</button>
-        <button class="pv-btn-emp" onclick="abrirPvLanc('${pvIdEsc}','${pvLabel}',${i})">🏷️ Vendedor</button>
+        <button class="pv-btn-emp" onclick="abrirPvLanc(this,'${pvIdEsc}','${pvLabel}',${i})">🏷️ Vendedor</button>
         <button class="btn-del-emp" onclick="excluirEmp('${e.idLancamento||''}','${(e.nomeEmpreendimento||'').replace(/'/g,'\\&apos;')}')">🗑 Excluir</button>
       </div>
       <div class="emp-panel" id="ep-${i}">${renderPanel(e.unidades)}</div>
@@ -1757,9 +1757,10 @@ function renderLista(lista) {
   carregarPvBadgesLanc_();
 }
 
-function abrirPvLanc(idLancamento, label, idx) {
+function abrirPvLanc(btn, idLancamento, label, idx) {
   abrirPerfilVendedor_(idLancamento, 'LANCAMENTOS', ['PJ','CONSTRUTORA'], label, function(json) {
     pvAtualizarBadgeLanc_(idLancamento, json.urgenciaNivel, idx);
+    pvSetBotaoScore_(btn, '🏷️ Vendedor', json.scoreVendedor);
   });
 }
 
@@ -1793,6 +1794,7 @@ async function carregarPvBadgesLanc_() {
         badge.className     = 'pv-emp-badge ' + u.cls;
         badge.style.display = 'inline-flex';
       }
+      pvSetBotaoScore_(el.querySelector('.pv-btn-emp'), '🏷️ Vendedor', sv);
     }
   );
 }

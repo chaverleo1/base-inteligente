@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 24) — Score do vendedor dentro do botão "Vendedor" (todas as telas)
+
+Todo botão que abre o Perfil do Vendedor agora mostra o score numérico dentro do próprio botão (ex:
+"🏷️ Vendedor 76"), em vez de só num badge separado — sem score cadastrado ainda (perfil vazio ou
+score 0), mantém só o rótulo, sem "0" pendurado. Aplicado nas 5 telas que têm esse botão:
+
+- **`revendas-lista.html`** (pedido original): score já vinha pronto por linha (`listarRevendaLista_`
+  no backend), só precisou entrar no template do botão + atualizar após salvar no modal.
+- **`busca.html`, `lancamentos.html`, `revendas-construtoras.html`**: já buscavam o perfil em lote
+  (`pvCarregarBadgesBatch_`, endpoint `listarPerfisVendedor`) pra pintar um badge de urgência nos
+  cards — o mesmo carregamento agora também atualiza o botão.
+- **`dashboard.html`** (2 templates: linha compacta de "Matches do momento" e o drawer de cards por
+  cliente — nenhum dos dois buscava o perfil em lote antes): novo `pvAtualizarScoresDash_()`, que
+  reaproveita o mesmo `pvCarregarBadgesBatch_` compartilhado, mas com origem dinâmica por card
+  (Revenda/Lançamento/Revenda-construtora) em vez de fixa — chamado após cada um dos 2 renders.
+  `abrirPvDash_` (antes não atualizava nada após salvar) agora atualiza TODOS os botões daquele
+  imóvel na tela ao mesmo tempo (ex: se o mesmo imóvel aparece na tabela E no drawer simultaneamente).
+
+Novo helper compartilhado em `perfil-vendedor.js`: `pvSetBotaoScore_(btn, baseLabel, score)`.
+
+Testado ao vivo no navegador (mock de `fetch`) nas 2 telas mais arriscadas: `revendas-lista.html`
+(render inicial com/sem score + atualização pós-save) e `dashboard.html` (batch com item sem perfil
+mantendo o rótulo puro, e `abrirPvDash_` atualizando os 2 botões do mesmo imóvel simultaneamente).
+
+100% frontend, sem mudança no backend (os endpoints já retornavam `scoreVendedor`).
+
 ## 2026-07-14 (parte 23) — Checagem de saúde do backend na tela de login (ponto único de falha)
 
 Problema identificado: todas as 16 páginas apontam pra uma única `WEBHOOK_URL` em `config.js`. Se a

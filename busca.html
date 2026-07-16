@@ -1434,7 +1434,7 @@ function renderResultados(resultados, filtros, interpretado) {
           <div class="card-actions">
             <button class="btn-sm btn-ver" onclick="event.stopPropagation();abrirDetalhe(${JSON.stringify(im).replace(/"/g,'&quot;')})">Ver detalhes e mensagem</button>
             ${im.url && im.url.startsWith('http') ? `<a class="btn-sm btn-link-ext" href="${im.url}" target="_blank" onclick="event.stopPropagation()">Ver anúncio →</a>` : ''}
-            ${isRevenda ? `<button class="pv-btn-card" onclick="event.stopPropagation();abrirPvRevenda_('${im.codigo}','${(im.condominio||im.bairro||im.codigo).replace(/'/g,'\\&#39;')}')">🏷️ Vendedor</button>` : ''}
+            ${isRevenda ? `<button class="pv-btn-card" data-pv-cod="${im.codigo}" onclick="event.stopPropagation();abrirPvRevenda_(this,'${im.codigo}','${(im.condominio||im.bairro||im.codigo).replace(/'/g,'\\&#39;')}')">🏷️ Vendedor</button>` : ''}
           </div>
         </div>
       </div>
@@ -1450,9 +1450,10 @@ function renderResultados(resultados, filtros, interpretado) {
   carregarPvBadgesRevenda_();
 }
 
-function abrirPvRevenda_(codigo, label) {
+function abrirPvRevenda_(btn, codigo, label) {
   abrirPerfilVendedor_(codigo, 'REVENDA', ['PF','PJ','CORRETOR'], label, function(json) {
     pvAtualizarBadgeCard_(codigo, json.urgenciaNivel);
+    pvSetBotaoScore_(btn, '🏷️ Vendedor', json.scoreVendedor);
   });
 }
 
@@ -1473,6 +1474,8 @@ async function carregarPvBadgesRevenda_() {
       const sv    = parseInt(p.scoreVendedor) || 0;
       const nivel = p.urgenciaNivel || (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA');
       pvAtualizarBadgeCard_(el.dataset.pvBadge, nivel);
+      const btn = el.closest('.card')?.querySelector('.pv-btn-card');
+      pvSetBotaoScore_(btn, '🏷️ Vendedor', sv);
     }
   );
 }

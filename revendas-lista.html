@@ -335,7 +335,7 @@ function renderTabela() {
         <span class="match-badge ${im.matchTotal > 0 ? '' : 'match-zero'}">${im.matchTotal || '—'}</span>
       </td>
       <td class="td-actions">
-        <button class="btn-sm btn-vend" data-cod="${eCod}" data-tip="${eTip}" onclick="abrirVendedorRevenda_(this)">🏷️ Vendedor</button>
+        <button class="btn-sm btn-vend" data-cod="${eCod}" data-tip="${eTip}" onclick="abrirVendedorRevenda_(this)">${sv > 0 ? '🏷️ Vendedor ' + svTxt : '🏷️ Vendedor'}</button>
         <button class="btn-sm btn-del" data-cod="${eCod}" onclick="excluirImovelBtn_(this)">🗑</button>
       </td>
     </tr>`;
@@ -348,7 +348,9 @@ function abrirVendedorRevenda_(btn) {
   const cod = btn.dataset.cod;
   const tip = btn.dataset.tip;
   const label = cod + (tip && tip !== cod ? ' · ' + tip : '');
-  abrirPerfilVendedor_(cod, 'REVENDA', ['PF','PJ','CORRETOR'], label, null);
+  abrirPerfilVendedor_(cod, 'REVENDA', ['PF','PJ','CORRETOR'], label, function(json) {
+    pvSetBotaoScore_(btn, '🏷️ Vendedor', json.scoreVendedor);
+  });
 }
 
 function excluirImovelBtn_(btn) {

@@ -2628,7 +2628,7 @@ async function selecionarCliente(cod, nome) {
         const pvOrigem = isLanc ? 'LANCAMENTOS' : isRevConst ? 'REVENDAS_CONSTRUTORAS' : 'REVENDA';
         const pvLabel  = (isLanc || isRevConst) ? (m.imoConstrutora || local || m.imoTipo || 'Construtora') : (local || m.imoTipo || 'Revenda');
         const j = s => JSON.stringify(s).replace(/"/g, '&quot;');
-        return `<button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${j(pvChave)},${j(pvOrigem)},${j(pvLabel)})">🏷️ Vendedor</button>`;
+        return `<button type="button" class="pv-btn-card" data-pv-cod="${escAttr(pvChave)}" data-pv-ori="${pvOrigem}" data-pv-base="🏷️ Vendedor" onclick="event.stopPropagation();abrirPvDash_(${j(pvChave)},${j(pvOrigem)},${j(pvLabel)})">🏷️ Vendedor</button>`;
       })();
       return `<tr data-idx="${idx}" onclick="abrirImovelDrawer(${idx},'${escAttr(cod)}','${escAttr(nome)}')">
         <td style="padding:4px 6px;vertical-align:middle;width:83px">${fotoHtml}</td>
@@ -2647,6 +2647,7 @@ async function selecionarCliente(cod, nome) {
         <td style="color:${jaFav?'#f5a623':'var(--text3)'};font-size:14px;text-align:center;padding-left:4px">${jaFav?'★':'☆'}</td>
       </tr>`;
     }).join('');
+    pvAtualizarScoresDash_();
   } catch(e) {
     if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">Erro ao buscar matches.</td></tr>';
   }
@@ -3147,7 +3148,7 @@ async function carregarMatchesDrawer(cod, cliente) {
         const pvOrigem = isLanc ? 'LANCAMENTOS' : isRevConst ? 'REVENDAS_CONSTRUTORAS' : 'REVENDA';
         const pvLabel  = (isLanc || isRevConst) ? (m.imoConstrutora || local || m.imoTipo || 'Construtora') : (local || m.imoTipo || 'Revenda');
         const j = s => JSON.stringify(s).replace(/"/g, '&quot;');
-        return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="pv-btn-card" onclick="event.stopPropagation();abrirPvDash_(${j(pvChave)},${j(pvOrigem)},${j(pvLabel)})">🏷️ Perfil do Vendedor</button></div>`;
+        return `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap"><button type="button" class="pv-btn-card" data-pv-cod="${escAttr(pvChave)}" data-pv-ori="${pvOrigem}" data-pv-base="🏷️ Perfil do Vendedor" onclick="event.stopPropagation();abrirPvDash_(${j(pvChave)},${j(pvOrigem)},${j(pvLabel)})">🏷️ Perfil do Vendedor</button></div>`;
       })();
 
       return `<div class="imovel-card${isLanc ? ' imovel-card-lanc' : isConst ? ' imovel-card-const' : isRevConst ? ' imovel-card-revconst' : ''}">
@@ -3186,6 +3187,7 @@ async function carregarMatchesDrawer(cod, cliente) {
         ${m.imoUrl && m.imoUrl.startsWith('http') ? `<a class="imovel-link" href="${m.imoUrl}" target="_blank">Ver imóvel completo →</a>` : ''}
       </div>`;
     }).join('')}</div>${rodapeDrawerCliente_(cliente)}`;
+    pvAtualizarScoresDash_();
   } catch(e) {
     el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Erro ao buscar matches.</div>';
   }
@@ -5019,7 +5021,27 @@ function abrirPvDash_(codigo, origemImovel, label) {
   const cats = origemImovel === 'LANCAMENTOS'           ? ['PJ','CONSTRUTORA']
              : origemImovel === 'REVENDAS_CONSTRUTORAS'  ? ['PJ','CONSTRUTORA','CORRETOR']
              :                                             ['PF','PJ','CORRETOR'];
-  abrirPerfilVendedor_(codigo, origemImovel, cats, label, null);
+  abrirPerfilVendedor_(codigo, origemImovel, cats, label, function(json) {
+    // Atualiza TODOS os botões desse imóvel na tela (o mesmo imóvel pode
+    // aparecer na tabela compacta de Matches E no drawer de cards ao mesmo tempo).
+    document.querySelectorAll(`[data-pv-cod="${CSS.escape(codigo)}"][data-pv-ori="${CSS.escape(origemImovel)}"]`).forEach(btn => {
+      pvSetBotaoScore_(btn, btn.dataset.pvBase || '🏷️ Vendedor', json.scoreVendedor);
+    });
+  });
+}
+
+// Preenche o score do vendedor nos botões "Vendedor"/"Perfil do Vendedor" já
+// renderizados na tela (tabela compacta de Matches e/ou drawer de cards) —
+// reaproveita o mesmo helper de batch das outras páginas, só que aqui a
+// origem varia por card (Revenda/Lançamento/Revenda-construtora), por isso
+// getOrigem lê o data-pv-ori de cada botão em vez de um valor fixo.
+async function pvAtualizarScoresDash_() {
+  await pvCarregarBadgesBatch_(
+    '[data-pv-cod]',
+    el => el.dataset.pvCod,
+    el => el.dataset.pvOri,
+    (el, p) => pvSetBotaoScore_(el, el.dataset.pvBase || '🏷️ Vendedor', p.scoreVendedor)
+  );
 }
 
 // ── INTELIGÊNCIA DE VENDAS ─────────────────────────────────────────────────
