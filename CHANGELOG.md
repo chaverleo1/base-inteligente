@@ -1,5 +1,45 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 42) — Alertas de Tração (cenários combinados) + reordenação dos cards por alerta
+
+Pedido do usuário: cruzar os eixos do score de Tração pra emitir alertas destacados no topo do card de
+cada empreendimento, em 3 cenários exatos fornecidos por ele, e reordenar TODOS os cards por prioridade
+de alerta (positivo → negativo → score de tração), não mais por preço/m².
+
+**Cenários implementados** (`ALERTAS_TRACAO` em lancamentos.html), cruzando 4 sinais: Vendedor (score
+bruto 0-100), Força de Venda (eixo normalizado 0-10, % vendido), Prazo de pagamento (bruto, em meses) e
+Estoque (bruto, em unidades):
+- 🚀 **Oportunidade** (positivo): Vendedor ≥70, Força ≥3, Prazo ≥24 meses, Estoque ≥20 unidades.
+- ⏳ **Estoque de Qualidade se Esgotando** (positivo): mesmos Vendedor/Força/Prazo, mas Estoque ≤15.
+- ⚠️ **Risco de Qualidade do Vendedor** (negativo): Vendedor ≤30, Força ≥3, Prazo ≥24, Estoque ≥20.
+
+Só o primeiro cenário que bater "ganha" (1 alerta por card); sem dados suficientes pro score composto
+(comp = 0), nunca dispara alerta. Banner exibido no topo do card (`.card-alerta`), verde para positivo
+e vermelho para negativo.
+
+**Reordenação**: `renderLista` virou `async` (precisa do score do vendedor, já buscado via
+`buscarScoreVendedorPorLancamento_`, ANTES de ordenar). Sort de 3 níveis: alertas positivos primeiro
+(por score de tração desc entre eles), depois negativos (idem), depois sem alerta (idem) — substitui o
+sort antigo por m² médio.
+
+Simplificação de arquitetura: removidas as funções antigas de "pintura em 2 passadas"
+(`carregarScoreTracaoDosCards_`/`atualizarScoreTracaoCards_`, que preenchiam divs-placeholder depois do
+render síncrono) — agora o alerta e o quadrado [T|V] são calculados ANTES do sort e renderizados
+diretamente no template do card, sem passada assíncrona posterior.
+
+Testado em Node: os 3 cenários disparam exatamente como especificado; casos de fronteira (força de
+venda <3, prazo <24, ou sem dados suficientes) corretamente não disparam alerta; ordenação de 3 níveis
+confirmada com 4 empreendimentos (2 positivos em qualquer ordem interna, depois o negativo, depois o
+sem-alerta). Página carrega sem erros de console; verificação visual completa (renderização de dados
+reais) não foi feita porque a sessão de navegador não tinha um token de login salvo — a lógica é 100%
+coberta pelos testes automatizados acima.
+
+Sugestões de outros cenários (positivos/negativos) usando dados de produto/vendedor/clientes e prevendo
+dados futuros de campanhas: apresentadas separadamente na conversa, aguardando o usuário escolher quais
+implementar.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-16 (parte 41) — Perfis Pessoa Física e Corretor reorganizados (mesmo padrão do PJ)
 
 Pedido do usuário: revisar TODOS os critérios de PF e CORRETOR e reorganizar em grupos objetivos/

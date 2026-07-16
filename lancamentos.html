@@ -247,6 +247,12 @@ select.form-input option { background: var(--surface2); }
 /* ── CARD EMPREENDIMENTO ── */
 .emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
 .emp-card:hover { border-color: var(--border2); }
+/* Alerta de Tração (ALERTAS_TRACAO, renderLista) — destacado no topo do
+   card, acima até do cabeçalho, pra ser a primeira coisa que salta aos olhos. */
+.card-alerta { padding: 7px 16px; font-size: 11px; font-weight: 700; text-align: center;
+               letter-spacing: .2px; }
+.card-alerta-positivo { background: rgba(0,212,170,.16); color: var(--accent2); border-bottom: 1px solid rgba(0,212,170,.3); }
+.card-alerta-negativo { background: rgba(255,90,90,.14); color: var(--danger); border-bottom: 1px solid rgba(255,90,90,.3); }
 .emp-card-header { padding: 16px; border-bottom: 1px solid var(--border); }
 .badge-vendido-row { margin-bottom: 6px; }
 .emp-nome { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 3px; }
@@ -1771,7 +1777,7 @@ function setFiltro(s) {
   renderLista(s ? _todos.filter(l => l.status === s) : _todos);
 }
 
-function renderLista(lista) {
+async function renderLista(lista) {
   const grid = document.getElementById('lista-grid');
   const cnt  = document.getElementById('lista-count');
 
@@ -1788,17 +1794,33 @@ function renderLista(lista) {
     if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
     mapa[key].unidades.push(l);
   }
-  // Ordena do metro quadrado mais barato pro mais caro (mesmo m² médio do
-  // painel resumo — calcularM2Medio, config.js). Empreendimento sem
-  // área/preço suficiente pra calcular vai pro final (Infinity), não pro
-  // topo, senão pareceria erroneamente "mais barato".
-  _emps = Object.values(mapa).sort((a, b) => (calcularM2Medio(a.unidades) || Infinity) - (calcularM2Medio(b.unidades) || Infinity));
+  const empsBrutos = Object.values(mapa);
+  cnt.innerHTML = `<b>${empsBrutos.length}</b> empreendimento${empsBrutos.length !== 1 ? 's' : ''}`;
+
+  // Score de Tração (com o eixo Vendedor buscado em lote) precisa estar
+  // pronto ANTES de ordenar — a nova ordem depende dele (ver abaixo), ao
+  // contrário do sort antigo por m² médio, que não precisava de nada
+  // assíncrono. `scored` já traz `s.e` apontando de volta pro empreendimento
+  // bruto correspondente.
+  const mapaScoreVendedor = await buscarScoreVendedorPorLancamento_();
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor);
+  scored.forEach(s => { s.alerta = calcularAlertaTracao_(s); });
+
+  // Ordem pedida pelo usuário: alerta POSITIVO primeiro, depois NEGATIVO,
+  // depois sem alerta — dentro de cada grupo, do maior Score de Tração pro
+  // menor. Substitui o sort antigo por m² médio (que não considerava
+  // vendedor/tração nenhum).
+  const rankAlerta_ = s => s.alerta ? (s.alerta.tipo === 'positivo' ? 0 : 1) : 2;
+  scored.sort((a, b) => {
+    const ra = rankAlerta_(a), rb = rankAlerta_(b);
+    return ra !== rb ? ra - rb : b.comp - a.comp;
+  });
+
+  _emps = scored.map(s => s.e);
   const emps = _emps;
-  cnt.innerHTML = `<b>${emps.length}</b> empreendimento${emps.length !== 1 ? 's' : ''}`;
 
-  carregarScoreTracaoDosCards_(emps);
-
-  grid.innerHTML = emps.map((e, i) => {
+  grid.innerHTML = scored.map((s, i) => {
+    const e = s.e;
     const tips   = [...new Set(e.unidades.map(u => u.tipologia).filter(Boolean))];
     const stCls  = { 'Em obras':'st-obras','Em planta':'st-planta','Pronto':'st-pronto','Entregue':'st-entregue' }[e.status] || 'st-planta';
     const pctVendido = calcularPercentualVendido(e.estoque, e.totalUnidades);
@@ -1826,14 +1848,21 @@ function renderLista(lista) {
     const pvId    = (e.idLancamento || '').replace(/"/g,'&quot;');
     const pvLabel = (e.nomeEmpreendimento || e.idLancamento || '').replace(/'/g,'\\&#39;');
     const pvIdEsc = (e.idLancamento || '').replace(/'/g,"\\'");
+    // Alerta destacado no topo do card (ALERTAS_TRACAO) e quadrado [T|V] —
+    // ambos já calculados ANTES do render (ver `scored` acima), diferente da
+    // versão anterior que pintava isso depois via getElementById.
+    const alertaHtml = s.alerta ? `<div class="card-alerta card-alerta-${s.alerta.tipo}">${s.alerta.titulo}</div>` : '';
+    const tvHtml = s.comp > 0 ? `
+        <div class="tv-score-badge ${classeScoreTracao_(s.comp)}" title="Score de Tração ${s.comp.toFixed(1)} — ${s.perfil}">T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div>
+        <div class="tv-eixos-mini">Prazo ${s.prazoSc.toFixed(1)} · Força ${s.trac.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)}</div>` : '';
     return `
     <div class="emp-card" id="ec-${i}" data-pv-badge-lanc="${pvId}">
+      ${alertaHtml}
       <div class="emp-card-header">
         <div class="badge-vendido-row">${badgeVendidoHTML(pctVendido, e.estoque)}</div>
         <div class="emp-nome">${e.nomeEmpreendimento || '—'}</div>
         <div class="emp-sub">${[e.construtora, e.bairro].filter(Boolean).join(' · ')}</div>
-        <div class="tv-score-badge" id="tv-lanc-${i}" style="display:none"></div>
-        <div class="tv-eixos-mini" id="tv-eixos-lanc-${i}" style="display:none"></div>
+        ${tvHtml}
         <div class="emp-badges">
           ${e.status ? `<span class="st-badge ${stCls}">${e.status}</span>` : ''}
           ${e.previsaoEntrega ? `<span class="st-badge st-data">📅 ${e.previsaoEntrega}</span>` : ''}
@@ -1947,7 +1976,7 @@ function calcularDispScoreTracao_(estoque, tipoEmpreendimento) {
 }
 
 // mapaScoreVendedor: { idLancamento: scoreVendedor (0-100) }, já buscado em
-// lote por carregarScoreTracaoDosCards_() antes de chamar esta função — ver
+// lote por renderLista() antes de chamar esta função — ver
 // pvCarregarBadgesBatch_ (perfil-vendedor.js), mesmo endpoint usado nos
 // badges de urgência dos cards.
 function calcularScoreTracao(emps, mapaScoreVendedor) {
@@ -2004,51 +2033,37 @@ async function buscarScoreVendedorPorLancamento_() {
   return mapa;
 }
 
-// Faixa de cor do score composto — usada no quadrado [T|V] do card (o painel
-// de ranking que usava essa mesma escala foi retirado da tela).
+// Faixa de cor do score composto — usada no quadrado [T|V] do card.
 function classeScoreTracao_(comp) {
   return comp >= 7 ? 'tp-hot' : comp >= 5 ? 'tp-warm' : comp >= 3 ? 'tp-esgot' : 'tp-cold';
 }
 
-// Pinta, em cada card, o quadrado com a nota de Tração [T] e do Vendedor [V]
-// lado a lado (ex: "T 6.9|V 78") — ver placeholders tv-lanc-i/tv-eixos-lanc-i
-// em renderLista. Os eixos que COMPÕEM o composto (Prazo/Força de Venda/
-// Atratividade/Estoque) aparecem pequenos e sem destaque logo abaixo, só
-// como referência — nunca em badge/cor, é texto simples (pedido do usuário:
-// "sem destaque"). Recebe o array JÁ pontuado — a posição do card vem de
-// emps.indexOf(s.e), já que scored vem reordenado por score, não na ordem em
-// que os cards foram renderizados. Empreendimento sem dados suficientes
-// (comp = 0, perfil "Sem dados") não ganha quadrado: "T 0.0" ali seria
-// ruído, não informação.
-function atualizarScoreTracaoCards_(scored, emps) {
-  scored.forEach(s => {
-    const i = emps.indexOf(s.e);
-    if (i < 0) return;
-    const quadrado = document.getElementById('tv-lanc-' + i);
-    const eixos    = document.getElementById('tv-eixos-lanc-' + i);
-    if (!(s.comp > 0)) return;
-    if (quadrado) {
-      quadrado.textContent = `T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}`;
-      quadrado.className   = 'tv-score-badge ' + classeScoreTracao_(s.comp);
-      quadrado.title       = 'Score de Tração ' + s.comp.toFixed(1) + ' — ' + s.perfil;
-      quadrado.style.display = 'inline-flex';
-    }
-    if (eixos) {
-      eixos.textContent = `Prazo ${s.prazoSc.toFixed(1)} · Força ${s.trac.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)}`;
-      eixos.style.display = 'block';
-    }
-  });
-}
-
-// Calcula o Score de Tração de todos os empreendimentos (com o eixo Vendedor
-// buscado em lote) e pinta o quadrado [T|V] de cada card — sem painel de
-// ranking na tela (retirado a pedido do usuário), o cálculo continua rodando
-// nos bastidores só pra alimentar os cards.
-async function carregarScoreTracaoDosCards_(emps) {
-  if (!emps || emps.length === 0) return;
-  const mapaScoreVendedor = await buscarScoreVendedorPorLancamento_();
-  const scoredTodos = calcularScoreTracao(emps, mapaScoreVendedor);
-  atualizarScoreTracaoCards_(scoredTodos, emps);
+// ── ALERTAS DE TRAÇÃO (combinações de eixos, 2026-07) ──────────────────────
+// Cruza 4 sinais pra emitir um alerta destacado no topo do card: Vendedor
+// (score bruto 0-100), Força de Venda (eixo normalizado 0-10 — "trac", %
+// vendido em escala 0-10), Prazo de pagamento (prazoMaximo BRUTO, em meses —
+// não o eixo normalizado por tipo) e Estoque (BRUTO, em unidades — não o
+// eixo normalizado por teto). Critérios exatos definidos pelo usuário. Só o
+// PRIMEIRO cenário que bater "ganha" (um card mostra no máximo 1 alerta); a
+// ordem da lista é também a ordem de prioridade quando mais de um bateria.
+// Sem dados suficientes pro composto (comp = 0), nunca dispara alerta.
+const ALERTAS_TRACAO = [
+  {
+    id: 'oportunidade', tipo: 'positivo', titulo: '🚀 Alerta de Oportunidade',
+    bate: s => s.scoreVendedor >= 70 && s.trac >= 3 && (Number(s.e.prazoMaximo)||0) >= 24 && (Number(s.e.estoque)||0) >= 20,
+  },
+  {
+    id: 'estoque_esgotando', tipo: 'positivo', titulo: '⏳ Estoque de Qualidade se Esgotando',
+    bate: s => s.scoreVendedor >= 70 && s.trac >= 3 && (Number(s.e.prazoMaximo)||0) >= 24 && (Number(s.e.estoque)||0) <= 15,
+  },
+  {
+    id: 'risco_vendedor', tipo: 'negativo', titulo: '⚠️ Risco de Qualidade do Vendedor',
+    bate: s => s.scoreVendedor <= 30 && s.trac >= 3 && (Number(s.e.prazoMaximo)||0) >= 24 && (Number(s.e.estoque)||0) >= 20,
+  },
+];
+function calcularAlertaTracao_(s) {
+  if (!(s.comp > 0)) return null;
+  return ALERTAS_TRACAO.find(cenario => cenario.bate(s)) || null;
 }
 
 function renderPanel(unidades) {
