@@ -181,6 +181,12 @@ function doGet(e) {
     return ok(objBL);
   }
 
+  // Checagem de saúde do backend (index.html, tela de login) — deliberadamente
+  // sem tocar em PropertiesService/Spreadsheet, pra medir só "o deploy está no
+  // ar", nunca lentidão de planilha/quota. Se essa rota não responder em
+  // poucos segundos, o problema é a URL/implantação do Apps Script em si
+  // (ex: "Nova implantação" trocou a URL), não alguma função pesada.
+  if (acao === 'ping')             return ok({ ok: true, ts: new Date().getTime() });
   if (acao === 'dashboard')        return ok(dadosDashboard());
   if (acao === 'verificar_senha')  return verificarSenha_(e.parameter.hash);
   if (acao === 'esqueci_senha')    return esquecerSenha_();

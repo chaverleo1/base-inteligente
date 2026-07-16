@@ -30,6 +30,13 @@
   .login-link{text-align:center;margin-top:16px;font-size:13px;color:var(--text3)}
   .login-link a{color:var(--accent);cursor:pointer;text-decoration:none}
   .login-link a:hover{text-decoration:underline}
+  /* Ponto único de falha: se a URL do Apps Script (config.js) apontar pra uma
+     implantação errada/parada, nenhuma das 16 páginas funciona e o corretor só
+     descobre na hora de usar. Este banner avisa isso já na tela de login, sem
+     precisar nem digitar senha (ver checarSaudeBackend_ abaixo). */
+  .health-banner{display:none;background:rgba(255,90,90,.12);border:1px solid rgba(255,90,90,.4);
+    color:var(--danger);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;
+    line-height:1.45;margin-bottom:18px}
   /* init overlay */
   .init-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:none;align-items:center;justify-content:center;padding:24px}
   .init-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:44px 48px;width:360px;max-width:90vw;text-align:center}
@@ -46,6 +53,7 @@
   <div class="login-box">
     <div class="login-logo">BASE <span>INTELIGENTE</span></div>
     <div class="login-sub" id="loginSub">Acesso administrativo</div>
+    <div class="health-banner" id="healthBanner"></div>
     <div class="login-user">
       <div class="login-avatar">L</div>
       <div>
@@ -97,11 +105,38 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
+  const MSG_BACKEND_INACESSIVEL = 'Backend inacessível — verifique se a reimplantação do Apps Script foi feita como "Nova versão" (não "Nova implantação").';
+
+  // Roda em paralelo à tela de login (não atrasa nem bloqueia nada) — avisa o
+  // corretor ANTES de ele perder tempo digitando a senha se a WEBHOOK_URL de
+  // config.js estiver apontando pra uma implantação parada/trocada. Usa
+  // "acao=ping" (backend, sem tocar em planilha) em vez de "verificar_senha"
+  // de propósito, pra não misturar "backend fora do ar" com "senha errada"
+  // no mesmo request.
+  async function checarSaudeBackend_() {
+    const banner = document.getElementById('healthBanner');
+    const ctrl   = new AbortController();
+    const tid    = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?acao=ping', { signal: ctrl.signal });
+      const data = await resp.json();
+      if (!data || data.ok !== true) throw new Error('resposta inesperada');
+      banner.style.display = 'none';
+    } catch(e) {
+      banner.textContent   = '⚠️ ' + MSG_BACKEND_INACESSIVEL;
+      banner.style.display = 'block';
+    } finally {
+      clearTimeout(tid);
+    }
+  }
+
   async function verificarAuth() {
     if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) {
       if (sessionStorage.getItem('bi_init_done') === '1') { window.location.href = 'busca.html'; return; }
       inicializarERedirecionar();
+      return;
     }
+    checarSaudeBackend_();
   }
 
   async function entrar() {
@@ -111,8 +146,14 @@
     if (!senha) { err.textContent = 'Digite sua senha.'; return; }
     btn.disabled = true; btn.textContent = 'Verificando...'; err.textContent = '';
     const hash = await sha256(senha + USER_EMAIL);
+    // Timeout de 5s: sem isso, uma implantação travada/trocada deixava o
+    // botão preso em "Verificando..." indefinidamente, sem nenhum aviso —
+    // era exatamente esse silêncio que fazia o corretor só perceber a falha
+    // na hora de usar de verdade.
+    const ctrl = new AbortController();
+    const tid  = setTimeout(() => ctrl.abort(), 5000);
     try {
-      const resp = await fetch(WEBHOOK_URL + '?acao=verificar_senha&hash=' + encodeURIComponent(hash));
+      const resp = await fetch(WEBHOOK_URL + '?acao=verificar_senha&hash=' + encodeURIComponent(hash), { signal: ctrl.signal });
       const data = await resp.json();
       if (data.ok) {
         sessionStorage.setItem(SESS_KEY, 'ok');
@@ -131,8 +172,10 @@
       }
     } catch(e) {
       err.style.color = 'var(--danger)';
-      err.textContent = 'Erro de conexão. Tente novamente.';
+      err.textContent = e.name === 'AbortError' ? MSG_BACKEND_INACESSIVEL : 'Erro de conexão. Tente novamente.';
       btn.disabled = false; btn.textContent = 'Entrar';
+    } finally {
+      clearTimeout(tid);
     }
   }
 

@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-14 (parte 23) — Checagem de saúde do backend na tela de login (ponto único de falha)
+
+Problema identificado: todas as 16 páginas apontam pra uma única `WEBHOOK_URL` em `config.js`. Se a
+reimplantação do Apps Script for feita errado ("Nova implantação", que gera uma URL nova, em vez de
+"Editar implantação → Nova versão", que mantém a mesma URL), a plataforma inteira para — sem fallback,
+sem detecção automática. Agravante encontrado ao investigar: o `fetch` do botão "Entrar" em
+`index.html` não tinha timeout nenhum — se o backend travasse, o botão ficava preso em
+"Verificando..." indefinidamente, sem nenhum aviso. Era exatamente esse silêncio que fazia o corretor
+só perceber a falha na hora de tentar usar de verdade.
+
+**Backend (`code.txt`)**: nova rota `acao=ping`, deliberadamente sem tocar em `PropertiesService`/
+Spreadsheet — mede só "o deploy está no ar", nunca lentidão de planilha/quota.
+
+**Frontend (`index.html`)**:
+1. Checagem proativa (`checarSaudeBackend_`): dispara em paralelo assim que a tela de login aparece
+   (não atrasa nem bloqueia nada) — se `acao=ping` não responder em 5s (`AbortController`) ou a
+   resposta não for o JSON esperado, mostra um banner vermelho fixo acima do formulário: "Backend
+   inacessível — verifique se a reimplantação do Apps Script foi feita como 'Nova versão' (não 'Nova
+   implantação')." Roda só quando a tela de login vai mesmo aparecer (não quando já autenticado e
+   redirecionando direto).
+2. Timeout de 5s adicionado ao próprio botão "Entrar" (`acao=verificar_senha`) — se abortar por
+   timeout, mostra a mesma mensagem de backend inacessível; qualquer outro erro de rede continua com
+   a mensagem genérica "Erro de conexão. Tente novamente." (evita alarmar o usuário com um diagnóstico
+   específico quando pode ser só a internet dele).
+
+Testado no navegador simulando os 3 cenários (mock de `fetch`): timeout de ~5s exibe o banner e a
+mensagem certa; resposta `{ok:true}` esconde o banner; erro de rede comum (não-timeout) mantém a
+mensagem genérica no botão "Entrar", sem travar o botão desabilitado.
+
+**Escopo**: cobre só o momento de login — uma sessão já aberta em outra página (dashboard, contatos
+etc.) que perde o backend no meio do uso não é avisada por este banner (fora do que foi pedido).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no editor do Apps Script e reimplantar como "Nova
+versão" pra rota `ping` existir em produção.
+
 ## 2026-07-14 (parte 22) — Seção "Novas ofertas" renomeada pra "Novidades" + painel de portfólio movido pra dentro
 
 Rebatiza a seção "Novas ofertas" para "Novidades" (id interno `novasOfertasSection` mantido, só o
