@@ -1,5 +1,32 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 30) — Score de Tração: prazo por tipo de empreendimento + eixo Vendedor (peso 4)
+
+Duas mudanças na regra do "Score de Tração" (lancamentos.html), a pedido do usuário:
+
+**1. Eixo Prazo deixa de ser relativo, vira absoluto por tipo de empreendimento.** Antes, o prazo
+máximo era normalizado por min-max contra o LOTE de empreendimentos carregados no momento (um mesmo
+prazo podia pontuar diferente dependendo do que mais estava na tela). Agora usa um teto FIXO por
+`tipoEmpreendimento`: **Condomínio Vertical = 36 meses (3 anos de obra, prazo típico até liberar
+financiamento bancário) = 100%**; **Condomínio Horizontal = 240 meses (média — pode chegar a 420 em
+casos pontuais, mas 240 é a referência) = 100%**. Score sempre capado em 10 (não deixa um prazo bem
+acima do teto típico desbalancear a soma ponderada). Empreendimento sem `tipoEmpreendimento` definido
+cai no teto de Vertical (mais conservador). Exemplo confirmado com o usuário: 29 meses num Vertical
+agora pontua ~8,1/10 (muito alta, como esperado — antes dependia do que mais estivesse carregado).
+
+**2. Novo eixo "Vendedor" (nota do Perfil do Vendedor, peso 4).** Busca `scoreVendedor` em lote via
+`listarPerfisVendedor` (mesmo endpoint já usado pros badges de urgência nos cards), indexado por
+`idLancamento`. Pesos reescritos como partes inteiras (os mesmos 40/30/20/10% de sempre = 4/3/2/1,
+mais Vendedor=4) — soma 14, cada eixo contribui `eixo × peso ÷ 14`. `renderRankingTracao` virou
+assíncrona pra buscar o score antes de renderizar; painel ganha uma 5ª coluna de eixo (roxo,
+`.bar-vendedor`) com o valor bruto (0-100) ao lado da barra.
+
+Testado em Node (prazoScore isolado pros 2 tipos + caso sem tipo + caso capado em 420m; composto final
+com score de vendedor influenciando corretamente o ranking) e ao vivo no navegador (5 eixos renderizando
+com os valores certos, ranking reordenando pelo novo composto).
+
+100% frontend, sem mudança no backend (só consome campos/endpoints que já existiam).
+
 ## 2026-07-16 (parte 29) — Fix: "Única" e "Financiamento em" não gravavam (conflito com auto-formatação de data do Sheets)
 
 Bug reportado: depois de cadastrar um empreendimento, os campos "Única" e "Financiamento em" (Plano de
