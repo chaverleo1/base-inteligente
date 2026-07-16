@@ -1,5 +1,32 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 27) — Painel "Plano de Pagamento" em Dados Gerais (lancamentos-editar.html)
+
+Novo painel destacado (mesmo estilo visual do resumo de área/preço/m²) dentro da seção "Dados Gerais",
+logo abaixo de "Prazo máximo (meses)": Sinal, Mensais, Semestrais, Única (todos QUANTIDADE DE
+PARCELAS, confirmado com o usuário — não % nem R$) e "Financiamento em" (mês/ano).
+
+"Financiamento em" preenche "Prazo máximo (meses)" automaticamente ao mudar (`calcularPrazoMaximoAuto`
+— meses entre HOJE e a data informada, confirmado com o usuário; nunca negativo, trava em 0 se a data
+já passou). O campo "Prazo máximo" continua editável manualmente depois, se o usuário quiser ajustar.
+
+**Backend**: 5 campos novos no fim de `CABECALHO_LANCAMENTOS` (depois de `statusAtivo`, que era o
+último até agora) — `planoSinalParcelas`, `planoMensaisParcelas`, `planoSemestraisParcelas`,
+`planoUnicaParcelas`, `planoFinanciamentoEm`. Nomes com prefixo "plano" de propósito: já existem
+campos por-UNIDADE chamados `sinal`/`mensais`/`anuais` (de um plano de pagamento antigo removido da UI
+— ver "Remover Qd/Lt e plano de pagamento por unidade"), sem esse prefixo haveria colisão de nome no
+array (dois campos com a mesma chave string quebraria a conversão linha→objeto). `salvarLancamento_`
+grava os 5 valores nessa mesma posição (fim do array) — testado que isso NÃO desalinha nenhum campo
+já existente (construtora, unidades, statusAtivo etc. continuam batendo certinho).
+
+Testado em Node (salvarLancamento_ + listarLancamentos_ com os campos novos, confirmando alinhamento)
+e ao vivo no navegador (painel renderiza, populate ao carregar um lançamento existente, cálculo de
+29 meses pra uma data ~2,5 anos no futuro, e trava em 0 pra data no passado).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no editor do Apps Script e reimplantar como "Nova
+versão" pra funcionar em produção (a planilha ganha as 5 colunas novas automaticamente no próximo
+login, via a migração `migrar_cabecalho_lancamentos` que já roda no init).
+
 ## 2026-07-16 (parte 26) — Fix: botão "Excluir" de empreendimentos não removia da lista
 
 Bug reportado: em `lancamentos.html`, clicar "🗑 Excluir" num empreendimento cadastrado não tinha

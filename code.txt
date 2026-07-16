@@ -110,9 +110,22 @@ const CABECALHO_LANCAMENTOS = [
   // prazoMaximo — prazo máximo de parcelamento em meses (ex: 120). Quanto
   // maior, mais acessível financeiramente; usado como eixo no Score de Tração.
   'prazoMaximo',
-  // statusAtivo — soft delete: 'Ativo' (padrão) ou 'Excluído'. Sempre no
-  // fim do array para migrarCabecalhoLancamentos() só anexar a coluna nova.
-  'statusAtivo'
+  // statusAtivo — soft delete: 'Ativo' (padrão) ou 'Excluído').
+  'statusAtivo',
+  // Plano de Pagamento do EMPREENDIMENTO (painel destacado em "Dados Gerais",
+  // adicionado em 2026-07) — distinto dos campos POR UNIDADE 'sinal'/'mensais'/
+  // 'anuais' já existentes acima (removidos da UI, mas o nome já estava em uso
+  // no array — por isso o prefixo "plano" aqui, pra não colidir). Cada campo é
+  // uma QUANTIDADE DE PARCELAS (ex: Mensais=27 → 27 parcelas mensais), não um
+  // valor em R$ nem percentual. planoFinanciamentoEm é "AAAA-MM" (input
+  // type=month) — usado só pra CALCULAR "prazoMaximo" no front-end (meses
+  // entre hoje e essa data); o valor calculado é gravado normalmente no campo
+  // prazoMaximo já existente, não duplicado aqui. Vai no FIM do array (depois
+  // de 'statusAtivo', que era o último até agora) pelo mesmo motivo de sempre:
+  // migrarCabecalhoLancamentos() só sabe ANEXAR colunas novas, nunca inserir
+  // no meio — colocar antes de 'statusAtivo' desalinharia os dados já salvos.
+  'planoSinalParcelas', 'planoMensaisParcelas', 'planoSemestraisParcelas',
+  'planoUnicaParcelas', 'planoFinanciamentoEm'
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -3136,6 +3149,11 @@ function salvarLancamento_(dados) {
         dados.gerenteObs         || '',
         dados.prazoMaximo        || '',
         statusAtivo,
+        dados.planoSinalParcelas      || '',
+        dados.planoMensaisParcelas    || '',
+        dados.planoSemestraisParcelas || '',
+        dados.planoUnicaParcelas      || '',
+        dados.planoFinanciamentoEm    || '',
       ];
     });
 

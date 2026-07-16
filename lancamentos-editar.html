@@ -48,6 +48,9 @@ a{text-decoration:none;color:inherit}
 .resumo-item{font-size:13px;color:var(--text)}
 .resumo-item b{color:var(--accent2);font-weight:700}
 .resumo-item small{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:1px}
+/* ── PLANO DE PAGAMENTO (painel destacado, mesmo estilo do resumo-extracao) ── */
+.plano-pag-panel{background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.25);border-radius:var(--radius-sm);padding:14px 16px 4px;margin-bottom:16px}
+.plano-pag-titulo{font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
 .page-sub{font-size:13px;color:var(--text3);margin-top:3px}
 .back-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
           color:var(--text2);padding:7px 16px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
@@ -277,6 +280,35 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
         <input class="form-input" id="f-prazoMaximo" type="number" min="0" placeholder="Ex: 120">
       </div>
     </div>
+
+    <div class="plano-pag-panel">
+      <div class="plano-pag-titulo">Plano de Pagamento</div>
+      <div class="form-grid cols3">
+        <div class="form-group">
+          <label class="form-label">Sinal (parcelas)</label>
+          <input class="form-input" id="f-planoSinalParcelas" type="number" min="0" placeholder="Ex: 3">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mensais (parcelas)</label>
+          <input class="form-input" id="f-planoMensaisParcelas" type="number" min="0" placeholder="Ex: 27">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Semestrais (parcelas)</label>
+          <input class="form-input" id="f-planoSemestraisParcelas" type="number" min="0" placeholder="Ex: 4">
+        </div>
+      </div>
+      <div class="form-grid cols3">
+        <div class="form-group">
+          <label class="form-label">Única (parcelas)</label>
+          <input class="form-input" id="f-planoUnicaParcelas" type="number" min="0" placeholder="Ex: 1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Financiamento em</label>
+          <input class="form-input" id="f-planoFinanciamentoEm" type="month" onchange="calcularPrazoMaximoAuto()">
+        </div>
+      </div>
+    </div>
+
     <div class="form-grid cols3">
       <div class="form-group">
         <label class="form-label">Estoque</label>
@@ -393,7 +425,9 @@ function preencherForm(e) {
                   'endereco','bairro','cidade','estado','previsaoEntrega','prazoMaximo',
                   'estoque','totalUnidades','dataLancamento',
                   'urlSite','foto','lazer','conceito',
-                  'gerenteNome','gerenteTelefone','gerenteObs'];
+                  'gerenteNome','gerenteTelefone','gerenteObs',
+                  'planoSinalParcelas','planoMensaisParcelas','planoSemestraisParcelas',
+                  'planoUnicaParcelas','planoFinanciamentoEm'];
   campos.forEach(c => {
     const el = document.getElementById('f-' + c);
     if (el && e[c] != null) el.value = e[c];
@@ -450,6 +484,22 @@ function salvarGerenteDrawer() {
 
 // Percentual vendido = derivado de Estoque/Total de unidades (Alterações
 // 08/07, parte 2) — recalcula ao vivo sempre que um dos dois campos muda.
+// "Financiamento em" (input type=month, "AAAA-MM") → "Prazo máximo (meses)":
+// calcula quantos meses faltam de HOJE até a data informada e preenche
+// f-prazoMaximo automaticamente. Campo continua editável manualmente depois
+// (não é somente-leitura) — isso só roda quando "Financiamento em" muda.
+function calcularPrazoMaximoAuto() {
+  const valor = gV('f-planoFinanciamentoEm');
+  if (!valor) return;
+  const [anoStr, mesStr] = valor.split('-');
+  const ano = parseInt(anoStr, 10);
+  const mes = parseInt(mesStr, 10); // 1-12
+  if (!ano || !mes) return;
+  const hoje = new Date();
+  const meses = (ano - hoje.getFullYear()) * 12 + (mes - (hoje.getMonth() + 1));
+  document.getElementById('f-prazoMaximo').value = Math.max(0, meses);
+}
+
 function atualizarBadgeVendido() {
   const pct = calcularPercentualVendido(gV('f-estoque'), gV('f-totalUnidades'));
   document.getElementById('badgeVendidoTitulo').innerHTML = badgeVendidoHTML(pct, gV('f-estoque'));
@@ -673,6 +723,11 @@ async function salvar() {
     gerenteTelefone:   gV('f-gerenteTelefone'),
     gerenteObs:        gV('f-gerenteObs'),
     statusAtivo:       gV('f-statusAtivo') || 'Ativo',
+    planoSinalParcelas:      gV('f-planoSinalParcelas'),
+    planoMensaisParcelas:    gV('f-planoMensaisParcelas'),
+    planoSemestraisParcelas: gV('f-planoSemestraisParcelas'),
+    planoUnicaParcelas:      gV('f-planoUnicaParcelas'),
+    planoFinanciamentoEm:    gV('f-planoFinanciamentoEm'),
     unidades
   };
 
