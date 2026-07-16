@@ -3161,7 +3161,19 @@ function salvarLancamento_(dados) {
     });
 
     if (linhas.length) {
-      aba.getRange(aba.getLastRow() + 1, 1, linhas.length, CABECALHO_LANCAMENTOS.length)
+      var linhaInicio = aba.getLastRow() + 1;
+      // planoUnicaData/planoFinanciamentoEm são "AAAA-MM" (input type=month no
+      // front-end) — SEM forçar formato de texto ANTES do setValues, o Sheets
+      // auto-detecta esse padrão como data e converte pra um valor Date
+      // interno. Na leitura de volta (listarLancamentos_), esse Date vira uma
+      // string ISO completa (ex: "2028-12-01T00:00:00.000Z"), que não bate
+      // com o formato exato "AAAA-MM" que o <input type=month> exige — o
+      // campo aparece vazio na tela, dando a impressão de que "não gravou".
+      var idxUnicaData = CABECALHO_LANCAMENTOS.indexOf('planoUnicaData') + 1;
+      var idxFinancEm  = CABECALHO_LANCAMENTOS.indexOf('planoFinanciamentoEm') + 1;
+      if (idxUnicaData > 0) aba.getRange(linhaInicio, idxUnicaData, linhas.length, 1).setNumberFormat('@');
+      if (idxFinancEm  > 0) aba.getRange(linhaInicio, idxFinancEm,  linhas.length, 1).setNumberFormat('@');
+      aba.getRange(linhaInicio, 1, linhas.length, CABECALHO_LANCAMENTOS.length)
          .setValues(linhas);
     }
 

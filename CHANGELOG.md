@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 29) — Fix: "Única" e "Financiamento em" não gravavam (conflito com auto-formatação de data do Sheets)
+
+Bug reportado: depois de cadastrar um empreendimento, os campos "Única" e "Financiamento em" (Plano de
+Pagamento) não ficavam gravados.
+
+Causa raiz: os dois campos são `input type=month` (valor "AAAA-MM", ex: "2028-12"). Sem forçar o
+formato da célula ANTES de escrever, o Google Sheets auto-detecta esse padrão como data e converte
+pra um valor Date interno — na leitura de volta (`listarLancamentos_`), esse Date vira uma string ISO
+completa (ex: "2028-12-01T00:00:00.000Z"), que não bate com o formato exato "AAAA-MM" que o
+`<input type=month>` exige pra exibir um valor. O campo aparecia vazio na tela, dando a impressão de
+que "não gravou" — mesmo bug clássico do Sheets auto-formatando texto parecido com data.
+
+Fix: `salvarLancamento_` agora chama `setNumberFormat('@')` (texto puro) nas colunas
+`planoUnicaData`/`planoFinanciamentoEm` da(s) linha(s) recém-inseridas, ANTES do `setValues()` — sem
+isso a ordem inversa não adianta nada (o Sheets já teria convertido o valor no mesmo `setValues`).
+
+Confirmado que "Prazo máximo" já atualiza automaticamente a partir de "Financiamento em"
+(`calcularPrazoMaximoAuto`, implementado na parte 27) — isso já estava funcionando; o problema era só
+o campo de origem ("Financiamento em") não persistir.
+
+Testado em Node com um espião em `setNumberFormat` confirmando que é chamado nas colunas certas
+(índices 61/62), na ordem certa (antes do `setValues`), sem desalinhar nenhum outro campo.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+**Atenção**: qualquer empreendimento que você já tentou salvar com esses 2 campos antes desse fix
+provavelmente ficou com a data corrompida/vazia na planilha — depois de reimplantar, reabra esse
+empreendimento em "Editar" e preencha "Única"/"Financiamento em" de novo pra gravar corretamente.
+
 ## 2026-07-16 (parte 28) — Correção: "Única" é data, não quantidade de parcelas
 
 Correção da parte 27, ainda no mesmo dia: "Única" no Plano de Pagamento é um pagamento pontual numa
