@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 36) — Perfil do Vendedor (PJ): 5 sinais de prontidão para negociar
+
+Novos critérios no perfil "Construtora/Incorporadora (PJ)", a pedido do usuário — todos sinais fortes
+de que o vendedor está pronto pra ceder em preço e condições de pagamento:
+
+- Está dando premiação por venda (+10)
+- Foi à imobiliária promover o produto (+10)
+- Está pagando escritura e/ou ITBI (+12)
+- Está querendo queimar estoque (+15)
+- Aceita permuta com facilidade (+10)
+
+Nova subseção "Sinais de prontidão para negociar" no formulário, logo abaixo do checkbox de urgência
+de venda já existente. Todos checkbox sim/não, mesmo padrão dos demais critérios objetivos do PJ.
+
+Testado em Node (perfil só com os 5 sinais marcados → score 57, exatamente 10+10+12+15+10) e ao vivo
+no navegador (5 campos presentes no formulário, coleta capturando "sim" nos 5 corretamente).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 35) — Perfil do Vendedor: categoria única "Construtora/Incorporadora (PJ)"
 
 Pedido do usuário: as categorias "PJ" e "CONSTRUTORA" tinham critérios quase todos sobre o PRODUTO

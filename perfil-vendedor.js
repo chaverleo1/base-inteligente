@@ -290,6 +290,18 @@ function _pvRenderForm_() {
   <select id="pvClimaParceria"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'climaParceria')}</select></div>
 <div class="pv-row pv-row-checks">
   <label><input type="checkbox" id="pvUrgenciaVenda" ${_pvCeChk_('urgenciaVendaSinalizada')}> Construtora sinalizou urgência de venda / pressão por resultado</label>
+</div>
+<div class="pv-section-title">Sinais de prontidão para negociar</div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvPremiacaoVenda" ${_pvCeChk_('premiacaoPorVenda')}> Está dando premiação por venda</label>
+  <label><input type="checkbox" id="pvPromoveuProduto" ${_pvCeChk_('promoveuProdutoNaImobiliaria')}> Foi à imobiliária promover o produto</label>
+</div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvPagaEscrituraItbi" ${_pvCeChk_('pagaEscrituraItbi')}> Está pagando escritura e/ou ITBI</label>
+  <label><input type="checkbox" id="pvQueimandoEstoque"  ${_pvCeChk_('queimandoEstoque')}> Está querendo queimar estoque</label>
+</div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvPermutaFacil" ${_pvCeChk_('aceitaPermutaFacil')}> Aceita permuta com facilidade</label>
 </div>`;
   } else if (cat === 'CORRETOR') {
     esp = `
@@ -370,6 +382,9 @@ function _pvColetarEsp_() {
     confiabilidadePrazos: g('pvConfiabilidade'), qualidadeSuporteGerente: g('pvSuporteGerente'),
     facilidadeNegociacao: g('pvFacilidadeNeg'), reputacaoMercado: g('pvReputacao'),
     climaParceria: g('pvClimaParceria'), urgenciaVendaSinalizada: chk('pvUrgenciaVenda'),
+    premiacaoPorVenda: chk('pvPremiacaoVenda'), promoveuProdutoNaImobiliaria: chk('pvPromoveuProduto'),
+    pagaEscrituraItbi: chk('pvPagaEscrituraItbi'), queimandoEstoque: chk('pvQueimandoEstoque'),
+    aceitaPermutaFacil: chk('pvPermutaFacil'),
   };
   if (cat === 'CORRETOR') return { exclusividade: g('pvExcl'), diasDesdeUltimaResposta: g('pvDiasResp'), vendedorOriginalUrgente: g('pvVendUrgente'), comissaoNegociavel: chk('pvComissNeg'), relacionamentoHistorico: chk('pvRelHist') };
   return {};

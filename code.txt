@@ -5624,6 +5624,14 @@ function calcularScoreVendedor_PJ_(ce, ctx) {
   score += pts('reputacaoMercado')        * 3;
   score += pts('climaParceria')           * 2;
   if (ce.urgenciaVendaSinalizada === 'sim') score += 15;
+  // ── Sinais de prontidão para negociar (2026-07) — cada um, isolado, já
+  // indica que o vendedor está mais aberto a ceder em preço/condições; juntos
+  // pesam mais que qualquer critério individual isolado.
+  if (ce.premiacaoPorVenda === 'sim')             score += 10;
+  if (ce.promoveuProdutoNaImobiliaria === 'sim')  score += 10;
+  if (ce.pagaEscrituraItbi === 'sim')             score += 12;
+  if (ce.queimandoEstoque === 'sim')              score += 15;
+  if (ce.aceitaPermutaFacil === 'sim')            score += 10;
   return score;
 }
 
