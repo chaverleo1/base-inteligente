@@ -5577,44 +5577,53 @@ function calcularScoreVendedor_PF_(ce, ctx) {
   return score;
 }
 
-// ── Score PJ ─────────────────────────────────────────────────
+// ── Score PJ / Construtora-Incorporadora (perfil único, 2026-07) ───────────
+// Qualifica a CONSTRUTORA COMO PARCEIRA DE NEGÓCIO (comissão, agilidade,
+// relacionamento, confiabilidade) — NÃO o produto que ela vende. Dado de
+// produto (unidades restantes, meses desde Habite-se, % vendido, prazo de
+// entrega...) já mora no cadastro do empreendimento (lancamentos-editar.html)
+// e já alimenta outros eixos do Score de Tração (Estoque/Força de Venda/
+// Prazo de Pgt) — repetir aqui duplicava dado e desvirtuava o que esse eixo
+// "Vendedor" deveria medir. Substitui as antigas calcularScoreVendedor_PJ_/
+// _CONSTRUTORA_ (2 categorias separadas, mescladas nesta única função).
+var PV_ESCALA_5_PONTOS = { 'Ruim': 0, 'Regular': 1, 'Bom': 2, 'Ótimo': 3, 'Excelente': 4 };
 function calcularScoreVendedor_PJ_(ce, ctx) {
   var score = 0;
-  var total = parseInt(ce.unidadesTotais) || 0;
-  var rest  = parseInt(ce.unidadesRestantes) || 0;
-  var pctR  = total > 0 ? (rest / total * 100) : 0;
-  if      (pctR > 50)  score += 20;
-  else if (pctR >= 20) score += 10;
-  var meses = parseInt(ce.mesesDesdeHabiteSe) || 0;
-  if      (meses > 18) score += 18;
-  else if (meses >= 6) score += 8;
-  if (String(ce.statusObra || '') === 'Em obra atrasada') score += 15;
-  if (ce.financiamentoObraAtivo === 'sim')                score += 15;
-  if (ce.campanhaComercialAtiva === 'sim')                score += 10;
-  if (ce.metaComercialObs || ctx.prazoDeclarado)          score += 10;
-  if      (ctx._nr >= 2) score += 18;
-  else if (ctx._nr === 1) score += 12;
-  if (rest > 0 && rest < 5) score += 8;
-  if (ce.tabelaFlexivel === 'não') score -= 10;
-  return score;
-}
-
-// ── Score CONSTRUTORA ─────────────────────────────────────────
-function calcularScoreVendedor_CONSTRUTORA_(ce, ctx) {
-  var score = 0;
-  if (ce.fechamentoResultadoProximo === 'sim') score += 25;
-  if (String(ce.faseEmpreendimento || '') === 'Pronto há mais de 24 meses') score += 20;
-  var pctV = parseInt(ce.percentualVendidoEmpreendimento) || 0;
-  if      (pctV < 70) score += 15;
-  else if (pctV <= 90) score += 8;
-  if (ce.unidadeDecoradaParada === 'sim') score += 10;
-  if (ce.campanhaPorBlocoTorre === 'sim') score += 15;
-  if (ce.prazoEntregaObra) {
-    var prazo = new Date(String(ce.prazoEntregaObra));
-    var mesesR = (prazo - new Date()) / (1000 * 60 * 60 * 24 * 30);
-    if (!isNaN(mesesR) && mesesR >= 0 && mesesR < 6 && pctV < 100) score += 15;
+  // ── Critérios objetivos ──
+  var comissao = parseFloat(ce.comissaoPerc) || 0;
+  if      (comissao >= 8) score += 20;
+  else if (comissao >= 5) score += 12;
+  else if (comissao > 0)  score += 6;
+  if (ce.comissaoNegociavel === 'sim') score += 10;
+  var prazoComissao = String(ce.prazoPagamentoComissao || '');
+  if      (prazoComissao === 'Na assinatura') score += 15;
+  else if (prazoComissao === 'No Habite-se')  score += 5;
+  var excl = String(ce.exclusividadeParceria || '');
+  if      (excl === 'Exclusiva com você/sua imobiliária')    score += 20;
+  else if (excl === 'Compartilhada com outras imobiliárias') score -= 5;
+  else if (excl === 'Sem contrato formal')                   score -= 10;
+  var tempoRelac = parseInt(ce.tempoRelacionamentoMeses) || 0;
+  if      (tempoRelac > 24) score += 10;
+  else if (tempoRelac >= 6) score += 5;
+  var volume = parseInt(ce.volumeVendas12Meses) || 0;
+  if      (volume >= 10) score += 15;
+  else if (volume >= 3)  score += 8;
+  var agilidade = parseInt(ce.agilidadeDocumentalDias);
+  if (!isNaN(agilidade)) {
+    if      (agilidade <= 5)  score += 10;
+    else if (agilidade <= 15) score += 5;
+    else if (agilidade > 30)  score -= 5;
   }
-  if (String(ce.politicaComercial || '') === 'Tabela fechada') score -= 15;
+  if (ce.materialComercialDisponivel === 'sim')  score += 5;
+  if ((parseInt(ce.reservaUnidadeDias) || 0) > 0) score += 5;
+  // ── Critérios subjetivos (escala rotulada -> pontos, ver PV_ESCALA_5_PONTOS) ──
+  var pts = function(campo) { return PV_ESCALA_5_PONTOS[String(ce[campo] || '')] || 0; };
+  score += pts('confiabilidadePrazos')    * 3;
+  score += pts('qualidadeSuporteGerente') * 2;
+  score += pts('facilidadeNegociacao')    * 2;
+  score += pts('reputacaoMercado')        * 3;
+  score += pts('climaParceria')           * 2;
+  if (ce.urgenciaVendaSinalizada === 'sim') score += 15;
   return score;
 }
 
@@ -5639,6 +5648,10 @@ function calcularScoreVendedor_CORRETOR_(ce, ctx) {
 // Retorna {scoreVendedor, margemEstimada, urgenciaNivel, categoriaVendedor}
 function calcularScoreVendedor_(dados) {
   var cat = String(dados.categoriaVendedor || 'PF');
+  // "CONSTRUTORA" era categoria separada, mesclada em "PJ" (2026-07) — ver
+  // calcularScoreVendedor_PJ_. Perfis antigos salvos com essa categoria
+  // continuam pontuando normalmente, só que pela régua unificada agora.
+  if (cat === 'CONSTRUTORA') cat = 'PJ';
   var reducoes = parseReducoes_(dados.reducoes);
   var ce;
   try { ce = typeof dados.camposEspecificos === 'string'
@@ -5655,11 +5668,10 @@ function calcularScoreVendedor_(dados) {
   };
 
   var score;
-  if      (cat === 'PF')          score = calcularScoreVendedor_PF_(ce, ctx);
-  else if (cat === 'PJ')          score = calcularScoreVendedor_PJ_(ce, ctx);
-  else if (cat === 'CONSTRUTORA') score = calcularScoreVendedor_CONSTRUTORA_(ce, ctx);
-  else if (cat === 'CORRETOR')    score = calcularScoreVendedor_CORRETOR_(ce, ctx);
-  else                             score = 0;
+  if      (cat === 'PF')       score = calcularScoreVendedor_PF_(ce, ctx);
+  else if (cat === 'PJ')       score = calcularScoreVendedor_PJ_(ce, ctx);
+  else if (cat === 'CORRETOR') score = calcularScoreVendedor_CORRETOR_(ce, ctx);
+  else                          score = 0;
 
   score = Math.max(0, Math.min(100, score));
 
@@ -5672,11 +5684,8 @@ function calcularScoreVendedor_(dados) {
         m === 'Inventário / herança' || m === 'Mudança de cidade') margem += 2;
     if (ctx._dias > 90) margem += 2;
   } else if (cat === 'PJ') {
-    if (ce.financiamentoObraAtivo === 'sim') margem += 2;
-    if (ctx._dias > 90) margem += 2;
-  } else if (cat === 'CONSTRUTORA') {
-    if (ce.fechamentoResultadoProximo === 'sim') margem += 2;
-    if ((parseInt(ce.percentualVendidoEmpreendimento)||100) < 70) margem += 2;
+    if (ce.comissaoNegociavel === 'sim') margem += 2;
+    if (String(ce.exclusividadeParceria||'') === 'Exclusiva com você/sua imobiliária') margem += 2;
   } else if (cat === 'CORRETOR') {
     if (String(ce.vendedorOriginalUrgente||'') === 'Sim (sinalizado pelo corretor)') margem += 2;
   }

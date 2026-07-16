@@ -1,5 +1,41 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 35) — Perfil do Vendedor: categoria única "Construtora/Incorporadora (PJ)"
+
+Pedido do usuário: as categorias "PJ" e "CONSTRUTORA" tinham critérios quase todos sobre o PRODUTO
+(unidades restantes, meses desde Habite-se, % vendido, prazo de entrega, unidade decorada parada,
+campanha por bloco/torre...) — dado que já mora no cadastro do empreendimento (`lancamentos-editar.html`)
+e já alimenta outros eixos do Score de Tração (Estoque/Força de Venda/Prazo de Pgt). Isso duplicava
+informação e desvirtuava o que o eixo "Vendedor" deveria medir: a qualidade da construtora **como
+parceira de negócio**, não do produto que ela vende.
+
+**Categoria única "🏢 Construtora / Incorporadora (PJ)"**, com critérios redesenhados:
+
+**Objetivos**: comissão oferecida (%), comissão negociável, prazo de pagamento da comissão (na
+assinatura / no Habite-se / após financiamento), exclusividade da parceria, tempo de relacionamento
+(meses), volume de vendas fechadas nos últimos 12 meses, agilidade documental (dias médios), material
+comercial disponível, política de reserva de unidade (dias sem custo).
+
+**Subjetivos** (avaliação do corretor, escala rotulada Ruim/Regular/Bom/Ótimo/Excelente — mais rápido
+de preencher e mais consistente entre corretores do que uma nota solta 1-5): confiabilidade/cumpre
+prazos, qualidade do suporte do gerente comercial, facilidade de negociar condições especiais,
+reputação no mercado, clima geral da parceria — mais um checkbox de urgência de venda sinalizada.
+
+**Backend**: `calcularScoreVendedor_PJ_` reescrita com a nova régua de pontos; `calcularScoreVendedor_CONSTRUTORA_`
+removida. Dispatcher `calcularScoreVendedor_` normaliza `categoriaVendedor === 'CONSTRUTORA'` → `'PJ'`
+automaticamente (perfis antigos continuam pontuando, só que pela régua nova — os campos antigos de
+produto não têm mapeamento na fórmula nova e contam como 0, mas nada se perde no `camposEspecificos`
+bruto salvo). Categorias `['PJ','CONSTRUTORA']`/`['PJ','CONSTRUTORA','CORRETOR']` viram `['PJ']`/
+`['PJ','CORRETOR']` nos 3 lugares que abrem o modal (dashboard.html ×2, lancamentos.html,
+revendas-construtoras.html).
+
+Testado em Node (perfil novo com tudo "Excelente" → score 100; perfil vazio → score 0; perfil antigo
+categoria CONSTRUTORA → normaliza pra PJ sem erro, score 0 pelos campos não mapeados) e ao vivo no
+navegador (aba única "Construtora / Incorporadora (PJ)", campos antigos de produto confirmados
+ausentes, escala rotulada com as 5 opções certas, coleta de formulário capturando os valores certos).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 34) — Plano de Pagamento: reposicionado + campos "Captação %" e "Anuais"
 
 `lancamentos-editar.html`, seção "Dados Gerais":

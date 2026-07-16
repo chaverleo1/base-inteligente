@@ -169,7 +169,12 @@ async function _pvCarregarPerfil_() {
     if (trataNaoAutenticado && trataNaoAutenticado(json)) return;
     _pv.perfil = json || null;
     if (_pv.perfil) {
-      const cat = _pv.perfil.categoriaVendedor;
+      // "CONSTRUTORA" era uma categoria separada, mesclada em "PJ" (2026-07)
+      // — perfis antigos salvos com essa categoria continuam abrindo
+      // normalmente, só que agora na aba PJ (schema de campos específicos
+      // mudou; os campos antigos de produto ficam sem uso, mas nada se perde
+      // no camposEspecificos bruto salvo).
+      const cat = _pv.perfil.categoriaVendedor === 'CONSTRUTORA' ? 'PJ' : _pv.perfil.categoriaVendedor;
       if (cat && _pv.categorias.includes(cat)) _pv.catSelecionada = cat;
       _pv.reducoes = Array.isArray(_pv.perfil.reducoes) ? _pv.perfil.reducoes : [];
       const alertEl = document.getElementById('pvAlertaExcluido');
@@ -187,7 +192,11 @@ async function _pvCarregarPerfil_() {
 }
 
 // ── Render tabs ───────────────────────────────────────────────────────────────
-const _pvCatLabels = { PF:'👤 Pessoa Física', PJ:'🏢 PJ / Incorporadora', CONSTRUTORA:'🏗️ Construtora', CORRETOR:'🤝 Corretor' };
+const _pvCatLabels = { PF:'👤 Pessoa Física', PJ:'🏢 Construtora / Incorporadora (PJ)', CORRETOR:'🤝 Corretor' };
+// Escala rotulada usada nos critérios SUBJETIVOS do perfil PJ (2026-07) — mais
+// rápido de preencher e mais consistente entre corretores diferentes do que
+// pedir uma nota solta 1-5 (cada um interpretaria "nota 3" de um jeito).
+const PV_ESCALA_5 = ['Ruim', 'Regular', 'Bom', 'Ótimo', 'Excelente'];
 
 function _pvRenderCatTabs_() {
   document.getElementById('pvCatTabs').innerHTML = _pv.categorias.map(c =>
@@ -230,44 +239,57 @@ function _pvRenderForm_() {
     ${_pvOpts_(['Único (mora no imóvel)','Único (vazio)','Casal / família','Investidor (1-5 imóveis)','Investidor grande portfólio (6+)'],'perfilProprietario')}
   </select></div>`;
   } else if (cat === 'PJ') {
+    // Perfil único Construtora/Incorporadora (2026-07) — qualifica a
+    // CONSTRUTORA COMO PARCEIRA DE NEGÓCIO, não o produto que ela vende (isso
+    // já mora no cadastro do empreendimento em lancamentos-editar.html e já
+    // alimenta outros eixos do Score de Tração — Estoque/Força de Venda/
+    // Prazo de Pgt). Antes existiam 2 categorias (PJ e CONSTRUTORA) cujos
+    // campos eram quase todos sobre o PRODUTO (unidades restantes, meses
+    // desde Habite-se, % vendido, prazo de entrega...) — duplicava dado e
+    // desvirtuava o que o eixo "Vendedor" deveria medir. Substituído por
+    // critérios OBJETIVOS (fatos verificáveis sobre a parceria) e SUBJETIVOS
+    // (percepção do corretor, em escala rotulada — ver PV_ESCALA_5).
     esp = `
-<div class="pv-section-title">Perfil — PJ / Incorporadora</div>
+<div class="pv-section-title">Critérios objetivos</div>
 <div class="pv-row pv-row-2">
-  <div><label>Unidades totais</label><input type="number" id="pvUnidTot" min="0" value="${_pvCe_('unidadesTotais')}"></div>
-  <div><label>Unidades restantes</label><input type="number" id="pvUnidRest" min="0" value="${_pvCe_('unidadesRestantes')}"></div>
+  <div><label>Comissão oferecida (%)</label><input type="number" id="pvComissaoPerc" min="0" max="100" step="0.5" value="${_pvCe_('comissaoPerc')}"></div>
+  <div><label>Tempo de relacionamento (meses)</label><input type="number" id="pvTempoRelac" min="0" value="${_pvCe_('tempoRelacionamentoMeses')}"></div>
 </div>
-<div class="pv-row"><label>Meses desde Habite-se</label>
-  <input type="number" id="pvMesesHS" min="0" value="${_pvCe_('mesesDesdeHabiteSe')}"></div>
-<div class="pv-row"><label>Status da obra</label>
-  <select id="pvStatusObra"><option value="">— selecione —</option>
-    ${_pvOpts_(['Concluída','Em obra atrasada','Em obra no prazo'],'statusObra')}
+<div class="pv-row"><label>Prazo de pagamento da comissão</label>
+  <select id="pvPrazoComissao"><option value="">— selecione —</option>
+    ${_pvOpts_(['Na assinatura','No Habite-se','Após aprovação de financiamento'],'prazoPagamentoComissao')}
   </select></div>
-<div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvFinanObra" ${_pvCeChk_('financiamentoObraAtivo')}> Financiamento de obra ativo</label>
-  <label><input type="checkbox" id="pvCampanha"  ${_pvCeChk_('campanhaComercialAtiva')}> Campanha comercial ativa</label>
-  <label><input type="checkbox" id="pvTabelaFlex" ${_pvCeChk_('tabelaFlexivel')}> Tabela flexível</label>
-</div>
-<div class="pv-row"><label>Observação / meta comercial</label>
-  <input type="text" id="pvMetaObs" value="${_pvCe_('metaComercialObs')}"></div>`;
-  } else if (cat === 'CONSTRUTORA') {
-    esp = `
-<div class="pv-section-title">Perfil — Construtora / Empreendimento</div>
-<div class="pv-row"><label>Fase do empreendimento</label>
-  <select id="pvFase"><option value="">— selecione —</option>
-    ${_pvOpts_(['Na planta','Em obras','Pronto há menos de 24 meses','Pronto há mais de 24 meses'],'faseEmpreendimento')}
+<div class="pv-row"><label>Exclusividade da parceria</label>
+  <select id="pvExclParceria"><option value="">— selecione —</option>
+    ${_pvOpts_(['Exclusiva com você/sua imobiliária','Compartilhada com outras imobiliárias','Sem contrato formal'],'exclusividadeParceria')}
   </select></div>
 <div class="pv-row pv-row-2">
-  <div><label>% vendido</label><input type="number" id="pvPctVendido" min="0" max="100" value="${_pvCe_('percentualVendidoEmpreendimento')}"></div>
-  <div><label>Prazo de entrega (mês)</label><input type="month" id="pvPrazoObra" value="${_pvCe_('prazoEntregaObra')}"></div>
+  <div><label>Vendas fechadas c/ essa construtora (12 meses)</label><input type="number" id="pvVolumeVendas" min="0" value="${_pvCe_('volumeVendas12Meses')}"></div>
+  <div><label>Agilidade documental (dias médios)</label><input type="number" id="pvAgilidadeDoc" min="0" value="${_pvCe_('agilidadeDocumentalDias')}"></div>
 </div>
-<div class="pv-row"><label>Política comercial</label>
-  <select id="pvPolitica"><option value="">— selecione —</option>
-    ${_pvOpts_(['Tabela fechada','Tabela flexível','Sob consulta'],'politicaComercial')}
-  </select></div>
+<div class="pv-row"><label>Reserva de unidade sem custo (dias, 0 = sem política)</label>
+  <input type="number" id="pvReservaDias" min="0" value="${_pvCe_('reservaUnidadeDias')}"></div>
 <div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvFechResult" ${_pvCeChk_('fechamentoResultadoProximo')}> Fechamento de resultado próximo</label>
-  <label><input type="checkbox" id="pvUniDecor"   ${_pvCeChk_('unidadeDecoradaParada')}> Unidade decorada parada</label>
-  <label><input type="checkbox" id="pvCampBloco"  ${_pvCeChk_('campanhaPorBlocoTorre')}> Campanha por bloco / torre</label>
+  <label><input type="checkbox" id="pvComissNeg2"  ${_pvCeChk_('comissaoNegociavel')}> Comissão negociável</label>
+  <label><input type="checkbox" id="pvMaterialCom" ${_pvCeChk_('materialComercialDisponivel')}> Material comercial disponível (books, plantas, simulador)</label>
+</div>
+<div class="pv-section-title">Critérios subjetivos <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#8892aa">— avaliação do corretor</span></div>
+<div class="pv-row pv-row-2">
+  <div><label>Confiabilidade / cumpre prazos e promessas</label>
+    <select id="pvConfiabilidade"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'confiabilidadePrazos')}</select></div>
+  <div><label>Suporte do gerente comercial</label>
+    <select id="pvSuporteGerente"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'qualidadeSuporteGerente')}</select></div>
+</div>
+<div class="pv-row pv-row-2">
+  <div><label>Facilidade de negociar condições especiais</label>
+    <select id="pvFacilidadeNeg"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'facilidadeNegociacao')}</select></div>
+  <div><label>Reputação no mercado</label>
+    <select id="pvReputacao"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'reputacaoMercado')}</select></div>
+</div>
+<div class="pv-row"><label>Clima geral da parceria</label>
+  <select id="pvClimaParceria"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'climaParceria')}</select></div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvUrgenciaVenda" ${_pvCeChk_('urgenciaVendaSinalizada')}> Construtora sinalizou urgência de venda / pressão por resultado</label>
 </div>`;
   } else if (cat === 'CORRETOR') {
     esp = `
@@ -338,10 +360,18 @@ function _pvColetarEsp_() {
   const cat  = _pv.catSelecionada;
   const g    = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const chk  = id => { const el = document.getElementById(id); return (el && el.checked) ? 'sim' : 'não'; };
-  if (cat === 'PF')          return { motivoVenda: g('pvMotivo'), perfilProprietario: g('pvPerfPropr') };
-  if (cat === 'PJ')          return { unidadesTotais: g('pvUnidTot'), unidadesRestantes: g('pvUnidRest'), mesesDesdeHabiteSe: g('pvMesesHS'), statusObra: g('pvStatusObra'), financiamentoObraAtivo: chk('pvFinanObra'), campanhaComercialAtiva: chk('pvCampanha'), tabelaFlexivel: chk('pvTabelaFlex'), metaComercialObs: g('pvMetaObs') };
-  if (cat === 'CONSTRUTORA') return { faseEmpreendimento: g('pvFase'), percentualVendidoEmpreendimento: g('pvPctVendido'), politicaComercial: g('pvPolitica'), prazoEntregaObra: g('pvPrazoObra'), fechamentoResultadoProximo: chk('pvFechResult'), unidadeDecoradaParada: chk('pvUniDecor'), campanhaPorBlocoTorre: chk('pvCampBloco') };
-  if (cat === 'CORRETOR')    return { exclusividade: g('pvExcl'), diasDesdeUltimaResposta: g('pvDiasResp'), vendedorOriginalUrgente: g('pvVendUrgente'), comissaoNegociavel: chk('pvComissNeg'), relacionamentoHistorico: chk('pvRelHist') };
+  if (cat === 'PF') return { motivoVenda: g('pvMotivo'), perfilProprietario: g('pvPerfPropr') };
+  if (cat === 'PJ') return {
+    comissaoPerc: g('pvComissaoPerc'), tempoRelacionamentoMeses: g('pvTempoRelac'),
+    prazoPagamentoComissao: g('pvPrazoComissao'), exclusividadeParceria: g('pvExclParceria'),
+    volumeVendas12Meses: g('pvVolumeVendas'), agilidadeDocumentalDias: g('pvAgilidadeDoc'),
+    reservaUnidadeDias: g('pvReservaDias'), comissaoNegociavel: chk('pvComissNeg2'),
+    materialComercialDisponivel: chk('pvMaterialCom'),
+    confiabilidadePrazos: g('pvConfiabilidade'), qualidadeSuporteGerente: g('pvSuporteGerente'),
+    facilidadeNegociacao: g('pvFacilidadeNeg'), reputacaoMercado: g('pvReputacao'),
+    climaParceria: g('pvClimaParceria'), urgenciaVendaSinalizada: chk('pvUrgenciaVenda'),
+  };
+  if (cat === 'CORRETOR') return { exclusividade: g('pvExcl'), diasDesdeUltimaResposta: g('pvDiasResp'), vendedorOriginalUrgente: g('pvVendUrgente'), comissaoNegociavel: chk('pvComissNeg'), relacionamentoHistorico: chk('pvRelHist') };
   return {};
 }
 
