@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 33) — Score de Tração: 2ª rodada de pesos + reordenação
+
+Correção da parte 32, mesmo dia: usuário refez a ordem/pesos. Novos pesos (soma continua 15):
+
+| Ordem na tela | Eixo | Peso | Peso anterior (parte 32) |
+|---|---|---|---|
+| 1º | Vendedor | 5 | 5 (sem mudança) |
+| 2º | Força de Venda | 4 | 4 (sem mudança) |
+| 3º | Prazo de Pgt | 3 | 1 |
+| 4º | Preço Médio *(era "Atratividade")* | 2 | 3 |
+| 5º | Estoque | 1 | 2 |
+
+Prazo de Pgt e Preço Médio trocaram de peso/posição entre si (Prazo sobe de peso 1→3, Preço Médio
+desce de peso 3→2); Estoque cai de peso 2→1, mas continua por último. Fórmula de cada eixo (parte
+30/31) não mudou, só peso/rótulo/ordem — mesmo padrão da parte 32.
+
+Testado em Node (composto recalculado: 7,667 pro caso de exemplo) e ao vivo no navegador desta vez —
+`renderRankingTracao` chamado com dados mockados, ordem confirmada "Vendedor → Força Venda → Prazo
+Pgt → Preço Méd. → Estoque", subtítulo do painel e score final (7,7) conferidos.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-16 (parte 32) — Score de Tração: novos pesos + renomeação + reordenação dos eixos
 
 Pedido do usuário: novos pesos e nova ordem de exibição pros 5 eixos do ranking (`lancamentos.html`).

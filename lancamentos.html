@@ -612,7 +612,7 @@ select.form-input option { background: var(--surface2); }
     <div class="tracao-header" onclick="toggleRankingTracao()">
       <div class="tracao-title">
         🎯 Ranking de Tração — Top 10
-        <span style="font-size:11px;font-weight:400;color:var(--text3)">Vendedor peso 5 · Força de Venda peso 4 · Atrativ. peso 3 · Estoque peso 2 · Prazo de Pgt peso 1</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text3)">Vendedor peso 5 · Força de Venda peso 4 · Prazo de Pgt peso 3 · Preço Médio peso 2 · Estoque peso 1</span>
       </div>
       <span id="rankingToggleIcon" style="color:var(--text3);font-size:14px;flex-shrink:0">▲</span>
     </div>
@@ -1980,11 +1980,11 @@ function calcularScoreTracao(emps, mapaScoreVendedor) {
   const m2s    = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
   const minM2  = m2s.length ? Math.min(...m2s) : 0;
   const maxM2  = m2s.length ? Math.max(...m2s) : 1;
-  // Pesos redefinidos pelo usuário (2026-07): Vendedor 5 / Força de Venda
-  // (antiga "Tração") 4 / Atratividade 3 / Estoque (antiga "Disponibilidade") 2
-  // / Prazo de Pgt (antigo "Prazo") 1 — soma 15, cada eixo contribui
-  // eixo * peso / 15, mantendo o composto na mesma escala 0-10 dos eixos.
-  const PESO_PRAZO = 1, PESO_DISP = 2, PESO_ATRAT = 3, PESO_TRAC = 4, PESO_VENDEDOR = 5;
+  // Pesos redefinidos pelo usuário (2026-07, 2ª rodada): Vendedor 5 / Força de
+  // Venda (antiga "Tração") 4 / Prazo de Pgt (antigo "Prazo") 3 / Preço Médio
+  // (antiga "Atratividade") 2 / Estoque (antiga "Disponibilidade") 1 — soma
+  // 15, cada eixo contribui eixo * peso / 15, mesma escala 0-10 dos eixos.
+  const PESO_PRAZO = 3, PESO_DISP = 1, PESO_ATRAT = 2, PESO_TRAC = 4, PESO_VENDEDOR = 5;
   const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_TRAC + PESO_VENDEDOR;
   return emps.map(e => {
     const total   = Number(e.totalUnidades) || 0;
@@ -2048,9 +2048,9 @@ async function renderRankingTracao(emps) {
       <div class="tracao-nome-col"><div class="tracao-nome">${nome}</div>${sub ? `<div class="tracao-sub">${sub}</div>` : ''}</div>
       <div class="tracao-eixo"><div class="tracao-eixo-lbl">Vendedor</div>${bar(s.vendedorSc,'bar-vendedor')}<div class="tracao-eixo-val">${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div></div>
       <div class="tracao-eixo"><div class="tracao-eixo-lbl">Força Venda</div>${bar(s.trac,'bar-trac')}<div class="tracao-eixo-val">${s.trac.toFixed(1)}</div></div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Atrativ.</div>${bar(s.atrat,'bar-atrat')}<div class="tracao-eixo-val">${s.atrat.toFixed(1)}</div></div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Estoque</div>${bar(s.disp,'bar-disp')}<div class="tracao-eixo-val">${s.disp.toFixed(1)}</div></div>
       <div class="tracao-eixo"><div class="tracao-eixo-lbl">Prazo Pgt</div>${bar(s.prazoSc,'bar-prazo')}<div class="tracao-eixo-val">${s.prazo > 0 ? s.prazo+'m' : '–'}</div></div>
+      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Preço Méd.</div>${bar(s.atrat,'bar-atrat')}<div class="tracao-eixo-val">${s.atrat.toFixed(1)}</div></div>
+      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Estoque</div>${bar(s.disp,'bar-disp')}<div class="tracao-eixo-val">${s.disp.toFixed(1)}</div></div>
       <div class="tracao-score-col"><div class="tracao-score-num ${cCls}">${s.comp.toFixed(1)}</div><div class="tracao-score-lbl">score</div></div>
       <div><span class="tracao-perfil ${s.perfilCls}">${s.perfil}</span></div>
     </div>`;
