@@ -1,5 +1,38 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 40) — Correção: quadrado [T|V] no card em vez do botão + remoção do Ranking de Tração
+
+Correção da parte 39, mesmo dia: usuário pediu formato diferente do que eu tinha implementado.
+
+**1. Removida a seção "Ranking de Tração"** inteira (painel colapsável com Top 10, header, legenda) —
+o cálculo do Score de Tração continua rodando nos bastidores (`carregarScoreTracaoDosCards_`, renomeada
+de `renderRankingTracao`), só não tem mais painel próprio na tela; ele agora só alimenta os cards.
+
+**2. Badge "🎯 Tração N.N" (da parte 39) removido do card** — substituído por um quadrado `[T|V]`
+mostrando as duas notas lado a lado, no formato exato pedido: `T 6.9|V 78`. Posicionado logo abaixo do
+nome do empreendimento e "Construtora · Bairro" (antes ficava na linha do gerente comercial).
+
+**3. Badge de % vendido (`63% | 70`) com letra maior** (16px, era 11px) e agora numa linha própria
+acima do nome, em vez de lado a lado com ele.
+
+**4. Eixos que compõem o composto (Prazo/Força de Venda/Atratividade/Estoque) aparecem pequenos e
+sem destaque** logo abaixo do quadrado `[T|V]` — texto simples 9px cor `text3`, sem badge/cor/negrito
+("sem destaque" — nada mais que informação de referência).
+
+CSS morto do painel de ranking removido (`.tracao-panel/-header/-title/-row/-rank/-nome/-sub/-eixo*/
+-bar-*/-score-col/-legend*`, classes `.bar-vendedor/-trac/-prazo/-atrat/-disp`); `.tp-hot/-warm/-esgot/
+-cold` mantidas — ainda usadas na cor do quadrado `[T|V]`.
+
+Testado em Node com DOM simulado: `atualizarScoreTracaoCards_` (nova, renomeada de
+`pvAtualizarTracaoCards_`) pinta cada card com a nota do SEU próprio empreendimento (mapeamento
+sobrevive à reordenação por score), card sem dados fica sem quadrado, formato de texto conferido
+caractere a caractere (`T 6.9|V 78`, pipe ASCII simples — corrigido de um traço vertical incorreto que
+eu tinha usado por engano na primeira tentativa). Desta vez também verificado ao vivo no navegador:
+badge-vendido em 16px, quadrado exato "T 6.9|V 78" com os mesmos dados do exemplo do usuário, painel
+de ranking confirmado ausente da tela.
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-16 (parte 39) — Nota de Tração no card + reload ao salvar vendedor + remove "Prazo declarado" do PJ
 
 **1. "Prazo declarado para venda" sai do perfil PJ** — é dado de PRODUTO (urgência do próprio

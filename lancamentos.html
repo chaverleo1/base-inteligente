@@ -172,11 +172,6 @@ select.form-input option { background: var(--surface2); }
 .emp-gerente { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text2);
                margin-bottom:10px; flex-wrap:wrap; }
 .emp-gerente-nome { font-weight:600; }
-/* Nota de Tração no card, ao lado do nome do vendedor — reaproveita as cores
-   tp-hot/tp-warm/tp-esgot/tp-cold do ranking (mesma faixa de score, mesma
-   leitura visual nos dois lugares). */
-.tracao-card-badge { display:none; align-items:center; gap:4px; font-size:10px; font-weight:700;
-                     padding:2px 8px; border-radius:99px; border:1px solid transparent; white-space:nowrap; }
 .emp-gerente-wpp { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700;
                    color:#25d366; background:rgba(37,211,102,.12); border:1px solid rgba(37,211,102,.3);
                    border-radius:99px; padding:2px 8px; text-decoration:none; }
@@ -231,38 +226,13 @@ select.form-input option { background: var(--surface2); }
 .lista-count { font-size: 12px; color: var(--text3); margin-top: 4px; }
 .lista-count b { color: var(--accent2); font-size: 16px; }
 
-/* ── RANKING DE TRAÇÃO ── */
-.tracao-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;overflow:hidden}
-.tracao-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;gap:12px}
-.tracao-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.tracao-row{display:grid;grid-template-columns:28px 1fr repeat(5,60px) 52px auto;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid rgba(42,48,80,.4)}
-.tracao-row:last-child{border-bottom:none}
-.tracao-row:hover{background:var(--surface2)}
-@media(max-width:700px){.tracao-row{grid-template-columns:22px 1fr repeat(5,52px) 44px}}
-.tracao-rank{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--text3);text-align:center}
-.tracao-rank.top3{color:var(--amber)}
-.tracao-nome{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tracao-sub{font-size:10px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tracao-eixo{display:flex;flex-direction:column;align-items:center;gap:3px}
-.tracao-eixo-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3)}
-.tracao-eixo-val{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;line-height:1}
-.tracao-bar-wrap{width:100%;height:3px;background:var(--border);border-radius:99px;margin-top:1px}
-.tracao-bar-fill{height:100%;border-radius:99px;transition:width .4s}
-.bar-atrat{background:var(--accent)}
-.bar-disp{background:var(--accent2)}
-.bar-trac{background:var(--amber,#f5a623)}
-.bar-prazo{background:#34d399}
-.bar-vendedor{background:#a78bfa}
-.tracao-score-col{display:flex;flex-direction:column;align-items:center}
-.tracao-score-num{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;line-height:1}
-.tracao-score-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-top:2px}
-.tracao-perfil{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap;border:1px solid transparent}
+/* ── SCORE DE TRAÇÃO — usado só no quadrado [T|V] do card (o painel de
+   ranking foi retirado da tela a pedido do usuário; classes de linha/barra/
+   legenda que só existiam pra esse painel foram removidas junto). ── */
 .tp-hot{background:rgba(0,212,170,.15);color:var(--accent2);border-color:rgba(0,212,170,.3)}
 .tp-warm{background:rgba(245,159,11,.15);color:var(--amber);border-color:rgba(245,159,11,.3)}
 .tp-esgot{background:rgba(255,90,90,.12);color:var(--danger);border-color:rgba(255,90,90,.25)}
 .tp-cold{background:rgba(74,84,112,.1);color:var(--text3);border-color:var(--border)}
-.tracao-legend{display:flex;gap:12px;flex-wrap:wrap;padding:8px 20px 12px;border-top:1px solid var(--border)}
-.tracao-legend-item{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px}
 .filtro-bar { display: flex; gap: 6px; flex-wrap: wrap; }
 .filtro-chip {
   padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border);
@@ -278,10 +248,20 @@ select.form-input option { background: var(--surface2); }
 .emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
 .emp-card:hover { border-color: var(--border2); }
 .emp-card-header { padding: 16px; border-bottom: 1px solid var(--border); }
-.emp-nome-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.emp-nome { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; }
-.badge-vendido { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.badge-vendido-row { margin-bottom: 6px; }
+.emp-nome { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.badge-vendido { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 16px; font-weight: 700; white-space: nowrap; }
 .emp-sub { font-size: 12px; color: var(--text2); line-height: 1.5; }
+/* Quadrado com a nota de Tração [T] e do Vendedor [V] lado a lado, abaixo do
+   nome/construtora/bairro — reaproveita as cores tp-hot/tp-warm/tp-esgot/
+   tp-cold (mesma faixa de score usada antes no painel de ranking, que foi
+   retirado da tela). As notas que COMPÕEM o composto (Prazo/Força de Venda/
+   Atratividade/Estoque) aparecem pequenas e sem destaque logo abaixo, só
+   como referência — não são um badge, é texto simples. */
+.tv-score-badge { display:inline-flex; align-items:center; gap:2px; font-size:12px; font-weight:700;
+                  padding:3px 10px; border-radius:6px; margin-top:8px; width:fit-content;
+                  border:1px solid transparent; white-space:nowrap; }
+.tv-eixos-mini { font-size:9px; color:var(--text3); margin-top:3px; }
 .emp-badges { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
 .st-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 4px; letter-spacing: .3px; }
 .st-obras   { background: rgba(245,158,11,.15); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
@@ -611,26 +591,6 @@ select.form-input option { background: var(--surface2); }
 
   <!-- LISTA -->
   <div id="tabPainelLista" class="tab-panel">
-
-  <!-- RANKING DE TRAÇÃO -->
-  <div id="rankingTracao" class="tracao-panel" style="display:none">
-    <div class="tracao-header" onclick="toggleRankingTracao()">
-      <div class="tracao-title">
-        🎯 Ranking de Tração — Top 10
-        <span style="font-size:11px;font-weight:400;color:var(--text3)">Vendedor peso 5 · Força de Venda peso 4 · Prazo de Pgt peso 3 · Preço Médio peso 2 · Estoque peso 1</span>
-      </div>
-      <span id="rankingToggleIcon" style="color:var(--text3);font-size:14px;flex-shrink:0">▲</span>
-    </div>
-    <div id="rankingTracaoBody">
-      <div id="rankingTracaoRows"></div>
-      <div class="tracao-legend">
-        <span class="tracao-legend-item"><span class="tracao-perfil tp-hot">Carro-chefe</span> Score alto · investir agora</span>
-        <span class="tracao-legend-item"><span class="tracao-perfil tp-warm">Investigar</span> Alta disponib. · baixa tração</span>
-        <span class="tracao-legend-item"><span class="tracao-perfil tp-esgot">Quase esgotado</span> Estoque &lt; 15%</span>
-        <span class="tracao-legend-item"><span class="tracao-perfil tp-cold">Sem dados</span> Estoque/preço não cadastrado</span>
-      </div>
-    </div>
-  </div>
 
   <div class="lista-header">
     <div>
@@ -1836,7 +1796,7 @@ function renderLista(lista) {
   const emps = _emps;
   cnt.innerHTML = `<b>${emps.length}</b> empreendimento${emps.length !== 1 ? 's' : ''}`;
 
-  renderRankingTracao(emps);
+  carregarScoreTracaoDosCards_(emps);
 
   grid.innerHTML = emps.map((e, i) => {
     const tips   = [...new Set(e.unidades.map(u => u.tipologia).filter(Boolean))];
@@ -1859,15 +1819,9 @@ function renderLista(lista) {
     // Contato do Gerente Comercial do Produto (painel/drawer criado em
     // lancamentos-editar.html) — mostrado no card só se já cadastrado.
     const gerenteTelLimpo = String(e.gerenteTelefone || '').replace(/\D/g, '');
-    // A linha do gerente também abriga a nota de Tração (pintada depois, por
-    // pvAtualizarTracaoCards_ — depende do fetch do score do vendedor). Sem
-    // gerente cadastrado a linha nasce escondida e só aparece se a nota vier,
-    // pra não abrir um espaço vazio em card sem gerente nem nota.
-    const gerenteHtml = `<div class="emp-gerente" id="ger-row-${i}"${e.gerenteNome ? '' : ' style="display:none"'}>${
-      e.gerenteNome
-        ? `<span class="emp-gerente-nome">👤 ${e.gerenteNome}</span>${gerenteTelLimpo ? `<a class="emp-gerente-wpp" href="https://wa.me/55${gerenteTelLimpo}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}`
-        : ''
-    }<span class="tracao-card-badge" id="tracao-lanc-${i}"></span></div>`;
+    const gerenteHtml = e.gerenteNome
+      ? `<div class="emp-gerente"><span class="emp-gerente-nome">👤 ${e.gerenteNome}</span>${gerenteTelLimpo ? `<a class="emp-gerente-wpp" href="https://wa.me/55${gerenteTelLimpo}" target="_blank" rel="noopener">💬 WhatsApp</a>` : ''}</div>`
+      : '';
 
     const pvId    = (e.idLancamento || '').replace(/"/g,'&quot;');
     const pvLabel = (e.nomeEmpreendimento || e.idLancamento || '').replace(/'/g,'\\&#39;');
@@ -1875,8 +1829,11 @@ function renderLista(lista) {
     return `
     <div class="emp-card" id="ec-${i}" data-pv-badge-lanc="${pvId}">
       <div class="emp-card-header">
-        <div class="emp-nome-row">${badgeVendidoHTML(pctVendido, e.estoque)}<div class="emp-nome">${e.nomeEmpreendimento || '—'}</div></div>
+        <div class="badge-vendido-row">${badgeVendidoHTML(pctVendido, e.estoque)}</div>
+        <div class="emp-nome">${e.nomeEmpreendimento || '—'}</div>
         <div class="emp-sub">${[e.construtora, e.bairro].filter(Boolean).join(' · ')}</div>
+        <div class="tv-score-badge" id="tv-lanc-${i}" style="display:none"></div>
+        <div class="tv-eixos-mini" id="tv-eixos-lanc-${i}" style="display:none"></div>
         <div class="emp-badges">
           ${e.status ? `<span class="st-badge ${stCls}">${e.status}</span>` : ''}
           ${e.previsaoEntrega ? `<span class="st-badge st-data">📅 ${e.previsaoEntrega}</span>` : ''}
@@ -1990,7 +1947,7 @@ function calcularDispScoreTracao_(estoque, tipoEmpreendimento) {
 }
 
 // mapaScoreVendedor: { idLancamento: scoreVendedor (0-100) }, já buscado em
-// lote por renderRankingTracao() antes de chamar esta função — ver
+// lote por carregarScoreTracaoDosCards_() antes de chamar esta função — ver
 // pvCarregarBadgesBatch_ (perfil-vendedor.js), mesmo endpoint usado nos
 // badges de urgência dos cards.
 function calcularScoreTracao(emps, mapaScoreVendedor) {
@@ -2047,69 +2004,51 @@ async function buscarScoreVendedorPorLancamento_() {
   return mapa;
 }
 
-// Faixa de cor do score composto — a mesma nos 2 lugares que mostram a nota
-// de Tração (número do ranking e badge do card), pra ler igual nos dois.
+// Faixa de cor do score composto — usada no quadrado [T|V] do card (o painel
+// de ranking que usava essa mesma escala foi retirado da tela).
 function classeScoreTracao_(comp) {
   return comp >= 7 ? 'tp-hot' : comp >= 5 ? 'tp-warm' : comp >= 3 ? 'tp-esgot' : 'tp-cold';
 }
 
-// Pinta a nota de Tração no card de cada empreendimento, ao lado do nome do
-// vendedor (ver gerenteHtml em renderLista). Recebe o array JÁ pontuado — a
-// posição do card vem de emps.indexOf(s.e), já que scored vem reordenado por
-// score, não na ordem em que os cards foram renderizados. Empreendimento sem
-// dados suficientes (comp = 0, perfil "Sem dados") não ganha badge: "Tração
-// 0.0" ali seria ruído, não informação.
-function pvAtualizarTracaoCards_(scored, emps) {
+// Pinta, em cada card, o quadrado com a nota de Tração [T] e do Vendedor [V]
+// lado a lado (ex: "T 6.9|V 78") — ver placeholders tv-lanc-i/tv-eixos-lanc-i
+// em renderLista. Os eixos que COMPÕEM o composto (Prazo/Força de Venda/
+// Atratividade/Estoque) aparecem pequenos e sem destaque logo abaixo, só
+// como referência — nunca em badge/cor, é texto simples (pedido do usuário:
+// "sem destaque"). Recebe o array JÁ pontuado — a posição do card vem de
+// emps.indexOf(s.e), já que scored vem reordenado por score, não na ordem em
+// que os cards foram renderizados. Empreendimento sem dados suficientes
+// (comp = 0, perfil "Sem dados") não ganha quadrado: "T 0.0" ali seria
+// ruído, não informação.
+function atualizarScoreTracaoCards_(scored, emps) {
   scored.forEach(s => {
     const i = emps.indexOf(s.e);
     if (i < 0) return;
-    const badge = document.getElementById('tracao-lanc-' + i);
-    if (!badge || !(s.comp > 0)) return;
-    badge.textContent = '🎯 Tração ' + s.comp.toFixed(1);
-    badge.className   = 'tracao-card-badge ' + classeScoreTracao_(s.comp);
-    badge.title       = 'Score de Tração ' + s.comp.toFixed(1) + ' — ' + s.perfil;
-    badge.style.display = 'inline-flex';
-    const row = document.getElementById('ger-row-' + i);
-    if (row) row.style.display = 'flex';
+    const quadrado = document.getElementById('tv-lanc-' + i);
+    const eixos    = document.getElementById('tv-eixos-lanc-' + i);
+    if (!(s.comp > 0)) return;
+    if (quadrado) {
+      quadrado.textContent = `T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}`;
+      quadrado.className   = 'tv-score-badge ' + classeScoreTracao_(s.comp);
+      quadrado.title       = 'Score de Tração ' + s.comp.toFixed(1) + ' — ' + s.perfil;
+      quadrado.style.display = 'inline-flex';
+    }
+    if (eixos) {
+      eixos.textContent = `Prazo ${s.prazoSc.toFixed(1)} · Força ${s.trac.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)}`;
+      eixos.style.display = 'block';
+    }
   });
 }
 
-async function renderRankingTracao(emps) {
-  const panel = document.getElementById('rankingTracao');
-  const rows  = document.getElementById('rankingTracaoRows');
-  if (!emps || emps.length === 0) { panel.style.display = 'none'; return; }
-  panel.style.display = '';
+// Calcula o Score de Tração de todos os empreendimentos (com o eixo Vendedor
+// buscado em lote) e pinta o quadrado [T|V] de cada card — sem painel de
+// ranking na tela (retirado a pedido do usuário), o cálculo continua rodando
+// nos bastidores só pra alimentar os cards.
+async function carregarScoreTracaoDosCards_(emps) {
+  if (!emps || emps.length === 0) return;
   const mapaScoreVendedor = await buscarScoreVendedorPorLancamento_();
   const scoredTodos = calcularScoreTracao(emps, mapaScoreVendedor);
-  pvAtualizarTracaoCards_(scoredTodos, emps);
-  const scored = scoredTodos.slice(0, 10);
-  const bar = (v, cls) => `<div class="tracao-bar-wrap"><div class="tracao-bar-fill ${cls}" style="width:${Math.round(v*10)}%"></div></div>`;
-  rows.innerHTML = scored.map((s, i) => {
-    const rank   = i + 1;
-    const nome   = s.e.nomeEmpreendimento || '—';
-    const sub    = [s.e.construtora, s.e.bairro].filter(Boolean).join(' · ') || '';
-    const rnkCls = rank <= 3 ? 'tracao-rank top3' : 'tracao-rank';
-    const cCls   = classeScoreTracao_(s.comp);
-    return `<div class="tracao-row">
-      <div class="${rnkCls}">${rank}</div>
-      <div class="tracao-nome-col"><div class="tracao-nome">${nome}</div>${sub ? `<div class="tracao-sub">${sub}</div>` : ''}</div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Vendedor</div>${bar(s.vendedorSc,'bar-vendedor')}<div class="tracao-eixo-val">${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div></div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Força Venda</div>${bar(s.trac,'bar-trac')}<div class="tracao-eixo-val">${s.trac.toFixed(1)}</div></div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Prazo Pgt</div>${bar(s.prazoSc,'bar-prazo')}<div class="tracao-eixo-val">${s.prazo > 0 ? s.prazo+'m' : '–'}</div></div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Preço Méd.</div>${bar(s.atrat,'bar-atrat')}<div class="tracao-eixo-val">${s.atrat.toFixed(1)}</div></div>
-      <div class="tracao-eixo"><div class="tracao-eixo-lbl">Estoque</div>${bar(s.disp,'bar-disp')}<div class="tracao-eixo-val">${s.disp.toFixed(1)}</div></div>
-      <div class="tracao-score-col"><div class="tracao-score-num ${cCls}">${s.comp.toFixed(1)}</div><div class="tracao-score-lbl">score</div></div>
-      <div><span class="tracao-perfil ${s.perfilCls}">${s.perfil}</span></div>
-    </div>`;
-  }).join('');
-}
-
-function toggleRankingTracao() {
-  const body = document.getElementById('rankingTracaoBody');
-  const icon = document.getElementById('rankingToggleIcon');
-  const open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : '';
-  icon.textContent   = open ? '▼' : '▲';
+  atualizarScoreTracaoCards_(scoredTodos, emps);
 }
 
 function renderPanel(unidades) {
