@@ -1271,15 +1271,50 @@ function parsearLinhasCampoValor_(linhas, mapa, alvo) {
   });
 }
 
+function _b1VazioOutros_() {
+  return { nomeEmpreendimento:'', construtora:'', tipoEmpreendimento:'', status:'', endereco:'',
+    bairro:'', cidade:'', estado:'', previsaoEntrega:'', estoque:'', totalUnidades:'', dataLancamento:'',
+    urlSite:'', foto:'', lazer:'', conceito:'', tipo:'', dataTabela:'' };
+}
+
+// Triangulação de preço (só um valor veio -> replica pros 3 campos), filtro
+// de linhas vazias e o resumo de tipo/data no Bloco 1 — compartilhado pelos
+// dois formatos de entrada (CAMPO: valor E tabela CSV), pra não duplicar a
+// mesma regra duas vezes.
+function finalizarUnidadesOutros_(b1, unidadesBrutas) {
+  const b2 = unidadesBrutas.map(u => {
+    if (!u.precoMedio) u.precoMedio = u.precoMax || u.precoMin || 0;
+    if (!u.precoMin)   u.precoMin   = u.precoMedio || u.precoMax || 0;
+    if (!u.precoMax)   u.precoMax   = u.precoMedio || u.precoMin || 0;
+    return u;
+  }).filter(u => u.areaUtil > 0 || u.areaTerr > 0 || u.precoMedio > 0);
+
+  // "Tipo de imóvel" (Bloco 1, campo único) mostra o tipo da primeira
+  // tipologia como referência — cada linha da tabela mantém seu próprio tipo
+  // individual (selecionável por linha), isso aqui é só o valor de exibição.
+  if (b2.length && b2[0].tipo) b1.tipo = b2[0].tipo;
+  // "Data da tabela de preços" (Bloco 1) — o formato Outros só tem
+  // DATA_TABELA por tipologia (cada uma pode ter uma tabela diferente), mas
+  // o campo geral existe pra alimentar o alerta "verificar preços" — usa a
+  // data da primeira tipologia como referência do empreendimento inteiro.
+  if (b2.length && b2[0].dataTabela) b1.dataTabela = b2[0].dataTabela;
+
+  return b2;
+}
+
 function extrairOutrosFormato(txt) {
+  const primeiraLinha = txt.split('\n').map(l => l.trim()).find(l => l);
+  if (primeiraLinha && pareceTabelaCsvOutros_(primeiraLinha)) return extrairOutrosTabelaCsv_(txt);
+  return extrairOutrosCampoValor_(txt);
+}
+
+function extrairOutrosCampoValor_(txt) {
   const linhas = txt.split('\n').map(l => limparPrefixoMarkdown_(l.trim()));
   const idxTipologias = linhas.findIndex(l => /^TIPOLOGIAS\s*:?\s*$/i.test(l));
   const linhasGerais = idxTipologias >= 0 ? linhas.slice(0, idxTipologias) : linhas;
   const linhasTipologias = idxTipologias >= 0 ? linhas.slice(idxTipologias + 1) : [];
 
-  const b1 = { nomeEmpreendimento:'', construtora:'', tipoEmpreendimento:'', status:'', endereco:'',
-    bairro:'', cidade:'', estado:'', previsaoEntrega:'', estoque:'', totalUnidades:'', dataLancamento:'',
-    urlSite:'', foto:'', lazer:'', conceito:'', tipo:'', dataTabela:'' };
+  const b1 = _b1VazioOutros_();
   parsearLinhasCampoValor_(linhasGerais, CAMPO_MAP_GERAL_OUTROS, b1);
 
   // Cada tipologia começa numa linha "TIPO_PRODUTO:" — mais confiável que
@@ -1300,7 +1335,7 @@ function extrairOutrosFormato(txt) {
   });
   if (atual) blocos.push(atual);
 
-  const b2 = blocos.map(blocoLinhas => {
+  const unidadesBrutas = blocos.map(blocoLinhas => {
     const u = { tipo:'', unidade:'', quartos:0, suites:0, banheiros:0, vagas:0, escaninho:'',
       areaUtil:0, areaTerr:0, precoMedio:0, precoMin:0, precoMax:0, dataTabela:'' };
     const uStr = {};
@@ -1318,24 +1353,124 @@ function extrairOutrosFormato(txt) {
     u.precoMedio = parsePrecoBR(uStr.precoMedio || '') || parseFloat(uStr.precoMedio) || 0;
     u.precoMin   = parsePrecoBR(uStr.precoMin || '')   || parseFloat(uStr.precoMin)   || 0;
     u.precoMax   = parsePrecoBR(uStr.precoMax || '')   || parseFloat(uStr.precoMax)   || 0;
-    // Se só veio um preço único (sem faixa), replica pros três campos —
-    // mesma regra pedida ao assistente organizador, reforçada aqui por segurança.
-    if (!u.precoMedio) u.precoMedio = u.precoMax || u.precoMin || 0;
-    if (!u.precoMin)   u.precoMin   = u.precoMedio || u.precoMax || 0;
-    if (!u.precoMax)   u.precoMax   = u.precoMedio || u.precoMin || 0;
     return u;
-  }).filter(u => u.areaUtil > 0 || u.areaTerr > 0 || u.precoMedio > 0);
+  });
 
-  // "Tipo de imóvel" (Bloco 1, campo único) mostra o tipo da primeira
-  // tipologia como referência — cada linha da tabela mantém seu próprio tipo
-  // individual (selecionável por linha), isso aqui é só o valor de exibição.
-  if (b2.length && b2[0].tipo) b1.tipo = b2[0].tipo;
-  // "Data da tabela de preços" (Bloco 1) — o formato Outros só tem
-  // DATA_TABELA por tipologia (cada uma pode ter uma tabela diferente), mas
-  // o campo geral existe pra alimentar o alerta "verificar preços" — usa a
-  // data da primeira tipologia como referência do empreendimento inteiro.
-  if (b2.length && b2[0].dataTabela) b1.dataTabela = b2[0].dataTabela;
+  const b2 = finalizarUnidadesOutros_(b1, unidadesBrutas);
+  return { b1, b2 };
+}
 
+// ── Formato alternativo: tabela CSV colada direto (ex: tabela de vendas de
+// um lançamento, uma linha por unidade — sem passar pelo assistente
+// organizador). Reaproveita o mesmo princípio "cabeçalho -> campo interno"
+// do extrator de revendas-construtoras.html (SINONIMOS_COLUNA_RC), mas com
+// vocabulário próprio pro schema de unidade de lançamento (b2). Detecção
+// automática: se a 1ª linha colada tiver cara de cabeçalho delimitado (vírgula
+// ou TAB, sem ":" de CAMPO: valor), extrairOutrosFormato() cai aqui em vez
+// do parser CAMPO: valor — sem precisar o usuário escolher manualmente.
+const SINONIMOS_COLUNA_OUTROS = {
+  'unidade': 'unidade', 'descricao': 'unidade',
+  'tipo_produto': 'tipo', 'tipo': 'tipo',
+  'quartos': 'quartos', 'dormitorios': 'quartos',
+  'suites': 'suites',
+  'banheiros': 'banheiros',
+  'vagas': 'vagas',
+  // "nº_escaninho" (LOUVRE) é o NÚMERO do escaninho (texto livre, não
+  // contagem) — mesmo campo que ESCANINHO no formato CAMPO: valor.
+  'escaninho': 'escaninho', 'nº_escaninho': 'escaninho', 'no_escaninho': 'escaninho',
+  // "area_total_apto_m2" (LOUVRE) é a área privativa do apto — mesmo bucket
+  // de "area"/"area_util". "area_garagem_m2"/"area_escaninho_m2" (área da
+  // vaga/do escaninho, não da unidade) NÃO mapeiam pra nada: não existe
+  // campo pra isso no schema de unidade, ficam só no texto de origem.
+  'area': 'areaUtil', 'area_util': 'areaUtil', 'area_total_apto_m2': 'areaUtil',
+  'area_terreno': 'areaTerr',
+  // "valor_unidade" (LOUVRE) é o preço final DESSA unidade específica (não
+  // uma faixa min/max de tipologia) — cai em precoMedio; finalizarUnidadesOutros_
+  // já replica pros 3 campos (min/max) quando só um valor existe.
+  'preco_medio': 'precoMedio', 'valor_unidade': 'precoMedio', 'valor': 'precoMedio', 'preco': 'precoMedio',
+  'preco_minimo': 'precoMin', 'preco_maximo': 'precoMax',
+  'data_tabela': 'dataTabela',
+  // "nº_vaga" (LOUVRE, ex: "VAGA 27/ VAGA 27A") é o IDENTIFICADOR da vaga,
+  // não uma contagem — de propósito NÃO mapeado pra 'vagas' (contagem
+  // numérica): forçar parseInt nesse texto daria 0 vagas errado. Sinal/
+  // Mensais/Semestrais/Única/Financiamento (plano de pagamento por unidade)
+  // também não têm campo no schema — ficam só no texto de origem, não são
+  // perdidos, só não estruturados (sem "obs" por unidade no momento).
+};
+function normHeaderOutros_(s) {
+  return (s || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function detectarDelimitadorOutros_(linhaCabecalho) {
+  const tabs = (linhaCabecalho.match(/\t/g) || []).length;
+  const virgulas = (linhaCabecalho.match(/,/g) || []).length;
+  return tabs > virgulas ? '\t' : ',';
+}
+// Parser de linha CSV com suporte a campos entre aspas (ex: "88,69" — a
+// vírgula decimal fica DENTRO do campo, não é separador).
+function parseCSVLinhaOutros_(linha, delimitador) {
+  delimitador = delimitador || ',';
+  const result = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < linha.length; i++) {
+    const c = linha[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (linha[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === delimitador) { result.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  result.push(cur);
+  return result.map(s => s.trim());
+}
+function pareceTabelaCsvOutros_(primeiraLinha) {
+  const l = limparPrefixoMarkdown_(primeiraLinha);
+  if (/^TIPOLOGIAS\s*:?\s*$/i.test(l)) return false;
+  if (/^[A-Za-z_]+\s*:/.test(l)) return false; // já é "CAMPO: valor"
+  const delimitador = detectarDelimitadorOutros_(l);
+  return parseCSVLinhaOutros_(l, delimitador).length >= 3; // pelo menos 3 colunas
+}
+
+function extrairOutrosTabelaCsv_(txt) {
+  const linhas = txt.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
+  const b1 = _b1VazioOutros_();
+  if (!linhas.length) return { b1, b2: [] };
+
+  const delimitador = detectarDelimitadorOutros_(linhas[0]);
+  const headerCols = parseCSVLinhaOutros_(linhas[0], delimitador).map(normHeaderOutros_);
+  const mapaColunas = {};
+  headerCols.forEach((h, i) => {
+    const campo = SINONIMOS_COLUNA_OUTROS[h];
+    if (campo && !(campo in mapaColunas)) mapaColunas[campo] = i;
+  });
+
+  const unidadesBrutas = linhas.slice(1).map(linhaRaw => {
+    const cols = parseCSVLinhaOutros_(linhaRaw, delimitador);
+    const get = campo => (campo in mapaColunas) ? (cols[mapaColunas[campo]] || '') : '';
+    return {
+      tipo:       get('tipo'),
+      unidade:    get('unidade'),
+      escaninho:  get('escaninho'),
+      dataTabela: get('dataTabela'),
+      quartos:    parseInt(get('quartos'))   || 0,
+      suites:     parseInt(get('suites'))    || 0,
+      banheiros:  parseInt(get('banheiros')) || 0,
+      vagas:      parseInt(get('vagas'))     || 0,
+      areaUtil:   parseFloat(get('areaUtil').replace(',', '.')) || 0,
+      areaTerr:   parseFloat(get('areaTerr').replace(',', '.')) || 0,
+      precoMedio: parsePrecoBR(get('precoMedio')) || 0,
+      precoMin:   parsePrecoBR(get('precoMin'))   || 0,
+      precoMax:   parsePrecoBR(get('precoMax'))   || 0,
+    };
+  });
+
+  const b2 = finalizarUnidadesOutros_(b1, unidadesBrutas);
   return { b1, b2 };
 }
 

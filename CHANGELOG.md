@@ -1,5 +1,44 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 25) — Novo padrão LOUVRE: revendas-construtoras + tabela CSV no extrator "Outros" de lançamentos
+
+Padrão de tabela de vendas por unidade da LOUVRE (colunas: Unidade, Area_Total_Apto_m2,
+Area_Garagem_m2, Area_Escaninho_m2, Nº_Vaga, Local_Vaga, Nº_Escaninho, Sinal_3x, Mensais_27x,
+Semestrais_4x_janXX, Unica_1x_novXX, Financiamento_dezXX, Valor_Unidade) — diferente dos padrões de
+revenda anteriores, é uma tabela de PREÇO POR UNIDADE de lançamento (sem bairro/tipo/quartos/suítes).
+
+**`revendas-construtoras.html`**: 2 rótulos novos em `SINONIMOS_COLUNA_RC` — `area_total_apto_m2` →
+`area`, `valor_unidade` → `valor`. `Nº_Vaga` (ex: "VAGA 27/ VAGA 27A") de propósito NÃO mapeado pra
+contagem de vagas — é um identificador de texto, não um número; forçar `parseInt` nisso daria "0
+vagas" errado. Tipo/bairro ficam vazios (a fonte não tem essa informação) — texto original preservado
+igual sempre.
+
+**`lancamentos.html`, aba "Outros"** (mudança maior): até agora esse extrator só aceitava texto no
+formato "CAMPO: valor" pré-organizado (ver `ORGANIZADOR_PROMPT.md`) — colar uma tabela CSV bruta
+resultava em 0 tipologias detectadas, silenciosamente. Nova capacidade: **detecção automática** —
+`extrairOutrosFormato()` agora reconhece se a 1ª linha colada tem cara de cabeçalho delimitado (vírgula
+ou TAB, sem os dois-pontos de "CAMPO:") e, se sim, usa um extrator CSV novo (`extrairOutrosTabelaCsv_`),
+reaproveitando o mesmo princípio "cabeçalho → campo interno" já usado em revendas-construtoras.html
+(`SINONIMOS_COLUNA_OUTROS`), mas com vocabulário próprio pro schema de unidade de lançamento. O
+formato "CAMPO: valor" original continua funcionando exatamente como antes (código original preservado
+em `extrairOutrosCampoValor_`, só a lógica de triangulação de preço/filtro foi extraída pra um helper
+compartilhado `finalizarUnidadesOutros_` entre os dois caminhos).
+
+Numa tabela CSV pura (sem "NOME:"/"CONSTRUTORA:"/"BAIRRO:"), o Bloco 1 (dados do empreendimento) fica
+vazio — o usuário preenche manualmente na prévia, já sinalizado pelo aviso "⚠ NÃO DETECTADO" que já
+existia na tela. `Nº_Escaninho` (número, ex: "26") mapeado pro campo escaninho existente. As colunas de
+plano de pagamento por unidade (Sinal/Mensais/Semestrais/Única/Financiamento) e `Nº_Vaga` (identificador,
+mesmo motivo do RC) **não têm campo correspondente no schema atual e não são importadas** — não se
+perdem tecnicamente (o texto pode ser consultado na fonte original), mas não ficam estruturadas; se
+isso for necessário no futuro, precisa de um campo novo dedicado (não implementado agora, fora do
+pedido original).
+
+Testado em Node (extração da LOUVRE + regressão do formato CAMPO:valor + detecção automática dos dois
+casos) e ao vivo no navegador (aba Outros → colar CSV → extrair → prévia mostra área/preço/m² corretos
+e o aviso de campos não detectados).
+
+100% frontend, sem mudança no backend.
+
 ## 2026-07-16 (parte 24) — Score do vendedor dentro do botão "Vendedor" (todas as telas)
 
 Todo botão que abre o Perfil do Vendedor agora mostra o score numérico dentro do próprio botão (ex:
