@@ -1,5 +1,36 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 43) — Correção: "Novo Lançamento" nascia Excluído se o nome já tinha sido usado
+
+Bug reportado pelo usuário: cadastrava um novo empreendimento pela aba "Novo Lançamento", o backend
+respondia "salvo com sucesso" e a linha aparecia na planilha, mas o card **nunca aparecia** na lista —
+nem depois de um F5 completo.
+
+**Causa raiz** (`salvarLancamento_`, code.txt): saves vindos da aba "Novo Lançamento" nunca mandam
+`idLancamento` (esse campo só existe depois, vindo da Editar), então o backend cai no dedup por
+**nome** pra decidir se é uma atualização de um empreendimento já existente. Esse dedup por nome também
+copiava o `statusAtivo` do registro encontrado — e se o usuário já tinha excluído (🗑) um empreendimento
+com aquele mesmo nome antes, o cadastro novo nascia com `statusAtivo = 'Excluído'` **em silêncio**: o
+backend confirmava sucesso, a linha ia pra planilha certinha, só que já escondida pelo filtro de
+excluídos do `listarLancamentos_()`.
+
+**Correção**: o dedup por nome (branch sem `idLancamento`) não copia mais `statusAtivo` do registro
+encontrado — todo cadastro novo pela aba "Novo Lançamento" nasce `Ativo`, mesmo reusando um nome já
+excluído antes. O dedup por `idLancamento` explícito (usado pela Editar) continua preservando o
+`statusAtivo` normalmente — só esse branch tinha a garantia de "é o MESMO registro sendo atualizado",
+o de nome era só uma tentativa de recuperar o ID certo pra reaproveitar.
+
+Também corrigido um bug secundário introduzido na parte 42: `carregarLancamentos()` chamava
+`renderLista()` (agora `async`, por causa dos Alertas de Tração) sem `await` — não era a causa deste
+bug específico, mas deixava a lista podendo re-renderizar fora de ordem/silenciosamente engolir erros.
+
+Testado em Node (mock do Google Sheets): recadastro com nome de empreendimento excluído agora nasce
+Ativo e aparece na listagem; fluxo de Editar (por ID) confirmado sem regressão, continua preservando
+`statusAtivo` normalmente.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão" —
+sem isso, novos cadastros com nome repetido de algo já excluído continuam nascendo escondidos.
+
 ## 2026-07-16 (parte 42) — Alertas de Tração (cenários combinados) + reordenação dos cards por alerta
 
 Pedido do usuário: cruzar os eixos do score de Tração pra emitir alertas destacados no topo do card de

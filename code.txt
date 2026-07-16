@@ -3062,22 +3062,26 @@ function salvarLancamento_(dados) {
           }
         }
       } else {
+        // Dedup só por NOME (sem idLancamento) só acontece pela aba "Novo
+        // Lançamento" — NUNCA preserva statusAtivo do registro encontrado aqui
+        // (diferente do branch por ID acima): se o usuário reusar o nome de um
+        // empreendimento que ele mesmo já excluiu antes, o cadastro novo tem
+        // que nascer Ativo, não herdar "Excluído" do antigo em silêncio (bug
+        // real: o backend respondia "ok" mas o card nunca aparecia, porque a
+        // linha nova ia pra planilha já com statusAtivo="Excluído").
         var nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
         var nomeNovo = String(dados.nomeEmpreendimento).toLowerCase().trim();
         for (var i = nomes.length - 1; i >= 0; i--) {
           if (String(nomes[i] || '').toLowerCase().trim() === nomeNovo) {
-            if (!idExistente) {
-              idExistente = aba.getRange(i + 2, 1).getValue();
-              if (statusAtivoColIdx > 0)
-                preservedStatusAtivo = aba.getRange(i + 2, statusAtivoColIdx).getValue() || '';
-            }
+            if (!idExistente) idExistente = aba.getRange(i + 2, 1).getValue();
             aba.deleteRow(i + 2);
           }
         }
       }
     }
     // statusAtivo: respeita o que vier no payload (edição explícita); se não
-    // vier (re-importação automática), preserva o valor anterior ao salvar.
+    // vier, preserva o valor anterior só quando o match foi por idLancamento
+    // explícito (Editar) — ver comentário acima sobre o match por nome.
     var statusAtivo = dados.statusAtivo !== undefined ? (dados.statusAtivo || 'Ativo') : (preservedStatusAtivo || 'Ativo');
 
     // Reaproveita o idLancamento já existente (mesmo empreendimento, dado
