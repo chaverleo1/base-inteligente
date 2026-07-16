@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 37) — Perfil do Vendedor (PJ): remove 4 campos residuais de produto
+
+Pedido do usuário: remover do perfil PJ/Construtora — "Preço anunciado (R$)", "Dias no mercado",
+"Histórico de reduções de preço" e "Reserva de unidade sem custo (dias)".
+
+Os 3 primeiros vivem na seção comum "Contato e Mercado" (compartilhada entre PF/PJ/CORRETOR) — são
+dado de PRODUTO (preço e tempo do próprio anúncio), o mesmo motivo por trás de toda a redefinição do
+perfil PJ nas partes 35/36 (o eixo "Vendedor" deve medir o vendedor como parceiro, não o produto).
+Escondidos especificamente pra PJ (`mostrarCamposMercado = cat !== 'PJ'`) — continuam aparecendo
+normalmente pro PF, onde são sinais legítimos de urgência do proprietário e ainda alimentam
+`calcularScoreVendedor_PF_` (nada mudou lá). "Reserva de unidade sem custo" era um campo específico do
+PJ (adicionado na parte 35) — removido por completo, junto com sua pontuação (+5) em
+`calcularScoreVendedor_PJ_`.
+
+Testado ao vivo no navegador: perfil PJ confirmado sem os 4 campos; perfil PF confirmado com os 3
+campos comuns intactos (Preço/Dias/Reduções).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 36) — Perfil do Vendedor (PJ): 5 sinais de prontidão para negociar
 
 Novos critérios no perfil "Construtora/Incorporadora (PJ)", a pedido do usuário — todos sinais fortes

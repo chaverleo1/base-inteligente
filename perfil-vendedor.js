@@ -222,6 +222,14 @@ function _pvOpts_(lista, ceField) {
 function _pvRenderForm_() {
   const cat = _pv.catSelecionada;
   const redHtml = _pvRenderReducoes_();
+  // Preço anunciado / Dias no mercado / Histórico de reduções são dado de
+  // PRODUTO (preço e tempo do anúncio) — fazem sentido pro perfil PF (onde
+  // são sinais legítimos de urgência do proprietário, usados em
+  // calcularScoreVendedor_PF_) e ficam visíveis pro CORRETOR também, mas NÃO
+  // pro PJ/Construtora: esse perfil mede o vendedor como parceiro de
+  // negócio, não o produto — mesmo motivo por trás de toda a redefinição do
+  // perfil PJ (ver comentário logo abaixo, no bloco `cat === 'PJ'`).
+  const mostrarCamposMercado = cat !== 'PJ';
 
   const origemMe   = _pvV_('origemContato') === 'Me procurou' ? 'checked' : '';
   const origemEu   = _pvV_('origemContato') === 'Eu acionei'  ? 'checked' : '';
@@ -267,8 +275,6 @@ function _pvRenderForm_() {
   <div><label>Vendas fechadas c/ essa construtora (12 meses)</label><input type="number" id="pvVolumeVendas" min="0" value="${_pvCe_('volumeVendas12Meses')}"></div>
   <div><label>Agilidade documental (dias médios)</label><input type="number" id="pvAgilidadeDoc" min="0" value="${_pvCe_('agilidadeDocumentalDias')}"></div>
 </div>
-<div class="pv-row"><label>Reserva de unidade sem custo (dias, 0 = sem política)</label>
-  <input type="number" id="pvReservaDias" min="0" value="${_pvCe_('reservaUnidadeDias')}"></div>
 <div class="pv-row pv-row-checks">
   <label><input type="checkbox" id="pvComissNeg2"  ${_pvCeChk_('comissaoNegociavel')}> Comissão negociável</label>
   <label><input type="checkbox" id="pvMaterialCom" ${_pvCeChk_('materialComercialDisponivel')}> Material comercial disponível (books, plantas, simulador)</label>
@@ -329,15 +335,17 @@ function _pvRenderForm_() {
     <label><input type="radio" name="pvOrigem" value="Me procurou" ${origemMe}> Me procurou</label>
     <label><input type="radio" name="pvOrigem" value="Eu acionei" ${origemEu}> Eu acionei</label>
   </div></div>
+${mostrarCamposMercado ? `
 <div class="pv-row pv-row-2">
   <div><label>Preço anunciado (R$)</label><input type="text" id="pvPreco" placeholder="ex: 850000" value="${_pvV_('precoAnuncio')}"></div>
   <div><label>Dias no mercado</label><input type="number" id="pvDias" min="0" value="${_pvV_('diasNaMercado')}"></div>
-</div>
+</div>` : ''}
 <div class="pv-row"><label>Prazo declarado para venda</label>
   <input type="text" id="pvPrazo" placeholder="ex: 60 dias, até março..." value="${_pvV_('prazoDeclarado')}"></div>
+${mostrarCamposMercado ? `
 <div class="pv-row"><label>Histórico de reduções de preço</label>
   <div id="pvReducoesList">${redHtml}</div>
-  <button class="pv-btn-add" onclick="pvAddReducao_()" type="button">+ Adicionar redução</button></div>
+  <button class="pv-btn-add" onclick="pvAddReducao_()" type="button">+ Adicionar redução</button></div>` : ''}
 <div class="pv-section-title">Condições aceitas</div>
 <div class="pv-row pv-row-checks">
   <label><input type="checkbox" id="pvFGTS"   ${_pvBool_('aceitaFGTS')}>         Aceita FGTS</label>
@@ -377,7 +385,7 @@ function _pvColetarEsp_() {
     comissaoPerc: g('pvComissaoPerc'), tempoRelacionamentoMeses: g('pvTempoRelac'),
     prazoPagamentoComissao: g('pvPrazoComissao'), exclusividadeParceria: g('pvExclParceria'),
     volumeVendas12Meses: g('pvVolumeVendas'), agilidadeDocumentalDias: g('pvAgilidadeDoc'),
-    reservaUnidadeDias: g('pvReservaDias'), comissaoNegociavel: chk('pvComissNeg2'),
+    comissaoNegociavel: chk('pvComissNeg2'),
     materialComercialDisponivel: chk('pvMaterialCom'),
     confiabilidadePrazos: g('pvConfiabilidade'), qualidadeSuporteGerente: g('pvSuporteGerente'),
     facilidadeNegociacao: g('pvFacilidadeNeg'), reputacaoMercado: g('pvReputacao'),
