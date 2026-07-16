@@ -1,5 +1,17 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 44) — Salvar "Novo Lançamento" fecha a aba e recarrega a página
+
+Pedido do usuário: depois de cadastrar um lançamento pela aba "Novo Lançamento", fechar o formulário e
+recarregar a página — mesmo padrão já usado ao salvar o Perfil do Vendedor (`abrirPvLanc`).
+
+`salvarLancamento()` agora, com sucesso: mostra o toast, limpa o formulário, troca pra aba
+"Empreendimentos Cadastrados" e recarrega a página inteira (`location.reload()`) depois de 1,2s — em
+vez de só re-buscar a lista via fetch (`carregarLancamentos()`). Garante que o card novo aparece com
+dado 100% fresco da planilha, sem depender do timing do fetch/render assíncrono da lista.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-16 (parte 43) — Correção: "Novo Lançamento" nascia Excluído se o nome já tinha sido usado
 
 Bug reportado pelo usuário: cadastrava um novo empreendimento pela aba "Novo Lançamento", o backend

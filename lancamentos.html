@@ -1728,8 +1728,12 @@ async function salvarLancamento() {
     if (json.ok) {
       mostrarToast(`"${dados.nomeEmpreendimento}" salvo com sucesso!`, 'ok');
       limparMotor();
-      await carregarLancamentos();
       mudarAbaLancamentos('lista');
+      // Recarrega a página inteira em vez de só re-buscar a lista via fetch
+      // (mesmo padrão do salvar de Perfil do Vendedor, abrirPvLanc) — garante
+      // que o card novo aparece com dado 100% fresco da planilha, sem
+      // depender do timing do fetch/render assíncrono da lista.
+      setTimeout(() => location.reload(), 1200);
     } else {
       mostrarToast(json.erro || 'Erro ao salvar.', 'erro');
     }
