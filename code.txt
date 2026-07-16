@@ -115,17 +115,20 @@ const CABECALHO_LANCAMENTOS = [
   // Plano de Pagamento do EMPREENDIMENTO (painel destacado em "Dados Gerais",
   // adicionado em 2026-07) — distinto dos campos POR UNIDADE 'sinal'/'mensais'/
   // 'anuais' já existentes acima (removidos da UI, mas o nome já estava em uso
-  // no array — por isso o prefixo "plano" aqui, pra não colidir). Cada campo é
-  // uma QUANTIDADE DE PARCELAS (ex: Mensais=27 → 27 parcelas mensais), não um
-  // valor em R$ nem percentual. planoFinanciamentoEm é "AAAA-MM" (input
-  // type=month) — usado só pra CALCULAR "prazoMaximo" no front-end (meses
-  // entre hoje e essa data); o valor calculado é gravado normalmente no campo
-  // prazoMaximo já existente, não duplicado aqui. Vai no FIM do array (depois
+  // no array — por isso o prefixo "plano" aqui, pra não colidir).
+  // planoSinal/Mensais/SemestraisParcelas são QUANTIDADE DE PARCELAS (ex:
+  // Mensais=27 → 27 parcelas mensais), não valor em R$ nem percentual.
+  // planoUnicaData e planoFinanciamentoEm são datas "AAAA-MM" (input
+  // type=month) — "Única" é um pagamento pontual numa data específica (não
+  // uma contagem, sempre 1x por definição), e planoFinanciamentoEm é usado só
+  // pra CALCULAR "prazoMaximo" no front-end (meses entre hoje e essa data); o
+  // valor calculado é gravado normalmente no campo prazoMaximo já existente,
+  // não duplicado aqui. Vai no FIM do array (depois
   // de 'statusAtivo', que era o último até agora) pelo mesmo motivo de sempre:
   // migrarCabecalhoLancamentos() só sabe ANEXAR colunas novas, nunca inserir
   // no meio — colocar antes de 'statusAtivo' desalinharia os dados já salvos.
   'planoSinalParcelas', 'planoMensaisParcelas', 'planoSemestraisParcelas',
-  'planoUnicaParcelas', 'planoFinanciamentoEm'
+  'planoUnicaData', 'planoFinanciamentoEm'
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -3152,7 +3155,7 @@ function salvarLancamento_(dados) {
         dados.planoSinalParcelas      || '',
         dados.planoMensaisParcelas    || '',
         dados.planoSemestraisParcelas || '',
-        dados.planoUnicaParcelas      || '',
+        dados.planoUnicaData      || '',
         dados.planoFinanciamentoEm    || '',
       ];
     });

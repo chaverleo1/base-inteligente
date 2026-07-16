@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 28) — Correção: "Única" é data, não quantidade de parcelas
+
+Correção da parte 27, ainda no mesmo dia: "Única" no Plano de Pagamento é um pagamento pontual numa
+data específica (ex: "nov/28" no padrão LOUVRE), não uma contagem de parcelas — sempre 1x por
+definição, então a informação que importa é QUANDO, não QUANTAS. Campo renomeado de
+`planoUnicaParcelas` (number) pra `planoUnicaData` (input type=month, mesmo padrão de
+`planoFinanciamentoEm`) em `lancamentos-editar.html` e em `CABECALHO_LANCAMENTOS`/`salvarLancamento_`
+no backend. Sinal/Mensais/Semestrais continuam quantidade de parcelas (numéricos), sem mudança.
+
+Testado em Node (alinhamento de colunas ainda correto após o rename) e no navegador (campo renderiza
+como seletor de mês/ano com o rótulo certo).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 27) — Painel "Plano de Pagamento" em Dados Gerais (lancamentos-editar.html)
 
 Novo painel destacado (mesmo estilo visual do resumo de área/preço/m²) dentro da seção "Dados Gerais",
