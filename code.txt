@@ -128,7 +128,15 @@ const CABECALHO_LANCAMENTOS = [
   // migrarCabecalhoLancamentos() só sabe ANEXAR colunas novas, nunca inserir
   // no meio — colocar antes de 'statusAtivo' desalinharia os dados já salvos.
   'planoSinalParcelas', 'planoMensaisParcelas', 'planoSemestraisParcelas',
-  'planoUnicaData', 'planoFinanciamentoEm'
+  'planoUnicaData', 'planoFinanciamentoEm',
+  // planoAnuaisParcelas (quantidade de parcelas, mesmo padrão de Sinal/
+  // Mensais/Semestrais) e planoCaptacaoPerc (2026-07) — % do valor total que
+  // o cliente paga direto até o imóvel ficar pronto (Condomínio Vertical); o
+  // restante é financiamento bancário após o Habite-se. Quanto MENOR esse %,
+  // mais acessível o produto pro cliente — Sinal/Mensais/Semestrais/Anuais
+  // são as parcelas em que esse total é fracionado. Vai no FIM do array pelo
+  // mesmo motivo de sempre (ver comentário acima).
+  'planoAnuaisParcelas', 'planoCaptacaoPerc'
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -3157,6 +3165,8 @@ function salvarLancamento_(dados) {
         dados.planoSemestraisParcelas || '',
         dados.planoUnicaData      || '',
         dados.planoFinanciamentoEm    || '',
+        dados.planoAnuaisParcelas || '',
+        dados.planoCaptacaoPerc   || '',
       ];
     });
 

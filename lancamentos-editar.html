@@ -209,6 +209,50 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
   <div class="section">
     <div class="section-title">Dados Gerais</div>
     <div id="resumoExtracao" class="resumo-extracao" style="display:none"></div>
+
+    <div class="plano-pag-panel">
+      <div class="plano-pag-titulo">Plano de Pagamento</div>
+      <div class="form-grid cols3">
+        <div class="form-group">
+          <label class="form-label">Captação (%)</label>
+          <input class="form-input" id="f-planoCaptacaoPerc" type="number" min="0" max="100" placeholder="Ex: 30">
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.4;margin:-4px 0 12px">
+        % do valor total que o cliente paga até o imóvel ficar pronto (Condomínio Vertical) — o
+        restante é financiamento bancário após o Habite-se. Quanto menor, mais acessível pro cliente:
+        Sinal, Mensais, Semestrais e Anuais são as parcelas em que esse total é fracionado.
+      </div>
+      <div class="form-grid cols3">
+        <div class="form-group">
+          <label class="form-label">Sinal (parcelas)</label>
+          <input class="form-input" id="f-planoSinalParcelas" type="number" min="0" placeholder="Ex: 3">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mensais (parcelas)</label>
+          <input class="form-input" id="f-planoMensaisParcelas" type="number" min="0" placeholder="Ex: 27">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Semestrais (parcelas)</label>
+          <input class="form-input" id="f-planoSemestraisParcelas" type="number" min="0" placeholder="Ex: 4">
+        </div>
+      </div>
+      <div class="form-grid cols3">
+        <div class="form-group">
+          <label class="form-label">Anuais (parcelas)</label>
+          <input class="form-input" id="f-planoAnuaisParcelas" type="number" min="0" placeholder="Ex: 2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Única (data)</label>
+          <input class="form-input" id="f-planoUnicaData" type="month">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Financiamento em</label>
+          <input class="form-input" id="f-planoFinanciamentoEm" type="month" onchange="calcularPrazoMaximoAuto()">
+        </div>
+      </div>
+    </div>
+
     <div class="form-grid cols3">
       <div class="form-group span2">
         <label class="form-label">Nome do empreendimento *</label>
@@ -278,34 +322,6 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
       <div class="form-group">
         <label class="form-label">Prazo máximo (meses)</label>
         <input class="form-input" id="f-prazoMaximo" type="number" min="0" placeholder="Ex: 120">
-      </div>
-    </div>
-
-    <div class="plano-pag-panel">
-      <div class="plano-pag-titulo">Plano de Pagamento</div>
-      <div class="form-grid cols3">
-        <div class="form-group">
-          <label class="form-label">Sinal (parcelas)</label>
-          <input class="form-input" id="f-planoSinalParcelas" type="number" min="0" placeholder="Ex: 3">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Mensais (parcelas)</label>
-          <input class="form-input" id="f-planoMensaisParcelas" type="number" min="0" placeholder="Ex: 27">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Semestrais (parcelas)</label>
-          <input class="form-input" id="f-planoSemestraisParcelas" type="number" min="0" placeholder="Ex: 4">
-        </div>
-      </div>
-      <div class="form-grid cols3">
-        <div class="form-group">
-          <label class="form-label">Única (data)</label>
-          <input class="form-input" id="f-planoUnicaData" type="month">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Financiamento em</label>
-          <input class="form-input" id="f-planoFinanciamentoEm" type="month" onchange="calcularPrazoMaximoAuto()">
-        </div>
       </div>
     </div>
 
@@ -427,7 +443,7 @@ function preencherForm(e) {
                   'urlSite','foto','lazer','conceito',
                   'gerenteNome','gerenteTelefone','gerenteObs',
                   'planoSinalParcelas','planoMensaisParcelas','planoSemestraisParcelas',
-                  'planoUnicaData','planoFinanciamentoEm'];
+                  'planoAnuaisParcelas','planoUnicaData','planoFinanciamentoEm','planoCaptacaoPerc'];
   campos.forEach(c => {
     const el = document.getElementById('f-' + c);
     if (el && e[c] != null) el.value = e[c];
@@ -726,8 +742,10 @@ async function salvar() {
     planoSinalParcelas:      gV('f-planoSinalParcelas'),
     planoMensaisParcelas:    gV('f-planoMensaisParcelas'),
     planoSemestraisParcelas: gV('f-planoSemestraisParcelas'),
-    planoUnicaData:      gV('f-planoUnicaData'),
+    planoAnuaisParcelas:     gV('f-planoAnuaisParcelas'),
+    planoUnicaData:          gV('f-planoUnicaData'),
     planoFinanciamentoEm:    gV('f-planoFinanciamentoEm'),
+    planoCaptacaoPerc:       gV('f-planoCaptacaoPerc'),
     unidades
   };
 

@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 34) — Plano de Pagamento: reposicionado + campos "Captação %" e "Anuais"
+
+`lancamentos-editar.html`, seção "Dados Gerais":
+
+**1. Painel movido**: "Plano de Pagamento" saiu de baixo de "Prazo máximo (meses)" e agora fica logo
+abaixo do resumo em destaque (fundo verde) que mostra "Faixa de áreas / Menor preço / Metro quadrado
+médio" — antes mesmo dos campos "Nome do empreendimento"/"Construtora".
+
+**2. Novo campo "Captação (%)"**: percentual do valor total que o cliente paga direto até o imóvel
+ficar pronto (Condomínio Vertical) — o restante é financiamento bancário após o Habite-se. Quanto
+MENOR esse %, mais acessível o produto pro cliente (geralmente ~30%). Nota explicativa incluída no
+próprio painel. Campo colocado em destaque, acima da grade de parcelas.
+
+**3. Novo campo "Anuais (parcelas)"**: mesma lógica de quantidade de parcelas de Sinal/Mensais/
+Semestrais — Sinal, Mensais, Semestrais e Anuais são as parcelas em que o total do "% de Captação" é
+fracionado.
+
+**Backend**: 2 campos novos no fim de `CABECALHO_LANCAMENTOS` — `planoAnuaisParcelas`,
+`planoCaptacaoPerc` — depois de `planoFinanciamentoEm` (que era o último até agora). `salvarLancamento_`
+grava os 2 valores nessa mesma posição.
+
+Nota: o "% de Captação" foi explicado pelo usuário como algo relevante pra qualificar a acessibilidade
+do produto — não foi pedido explicitamente pra entrar na fórmula do Score de Tração nesta rodada, só
+o campo em si. Fica registrado como possível próximo passo se o usuário quiser.
+
+Testado em Node (salvarLancamento_ + listarLancamentos_ com os 2 campos novos, 64 colunas no total,
+alinhamento confirmado) e ao vivo no navegador: painel confirmado imediatamente após `resumoExtracao`
+e antes de "Nome do empreendimento" (via inspeção do DOM), valores populando corretamente ao carregar
+um lançamento existente.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 33) — Score de Tração: 2ª rodada de pesos + reordenação
 
 Correção da parte 32, mesmo dia: usuário refez a ordem/pesos. Novos pesos (soma continua 15):
