@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-16 (parte 38) — Perfil do Vendedor (PJ): novo grupo Logística + reorganização completa
+
+**2 critérios novos**, grupo "📍 Logística e operação":
+- **Proximidade do stand de vendas com sua empresa** (select: Muito próxima/Moderada/Distante — até
+  +10 pts) — atendimento mais ágil e menor custo logístico.
+- **Permite plantão no decorado** (checkbox — +15 pts) — alta oportunidade de conversão direta.
+
+**Reorganização completa** de todos os critérios objetivos e subjetivos do perfil PJ, a pedido do
+usuário ("marcação intuitiva e lógica"): 5 grupos temáticos em vez de uma lista solta —
+💰 Comercial (comissão/pagamento) → 🤝 Relacionamento e parceria → 📍 Logística e operação →
+🔥 Sinais de urgência e prontidão para negociar → ⭐ Critérios subjetivos. Cada campo agora mostra um
+badge de peso/pontuação ao lado do rótulo (ex: "Comissão oferecida (%) `até +20`"), pra deixar visível
+na hora de preencher o quanto cada critério pesa no score final — novo helper `_pvLbl_()` e classe
+`.pv-peso`. Backend (`calcularScoreVendedor_PJ_`) reescrito com a mesma ordem/agrupamento dos 5 grupos,
+pra código e tela ficarem espelhados.
+
+Testado em Node (proximidade+plantão isolados → 25 pts exatos; perfil completo "tudo excelente" →
+score 100 clampado) e ao vivo no navegador (7 seções na ordem certa, 21 badges de peso visíveis,
+2 campos novos presentes e coletando corretamente).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 37) — Perfil do Vendedor (PJ): remove 4 campos residuais de produto
 
 Pedido do usuário: remover do perfil PJ/Construtora — "Preço anunciado (R$)", "Dias no mercado",

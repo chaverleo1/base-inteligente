@@ -89,6 +89,9 @@
   color:#8892aa;font-size:11px;font-weight:600;padding:4px 10px;
   cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;flex-shrink:0}
 .pv-btn-card:hover{border-color:#4f7cff;color:#4f7cff}
+.pv-peso{display:inline-block;margin-left:6px;font-size:10px;font-weight:700;color:#00d4aa;
+  background:rgba(0,212,170,.12);border-radius:99px;padding:1px 7px;vertical-align:middle}
+.pv-group-desc{font-size:11px;color:#4a5470;margin:-4px 0 10px;line-height:1.4}
 .pv-btn-emp{background:transparent;border:1px solid #2a3050;border-radius:6px;
   color:#8892aa;font-size:12px;font-weight:500;padding:5px 12px;
   cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
@@ -218,6 +221,11 @@ function _pvOpts_(lista, ceField) {
   return lista.map(o => `<option value="${o}" ${_pvCeSel_(ceField, o)}>${o}</option>`).join('');
 }
 
+// Rótulo com badge de peso/pontuação ao lado — deixa visível, na hora de
+// preencher, o quanto cada critério pesa no score final (pedido do usuário
+// ao reorganizar o perfil PJ: "marcação intuitiva e lógica").
+function _pvLbl_(texto, peso) { return `${texto}<span class="pv-peso">${peso}</span>`; }
+
 // ── Render form ───────────────────────────────────────────────────────────────
 function _pvRenderForm_() {
   const cat = _pv.catSelecionada;
@@ -251,64 +259,79 @@ function _pvRenderForm_() {
     // CONSTRUTORA COMO PARCEIRA DE NEGÓCIO, não o produto que ela vende (isso
     // já mora no cadastro do empreendimento em lancamentos-editar.html e já
     // alimenta outros eixos do Score de Tração — Estoque/Força de Venda/
-    // Prazo de Pgt). Antes existiam 2 categorias (PJ e CONSTRUTORA) cujos
-    // campos eram quase todos sobre o PRODUTO (unidades restantes, meses
-    // desde Habite-se, % vendido, prazo de entrega...) — duplicava dado e
-    // desvirtuava o que o eixo "Vendedor" deveria medir. Substituído por
-    // critérios OBJETIVOS (fatos verificáveis sobre a parceria) e SUBJETIVOS
-    // (percepção do corretor, em escala rotulada — ver PV_ESCALA_5).
+    // Prazo de Pgt). Reorganizado em 5 grupos temáticos (2026-07, 2ª rodada)
+    // — cada campo mostra o peso/pontuação ao lado do rótulo (ver _pvLbl_),
+    // pra deixar claro na hora de preencher o quanto cada critério pesa no
+    // score final. Ordem dos grupos: do mais "factual/comercial" pro mais
+    // "percepção do corretor" — objetivos primeiro, subjetivos por último.
     esp = `
-<div class="pv-section-title">Critérios objetivos</div>
+<div class="pv-section-title">💰 Comercial — comissão e pagamento</div>
 <div class="pv-row pv-row-2">
-  <div><label>Comissão oferecida (%)</label><input type="number" id="pvComissaoPerc" min="0" max="100" step="0.5" value="${_pvCe_('comissaoPerc')}"></div>
-  <div><label>Tempo de relacionamento (meses)</label><input type="number" id="pvTempoRelac" min="0" value="${_pvCe_('tempoRelacionamentoMeses')}"></div>
+  <div><label>${_pvLbl_('Comissão oferecida (%)','até +20')}</label><input type="number" id="pvComissaoPerc" min="0" max="100" step="0.5" value="${_pvCe_('comissaoPerc')}"></div>
+  <div><label>${_pvLbl_('Prazo de pagamento da comissão','até +15')}</label>
+    <select id="pvPrazoComissao"><option value="">— selecione —</option>
+      ${_pvOpts_(['Na assinatura','No Habite-se','Após aprovação de financiamento'],'prazoPagamentoComissao')}
+    </select></div>
 </div>
-<div class="pv-row"><label>Prazo de pagamento da comissão</label>
-  <select id="pvPrazoComissao"><option value="">— selecione —</option>
-    ${_pvOpts_(['Na assinatura','No Habite-se','Após aprovação de financiamento'],'prazoPagamentoComissao')}
-  </select></div>
-<div class="pv-row"><label>Exclusividade da parceria</label>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvComissNeg2"  ${_pvCeChk_('comissaoNegociavel')}> ${_pvLbl_('Comissão negociável','+10')}</label>
+</div>
+
+<div class="pv-section-title">🤝 Relacionamento e parceria</div>
+<div class="pv-row"><label>${_pvLbl_('Exclusividade da parceria','até +20')}</label>
   <select id="pvExclParceria"><option value="">— selecione —</option>
     ${_pvOpts_(['Exclusiva com você/sua imobiliária','Compartilhada com outras imobiliárias','Sem contrato formal'],'exclusividadeParceria')}
   </select></div>
 <div class="pv-row pv-row-2">
-  <div><label>Vendas fechadas c/ essa construtora (12 meses)</label><input type="number" id="pvVolumeVendas" min="0" value="${_pvCe_('volumeVendas12Meses')}"></div>
-  <div><label>Agilidade documental (dias médios)</label><input type="number" id="pvAgilidadeDoc" min="0" value="${_pvCe_('agilidadeDocumentalDias')}"></div>
+  <div><label>${_pvLbl_('Tempo de relacionamento (meses)','até +10')}</label><input type="number" id="pvTempoRelac" min="0" value="${_pvCe_('tempoRelacionamentoMeses')}"></div>
+  <div><label>${_pvLbl_('Vendas fechadas nos últimos 12 meses','até +15')}</label><input type="number" id="pvVolumeVendas" min="0" value="${_pvCe_('volumeVendas12Meses')}"></div>
+</div>
+<div class="pv-row"><label>${_pvLbl_('Agilidade documental (dias médios p/ aprovar)','até +10')}</label>
+  <input type="number" id="pvAgilidadeDoc" min="0" value="${_pvCe_('agilidadeDocumentalDias')}"></div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvMaterialCom" ${_pvCeChk_('materialComercialDisponivel')}> ${_pvLbl_('Material comercial disponível (books, plantas, simulador)','+5')}</label>
+</div>
+
+<div class="pv-section-title">📍 Logística e operação</div>
+<div class="pv-row"><label>${_pvLbl_('Proximidade do stand de vendas com sua empresa','até +10')}</label>
+  <select id="pvProximidadeStand"><option value="">— selecione —</option>
+    ${_pvOpts_(['Muito próxima','Moderada','Distante'],'proximidadeStand')}
+  </select></div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvPlantaoDecorado" ${_pvCeChk_('permitePlantaoDecorado')}> ${_pvLbl_('Permite plantão no decorado','+15')}</label>
+</div>
+
+<div class="pv-section-title">🔥 Sinais de urgência e prontidão para negociar</div>
+<div class="pv-group-desc">Cada sinal, isolado, já indica que o vendedor está mais aberto a ceder em preço/condições.</div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvUrgenciaVenda" ${_pvCeChk_('urgenciaVendaSinalizada')}> ${_pvLbl_('Sinalizou urgência de venda / pressão por resultado','+15')}</label>
+  <label><input type="checkbox" id="pvQueimandoEstoque" ${_pvCeChk_('queimandoEstoque')}> ${_pvLbl_('Querendo queimar estoque','+15')}</label>
 </div>
 <div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvComissNeg2"  ${_pvCeChk_('comissaoNegociavel')}> Comissão negociável</label>
-  <label><input type="checkbox" id="pvMaterialCom" ${_pvCeChk_('materialComercialDisponivel')}> Material comercial disponível (books, plantas, simulador)</label>
+  <label><input type="checkbox" id="pvPagaEscrituraItbi" ${_pvCeChk_('pagaEscrituraItbi')}> ${_pvLbl_('Pagando escritura e/ou ITBI','+12')}</label>
+  <label><input type="checkbox" id="pvPremiacaoVenda" ${_pvCeChk_('premiacaoPorVenda')}> ${_pvLbl_('Premiação por venda','+10')}</label>
 </div>
-<div class="pv-section-title">Critérios subjetivos <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#8892aa">— avaliação do corretor</span></div>
+<div class="pv-row pv-row-checks">
+  <label><input type="checkbox" id="pvPromoveuProduto" ${_pvCeChk_('promoveuProdutoNaImobiliaria')}> ${_pvLbl_('Foi à imobiliária promover o produto','+10')}</label>
+  <label><input type="checkbox" id="pvPermutaFacil" ${_pvCeChk_('aceitaPermutaFacil')}> ${_pvLbl_('Aceita permuta com facilidade','+10')}</label>
+</div>
+
+<div class="pv-section-title">⭐ Critérios subjetivos <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#8892aa">— avaliação do corretor</span></div>
+<div class="pv-group-desc">Escala Ruim → Excelente; cada nível soma mais pontos, proporcional ao peso do critério.</div>
 <div class="pv-row pv-row-2">
-  <div><label>Confiabilidade / cumpre prazos e promessas</label>
+  <div><label>${_pvLbl_('Confiabilidade / cumpre prazos e promessas','peso 3')}</label>
     <select id="pvConfiabilidade"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'confiabilidadePrazos')}</select></div>
-  <div><label>Suporte do gerente comercial</label>
-    <select id="pvSuporteGerente"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'qualidadeSuporteGerente')}</select></div>
-</div>
-<div class="pv-row pv-row-2">
-  <div><label>Facilidade de negociar condições especiais</label>
-    <select id="pvFacilidadeNeg"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'facilidadeNegociacao')}</select></div>
-  <div><label>Reputação no mercado</label>
+  <div><label>${_pvLbl_('Reputação no mercado','peso 3')}</label>
     <select id="pvReputacao"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'reputacaoMercado')}</select></div>
 </div>
-<div class="pv-row"><label>Clima geral da parceria</label>
-  <select id="pvClimaParceria"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'climaParceria')}</select></div>
-<div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvUrgenciaVenda" ${_pvCeChk_('urgenciaVendaSinalizada')}> Construtora sinalizou urgência de venda / pressão por resultado</label>
+<div class="pv-row pv-row-2">
+  <div><label>${_pvLbl_('Suporte do gerente comercial','peso 2')}</label>
+    <select id="pvSuporteGerente"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'qualidadeSuporteGerente')}</select></div>
+  <div><label>${_pvLbl_('Facilidade de negociar condições especiais','peso 2')}</label>
+    <select id="pvFacilidadeNeg"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'facilidadeNegociacao')}</select></div>
 </div>
-<div class="pv-section-title">Sinais de prontidão para negociar</div>
-<div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvPremiacaoVenda" ${_pvCeChk_('premiacaoPorVenda')}> Está dando premiação por venda</label>
-  <label><input type="checkbox" id="pvPromoveuProduto" ${_pvCeChk_('promoveuProdutoNaImobiliaria')}> Foi à imobiliária promover o produto</label>
-</div>
-<div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvPagaEscrituraItbi" ${_pvCeChk_('pagaEscrituraItbi')}> Está pagando escritura e/ou ITBI</label>
-  <label><input type="checkbox" id="pvQueimandoEstoque"  ${_pvCeChk_('queimandoEstoque')}> Está querendo queimar estoque</label>
-</div>
-<div class="pv-row pv-row-checks">
-  <label><input type="checkbox" id="pvPermutaFacil" ${_pvCeChk_('aceitaPermutaFacil')}> Aceita permuta com facilidade</label>
-</div>`;
+<div class="pv-row"><label>${_pvLbl_('Clima geral da parceria','peso 2')}</label>
+  <select id="pvClimaParceria"><option value="">— selecione —</option>${_pvOpts_(PV_ESCALA_5,'climaParceria')}</select></div>`;
   } else if (cat === 'CORRETOR') {
     esp = `
 <div class="pv-section-title">Perfil — Corretor / Parceiro</div>
@@ -393,6 +416,7 @@ function _pvColetarEsp_() {
     premiacaoPorVenda: chk('pvPremiacaoVenda'), promoveuProdutoNaImobiliaria: chk('pvPromoveuProduto'),
     pagaEscrituraItbi: chk('pvPagaEscrituraItbi'), queimandoEstoque: chk('pvQueimandoEstoque'),
     aceitaPermutaFacil: chk('pvPermutaFacil'),
+    proximidadeStand: g('pvProximidadeStand'), permitePlantaoDecorado: chk('pvPlantaoDecorado'),
   };
   if (cat === 'CORRETOR') return { exclusividade: g('pvExcl'), diasDesdeUltimaResposta: g('pvDiasResp'), vendedorOriginalUrgente: g('pvVendUrgente'), comissaoNegociavel: chk('pvComissNeg'), relacionamentoHistorico: chk('pvRelHist') };
   return {};

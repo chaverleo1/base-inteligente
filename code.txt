@@ -5587,17 +5587,25 @@ function calcularScoreVendedor_PF_(ce, ctx) {
 // "Vendedor" deveria medir. Substitui as antigas calcularScoreVendedor_PJ_/
 // _CONSTRUTORA_ (2 categorias separadas, mescladas nesta única função).
 var PV_ESCALA_5_PONTOS = { 'Ruim': 0, 'Regular': 1, 'Bom': 2, 'Ótimo': 3, 'Excelente': 4 };
+// Espelha os 5 grupos temáticos do formulário (perfil-vendedor.js, bloco
+// `cat === 'PJ'` — cada peso abaixo bate com o badge "+N"/"peso N" mostrado
+// ao lado do rótulo correspondente na tela, pra ficar transparente o quanto
+// cada critério pesa no score final ("marcação intuitiva e lógica", pedido
+// do usuário na 2ª reorganização, 2026-07).
 function calcularScoreVendedor_PJ_(ce, ctx) {
   var score = 0;
-  // ── Critérios objetivos ──
+
+  // ── 💰 Comercial — comissão e pagamento ──
   var comissao = parseFloat(ce.comissaoPerc) || 0;
   if      (comissao >= 8) score += 20;
   else if (comissao >= 5) score += 12;
   else if (comissao > 0)  score += 6;
-  if (ce.comissaoNegociavel === 'sim') score += 10;
   var prazoComissao = String(ce.prazoPagamentoComissao || '');
   if      (prazoComissao === 'Na assinatura') score += 15;
   else if (prazoComissao === 'No Habite-se')  score += 5;
+  if (ce.comissaoNegociavel === 'sim') score += 10;
+
+  // ── 🤝 Relacionamento e parceria ──
   var excl = String(ce.exclusividadeParceria || '');
   if      (excl === 'Exclusiva com você/sua imobiliária')    score += 20;
   else if (excl === 'Compartilhada com outras imobiliárias') score -= 5;
@@ -5614,23 +5622,33 @@ function calcularScoreVendedor_PJ_(ce, ctx) {
     else if (agilidade <= 15) score += 5;
     else if (agilidade > 30)  score -= 5;
   }
-  if (ce.materialComercialDisponivel === 'sim')  score += 5;
-  // ── Critérios subjetivos (escala rotulada -> pontos, ver PV_ESCALA_5_PONTOS) ──
-  var pts = function(campo) { return PV_ESCALA_5_PONTOS[String(ce[campo] || '')] || 0; };
-  score += pts('confiabilidadePrazos')    * 3;
-  score += pts('qualidadeSuporteGerente') * 2;
-  score += pts('facilidadeNegociacao')    * 2;
-  score += pts('reputacaoMercado')        * 3;
-  score += pts('climaParceria')           * 2;
-  if (ce.urgenciaVendaSinalizada === 'sim') score += 15;
-  // ── Sinais de prontidão para negociar (2026-07) — cada um, isolado, já
-  // indica que o vendedor está mais aberto a ceder em preço/condições; juntos
-  // pesam mais que qualquer critério individual isolado.
+  if (ce.materialComercialDisponivel === 'sim') score += 5;
+
+  // ── 📍 Logística e operação (2026-07) — proximidade do stand com a
+  // imobiliária (atendimento mais ágil, menor custo logístico) e liberdade
+  // pra fazer plantão no decorado (alta oportunidade de conversão direta).
+  var proximidade = String(ce.proximidadeStand || '');
+  if      (proximidade === 'Muito próxima') score += 10;
+  else if (proximidade === 'Moderada')      score += 5;
+  if (ce.permitePlantaoDecorado === 'sim') score += 15;
+
+  // ── 🔥 Sinais de urgência e prontidão para negociar — cada um, isolado,
+  // já indica que o vendedor está mais aberto a ceder em preço/condições.
+  if (ce.urgenciaVendaSinalizada === 'sim')       score += 15;
+  if (ce.queimandoEstoque === 'sim')              score += 15;
+  if (ce.pagaEscrituraItbi === 'sim')             score += 12;
   if (ce.premiacaoPorVenda === 'sim')             score += 10;
   if (ce.promoveuProdutoNaImobiliaria === 'sim')  score += 10;
-  if (ce.pagaEscrituraItbi === 'sim')             score += 12;
-  if (ce.queimandoEstoque === 'sim')              score += 15;
   if (ce.aceitaPermutaFacil === 'sim')            score += 10;
+
+  // ── ⭐ Critérios subjetivos (escala rotulada -> pontos, ver PV_ESCALA_5_PONTOS) ──
+  var pts = function(campo) { return PV_ESCALA_5_PONTOS[String(ce[campo] || '')] || 0; };
+  score += pts('confiabilidadePrazos')    * 3;
+  score += pts('reputacaoMercado')        * 3;
+  score += pts('qualidadeSuporteGerente') * 2;
+  score += pts('facilidadeNegociacao')    * 2;
+  score += pts('climaParceria')           * 2;
+
   return score;
 }
 
