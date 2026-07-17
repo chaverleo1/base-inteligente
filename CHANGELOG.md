@@ -1,5 +1,42 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 45) — Matriz de Eisenhower: calcularEisenhower_ + Triângulo de Oportunidade estendido a Lançamentos
+
+Primeiros 2 itens da proposta da Matriz de Eisenhower (5 dimensões — Lead/Cliente/Produto/Vendedor/
+Corretor, ver artefato compartilhado na conversa): a função de classificação e a extensão do motor de
+matching pra cobrir Lançamentos, que hoje ficavam de fora.
+
+**Bug estrutural encontrado e corrigido**: `fonteParaOrigemImovel_()` só sabia mapear
+`'REVENDA_CONSTRUTORA' → 'REVENDAS_CONSTRUTORAS'` — qualquer outra fonte (inclusive `'LANCAMENTO'`)
+caía no default `'REVENDA'`. Resultado: `listarTriangulosOportunidade_()` nunca conseguia achar o
+perfil de vendedor de nenhum Lançamento (buscava em `VENDEDORES_PERFIL` com `origemImovel='REVENDA'`
+em vez de `'LANCAMENTOS'`), então nenhum Lançamento jamais entrava no Triângulo de Oportunidade — não
+era falta de dado, era o mapeamento errado. Corrigido, e `fontesValidas` em
+`listarTriangulosOportunidade_()` agora inclui `'LANCAMENTO'`.
+
+**`calcularEisenhower_(tipo, idEntidade, idProduto)`** (nova, `code.txt`) — não recalcula nenhum score
+de base, só combina o que já existe em 2 eixos:
+- Importância = score do cliente×0.40 + scoreMatch×0.35 + scoreVendedor×0.25
+- Urgência = urgência do comprador×0.65 + urgência do vendedor (derivada do scoreVendedor)×0.35
+- Quadrante: Importância≥70 + Urgência≥70 → `FAZER_AGORA` · só Importância≥70 → `AGENDAR` · só
+  Urgência≥70 → `DELEGAR` · nenhum → `ELIMINAR`
+
+Só `tipo='CLIENTE'` está implementado — `tipo='LEAD'` retorna erro explícito em vez de inventar um
+resultado, porque leads ainda não passam por `rodarMatching()` (fica pro próximo passo, junto com a
+dimensão Corretor/check-in diário). Exposta via `?acao=calcularEisenhower&tipo=CLIENTE&idEntidade=...
+&idProduto=...`.
+
+**Limpeza colateral**: a fórmula de nível de urgência do vendedor (`scoreVendedor >= 70 ? 'ALTA' :
+>= 40 ? 'MEDIA' : 'BAIXA'`) estava duplicada em 2 lugares (`listarTriangulosOportunidade_` e
+`listarJanelaAberta_`) — extraída pra `vendedorUrgenciaNivel_()`/`vendedorUrgenciaScore_()`,
+comportamento idêntico, agora compartilhado (e é o que `calcularEisenhower_` usa também).
+
+Testado em Node com dados mockados (CONTATOS/MATCHES/VENDEDORES_PERFIL): mapeamento de fonte,
+inclusão de Lançamento no Triângulo com scoreTriplo correto, os 4 quadrantes do Eisenhower, e os dois
+casos de erro explícito (LEAD, par sem match).
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-16 (parte 44) — Salvar "Novo Lançamento" fecha a aba e recarrega a página
 
 Pedido do usuário: depois de cadastrar um lançamento pela aba "Novo Lançamento", fechar o formulário e

@@ -330,6 +330,7 @@ function doGet(e) {
   // ── Módulo Perfil do Vendedor ────────────────────────────────
   if (acao === 'getPerfilVendedor')           return ok(obterPerfilVendedor_(e.parameter.codigo, e.parameter.origemImovel));
   if (acao === 'listarTriangulosOportunidade') return ok(listarTriangulosOportunidade_());
+  if (acao === 'calcularEisenhower') return ok(calcularEisenhower_(e.parameter.tipo, e.parameter.idEntidade, e.parameter.idProduto));
   if (acao === 'listarFacaHoje')              return ok(listarFacaHoje_());
   if (acao === 'listarJanelaAberta')          return ok(listarJanelaAberta_());
   if (acao === 'listarPerfisVendedor')        return ok(lerAba_('VENDEDORES_PERFIL'));
@@ -5554,7 +5555,16 @@ function parseReducoes_(rv) {
   return Array.isArray(r) ? r : [];
 }
 function fonteParaOrigemImovel_(fonte) {
-  return String(fonte) === 'REVENDA_CONSTRUTORA' ? 'REVENDAS_CONSTRUTORAS' : 'REVENDA';
+  fonte = String(fonte);
+  if (fonte === 'REVENDA_CONSTRUTORA') return 'REVENDAS_CONSTRUTORAS';
+  // LANCAMENTO (singular, valor de m.fonte em MATCHES/lancamentoParaImovel_)
+  // guarda o perfil do vendedor em VENDEDORES_PERFIL com origemImovel
+  // 'LANCAMENTOS' (plural, mesmo valor usado por abrirPvLanc_/
+  // buscarScoreVendedorPorLancamento_ em lancamentos.html) -- sem esse
+  // branch, caía no default 'REVENDA' e o Triangulo de Oportunidade nunca
+  // achava o perfil de vendedor de nenhum Lançamento.
+  if (fonte === 'LANCAMENTO') return 'LANCAMENTOS';
+  return 'REVENDA';
 }
 
 // ── Score PF ─────────────────────────────────────────────────
@@ -5919,6 +5929,20 @@ function perfilDoMatch_(m, perfisMap) {
   return perfisMap[String(m.imoCodigo || '') + '|' + ori] || null;
 }
 
+// Nível de urgência do vendedor a partir do scoreVendedor (0-100) -- mesma
+// régua já usada em 3 pontos do arquivo (listarTriangulosOportunidade_,
+// listarJanelaAberta_, calcularEisenhower_), agora centralizada aqui.
+// scoreVendedor não persiste um "urgenciaNivel" próprio em VENDEDORES_PERFIL
+// (só existe transiente na hora de salvar, ver salvarPerfilVendedor_), então
+// essa é a fonte de verdade na leitura.
+function vendedorUrgenciaNivel_(scoreVendedor) {
+  return scoreVendedor >= 70 ? 'ALTA' : scoreVendedor >= 40 ? 'MEDIA' : 'BAIXA';
+}
+function vendedorUrgenciaScore_(scoreVendedor) {
+  var nivel = vendedorUrgenciaNivel_(scoreVendedor);
+  return nivel === 'ALTA' ? 90 : nivel === 'MEDIA' ? 55 : 20;
+}
+
 function listarTriangulosOportunidade_() {
   var contatos  = lerAba_('CONTATOS');
   var matches   = lerAba_('MATCHES');
@@ -5930,7 +5954,12 @@ function listarTriangulosOportunidade_() {
   var hoje = new Date();
   var resultados = [];
 
-  var fontesValidas = ['REVENDA', 'REVENDA_CONSTRUTORA'];
+  // LANCAMENTO adicionado (2026-07) -- antes só REVENDA/REVENDA_CONSTRUTORA
+  // entravam no Triângulo de Oportunidade porque fonteParaOrigemImovel_ não
+  // sabia mapear 'LANCAMENTO' -> 'LANCAMENTOS' (caía no default 'REVENDA' e
+  // nunca achava o perfil do vendedor). Com o mapeamento corrigido, o mesmo
+  // scoreTriplo passa a valer pra Lançamentos também, sem duplicar lógica.
+  var fontesValidas = ['REVENDA', 'REVENDA_CONSTRUTORA', 'LANCAMENTO'];
   matches.forEach(function(m) {
     if (fontesValidas.indexOf(String(m.fonte)) < 0) return;
     var perfil = perfilDoMatch_(m, perfisMap);
@@ -5958,7 +5987,7 @@ function listarTriangulosOportunidade_() {
       imoCodigo: m.imoCodigo, imoTipo: m.imoTipo, imoBairro: m.imoBairro,
       imoCondominio: m.imoCondominio, imoValorVenda: m.imoValorVenda,
       imoFoto: m.imoFoto, imoUrl: m.imoUrl, fonte: m.fonte,
-      vendedorUrgenciaNivel: scoreVendedor >= 70 ? 'ALTA' : scoreVendedor >= 40 ? 'MEDIA' : 'BAIXA',
+      vendedorUrgenciaNivel: vendedorUrgenciaNivel_(scoreVendedor),
       diasNaMercado: parseInt(perfil.diasNaMercado) || 0,
       margemEstimada: perfil.margemEstimada,
       aceitaFGTS: perfil.aceitaFGTS, aceitaPermuta: perfil.aceitaPermuta,
@@ -5970,6 +5999,84 @@ function listarTriangulosOportunidade_() {
 
   resultados.sort(function(a, b) { return b.scoreTriplo - a.scoreTriplo; });
   return resultados.slice(0, 10);
+}
+
+// ── EISENHOWER — classificação de atenção (2026-07) ───────────────────────
+// Não recalcula nenhum score de base: só combina o que já existe (score do
+// cliente, scoreMatch, scoreVendedor, urgência do comprador) em 2 eixos
+// (Importância/Urgência) e devolve um quadrante. Ver MATRIZ_EISENHOWER_5D no
+// estudo do usuário -- essa é a primeira fatia (dimensões Cliente/Produto/
+// Vendedor); Lead e Corretor ainda não têm dado suficiente pra entrar aqui
+// (leads não passam por rodarMatching(), corretor não tem check-in ainda).
+//
+// tipo: só 'CLIENTE' implementado por enquanto (idEntidade = idCliente de
+// CONTATOS, idProduto = imoCodigo de MATCHES -- idLancamento ou código de
+// revenda, tanto faz, MATCHES já guarda os dois tipos numa linha).
+var EISENHOWER_LIMIAR = 70;
+var EISENHOWER_PESOS_IMPORTANCIA = { cliente: 0.40, produto: 0.35, vendedor: 0.25 };
+var EISENHOWER_PESOS_URGENCIA    = { comprador: 0.65, vendedor: 0.35 };
+
+function calcularEisenhower_(tipo, idEntidade, idProduto) {
+  tipo = String(tipo || '').toUpperCase();
+  if (tipo === 'LEAD') {
+    return { ok: false, erro: 'leads ainda não entram no motor de matching -- ver rodarMatching()' };
+  }
+  if (tipo !== 'CLIENTE') {
+    return { ok: false, erro: 'tipo inválido (use CLIENTE -- LEAD ainda não suportado)' };
+  }
+  if (!idEntidade || !idProduto) return { ok: false, erro: 'idEntidade e idProduto são obrigatórios' };
+
+  var contatos = lerAba_('CONTATOS');
+  var contato = null;
+  for (var i = 0; i < contatos.length; i++) {
+    if (String(contatos[i].idCliente || '') === String(idEntidade)) { contato = contatos[i]; break; }
+  }
+  if (!contato) return { ok: false, erro: 'cliente não encontrado em CONTATOS' };
+
+  var matches = lerAba_('MATCHES');
+  var match = null;
+  for (var j = 0; j < matches.length; j++) {
+    if (String(matches[j].cliCodigo || '') === String(idEntidade) && String(matches[j].imoCodigo || '') === String(idProduto)) {
+      match = matches[j]; break;
+    }
+  }
+  if (!match) return { ok: false, erro: 'não há match calculado para esse par cliente/produto -- rode rodarMatching()' };
+
+  var perfisMap     = construirPerfisMap_();
+  var perfil        = perfilDoMatch_(match, perfisMap);
+  var scoreVendedor = perfil ? (parseInt(perfil.scoreVendedor) || 0) : null;
+  if (scoreVendedor === null) {
+    return { ok: false, erro: 'sem perfil de vendedor cadastrado para esse produto' };
+  }
+
+  var scoreMatch    = parseInt(match.scoreMatch) || 0;
+  var scoreCliente  = parseInt(contato.score) || 0;
+  var urgenciaTexto = String(contato.urgencia || '');
+  var urgComprador  = urgenciaCompradorParaScore_(urgenciaTexto);
+  var urgVendedor   = vendedorUrgenciaScore_(scoreVendedor);
+  var scoreTriplo   = calcularScoreTriplo_(scoreMatch, scoreVendedor, urgComprador);
+
+  var pi = EISENHOWER_PESOS_IMPORTANCIA, pu = EISENHOWER_PESOS_URGENCIA;
+  var importancia = Math.round(scoreCliente * pi.cliente + scoreMatch * pi.produto + scoreVendedor * pi.vendedor);
+  var urgencia    = Math.round(urgComprador * pu.comprador + urgVendedor * pu.vendedor);
+
+  var quadrante =
+    importancia >= EISENHOWER_LIMIAR && urgencia >= EISENHOWER_LIMIAR ? 'FAZER_AGORA' :
+    importancia >= EISENHOWER_LIMIAR                                  ? 'AGENDAR'     :
+    urgencia    >= EISENHOWER_LIMIAR                                  ? 'DELEGAR'     :
+                                                                          'ELIMINAR';
+
+  return {
+    ok: true, tipo: 'CLIENTE', idEntidade: String(idEntidade), idProduto: String(idProduto),
+    fonte: match.fonte, importancia: importancia, urgencia: urgencia, quadrante: quadrante,
+    scoreTriplo: scoreTriplo,
+    detalhes: {
+      scoreCliente: scoreCliente, scoreMatch: scoreMatch, scoreVendedor: scoreVendedor,
+      urgenciaComprador: urgComprador, urgenciaTextoComprador: urgenciaTexto,
+      urgenciaVendedorScore: urgVendedor, urgenciaVendedorNivel: vendedorUrgenciaNivel_(scoreVendedor),
+      categoriaVendedor: perfil.categoriaVendedor
+    }
+  };
 }
 
 function listarFacaHoje_() {
@@ -6058,7 +6165,7 @@ function listarJanelaAberta_() {
       codigo: codigo, tipo: tipo, bairro: bairro, condominio: condominio,
       valorVenda: valorVenda, foto: foto, diasEntrou: diasEntrou, fonte: fonteStr,
       scoreVendedor: sv,
-      urgenciaNivel: sv !== null ? (sv >= 70 ? 'ALTA' : sv >= 40 ? 'MEDIA' : 'BAIXA') : null,
+      urgenciaNivel: sv !== null ? vendedorUrgenciaNivel_(sv) : null,
       categoriaVendedor: p ? p.categoriaVendedor : null,
       margemEstimada: p ? p.margemEstimada : null,
       aceitaFGTS: p ? p.aceitaFGTS : null,
