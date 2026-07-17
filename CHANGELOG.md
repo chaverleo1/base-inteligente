@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 50) — Botão "🖨️ PDF" imprime a lista ativa em paisagem
+
+Pedido do usuário: um botão pra imprimir/gerar PDF da lista que estiver ativa no momento (cards ou
+Mapa Geral), em modo paisagem.
+
+Botão "🖨️ PDF" adicionado ao lado das abas (sempre visível), chama `imprimirListaAtiva_()` — abre o
+diálogo de impressão nativo do navegador (`window.print()`), onde "Salvar como PDF" já é uma das
+impressoras disponíveis por padrão em qualquer navegador moderno, sem precisar de biblioteca extra de
+geração de PDF no cliente.
+
+**"A lista que estiver ativa" acontece de graça**: cada aba já se controla via `style.display` inline
+(`mudarAbaLancamentos`), então a aba inativa já não está no fluxo do documento — o CSS de
+`@media print` só precisa esconder o chrome (header, barra de abas, filtros, botões de ação de cada
+card) e o que sobra é exatamente a lista visível na tela.
+
+**Paisagem**: `@page { size: landscape; margin: 10mm; }` — pedido de orientação direto no CSS, o
+navegador honra por padrão no diálogo de impressão (usuário ainda pode trocar se quiser).
+
+Guarda-corrimão: clicar em "🖨️ PDF" nas abas "Novo Lançamento"/"Outros" (que são formulários, não
+listas) mostra um toast pedindo pra abrir uma aba de lista primeiro, em vez de imprimir um formulário
+vazio sem sentido.
+
+Testado ao vivo no navegador: botão presente, bloqueio correto fora das abas de lista,
+`window.print()` disparado nas abas Lista/Mapa, e as regras `@page`/`@media print` confirmadas
+carregadas no stylesheet do navegador.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 49) — Nova aba "Mapa Geral": tabela compacta de todos os lançamentos
 
 Pedido do usuário: em Lançamentos, uma nova aba "Mapa Geral" (depois de "Outros") listando todos os
