@@ -809,10 +809,14 @@ function extrairBloco1(txt) {
       if (tipoTextoBruto.indexOf(key) >= 0) { b.tipo = TIPO_MAP[key]; break; }
     }
   }
-  // Mesma checagem em cima do texto bruto inteiro — "terreno" às vezes aparece
-  // só em "Outras informações"/no corpo do anúncio, fora da seção "Tipologias
-  // disponíveis" (que pode nem existir no texto colado).
-  if (b.tipo !== 'Lote Condomínio Horizontal' && /\bterreno\b/i.test(txt)) {
+  // Mesma checagem em cima do texto bruto inteiro — só entra como FALLBACK
+  // quando "Tipologias disponíveis" não achou nada (b.tipo ainda vazio).
+  // Antes rodava incondicionalmente e SOBRESCREVIA um tipo já detectado
+  // corretamente (ex: "Apartamento") — bug real: a Orulo sempre lista "Área
+  // do Terreno: -" em "Outras informações", inclusive em prédio vertical, e
+  // isso sozinho já disparava \bterreno\b e virava "Lote Condomínio
+  // Horizontal" por engano.
+  if (!b.tipo && /\bterreno\b/i.test(txt)) {
     b.tipo = 'Lote Condomínio Horizontal';
   }
 
@@ -828,6 +832,17 @@ function extrairBloco1(txt) {
     'Terreno': 'Condomínio Horizontal', 'Lote Condomínio Horizontal': 'Condomínio Horizontal',
   };
   if (b.tipo && TIPO_EMPREENDIMENTO_MAP[b.tipo]) b.tipoEmpreendimento = TIPO_EMPREENDIMENTO_MAP[b.tipo];
+
+  // "Unidades por andar: N" (Orulo, "Outras informações") só existe em
+  // prédio com pavimentos — sinal forte e inequívoco de Condomínio Vertical.
+  // Roda DEPOIS do bloco acima de propósito: corrige tipo/tipoEmpreendimento
+  // mesmo se algo antes (ex: o fallback de "terreno") tiver errado, sem
+  // precisar confiar só numa única fonte de sinal.
+  const unidPorAndarM = txt.match(/Unidades\s+por\s+andar:\s*(\d+)/i);
+  if (unidPorAndarM && parseInt(unidPorAndarM[1], 10) > 0) {
+    b.tipoEmpreendimento = 'Condomínio Vertical';
+    if (!b.tipo || b.tipo === 'Lote Condomínio Horizontal') b.tipo = 'Apartamento';
+  }
 
   // ── Padrão ── definido depois em atualizarResumoEPadrao(), a partir do
   // Metro Quadrado Médio calculado com as tipologias do Bloco 2 (só

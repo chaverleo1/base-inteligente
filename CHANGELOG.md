@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 46) — Corrige extração "Tipo de Imóvel"/"Tipo de Empreendimento" errados na colagem da Orulo
+
+Bug reportado pelo usuário: colando o texto padrão de uma página da Orulo (aba "Novo Lançamento",
+Bloco 1), um prédio de apartamento vertical (ex: Louvre du Parc) vinha extraído como "Tipo de Imóvel"
+errado e "Tipo de Empreendimento" = Horizontal, quando deveria ser Apartamento / Condomínio Vertical.
+
+**Causa raiz**: o fallback `/\bterreno\b/i.test(txt)` rodava em cima do texto colado inteiro e
+**sobrescrevia** um tipo já detectado corretamente pela seção "Tipologias disponíveis" — toda página da
+Orulo lista `Área do Terreno: -` em "Outras informações" (metadado genérico, presente até em prédio
+vertical), e isso sozinho já disparava o fallback e virava "Lote Condomínio Horizontal" por engano.
+
+**Correções** (`extrairBloco1`, `lancamentos.html`):
+1. O fallback de terreno agora só roda quando `Tipologias disponíveis` não achou nada (`!b.tipo`), em
+   vez de sempre — deixa de sobrescrever um tipo já corretamente identificado.
+2. **Novo sinal de reforço**: `Unidades por andar: N` (Orulo, "Outras informações") só existe em
+   prédio com pavimentos — sinal forte e inequívoco de Condomínio Vertical. Quando presente com N>0,
+   força `tipoEmpreendimento = 'Condomínio Vertical'` e corrige `tipo` pra Apartamento se ainda estiver
+   vazio ou tiver caído no fallback de Lote por engano — dupla proteção mesmo que outro sinal falhe.
+
+**"Data de Lançamento"**: já existia (campo `f-dataLancamento` + regex `Lançamento: DD/MM/AAAA`) —
+conferido contra o texto exato que o usuário colou, capturando "01/09/2025" corretamente. Nenhuma
+mudança necessária nessa parte, só confirmação.
+
+Testado em Node com o texto exato colado pelo usuário (Louvre du Parc): tipo, tipoEmpreendimento,
+dataLancamento, nome, construtora, estoque e totalUnidades todos corretos. Regressão testada: um Lote
+genuíno (Tipologias = "Lote") continua classificado como Lote Condomínio Horizontal; um texto sem seção
+"Tipologias disponíveis" que menciona "terreno" em prosa ainda cai no fallback original.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 45) — Matriz de Eisenhower: calcularEisenhower_ + Triângulo de Oportunidade estendido a Lançamentos
 
 Primeiros 2 itens da proposta da Matriz de Eisenhower (5 dimensões — Lead/Cliente/Produto/Vendedor/
