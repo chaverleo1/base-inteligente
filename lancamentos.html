@@ -2120,15 +2120,25 @@ function renderMapaEstagioFiltros_() {
   const bar = document.getElementById('mapa-estagio-filtros');
   if (!bar) return;
   const total = _mapaRows.length;
+  if (!total) { bar.innerHTML = ''; return; }
   const estagios = [...new Set(_mapaRows.map(r => r.estagio).filter(e => e && e !== '—'))];
-  bar.innerHTML = estagios.map(es => {
+  const todosOn = _mapaEstagiosAtivos.size === 0;
+  let html = `<button type="button" class="filtro-chip${todosOn ? ' on' : ''}" onclick="limparMapaEstagioFiltro_()">Todos (${total}|100%)</button>`;
+  html += estagios.map(es => {
     const qtd = _mapaRows.filter(r => r.estagio === es).length;
-    const pct = total ? Math.round((qtd / total) * 100) : 0;
+    const pct = Math.round((qtd / total) * 100);
     return `
     <button type="button" class="filtro-chip${_mapaEstagiosAtivos.has(es) ? ' on' : ''}"
-      onclick="toggleMapaEstagioFiltro_('${es.replace(/'/g,"\\'")}')">${es} (${pct}%)</button>
+      onclick="toggleMapaEstagioFiltro_('${es.replace(/'/g,"\\'")}')">${es} (${qtd}|${pct}%)</button>
   `;
   }).join('');
+  bar.innerHTML = html;
+}
+
+function limparMapaEstagioFiltro_() {
+  _mapaEstagiosAtivos = new Set();
+  renderMapaEstagioFiltros_();
+  renderMapaGeral_();
 }
 
 function toggleMapaEstagioFiltro_(estagio) {

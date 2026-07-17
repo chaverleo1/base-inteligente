@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 54) — Botão "Todos" + quantitativo|percentual nos botões de Estágio
+
+Pedido do usuário: acrescentar um botão "Todos" na barra de Estágio, e mostrar em todos os botões o
+total quantitativo junto do percentual (formato "quantidade|%").
+
+**Botão "Todos"**: primeiro botão da barra, mesmo padrão do filtro de status já existente na lista de
+cards (fica "on" quando nenhum Estágio individual está selecionado, clicar limpa qualquer seleção
+ativa via `limparMapaEstagioFiltro_()`). Mostra "Todos (N|100%)", N = total de empreendimentos.
+
+**Formato dos botões de Estágio**: mudou de "Nome (pct%)" pra "Nome (qtd|pct%)" — mesma convenção de
+separador `|` já usada no quadrado [T|V] dos cards de Score de Tração. Ex: "Em obras (12|50%)".
+
+Percentual sempre calculado sobre o TOTAL geral, não sobre o resultado já filtrado — continua correto
+com qualquer combinação de Estágios ligados.
+
+Testado em Node: botão "Todos" presente e com contagem/percentual corretos, fica "on" no estado
+inicial (nenhum Estágio individual fica), cada botão mostra "qtd|pct%", clicar em "Todos" zera a
+seleção e volta a mostrar tudo. Verificação ao vivo no navegador não foi possível nesta rodada — a
+ferramenta de browser ficou temporariamente indisponível; vale conferir visualmente na tela.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 53) — Botões de Estágio mostram o % de cada um
 
 Pedido do usuário: os botões de Estágio (Mapa Geral) devem mostrar o percentual quantitativo de cada
