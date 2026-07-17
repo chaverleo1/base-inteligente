@@ -244,6 +244,24 @@ select.form-input option { background: var(--surface2); }
 
 .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 
+/* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ── */
+.mapa-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.mapa-tabela { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+.mapa-tabela th, .mapa-tabela td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.mapa-tabela th { background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .03em; cursor: pointer; user-select: none; position: sticky; top: 0; }
+.mapa-tabela th:hover { color: var(--text); }
+.mapa-seta { display: inline-block; font-size: 9px; margin-left: 3px; color: var(--text3); }
+.mapa-seta.on { color: var(--accent); }
+.mapa-tabela tbody tr { cursor: pointer; }
+.mapa-tabela tbody tr:hover { background: var(--surface2); }
+.mapa-tabela td.mapa-num { font-variant-numeric: tabular-nums; }
+.mapa-tabela .badge-vendido { padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.mapa-alerta { font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+.mapa-alerta-positivo { background: rgba(0,212,170,.14); color: var(--accent2); }
+.mapa-alerta-negativo { background: rgba(255,90,90,.14); color: var(--danger); }
+.mapa-vazio { text-align: center; color: var(--text3); padding: 24px 0 !important; }
+
 /* ── CARD EMPREENDIMENTO ── */
 .emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
 .emp-card:hover { border-color: var(--border2); }
@@ -380,6 +398,7 @@ select.form-input option { background: var(--surface2); }
     <button class="lanc-tab active" id="tabBtnLista" onclick="mudarAbaLancamentos('lista')">Empreendimentos Cadastrados</button>
     <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Novo Lançamento</button>
     <button class="lanc-tab" id="tabBtnOutros" onclick="mudarAbaLancamentos('outros')">Outros</button>
+    <button class="lanc-tab" id="tabBtnMapa" onclick="mudarAbaLancamentos('mapa')">Mapa Geral</button>
   </div>
 
   <!-- MOTOR -->
@@ -596,6 +615,33 @@ select.form-input option { background: var(--surface2); }
       <button class="btn-sec" onclick="document.getElementById('txtOutros').value=''">✕ Limpar</button>
       <span class="motor-hint">Extrai pro mesmo formulário de revisão da aba "Novo Lançamento".</span>
     </div>
+  </div>
+  </div>
+
+  <!-- MAPA GERAL -->
+  <div id="tabPainelMapa" class="tab-panel" style="display:none">
+  <div class="sec-header">
+    <div class="sec-title">Mapa Geral</div>
+    <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique numa coluna pra ordenar, clique numa linha pra editar.</div>
+  </div>
+  <div class="mapa-wrap">
+    <table class="mapa-tabela">
+      <thead>
+        <tr>
+          <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
+          <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
+          <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
+          <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
+          <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
+          <th onclick="ordenarMapaGeral_('vendido')">% Estoque / Estoque<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
+          <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
+          <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
+        </tr>
+      </thead>
+      <tbody id="mapa-tbody">
+        <tr><td colspan="8" class="mapa-vazio">Carregando...</td></tr>
+      </tbody>
+    </table>
   </div>
   </div>
 
@@ -1170,9 +1216,11 @@ function mudarAbaLancamentos(nome) {
   document.getElementById('tabPainelLista').style.display  = nome === 'lista'  ? '' : 'none';
   document.getElementById('tabPainelNovo').style.display   = nome === 'novo'   ? '' : 'none';
   document.getElementById('tabPainelOutros').style.display = nome === 'outros' ? '' : 'none';
+  document.getElementById('tabPainelMapa').style.display   = nome === 'mapa'   ? '' : 'none';
   document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
   document.getElementById('tabBtnNovo').classList.toggle('active', nome === 'novo');
   document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
+  document.getElementById('tabBtnMapa').classList.toggle('active', nome === 'mapa');
 }
 
 function extrairDados() {
@@ -1798,6 +1846,7 @@ async function salvarLancamento() {
 
 // ─── CARREGAR LISTA ───────────────────────────────────────────────────────────
 let _todos = [], _filtroStatus = '', _emps = [];
+let _mapaRows = [], _mapaSort = { campo: null, dir: 'desc' };
 
 async function carregarLancamentos() {
   try {
@@ -1806,7 +1855,13 @@ async function carregarLancamentos() {
     if (trataNaoAutenticado(json)) return;
     _todos = json.lancamentos || [];
     renderFiltros();
-    await renderLista(_todos);
+    // Busca o score de vendedor UMA vez só e reaproveita tanto na lista de
+    // cards (que pode vir filtrada por status, ver setFiltro) quanto no Mapa
+    // Geral (sempre TODOS os lançamentos, sem filtro — evita 2 fetches
+    // redundantes no carregamento inicial da página).
+    const mapaScoreVendedor = await buscarScoreVendedorPorLancamento_();
+    await renderLista(_todos, mapaScoreVendedor);
+    atualizarMapaGeral_(_todos, mapaScoreVendedor);
   } catch {
     document.getElementById('lista-grid').innerHTML =
       '<div class="vazio"><h3>Erro ao carregar</h3><p>Verifique a conexão com o Apps Script.<br>O backend precisa ter a rota <code>listar_lancamentos</code> implantada.</p></div>';
@@ -1836,7 +1891,22 @@ function setFiltro(s) {
   renderLista(s ? _todos.filter(l => l.status === s) : _todos);
 }
 
-async function renderLista(lista) {
+// Agrupa linhas cruas (uma por unidade/tipologia, como vem de
+// listar_lancamentos) por idLancamento — cada empreendimento vira 1 objeto
+// com um array `unidades`. Compartilhado por renderLista (cards) e
+// atualizarMapaGeral_ (tabela), que precisam do mesmo agrupamento mas
+// renderizam formatos diferentes.
+function agruparPorEmpreendimento_(lista) {
+  const mapa = {};
+  for (const l of lista) {
+    const key = l.idLancamento || l.nomeEmpreendimento;
+    if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
+    mapa[key].unidades.push(l);
+  }
+  return Object.values(mapa);
+}
+
+async function renderLista(lista, mapaScoreVendedorParam) {
   const grid = document.getElementById('lista-grid');
   const cnt  = document.getElementById('lista-count');
 
@@ -1846,22 +1916,17 @@ async function renderLista(lista) {
     return;
   }
 
-  // Agrupar por idLancamento
-  const mapa = {};
-  for (const l of lista) {
-    const key = l.idLancamento || l.nomeEmpreendimento;
-    if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
-    mapa[key].unidades.push(l);
-  }
-  const empsBrutos = Object.values(mapa);
+  const empsBrutos = agruparPorEmpreendimento_(lista);
   cnt.innerHTML = `<b>${empsBrutos.length}</b> empreendimento${empsBrutos.length !== 1 ? 's' : ''}`;
 
   // Score de Tração (com o eixo Vendedor buscado em lote) precisa estar
   // pronto ANTES de ordenar — a nova ordem depende dele (ver abaixo), ao
   // contrário do sort antigo por m² médio, que não precisava de nada
   // assíncrono. `scored` já traz `s.e` apontando de volta pro empreendimento
-  // bruto correspondente.
-  const mapaScoreVendedor = await buscarScoreVendedorPorLancamento_();
+  // bruto correspondente. mapaScoreVendedorParam vem já buscado por
+  // carregarLancamentos() (evita refetch); setFiltro() não passa nada, cai
+  // no fetch próprio.
+  const mapaScoreVendedor = mapaScoreVendedorParam || await buscarScoreVendedorPorLancamento_();
   const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor);
   scored.forEach(s => { s.alerta = calcularAlertaTracao_(s); });
 
@@ -1947,6 +2012,118 @@ async function renderLista(lista) {
     </div>`;
   }).join('');
   carregarPvBadgesLanc_();
+}
+
+// ── MAPA GERAL — tabela compacta com TODOS os lançamentos, sem filtro de
+// status (diferente da lista de cards, que respeita o filtro-bar) ─────────
+// Reaproveita o mesmo Score de Tração/Alertas de Tração já usados nos
+// cards (calcularScoreTracao/calcularAlertaTracao_) — nenhum critério novo,
+// só uma segunda forma de visualizar o mesmo dado, lado a lado numa tabela.
+const MAPA_ESTAGIO_ORDEM_ = { 'Em planta': 1, 'Em obras': 2, 'Pronto': 3, 'Pronto novo': 3, 'Entregue': 4 };
+
+function atualizarMapaGeral_(lista, mapaScoreVendedorParam) {
+  if (!lista.length) {
+    _mapaRows = [];
+    renderMapaGeral_();
+    return;
+  }
+  const empsBrutos = agruparPorEmpreendimento_(lista);
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedorParam || {});
+  scored.forEach(s => { s.alerta = calcularAlertaTracao_(s); });
+
+  _mapaRows = scored.map(s => {
+    const e = s.e;
+    const areas  = e.unidades.map(u => Number(u.areaUtil) || Number(u.areaTerr) || 0).filter(v => v > 0);
+    const precos = e.unidades.map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+    return {
+      e,
+      nome: e.nomeEmpreendimento || '—',
+      construtora: e.construtora || '—',
+      areaMin: areas.length ? Math.min(...areas) : 0,
+      areaMax: areas.length ? Math.max(...areas) : 0,
+      menorPreco: precos.length ? Math.min(...precos) : 0,
+      m2Medio: calcularM2Medio(e.unidades) || 0,
+      pctVendido: calcularPercentualVendido(e.estoque, e.totalUnidades),
+      estoque: parseInt(e.estoque, 10) || 0,
+      estagio: e.status || '—',
+      estagioOrd: MAPA_ESTAGIO_ORDEM_[e.status] || 0,
+      alerta: s.alerta,
+      alertaRank: s.alerta ? (s.alerta.tipo === 'positivo' ? 2 : 1) : 0,
+    };
+  });
+  renderMapaGeral_();
+}
+
+function mapaCampoValor_(r, campo) {
+  if (campo === 'nome')        return r.nome.toLowerCase();
+  if (campo === 'construtora') return r.construtora.toLowerCase();
+  if (campo === 'area')        return r.areaMin;
+  if (campo === 'preco')       return r.menorPreco;
+  if (campo === 'm2')          return r.m2Medio;
+  if (campo === 'vendido')     return r.pctVendido == null ? -1 : r.pctVendido;
+  if (campo === 'estagio')     return r.estagioOrd;
+  if (campo === 'alerta')      return r.alertaRank;
+  return 0;
+}
+
+function ordenarMapaGeral_(campo) {
+  _mapaSort = _mapaSort.campo === campo
+    ? { campo, dir: _mapaSort.dir === 'desc' ? 'asc' : 'desc' }
+    : { campo, dir: 'desc' };
+  renderMapaGeral_();
+}
+
+function editarEmpMapa_(i) {
+  const r = _mapaRows[i];
+  if (!r) return;
+  sessionStorage.setItem('bi_edit_lancamento', JSON.stringify(r.e));
+  window.location.href = 'lancamentos-editar.html';
+}
+
+function renderMapaGeral_() {
+  const tbody = document.getElementById('mapa-tbody');
+  if (!tbody) return;
+
+  if (!_mapaRows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    atualizarSetasMapaGeral_();
+    return;
+  }
+
+  let linhas = _mapaRows.map((r, i) => ({ r, i }));
+  if (_mapaSort.campo) {
+    const mult = _mapaSort.dir === 'desc' ? -1 : 1;
+    linhas.sort((a, b) => {
+      const va = mapaCampoValor_(a.r, _mapaSort.campo), vb = mapaCampoValor_(b.r, _mapaSort.campo);
+      if (va < vb) return -1 * mult;
+      if (va > vb) return 1 * mult;
+      return 0;
+    });
+  }
+
+  tbody.innerHTML = linhas.map(({ r, i }) => `
+    <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar">
+      <td>${r.nome}</td>
+      <td>${r.construtora}</td>
+      <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
+      <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
+      <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
+      <td class="mapa-num">${badgeVendidoHTML(r.pctVendido, r.estoque) || '—'}</td>
+      <td>${r.estagio}</td>
+      <td>${r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
+    </tr>`).join('');
+
+  atualizarSetasMapaGeral_();
+}
+
+function atualizarSetasMapaGeral_() {
+  ['nome','construtora','area','preco','m2','vendido','estagio','alerta'].forEach(campo => {
+    const el = document.getElementById('seta-mapa-' + campo);
+    if (!el) return;
+    if (_mapaSort.campo !== campo) { el.textContent = '▾'; el.classList.remove('on'); return; }
+    el.textContent = _mapaSort.dir === 'desc' ? '▾' : '▴';
+    el.classList.add('on');
+  });
 }
 
 function abrirPvLanc(btn, idLancamento, label, idx) {

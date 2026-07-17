@@ -1,5 +1,38 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 49) — Nova aba "Mapa Geral": tabela compacta de todos os lançamentos
+
+Pedido do usuário: em Lançamentos, uma nova aba "Mapa Geral" (depois de "Outros") listando todos os
+empreendimentos cadastrados em formato de tabela — colunas Construtora, Faixa de áreas, Menor preço,
+R$/m², %Estoque/Estoque, Estágio, Alerta — cada coluna com seta de ordenação, espaçamento otimizado
+(resumido).
+
+**Coluna extra**: adicionei "Empreendimento" (nome) como primeira coluna, não pedida explicitamente —
+sem ela, várias linhas da mesma construtora ficariam indistinguíveis. Removível se não for útil.
+
+Reaproveita 100% do que já existe, nenhum critério novo: mesmo Score de Tração/Alertas de Tração dos
+cards (`calcularScoreTracao`/`calcularAlertaTracao_`), mesmo badge `%|estoque` (`badgeVendidoHTML`),
+mesma faixa de área/menor preço/m² médio do painel resumo (`calcularM2Medio`). É só uma segunda forma
+de visualizar o mesmo dado, lado a lado numa tabela em vez de cards.
+
+**Diferente da lista de cards**: Mapa Geral sempre mostra TODOS os lançamentos, sem respeitar o filtro
+de status da aba "Empreendimentos Cadastrados" — por isso a busca do score de vendedor foi movida pra
+`carregarLancamentos()` (buscada uma vez só, compartilhada entre `renderLista` e o novo
+`atualizarMapaGeral_`, evitando 2 fetches redundantes no carregamento inicial).
+
+**Ordenação**: clique numa coluna ordena descendente (maior→menor / Z→A) na primeira vez, ascendente
+na segunda — funciona em todas as 8 colunas, inclusive Estágio (ordem de progresso: planta→obras→
+pronto→entregue) e Alerta (positivo→negativo→sem alerta), não só as numéricas. Seta muda de direção
+(▾/▴) e fica destacada na coluna ativa.
+
+Clique numa linha abre a Editar do empreendimento (mesmo destino do botão "✏️ Editar" dos cards).
+
+Testado em Node (agrupamento por idLancamento, cálculo de cada coluna, ordenação nas 8 colunas, ida e
+volta desc/asc) e ao vivo no navegador (troca de aba, render da tabela com dado real formatado,
+clique em coluna alternando a ordem, seta mudando de direção).
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 48) — "Prazo máximo (meses)" calculado automaticamente na extração
 
 Pedido do usuário: na aba "Novo Lançamento", calcular o campo "Prazo máximo (meses)" automaticamente
