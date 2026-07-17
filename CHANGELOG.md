@@ -1,5 +1,20 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 53) — Botões de Estágio mostram o % de cada um
+
+Pedido do usuário: os botões de Estágio (Mapa Geral) devem mostrar o percentual quantitativo de cada
+um — ex: "Em obras (50%)".
+
+`renderMapaEstagioFiltros_` agora calcula, pra cada Estágio, quantos empreendimentos têm aquele
+Estágio sobre o total carregado em `_mapaRows`, e mostra o percentual arredondado no próprio botão.
+Recalcula sozinho a cada `atualizarMapaGeral_` (dado novo) e continua correto com o filtro
+ligado/desligado, já que a % é sempre sobre o total, não sobre o resultado já filtrado.
+
+Testado ao vivo no navegador: 4 empreendimentos (2 Em obras, 1 Pronto, 1 Entregue) geram
+"Em obras (50%)", "Pronto (25%)", "Entregue (25%)" corretamente.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 52) — Botões de Estágio e PDF movidos pra dentro da aba Mapa Geral, compactos
 
 Pedido do usuário: os botões de Estágio (ao lado do título) e o "🖨️ PDF" (na barra de abas, sempre

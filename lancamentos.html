@@ -2119,11 +2119,16 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam) {
 function renderMapaEstagioFiltros_() {
   const bar = document.getElementById('mapa-estagio-filtros');
   if (!bar) return;
+  const total = _mapaRows.length;
   const estagios = [...new Set(_mapaRows.map(r => r.estagio).filter(e => e && e !== '—'))];
-  bar.innerHTML = estagios.map(es => `
+  bar.innerHTML = estagios.map(es => {
+    const qtd = _mapaRows.filter(r => r.estagio === es).length;
+    const pct = total ? Math.round((qtd / total) * 100) : 0;
+    return `
     <button type="button" class="filtro-chip${_mapaEstagiosAtivos.has(es) ? ' on' : ''}"
-      onclick="toggleMapaEstagioFiltro_('${es.replace(/'/g,"\\'")}')">${es}</button>
-  `).join('');
+      onclick="toggleMapaEstagioFiltro_('${es.replace(/'/g,"\\'")}')">${es} (${pct}%)</button>
+  `;
+  }).join('');
 }
 
 function toggleMapaEstagioFiltro_(estagio) {
