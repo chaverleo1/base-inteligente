@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 52) — Botões de Estágio e PDF movidos pra dentro da aba Mapa Geral, compactos
+
+Pedido do usuário: os botões de Estágio (ao lado do título) e o "🖨️ PDF" (na barra de abas, sempre
+visível) deviam aparecer só na aba "Mapa Geral", logo abaixo da linha de descrição, com altura
+reduzida.
+
+**Antes**: PDF ficava fixo na barra de abas (visível em todas as 4 abas, mesmo Novo Lançamento/Outros
+onde não fazia sentido); Estágio ficava ao lado do título "Mapa Geral".
+
+**Agora**: os dois vivem juntos numa nova `.mapa-toolbar`, dentro do `sec-header` da aba Mapa Geral,
+logo depois da linha "Todos os lançamentos cadastrados lado a lado — clique numa coluna pra
+ordenar...". Botões bem mais baixos que o padrão do resto da tela (padding vertical 3px, contra 10px
+antes). A barra de abas voltou a ser só os 4 botões de aba, sem nada mais junto.
+
+`@media print` atualizado pra esconder `.mapa-toolbar` (não faz sentido a barra de filtro/PDF aparecer
+no papel) em vez do wrapper antigo `.lanc-tabs-row`, que deixou de existir.
+
+Testado ao vivo no navegador: só existe 1 botão PDF na página inteira, e ele — junto com os botões de
+Estágio — só existe dentro de `#tabPainelMapa`; ordem confirmada (título → descrição → barra de
+ferramentas); altura reduzida confirmada (3px de padding); e ambos continuam funcionando
+(`imprimirListaAtiva_`/`toggleMapaEstagioFiltro_`) depois da mudança de posição.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 51) — Mapa Geral: filtro de Estágio multi-seleção ao lado do título
 
 Pedido do usuário: botões de Estágio ao lado do título "Mapa Geral", múltipla escolha — clicar
