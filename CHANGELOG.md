@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 48) — "Prazo máximo (meses)" calculado automaticamente na extração
+
+Pedido do usuário: na aba "Novo Lançamento", calcular o campo "Prazo máximo (meses)" automaticamente
+como a diferença entre a data atual e a "Data de entrega" extraída — antes esse campo nem existia
+nessa aba (só existia em `lancamentos-editar.html`, calculado a partir de "Financiamento em", um campo
+diferente), então todo lançamento novo nascia sem prazo até alguém abrir a Editar manualmente. Isso
+deixava o eixo "Prazo de Pgt" do Score de Tração e os 3 cenários de Alertas de Tração sem dado logo
+na criação.
+
+**Campo novo**: "Prazo máximo (meses)" adicionado ao formulário da aba "Novo Lançamento", ao lado de
+"Previsão de entrega" — mesmo padrão visual dos demais campos, continua editável manualmente depois.
+
+**`calcularMesesAteEntrega_(previsaoEntrega)`** — calcula a diferença em meses (só ano/mês, mesma
+granularidade do cálculo equivalente em `lancamentos-editar.html`/`calcularPrazoMaximoAuto`, que usa
+"Financiamento em" como origem) entre hoje e a data extraída. Aceita os 2 formatos que a extração pode
+gerar pra "Previsão de entrega": `DD/MM/AAAA` (Orulo, ex: "31/12/2028") e `mês/AAAA` (fallback
+genérico, ex: "dez/2026", "dezembro de 2026"). Data no passado clampa em 0.
+
+Roda automaticamente logo após a extração (dentro de `renderB1`) e de novo sempre que o usuário editar
+"Previsão de entrega" manualmente (`onchange`) — cobre tanto o texto colado quanto uma correção manual
+depois, sem exigir que o usuário abra a Editar só pra preencher esse campo.
+
+Testado em Node: os 2 formatos de data, data passada (clampa em 0), entrada vazia/inválida (retorna
+null, não sobrescreve o campo), e o fluxo de integração completo (texto da Orulo colado → extração →
+campo preenchido automaticamente → edição manual da entrega recalcula).
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 47) — Excluir imóvel remove o perfil de vendedor vinculado
 
 Bug reportado pelo usuário: excluiu um lançamento já cadastrado, recadastrou com o mesmo nome, e o

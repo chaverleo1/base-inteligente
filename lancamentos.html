@@ -498,7 +498,11 @@ select.form-input option { background: var(--surface2); }
         </div>
         <div class="form-group">
           <div class="form-label">Previsão de entrega</div>
-          <input class="form-input" id="f-entrega" placeholder="Ex: Dez/2026">
+          <input class="form-input" id="f-entrega" placeholder="Ex: Dez/2026" onchange="preencherPrazoMaximoAuto_()">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Prazo máximo (meses)</div>
+          <input class="form-input" id="f-prazoMaximo" type="number" min="0" placeholder="Ex: 30">
         </div>
         <div class="form-group">
           <div class="form-label">Estoque</div>
@@ -1499,6 +1503,40 @@ function extrairOutros() {
   }, 80);
 }
 
+// "Prazo máximo (meses)" — calculado automaticamente a partir da "Previsão
+// de entrega" (diferença em meses entre hoje e a data de entrega, só
+// ano/mês, mesma granularidade do cálculo equivalente em
+// lancamentos-editar.html/calcularPrazoMaximoAuto, que usa "Financiamento
+// em" como origem). Aceita os 2 formatos que extrairBloco1 pode gerar pra
+// previsaoEntrega: "DD/MM/AAAA" (Orulo) ou "mês/AAAA" (fallback genérico,
+// ex: "dez/2026", "dezembro de 2026"). Roda na extração e sempre que o
+// usuário editar "Previsão de entrega" à mão (onchange) -- o campo
+// continua editável manualmente depois, não é somente-leitura.
+const MESES_ABREV_NUM_ = { jan:1, fev:2, mar:3, abr:4, mai:5, jun:6, jul:7, ago:8, set:9, out:10, nov:11, dez:12 };
+function calcularMesesAteEntrega_(previsaoEntrega) {
+  const v = String(previsaoEntrega || '').trim();
+  let ano, mes;
+  const mDMA = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (mDMA) {
+    mes = parseInt(mDMA[2], 10);
+    ano = parseInt(mDMA[3], 10);
+  } else {
+    const mMesAno = v.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
+    if (mMesAno) {
+      mes = MESES_ABREV_NUM_[mMesAno[1].toLowerCase()];
+      ano = parseInt(mMesAno[2], 10);
+    }
+  }
+  if (!ano || !mes) return null;
+  const hoje = new Date();
+  const meses = (ano - hoje.getFullYear()) * 12 + (mes - (hoje.getMonth() + 1));
+  return Math.max(0, meses);
+}
+function preencherPrazoMaximoAuto_() {
+  const meses = calcularMesesAteEntrega_(document.getElementById('f-entrega')?.value);
+  if (meses !== null) document.getElementById('f-prazoMaximo').value = meses;
+}
+
 function renderB1(b) {
   const set = (id, val) => {
     const el = document.getElementById(id);
@@ -1513,6 +1551,7 @@ function renderB1(b) {
   set('f-estado', b.estado);
   set('f-endereco', b.endereco);
   set('f-entrega', b.previsaoEntrega);
+  preencherPrazoMaximoAuto_();
   set('f-estoque', b.estoque);
   set('f-totalUnidades', b.totalUnidades);
   set('f-dataLancamento', b.dataLancamento);
@@ -1647,7 +1686,7 @@ function limparMotor() {
   document.getElementById('lbl-dataTabela').style.display = 'none';
   document.querySelectorAll('input[name="statusTabela"]').forEach(r => r.checked = false);
   ['f-nome','f-construtora','f-cidade','f-estado','f-bairro','f-endereco','f-entrega','f-dataTabela',
-   'f-estoque','f-totalUnidades','f-dataLancamento',
+   'f-estoque','f-totalUnidades','f-dataLancamento','f-prazoMaximo',
    'f-urlSite','f-lazer','f-conceito'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
   });
@@ -1671,6 +1710,7 @@ function lerPreview() {
     endereco:           g('f-endereco'),
     status:             g('f-status'),
     previsaoEntrega:    g('f-entrega'),
+    prazoMaximo:        g('f-prazoMaximo'),
     estoque:            g('f-estoque'),
     totalUnidades:      g('f-totalUnidades'),
     dataLancamento:     g('f-dataLancamento'),
