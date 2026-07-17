@@ -1,5 +1,11 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 56) — Mapa Geral: título da coluna "% Estoque / Estoque" → "Estoque"
+
+Pedido do usuário: renomear o cabeçalho da coluna, mantendo o mesmo conteúdo (badge % vendido | estoque).
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 55) — Mapa Geral: colunas T (Tração), V (Vendedor) e Prazo
 
 Pedido do usuário: acrescentar as colunas Prazo, T (nota de Tração) e V (nota do Vendedor), e
