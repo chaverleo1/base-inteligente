@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 51) — Mapa Geral: filtro de Estágio multi-seleção ao lado do título
+
+Pedido do usuário: botões de Estágio ao lado do título "Mapa Geral", múltipla escolha — clicar
+liga/desliga aquele estágio, a tabela só mostra o que está selecionado, pode combinar vários ao
+mesmo tempo.
+
+Botões gerados dinamicamente a partir dos Estágios que realmente existem nos dados carregados (mesma
+convenção do filtro-bar de status já usado na lista de cards, ver `renderFiltros`), mas em
+multi-seleção em vez de escolha única: `_mapaEstagiosAtivos` é um `Set`, cada clique
+(`toggleMapaEstagioFiltro_`) adiciona/remove daquele conjunto. Nenhum selecionado = mostra tudo
+(mesmo "Todos" implícito do filtro de card). Reaproveita a classe `.filtro-chip` já existente, sem CSS
+novo.
+
+Filtro roda antes da ordenação em `renderMapaGeral_` — cuidado técnico: o índice de cada linha
+(`editarEmpMapa_(i)`) continua apontando pro índice ORIGINAL em `_mapaRows`, não pro índice dentro do
+resultado filtrado, senão clicar numa linha depois de filtrar abriria o empreendimento errado na
+Editar.
+
+Seleção reseta a cada recarregamento de dados (`atualizarMapaGeral_`) — evita ficar preso num Estágio
+que talvez nem exista mais no dataset novo.
+
+Testado em Node (geração dos botões, toggle ligando/desligando, combinação de 2 estágios ao mesmo
+tempo, volta a mostrar tudo quando todos são desligados, e o índice pós-filtro continua apontando pro
+empreendimento certo) e ao vivo no navegador (multi-seleção confirmada via `toggleMapaEstagioFiltro_`,
+já que a página de login intercepta cliques reais sem sessão autenticada).
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 50) — Botão "🖨️ PDF" imprime a lista ativa em paisagem
 
 Pedido do usuário: um botão pra imprimir/gerar PDF da lista que estiver ativa no momento (cards ou

@@ -93,6 +93,7 @@ a { text-decoration: none; color: inherit; }
 .sec-header { margin-bottom: 14px; }
 .sec-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; }
 .sec-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.mapa-titulo-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
 /* ── MOTOR ── */
 .motor-box {
@@ -650,8 +651,11 @@ select.form-input option { background: var(--surface2); }
   <!-- MAPA GERAL -->
   <div id="tabPainelMapa" class="tab-panel" style="display:none">
   <div class="sec-header">
-    <div class="sec-title">Mapa Geral</div>
-    <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique numa coluna pra ordenar, clique numa linha pra editar.</div>
+    <div class="mapa-titulo-row">
+      <div class="sec-title">Mapa Geral</div>
+      <div class="filtro-bar" id="mapa-estagio-filtros"></div>
+    </div>
+    <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique num Estágio pra filtrar (múltipla escolha), numa coluna pra ordenar, numa linha pra editar.</div>
   </div>
   <div class="mapa-wrap">
     <table class="mapa-tabela">
@@ -1893,6 +1897,7 @@ async function salvarLancamento() {
 // ─── CARREGAR LISTA ───────────────────────────────────────────────────────────
 let _todos = [], _filtroStatus = '', _emps = [];
 let _mapaRows = [], _mapaSort = { campo: null, dir: 'desc' };
+let _mapaEstagiosAtivos = new Set(); // vazio = mostra todos (mesma convenção do filtro-bar de status da lista de cards)
 
 async function carregarLancamentos() {
   try {
@@ -2097,6 +2102,32 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam) {
       alertaRank: s.alerta ? (s.alerta.tipo === 'positivo' ? 2 : 1) : 0,
     };
   });
+  // Recarregou os dados -- reseta a seleção de Estágio pra não ficar preso
+  // num valor que talvez nem exista mais no dataset novo.
+  _mapaEstagiosAtivos = new Set();
+  renderMapaEstagioFiltros_();
+  renderMapaGeral_();
+}
+
+// Botões de Estágio ao lado do título "Mapa Geral" — só os que realmente
+// aparecem nos dados carregados (mesma convenção do filtro-bar de status da
+// lista de cards, ver renderFiltros), mas em multi-seleção: cada clique liga/
+// desliga aquele estágio, várias seleções ao mesmo tempo. Nenhum selecionado
+// = mostra tudo (mesmo "Todos" implícito do filtro de card).
+function renderMapaEstagioFiltros_() {
+  const bar = document.getElementById('mapa-estagio-filtros');
+  if (!bar) return;
+  const estagios = [...new Set(_mapaRows.map(r => r.estagio).filter(e => e && e !== '—'))];
+  bar.innerHTML = estagios.map(es => `
+    <button type="button" class="filtro-chip${_mapaEstagiosAtivos.has(es) ? ' on' : ''}"
+      onclick="toggleMapaEstagioFiltro_('${es.replace(/'/g,"\\'")}')">${es}</button>
+  `).join('');
+}
+
+function toggleMapaEstagioFiltro_(estagio) {
+  if (_mapaEstagiosAtivos.has(estagio)) _mapaEstagiosAtivos.delete(estagio);
+  else _mapaEstagiosAtivos.add(estagio);
+  renderMapaEstagioFiltros_();
   renderMapaGeral_();
 }
 
@@ -2136,7 +2167,19 @@ function renderMapaGeral_() {
     return;
   }
 
-  let linhas = _mapaRows.map((r, i) => ({ r, i }));
+  // Filtro de Estágio (multi-seleção) primeiro, ordenação depois -- `i`
+  // continua apontando pro índice ORIGINAL em _mapaRows (editarEmpMapa_
+  // depende disso), não pro índice dentro do resultado filtrado/ordenado.
+  let linhas = _mapaRows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
+
+  if (!linhas.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    atualizarSetasMapaGeral_();
+    return;
+  }
+
   if (_mapaSort.campo) {
     const mult = _mapaSort.dir === 'desc' ? -1 : 1;
     linhas.sort((a, b) => {
