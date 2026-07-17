@@ -3672,6 +3672,29 @@ function getStatusMapRevenda_() {
   return mapa;
 }
 
+// Remove o(s) perfil(is) de vendedor vinculado(s) a um imóvel excluído --
+// sem isso, um cadastro novo que reaproveita o mesmo código (idLancamento
+// reaproveitado pelo dedup por nome de salvarLancamento_, ou o mesmo código
+// de revenda recadastrado) "herdava" em silêncio a nota/urgência de um
+// vendedor de um anúncio que já tinha sido excluído -- confirmado pelo
+// usuário: excluiu um lançamento, recadastrou com o mesmo nome, o perfil de
+// vendedor antigo voltou a aparecer no card sozinho. Chamada só quando
+// statusAtivo vira 'Excluído' (nunca em Ativo/outros status).
+function removerPerfilVendedor_(codigo, origemImovel) {
+  if (!codigo) return;
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('VENDEDORES_PERFIL');
+  if (!aba) return;
+  var lr = aba.getLastRow();
+  if (lr < 2) return;
+  var dados = aba.getRange(2, 1, lr - 1, 2).getValues(); // codigo, origemImovel
+  for (var i = dados.length - 1; i >= 0; i--) {
+    if (String(dados[i][0]) === String(codigo) && String(dados[i][1]) === String(origemImovel)) {
+      aba.deleteRow(i + 2);
+    }
+  }
+}
+
 // Atualiza statusAtivo de um imóvel (LANCAMENTO ou REVENDA/CONSTRUTORA).
 function setStatusImovel_(d) {
   var statusAtivo = d.statusAtivo || 'Ativo';
@@ -3690,8 +3713,12 @@ function setStatusImovel_(d) {
     var nomeAlvo = String(d.nomeEmpreendimento || '').toLowerCase().trim();
     for (var i = 0; i < ids.length; i++) {
       var bate = idAlvo ? (String(ids[i]) === idAlvo) : (String(nomes[i] || '').toLowerCase().trim() === nomeAlvo);
-      if (bate) aba.getRange(i + 2, colNum).setValue(statusAtivo);
+      if (bate) {
+        aba.getRange(i + 2, colNum).setValue(statusAtivo);
+        if (statusAtivo === 'Excluído' && !idAlvo) idAlvo = String(ids[i]); // achado só pelo nome
+      }
     }
+    if (statusAtivo === 'Excluído') removerPerfilVendedor_(idAlvo, 'LANCAMENTOS');
     return { ok: true };
   }
 
@@ -3699,6 +3726,7 @@ function setStatusImovel_(d) {
   var codigo = String(d.codigo || '');
   if (!codigo) return { ok: false, erro: 'codigo ausente' };
   var fonte  = d.fonte || 'REVENDA';
+  if (statusAtivo === 'Excluído') removerPerfilVendedor_(codigo, fonteParaOrigemImovel_(fonte));
   var aba    = obterAbaRevendaStatus_();
   var lr     = aba.getLastRow();
   if (lr >= 2) {

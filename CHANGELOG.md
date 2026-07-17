@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 47) — Excluir imóvel remove o perfil de vendedor vinculado
+
+Bug reportado pelo usuário: excluiu um lançamento já cadastrado, recadastrou com o mesmo nome, e o
+card voltou mostrando a nota do vendedor antigo (herdada em silêncio) mas sem atualizar o "Alerta de
+Oportunidade" — sinal de que o cadastro novo estava reaproveitando dado de um vendedor de um anúncio
+que já tinha sido excluído. O usuário pediu explicitamente: ao excluir um empreendimento, excluir
+também o perfil de vendedor vinculado a ele.
+
+**`removerPerfilVendedor_(codigo, origemImovel)`** (nova, `code.txt`) — remove da aba
+`VENDEDORES_PERFIL` a(s) linha(s) cujo `codigo`+`origemImovel` batem exatamente com o imóvel excluído.
+
+**`setStatusImovel_(d)`** — chama `removerPerfilVendedor_` sempre que `statusAtivo` vira `'Excluído'`
+(nunca em `'Ativo'` ou outro status), tanto pro branch de LANCAMENTO (usa o `idLancamento` encontrado,
+`origemImovel='LANCAMENTOS'`) quanto pro branch de REVENDA/REVENDA_CONSTRUTORA (usa
+`fonteParaOrigemImovel_`, a mesma função corrigida na parte 45 — ganha a correção de graça). Coberto
+pra qualquer fonte, não só Lançamentos: excluir uma revenda ou revenda-construtora agora também limpa
+o perfil de vendedor associado, mesmo risco de herança silenciosa existia lá.
+
+Testado em Node (mock de planilha): excluir um Lançamento remove só o perfil daquele
+`idLancamento` (outro empreendimento não é afetado); reativar (`statusAtivo='Ativo'`) NÃO remove nada;
+excluir REVENDA e REVENDA_CONSTRUTORA também removem o perfil certo, com o `origemImovel` resolvido
+corretamente pra cada fonte.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão".
+
 ## 2026-07-17 (parte 46) — Corrige extração "Tipo de Imóvel"/"Tipo de Empreendimento" errados na colagem da Orulo
 
 Bug reportado pelo usuário: colando o texto padrão de uma página da Orulo (aba "Novo Lançamento",
