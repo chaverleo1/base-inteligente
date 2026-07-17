@@ -277,9 +277,9 @@ select.form-input option { background: var(--surface2); }
 
 /* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ── */
 .mapa-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-.mapa-tabela { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
-.mapa-tabela th, .mapa-tabela td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
-.mapa-tabela th { background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 11px;
+.mapa-tabela { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+.mapa-tabela th, .mapa-tabela td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--border); }
+.mapa-tabela th { background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 10px;
   text-transform: uppercase; letter-spacing: .03em; cursor: pointer; user-select: none; position: sticky; top: 0; }
 .mapa-tabela th:hover { color: var(--text); }
 .mapa-seta { display: inline-block; font-size: 9px; margin-left: 3px; color: var(--text3); }
@@ -287,8 +287,12 @@ select.form-input option { background: var(--surface2); }
 .mapa-tabela tbody tr { cursor: pointer; }
 .mapa-tabela tbody tr:hover { background: var(--surface2); }
 .mapa-tabela td.mapa-num { font-variant-numeric: tabular-nums; }
-.mapa-tabela .badge-vendido { padding: 2px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-.mapa-alerta { font-size: 11px; padding: 2px 7px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+.mapa-tabela .badge-vendido { padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+/* Caixas T/V reaproveitam .tv-score-badge (mesma cor/classe dos cards) --
+   aqui só reduz o tamanho, já que margin-top:8px e padding maior fazem
+   sentido no card, não numa linha de tabela densa. */
+.mapa-tabela .tv-score-badge { font-size: 10px; padding: 1px 6px; margin-top: 0; }
+.mapa-alerta { font-size: 10px; padding: 2px 6px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
 .mapa-alerta-positivo { background: rgba(0,212,170,.14); color: var(--accent2); }
 .mapa-alerta-negativo { background: rgba(255,90,90,.14); color: var(--danger); }
 .mapa-vazio { text-align: center; color: var(--text3); padding: 24px 0 !important; }
@@ -664,17 +668,20 @@ select.form-input option { background: var(--surface2); }
       <thead>
         <tr>
           <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
+          <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
+          <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
           <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
           <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
           <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
           <th onclick="ordenarMapaGeral_('vendido')">% Estoque / Estoque<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
+          <th onclick="ordenarMapaGeral_('prazo')">Prazo<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
           <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
           <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="8" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="11" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -2102,6 +2109,9 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam) {
       estagioOrd: MAPA_ESTAGIO_ORDEM_[e.status] || 0,
       alerta: s.alerta,
       alertaRank: s.alerta ? (s.alerta.tipo === 'positivo' ? 2 : 1) : 0,
+      comp: s.comp || 0,
+      scoreVendedor: s.scoreVendedor || 0,
+      prazo: parseInt(e.prazoMaximo, 10) || 0,
     };
   });
   // Recarregou os dados -- reseta a seleção de Estágio pra não ficar preso
@@ -2150,11 +2160,14 @@ function toggleMapaEstagioFiltro_(estagio) {
 
 function mapaCampoValor_(r, campo) {
   if (campo === 'nome')        return r.nome.toLowerCase();
+  if (campo === 't')           return r.comp;
   if (campo === 'construtora') return r.construtora.toLowerCase();
+  if (campo === 'v')           return r.scoreVendedor;
   if (campo === 'area')        return r.areaMin;
   if (campo === 'preco')       return r.menorPreco;
   if (campo === 'm2')          return r.m2Medio;
   if (campo === 'vendido')     return r.pctVendido == null ? -1 : r.pctVendido;
+  if (campo === 'prazo')       return r.prazo;
   if (campo === 'estagio')     return r.estagioOrd;
   if (campo === 'alerta')      return r.alertaRank;
   return 0;
@@ -2179,7 +2192,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2192,7 +2205,7 @@ function renderMapaGeral_() {
     .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2207,14 +2220,20 @@ function renderMapaGeral_() {
     });
   }
 
+  // Caixas T/V reaproveitam o mesmo estilo/cor do quadrado [T|V] dos cards
+  // (classeScoreTracao_, baseado no score composto) — aqui cada nota vira
+  // sua própria coluna em vez de um badge combinado.
   tbody.innerHTML = linhas.map(({ r, i }) => `
     <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar">
       <td>${r.nome}</td>
+      <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
       <td>${r.construtora}</td>
+      <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
       <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
       <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
       <td class="mapa-num">${badgeVendidoHTML(r.pctVendido, r.estoque) || '—'}</td>
+      <td class="mapa-num">${r.prazo > 0 ? r.prazo + ' meses' : '—'}</td>
       <td>${r.estagio}</td>
       <td>${r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
     </tr>`).join('');
@@ -2223,7 +2242,7 @@ function renderMapaGeral_() {
 }
 
 function atualizarSetasMapaGeral_() {
-  ['nome','construtora','area','preco','m2','vendido','estagio','alerta'].forEach(campo => {
+  ['nome','t','construtora','v','area','preco','m2','vendido','prazo','estagio','alerta'].forEach(campo => {
     const el = document.getElementById('seta-mapa-' + campo);
     if (!el) return;
     if (_mapaSort.campo !== campo) { el.textContent = '▾'; el.classList.remove('on'); return; }

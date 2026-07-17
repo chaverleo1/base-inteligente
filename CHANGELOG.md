@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-17 (parte 55) — Mapa Geral: colunas T (Tração), V (Vendedor) e Prazo
+
+Pedido do usuário: acrescentar as colunas Prazo, T (nota de Tração) e V (nota do Vendedor), e
+reordenar a tabela na sequência EMPREENDIMENTO|T|CONSTRUTORA|V|FAIXA DE ÁREAS|MENOR PREÇO|R$/M²|
+%ESTOQUE/ESTOQUE|PRAZO|ESTÁGIO|ALERTA — reduzindo a fonte se necessário (foi).
+
+**Colunas T e V**: reaproveitam a caixa `.tv-score-badge` já usada no quadrado [T|V] dos cards
+(mesma cor via `classeScoreTracao_`, baseada no score composto), agora cada nota na sua própria
+coluna em vez de um badge combinado — "T 6.6" e "V 71" separados, exatamente como pedido. `—` quando
+não há dado suficiente (sem score de tração ou sem vendedor cadastrado).
+
+**Coluna Prazo**: mostra `prazoMaximo` em meses (ex: "30 meses"), mesmo campo usado nos 3 cenários de
+Alerta de Tração — `—` quando vazio.
+
+**Fonte reduzida**: tabela foi de 12px pra 11px, cabeçalho de 11px pra 10px, padding das células de
+6px/8px pra 5px/7px, e as caixas T/V ganharam uma variante compacta (`padding:1px 6px`, sem o
+`margin-top` que fazia sentido no card mas não numa linha de tabela) — necessário pra caber 11 colunas
+sem quebrar linha.
+
+`_mapaRows` agora guarda `comp` (score de tração), `scoreVendedor` e `prazo` — já vinham calculados
+por `calcularScoreTracao`/`calcularAlertaTracao_`, só não estavam sendo salvos na linha. Ordenação por
+T/V/Prazo funciona igual às demais colunas (desc no 1º clique, asc no 2º).
+
+Testado em Node (valores de T/V/Prazo por linha, formatação das caixas, ordenação nas 3 colunas
+novas) e ao vivo no navegador: HTML renderizado confere exatamente com o exemplo do usuário
+("T 6.6"/"V 71" pro Louvre du Parc), ordem das 11 colunas confirmada, fonte reduzida confirmada
+(11px/10px).
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-17 (parte 54) — Botão "Todos" + quantitativo|percentual nos botões de Estágio
 
 Pedido do usuário: acrescentar um botão "Todos" na barra de Estágio, e mostrar em todos os botões o
