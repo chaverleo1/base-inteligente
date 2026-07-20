@@ -596,7 +596,7 @@ select.form-input option { background: var(--surface2); }
         </div>
         <div class="form-group">
           <div class="form-label">Estoque</div>
-          <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18" oninput="atualizarResumoEPadrao()">
+          <input class="form-input" id="f-estoque" type="number" min="0" placeholder="Ex: 18" oninput="atualizarResumoEPadrao();atualizarNovoEstoque_()">
         </div>
         <div class="form-group">
           <div class="form-label">Total de unidades</div>
@@ -633,6 +633,26 @@ select.form-input option { background: var(--surface2); }
         <div class="form-group span2">
           <div class="form-label">Conceito / Descrição do empreendimento</div>
           <textarea class="form-input" id="f-conceito" placeholder="Texto de apresentação do empreendimento"></textarea>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Qtd de andares</div>
+          <input class="form-input" id="f-qtdAndares" type="number" min="0" placeholder="Ex: 12">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Apto por andar</div>
+          <input class="form-input" id="f-aptoPorAndar" type="number" min="0" placeholder="Ex: 8">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Data última atualização (Orulo)</div>
+          <input class="form-input" id="f-dataAtualizacaoOrulo" placeholder="Ex: 19/07/2026">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Novo estoque (antes → atual)</div>
+          <input class="form-input" id="f-novoEstoque" readonly placeholder="— → —" style="color:var(--text3);cursor:default">
+        </div>
+        <div class="form-group span2">
+          <div class="form-label">Obs — o que foi alterado</div>
+          <textarea class="form-input" id="f-obs" placeholder="Descreva aqui o que foi alterado nesta atualização"></textarea>
         </div>
       </div>
 
@@ -1062,6 +1082,13 @@ function extrairBloco1(txt) {
   if (totalUnidM) b.totalUnidades = totalUnidM[1];
   const lancamentoM = txt.match(/Lan[çc]amento:\s*(\d{2}\/\d{2}\/\d{4})/i);
   if (lancamentoM) b.dataLancamento = lancamentoM[1];
+  // "Número de andares: 12" e "Unidades por andar: 8" (Orulo, "Outras informações")
+  const qtdAndaresM = txt.match(/N[uú]mero\s+de\s+andares:\s*(\d+)/i);
+  if (qtdAndaresM) b.qtdAndares = qtdAndaresM[1];
+  if (unidPorAndarM) b.aptoPorAndar = unidPorAndarM[1];
+  // "Atualizado em: DD/MM/YYYY" (Orulo, "Outras informações")
+  const dataAtualizM = txt.match(/Atualizado\s+em:\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if (dataAtualizM) b.dataAtualizacaoOrulo = dataAtualizM[1];
 
   // ── Lazer ── "Características condominiais" + opcionalmente "Características da unidade"
   const limpItem = l => l.trim().length > 1 && !/^\d+$/.test(l.trim()) && !/alguma informa[çc]/i.test(l);
@@ -1713,6 +1740,18 @@ function preencherPrazoMaximoAuto_() {
   if (meses !== null) document.getElementById('f-prazoMaximo').value = meses;
 }
 
+// Exibe "antes → atual" em f-novoEstoque.
+// _estoqueAnterior é '' em Novo Lançamento (sem histórico) e preenchido com
+// o estoque original em lancamentos-editar.html (via preencherForm).
+let _estoqueAnterior = '';
+function atualizarNovoEstoque_() {
+  const el = document.getElementById('f-novoEstoque');
+  if (!el) return;
+  const atual = (document.getElementById('f-estoque')?.value || '').trim();
+  if (!atual) { el.value = ''; return; }
+  el.value = _estoqueAnterior ? `${_estoqueAnterior} → ${atual}` : `— → ${atual}`;
+}
+
 function renderB1(b) {
   const set = (id, val) => {
     const el = document.getElementById(id);
@@ -1734,6 +1773,10 @@ function renderB1(b) {
   set('f-urlSite', b.urlSite);
   set('f-lazer', b.lazer);
   set('f-conceito', b.conceito);
+  set('f-qtdAndares', b.qtdAndares);
+  set('f-aptoPorAndar', b.aptoPorAndar);
+  set('f-dataAtualizacaoOrulo', b.dataAtualizacaoOrulo);
+  atualizarNovoEstoque_();
   if (b.status) document.getElementById('f-status').value = b.status;
   if (b.tipo)   document.getElementById('f-tipo').value   = b.tipo;
   if (b.tipoEmpreendimento) document.getElementById('f-tipoEmpreendimento').value = b.tipoEmpreendimento;
@@ -1863,7 +1906,8 @@ function limparMotor() {
   document.querySelectorAll('input[name="statusTabela"]').forEach(r => r.checked = false);
   ['f-nome','f-construtora','f-cidade','f-estado','f-bairro','f-endereco','f-entrega','f-dataTabela',
    'f-estoque','f-totalUnidades','f-dataLancamento','f-prazoMaximo',
-   'f-urlSite','f-lazer','f-conceito'].forEach(id => {
+   'f-urlSite','f-lazer','f-conceito',
+   'f-qtdAndares','f-aptoPorAndar','f-dataAtualizacaoOrulo','f-novoEstoque','f-obs'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
   });
   document.getElementById('f-status').value = '';
@@ -1896,6 +1940,10 @@ function lerPreview() {
     urlSite:            g('f-urlSite'),
     lazer:              g('f-lazer'),
     conceito:           g('f-conceito'),
+    qtdAndares:         g('f-qtdAndares'),
+    aptoPorAndar:       g('f-aptoPorAndar'),
+    dataAtualizacaoOrulo: g('f-dataAtualizacaoOrulo'),
+    obs:                g('f-obs'),
   };
   const unidades = [];
   document.querySelectorAll('#unidades-tbody tr').forEach(tr => {

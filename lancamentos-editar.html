@@ -359,6 +359,30 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
         <textarea class="form-input" id="f-conceito" rows="2" placeholder="Ex: Vida integrada à natureza..."></textarea>
       </div>
     </div>
+    <div class="form-grid cols3" style="margin-top:8px">
+      <div class="form-group">
+        <label class="form-label">Qtd de andares</label>
+        <input class="form-input" id="f-qtdAndares" type="number" min="0" placeholder="Ex: 12">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Apto por andar</label>
+        <input class="form-input" id="f-aptoPorAndar" type="number" min="0" placeholder="Ex: 8">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data última atualização (Orulo)</label>
+        <input class="form-input" id="f-dataAtualizacaoOrulo" placeholder="Ex: 19/07/2026">
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:8px">
+      <div class="form-group">
+        <label class="form-label">Novo estoque (antes → atual)</label>
+        <input class="form-input" id="f-novoEstoque" readonly placeholder="— → —" style="color:var(--text3);cursor:default">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Obs — o que foi alterado</label>
+        <textarea class="form-input" id="f-obs" rows="2" placeholder="Descreva aqui o que foi alterado nesta atualização"></textarea>
+      </div>
+    </div>
   </div>
 
   <!-- ── TIPOLOGIAS ── -->
@@ -443,11 +467,15 @@ function preencherForm(e) {
                   'urlSite','foto','lazer','conceito',
                   'gerenteNome','gerenteTelefone','gerenteObs',
                   'planoSinalParcelas','planoMensaisParcelas','planoSemestraisParcelas',
-                  'planoAnuaisParcelas','planoUnicaData','planoFinanciamentoEm','planoCaptacaoPerc'];
+                  'planoAnuaisParcelas','planoUnicaData','planoFinanciamentoEm','planoCaptacaoPerc',
+                  'qtdAndares','aptoPorAndar','dataAtualizacaoOrulo','obs'];
   campos.forEach(c => {
     const el = document.getElementById('f-' + c);
     if (el && e[c] != null) el.value = e[c];
   });
+  // Guarda estoque original para exibir "antes → atual" no campo f-novoEstoque
+  _estoqueAnterior = String(e.estoque || '');
+  atualizarNovoEstoque_();
 
   const unidades = e.unidades && e.unidades.length ? e.unidades : [{}];
   unidades.forEach(u => addUnidade(u));
@@ -516,9 +544,19 @@ function calcularPrazoMaximoAuto() {
   document.getElementById('f-prazoMaximo').value = Math.max(0, meses);
 }
 
+let _estoqueAnterior = '';
+function atualizarNovoEstoque_() {
+  const el = document.getElementById('f-novoEstoque');
+  if (!el) return;
+  const atual = (gV('f-estoque') || '').trim();
+  if (!atual) { el.value = ''; return; }
+  el.value = _estoqueAnterior ? `${_estoqueAnterior} → ${atual}` : `— → ${atual}`;
+}
+
 function atualizarBadgeVendido() {
   const pct = calcularPercentualVendido(gV('f-estoque'), gV('f-totalUnidades'));
   document.getElementById('badgeVendidoTitulo').innerHTML = badgeVendidoHTML(pct, gV('f-estoque'));
+  atualizarNovoEstoque_();
 }
 
 // Painel resumo (área/preço/m² médio) — antes só existia na extração
@@ -746,6 +784,10 @@ async function salvar() {
     planoUnicaData:          gV('f-planoUnicaData'),
     planoFinanciamentoEm:    gV('f-planoFinanciamentoEm'),
     planoCaptacaoPerc:       gV('f-planoCaptacaoPerc'),
+    qtdAndares:              gV('f-qtdAndares'),
+    aptoPorAndar:            gV('f-aptoPorAndar'),
+    dataAtualizacaoOrulo:    gV('f-dataAtualizacaoOrulo'),
+    obs:                     gV('f-obs'),
     unidades
   };
 

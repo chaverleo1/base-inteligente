@@ -149,6 +149,11 @@ const CABECALHO_LANCAMENTOS = [
   // dataUltimaAtualizacao — dd/MM/yyyy HH:mm — preenchida apenas em updates
   // (vazia no primeiro cadastro); indica quando o dado foi revisado pela última vez.
   'dataUltimaAtualizacao',
+  // qtdAndares / aptoPorAndar — estrutura física do Condomínio Vertical,
+  // extraídos da Orulo ("Número de andares" / "Unidades por andar").
+  // dataAtualizacaoOrulo — data do campo "Atualizado em" da Orulo.
+  // obs — nota livre descrevendo o que mudou nessa atualização (Padrão Vendedor).
+  'qtdAndares', 'aptoPorAndar', 'dataAtualizacaoOrulo', 'obs',
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -3285,6 +3290,10 @@ function salvarLancamento_(dados) {
         idEmp,                     // idEmpreendimento (EMP-NNN)
         historicoEstoque,          // JSON [{data, valor}]
         dataUltimaAtualizacao,     // vazio no 1º cadastro
+        dados.qtdAndares              || '',
+        dados.aptoPorAndar            || '',
+        dados.dataAtualizacaoOrulo    || '',
+        dados.obs                     || '',
       ];
     });
 
