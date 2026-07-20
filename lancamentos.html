@@ -332,6 +332,40 @@ select.form-input option { background: var(--surface2); }
 .st-prazo   { background: rgba(52,211,153,.1); color: #34d399; border: 1px solid rgba(52,211,153,.28); }
 .st-id      { background: rgba(0,212,170,.08); color: var(--accent2); border: 1px solid rgba(0,212,170,.22); font-family: monospace; font-size: 10px; letter-spacing: .4px; }
 
+/* ── PADRÃO VENDEDOR ── */
+.padroes-panel {
+  margin-bottom: 28px; border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.padroes-panel-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.padroes-panel-title {
+  font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px;
+}
+.padroes-panel-sub { font-size: 11px; color: var(--text3); }
+.padroes-wrap { overflow-x: auto; }
+.padroes-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+.padroes-tabela th {
+  padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px; color: var(--text3);
+  background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.padroes-tabela td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.padroes-tabela tr:last-child td { border-bottom: none; }
+.padrao-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 99px;
+  font-size: 10px; font-weight: 700; letter-spacing: .4px;
+}
+.padrao-extremo { background: rgba(255,200,0,.15); color: #e6ac00; border: 1px solid rgba(255,200,0,.3); }
+.padrao-alto    { background: rgba(0,212,170,.12); color: var(--accent2); border: 1px solid rgba(0,212,170,.3); }
+.padrao-sobra   { background: rgba(255,80,80,.1);  color: #e05555; border: 1px solid rgba(255,80,80,.25); }
+.padrao-pct     { font-weight: 700; font-size: 13px; }
+.padrao-id      { font-family: monospace; font-size: 10px; color: var(--text3); }
+
 .emp-card-body { padding: 14px 16px; }
 .emp-tipologias { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .tip-chip { font-size: 11px; padding: 3px 10px; border-radius: 99px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
@@ -657,6 +691,38 @@ select.form-input option { background: var(--surface2); }
 
   <!-- MAPA GERAL -->
   <div id="tabPainelMapa" class="tab-panel" style="display:none">
+  <!-- PADRÃO VENDEDOR -->
+  <div class="padroes-panel" id="padroesPainel" style="display:none">
+    <div class="padroes-panel-header">
+      <div>
+        <div class="padroes-panel-title">⚡ Padrão Vendedor</div>
+        <div class="padroes-panel-sub">Empreendimentos com alta velocidade de vendas (≥80% em ≤1 ano). SOBRA SUSPEITA = >80% vendido com entrega >24 meses.</div>
+      </div>
+    </div>
+    <div class="padroes-wrap">
+      <table class="padroes-tabela">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Empreendimento</th>
+            <th>Construtora</th>
+            <th>Tipo</th>
+            <th>Classificação</th>
+            <th title="% de unidades vendidas">% Vendido</th>
+            <th>Estoque</th>
+            <th>Total</th>
+            <th>Prazo (m)</th>
+            <th>1º Estoque</th>
+            <th>Bairro</th>
+          </tr>
+        </thead>
+        <tbody id="padroesBody">
+          <tr><td colspan="11" style="text-align:center;color:var(--text3);padding:18px">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="sec-header">
     <div class="sec-title">Mapa Geral</div>
     <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique num Estágio pra filtrar (múltipla escolha), numa coluna pra ordenar, numa linha pra editar.</div>
@@ -1917,6 +1983,47 @@ let _todos = [], _filtroStatus = '', _emps = [];
 let _mapaRows = [], _mapaSort = { campo: null, dir: 'desc' };
 let _mapaEstagiosAtivos = new Set(); // vazio = mostra todos (mesma convenção do filtro-bar de status da lista de cards)
 
+async function carregarPadroesVendedores_() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_padroes_vendedores&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (!json || json.ok === false) return;
+    const padroes = Array.isArray(json) ? json : (json.dados || []);
+    renderPadroesVendedores_(padroes);
+  } catch(e) {
+    document.getElementById('padroesBody').innerHTML =
+      '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:12px">Erro ao carregar Padrões Vendedores.</td></tr>';
+  }
+}
+
+function renderPadroesVendedores_(padroes) {
+  const painel = document.getElementById('padroesPainel');
+  const tbody  = document.getElementById('padroesBody');
+  if (!padroes || !padroes.length) {
+    painel.style.display = 'none';
+    return;
+  }
+  painel.style.display = '';
+  const CLASS_MAP = { 'EXTREMO': 'padrao-extremo', 'ALTO': 'padrao-alto', 'SOBRA SUSPEITA': 'padrao-sobra' };
+  tbody.innerHTML = padroes.map(p => {
+    const cls = CLASS_MAP[p.classificacao] || 'padrao-alto';
+    const pct = p.pctVendido ? `<span class="padrao-pct">${p.pctVendido}%</span>` : '—';
+    return `<tr>
+      <td class="padrao-id">${p.idEmpreendimento || '—'}</td>
+      <td><strong>${p.nomeEmpreendimento || '—'}</strong></td>
+      <td>${p.construtora || '—'}</td>
+      <td>${p.tipoPadrao || '—'}</td>
+      <td><span class="padrao-badge ${cls}">${p.classificacao || '—'}</span></td>
+      <td>${pct}</td>
+      <td>${p.estoque !== undefined && p.estoque !== '' ? p.estoque : '—'}</td>
+      <td>${p.totalUnidades || '—'}</td>
+      <td>${p.prazoMaximo || '—'}</td>
+      <td style="white-space:nowrap;font-size:11px">${p.dataPrimeiroEstoque || '—'}</td>
+      <td>${p.bairro || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
 async function carregarLancamentos() {
   try {
     const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos&token=${encodeURIComponent(tokenSessao())}`);
@@ -1931,6 +2038,7 @@ async function carregarLancamentos() {
     const mapaScoreVendedor = await buscarScoreVendedorPorLancamento_();
     await renderLista(_todos, mapaScoreVendedor);
     atualizarMapaGeral_(_todos, mapaScoreVendedor);
+    carregarPadroesVendedores_();
   } catch {
     document.getElementById('lista-grid').innerHTML =
       '<div class="vazio"><h3>Erro ao carregar</h3><p>Verifique a conexão com o Apps Script.<br>O backend precisa ter a rota <code>listar_lancamentos</code> implantada.</p></div>';

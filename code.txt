@@ -233,7 +233,8 @@ function doGet(e) {
   if (acao === 'listar_top_favoritos') return ok(listarTopFavoritos_());
   if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
-  if (acao === 'listar_lancamentos')    return ok(listarLancamentos_());
+  if (acao === 'listar_lancamentos')         return ok(listarLancamentos_());
+  if (acao === 'listar_padroes_vendedores')  return ok(listarPadroesVendedores_());
   if (acao === 'listar_revendas_construtoras') return ok(listarRevendasConstrutoras_());
   if (acao === 'buscar_revenda_construtora') return ok(buscarRevendaConstrutoraPorCodigo_(e.parameter));
   if (acao === 'listar_construtoras_parceiras') return ok(listarConstrutorasParceiras_());
@@ -3297,9 +3298,16 @@ function salvarLancamento_(dados) {
          .setValues(linhas);
     }
 
+    // Avalia Padrão Vendedor e registra na aba PADROES_VENDEDORES se elegível
+    var resultadoPadrao = avaliarPadraoVendedor_(dados, histArr);
+    if (resultadoPadrao) {
+      registrarPadraoVendedor_(idEmp, id, dados, resultadoPadrao, agora);
+    }
+
     return {
       ok: true, idLancamento: id, idEmpreendimento: idEmp,
       unidades: linhas.length, isUpdate: !!idExistente, mudancas: mudancas,
+      padrao: resultadoPadrao || null,
     };
   } catch(e) {
     return { ok: false, erro: e.message };
@@ -3310,6 +3318,118 @@ function salvarLancamento_(dados) {
 // O imóvel continua na planilha e nos resultados de busca (com badge excluído).
 function excluirLancamento_(dados) {
   return setStatusImovel_({ fonte: 'LANCAMENTO', codigo: dados.idLancamento, nomeEmpreendimento: dados.nomeEmpreendimento, statusAtivo: 'Excluído' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PADRÃO VENDEDOR — empreendimentos com alta velocidade de vendas
+// ALTO: ≥80% vendido em ≤1 ano desde o primeiro registro de estoque
+// EXTREMO: 100% vendido em ≤1 ano
+// SOBRA SUSPEITA: >80% vendido mas prazoMaximo > 24 meses (independente de tempo)
+// ═══════════════════════════════════════════════════════════════
+
+var CABECALHO_PADROES_VENDEDORES = [
+  'dataCadastro', 'idEmpreendimento', 'idLancamento', 'nomeEmpreendimento',
+  'construtora', 'tipoPadrao', 'classificacao', 'pctVendido',
+  'totalUnidades', 'estoque', 'prazoMaximo', 'dataPrimeiroEstoque',
+  'dataClassificacao', 'bairro', 'observacao',
+];
+
+function obterAbaPadroesVendedores_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('PADROES_VENDEDORES');
+  if (!aba) {
+    aba = ss.insertSheet('PADROES_VENDEDORES');
+    aba.getRange(1, 1, 1, CABECALHO_PADROES_VENDEDORES.length)
+       .setValues([CABECALHO_PADROES_VENDEDORES]);
+  }
+  return aba;
+}
+
+function avaliarPadraoVendedor_(dados, histArr) {
+  var totalUnidades = parseInt(dados.totalUnidades, 10);
+  var estoque       = parseInt(dados.estoque, 10);
+  var prazoMaximo   = parseInt(dados.prazoMaximo, 10);
+  if (!totalUnidades || totalUnidades <= 0) return null;
+  if (isNaN(estoque))     estoque     = 0;
+  if (isNaN(prazoMaximo)) prazoMaximo = 0;
+
+  var pctVendido = Math.round(((totalUnidades - estoque) / totalUnidades) * 100);
+
+  // SOBRA SUSPEITA: sem restrição de tempo
+  if (pctVendido > 80 && prazoMaximo > 24) {
+    return { classificacao: 'SOBRA SUSPEITA', pctVendido: pctVendido, dataPrimeiroEstoque: '' };
+  }
+
+  // Para ALTO e EXTREMO exige histório de estoque com data inicial
+  if (!Array.isArray(histArr) || histArr.length === 0) return null;
+
+  var primeiraData  = histArr[0].data || '';
+  var partes        = primeiraData.split(/[\s\/]+/);
+  // formato "dd/MM/yyyy HH:mm" → partes[0]=dd, [1]=MM, [2]=yyyy
+  var dia  = parseInt(partes[0], 10);
+  var mes  = parseInt(partes[1], 10) - 1;
+  var ano  = parseInt(partes[2], 10);
+  if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return null;
+
+  var dataInicio       = new Date(ano, mes, dia);
+  var hoje             = new Date();
+  var diasDecorridos   = Math.floor((hoje - dataInicio) / 86400000);
+
+  if (pctVendido >= 100 && diasDecorridos <= 365) {
+    return { classificacao: 'EXTREMO',  pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
+  if (pctVendido >= 80  && diasDecorridos <= 365) {
+    return { classificacao: 'ALTO',     pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
+  return null;
+}
+
+function registrarPadraoVendedor_(idEmp, idLan, dados, resultado, agora) {
+  var aba = obterAbaPadroesVendedores_();
+  var lr  = aba.getLastRow();
+  var idxIdEmp = CABECALHO_PADROES_VENDEDORES.indexOf('idEmpreendimento') + 1;
+  // Atualiza se já existir linha para este empreendimento
+  if (lr >= 2 && idxIdEmp > 0) {
+    var existentes = aba.getRange(2, idxIdEmp, lr - 1, 1).getValues().flat();
+    for (var i = existentes.length - 1; i >= 0; i--) {
+      if (String(existentes[i]) === String(idEmp)) {
+        aba.deleteRow(i + 2);
+      }
+    }
+  }
+  var linha = CABECALHO_PADROES_VENDEDORES.map(function(col) {
+    switch (col) {
+      case 'dataCadastro':         return agora;
+      case 'idEmpreendimento':     return idEmp;
+      case 'idLancamento':         return idLan;
+      case 'nomeEmpreendimento':   return dados.nomeEmpreendimento   || '';
+      case 'construtora':          return dados.construtora          || '';
+      case 'tipoPadrao':           return dados.padrao               || '';
+      case 'classificacao':        return resultado.classificacao    || '';
+      case 'pctVendido':           return resultado.pctVendido       || 0;
+      case 'totalUnidades':        return dados.totalUnidades        || '';
+      case 'estoque':              return dados.estoque              || '';
+      case 'prazoMaximo':          return dados.prazoMaximo          || '';
+      case 'dataPrimeiroEstoque':  return resultado.dataPrimeiroEstoque || '';
+      case 'dataClassificacao':    return agora;
+      case 'bairro':               return dados.bairro               || '';
+      case 'observacao':           return '';
+      default: return '';
+    }
+  });
+  aba.appendRow(linha);
+}
+
+function listarPadroesVendedores_() {
+  var aba = obterAbaPadroesVendedores_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return [];
+  var valores = aba.getRange(2, 1, lr - 1, CABECALHO_PADROES_VENDEDORES.length).getValues();
+  return valores.map(function(row) {
+    var obj = {};
+    CABECALHO_PADROES_VENDEDORES.forEach(function(col, idx) { obj[col] = row[idx]; });
+    return obj;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
