@@ -363,6 +363,27 @@ select.form-input option { background: var(--surface2); }
 .padrao-extremo { background: rgba(255,200,0,.15); color: #e6ac00; border: 1px solid rgba(255,200,0,.3); }
 .padrao-alto    { background: rgba(0,212,170,.12); color: var(--accent2); border: 1px solid rgba(0,212,170,.3); }
 .padrao-sobra   { background: rgba(255,80,80,.1);  color: #e05555; border: 1px solid rgba(255,80,80,.25); }
+
+/* ── SIMILARIDADE PADRÃO VENDEDOR ── */
+.simil-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 99px;
+  font-size: 10px; font-weight: 700; letter-spacing: .4px;
+  background: rgba(139,92,246,.12); color: #7c3aed;
+  border: 1px solid rgba(139,92,246,.25);
+}
+@media (prefers-color-scheme: dark) {
+  .simil-badge { color: #c4b5fd; background: rgba(139,92,246,.18); border-color: rgba(139,92,246,.3); }
+}
+.sobra-flag {
+  display: inline-block; padding: 2px 7px; border-radius: 99px;
+  font-size: 10px; font-weight: 700;
+  background: rgba(255,160,0,.12); color: #b45309;
+  border: 1px solid rgba(255,160,0,.3); margin-left: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  .sobra-flag { color: #fbbf24; background: rgba(255,160,0,.15); border-color: rgba(255,160,0,.35); }
+}
+.mapa-simil { font-family: monospace; font-size: 11px; white-space: nowrap; }
 .padrao-pct     { font-weight: 700; font-size: 13px; }
 .padrao-id      { font-family: monospace; font-size: 10px; color: var(--text3); }
 
@@ -760,6 +781,7 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
           <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
+          <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
           <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
           <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
           <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
@@ -770,7 +792,7 @@ select.form-input option { background: var(--surface2); }
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="12" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="13" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -2031,17 +2053,75 @@ let _todos = [], _filtroStatus = '', _emps = [];
 let _mapaRows = [], _mapaSort = { campo: null, dir: 'desc' };
 let _mapaEstagiosAtivos = new Set(); // vazio = mostra todos (mesma convenção do filtro-bar de status da lista de cards)
 
-async function carregarPadroesVendedores_() {
+let _listaPadroes = [];
+
+// Busca a lista de PADRÕES_VENDEDORES do backend (sem side-effects de UI).
+async function buscarPadroesVendedores_() {
   try {
     const resp = await fetch(`${WEBHOOK_URL}?acao=listar_padroes_vendedores&token=${encodeURIComponent(tokenSessao())}`);
     const json = await resp.json();
-    if (!json || json.ok === false) return;
-    const padroes = Array.isArray(json) ? json : (json.dados || []);
+    if (!json || json.ok === false) return [];
+    return Array.isArray(json) ? json : (json.dados || []);
+  } catch(_) { return []; }
+}
+
+// Renderiza o painel de PADRÕES_VENDEDORES. Aceita lista pré-buscada para
+// evitar fetch duplo quando carregarLancamentos() já buscou em paralelo.
+async function carregarPadroesVendedores_(listaPrefetch) {
+  try {
+    const padroes = listaPrefetch !== undefined ? listaPrefetch : await buscarPadroesVendedores_();
+    _listaPadroes = padroes;
     renderPadroesVendedores_(padroes);
-  } catch(e) {
+  } catch(_) {
     document.getElementById('padroesBody').innerHTML =
       '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:12px">Erro ao carregar Padrões Vendedores.</td></tr>';
   }
+}
+
+// Calcula similaridade (0-100%) do empreendimento com o melhor PADRÃO
+// VENDEDOR do mesmo tipo (excluindo SOBRA SUSPEITA do conjunto de referência).
+// Também detecta SOBRA SUSPEITA para flag visual independente.
+// Dimensão 1 (60%): % de unidades vendidas vs. a referência do padrão.
+// Dimensão 2 (40%): ritmo projetado para 365 dias vs. a referência.
+function calcularSimilaridadePadrao_(e, padroes) {
+  const total   = Number(e.totalUnidades) || 0;
+  const estoque = Number(e.estoque) || 0;
+  if (total === 0) return { simil: 0, isSobraSuspeita: false };
+
+  const pctVendido  = ((total - estoque) / total) * 100;
+  const prazoMaximo = Number(e.prazoMaximo) || 0;
+  const isSobraSuspeita = pctVendido > 80 && prazoMaximo > 24;
+
+  const tipoPadrao = String(e.padrao || '').toLowerCase();
+  const candidatos = (padroes || []).filter(p =>
+    String(p.tipoPadrao || '').toLowerCase() === tipoPadrao &&
+    p.classificacao !== 'SOBRA SUSPEITA'
+  );
+
+  // Referência: melhor % vendido do mesmo tipo arquivado, ou 80 (limiar ALTO)
+  let refPct = 80;
+  if (candidatos.length) {
+    refPct = Math.max(...candidatos.map(p => Number(p.pctVendido) || 80));
+  }
+
+  const pctDim = Math.min(pctVendido / Math.max(refPct, 1), 1);
+
+  // Velocidade: ritmo projetado em 365 dias desde o 1º estoque registrado
+  let timeDim = 0.5;
+  try {
+    const hist = JSON.parse(e.historicoEstoque || '[]');
+    if (Array.isArray(hist) && hist.length > 0) {
+      const partes = (hist[0].data || '').split(/[\s\/]+/);
+      const d = parseInt(partes[0], 10), m = parseInt(partes[1], 10) - 1, y = parseInt(partes[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        const dias = Math.max(1, Math.floor((Date.now() - new Date(y, m, d)) / 86400000));
+        timeDim = Math.min((pctVendido / dias) * 365 / Math.max(refPct, 1), 1);
+      }
+    }
+  } catch(_) {}
+
+  const simil = Math.round((pctDim * 0.6 + timeDim * 0.4) * 100);
+  return { simil, isSobraSuspeita };
 }
 
 function renderPadroesVendedores_(padroes) {
@@ -2083,10 +2163,13 @@ async function carregarLancamentos() {
     // cards (que pode vir filtrada por status, ver setFiltro) quanto no Mapa
     // Geral (sempre TODOS os lançamentos, sem filtro — evita 2 fetches
     // redundantes no carregamento inicial da página).
-    const mapaScoreVendedor = await buscarScoreVendedorPorLancamento_();
-    await renderLista(_todos, mapaScoreVendedor);
-    atualizarMapaGeral_(_todos, mapaScoreVendedor);
-    carregarPadroesVendedores_();
+    const [mapaScoreVendedor, listaPadroes] = await Promise.all([
+      buscarScoreVendedorPorLancamento_(),
+      buscarPadroesVendedores_(),
+    ]);
+    await renderLista(_todos, mapaScoreVendedor, listaPadroes);
+    atualizarMapaGeral_(_todos, mapaScoreVendedor, listaPadroes);
+    carregarPadroesVendedores_(listaPadroes);
   } catch {
     document.getElementById('lista-grid').innerHTML =
       '<div class="vazio"><h3>Erro ao carregar</h3><p>Verifique a conexão com o Apps Script.<br>O backend precisa ter a rota <code>listar_lancamentos</code> implantada.</p></div>';
@@ -2113,7 +2196,7 @@ function renderFiltros() {
 
 function setFiltro(s) {
   _filtroStatus = s; renderFiltros();
-  renderLista(s ? _todos.filter(l => l.status === s) : _todos);
+  renderLista(s ? _todos.filter(l => l.status === s) : _todos, null, _listaPadroes);
 }
 
 // Agrupa linhas cruas (uma por unidade/tipologia, como vem de
@@ -2131,7 +2214,7 @@ function agruparPorEmpreendimento_(lista) {
   return Object.values(mapa);
 }
 
-async function renderLista(lista, mapaScoreVendedorParam) {
+async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam) {
   const grid = document.getElementById('lista-grid');
   const cnt  = document.getElementById('lista-count');
 
@@ -2152,7 +2235,8 @@ async function renderLista(lista, mapaScoreVendedorParam) {
   // carregarLancamentos() (evita refetch); setFiltro() não passa nada, cai
   // no fetch próprio.
   const mapaScoreVendedor = mapaScoreVendedorParam || await buscarScoreVendedorPorLancamento_();
-  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor);
+  const listaPadroes = listaPadroesParam !== undefined ? listaPadroesParam : _listaPadroes;
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor, listaPadroes);
   scored.forEach(s => { s.alerta = calcularAlertaTracao_(s); });
 
   // Ordem pedida pelo usuário: alerta POSITIVO primeiro, depois NEGATIVO,
@@ -2201,9 +2285,11 @@ async function renderLista(lista, mapaScoreVendedorParam) {
     // ambos já calculados ANTES do render (ver `scored` acima), diferente da
     // versão anterior que pintava isso depois via getElementById.
     const alertaHtml = s.alerta ? `<div class="card-alerta card-alerta-${s.alerta.tipo}">${s.alerta.titulo}</div>` : '';
+    const similHtml       = s.simil > 0 ? `<span class="simil-badge" title="Similaridade com Padrão Vendedor ${s.simil}% (peso 5 na Tração)">S ${s.simil}%</span>` : '';
+    const sobraFlagHtml   = s.isSobraSuspeita ? `<span class="sobra-flag" title="Padrão SOBRA SUSPEITA: >80% vendido com entrega >24 meses">⚠ Sobra suspeita</span>` : '';
     const tvHtml = s.comp > 0 ? `
-        <div class="tv-score-badge ${classeScoreTracao_(s.comp)}" title="Score de Tração ${s.comp.toFixed(1)} — ${s.perfil}">T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div>
-        <div class="tv-eixos-mini">Prazo ${s.prazoSc.toFixed(1)} · Força ${s.trac.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)}</div>` : '';
+        <div class="tv-score-badge ${classeScoreTracao_(s.comp)}" title="Score de Tração ${s.comp.toFixed(1)} — ${s.perfil} · Similaridade Padrão Vendedor ${s.simil}%">T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div>
+        <div class="tv-eixos-mini">Prazo ${s.prazoSc.toFixed(1)} · Força ${s.trac.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)} ${similHtml}${sobraFlagHtml}</div>` : '';
     return `
     <div class="emp-card" id="ec-${i}" data-pv-badge-lanc="${pvId}">
       ${alertaHtml}
@@ -2247,14 +2333,15 @@ async function renderLista(lista, mapaScoreVendedorParam) {
 // só uma segunda forma de visualizar o mesmo dado, lado a lado numa tabela.
 const MAPA_ESTAGIO_ORDEM_ = { 'Em planta': 1, 'Em obras': 2, 'Pronto': 3, 'Pronto novo': 3, 'Entregue': 4 };
 
-function atualizarMapaGeral_(lista, mapaScoreVendedorParam) {
+function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
   if (!lista.length) {
     _mapaRows = [];
     renderMapaGeral_();
     return;
   }
   const empsBrutos = agruparPorEmpreendimento_(lista);
-  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedorParam || {});
+  const listaPadroes = listaPadroesParam !== undefined ? listaPadroesParam : _listaPadroes;
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedorParam || {}, listaPadroes);
   scored.forEach(s => { s.alerta = calcularAlertaTracao_(s); });
 
   _mapaRows = scored.map(s => {
@@ -2278,6 +2365,8 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam) {
       alertaRank: s.alerta ? (s.alerta.tipo === 'positivo' ? 2 : 1) : 0,
       comp: s.comp || 0,
       scoreVendedor: s.scoreVendedor || 0,
+      simil: s.simil || 0,
+      isSobraSuspeita: s.isSobraSuspeita || false,
       prazo: parseInt(e.prazoMaximo, 10) || 0,
     };
   });
@@ -2331,6 +2420,7 @@ function mapaCampoValor_(r, campo) {
   if (campo === 't')           return r.comp;
   if (campo === 'construtora') return r.construtora.toLowerCase();
   if (campo === 'v')           return r.scoreVendedor;
+  if (campo === 's')           return r.simil;
   if (campo === 'area')        return r.areaMin;
   if (campo === 'preco')       return r.menorPreco;
   if (campo === 'm2')          return r.m2Medio;
@@ -2360,7 +2450,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2373,7 +2463,7 @@ function renderMapaGeral_() {
     .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="12" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2398,6 +2488,7 @@ function renderMapaGeral_() {
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
       <td>${r.construtora}</td>
       <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
+      <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge" title="Similaridade com Padrão Vendedor">${r.simil}%</span>${r.isSobraSuspeita ? ' <span class="sobra-flag" title="Padrão SOBRA SUSPEITA">⚠ suspeita</span>' : ''}` : '—'}</td>
       <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
       <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
@@ -2411,7 +2502,7 @@ function renderMapaGeral_() {
 }
 
 function atualizarSetasMapaGeral_() {
-  ['id','nome','t','construtora','v','area','preco','m2','vendido','prazo','estagio','alerta'].forEach(campo => {
+  ['id','nome','t','construtora','v','s','area','preco','m2','vendido','prazo','estagio','alerta'].forEach(campo => {
     const el = document.getElementById('seta-mapa-' + campo);
     if (!el) return;
     if (_mapaSort.campo !== campo) { el.textContent = '▾'; el.classList.remove('on'); return; }
@@ -2509,17 +2600,16 @@ function calcularDispScoreTracao_(estoque, tipoEmpreendimento) {
 // lote por renderLista() antes de chamar esta função — ver
 // pvCarregarBadgesBatch_ (perfil-vendedor.js), mesmo endpoint usado nos
 // badges de urgência dos cards.
-function calcularScoreTracao(emps, mapaScoreVendedor) {
+function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes) {
   mapaScoreVendedor = mapaScoreVendedor || {};
+  listaPadroes      = listaPadroes      || [];
   const m2s    = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
   const minM2  = m2s.length ? Math.min(...m2s) : 0;
   const maxM2  = m2s.length ? Math.max(...m2s) : 1;
-  // Pesos redefinidos pelo usuário (2026-07, 2ª rodada): Vendedor 5 / Força de
-  // Venda (antiga "Tração") 4 / Prazo de Pgt (antigo "Prazo") 3 / Preço Médio
-  // (antiga "Atratividade") 2 / Estoque (antiga "Disponibilidade") 1 — soma
-  // 15, cada eixo contribui eixo * peso / 15, mesma escala 0-10 dos eixos.
-  const PESO_PRAZO = 3, PESO_DISP = 1, PESO_ATRAT = 2, PESO_TRAC = 4, PESO_VENDEDOR = 5;
-  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_TRAC + PESO_VENDEDOR;
+  // Pesos (2026-07): Vendedor 5 / Similaridade Padrão Vendedor 5 / Força de
+  // Venda 4 / Prazo 3 / Preço Médio 2 / Estoque 1 — soma 20.
+  const PESO_PRAZO = 3, PESO_DISP = 1, PESO_ATRAT = 2, PESO_TRAC = 4, PESO_VENDEDOR = 5, PESO_SIMIL = 5;
+  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_TRAC + PESO_VENDEDOR + PESO_SIMIL;
   return emps.map(e => {
     const total   = Number(e.totalUnidades) || 0;
     const estoque = Number(e.estoque) || 0;
@@ -2531,9 +2621,12 @@ function calcularScoreTracao(emps, mapaScoreVendedor) {
     const trac    = total > 0 ? ((total - estoque) / total) * 10 : 0;
     const prazoSc = calcularPrazoScoreTracao_(prazo, e.tipoEmpreendimento);
     const scoreVendedor = parseInt(mapaScoreVendedor[e.idLancamento]) || 0;
-    const vendedorSc = scoreVendedor / 10; // 0-100 -> 0-10, mesma escala dos outros eixos
+    const vendedorSc    = scoreVendedor / 10;
+    const { simil, isSobraSuspeita } = calcularSimilaridadePadrao_(e, listaPadroes);
+    const similSc = simil / 10; // 0-100 → 0-10
     const comp    = semDados ? 0 : (
-      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT + trac * PESO_TRAC + vendedorSc * PESO_VENDEDOR)
+      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT + trac * PESO_TRAC +
+       vendedorSc * PESO_VENDEDOR + similSc * PESO_SIMIL)
       / PESO_TOTAL
     );
     const pctDisp = total > 0 ? estoque / total : 1;
@@ -2542,7 +2635,8 @@ function calcularScoreTracao(emps, mapaScoreVendedor) {
     else if (comp >= 7)     { perfil = 'Carro-chefe';    perfilCls = 'tp-hot';  }
     else if (pctDisp < 0.15){ perfil = 'Quase esgotado'; perfilCls = 'tp-esgot';}
     else                    { perfil = 'Investigar';     perfilCls = 'tp-warm'; }
-    return { e, atrat, disp, trac, prazoSc, prazo, vendedorSc, scoreVendedor, comp, perfil, perfilCls };
+    return { e, atrat, disp, trac, prazoSc, prazo, vendedorSc, scoreVendedor,
+             simil, similSc, isSobraSuspeita, comp, perfil, perfilCls };
   }).sort((a, b) => b.comp - a.comp);
 }
 
