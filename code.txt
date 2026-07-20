@@ -136,7 +136,19 @@ const CABECALHO_LANCAMENTOS = [
   // mais acessível o produto pro cliente — Sinal/Mensais/Semestrais/Anuais
   // são as parcelas em que esse total é fracionado. Vai no FIM do array pelo
   // mesmo motivo de sempre (ver comentário acima).
-  'planoAnuaisParcelas', 'planoCaptacaoPerc'
+  'planoAnuaisParcelas', 'planoCaptacaoPerc',
+  // idEmpreendimento — código único por par NOME+CONSTRUTORA (EMP-NNN).
+  // Dois cadastros com mesmo nome e mesma construtora = mesmo código,
+  // independente de quantas vezes o empreendimento for reimportado ou editado.
+  // Diferente de idLancamento (por importação/sessão) — este é estável
+  // e serve pra rastrear histórico e velocidade de vendas do estoque.
+  'idEmpreendimento',
+  // historicoEstoque — JSON [{data, valor}] — cada entrada registra o estoque
+  // no momento em que foi salvo. Permite calcular velocidade de vendas.
+  'historicoEstoque',
+  // dataUltimaAtualizacao — dd/MM/yyyy HH:mm — preenchida apenas em updates
+  // (vazia no primeiro cadastro); indica quando o dado foi revisado pela última vez.
+  'dataUltimaAtualizacao',
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -3031,6 +3043,62 @@ function listarLancamentos_() {
   }
 }
 
+// Chave de normalização para identificar par NOME+CONSTRUTORA de forma
+// resistente a variações de capitalização, acentuação e espaços extras.
+function chaveEmpreendimento_(nome, construtora) {
+  function slug_(s) {
+    return String(s || '').toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  return slug_(nome) + '|' + slug_(construtora);
+}
+
+// Gera o próximo código sequencial EMP-NNN, verificando o maior já existente
+// na coluna idEmpreendimento da aba (evita colisões entre sessões concorrentes).
+function proximoIdEmpreendimento_(aba, lr) {
+  var idxIdEmp = CABECALHO_LANCAMENTOS.indexOf('idEmpreendimento') + 1;
+  var maxNum = 0;
+  if (lr >= 2 && idxIdEmp > 0) {
+    var vals = aba.getRange(2, idxIdEmp, lr - 1, 1).getValues().flat();
+    vals.forEach(function(v) {
+      var m = String(v || '').match(/(\d+)$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    });
+  }
+  return 'EMP-' + String(maxNum + 1).padStart(3, '0');
+}
+
+// Retorna o idEmpreendimento já existente se o par NOME+CONSTRUTORA ainda
+// aparece em alguma linha da aba (chamado APÓS deleção das linhas antigas);
+// caso contrário, gera o próximo código sequencial com LockService pra evitar
+// colisão em saves simultâneos.
+function obterOuCriarIdEmpreendimento_(nome, construtora, aba, lr) {
+  var chave    = chaveEmpreendimento_(nome, construtora);
+  var idxIdEmp = CABECALHO_LANCAMENTOS.indexOf('idEmpreendimento') + 1;
+  var idxNome  = CABECALHO_LANCAMENTOS.indexOf('nomeEmpreendimento') + 1;
+  var idxConst = CABECALHO_LANCAMENTOS.indexOf('construtora') + 1;
+  if (lr >= 2 && idxIdEmp > 0) {
+    var nCols = Math.max(idxIdEmp, idxNome, idxConst);
+    var dados = aba.getRange(2, 1, lr - 1, nCols).getValues();
+    for (var i = 0; i < dados.length; i++) {
+      var idEmp = String(dados[i][idxIdEmp - 1] || '');
+      if (!idEmp) continue;
+      if (chaveEmpreendimento_(dados[i][idxNome - 1], dados[i][idxConst - 1]) === chave) {
+        return idEmp;
+      }
+    }
+  }
+  // Novo par — gera código sequencial com lock pra evitar colisão.
+  var lock = LockService.getScriptLock();
+  lock.waitLock(8000);
+  try {
+    return proximoIdEmpreendimento_(aba, aba.getLastRow());
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function salvarLancamento_(dados) {
   if (!dados || !dados.nomeEmpreendimento) return { ok: false, erro: 'nomeEmpreendimento obrigatorio' };
   try {
@@ -3048,48 +3116,89 @@ function salvarLancamento_(dados) {
     // o registro antigo, gera um idLancamento novo e o registro com o nome
     // velho fica órfão na planilha — por isso o idLancamento tem prioridade.
     var lr = aba.getLastRow();
-    var idExistente = '';
+    var idExistente       = '';
     var preservedStatusAtivo = '';
     var statusAtivoColIdx = CABECALHO_LANCAMENTOS.indexOf('statusAtivo') + 1;
+
+    var idxEstoque  = CABECALHO_LANCAMENTOS.indexOf('estoque') + 1;
+    var idxIdEmp    = CABECALHO_LANCAMENTOS.indexOf('idEmpreendimento') + 1;
+    var idxHistEst  = CABECALHO_LANCAMENTOS.indexOf('historicoEstoque') + 1;
+    var estoqueAnterior     = null;
+    var idEmpAnterior       = '';
+    var histEstoqueAnterior = '[]';
+    var histCapturado       = false;
+    var mudancas            = [];
+
     if (lr >= 2) {
       if (dados.idLancamento) {
-        var idsAtuais = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
-        for (var i = idsAtuais.length - 1; i >= 0; i--) {
-          if (idsAtuais[i] === dados.idLancamento) {
-            if (!preservedStatusAtivo && statusAtivoColIdx > 0)
-              preservedStatusAtivo = aba.getRange(i + 2, statusAtivoColIdx).getValue() || '';
-            idExistente = idsAtuais[i];
-            aba.deleteRow(i + 2);
+        var nColsById = [statusAtivoColIdx, idxEstoque, idxIdEmp, idxHistEst]
+          .reduce(function(m, v) { return v > 0 ? Math.max(m, v) : m; }, 1);
+        nColsById = Math.min(nColsById, CABECALHO_LANCAMENTOS.length);
+        var dadosPorId = aba.getRange(2, 1, lr - 1, nColsById).getValues();
+        for (var i = dadosPorId.length - 1; i >= 0; i--) {
+          if (String(dadosPorId[i][0]) !== String(dados.idLancamento)) continue;
+          if (!preservedStatusAtivo && statusAtivoColIdx > 0 && statusAtivoColIdx <= nColsById)
+            preservedStatusAtivo = String(dadosPorId[i][statusAtivoColIdx - 1] || '');
+          if (estoqueAnterior === null && idxEstoque > 0 && idxEstoque <= nColsById)
+            estoqueAnterior = dadosPorId[i][idxEstoque - 1];
+          if (!idEmpAnterior && idxIdEmp > 0 && idxIdEmp <= nColsById)
+            idEmpAnterior = String(dadosPorId[i][idxIdEmp - 1] || '');
+          if (!histCapturado && idxHistEst > 0 && idxHistEst <= nColsById) {
+            histEstoqueAnterior = String(dadosPorId[i][idxHistEst - 1] || '[]');
+            histCapturado = true;
           }
+          if (!idExistente) idExistente = String(dadosPorId[i][0]);
+          aba.deleteRow(i + 2);
         }
       } else {
-        // Dedup só por NOME (sem idLancamento) só acontece pela aba "Novo
-        // Lançamento" — NUNCA preserva statusAtivo do registro encontrado aqui
-        // (diferente do branch por ID acima): se o usuário reusar o nome de um
-        // empreendimento que ele mesmo já excluiu antes, o cadastro novo tem
-        // que nascer Ativo, não herdar "Excluído" do antigo em silêncio (bug
-        // real: o backend respondia "ok" mas o card nunca aparecia, porque a
-        // linha nova ia pra planilha já com statusAtivo="Excluído").
-        var nomes = aba.getRange(2, 2, lr - 1, 1).getValues().flat();
-        var nomeNovo = String(dados.nomeEmpreendimento).toLowerCase().trim();
-        for (var i = nomes.length - 1; i >= 0; i--) {
-          if (String(nomes[i] || '').toLowerCase().trim() === nomeNovo) {
-            if (!idExistente) idExistente = aba.getRange(i + 2, 1).getValue();
-            aba.deleteRow(i + 2);
+        // Dedup por NOME+CONSTRUTORA (mais robusto que só nome — empreendimentos
+        // com nome igual de construtoras diferentes são distintos).
+        // NUNCA preserva statusAtivo: cadastro novo sempre nasce Ativo.
+        var nColsDedup = [3, idxEstoque, idxIdEmp, idxHistEst]
+          .reduce(function(m, v) { return v > 0 ? Math.max(m, v) : m; }, 3);
+        nColsDedup = Math.min(nColsDedup, CABECALHO_LANCAMENTOS.length);
+        var deupDados = aba.getRange(2, 1, lr - 1, nColsDedup).getValues();
+        var chaveNova = chaveEmpreendimento_(dados.nomeEmpreendimento, dados.construtora);
+        for (var i = deupDados.length - 1; i >= 0; i--) {
+          if (chaveEmpreendimento_(deupDados[i][1], deupDados[i][2]) !== chaveNova) continue;
+          if (!idExistente) {
+            idExistente = String(deupDados[i][0] || '');
+            if (idxEstoque > 0 && idxEstoque <= nColsDedup)
+              estoqueAnterior = deupDados[i][idxEstoque - 1];
+            if (idxIdEmp > 0 && idxIdEmp <= nColsDedup)
+              idEmpAnterior = String(deupDados[i][idxIdEmp - 1] || '');
+            if (!histCapturado && idxHistEst > 0 && idxHistEst <= nColsDedup) {
+              histEstoqueAnterior = String(deupDados[i][idxHistEst - 1] || '[]');
+              histCapturado = true;
+            }
           }
+          aba.deleteRow(i + 2);
         }
       }
     }
-    // statusAtivo: respeita o que vier no payload (edição explícita); se não
-    // vier, preserva o valor anterior só quando o match foi por idLancamento
-    // explícito (Editar) — ver comentário acima sobre o match por nome.
-    var statusAtivo = dados.statusAtivo !== undefined ? (dados.statusAtivo || 'Ativo') : (preservedStatusAtivo || 'Ativo');
 
-    // Reaproveita o idLancamento já existente (mesmo empreendimento, dado
-    // reextraído/atualizado) em vez de gerar um novo toda vez — sem isso o ID
-    // mudava a cada reimportação e quebrava qualquer referência já enviada
-    // pro cliente (interesse registrado, link de email, etc.).
+    var statusAtivo = dados.statusAtivo !== undefined ? (dados.statusAtivo || 'Ativo') : (preservedStatusAtivo || 'Ativo');
     var id = idExistente || proximoIdLancamento_();
+
+    // idEmpreendimento: reaproveitado se capturado antes da deleção; caso
+    // contrário, obtido/criado pelo par NOME+CONSTRUTORA no que resta na aba.
+    var lrAtual = aba.getLastRow();
+    var idEmp = idEmpAnterior ||
+                obterOuCriarIdEmpreendimento_(dados.nomeEmpreendimento, dados.construtora, aba, lrAtual);
+
+    // Histórico de estoque (velocidade de vendas).
+    var estoqueNovo = dados.estoque || '';
+    var histArr = [];
+    try { histArr = JSON.parse(histEstoqueAnterior); } catch(e_) {}
+    if (!Array.isArray(histArr)) histArr = [];
+    if (estoqueAnterior === null) {
+      if (estoqueNovo) histArr.push({ data: agora, valor: estoqueNovo });
+    } else if (String(estoqueAnterior) !== String(estoqueNovo)) {
+      mudancas.push({ campo: 'estoque', de: String(estoqueAnterior), para: String(estoqueNovo), data: agora });
+      histArr.push({ data: agora, valor: estoqueNovo });
+    }
+    var historicoEstoque      = JSON.stringify(histArr);
+    var dataUltimaAtualizacao = idExistente ? agora : '';
 
     var linhas = unidades.map(function(u, idx) {
       var q  = parseInt(u.quartos)  || 0;
@@ -3172,18 +3281,14 @@ function salvarLancamento_(dados) {
         dados.planoFinanciamentoEm    || '',
         dados.planoAnuaisParcelas || '',
         dados.planoCaptacaoPerc   || '',
+        idEmp,                     // idEmpreendimento (EMP-NNN)
+        historicoEstoque,          // JSON [{data, valor}]
+        dataUltimaAtualizacao,     // vazio no 1º cadastro
       ];
     });
 
     if (linhas.length) {
       var linhaInicio = aba.getLastRow() + 1;
-      // planoUnicaData/planoFinanciamentoEm são "AAAA-MM" (input type=month no
-      // front-end) — SEM forçar formato de texto ANTES do setValues, o Sheets
-      // auto-detecta esse padrão como data e converte pra um valor Date
-      // interno. Na leitura de volta (listarLancamentos_), esse Date vira uma
-      // string ISO completa (ex: "2028-12-01T00:00:00.000Z"), que não bate
-      // com o formato exato "AAAA-MM" que o <input type=month> exige — o
-      // campo aparece vazio na tela, dando a impressão de que "não gravou".
       var idxUnicaData = CABECALHO_LANCAMENTOS.indexOf('planoUnicaData') + 1;
       var idxFinancEm  = CABECALHO_LANCAMENTOS.indexOf('planoFinanciamentoEm') + 1;
       if (idxUnicaData > 0) aba.getRange(linhaInicio, idxUnicaData, linhas.length, 1).setNumberFormat('@');
@@ -3192,7 +3297,10 @@ function salvarLancamento_(dados) {
          .setValues(linhas);
     }
 
-    return { ok: true, idLancamento: id, unidades: linhas.length };
+    return {
+      ok: true, idLancamento: id, idEmpreendimento: idEmp,
+      unidades: linhas.length, isUpdate: !!idExistente, mudancas: mudancas,
+    };
   } catch(e) {
     return { ok: false, erro: e.message };
   }

@@ -287,6 +287,7 @@ select.form-input option { background: var(--surface2); }
 .mapa-tabela tbody tr { cursor: pointer; }
 .mapa-tabela tbody tr:hover { background: var(--surface2); }
 .mapa-tabela td.mapa-num { font-variant-numeric: tabular-nums; }
+.mapa-tabela td.mapa-id { color: var(--accent2); font-family: monospace; font-size: 10px; font-weight: 700; white-space: nowrap; width: 1%; }
 .mapa-tabela .badge-vendido { padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; }
 /* Caixas T/V reaproveitam .tv-score-badge (mesma cor/classe dos cards) --
    aqui só reduz o tamanho, já que margin-top:8px e padding maior fazem
@@ -329,6 +330,7 @@ select.form-input option { background: var(--surface2); }
 .st-entregue{ background: rgba(0,212,170,.12);   color: var(--accent2); border: 1px solid rgba(0,212,170,.25); }
 .st-data    { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
 .st-prazo   { background: rgba(52,211,153,.1); color: #34d399; border: 1px solid rgba(52,211,153,.28); }
+.st-id      { background: rgba(0,212,170,.08); color: var(--accent2); border: 1px solid rgba(0,212,170,.22); font-family: monospace; font-size: 10px; letter-spacing: .4px; }
 
 .emp-card-body { padding: 14px 16px; }
 .emp-tipologias { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -667,6 +669,7 @@ select.form-input option { background: var(--surface2); }
     <table class="mapa-tabela">
       <thead>
         <tr>
+          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
           <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
@@ -681,7 +684,7 @@ select.form-input option { background: var(--surface2); }
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="11" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="12" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -1888,13 +1891,19 @@ async function salvarLancamento() {
     try { json = JSON.parse(texto); } catch { json = {}; }
     if (trataNaoAutenticado(json)) return;
     if (json.ok) {
-      mostrarToast(`"${dados.nomeEmpreendimento}" salvo com sucesso!`, 'ok');
+      const idEmpLabel = json.idEmpreendimento ? ` [${json.idEmpreendimento}]` : '';
+      let msgToast;
+      if (json.isUpdate && json.mudancas && json.mudancas.length) {
+        const desc = json.mudancas.map(m => `${m.campo}: ${m.de} → ${m.para}`).join(' · ');
+        msgToast = `"${dados.nomeEmpreendimento}"${idEmpLabel} atualizado — ${desc}`;
+      } else if (json.isUpdate) {
+        msgToast = `"${dados.nomeEmpreendimento}"${idEmpLabel} atualizado sem mudanças no estoque.`;
+      } else {
+        msgToast = `"${dados.nomeEmpreendimento}"${idEmpLabel} cadastrado com sucesso!`;
+      }
+      mostrarToast(msgToast, 'ok');
       limparMotor();
       mudarAbaLancamentos('lista');
-      // Recarrega a página inteira em vez de só re-buscar a lista via fetch
-      // (mesmo padrão do salvar de Perfil do Vendedor, abrirPvLanc) — garante
-      // que o card novo aparece com dado 100% fresco da planilha, sem
-      // depender do timing do fetch/render assíncrono da lista.
       setTimeout(() => location.reload(), 1200);
     } else {
       mostrarToast(json.erro || 'Erro ao salvar.', 'erro');
@@ -2053,6 +2062,7 @@ async function renderLista(lista, mapaScoreVendedorParam) {
           ${e.prazoMaximo ? `<span class="st-badge st-prazo">⏱ ${e.prazoMaximo} meses</span>` : ''}
           ${tabelaBadge}
           ${urlBadge}
+          ${e.idEmpreendimento ? `<span class="st-badge st-id" title="Código do empreendimento (NOME+CONSTRUTORA)"># ${e.idEmpreendimento}</span>` : ''}
           <span class="pv-emp-badge" id="pvbadge-lanc-${i}" style="display:none"></span>
         </div>
       </div>
@@ -2097,6 +2107,7 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam) {
     const precos = e.unidades.map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
     return {
       e,
+      idEmpreendimento: e.idEmpreendimento || '',
       nome: e.nomeEmpreendimento || '—',
       construtora: e.construtora || '—',
       areaMin: areas.length ? Math.min(...areas) : 0,
@@ -2159,6 +2170,7 @@ function toggleMapaEstagioFiltro_(estagio) {
 }
 
 function mapaCampoValor_(r, campo) {
+  if (campo === 'id')          return r.idEmpreendimento;
   if (campo === 'nome')        return r.nome.toLowerCase();
   if (campo === 't')           return r.comp;
   if (campo === 'construtora') return r.construtora.toLowerCase();
@@ -2192,7 +2204,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2205,7 +2217,7 @@ function renderMapaGeral_() {
     .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2225,6 +2237,7 @@ function renderMapaGeral_() {
   // sua própria coluna em vez de um badge combinado.
   tbody.innerHTML = linhas.map(({ r, i }) => `
     <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar">
+      <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
       <td>${r.construtora}</td>
@@ -2242,7 +2255,7 @@ function renderMapaGeral_() {
 }
 
 function atualizarSetasMapaGeral_() {
-  ['nome','t','construtora','v','area','preco','m2','vendido','prazo','estagio','alerta'].forEach(campo => {
+  ['id','nome','t','construtora','v','area','preco','m2','vendido','prazo','estagio','alerta'].forEach(campo => {
     const el = document.getElementById('seta-mapa-' + campo);
     if (!el) return;
     if (_mapaSort.campo !== campo) { el.textContent = '▾'; el.classList.remove('on'); return; }
