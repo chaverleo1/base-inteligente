@@ -3317,9 +3317,17 @@ function salvarLancamento_(dados) {
       var idxUnicaData   = CABECALHO_LANCAMENTOS.indexOf('planoUnicaData') + 1;
       var idxFinancEm    = CABECALHO_LANCAMENTOS.indexOf('planoFinanciamentoEm') + 1;
       var idxDataLanc    = CABECALHO_LANCAMENTOS.indexOf('dataLancamento') + 1;
+      // previsaoEntrega — mesmo motivo de dataLancamento: sem forçar texto,
+      // o Sheets pode formatar a célula como Data (a string "30/12/2012"
+      // "parece" data) e getValues() devolve um objeto Date, que vira ISO
+      // 8601 no JSON de resposta — travava a classificação de Padrão
+      // Vendedor inteira pra quem tinha esse campo preenchido assim (caso
+      // real 2026-07, ver parseDataFlexivel_).
+      var idxPrevisaoEntrega = CABECALHO_LANCAMENTOS.indexOf('previsaoEntrega') + 1;
       if (idxUnicaData > 0) aba.getRange(linhaInicio, idxUnicaData, linhas.length, 1).setNumberFormat('@');
       if (idxFinancEm  > 0) aba.getRange(linhaInicio, idxFinancEm,  linhas.length, 1).setNumberFormat('@');
       if (idxDataLanc  > 0) aba.getRange(linhaInicio, idxDataLanc,  linhas.length, 1).setNumberFormat('@');
+      if (idxPrevisaoEntrega > 0) aba.getRange(linhaInicio, idxPrevisaoEntrega, linhas.length, 1).setNumberFormat('@');
       aba.getRange(linhaInicio, 1, linhas.length, CABECALHO_LANCAMENTOS.length)
          .setValues(linhas);
     }
@@ -3425,6 +3433,16 @@ function parseDataFlexivel_(v) {
   v = String(v || '').trim();
   var m1 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (m1) return { dia: parseInt(m1[1], 10), mes: parseInt(m1[2], 10), ano: parseInt(m1[3], 10) };
+  // Formato ISO 8601 (ex: "2012-12-30T02:00:00.000Z") -- acontece quando a
+  // célula no Sheets está formatada como Data em vez de texto puro:
+  // getValues() devolve um objeto Date nesse caso, que o Apps Script
+  // serializa nesse formato ao passar pelo JSON de resposta. Extrai
+  // ano/mês/dia direto da string (sem reconstruir um Date e reinterpretar
+  // o "Z", que podia mudar o dia por causa do fuso) -- caso real 2026-07:
+  // previsaoEntrega de um lançamento antigo veio assim e travava a
+  // classificação de Padrão Vendedor inteira (ver avaliarPadraoVendedor_).
+  var m3 = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m3) return { dia: parseInt(m3[3], 10), mes: parseInt(m3[2], 10), ano: parseInt(m3[1], 10) };
   var m2 = v.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})/i);
   if (m2) return { dia: 1, mes: MESES_ABREV_NUM_BR_[m2[1].toLowerCase()], ano: parseInt(m2[2], 10) };
   return null;

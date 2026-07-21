@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 73) — Bug: previsaoEntrega em formato ISO travava a classificação inteira
+
+Usuário reportou: 3 obras já entregues ("Pronto novo"), com Data de Entrega preenchida e % vendido
+alto (97%, 99%, 81%), continuavam sem nenhuma classificação de Padrão Vendedor. Pedi o dado bruto
+de uma delas (Near Lourenzzo) via console e encontrei a causa: `previsaoEntrega` veio como
+`"2012-12-30T02:00:00.000Z"` (ISO 8601) em vez de `"30/12/2012"` — o Google Sheets tinha formatado
+essa célula como Data em vez de texto puro (mesmo problema que `dataLancamento` já tinha antes),
+então `getValues()` devolve um objeto Date que vira ISO 8601 ao passar pelo JSON de resposta. Nem
+`parseDataFlexivel_` (backend) nem `parseDataFlexivelParaDate_` (frontend) reconheciam esse
+formato — a classificação inteira parava de cara (`if (!dataEntrega) return null`), pra QUALQUER
+lançamento com esse problema.
+
+**Correção**: `parseDataFlexivel_` (code.txt) e `parseDataFlexivelParaDate_` (lancamentos.html)
+ganharam um terceiro padrão de reconhecimento (`/^(\d{4})-(\d{2})-(\d{2})/`), extraindo ano/mês/dia
+direto da string ISO sem reconstruir um objeto `Date` (evita reinterpretar o "Z" e mudar o dia por
+fuso horário). `calcularTempoObraEntreDatas_` foi simplificada pra reaproveitar
+`parseDataFlexivelParaDate_` nos dois lados (antes tinha um regex próprio duplicado, sem suporte a
+ISO). No backend, `previsaoEntrega` entrou na lista de colunas que recebem `setNumberFormat('@')`
+ao salvar (mesma proteção que `dataLancamento` já tinha) — evita esse problema em cadastros novos.
+
+⚠️ **Efeito colateral esperado, não é bug**: como o `historicoEstoque` dessas obras antigas só tem
+1 snapshot (hoje, capturado na reimportação), o sistema não sabe QUANDO elas realmente venderam
+70-97% no passado — só sabe que, comparando "hoje" contra uma entrega de 2012, já se passaram anos.
+Isso as classifica como **SOBRA SUSPEITA** (alerta no Mapa Geral, não entra na tabela Padrão
+Vendedor) em vez de FORTE/POTENCIAL — tecnicamente correto dado o critério definido (>2 anos depois
+da entrega), mas pode surpreender quem esperava ver essas obras antigas e bem vendidas como padrão
+positivo. Não tem solução sem histórico real de estoque anterior a hoje.
+
+Testado em Node: `parseDataFlexivelParaDate_`/`calcularTempoObraEntreDatas_` reconhecem o formato
+ISO corretamente (ano/mês/dia batendo), e o dado real do Near Lourenzzo (que antes retornava `null`)
+agora retorna um resultado válido. Regressão completa (todas as suítes anteriores) sem quebras.
+
+⚠️ **Backend**: `code.txt` mudou (`parseDataFlexivel_` + `setNumberFormat('@')` em
+`previsaoEntrega`) — precisa colar `code.gs.txt` no Apps Script e reimplantar como nova versão.
+
 ## 2026-07-21 (parte 72) — Tabela "Modelos Vendedores" move pra cima do Padrão Vendedor no Mapa Geral
 
 Pedido do usuário: a tabela de Modelos Vendedores (importados + automáticos, parte 71) estava só

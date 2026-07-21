@@ -2441,6 +2441,17 @@ function parseDataFlexivelParaDate_(v) {
   v = String(v || '').trim();
   const m1 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   if (m1) return new Date(+m1[3], +m1[2] - 1, +m1[1]);
+  // Formato ISO 8601 (ex: "2012-12-30T02:00:00.000Z") -- acontece quando o
+  // Google Sheets formata a célula como Data em vez de texto puro:
+  // getValues() devolve um objeto Date nesse caso, que vira essa string ao
+  // passar por JSON no caminho até aqui. Extrai ano/mês/dia direto da
+  // string (não usa `new Date(isoString)`, que reinterpretaria o "Z" e
+  // podia mudar o dia por causa do fuso horário) -- caso real 2026-07:
+  // previsaoEntrega de um lançamento antigo veio assim e travava toda a
+  // classificação de Padrão Vendedor (sem data de entrega reconhecida, a
+  // avaliação para de cara).
+  const m3 = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m3) return new Date(+m3[1], +m3[2] - 1, +m3[3]);
   const m2 = v.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
   if (m2) return new Date(+m2[2], MESES_ABREV_NUM_[m2[1].toLowerCase()] - 1, 1);
   return null;
@@ -3256,18 +3267,13 @@ function prazoDeVendaMeses_(dataLanc) {
 // estimativa ao vivo durante a extração.
 function calcularTempoObraEntreDatas_(dataLancamentoStr, previsaoEntregaStr) {
   if (!dataLancamentoStr || !previsaoEntregaStr) return null;
-  const inicio = parseDateLanc_(dataLancamentoStr);
-  if (!inicio) return null;
-  const ent = String(previsaoEntregaStr).trim();
-  let ano, mes;
-  const mDMA = ent.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (mDMA) { mes = +mDMA[2]; ano = +mDMA[3]; }
-  else {
-    const mMA = ent.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
-    if (mMA) { mes = MESES_ABREV_NUM_[mMA[1].toLowerCase()]; ano = +mMA[2]; }
-  }
-  if (!ano || !mes) return null;
-  return (ano - inicio.getFullYear()) * 12 + (mes - (inicio.getMonth() + 1));
+  // Reaproveita parseDataFlexivelParaDate_ pros dois lados (antes tinha um
+  // regex próprio, duplicado, que não entendia ISO 8601 -- ver comentário
+  // lá pro porquê isso importa de verdade).
+  const inicio = parseDataFlexivelParaDate_(dataLancamentoStr);
+  const fim    = parseDataFlexivelParaDate_(previsaoEntregaStr);
+  if (!inicio || !fim) return null;
+  return (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
 }
 
 function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam, listaModelosParam) {
