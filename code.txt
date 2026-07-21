@@ -3322,7 +3322,7 @@ function salvarLancamento_(dados) {
 
     // Avalia Padrão Vendedor e registra na aba PADROES_VENDEDORES se elegível
     var resultadoPadrao = avaliarPadraoVendedor_(dados, histArr);
-    if (resultadoPadrao) {
+    if (resultadoPadrao && !resultadoPadrao.apenasAlerta) {
       registrarPadraoVendedor_(idEmp, id, dados, resultadoPadrao, agora);
     }
 
@@ -3344,16 +3344,28 @@ function excluirLancamento_(dados) {
 
 // ═══════════════════════════════════════════════════════════════
 // PADRÃO VENDEDOR — empreendimentos com alta velocidade de vendas
-// ALTO: ≥80% vendido em ≤1 ano desde o primeiro registro de estoque
-// EXTREMO: 100% vendido em ≤1 ano
-// SOBRA SUSPEITA: >80% vendido mas prazoMaximo > 24 meses (independente de tempo)
+// (critério redefinido 2026-07 — referência de tempo passa a ser a DATA DE
+// ENTREGA, não mais o 1º registro de estoque; ver avaliarPadraoVendedor_)
+//
+// Cenário 1 — durante a obra (limiar cruzado ANTES da entrega):
+//   EXTREMO   — 100% vendido em até 1 ano desde o LANÇAMENTO
+//   FORTE     — 100% vendido antes da entrega (mas depois de 1 ano do lançamento)
+//   POTENCIAL — 70% vendido antes da entrega
+// Cenário 2 — depois da entrega:
+//   MODERADO  — 90% vendido em até 1 ano depois da entrega
+// Cenário 3 — NÃO é PADRÃO VENDEDOR, não entra neste repositório — vira só
+// um alerta ao vivo no Mapa Geral (ver calcularSimilaridadePadrao_ em
+// lancamentos.html):
+//   SOBRA SUSPEITA — 80% vendido, mas isso só aconteceu mais de 2 anos
+//   depois da entrega
 // ═══════════════════════════════════════════════════════════════
 
 // PADROES_VENDEDORES é o REPOSITÓRIO de características dos empreendimentos
-// qualificados (EXTREMO/ALTO/SOBRA SUSPEITA) — não é só um painel de "quem
-// vendeu bem", é a matéria-prima que a IA ASSISTENTE DE MODELOS vai ler pra
-// construir os MODELOS_VENDEDORES (ver mais abaixo). Por isso captura TODAS
-// as características de produto ("Sobre o Empreendimento" + "Sobre os
+// qualificados (EXTREMO/FORTE/POTENCIAL/MODERADO — SOBRA SUSPEITA fica de
+// fora, ver acima) — não é só um painel de "quem vendeu bem", é a
+// matéria-prima que a IA ASSISTENTE DE MODELOS vai ler pra construir os
+// MODELOS_VENDEDORES (ver mais abaixo). Por isso captura TODAS as
+// características de produto ("Sobre o Empreendimento" + "Sobre os
 // apartamentos"), não só o que decide a classificação em si.
 var CABECALHO_PADROES_VENDEDORES = [
   'dataCadastro', 'idEmpreendimento', 'idLancamento', 'nomeEmpreendimento',
@@ -3425,42 +3437,107 @@ function mesesEntreDatas_(dataInicioStr, dataFimStr) {
   return (fim.ano - ini.ano) * 12 + (fim.mes - ini.mes);
 }
 
+// Converte string de data (dd/MM/aaaa HH:mm) de um ponto de historicoEstoque
+// pra Date. Formato diferente de parseDataFlexivel_ (que aceita mês/ano
+// abreviado) porque historicoEstoque sempre grava timestamp completo -- ver
+// salvarLancamento_.
+function parseDataHistorico_(str) {
+  var partes = String(str || '').split(/[\s\/]+/);
+  var dia = parseInt(partes[0], 10), mes = parseInt(partes[1], 10) - 1, ano = parseInt(partes[2], 10);
+  if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return null;
+  return new Date(ano, mes, dia);
+}
+
+function dataFlexivelParaDate_(v) {
+  var p = parseDataFlexivel_(v);
+  return p ? new Date(p.ano, p.mes - 1, p.dia) : null;
+}
+
+// Acha a primeira data (em ordem cronológica de historicoEstoque) em que o
+// estoque já implicava pelo menos `limiarPct`% vendido. Precisa saber QUANDO
+// cada limiar (70/80/90/100%) foi cruzado pela primeira vez -- não basta
+// olhar o % vendido ATUAL, porque o critério novo compara a DATA do
+// cruzamento contra a data de entrega, não o estado de hoje.
+function acharCruzamentoEstoque_(histArr, totalUnidades, limiarPct) {
+  for (var i = 0; i < histArr.length; i++) {
+    var valor = parseInt(histArr[i].valor, 10);
+    if (isNaN(valor)) continue;
+    // Compara em % arredondado (não estoque bruto contra um limiar
+    // calculado) -- limiarPct/100 tem imprecisão de ponto flutuante (ex:
+    // 1 - 90/100 = 0.09999999999999998), o que fazia o limiar de 90% falhar
+    // bem em cima da borda. Arredondar pro % inteiro (mesma conta de
+    // pctVendido no resto do arquivo) evita esse erro de borda.
+    var pctNessePonto = Math.round(((totalUnidades - valor) / totalUnidades) * 100);
+    if (pctNessePonto < limiarPct) continue;
+    var data = parseDataHistorico_(histArr[i].data);
+    if (data) return data;
+  }
+  return null;
+}
+
+// PADRÃO VENDEDOR (critério 2026-07 — ver bloco de comentário acima desta
+// seção pros 2 cenários + o alerta). Precisa do historicoEstoque pra saber
+// QUANDO cada limiar foi cruzado, e da data de entrega (previsaoEntrega)
+// como referência de "durante a obra" vs. "depois da entrega".
 function avaliarPadraoVendedor_(dados, histArr) {
   var totalUnidades = parseInt(dados.totalUnidades, 10);
   var estoque       = parseInt(dados.estoque, 10);
-  var prazoMaximo   = parseInt(dados.prazoMaximo, 10);
   if (!totalUnidades || totalUnidades <= 0) return null;
-  if (isNaN(estoque))     estoque     = 0;
-  if (isNaN(prazoMaximo)) prazoMaximo = 0;
+  if (isNaN(estoque)) estoque = 0;
 
   var pctVendido = Math.round(((totalUnidades - estoque) / totalUnidades) * 100);
+  if (pctVendido < 70) return null; // abaixo do menor limiar (POTENCIAL) -- não classifica
 
-  // SOBRA SUSPEITA: sem restrição de tempo
-  if (pctVendido > 80 && prazoMaximo > 24) {
-    return { classificacao: 'SOBRA SUSPEITA', pctVendido: pctVendido, dataPrimeiroEstoque: '' };
-  }
+  var dataEntrega    = dataFlexivelParaDate_(dados.previsaoEntrega);
+  var dataLancamento = dataFlexivelParaDate_(dados.dataLancamento);
+  if (!dataEntrega) return null; // sem data de entrega não dá pra saber "antes/depois"
 
-  // Para ALTO e EXTREMO exige histório de estoque com data inicial
   if (!Array.isArray(histArr) || histArr.length === 0) return null;
 
-  var primeiraData  = histArr[0].data || '';
-  var partes        = primeiraData.split(/[\s\/]+/);
-  // formato "dd/MM/yyyy HH:mm" → partes[0]=dd, [1]=MM, [2]=yyyy
-  var dia  = parseInt(partes[0], 10);
-  var mes  = parseInt(partes[1], 10) - 1;
-  var ano  = parseInt(partes[2], 10);
-  if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return null;
+  var primeiraData = histArr[0].data || '';
+  var hoje = new Date();
+  // Se o histórico não tem NENHUM ponto que já cruzava o limiar (ex: só 1
+  // registro antigo com estoque alto, mas o valor ATUAL já vendeu aquilo),
+  // usa hoje como aproximação de quando cruzou -- melhor esforço, não trava
+  // a classificação por falta de um snapshot exato.
+  var dataCruzou70  = acharCruzamentoEstoque_(histArr, totalUnidades, 70)  || (pctVendido >= 70  ? hoje : null);
+  var dataCruzou90  = acharCruzamentoEstoque_(histArr, totalUnidades, 90)  || (pctVendido >= 90  ? hoje : null);
+  var dataCruzou80  = acharCruzamentoEstoque_(histArr, totalUnidades, 80)  || (pctVendido >= 80  ? hoje : null);
+  var dataCruzou100 = acharCruzamentoEstoque_(histArr, totalUnidades, 100) || (pctVendido >= 100 ? hoje : null);
 
-  var dataInicio       = new Date(ano, mes, dia);
-  var hoje             = new Date();
-  var diasDecorridos   = Math.floor((hoje - dataInicio) / 86400000);
+  // Cenário 1 — durante a obra (cruzou o limiar antes da entrega)
+  if (dataCruzou100 && dataCruzou100 <= dataEntrega) {
+    if (dataLancamento) {
+      var umAnoAposLancamento = new Date(dataLancamento.getTime());
+      umAnoAposLancamento.setFullYear(umAnoAposLancamento.getFullYear() + 1);
+      if (dataCruzou100 <= umAnoAposLancamento) {
+        return { classificacao: 'EXTREMO', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+      }
+    }
+    return { classificacao: 'FORTE', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
+  if (dataCruzou70 && dataCruzou70 <= dataEntrega) {
+    return { classificacao: 'POTENCIAL', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
 
-  if (pctVendido >= 100 && diasDecorridos <= 365) {
-    return { classificacao: 'EXTREMO',  pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+  // Cenário 2 — depois da entrega
+  if (dataCruzou90 && dataCruzou90 > dataEntrega) {
+    var diasApos90 = Math.floor((dataCruzou90 - dataEntrega) / 86400000);
+    if (diasApos90 <= 365) {
+      return { classificacao: 'MODERADO', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+    }
   }
-  if (pctVendido >= 80  && diasDecorridos <= 365) {
-    return { classificacao: 'ALTO',     pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+
+  // Cenário 3 — NÃO é padrão vendedor, só alerta (registrarPadraoVendedor_
+  // nunca é chamado pra esse retorno, ver apenasAlerta abaixo e o call site
+  // em salvarLancamento_)
+  if (dataCruzou80 && dataCruzou80 > dataEntrega) {
+    var diasApos80 = Math.floor((dataCruzou80 - dataEntrega) / 86400000);
+    if (diasApos80 > 730) {
+      return { classificacao: 'SOBRA SUSPEITA', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData, apenasAlerta: true };
+    }
   }
+
   return null;
 }
 

@@ -1,5 +1,51 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 67) — Critério de PADRÃO VENDEDOR redefinido (referência vira a data de entrega)
+
+Pedido do usuário: substituir o critério antigo (ALTO/EXTREMO baseado no 1º registro de estoque,
+SOBRA SUSPEITA baseado em prazo de pagamento >24 meses) por um critério novo, com a **data de
+entrega** como referência central:
+
+- **Cenário 1 — durante a obra** (limiar cruzado ANTES da entrega):
+  - **EXTREMO** — 100% vendido em até 1 ano do lançamento
+  - **FORTE** — 100% vendido antes da entrega, mas levou mais de 1 ano do lançamento
+  - **POTENCIAL** — 70% vendido antes da entrega
+- **Cenário 2 — depois da entrega**: **MODERADO** — 90% vendido em até 1 ano depois da entrega
+- **Cenário 3 — NÃO é PADRÃO VENDEDOR**, não entra em `PADROES_VENDEDORES` — só um alerta ao vivo
+  no Mapa Geral: **SOBRA SUSPEITA** — 80% vendido, mas isso só aconteceu mais de 2 anos depois da
+  entrega
+
+**Backend (`code.txt`)** — `avaliarPadraoVendedor_()` reescrita: novas funções `acharCruzamentoEstoque_()`
+(acha a primeira data em `historicoEstoque` que já implicava um limiar de %, não só o valor atual),
+`parseDataHistorico_()` e `dataFlexivelParaDate_()`. O call site em `salvarLancamento_` passou a
+checar `resultado.apenasAlerta` antes de chamar `registrarPadraoVendedor_` — SOBRA SUSPEITA nunca
+mais é gravada na planilha.
+
+**Frontend (`lancamentos.html`)** — o alerta de SOBRA SUSPEITA no Mapa Geral/cards (`isSobraSuspeita`,
+dentro de `calcularSimilaridadePadrao_`) foi reescrito pra espelhar a mesma regra nova
+(`calcularSobraSuspeita_()`, `acharDataCruzamentoEstoque_()`, `parseDataFlexivelParaDate_()`) —
+antes usava `prazoMaximo > 24`, que não existe mais nessa conta. Tabela "Padrão Vendedor" ganhou
+badges/cores novas pra FORTE/POTENCIAL/MODERADO (`.padrao-forte`, `.padrao-potencial`,
+`.padrao-moderado`), além do já existente EXTREMO/SOBRA SUSPEITA. `MODELO_VENDEDOR_PROMPT.md`
+atualizado com os novos rótulos de classificação.
+
+**Bug pego durante o teste, antes de ir pra produção**: a primeira versão de `acharCruzamentoEstoque_`
+comparava o valor do estoque contra um limiar calculado como `total * (1 - limiarPct/100)` — para
+90%, isso dá `total * 0.09999999999999998` em ponto flutuante (não exatamente `total * 0.1`), o que
+fazia o limiar de 90% falhar bem em cima da borda em alguns casos. Corrigido comparando em %
+arredondado (mesma conta de `pctVendido` usada no resto do arquivo) em vez de estoque bruto contra
+um limiar fracionário.
+
+Testado em Node: os 6 cenários (EXTREMO/FORTE/POTENCIAL/MODERADO/SOBRA SUSPEITA/zona cinzenta sem
+classificação) mais os casos de borda (sem data de entrega, sem histórico, abaixo de 70%, data de
+entrega em formato mês/ano abreviado) — todos passando, no backend e no espelho do frontend.
+
+⚠️ **Backend**: `code.txt` mudou (critério de `avaliarPadraoVendedor_` totalmente reescrito) —
+precisa colar o `code.gs.txt` atualizado no editor do Apps Script e reimplantar como **nova
+versão** pra valer. Entradas já gravadas em `PADROES_VENDEDORES` com a classificação antiga (ALTO)
+só serão substituídas pela nova classificação quando aquele empreendimento for salvo de novo — não
+há uma migração automática das linhas antigas nesta parte.
+
 ## 2026-07-21 (parte 66) — Diagnóstico do erro de importação + excluir Modelo Vendedor
 
 Usuário reportou: importação de Modelos Vendedores "falhando" e a tabela de modelos já cadastrados

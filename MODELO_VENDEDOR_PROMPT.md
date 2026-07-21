@@ -28,14 +28,22 @@ em jogo.
 
 ## O que é PADRÃO VENDEDOR (o repositório que você vai ler)
 
-Todo empreendimento cadastrado no sistema é avaliado automaticamente quando salvo. Se ele se
-enquadra num destes critérios de **tempo de venda**, entra no repositório `PADROES_VENDEDORES`:
+Todo empreendimento cadastrado no sistema é avaliado automaticamente quando salvo, usando a
+**data de entrega** como referência de tempo (não mais a data de cadastro). Se ele se enquadra
+num destes critérios, entra no repositório `PADROES_VENDEDORES`:
 
-- **EXTREMO** — vendeu 100% em até 1 ano desde o primeiro registro de estoque.
-- **ALTO** — vendeu 80% ou mais em até 1 ano.
-- **SOBRA SUSPEITA** — vendeu mais de 80%, mas o prazo de pagamento oferecido é maior que 24
-  meses (sinal de que o produto pode estar "empurrado" com condição facilitada demais, não
-  necessariamente por ser um produto forte).
+**Durante a obra** (o limiar foi atingido antes da entrega):
+- **EXTREMO** — vendeu 100% em até 1 ano desde o lançamento.
+- **FORTE** — vendeu 100% antes da entrega, mas levou mais de 1 ano desde o lançamento pra isso.
+- **POTENCIAL** — vendeu 70% antes da entrega (sem necessariamente chegar a 100%).
+
+**Depois da entrega**:
+- **MODERADO** — vendeu 90% em até 1 ano depois da entrega.
+
+Existe ainda um 4º sinal, **SOBRA SUSPEITA** (vendeu 80%, mas isso só aconteceu mais de 2 anos
+depois da entrega) — **esse NÃO entra neste repositório**, é só um alerta calculado ao vivo no
+Mapa Geral do sistema. Se você não ver nenhum registro com essa classificação na lista que
+recebeu, é esperado — ela nunca é gravada aqui.
 
 Isso é só o **critério de entrada** no repositório — não é o que você vai comparar. O que você
 vai analisar são as **características do produto** desses empreendimentos que já entraram: é aí
@@ -47,9 +55,9 @@ Uma lista de registros (JSON, um objeto por empreendimento qualificado), vindo d
 `?acao=listar_padroes_vendedores`. Cada registro tem estes campos:
 
 ### Identificação e classificação (não são características de produto — são o motivo de estarem na lista)
-`idEmpreendimento`, `idLancamento`, `nomeEmpreendimento`, `classificacao` (EXTREMO/ALTO/SOBRA
-SUSPEITA), `pctVendido`, `totalUnidades`, `estoque`, `dataPrimeiroEstoque`, `dataClassificacao`,
-`observacao`.
+`idEmpreendimento`, `idLancamento`, `nomeEmpreendimento`, `classificacao`
+(EXTREMO/FORTE/POTENCIAL/MODERADO — SOBRA SUSPEITA nunca aparece aqui, ver seção anterior),
+`pctVendido`, `totalUnidades`, `estoque`, `dataPrimeiroEstoque`, `dataClassificacao`, `observacao`.
 
 ### Sobre o Empreendimento (características do projeto inteiro)
 | Campo | O que é |
@@ -162,7 +170,7 @@ certeza, coloque o campo entre aspas duplas sempre que ele tiver qualquer vírgu
 
 ```
 idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,qtdEmpreendimentosBase,idsEmpreendimentosBase,faixaAreaUtilMin,faixaAreaUtilMax,faixaQuartosMin,faixaQuartosMax,faixaPrecoMedioMin,faixaPrecoMedioMax,faixaTempoObraMin,faixaTempoObraMax,lazerComum,criteriosComparacao,observacao,tipoImovel
-,Vertical Médio Compacto — Região Sul de Goiânia,,IA_ASSISTENTE_MODELOS,Condomínio Vertical,Médio,4,EMP-003;EMP-007;EMP-011;EMP-014,55,92,2,3,420000,780000,24,34,Piscina;Academia;Salão de festas;Playground,"{""pesoAreaUtil"":0.3,""pesoPrecoMedio"":0.3,""pesoTempoObra"":0.25,""pesoLazer"":0.15}","Os 4 empreendimentos-base venderam rápido (EXTREMO/ALTO) com apartamentos compactos de 2-3 quartos na região Sul, obra até ~3 anos e lazer completo mas sem diferenciais de luxo.",Apartamento
+,Vertical Médio Compacto — Região Sul de Goiânia,,IA_ASSISTENTE_MODELOS,Condomínio Vertical,Médio,4,EMP-003;EMP-007;EMP-011;EMP-014,55,92,2,3,420000,780000,24,34,Piscina;Academia;Salão de festas;Playground,"{""pesoAreaUtil"":0.3,""pesoPrecoMedio"":0.3,""pesoTempoObra"":0.25,""pesoLazer"":0.15}","Os 4 empreendimentos-base venderam rápido (EXTREMO/FORTE) com apartamentos compactos de 2-3 quartos na região Sul, obra até ~3 anos e lazer completo mas sem diferenciais de luxo.",Apartamento
 ,Horizontal Popular — Lotes de Entrada,,IA_ASSISTENTE_MODELOS,Condomínio Horizontal,Popular,3,EMP-002;EMP-009;EMP-018,180,250,0,0,180000,260000,12,20,Portaria;Área verde,"{""pesoAreaUtil"":0.4,""pesoPrecoMedio"":0.4,""pesoTempoObra"":0.2}","Lotes pequenos com prazo de obra curto -- venda rapida por preco de entrada, nao por lazer.",Terreno
 ```
 
