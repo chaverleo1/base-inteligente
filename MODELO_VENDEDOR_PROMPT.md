@@ -5,6 +5,11 @@ repositório de PADRÕES VENDEDORES do Base Inteligente e construir os MODELOS V
 os modelos de comparação usados depois para calcular a nota de SIMILARIDADE de cada
 empreendimento.
 
+**Fluxo completo**: você baixa o CSV de `PADROES_VENDEDORES` (botão "⬇️ CSV" no painel Padrão
+Vendedor, em Lançamentos), cola esse CSV numa conversa com esse assistente junto com este prompt,
+o assistente devolve um CSV novo (formato descrito abaixo), e você importa esse CSV de volta no
+Base Inteligente pela aba "Importar Modelos" (Lançamentos → Mapa Geral → Importar Modelos).
+
 **Princípio central, não esqueça**: não existe nota de SIMILARIDADE sem um MODELO COMPARATIVO.
 O seu trabalho é justamente criar esses modelos — sem eles, o sistema não tem contra o que
 comparar nada.
@@ -43,7 +48,7 @@ SUSPEITA), `pctVendido`, `totalUnidades`, `estoque`, `dataPrimeiroEstoque`, `dat
 | `tipoEmpreendimento` | `Condomínio Vertical` (prédio) ou `Condomínio Horizontal` (casas/lotes) |
 | `tipoPadrao` | Padrão de preço: `Popular`, `Médio`, `Alto` ou `Luxo` (calculado pelo sistema a partir do m² médio, não invente outro) |
 | `bairro`, `cidade`, `estado` | Localização |
-| `lazer` | Itens de lazer/infraestrutura, separados por vírgula |
+| `lazer` | Itens de lazer/infraestrutura, separados por vírgula (nesse campo de ENTRADA, vírgula é normal) |
 | `conceito` | Texto de apresentação/descrição do empreendimento |
 | `qtdAndares`, `aptoPorAndar` | Estrutura física (só relevante pra Vertical) |
 | `prazoMaximo` | Prazo de pagamento oferecido, em meses |
@@ -93,68 +98,54 @@ o detalhe real do produto**, não só um resumo do empreendimento.
 
 ## O que você precisa devolver
 
-Um bloco por modelo identificado, neste formato exato — sem comentários fora do formato, sem
-explicações soltas:
+Um arquivo **.csv** — esse é o arquivo final que será importado direto na aba "Importar Modelos"
+do Base Inteligente (Lançamentos → Mapa Geral → Importar Modelos). Não devolva texto solto, não
+devolva markdown, não devolva explicação fora do CSV — só o conteúdo do arquivo, pronto pra salvar
+como `.csv` e importar.
+
+**Primeira linha = cabeçalho, exatamente estes 19 nomes de campo, nesta ordem, separados por
+vírgula:**
 
 ```
-NOME_MODELO:
-TIPO_EMPREENDIMENTO:
-TIPO_PADRAO:
-QTD_EMPREENDIMENTOS_BASE:
-IDS_EMPREENDIMENTOS_BASE:
-FAIXA_AREA_UTIL_MIN:
-FAIXA_AREA_UTIL_MAX:
-FAIXA_QUARTOS_MIN:
-FAIXA_QUARTOS_MAX:
-FAIXA_PRECO_MEDIO_MIN:
-FAIXA_PRECO_MEDIO_MAX:
-FAIXA_TEMPO_OBRA_MIN:
-FAIXA_TEMPO_OBRA_MAX:
-LAZER_COMUM:
-CRITERIOS_COMPARACAO:
-OBSERVACAO:
----
+idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,qtdEmpreendimentosBase,idsEmpreendimentosBase,faixaAreaUtilMin,faixaAreaUtilMax,faixaQuartosMin,faixaQuartosMax,faixaPrecoMedioMin,faixaPrecoMedioMax,faixaTempoObraMin,faixaTempoObraMax,lazerComum,criteriosComparacao,observacao
 ```
 
-Repita o bloco entre `---` uma vez pra **cada modelo diferente** que você identificar.
+Depois, **uma linha por modelo identificado**.
 
 ### Campo por campo
 
 | Campo | Como preencher |
 |---|---|
-| `NOME_MODELO` | Um nome descritivo curto, ex: `Vertical Médio Compacto — Parque Amazônia` |
-| `TIPO_EMPREENDIMENTO` | `Condomínio Vertical` ou `Condomínio Horizontal` |
-| `TIPO_PADRAO` | `Popular`, `Médio`, `Alto` ou `Luxo` |
-| `QTD_EMPREENDIMENTOS_BASE` | Quantos empreendimentos formaram esse modelo (mínimo 3) |
-| `IDS_EMPREENDIMENTOS_BASE` | Os `idEmpreendimento` (código EMP-NNN) de cada um, separados por vírgula — pra rastreabilidade, alguém precisa conseguir auditar depois de onde veio o modelo |
-| `FAIXA_AREA_UTIL_MIN` / `MAX` | Menor e maior área útil observada entre as tipologias dos empreendimentos-base |
-| `FAIXA_QUARTOS_MIN` / `MAX` | Menor e maior número de quartos observado |
-| `FAIXA_PRECO_MEDIO_MIN` / `MAX` | Menor e maior preço médio observado |
-| `FAIXA_TEMPO_OBRA_MIN` / `MAX` | Menor e maior `tempoObra` (meses) observado |
-| `LAZER_COMUM` | Itens de lazer que se repetem na maioria do grupo, separados por vírgula |
-| `CRITERIOS_COMPARACAO` | JSON de uma linha só (sem quebra de linha) com os pesos/regras que você usaria pra medir similaridade contra este modelo |
-| `OBSERVACAO` | 1-2 frases explicando o que caracteriza esse grupo e por que os critérios acima fazem sentido pra ele |
+| `idModelo` | **Deixe em branco** — o sistema gera o código (MOD-NNN) sozinho na hora de importar |
+| `nomeModelo` | Um nome descritivo curto, ex: `Vertical Médio Compacto — Parque Amazônia` |
+| `dataCriacao` | Deixe em branco — o sistema preenche |
+| `criadoPor` | Escreva `IA_ASSISTENTE_MODELOS` |
+| `tipoEmpreendimento` | `Condomínio Vertical` ou `Condomínio Horizontal` |
+| `tipoPadrao` | `Popular`, `Médio`, `Alto` ou `Luxo` |
+| `qtdEmpreendimentosBase` | Quantos empreendimentos formaram esse modelo (mínimo 3) |
+| `idsEmpreendimentosBase` | Os `idEmpreendimento` (código EMP-NNN) de cada um, **separados por ponto e vírgula (`;`), nunca por vírgula** — pra rastreabilidade, alguém precisa conseguir auditar depois de onde veio o modelo |
+| `faixaAreaUtilMin` / `faixaAreaUtilMax` | Menor e maior área útil observada entre as tipologias dos empreendimentos-base |
+| `faixaQuartosMin` / `faixaQuartosMax` | Menor e maior número de quartos observado |
+| `faixaPrecoMedioMin` / `faixaPrecoMedioMax` | Menor e maior preço médio observado |
+| `faixaTempoObraMin` / `faixaTempoObraMax` | Menor e maior `tempoObra` (meses) observado |
+| `lazerComum` | Itens de lazer que se repetem na maioria do grupo, **separados por ponto e vírgula (`;`), nunca por vírgula** |
+| `criteriosComparacao` | JSON de uma linha só (sem quebra de linha) com os pesos/regras que você usaria pra medir similaridade contra este modelo — **como esse campo tem vírgulas e aspas por causa do JSON, ele PRECISA vir entre aspas duplas no CSV, com as aspas internas dobradas** (ver exemplo abaixo) |
+| `observacao` | 1-2 frases explicando o que caracteriza esse grupo — se a frase tiver vírgula, também precisa vir entre aspas duplas (regra padrão de CSV) |
 
-### Exemplo preenchido
+### ⚠️ Regra de CSV que mais gera erro — leia com atenção
+
+Qualquer campo que contenha vírgula (`,`) ou aspas (`"`) **precisa** vir entre aspas duplas, e cada
+aspas dupla interna vira duas (`""`). É exatamente por isso que `idsEmpreendimentosBase` e
+`lazerComum` usam ponto e vírgula em vez de vírgula — assim quase nunca precisam de aspas. Mas
+`criteriosComparacao` (JSON) e `observacao` (texto livre) frequentemente vão precisar. Se não tiver
+certeza, coloque o campo entre aspas duplas sempre que ele tiver qualquer vírgula ou aspas dentro.
+
+### Exemplo preenchido (2 linhas de dados)
 
 ```
-NOME_MODELO: Vertical Médio Compacto — Região Sul de Goiânia
-TIPO_EMPREENDIMENTO: Condomínio Vertical
-TIPO_PADRAO: Médio
-QTD_EMPREENDIMENTOS_BASE: 4
-IDS_EMPREENDIMENTOS_BASE: EMP-003,EMP-007,EMP-011,EMP-014
-FAIXA_AREA_UTIL_MIN: 55
-FAIXA_AREA_UTIL_MAX: 92
-FAIXA_QUARTOS_MIN: 2
-FAIXA_QUARTOS_MAX: 3
-FAIXA_PRECO_MEDIO_MIN: 420000
-FAIXA_PRECO_MEDIO_MAX: 780000
-FAIXA_TEMPO_OBRA_MIN: 24
-FAIXA_TEMPO_OBRA_MAX: 34
-LAZER_COMUM: Piscina, Academia, Salão de festas, Playground
-CRITERIOS_COMPARACAO: {"pesoAreaUtil":0.3,"pesoPrecoMedio":0.3,"pesoTempoObra":0.25,"pesoLazer":0.15}
-OBSERVACAO: Os 4 empreendimentos-base venderam rápido (EXTREMO/ALTO) com apartamentos compactos de 2-3 quartos na região Sul, obra até ~3 anos e lazer completo mas sem diferenciais de luxo — parece ser o "combo" que funciona pra esse público, não um caso isolado.
----
+idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,qtdEmpreendimentosBase,idsEmpreendimentosBase,faixaAreaUtilMin,faixaAreaUtilMax,faixaQuartosMin,faixaQuartosMax,faixaPrecoMedioMin,faixaPrecoMedioMax,faixaTempoObraMin,faixaTempoObraMax,lazerComum,criteriosComparacao,observacao
+,Vertical Médio Compacto — Região Sul de Goiânia,,IA_ASSISTENTE_MODELOS,Condomínio Vertical,Médio,4,EMP-003;EMP-007;EMP-011;EMP-014,55,92,2,3,420000,780000,24,34,Piscina;Academia;Salão de festas;Playground,"{""pesoAreaUtil"":0.3,""pesoPrecoMedio"":0.3,""pesoTempoObra"":0.25,""pesoLazer"":0.15}","Os 4 empreendimentos-base venderam rápido (EXTREMO/ALTO) com apartamentos compactos de 2-3 quartos na região Sul, obra até ~3 anos e lazer completo mas sem diferenciais de luxo."
+,Horizontal Popular — Lotes de Entrada,,IA_ASSISTENTE_MODELOS,Condomínio Horizontal,Popular,3,EMP-002;EMP-009;EMP-018,180,250,0,0,180000,260000,12,20,Portaria;Área verde,"{""pesoAreaUtil"":0.4,""pesoPrecoMedio"":0.4,""pesoTempoObra"":0.2}","Lotes pequenos com prazo de obra curto -- venda rapida por preco de entrada, nao por lazer."
 ```
 
 ## Regras gerais de bom senso
@@ -165,13 +156,16 @@ OBSERVACAO: Os 4 empreendimentos-base venderam rápido (EXTREMO/ALTO) com aparta
 2. **Não misture `tipoEmpreendimento` diferentes no mesmo modelo** — Vertical e Horizontal são
    produtos fundamentalmente diferentes (apartamento vs. lote/casa térrea), a comparação não faz
    sentido.
-3. **As faixas (`FAIXA_*`) devem refletir o que os empreendimentos-base realmente têm** — nunca
-   arredonde pra um número "redondo" que nenhum deles tem de verdade.
-4. **`IDS_EMPREENDIMENTOS_BASE` é obrigatório e tem que bater exatamente com `QTD_EMPREENDIMENTOS_BASE`** —
-   é o jeito de auditar/refazer a análise depois, não pode faltar.
+3. **As faixas (`faixa*Min`/`faixa*Max`) devem refletir o que os empreendimentos-base realmente
+   têm** — nunca arredonde pra um número "redondo" que nenhum deles tem de verdade.
+4. **`idsEmpreendimentosBase` é obrigatório e a quantidade de IDs tem que bater exatamente com
+   `qtdEmpreendimentosBase`** — é o jeito de auditar/refazer a análise depois, não pode faltar.
 5. Se dois grupos ficarem parecidos demais (faixas quase idênticas, mesmo tipo/padrão), considere
    se não é o mesmo modelo — não crie modelos redundantes.
 6. Números sempre sem formatação (sem "R$", sem "m²", sem separador de milhar) — só o número puro,
    igual ao que já vem no repositório.
-7. Não adicione texto fora do formato pedido — nada de "aqui está a análise:" ou explicações soltas
-   fora dos campos. Só os blocos estruturados.
+7. Não adicione texto fora do CSV — nada de "aqui está a análise:", nem blocos de markdown
+   (` ```csv `) envolvendo o conteúdo. Só o cabeçalho e as linhas de dados, prontos pra virar o
+   arquivo `.csv` em si.
+8. `idModelo` e `dataCriacao` sempre em branco — quem preenche esses dois é o sistema no momento
+   da importação, não você.

@@ -491,6 +491,7 @@ select.form-input option { background: var(--surface2); }
     <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Novo Lançamento</button>
     <button class="lanc-tab" id="tabBtnOutros" onclick="mudarAbaLancamentos('outros')">Outros</button>
     <button class="lanc-tab" id="tabBtnMapa" onclick="mudarAbaLancamentos('mapa')">Mapa Geral</button>
+    <button class="lanc-tab" id="tabBtnImportar" onclick="mudarAbaLancamentos('importar')">Importar Modelos</button>
   </div>
 
   <!-- MOTOR -->
@@ -801,6 +802,47 @@ select.form-input option { background: var(--surface2); }
         <tr><td colspan="14" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
+  </div>
+  </div>
+
+  <!-- IMPORTAR MODELOS -->
+  <div id="tabPainelImportar" class="tab-panel" style="display:none">
+  <div class="sec-header">
+    <div class="sec-title">Importar Modelos Vendedores</div>
+    <div class="sec-sub">Cole ou envie o .csv que a IA assistente de modelos gerou (ver <code>MODELO_VENDEDOR_PROMPT.md</code>) — um MODELO por linha. Confira a pré-visualização antes de importar.</div>
+  </div>
+  <div class="motor-box">
+    <div class="motor-label">Arquivo .csv</div>
+    <input type="file" id="fileImportarModelos" accept=".csv,text/csv" onchange="lerArquivoModelosCsv_(this)">
+    <div class="motor-label" style="margin-top:14px">…ou cole o conteúdo do .csv aqui</div>
+    <textarea class="motor-input" id="txtImportarModelos" placeholder="idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,..." style="min-height:200px;font-family:monospace;font-size:12px"></textarea>
+    <div class="motor-actions">
+      <button class="btn-extrair" id="btnAnalisarModelos" onclick="analisarModelosCsv_()">🔍 Analisar</button>
+      <button class="btn-sec" onclick="limparImportarModelos_()">✕ Limpar</button>
+      <span class="motor-hint">Nada é gravado na base até você clicar em "Importar todos" na pré-visualização.</span>
+    </div>
+  </div>
+
+  <div id="previewModelosBox" style="display:none;margin-top:20px">
+    <div class="sec-title" style="font-size:14px;margin-bottom:10px">Pré-visualização (<span id="previewModelosCount">0</span> modelo(s))</div>
+    <div class="mapa-wrap">
+      <table class="mapa-tabela">
+        <thead>
+          <tr>
+            <th>Nome do Modelo</th>
+            <th>Tipo Empreend.</th>
+            <th>Padrão</th>
+            <th>Qtd Base</th>
+            <th>IDs Base</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="previewModelosBody"></tbody>
+      </table>
+    </div>
+    <div class="motor-actions" style="margin-top:14px">
+      <button class="btn-extrair" id="btnImportarModelos" onclick="importarModelosCsv_()">✅ Importar todos</button>
+    </div>
   </div>
   </div>
 
@@ -1382,14 +1424,16 @@ function atualizarUrlLink(val) {
 
 // ── ABAS (Empreendimentos Cadastrados / Novo Lançamento / Outros) ────────────
 function mudarAbaLancamentos(nome) {
-  document.getElementById('tabPainelLista').style.display  = nome === 'lista'  ? '' : 'none';
-  document.getElementById('tabPainelNovo').style.display   = nome === 'novo'   ? '' : 'none';
-  document.getElementById('tabPainelOutros').style.display = nome === 'outros' ? '' : 'none';
-  document.getElementById('tabPainelMapa').style.display   = nome === 'mapa'   ? '' : 'none';
+  document.getElementById('tabPainelLista').style.display    = nome === 'lista'    ? '' : 'none';
+  document.getElementById('tabPainelNovo').style.display     = nome === 'novo'     ? '' : 'none';
+  document.getElementById('tabPainelOutros').style.display   = nome === 'outros'   ? '' : 'none';
+  document.getElementById('tabPainelMapa').style.display     = nome === 'mapa'     ? '' : 'none';
+  document.getElementById('tabPainelImportar').style.display = nome === 'importar' ? '' : 'none';
   document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
   document.getElementById('tabBtnNovo').classList.toggle('active', nome === 'novo');
   document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
   document.getElementById('tabBtnMapa').classList.toggle('active', nome === 'mapa');
+  document.getElementById('tabBtnImportar').classList.toggle('active', nome === 'importar');
 }
 
 // Imprime/gera PDF só da aba de LISTA que estiver ativa no momento
@@ -2230,6 +2274,152 @@ function exportarPadroesVendedorCSV_() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   mostrarToast(`CSV baixado com ${_listaPadroes.length} empreendimento${_listaPadroes.length !== 1 ? 's' : ''}.`, 'ok');
+}
+
+// ── IMPORTAR MODELOS VENDEDORES (aba nova, depois de Mapa Geral) ──────────
+// Fluxo: usuário baixa o CSV de PADRÕES_VENDEDORES acima, manda pra IA
+// assistente de modelos (ver MODELO_VENDEDOR_PROMPT.md), cola/envia o CSV de
+// resposta aqui, confere a pré-visualização, e só então importa -- cada
+// linha vira uma chamada a salvar_modelo_vendedor (endpoint já existente,
+// mesmo usado se alguém cadastrasse um modelo manualmente).
+
+// Parser CSV simples (RFC4180-ish): respeita campos entre aspas, que podem
+// conter vírgula, aspas duplicadas ("") e quebra de linha -- não dá pra usar
+// um split(',') ingênuo porque criteriosComparacao é JSON cheio de vírgula.
+function parseCsv_(texto) {
+  const linhas = [];
+  let campo = '', linha = [], dentroAspas = false;
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i], prox = texto[i + 1];
+    if (dentroAspas) {
+      if (c === '"' && prox === '"') { campo += '"'; i++; }
+      else if (c === '"') { dentroAspas = false; }
+      else campo += c;
+    } else {
+      if (c === '"') dentroAspas = true;
+      else if (c === ',') { linha.push(campo); campo = ''; }
+      else if (c === '\r') { /* ignora -- \n cuida da quebra de linha */ }
+      else if (c === '\n') { linha.push(campo); linhas.push(linha); linha = []; campo = ''; }
+      else campo += c;
+    }
+  }
+  if (campo.length || linha.length) { linha.push(campo); linhas.push(linha); }
+  // remove BOM se o arquivo vier com ele (mesmo BOM que exportarPadroesVendedorCSV_ escreve)
+  if (linhas.length && linhas[0].length && linhas[0][0].charCodeAt(0) === 0xFEFF) {
+    linhas[0][0] = linhas[0][0].slice(1);
+  }
+  return linhas.filter(l => l.length > 1 || (l.length === 1 && l[0].trim() !== ''));
+}
+
+// Mesma ordem de CABECALHO_MODELOS_VENDEDORES (code.txt).
+const CSV_CAMPOS_MODELOS_ = [
+  'idModelo', 'nomeModelo', 'dataCriacao', 'criadoPor',
+  'tipoEmpreendimento', 'tipoPadrao',
+  'qtdEmpreendimentosBase', 'idsEmpreendimentosBase',
+  'faixaAreaUtilMin', 'faixaAreaUtilMax',
+  'faixaQuartosMin', 'faixaQuartosMax',
+  'faixaPrecoMedioMin', 'faixaPrecoMedioMax',
+  'faixaTempoObraMin', 'faixaTempoObraMax',
+  'lazerComum', 'criteriosComparacao', 'observacao',
+];
+
+let _modelosParaImportar = [];
+
+function lerArquivoModelosCsv_(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { document.getElementById('txtImportarModelos').value = ev.target.result; };
+  reader.onerror = () => mostrarToast('Não consegui ler o arquivo.', 'erro');
+  reader.readAsText(file, 'utf-8');
+}
+
+function limparImportarModelos_() {
+  document.getElementById('txtImportarModelos').value = '';
+  document.getElementById('fileImportarModelos').value = '';
+  document.getElementById('previewModelosBox').style.display = 'none';
+  _modelosParaImportar = [];
+}
+
+// Valida cada linha sem travar a análise inteira por causa de 1 erro --
+// cada modelo é avaliado independente, os válidos podem ser importados
+// mesmo que outros da mesma leva tenham problema.
+function validarModeloImportado_(m) {
+  const erros = [];
+  if (!m.nomeModelo) erros.push('nomeModelo obrigatório');
+  if (m.criteriosComparacao) {
+    try { JSON.parse(m.criteriosComparacao); } catch (e) { erros.push('criteriosComparacao não é JSON válido'); }
+  }
+  const qtd = parseInt(m.qtdEmpreendimentosBase, 10) || 0;
+  const idsQtd = m.idsEmpreendimentosBase ? m.idsEmpreendimentosBase.split(';').filter(Boolean).length : 0;
+  if (qtd && idsQtd && qtd !== idsQtd) {
+    erros.push(`qtdEmpreendimentosBase (${qtd}) não bate com a quantidade de IDs em idsEmpreendimentosBase (${idsQtd})`);
+  }
+  return erros;
+}
+
+function analisarModelosCsv_() {
+  const txt = document.getElementById('txtImportarModelos').value.trim();
+  if (!txt) { mostrarToast('Cole o CSV ou selecione um arquivo primeiro.', 'erro'); return; }
+  const linhas = parseCsv_(txt);
+  if (linhas.length < 2) { mostrarToast('CSV vazio ou sem linhas de dados (só o cabeçalho).', 'erro'); return; }
+
+  const header = linhas[0].map(h => h.trim());
+  _modelosParaImportar = linhas.slice(1).map(cols => {
+    const m = {};
+    header.forEach((campo, i) => { m[campo] = (cols[i] !== undefined ? cols[i] : '').trim(); });
+    m._erros = validarModeloImportado_(m);
+    return m;
+  });
+
+  renderPreviewModelos_();
+}
+
+function renderPreviewModelos_() {
+  const box   = document.getElementById('previewModelosBox');
+  const tbody = document.getElementById('previewModelosBody');
+  const count = document.getElementById('previewModelosCount');
+  box.style.display = _modelosParaImportar.length ? '' : 'none';
+  count.textContent = _modelosParaImportar.length;
+  const validos = _modelosParaImportar.filter(m => !m._erros.length).length;
+
+  tbody.innerHTML = _modelosParaImportar.map(m => `
+    <tr style="${m._erros.length ? 'background:rgba(255,90,90,.08)' : ''}">
+      <td>${m.nomeModelo || '<span style="color:var(--danger)">— faltando —</span>'}</td>
+      <td>${m.tipoEmpreendimento || '—'}</td>
+      <td>${m.tipoPadrao || '—'}</td>
+      <td>${m.qtdEmpreendimentosBase || '—'}</td>
+      <td style="font-size:11px;white-space:normal;max-width:220px">${(m.idsEmpreendimentosBase || '—').split(';').join(', ')}</td>
+      <td>${m._erros.length ? `<span style="color:var(--danger)" title="${m._erros.join('; ').replace(/"/g,'&quot;')}">⚠ ${m._erros.length} erro(s)</span>` : '<span style="color:var(--accent2)">✓ ok</span>'}</td>
+    </tr>
+  `).join('');
+
+  const btn = document.getElementById('btnImportarModelos');
+  btn.disabled = validos === 0;
+  mostrarToast(`${_modelosParaImportar.length} modelo(s) analisado(s), ${validos} pronto(s) pra importar.`, validos ? 'ok' : 'erro');
+}
+
+async function importarModelosCsv_() {
+  const validos = _modelosParaImportar.filter(m => !m._erros.length);
+  if (!validos.length) { mostrarToast('Nenhum modelo válido pra importar.', 'erro'); return; }
+  const btn = document.getElementById('btnImportarModelos');
+  btn.disabled = true; btn.textContent = '⏳ Importando...';
+  let ok = 0, falhas = 0;
+  for (const m of validos) {
+    try {
+      const payload = {};
+      CSV_CAMPOS_MODELOS_.forEach(campo => { if (m[campo]) payload[campo] = m[campo]; });
+      const resp = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_modelo_vendedor', dados: payload, token: tokenSessao() }) })
+      });
+      const json = await resp.json();
+      if (json && json.ok) ok++; else falhas++;
+    } catch (e) { falhas++; }
+  }
+  btn.disabled = false; btn.textContent = '✅ Importar todos';
+  mostrarToast(`${ok} modelo(s) importado(s)${falhas ? `, ${falhas} falha(s)` : ''}.`, falhas && !ok ? 'erro' : 'ok');
+  if (ok) limparImportarModelos_();
 }
 
 function renderPadroesVendedores_(padroes) {

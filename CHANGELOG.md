@@ -1,5 +1,42 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 64) — Nova aba "Importar Modelos" + saída em CSV no prompt da IA de modelos
+
+Pedido do usuário: instruções pra IA assistente de modelos gerar um arquivo final pronto pra importar
+na base, e uma aba nova em Lançamentos (depois de "Mapa Geral") com tela de importação desse arquivo.
+
+**`MODELO_VENDEDOR_PROMPT.md` revisado** — a seção "O que você precisa devolver" trocou de blocos
+`CHAVE: valor` pra um **.csv** de verdade: cabeçalho com os 19 campos de
+`CABECALHO_MODELOS_VENDEDORES` na ordem exata, uma linha por modelo. `idModelo`/`dataCriacao` ficam
+em branco (o sistema preenche na importação). `idsEmpreendimentosBase`/`lazerComum` passam a usar
+`;` como separador interno em vez de `,` — evita que a IA precise lembrar de colocar esses 2 campos
+entre aspas só por causa de vírgula. Adicionada uma seção só sobre a regra de escape de CSV
+(campo com vírgula/aspas precisa de aspas duplas, aspas internas dobram), com exemplo completo de
+2 linhas incluindo `criteriosComparacao` (JSON) devidamente escapado. Fluxo completo documentado no
+topo: baixar CSV de Padrão Vendedor → IA analisa → IA devolve CSV de modelos → importar pela aba nova.
+
+**Nova aba "Importar Modelos"** (`lancamentos.html`), depois de "Mapa Geral" na barra de abas —
+upload de arquivo `.csv` ou colar o conteúdo direto, com pré-visualização antes de gravar qualquer
+coisa na base:
+- `parseCsv_()` — parser CSV próprio (não um `split(',')` ingênuo), respeita campos entre aspas que
+  contêm vírgula/aspas duplicadas/quebra de linha — necessário porque `criteriosComparacao` é JSON.
+- `analisarModelosCsv_()` + `validarModeloImportado_()` — valida cada linha independente (nome
+  obrigatório, `criteriosComparacao` precisa ser JSON válido, contagem de
+  `idsEmpreendimentosBase` bate com `qtdEmpreendimentosBase`) — um modelo com erro não trava os
+  outros, cada um é avaliado por conta própria.
+- Pré-visualização em tabela (reaproveita `.mapa-tabela`) com status por linha (✓ ok / ⚠ N erro(s),
+  detalhe no `title`) — só os válidos entram no botão "Importar todos".
+- `importarModelosCsv_()` — uma chamada a `salvar_modelo_vendedor` (endpoint já existente da parte
+  59) por modelo válido; campos vazios do CSV não entram no payload, deixando o backend
+  auto-gerar `idModelo`/`dataCriacao` normalmente.
+
+Testado em Node (parser CSV com aspas/BOM/JSON aninhado; validação com CSV limpo e com 3 tipos de
+erro simultâneos; `limparImportarModelos_`) e ao vivo no navegador: aba troca corretamente,
+pré-visualização renderiza os dados parseados, e a chamada de importação interceptada confirma o
+payload exato (`acao: salvar_modelo_vendedor`, campos vazios omitidos) enviado ao backend.
+
+100% frontend + documentação — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 63) — Painel Padrão Vendedor volta compacto; CSV busca dado fresco do lançamento
 
 Pedido do usuário: a tabela em tela ficou com linhas altas demais depois da expansão pra 20 colunas
