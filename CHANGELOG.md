@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 60) — MODELO_VENDEDOR_PROMPT.md — instruções pra IA assistente de modelos
+
+Pedido do usuário: um relatório de orientações pra outra IA (IA ASSISTENTE DE MODELOS) ler o
+repositório `PADROES_VENDEDORES`, entender o projeto, e devolver as informações certas pra compor
+`MODELOS_VENDEDORES`. Mesmo padrão já usado em `ORGANIZADOR_PROMPT.md` (instruções pro assistente
+que organiza texto bruto pra aba "Outros").
+
+Cobre: o que é o critério de entrada em PADRÕES VENDEDORES (EXTREMO/ALTO/SOBRA SUSPEITA, por tempo
+de venda — não é o que se compara) vs. o que realmente forma um modelo (características de produto:
+"Sobre o Empreendimento" + "Sobre os apartamentos", incluindo o JSON de tipologias); formato exato
+de entrada (schema completo de `listar_padroes_vendedores`) e de saída (blocos `---`-delimitados
+com todos os campos de `CABECALHO_MODELOS_VENDEDORES`); regra de amostra mínima (3+ empreendimentos
+por modelo, mesmo piso já usado na análise do Indicador de ACEITAÇÃO); proibição de misturar
+`tipoEmpreendimento` diferentes no mesmo modelo; exemplo completo preenchido.
+
+Documento apenas — sem mudança de código.
+
 ## 2026-07-21 (parte 59) — PADROES_VENDEDORES vira repositório completo + nova aba MODELOS_VENDEDORES
 
 Redefinição do usuário: PADRÃO VENDEDOR é só um painel informativo de quem qualifica por "tempo de
