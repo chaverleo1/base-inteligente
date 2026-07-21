@@ -1,5 +1,53 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 59) — PADROES_VENDEDORES vira repositório completo + nova aba MODELOS_VENDEDORES
+
+Redefinição do usuário: PADRÃO VENDEDOR é só um painel informativo de quem qualifica por "tempo de
+venda" — quem realmente vai alimentar o MODELO VENDEDOR são as características completas do projeto
+("Sobre o Empreendimento") e das tipologias comercializadas ("Sobre os apartamentos"). A nota de
+SIMILARIDADE não existe sem um MODELO COMPARATIVO — e o modelo é construído por uma IA assistente
+separada, lendo o repositório de PADROES_VENDEDORES. Não existe similaridade sem modelo.
+
+**`PADROES_VENDEDORES` expandido** — de 15 pra 24 colunas. Novo em "Sobre o Empreendimento":
+`tipoEmpreendimento`, `cidade`, `estado`, `lazer`, `conceito`, `qtdAndares`, `aptoPorAndar`, e o campo
+novo `tempoObra` (meses entre `dataLancamento` e `previsaoEntrega`, calculado uma vez e congelado no
+snapshot). Novo em "Sobre os apartamentos": `tipologias` — JSON com uma entrada POR tipologia
+comercializada (tipo, quartos, suítes, banheiros, vagas, escaninho, área útil, área terreno, preço
+médio/mín/máx) — guardado bruto de propósito, não resumido em faixa min-max, porque a análise de
+padrão comum entre vários empreendimentos precisa da característica de cada tipologia individual.
+
+**`mesesEntreDatas_(dataInicioStr, dataFimStr)`** (nova) — diferença em meses entre duas datas
+quaisquer (não "até hoje" como as funções equivalentes já existentes no front-end), aceita
+`DD/MM/AAAA` e `mês/AAAA` abreviado nos dois lados.
+
+**Nova aba `MODELOS_VENDEDORES`** — o repositório dos MODELOS DE COMPARAÇÃO. Este código só lê e
+grava (`listarModelosVendedores_`/`salvarModeloVendedor_`, rotas `listar_modelos_vendedores` GET e
+`salvar_modelo_vendedor` POST) — quem PREENCHE cada modelo é o processo externo (IA assistente de
+modelos) analisando `PADROES_VENDEDORES`. Schema: identificação (`idModelo` MOD-NNN, `nomeModelo`),
+critérios de agrupamento (`tipoEmpreendimento`, `tipoPadrao`), rastreabilidade (`qtdEmpreendimentosBase`,
+`idsEmpreendimentosBase`), faixas típicas do grupo (área útil, quartos, preço médio, tempo de obra),
+`lazerComum`, e um campo aberto `criteriosComparacao` (JSON) para os pesos/regras que a análise externa
+decidir usar — estrutura de comparação ainda não definida, então não trava o formato agora.
+
+`calcularSimilaridadePadrao_` (frontend) **ainda não foi alterada** — continua comparando contra o
+melhor `pctVendido` já arquivado em `PADROES_VENDEDORES`, não contra `MODELOS_VENDEDORES` (que começa
+vazio). Recalcular a similaridade contra modelos reais é o próximo passo, assim que os primeiros
+modelos existirem.
+
+Também adicionadas: `migrarCabecalhoPadroesVendedores`/`migrarCabecalhoModelosVendedores` (mesmo
+padrão de `migrarCabecalhoVendedoresPerfil`, anexam colunas novas numa aba já existente) e as rotas
+admin correspondentes.
+
+Testado em Node (mock de planilha): `mesesEntreDatas_` nos 2 formatos de data; `registrarPadraoVendedor_`
+populando todos os campos novos corretamente, incluindo o JSON de tipologias; upsert por
+`idEmpreendimento` continua funcionando; as 2 migrações anexando colunas certas numa aba antiga;
+`salvarModeloVendedor_` criando, gerando ID sequencial, fazendo upsert por `idModelo`, e exigindo
+`nomeModelo`.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão", e
+rodar as duas migrações (`adm_migrar_cabecalho_padroes_vendedores`,
+`adm_migrar_cabecalho_modelos_vendedores`) uma vez pra atualizar/criar as abas.
+
 ## 2026-07-21 (parte 58) — Mapa Geral: coluna "Tipo/S%" + verificação da coluna PV
 
 Pedido do usuário: (1) na coluna S%, mostrar também o Tipo (padrão de preço) — renomeada pra "Tipo/S%",

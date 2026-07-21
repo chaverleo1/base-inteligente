@@ -240,6 +240,7 @@ function doGet(e) {
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')         return ok(listarLancamentos_());
   if (acao === 'listar_padroes_vendedores')  return ok(listarPadroesVendedores_());
+  if (acao === 'listar_modelos_vendedores')  return ok(listarModelosVendedores_());
   if (acao === 'listar_revendas_construtoras') return ok(listarRevendasConstrutoras_());
   if (acao === 'buscar_revenda_construtora') return ok(buscarRevendaConstrutoraPorCodigo_(e.parameter));
   if (acao === 'listar_construtoras_parceiras') return ok(listarConstrutorasParceiras_());
@@ -354,6 +355,14 @@ function doGet(e) {
   if (acao === 'listarPerfisVendedor')        return ok(lerAba_('VENDEDORES_PERFIL'));
   if (acao === 'adm_migrar_cabecalho_vendedores_perfil') {
     try { migrarCabecalhoVendedoresPerfil(); return ok({ status: 'ok', msg: 'VENDEDORES_PERFIL criado/atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_migrar_cabecalho_padroes_vendedores') {
+    try { migrarCabecalhoPadroesVendedores(); return ok({ status: 'ok', msg: 'PADROES_VENDEDORES criado/atualizado.' }); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
+  if (acao === 'adm_migrar_cabecalho_modelos_vendedores') {
+    try { migrarCabecalhoModelosVendedores(); return ok({ status: 'ok', msg: 'MODELOS_VENDEDORES criado/atualizado.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
 
@@ -770,6 +779,7 @@ function doPost(e) {
   if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
+  if (d.acao === 'salvar_modelo_vendedor') return ok(salvarModeloVendedor_(d.dados || d));
   if (d.acao === 'importar_revendas_construtoras') return ok(importarRevendasConstrutoras_(d.dados || d));
   if (d.acao === 'excluir_revenda_construtora')     return ok(excluirRevendaConstrutora_(d));
   if (d.acao === 'excluir_todos_revendas_construtora') return ok(excluirTodosRevendasConstrutora_(d));
@@ -3338,11 +3348,31 @@ function excluirLancamento_(dados) {
 // SOBRA SUSPEITA: >80% vendido mas prazoMaximo > 24 meses (independente de tempo)
 // ═══════════════════════════════════════════════════════════════
 
+// PADROES_VENDEDORES é o REPOSITÓRIO de características dos empreendimentos
+// qualificados (EXTREMO/ALTO/SOBRA SUSPEITA) — não é só um painel de "quem
+// vendeu bem", é a matéria-prima que a IA ASSISTENTE DE MODELOS vai ler pra
+// construir os MODELOS_VENDEDORES (ver mais abaixo). Por isso captura TODAS
+// as características de produto ("Sobre o Empreendimento" + "Sobre os
+// apartamentos"), não só o que decide a classificação em si.
 var CABECALHO_PADROES_VENDEDORES = [
   'dataCadastro', 'idEmpreendimento', 'idLancamento', 'nomeEmpreendimento',
   'construtora', 'tipoPadrao', 'classificacao', 'pctVendido',
   'totalUnidades', 'estoque', 'prazoMaximo', 'dataPrimeiroEstoque',
   'dataClassificacao', 'bairro', 'observacao',
+  // "Sobre o Empreendimento" — características do projeto inteiro.
+  'tipoEmpreendimento', 'cidade', 'estado', 'lazer', 'conceito',
+  'qtdAndares', 'aptoPorAndar',
+  // tempoObra — meses entre dataLancamento e previsaoEntrega, calculado uma
+  // vez na hora de registrar (ver mesesEntreDatas_). Congelado no snapshot,
+  // não recalcula sozinho depois.
+  'tempoObra',
+  // "Sobre os apartamentos" — JSON [{tipo, quartos, suites, banheiros, vagas,
+  // escaninho, areaUtil, areaTerr, precoMedio, precoMin, precoMax}], uma
+  // entrada por tipologia comercializada. Guardado bruto (não resumido em
+  // faixa min-max) de propósito: a IA ASSISTENTE DE MODELOS precisa da
+  // característica de CADA tipologia pra achar padrão comum entre vários
+  // empreendimentos, não só a faixa de um empreendimento isolado.
+  'tipologias',
 ];
 
 function obterAbaPadroesVendedores_() {
@@ -3354,6 +3384,44 @@ function obterAbaPadroesVendedores_() {
        .setValues([CABECALHO_PADROES_VENDEDORES]);
   }
   return aba;
+}
+
+// Migra uma aba PADROES_VENDEDORES já existente (criada antes da expansão de
+// "Sobre o Empreendimento"/"Sobre os apartamentos") anexando as colunas que
+// faltarem no final — mesmo padrão de migrarCabecalhoVendedoresPerfil.
+function migrarCabecalhoPadroesVendedores() {
+  var aba = obterAbaPadroesVendedores_();
+  var cabAtual = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(String);
+  CABECALHO_PADROES_VENDEDORES.forEach(function(col) {
+    if (cabAtual.indexOf(col) < 0) {
+      aba.getRange(1, aba.getLastColumn() + 1).setValue(col).setFontWeight('bold');
+      Logger.log('PADROES_VENDEDORES — coluna adicionada: ' + col);
+    }
+  });
+}
+
+// Converte "DD/MM/AAAA" ou "mês/AAAA" (abreviado, ex: "dez/2026") em
+// {dia, mes, ano} -- aceita os 2 formatos que a extração já pode gerar tanto
+// pra dataLancamento quanto pra previsaoEntrega.
+var MESES_ABREV_NUM_BR_ = { jan:1, fev:2, mar:3, abr:4, mai:5, jun:6, jul:7, ago:8, set:9, out:10, nov:11, dez:12 };
+function parseDataFlexivel_(v) {
+  v = String(v || '').trim();
+  var m1 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m1) return { dia: parseInt(m1[1], 10), mes: parseInt(m1[2], 10), ano: parseInt(m1[3], 10) };
+  var m2 = v.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})/i);
+  if (m2) return { dia: 1, mes: MESES_ABREV_NUM_BR_[m2[1].toLowerCase()], ano: parseInt(m2[2], 10) };
+  return null;
+}
+
+// Tempo de Obra = meses entre duas datas quaisquer (não "até hoje" como
+// calcularPrazoMaximoAuto/calcularMesesAteEntrega_ no front-end) -- usado
+// pra Tempo de Obra (dataLancamento -> previsaoEntrega). null se qualquer
+// uma das duas datas não existir ou não for reconhecível.
+function mesesEntreDatas_(dataInicioStr, dataFimStr) {
+  var ini = parseDataFlexivel_(dataInicioStr);
+  var fim = parseDataFlexivel_(dataFimStr);
+  if (!ini || !fim) return null;
+  return (fim.ano - ini.ano) * 12 + (fim.mes - ini.mes);
 }
 
 function avaliarPadraoVendedor_(dados, histArr) {
@@ -3425,6 +3493,23 @@ function registrarPadraoVendedor_(idEmp, idLan, dados, resultado, agora) {
       case 'dataClassificacao':    return agora;
       case 'bairro':               return dados.bairro               || '';
       case 'observacao':           return '';
+      case 'tipoEmpreendimento':   return dados.tipoEmpreendimento   || '';
+      case 'cidade':               return dados.cidade               || '';
+      case 'estado':               return dados.estado               || '';
+      case 'lazer':                return dados.lazer                || '';
+      case 'conceito':             return dados.conceito             || '';
+      case 'qtdAndares':           return dados.qtdAndares           || '';
+      case 'aptoPorAndar':         return dados.aptoPorAndar         || '';
+      case 'tempoObra':            return mesesEntreDatas_(dados.dataLancamento, dados.previsaoEntrega);
+      case 'tipologias':
+        return JSON.stringify((dados.unidades || []).map(function(u) {
+          return {
+            tipo: u.tipo || '', quartos: u.quartos || '', suites: u.suites || '',
+            banheiros: u.banheiros || '', vagas: u.vagas || '', escaninho: u.escaninho || '',
+            areaUtil: u.areaUtil || '', areaTerr: u.areaTerr || '',
+            precoMedio: u.precoMedio || '', precoMin: u.precoMin || '', precoMax: u.precoMax || '',
+          };
+        }));
       default: return '';
     }
   });
@@ -3441,6 +3526,139 @@ function listarPadroesVendedores_() {
     CABECALHO_PADROES_VENDEDORES.forEach(function(col, idx) { obj[col] = row[idx]; });
     return obj;
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODELOS_VENDEDORES — repositório dos MODELOS DE COMPARAÇÃO
+// ═══════════════════════════════════════════════════════════════
+// Não é gerado por código aqui: um MODELO VENDEDOR é o resultado de uma
+// análise comum feita por uma IA ASSISTENTE DE MODELOS separada, que lê
+// TODOS os registros de PADROES_VENDEDORES (repositório de características
+// dos empreendimentos já qualificados) e identifica um padrão comparativo
+// -- ex: "Vertical, Médio, 2-3 quartos, 60-90m², obra até 30 meses". Este
+// arquivo só guarda o repositório (ler/salvar); quem PREENCHE cada modelo é
+// esse processo externo, via salvar_modelo_vendedor.
+//
+// A nota de SIMILARIDADE de um empreendimento (calcularSimilaridadePadrao_,
+// lancamentos.html) hoje compara contra o melhor pctVendido já arquivado em
+// PADROES_VENDEDORES -- ainda NÃO compara contra MODELOS_VENDEDORES, porque
+// não há nenhum modelo real ainda pra validar esse recálculo contra. Fica
+// como próximo passo assim que os primeiros modelos existirem.
+var CABECALHO_MODELOS_VENDEDORES = [
+  'idModelo', 'nomeModelo', 'dataCriacao', 'criadoPor',
+  // Critérios de agrupamento -- que fatia do portfólio esse modelo representa.
+  'tipoEmpreendimento', 'tipoPadrao',
+  // Rastreabilidade -- de quais PADROES_VENDEDORES esse modelo foi extraído,
+  // pra poder auditar/refazer a análise depois.
+  'qtdEmpreendimentosBase', 'idsEmpreendimentosBase',
+  // Faixas típicas do grupo (min-max observado nos empreendimentos-base) --
+  // mesmas características de "Sobre o Empreendimento"/"Sobre os
+  // apartamentos" que PADROES_VENDEDORES já captura bruto.
+  'faixaAreaUtilMin', 'faixaAreaUtilMax',
+  'faixaQuartosMin', 'faixaQuartosMax',
+  'faixaPrecoMedioMin', 'faixaPrecoMedioMax',
+  'faixaTempoObraMin', 'faixaTempoObraMax',
+  'lazerComum',
+  // criteriosComparacao — JSON livre: pesos/regras que a IA ASSISTENTE DE
+  // MODELOS decidir usar pra calcular similaridade contra este modelo. Campo
+  // aberto de propósito -- a estrutura exata da comparação ainda não está
+  // definida, não faz sentido travar o formato agora.
+  'criteriosComparacao',
+  'observacao',
+];
+
+function obterAbaModelosVendedores_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('MODELOS_VENDEDORES');
+  if (!aba) {
+    aba = ss.insertSheet('MODELOS_VENDEDORES');
+    aba.getRange(1, 1, 1, CABECALHO_MODELOS_VENDEDORES.length)
+       .setValues([CABECALHO_MODELOS_VENDEDORES]);
+  }
+  return aba;
+}
+
+function migrarCabecalhoModelosVendedores() {
+  var aba = obterAbaModelosVendedores_();
+  var cabAtual = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(String);
+  CABECALHO_MODELOS_VENDEDORES.forEach(function(col) {
+    if (cabAtual.indexOf(col) < 0) {
+      aba.getRange(1, aba.getLastColumn() + 1).setValue(col).setFontWeight('bold');
+      Logger.log('MODELOS_VENDEDORES — coluna adicionada: ' + col);
+    }
+  });
+}
+
+function proximoIdModeloVendedor_(aba, lr) {
+  var maxNum = 0;
+  if (lr >= 2) {
+    var vals = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+    vals.forEach(function(v) {
+      var m = String(v || '').match(/(\d+)$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    });
+  }
+  return 'MOD-' + String(maxNum + 1).padStart(3, '0');
+}
+
+function listarModelosVendedores_() {
+  var aba = obterAbaModelosVendedores_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return [];
+  var valores = aba.getRange(2, 1, lr - 1, CABECALHO_MODELOS_VENDEDORES.length).getValues();
+  return valores.map(function(row) {
+    var obj = {};
+    CABECALHO_MODELOS_VENDEDORES.forEach(function(col, idx) { obj[col] = row[idx]; });
+    return obj;
+  });
+}
+
+// Salva (cria ou atualiza por idModelo) um MODELO VENDEDOR. Chamado pela IA
+// ASSISTENTE DE MODELOS depois de analisar PADROES_VENDEDORES -- não é
+// chamado por nenhum fluxo automático deste arquivo.
+function salvarModeloVendedor_(dados) {
+  if (!dados || !dados.nomeModelo) return { ok: false, erro: 'nomeModelo obrigatorio' };
+  var aba = obterAbaModelosVendedores_();
+  var lr  = aba.getLastRow();
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+
+  var idModelo = String(dados.idModelo || '').trim();
+  if (idModelo && lr >= 2) {
+    var idsAtuais = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+    for (var i = idsAtuais.length - 1; i >= 0; i--) {
+      if (String(idsAtuais[i]) === idModelo) aba.deleteRow(i + 2);
+    }
+  }
+  if (!idModelo) idModelo = proximoIdModeloVendedor_(aba, aba.getLastRow());
+
+  var linha = CABECALHO_MODELOS_VENDEDORES.map(function(col) {
+    switch (col) {
+      case 'idModelo':               return idModelo;
+      case 'nomeModelo':              return dados.nomeModelo              || '';
+      case 'dataCriacao':             return dados.dataCriacao             || agora;
+      case 'criadoPor':               return dados.criadoPor               || '';
+      case 'tipoEmpreendimento':      return dados.tipoEmpreendimento      || '';
+      case 'tipoPadrao':              return dados.tipoPadrao              || '';
+      case 'qtdEmpreendimentosBase':  return dados.qtdEmpreendimentosBase  || 0;
+      case 'idsEmpreendimentosBase':  return dados.idsEmpreendimentosBase  || '';
+      case 'faixaAreaUtilMin':        return dados.faixaAreaUtilMin        || '';
+      case 'faixaAreaUtilMax':        return dados.faixaAreaUtilMax        || '';
+      case 'faixaQuartosMin':         return dados.faixaQuartosMin         || '';
+      case 'faixaQuartosMax':         return dados.faixaQuartosMax         || '';
+      case 'faixaPrecoMedioMin':      return dados.faixaPrecoMedioMin      || '';
+      case 'faixaPrecoMedioMax':      return dados.faixaPrecoMedioMax      || '';
+      case 'faixaTempoObraMin':       return dados.faixaTempoObraMin       || '';
+      case 'faixaTempoObraMax':       return dados.faixaTempoObraMax       || '';
+      case 'lazerComum':              return dados.lazerComum              || '';
+      case 'criteriosComparacao':
+        return typeof dados.criteriosComparacao === 'string'
+          ? dados.criteriosComparacao : JSON.stringify(dados.criteriosComparacao || {});
+      case 'observacao':              return dados.observacao              || '';
+      default: return '';
+    }
+  });
+  aba.appendRow(linha);
+  return { ok: true, idModelo: idModelo };
 }
 
 // ═══════════════════════════════════════════════════════════════
