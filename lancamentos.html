@@ -790,13 +790,14 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
           <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
           <th onclick="ordenarMapaGeral_('vendido')">Estoque<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
-          <th onclick="ordenarMapaGeral_('prazo')">Prazo<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
+          <th onclick="ordenarMapaGeral_('prazo')" title="Prazo de Pagamento (meses)">PG<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
+          <th onclick="ordenarMapaGeral_('pv')" title="Prazo de Venda — meses desde o lançamento">PV<span class="mapa-seta" id="seta-mapa-pv"></span></th>
           <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
           <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="13" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="14" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -2353,6 +2354,15 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam) {
 // só uma segunda forma de visualizar o mesmo dado, lado a lado numa tabela.
 const MAPA_ESTAGIO_ORDEM_ = { 'Em planta': 1, 'Em obras': 2, 'Pronto': 3, 'Pronto novo': 3, 'Entregue': 4 };
 
+function prazoDeVendaMeses_(dataLanc) {
+  if (!dataLanc) return 0;
+  const m = String(dataLanc).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return 0;
+  const inicio = new Date(+m[3], +m[2] - 1, +m[1]);
+  const hoje = new Date();
+  return Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
+}
+
 function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
   if (!lista.length) {
     _mapaRows = [];
@@ -2388,6 +2398,7 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
       simil: s.simil || 0,
       isSobraSuspeita: s.isSobraSuspeita || false,
       prazo: parseInt(e.prazoMaximo, 10) || 0,
+      prazoVenda: prazoDeVendaMeses_(e.dataLancamento),
     };
   });
   // Recarregou os dados -- reseta a seleção de Estágio pra não ficar preso
@@ -2446,6 +2457,7 @@ function mapaCampoValor_(r, campo) {
   if (campo === 'm2')          return r.m2Medio;
   if (campo === 'vendido')     return r.pctVendido == null ? -1 : r.pctVendido;
   if (campo === 'prazo')       return r.prazo;
+  if (campo === 'pv')          return r.prazoVenda;
   if (campo === 'estagio')     return r.estagioOrd;
   if (campo === 'alerta')      return r.alertaRank;
   return 0;
@@ -2470,7 +2482,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="13" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2483,7 +2495,7 @@ function renderMapaGeral_() {
     .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="13" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -2513,7 +2525,8 @@ function renderMapaGeral_() {
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
       <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
       <td class="mapa-num">${badgeVendidoHTML(r.pctVendido, r.estoque) || '—'}</td>
-      <td class="mapa-num">${r.prazo > 0 ? r.prazo + ' meses' : '—'}</td>
+      <td class="mapa-num">${r.prazo > 0 ? r.prazo + 'm' : '—'}</td>
+      <td class="mapa-num">${r.prazoVenda > 0 ? r.prazoVenda + 'm' : '—'}</td>
       <td>${r.estagio}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
     </tr>`).join('');
@@ -2522,7 +2535,7 @@ function renderMapaGeral_() {
 }
 
 function atualizarSetasMapaGeral_() {
-  ['id','nome','t','construtora','v','s','area','preco','m2','vendido','prazo','estagio','alerta'].forEach(campo => {
+  ['id','nome','t','construtora','v','s','area','preco','m2','vendido','prazo','pv','estagio','alerta'].forEach(campo => {
     const el = document.getElementById('seta-mapa-' + campo);
     if (!el) return;
     if (_mapaSort.campo !== campo) { el.textContent = '▾'; el.classList.remove('on'); return; }
