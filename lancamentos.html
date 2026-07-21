@@ -1778,9 +1778,8 @@ function calcularPrazoDeVenda_() {
   if (!el) return;
   const lanc = (document.getElementById('f-dataLancamento')?.value || '').trim();
   if (!lanc) { el.value = ''; return; }
-  const mLanc = lanc.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!mLanc) { el.value = ''; return; }
-  const inicio = new Date(+mLanc[3], +mLanc[2] - 1, +mLanc[1]);
+  const inicio = parseDateLanc_(lanc);
+  if (!inicio) { el.value = ''; return; }
   const hoje = new Date();
   const meses = Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
   el.value = meses >= 1 ? meses : '';
@@ -2358,11 +2357,17 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam) {
 // só uma segunda forma de visualizar o mesmo dado, lado a lado numa tabela.
 const MAPA_ESTAGIO_ORDEM_ = { 'Em planta': 1, 'Em obras': 2, 'Pronto': 3, 'Pronto novo': 3, 'Entregue': 4 };
 
+function parseDateLanc_(s) {
+  if (!s) return null;
+  const d1 = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (d1) return new Date(+d1[3], +d1[2] - 1, +d1[1]);
+  const d2 = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (d2) return new Date(+d2[1], +d2[2] - 1, +d2[3]);
+  return null;
+}
 function prazoDeVendaMeses_(dataLanc) {
-  if (!dataLanc) return 0;
-  const m = String(dataLanc).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!m) return 0;
-  const inicio = new Date(+m[3], +m[2] - 1, +m[1]);
+  const inicio = parseDateLanc_(dataLanc);
+  if (!inicio) return 0;
   const hoje = new Date();
   return Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
 }

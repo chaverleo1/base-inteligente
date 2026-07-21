@@ -465,6 +465,13 @@ function preencherForm(e) {
   document.getElementById('pageSub').textContent = [e.construtora, e.bairro, e.cidade].filter(Boolean).join(' · ') || 'Preencha os dados abaixo';
   setStatusEditar(e.statusAtivo || 'Ativo');
 
+  // GAS pode retornar dataLancamento como ISO ("2021-11-01T...") se a célula
+  // foi reconhecida como data pela planilha — normaliza para DD/MM/YYYY.
+  if (e.dataLancamento) {
+    const d = parseDateLanc_(e.dataLancamento);
+    if (d) e.dataLancamento = String(d.getDate()).padStart(2,'0') + '/' +
+                              String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+  }
   const campos = ['nomeEmpreendimento','construtora','tipoEmpreendimento','padrao','status',
                   'endereco','bairro','cidade','estado','previsaoEntrega','prazoMaximo',
                   'estoque','totalUnidades','dataLancamento',
@@ -557,14 +564,21 @@ function calcularMesesAteEntregaEditar_(v) {
 }
 // Prazo de venda = (meses desde lançamento até hoje) + (meses de hoje até entrega)
 // = janela total de vendas do lançamento à entrega (≤ 36m → elegível PADRÃO VENDEDOR).
+function parseDateLanc_(s) {
+  if (!s) return null;
+  const d1 = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (d1) return new Date(+d1[3], +d1[2] - 1, +d1[1]);
+  const d2 = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (d2) return new Date(+d2[1], +d2[2] - 1, +d2[3]);
+  return null;
+}
 function calcularPrazoDeVenda_() {
   const el = document.getElementById('f-prazoDeVenda');
   if (!el) return;
   const lanc = (document.getElementById('f-dataLancamento')?.value || '').trim();
   if (!lanc) { el.value = ''; return; }
-  const mLanc = lanc.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!mLanc) { el.value = ''; return; }
-  const inicio = new Date(+mLanc[3], +mLanc[2] - 1, +mLanc[1]);
+  const inicio = parseDateLanc_(lanc);
+  if (!inicio) { el.value = ''; return; }
   const hoje = new Date();
   const meses = Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
   el.value = meses >= 1 ? meses : '';
