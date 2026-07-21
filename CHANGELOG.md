@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 72) — Tabela "Modelos Vendedores" move pra cima do Padrão Vendedor no Mapa Geral
+
+Pedido do usuário: a tabela de Modelos Vendedores (importados + automáticos, parte 71) estava só
+na aba "Importar Modelos" — pediu pra ela aparecer acima da tabela "Padrão Vendedor", na aba
+"Mapa Geral" (fluxo mais natural: ver primeiro os modelos de referência, depois quem se classifica
+contra eles).
+
+`#modelosPainel` movido do HTML de `#tabPainelImportar` pra `#tabPainelMapa`, logo antes de
+`#padroesPainel`. A aba "Importar Modelos" mantém só o formulário de upload/colar CSV — nenhuma
+função JS mudou (`renderModelosVendedores_`/`recarregarModelosMesclados_` continuam usando os
+mesmos ids `modelosPainel`/`modelosBody`, independente de qual aba os contém).
+
+Testado ao vivo no navegador: painel renderiza dentro de `#tabPainelMapa`, sem duplicar o id, na
+ordem certa (Modelos Vendedores antes de Padrão Vendedor).
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-21 (parte 71) — Modelos Vendedores construídos automaticamente ("Opção A")
 
 Pedido do usuário, depois de discutir como fazer o Modelo Vendedor deixar de depender de curadoria
