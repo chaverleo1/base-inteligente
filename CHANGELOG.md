@@ -1,5 +1,46 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 71) — Modelos Vendedores construídos automaticamente ("Opção A")
+
+Pedido do usuário, depois de discutir como fazer o Modelo Vendedor deixar de depender de curadoria
+manual (exportar CSV → IA externa → importar): montar a estrutura que constrói a lista de Modelos
+Vendedores de forma dinâmica, sem precisar de nenhuma etapa manual.
+
+**`construirModelosVendedoresDinamicos_(empsBrutos)`** (nova, `lancamentos.html`) — roda 100% no
+cliente, a cada carregamento de página, sem gravar nada:
+1. Filtra os empreendimentos que JÁ qualificam como Padrão Vendedor ao vivo
+   (`avaliarPadraoVendedorAoVivo_`, parte 70) — EXTREMO/FORTE/POTENCIAL/MODERADO (SOBRA SUSPEITA
+   nunca vira modelo).
+2. Agrupa por Tipo de Empreendimento + Tipo de Imóvel dominante + Padrão — mesma cascata de 3
+   níveis que a Similaridade já usa, e o mesmo critério que `MODELO_VENDEDOR_PROMPT.md` pedia pra
+   IA assistente seguir manualmente.
+3. Só vira modelo se o grupo tiver 3+ empreendimentos-base (mesma regra do prompt).
+4. Faixas (área útil/quartos/preço médio/tempo de obra) = min/max observado no grupo, só
+   considerando unidades do Tipo de Imóvel dominante do grupo. `lazerComum` = itens presentes em
+   mais de 50% dos empreendimentos-base. `criteriosComparacao` fica vazio de propósito —
+   `calcularSimilaridadeModelo_` já aplica os pesos padrão nesse caso, evita duplicar a lógica.
+
+**`mesclarModelosVendedores_(importados, dinamicos)`** — modelos importados manualmente (via CSV/
+IA, fluxo antigo) continuam tendo PRIORIDADE sobre um dinâmico do mesmo segmento — a curadoria
+manual, quando existe, nunca é descartada; o dinâmico só preenche lacunas.
+
+`carregarLancamentos()` recalcula os modelos dinâmicos a partir de `agruparPorEmpreendimento_(_todos)`
+(não de `_mapaRows`, que só existe depois — evitaria dependência circular) ANTES de
+`renderLista`/`atualizarMapaGeral_` rodarem, então a nota de Similaridade já considera os modelos
+automáticos desde o primeiro render da página. Tabela "Modelos Vendedores" ganhou um selo "⚙️
+auto" pros modelos dinâmicos (sem botão de excluir — eles são recalculados do zero a cada
+carregamento, não haveria o que excluir).
+
+Testado em Node: grupo com 4 membros gera 1 modelo com faixas/lazerComum corretos; grupo com só 2
+membros não gera nada; empreendimento sem Padrão/Tipo definido é ignorado; empreendimento que não
+qualifica (50% vendido) é ignorado; modelo importado tem prioridade sobre dinâmico do mesmo
+segmento; sem sobreposição, os dois aparecem. Testado ao vivo no navegador com o fluxo completo
+(`carregarLancamentos()` mockado ponta a ponta): 4 lançamentos fictícios geram 1 modelo automático,
+que entra em `_listaModelos`, aparece na tabela com o selo "auto", e já é usado pela Similaridade
+no mesmo carregamento (nota 100% pros 4 empreendimentos que formaram o próprio modelo).
+
+100% frontend — sem alterações em `code.txt`, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 70) — Classificação de Padrão Vendedor 100% ao vivo (tabela + badge no card)
 
 Pedido do usuário: a coluna "Classificação" (painel Padrão Vendedor) deve recalcular sempre que a

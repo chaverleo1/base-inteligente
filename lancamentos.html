@@ -2267,7 +2267,18 @@ function renderModelosVendedores_(modelos) {
     return;
   }
   painel.style.display = '';
-  tbody.innerHTML = modelos.map(m => `<tr>
+  tbody.innerHTML = modelos.map(m => {
+    const isAuto = m.criadoPor === 'AUTO_CLUSTER';
+    // Modelo automático não tem o que excluir (é recalculado do zero a cada
+    // carregamento, sem gravação nenhuma) -- mostra um selo em vez do botão.
+    const acaoHtml = isAuto
+      ? `<span style="color:var(--text3);font-size:11px" title="Recalculado automaticamente a cada carregamento -- não há o que excluir">⚙️ auto</span>`
+      : `<button class="btn-del-emp" style="padding:3px 8px;font-size:12px" title="Excluir modelo"
+          onclick="excluirModeloVendedor_('${String(m.idModelo||'').replace(/'/g,"\\'")}','${String(m.nomeModelo||'').replace(/'/g,"\\'")}')">🗑</button>`;
+    const criadoEmHtml = isAuto
+      ? '<span style="color:var(--text3)">automático</span>'
+      : (m.dataCriacao || '—');
+    return `<tr>
     <td class="padrao-id">${m.idModelo || '—'}</td>
     <td><strong>${m.nomeModelo || '—'}</strong></td>
     <td>${m.tipoEmpreendimento || '—'}</td>
@@ -2276,10 +2287,10 @@ function renderModelosVendedores_(modelos) {
     <td>${m.qtdEmpreendimentosBase || '—'}</td>
     <td>${m.faixaAreaUtilMin || m.faixaAreaUtilMax ? `${m.faixaAreaUtilMin || '?'}–${m.faixaAreaUtilMax || '?'}m²` : '—'}</td>
     <td>${m.faixaPrecoMedioMin || m.faixaPrecoMedioMax ? `${formatarMoedaCompacta_(m.faixaPrecoMedioMin)}–${formatarMoedaCompacta_(m.faixaPrecoMedioMax)}` : '—'}</td>
-    <td style="white-space:nowrap;font-size:11px">${m.dataCriacao || '—'}</td>
-    <td><button class="btn-del-emp" style="padding:3px 8px;font-size:12px" title="Excluir modelo"
-        onclick="excluirModeloVendedor_('${String(m.idModelo||'').replace(/'/g,"\\'")}','${String(m.nomeModelo||'').replace(/'/g,"\\'")}')">🗑</button></td>
-  </tr>`).join('');
+    <td style="white-space:nowrap;font-size:11px">${criadoEmHtml}</td>
+    <td>${acaoHtml}</td>
+  </tr>`;
+  }).join('');
 }
 
 // Exclui um MODELO VENDEDOR (botão 🗑 na tabela acima) -- pede confirmação
@@ -2296,7 +2307,7 @@ async function excluirModeloVendedor_(idModelo, nomeModelo) {
     if (trataNaoAutenticado(json)) return;
     if (json && json.ok) {
       mostrarToast(`Modelo "${nomeModelo || idModelo}" excluído.`, 'ok');
-      carregarModelosVendedores_();
+      recarregarModelosMesclados_();
     } else {
       const motivo = json && json.status === 'acao desconhecida'
         ? 'o backend (Apps Script) ainda não tem essa função implantada -- cole code.txt/code.gs.txt atualizado no editor e reimplante'
@@ -2534,6 +2545,122 @@ function avaliarPadraoVendedorAoVivo_(e) {
     }
   }
   return null;
+}
+
+// ── MODELOS VENDEDORES DINÂMICOS (2026-07) ────────────────────────────────
+// "Opção A" discutida com o usuário: em vez de depender só de exportar CSV
+// pra uma IA externa e importar de volta (curadoria manual, fica defasado),
+// o sistema também constrói modelos SOZINHO, ao vivo, a cada carregamento
+// de página -- sem gravar nada, sem etapa manual. Reproduz mecanicamente as
+// mesmas regras que MODELO_VENDEDOR_PROMPT.md pedia pra IA seguir: agrupar
+// por Tipo de Empreendimento + Tipo de Imóvel + Padrão (mesma cascata da
+// Similaridade), mínimo 3 empreendimentos-base por grupo, faixas = min/max
+// observado, lazerComum = itens em mais de 50% do grupo. Modelos importados
+// manualmente (via CSV/IA) continuam tendo prioridade sobre um dinâmico do
+// mesmo segmento -- ver mesclarModelosVendedores_ logo abaixo.
+
+// Constrói a lista de modelos dinâmicos a partir dos empreendimentos que JÁ
+// qualificam como Padrão Vendedor (ao vivo -- avaliarPadraoVendedorAoVivo_).
+// `empsBrutos` é o mesmo formato de agruparPorEmpreendimento_(_todos).
+function construirModelosVendedoresDinamicos_(empsBrutos) {
+  const qualificados = [];
+  (empsBrutos || []).forEach(e => {
+    const resultado = avaliarPadraoVendedorAoVivo_(e);
+    if (!resultado || resultado.apenasAlerta) return; // SOBRA SUSPEITA não vira modelo
+    const tipoImovel = tipoImovelDominante_(e.unidades);
+    if (!e.tipoEmpreendimento || !tipoImovel || !e.padrao) return;
+    qualificados.push({ e, tipoImovel });
+  });
+
+  const grupos = {};
+  qualificados.forEach(({ e, tipoImovel }) => {
+    const key = `${e.tipoEmpreendimento}||${tipoImovel}||${e.padrao}`;
+    (grupos[key] = grupos[key] || []).push({ e, tipoImovel });
+  });
+
+  const modelos = [];
+  Object.keys(grupos).forEach(key => {
+    const membros = grupos[key];
+    if (membros.length < 3) return; // regra: mínimo 3 empreendimentos-base, mesma do prompt da IA
+
+    const [tipoEmpreendimento, tipoImovel, tipoPadrao] = key.split('||');
+
+    // Só as unidades do TIPO dominante do grupo entram na faixa -- compara
+    // like-with-like, mesmo critério do resto do projeto (evita um terreno
+    // isolado puxar a faixa de área de um grupo de apartamento, por ex).
+    const unidadesDoTipo = [];
+    membros.forEach(({ e }) => {
+      (e.unidades || []).forEach(u => { if (String(u.tipo || '') === tipoImovel) unidadesDoTipo.push(u); });
+    });
+
+    const areaUteis  = unidadesDoTipo.map(u => Number(u.areaUtil)   || 0).filter(v => v > 0);
+    const quartosArr = unidadesDoTipo.map(u => Number(u.quartos)    || 0).filter(v => v > 0);
+    const precos     = unidadesDoTipo.map(u => Number(u.precoMedio) || 0).filter(v => v > 0);
+    const temposObra = membros.map(({ e }) => calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega)).filter(v => v !== null);
+
+    // lazerComum: itens que aparecem em mais da metade dos empreendimentos-base.
+    const contagemLazer = {};
+    membros.forEach(({ e }) => {
+      String(e.lazer || '').split(',').map(s => s.trim()).filter(Boolean).forEach(item => {
+        contagemLazer[item] = (contagemLazer[item] || 0) + 1;
+      });
+    });
+    const lazerComum = Object.keys(contagemLazer)
+      .filter(item => contagemLazer[item] / membros.length > 0.5)
+      .join(';');
+
+    const slug = key.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+    modelos.push({
+      idModelo: 'AUTO-' + slug,
+      nomeModelo: `${tipoEmpreendimento} ${tipoPadrao} — ${tipoImovel} (auto)`,
+      dataCriacao: '',
+      criadoPor: 'AUTO_CLUSTER',
+      tipoEmpreendimento, tipoPadrao, tipoImovel,
+      qtdEmpreendimentosBase: membros.length,
+      idsEmpreendimentosBase: membros.map(({ e }) => e.idEmpreendimento).filter(Boolean).join(';'),
+      faixaAreaUtilMin: areaUteis.length ? Math.min(...areaUteis) : '',
+      faixaAreaUtilMax: areaUteis.length ? Math.max(...areaUteis) : '',
+      faixaQuartosMin: quartosArr.length ? Math.min(...quartosArr) : '',
+      faixaQuartosMax: quartosArr.length ? Math.max(...quartosArr) : '',
+      faixaPrecoMedioMin: precos.length ? Math.min(...precos) : '',
+      faixaPrecoMedioMax: precos.length ? Math.max(...precos) : '',
+      faixaTempoObraMin: temposObra.length ? Math.min(...temposObra) : '',
+      faixaTempoObraMax: temposObra.length ? Math.max(...temposObra) : '',
+      lazerComum,
+      // criteriosComparacao vazio de propósito -- calcularSimilaridadeModelo_
+      // já aplica os pesos padrão quando esse campo está ausente/vazio, não
+      // precisa duplicar essa lógica aqui.
+      criteriosComparacao: '{}',
+      observacao: `Gerado automaticamente a partir de ${membros.length} empreendimentos com Padrão Vendedor (EXTREMO/FORTE/POTENCIAL/MODERADO).`,
+    });
+  });
+
+  return modelos;
+}
+
+// Modelos importados manualmente (via CSV/IA) têm prioridade sobre um
+// dinâmico do mesmo segmento -- respeita curadoria humana quando ela
+// existe, preenche a lacuna quando não existe curadoria nenhuma ainda.
+function mesclarModelosVendedores_(importados, dinamicos) {
+  const chaves = new Set((importados || []).map(m => `${m.tipoEmpreendimento}||${m.tipoImovel}||${m.tipoPadrao}`));
+  const dinamicosSemSobreposicao = (dinamicos || []).filter(m =>
+    !chaves.has(`${m.tipoEmpreendimento}||${m.tipoImovel}||${m.tipoPadrao}`)
+  );
+  return [...(importados || []), ...dinamicosSemSobreposicao];
+}
+
+// Recarrega a lista de modelos depois de importar/excluir um modelo manual:
+// busca os importados atualizados no backend, recalcula os dinâmicos a
+// partir dos lançamentos já carregados (não muda nesses casos, mas precisa
+// remesclar com a lista importada atualizada) e re-renderiza a tabela.
+async function recarregarModelosMesclados_() {
+  const importados  = await buscarModelosVendedores_();
+  const empsBrutos   = agruparPorEmpreendimento_(_todos);
+  const dinamicos    = construirModelosVendedoresDinamicos_(empsBrutos);
+  const mesclados    = mesclarModelosVendedores_(importados, dinamicos);
+  _listaModelos = mesclados;
+  renderModelosVendedores_(mesclados);
+  return mesclados;
 }
 
 // Calcula similaridade (0-100%) do empreendimento -- a partir de agora,
@@ -2840,7 +2967,7 @@ async function importarModelosCsv_() {
   btn.disabled = false; btn.textContent = '✅ Importar todos';
   const resumo = `${ok} modelo(s) importado(s)${falhas ? `, ${falhas} falha(s)` : ''}.`;
   mostrarToast(falhas ? `${resumo} Motivo: ${primeiroErro}` : resumo, falhas && !ok ? 'erro' : 'ok');
-  if (ok) { limparImportarModelos_(); carregarModelosVendedores_(); }
+  if (ok) { limparImportarModelos_(); recarregarModelosMesclados_(); }
 }
 
 function renderPadroesVendedores_(padroes) {
@@ -2911,15 +3038,25 @@ async function carregarLancamentos() {
     // cards (que pode vir filtrada por status, ver setFiltro) quanto no Mapa
     // Geral (sempre TODOS os lançamentos, sem filtro — evita 2 fetches
     // redundantes no carregamento inicial da página).
-    const [mapaScoreVendedor, listaPadroes, listaModelos] = await Promise.all([
+    const [mapaScoreVendedor, listaPadroes, listaModelosImportados] = await Promise.all([
       buscarScoreVendedorPorLancamento_(),
       buscarPadroesVendedores_(),
       buscarModelosVendedores_(),
     ]);
+    // Modelos dinâmicos: computados AO VIVO a partir dos lançamentos atuais
+    // (empsBrutos, não _mapaRows -- que só existe DEPOIS de
+    // atualizarMapaGeral_, criaria dependência circular). Mesclados com os
+    // importados manualmente ANTES de renderLista/atualizarMapaGeral_
+    // rodarem, pra a nota de Similaridade já considerar os dois desde o
+    // primeiro render (ver construirModelosVendedoresDinamicos_ acima).
+    const empsBrutos    = agruparPorEmpreendimento_(_todos);
+    const listaModelos  = mesclarModelosVendedores_(listaModelosImportados, construirModelosVendedoresDinamicos_(empsBrutos));
+    _listaModelos = listaModelos;
+
     await renderLista(_todos, mapaScoreVendedor, listaPadroes, listaModelos);
     atualizarMapaGeral_(_todos, mapaScoreVendedor, listaPadroes, listaModelos);
     carregarPadroesVendedores_(listaPadroes);
-    carregarModelosVendedores_(listaModelos);
+    renderModelosVendedores_(listaModelos);
   } catch {
     document.getElementById('lista-grid').innerHTML =
       '<div class="vazio"><h3>Erro ao carregar</h3><p>Verifique a conexão com o Apps Script.<br>O backend precisa ter a rota <code>listar_lancamentos</code> implantada.</p></div>';

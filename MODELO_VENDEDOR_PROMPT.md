@@ -1,5 +1,14 @@
 # Instruções para o Assistente IA de Modelos
 
+**Nota (2026-07)**: o sistema agora TAMBÉM constrói modelos sozinho, automaticamente, a cada
+carregamento da página (`construirModelosVendedoresDinamicos_` em `lancamentos.html`) — mesma
+regra de agrupamento descrita abaixo (Tipo de Empreendimento + Tipo de Imóvel + Padrão, mínimo 3
+empreendimentos-base), só que calculada ao vivo, sem gravar nada e sem precisar desse fluxo
+manual. Modelos importados manualmente por este fluxo continuam tendo PRIORIDADE sobre um modelo
+automático do mesmo segmento — este prompt/fluxo continua útil pra refinar manualmente um segmento
+específico (pesos customizados em `criteriosComparacao`, mesclar grupos parecidos, descrição em
+prosa), não é mais a ÚNICA forma de ter modelos na base.
+
 Cole este texto (ou resuma o essencial) como instrução pro assistente de IA que vai ler o
 repositório de PADRÕES VENDEDORES do Base Inteligente e construir os MODELOS VENDEDORES —
 os modelos de comparação usados depois para calcular a nota de SIMILARIDADE de cada
