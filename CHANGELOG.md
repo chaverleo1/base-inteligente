@@ -1,5 +1,61 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 65) — Tabela de Modelos importados + nota de Similaridade agora usa cascata contra MODELOS_VENDEDORES
+
+Pedido do usuário: (A) mostrar, acima do formulário "Importar Modelos", uma tabela com os MODELOS
+VENDEDORES já gravados; (B) redefinir a nota de Similaridade pra seguir uma ordem de prioridade
+estrita — 1º Tipo de Empreendimento, 2º Tipo de Imóvel, 3º Padrão, 4º "todas as demais
+características" — comparando contra a base de MODELOS_VENDEDORES (não mais contra
+PADROES_VENDEDORES), tanto pra empreendimentos já cadastrados quanto ao vivo durante a extração
+(Orulo ou "Outros").
+
+**(A) Tabela "Modelos Vendedores"** (`lancamentos.html`, dentro de `#tabPainelImportar`, acima do
+formulário de importação) — `buscarModelosVendedores_()`/`carregarModelosVendedores_()` (mesmo
+padrão de `buscarPadroesVendedores_`), renderizada por `renderModelosVendedores_()`. Carregada
+eagerly junto com o resto da página (`carregarLancamentos()`) e recarregada depois de uma
+importação bem-sucedida.
+
+**(B) Cascata de Similaridade** — `calcularSimilaridadeModelo_()` (nova, `lancamentos.html`):
+1. Filtra modelos pelo mesmo `tipoEmpreendimento` do empreendimento — **obrigatório**: sem isso,
+   não existe MODELO COMPARATIVO válido (regra do usuário), retorna nota 0.
+2. Dentro do que sobrou, prefere modelos com o mesmo Tipo de Imóvel **dominante**
+   (`tipoImovelDominante_()` — moda do campo `tipo` entre as unidades). Se nenhum bater, cai pro
+   conjunto do nível anterior (nunca fica sem candidato só por um critério secundário).
+3. Mesma lógica de fallback pro `tipoPadrao`.
+4. Só então calcula uma nota parcial por característica (`scoreFaixa_()` pra área útil/quartos/
+   preço médio/tempo de obra contra as faixas do modelo, `scoreLazer_()` pra sobreposição de
+   lazer) contra cada modelo que sobreviveu à cascata, pega o de maior nota (`modeloRef` no
+   retorno, pra saber COM QUAL modelo bateu).
+
+`calcularSimilaridadePadrao_()` foi reescrita pra usar essa cascata quando existe pelo menos 1
+modelo gravado; **enquanto a base de MODELOS_VENDEDORES estiver vazia, continua caindo no cálculo
+antigo** (comparação contra o melhor % vendido do mesmo `tipoPadrao` em PADROES_VENDEDORES) — só
+uma ponte de transição, pra não zerar a nota de todo mundo antes da IA assistente entregar os
+primeiros modelos. Já entra automaticamente no Score de Tração (mesmo peso `PESO_SIMIL=5` de
+antes, só mudou a fonte da nota).
+
+**Nota de similaridade ao vivo durante a extração** — `atualizarResumoEPadrao()` agora também
+chama `atualizarSimilaridadeEstimada_()`, que roda a mesma cascata sobre os dados ainda não salvos
+(Orulo ou "Outros", ambos convergem pro mesmo preview) e mostra um badge abaixo do resumo:
+"Similaridade estimada: XX% · aproxima do modelo NOME", ou avisa quando não há modelo comparável
+ainda pro Tipo de Empreendimento em questão.
+
+**Campo novo `tipoImovel` em MODELOS_VENDEDORES** — 2º critério da cascata. Acrescentado no FIM de
+`CABECALHO_MODELOS_VENDEDORES` (`code.txt`) e de `CSV_CAMPOS_MODELOS_` (frontend) de propósito —
+migração só adiciona coluna no fim da planilha, nunca reordena as existentes.
+`MODELO_VENDEDOR_PROMPT.md` atualizado: cabeçalho do CSV de saída passa a ter 20 campos, nova
+seção explicando a cascata (pra IA entender por que a ordem dos 3 primeiros campos importa), e
+instrução de agrupamento revisada pra considerar o Tipo de Imóvel dominante antes do Padrão.
+
+Testado em Node (helpers de score/cascata, `calcularTempoObraEntreDatas_`, fallback pro cálculo
+antigo sem modelos, `isSobraSuspeita` independente da cascata) e ao vivo no navegador: tabela de
+Modelos Vendedores renderiza acima do formulário de importação, e o badge de similaridade estimada
+aparece corretamente durante a extração ao preencher Tipo de Empreendimento + unidades.
+
+⚠️ **Backend**: `code.txt` mudou (campo `tipoImovel` em `CABECALHO_MODELOS_VENDEDORES` +
+`salvarModeloVendedor_`) — precisa colar o conteúdo atualizado no editor do Apps Script e reimplantar
+pra valer no ambiente publicado.
+
 ## 2026-07-21 (parte 64) — Nova aba "Importar Modelos" + saída em CSV no prompt da IA de modelos
 
 Pedido do usuário: instruções pra IA assistente de modelos gerar um arquivo final pronto pra importar

@@ -3565,6 +3565,14 @@ var CABECALHO_MODELOS_VENDEDORES = [
   // definida, não faz sentido travar o formato agora.
   'criteriosComparacao',
   'observacao',
+  // Tipo de Imóvel dominante da base (ex.: Apartamento/Casa/Terreno) -- 2º
+  // critério da cascata de similaridade (1º Tipo de Empreendimento, 2º Tipo
+  // de Imóvel, 3º Padrão, 4º demais características -- ver
+  // calcularSimilaridadeModelo_ em lancamentos.html). Acrescentado no FIM do
+  // array de propósito: migrarCabecalhoModelosVendedores só ADICIONA colunas
+  // no fim da planilha, nunca reordena -- inserir no meio bagunçaria a
+  // leitura posicional de linhas já gravadas.
+  'tipoImovel',
 ];
 
 function obterAbaModelosVendedores_() {
@@ -3654,6 +3662,7 @@ function salvarModeloVendedor_(dados) {
         return typeof dados.criteriosComparacao === 'string'
           ? dados.criteriosComparacao : JSON.stringify(dados.criteriosComparacao || {});
       case 'observacao':              return dados.observacao              || '';
+      case 'tipoImovel':              return dados.tipoImovel              || '';
       default: return '';
     }
   });

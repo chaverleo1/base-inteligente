@@ -14,6 +14,16 @@ Base Inteligente pela aba "Importar Modelos" (Lançamentos → Mapa Geral → Im
 O seu trabalho é justamente criar esses modelos — sem eles, o sistema não tem contra o que
 comparar nada.
 
+**Como a nota de similaridade é calculada depois** (pra você entender por que a ordem dos critérios
+de agrupamento importa): o sistema compara um empreendimento contra a base de modelos em cascata —
+1º filtra por `tipoEmpreendimento`, 2º por `tipoImovel`, 3º por `tipoPadrao` (cada nível estreita
+os candidatos; se nenhum modelo bater num nível, ele volta pro conjunto do nível anterior), e só
+então, dentro do(s) modelo(s) que sobraram, calcula uma nota parcial por característica (área,
+preço, tempo de obra, lazer) contra as faixas do modelo. Por isso os 3 primeiros campos
+(`tipoEmpreendimento`, `tipoImovel`, `tipoPadrao`) precisam estar corretos acima de tudo — são o
+que decide COM QUAL modelo o empreendimento vai ser comparado, antes de qualquer nota fina entrar
+em jogo.
+
 ---
 
 ## O que é PADRÃO VENDEDOR (o repositório que você vai ler)
@@ -74,11 +84,18 @@ o detalhe real do produto**, não só um resumo do empreendimento.
 
 ## O que você precisa fazer
 
-1. **Agrupe os empreendimentos que têm características REALMENTE parecidas** — não force tudo
-   numa grade fixa. Olhe pra combinação de: `tipoEmpreendimento` + `tipoPadrao` como ponto de
-   partida óbvio (não faz sentido comparar um Vertical Luxo com um Horizontal Popular), mas
-   dentro disso, procure padrão de verdade: faixa de área parecida, faixa de preço parecida,
-   `tempoObra` parecido, lazer parecido, mesma região/bairro se fizer sentido.
+1. **Agrupe os empreendimentos que têm características REALMENTE parecidas**, seguindo esta ordem
+   de prioridade (é a mesma cascata que o sistema usa depois pra calcular a nota de similaridade,
+   por isso o agrupamento precisa respeitar essa hierarquia):
+   1. `tipoEmpreendimento` — não faz sentido comparar um Vertical com um Horizontal.
+   2. **Tipo de Imóvel dominante** — olhe as `tipologias` de cada empreendimento-base e veja qual
+      `tipo` (Apartamento, Casa, Studio, Terreno, etc.) é o mais comum entre elas. Empreendimentos
+      com tipo de imóvel dominante diferente não deveriam entrar no mesmo modelo, mesmo que
+      `tipoEmpreendimento` bata.
+   3. `tipoPadrao` — Popular/Médio/Alto/Luxo.
+   4. Só depois disso, veja se as **demais características** (faixa de área, faixa de preço,
+      `tempoObra`, lazer, região/bairro) realmente convergem dentro do grupo já filtrado pelos 3
+      critérios acima — é aqui que mora o "padrão real de produto".
 2. **Um grupo só vira um MODELO se tiver pelo menos 3 empreendimentos** com característica
    realmente comum. Menos que isso não é padrão, é coincidência — não crie o modelo, deixe esse
    empreendimento de fora por enquanto (ele pode entrar num modelo futuro quando mais
@@ -103,11 +120,11 @@ do Base Inteligente (Lançamentos → Mapa Geral → Importar Modelos). Não dev
 devolva markdown, não devolva explicação fora do CSV — só o conteúdo do arquivo, pronto pra salvar
 como `.csv` e importar.
 
-**Primeira linha = cabeçalho, exatamente estes 19 nomes de campo, nesta ordem, separados por
+**Primeira linha = cabeçalho, exatamente estes 20 nomes de campo, nesta ordem, separados por
 vírgula:**
 
 ```
-idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,qtdEmpreendimentosBase,idsEmpreendimentosBase,faixaAreaUtilMin,faixaAreaUtilMax,faixaQuartosMin,faixaQuartosMax,faixaPrecoMedioMin,faixaPrecoMedioMax,faixaTempoObraMin,faixaTempoObraMax,lazerComum,criteriosComparacao,observacao
+idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,qtdEmpreendimentosBase,idsEmpreendimentosBase,faixaAreaUtilMin,faixaAreaUtilMax,faixaQuartosMin,faixaQuartosMax,faixaPrecoMedioMin,faixaPrecoMedioMax,faixaTempoObraMin,faixaTempoObraMax,lazerComum,criteriosComparacao,observacao,tipoImovel
 ```
 
 Depois, **uma linha por modelo identificado**.
@@ -122,6 +139,7 @@ Depois, **uma linha por modelo identificado**.
 | `criadoPor` | Escreva `IA_ASSISTENTE_MODELOS` |
 | `tipoEmpreendimento` | `Condomínio Vertical` ou `Condomínio Horizontal` |
 | `tipoPadrao` | `Popular`, `Médio`, `Alto` ou `Luxo` |
+| `tipoImovel` | O `tipo` de imóvel dominante entre as `tipologias` dos empreendimentos-base (ex: `Apartamento`, `Casa`, `Studio`, `Terreno`) — é o 2º critério da cascata de similaridade, preencha sempre que os empreendimentos-base tiverem um tipo claramente predominante |
 | `qtdEmpreendimentosBase` | Quantos empreendimentos formaram esse modelo (mínimo 3) |
 | `idsEmpreendimentosBase` | Os `idEmpreendimento` (código EMP-NNN) de cada um, **separados por ponto e vírgula (`;`), nunca por vírgula** — pra rastreabilidade, alguém precisa conseguir auditar depois de onde veio o modelo |
 | `faixaAreaUtilMin` / `faixaAreaUtilMax` | Menor e maior área útil observada entre as tipologias dos empreendimentos-base |
@@ -143,9 +161,9 @@ certeza, coloque o campo entre aspas duplas sempre que ele tiver qualquer vírgu
 ### Exemplo preenchido (2 linhas de dados)
 
 ```
-idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,qtdEmpreendimentosBase,idsEmpreendimentosBase,faixaAreaUtilMin,faixaAreaUtilMax,faixaQuartosMin,faixaQuartosMax,faixaPrecoMedioMin,faixaPrecoMedioMax,faixaTempoObraMin,faixaTempoObraMax,lazerComum,criteriosComparacao,observacao
-,Vertical Médio Compacto — Região Sul de Goiânia,,IA_ASSISTENTE_MODELOS,Condomínio Vertical,Médio,4,EMP-003;EMP-007;EMP-011;EMP-014,55,92,2,3,420000,780000,24,34,Piscina;Academia;Salão de festas;Playground,"{""pesoAreaUtil"":0.3,""pesoPrecoMedio"":0.3,""pesoTempoObra"":0.25,""pesoLazer"":0.15}","Os 4 empreendimentos-base venderam rápido (EXTREMO/ALTO) com apartamentos compactos de 2-3 quartos na região Sul, obra até ~3 anos e lazer completo mas sem diferenciais de luxo."
-,Horizontal Popular — Lotes de Entrada,,IA_ASSISTENTE_MODELOS,Condomínio Horizontal,Popular,3,EMP-002;EMP-009;EMP-018,180,250,0,0,180000,260000,12,20,Portaria;Área verde,"{""pesoAreaUtil"":0.4,""pesoPrecoMedio"":0.4,""pesoTempoObra"":0.2}","Lotes pequenos com prazo de obra curto -- venda rapida por preco de entrada, nao por lazer."
+idModelo,nomeModelo,dataCriacao,criadoPor,tipoEmpreendimento,tipoPadrao,qtdEmpreendimentosBase,idsEmpreendimentosBase,faixaAreaUtilMin,faixaAreaUtilMax,faixaQuartosMin,faixaQuartosMax,faixaPrecoMedioMin,faixaPrecoMedioMax,faixaTempoObraMin,faixaTempoObraMax,lazerComum,criteriosComparacao,observacao,tipoImovel
+,Vertical Médio Compacto — Região Sul de Goiânia,,IA_ASSISTENTE_MODELOS,Condomínio Vertical,Médio,4,EMP-003;EMP-007;EMP-011;EMP-014,55,92,2,3,420000,780000,24,34,Piscina;Academia;Salão de festas;Playground,"{""pesoAreaUtil"":0.3,""pesoPrecoMedio"":0.3,""pesoTempoObra"":0.25,""pesoLazer"":0.15}","Os 4 empreendimentos-base venderam rápido (EXTREMO/ALTO) com apartamentos compactos de 2-3 quartos na região Sul, obra até ~3 anos e lazer completo mas sem diferenciais de luxo.",Apartamento
+,Horizontal Popular — Lotes de Entrada,,IA_ASSISTENTE_MODELOS,Condomínio Horizontal,Popular,3,EMP-002;EMP-009;EMP-018,180,250,0,0,180000,260000,12,20,Portaria;Área verde,"{""pesoAreaUtil"":0.4,""pesoPrecoMedio"":0.4,""pesoTempoObra"":0.2}","Lotes pequenos com prazo de obra curto -- venda rapida por preco de entrada, nao por lazer.",Terreno
 ```
 
 ## Regras gerais de bom senso

@@ -547,6 +547,7 @@ select.form-input option { background: var(--surface2); }
       <!-- BLOCO 1 -->
       <div class="bloco-title">Bloco 1 — Empreendimento</div>
       <div id="resumoExtracao" class="resumo-extracao" style="display:none"></div>
+      <div id="similaridadeEstimadaBadge" style="display:none;font-size:12px;margin:-6px 0 12px;padding:8px 14px;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);border-radius:var(--radius-sm)"></div>
       <div class="form-grid">
         <div class="form-group span2">
           <div class="form-label">Nome do empreendimento <span class="lbl-warn" id="lbl-nome" style="display:none">⚠ não detectado</span></div>
@@ -807,6 +808,32 @@ select.form-input option { background: var(--surface2); }
 
   <!-- IMPORTAR MODELOS -->
   <div id="tabPainelImportar" class="tab-panel" style="display:none">
+
+  <div id="modelosPainel" class="padroes-panel" style="display:none;margin-bottom:24px">
+    <div class="sec-header">
+      <div class="sec-title">Modelos Vendedores</div>
+      <div class="sec-sub">Modelos já importados/gravados em <code>MODELOS_VENDEDORES</code> — usados como referência pra calcular a nota de Similaridade de cada empreendimento.</div>
+    </div>
+    <div class="mapa-wrap">
+      <table class="mapa-tabela">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome do Modelo</th>
+            <th>Tipo Empreend.</th>
+            <th>Tipo Imóvel</th>
+            <th>Padrão</th>
+            <th>Qtd Base</th>
+            <th>Área útil</th>
+            <th>Preço médio</th>
+            <th>Criado em</th>
+          </tr>
+        </thead>
+        <tbody id="modelosBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="sec-header">
     <div class="sec-title">Importar Modelos Vendedores</div>
     <div class="sec-sub">Cole ou envie o .csv que a IA assistente de modelos gerou (ver <code>MODELO_VENDEDOR_PROMPT.md</code>) — um MODELO por linha. Confira a pré-visualização antes de importar.</div>
@@ -831,6 +858,7 @@ select.form-input option { background: var(--surface2); }
           <tr>
             <th>Nome do Modelo</th>
             <th>Tipo Empreend.</th>
+            <th>Tipo Imóvel</th>
             <th>Padrão</th>
             <th>Qtd Base</th>
             <th>IDs Base</th>
@@ -1926,11 +1954,42 @@ function renderResumoExtracao(unidades) {
 // tipo, inclusive Lote Condomínio Horizontal (sem exceção — confirmado pelo
 // usuário; a regra antiga de forçar "Médio" pra lote foi removida).
 function atualizarResumoEPadrao() {
-  const unidades = lerPreview().unidades;
-  renderResumoExtracao(unidades);
-  const m2Medio = calcularM2Medio(unidades);
+  const dados = lerPreview();
+  renderResumoExtracao(dados.unidades);
+  const m2Medio = calcularM2Medio(dados.unidades);
   const tipoEmpreendimento = document.getElementById('f-tipoEmpreendimento').value;
-  if (m2Medio > 0) document.getElementById('f-padrao').value = classificarPadraoPorM2Medio_(m2Medio, tipoEmpreendimento);
+  let padrao = dados.padrao;
+  if (m2Medio > 0) {
+    padrao = classificarPadraoPorM2Medio_(m2Medio, tipoEmpreendimento);
+    document.getElementById('f-padrao').value = padrao;
+  }
+  atualizarSimilaridadeEstimada_({ ...dados, tipoEmpreendimento, padrao });
+}
+
+// Mostra, ao vivo durante a extração (Orulo ou "Outros" -- ambas convergem
+// pro mesmo preview/tabela de unidades), uma estimativa da nota de
+// Similaridade contra a base de MODELOS_VENDEDORES já carregada
+// (_listaModelos) -- mesma cascata (Tipo de Empreendimento > Tipo de Imóvel
+// > Padrão > demais características, ver calcularSimilaridadeModelo_) usada
+// depois de salvo, só que calculada sobre os dados ainda não gravados.
+// Chamada sempre que o usuário edita área/preço/tipo/padrão manualmente na
+// tabela (mesmo gatilho de atualizarResumoEPadrao), não só na extração
+// automática inicial.
+function atualizarSimilaridadeEstimada_(dados) {
+  const badge = document.getElementById('similaridadeEstimadaBadge');
+  if (!badge) return;
+  if (!dados.tipoEmpreendimento || !dados.unidades || !dados.unidades.length || !_listaModelos.length) {
+    badge.style.display = 'none';
+    return;
+  }
+  const resultado = calcularSimilaridadeModelo_(dados, _listaModelos);
+  badge.style.display = '';
+  if (!resultado) {
+    badge.innerHTML = '<span style="color:var(--text3)">Similaridade estimada: sem modelo comparável ainda (nenhum MODELO gravado com este Tipo de Empreendimento).</span>';
+    return;
+  }
+  const nomeModelo = resultado.modeloRef.nomeModelo || resultado.modeloRef.idModelo || '—';
+  badge.innerHTML = `<span style="color:var(--accent2)">Similaridade estimada: <strong>${resultado.simil}%</strong></span> · aproxima do modelo <strong>${nomeModelo}</strong>`;
 }
 
 const TIPOS_PRODUTO = ['Apartamento','Casa','Sobrado','Cobertura','Loft','Studio','Terreno','Lote Condomínio Horizontal','Comercial'];
@@ -2123,6 +2182,7 @@ let _mapaRows = [], _mapaSort = { campo: null, dir: 'desc' };
 let _mapaEstagiosAtivos = new Set(); // vazio = mostra todos (mesma convenção do filtro-bar de status da lista de cards)
 
 let _listaPadroes = [];
+let _listaModelos = [];
 
 // Busca a lista de PADRÕES_VENDEDORES do backend (sem side-effects de UI).
 async function buscarPadroesVendedores_() {
@@ -2147,19 +2207,191 @@ async function carregarPadroesVendedores_(listaPrefetch) {
   }
 }
 
-// Calcula similaridade (0-100%) do empreendimento com o melhor PADRÃO
-// VENDEDOR do mesmo tipo (excluindo SOBRA SUSPEITA do conjunto de referência).
-// Também detecta SOBRA SUSPEITA para flag visual independente.
-// Dimensão 1 (60%): % de unidades vendidas vs. a referência do padrão.
-// Dimensão 2 (40%): ritmo projetado para 365 dias vs. a referência.
-function calcularSimilaridadePadrao_(e, padroes) {
+// Busca a lista de MODELOS_VENDEDORES do backend (sem side-effects de UI) --
+// mesma convenção de buscarPadroesVendedores_ acima.
+async function buscarModelosVendedores_() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_modelos_vendedores&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (!json || json.ok === false) return [];
+    return Array.isArray(json) ? json : (json.dados || []);
+  } catch(_) { return []; }
+}
+
+// Renderiza a tabela de MODELOS_VENDEDORES já importados, na aba "Importar
+// Modelos" (acima do formulário de importação). Aceita lista pré-buscada
+// pelo mesmo motivo de carregarPadroesVendedores_.
+async function carregarModelosVendedores_(listaPrefetch) {
+  try {
+    const modelos = listaPrefetch !== undefined ? listaPrefetch : await buscarModelosVendedores_();
+    _listaModelos = modelos;
+    renderModelosVendedores_(modelos);
+  } catch(_) {
+    const tbody = document.getElementById('modelosBody');
+    if (tbody) tbody.innerHTML =
+      '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:12px">Erro ao carregar Modelos Vendedores.</td></tr>';
+  }
+}
+
+function renderModelosVendedores_(modelos) {
+  const painel = document.getElementById('modelosPainel');
+  const tbody  = document.getElementById('modelosBody');
+  if (!painel || !tbody) return;
+  if (!modelos || !modelos.length) {
+    painel.style.display = 'none';
+    return;
+  }
+  painel.style.display = '';
+  tbody.innerHTML = modelos.map(m => `<tr>
+    <td class="padrao-id">${m.idModelo || '—'}</td>
+    <td><strong>${m.nomeModelo || '—'}</strong></td>
+    <td>${m.tipoEmpreendimento || '—'}</td>
+    <td>${m.tipoImovel || '—'}</td>
+    <td>${m.tipoPadrao || '—'}</td>
+    <td>${m.qtdEmpreendimentosBase || '—'}</td>
+    <td>${m.faixaAreaUtilMin || m.faixaAreaUtilMax ? `${m.faixaAreaUtilMin || '?'}–${m.faixaAreaUtilMax || '?'}m²` : '—'}</td>
+    <td>${m.faixaPrecoMedioMin || m.faixaPrecoMedioMax ? `${formatarMoedaCompacta_(m.faixaPrecoMedioMin)}–${formatarMoedaCompacta_(m.faixaPrecoMedioMax)}` : '—'}</td>
+    <td style="white-space:nowrap;font-size:11px">${m.dataCriacao || '—'}</td>
+  </tr>`).join('');
+}
+
+// Formata um valor de preço de forma compacta (ex: 420000 -> "420 mil"), só
+// pra caber na tabela compacta de Modelos Vendedores sem quebrar linha.
+function formatarMoedaCompacta_(v) {
+  const n = Number(v) || 0;
+  if (!n) return '?';
+  if (n >= 1000000) return (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'mi';
+  if (n >= 1000) return Math.round(n / 1000) + 'mil';
+  return String(n);
+}
+
+// ── SIMILARIDADE CONTRA A BASE DE MODELOS_VENDEDORES ──────────────────────
+// Cascata de prioridade (regra do usuário, 2026-07): 1º Tipo de
+// Empreendimento, 2º Tipo de Imóvel, 3º Padrão, 4º "todas as demais
+// características". Cada nível 1-3 FILTRA os modelos candidatos (nunca
+// soma peso junto com os outros níveis) -- se um nível não encontra NENHUM
+// candidato, cai pro conjunto do nível anterior (nunca fica sem candidato só
+// por falta de 1 critério secundário), EXCETO o nível 1, que é obrigatório:
+// sem Tipo de Empreendimento batendo, não existe MODELO COMPARATIVO válido
+// ("não existe nota de similaridade sem um MODELO COMPARATIVO" -- regra do
+// usuário). Só depois de filtrar pelos 3 níveis é que o nível 4 entra: nota
+// parcial por característica (área útil, quartos, preço médio, tempo de
+// obra, lazer) contra as faixas do(s) modelo(s) que sobraram, pegando o
+// melhor resultado entre eles.
+
+function mediaCampoUnidades_(unidades, campo) {
+  const vals = (unidades || []).map(u => Number(u[campo]) || 0).filter(v => v > 0);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
+
+// Tipo de imóvel dominante (moda) entre as unidades -- mesmo critério que a
+// IA assistente usa pra preencher `tipoImovel` de um MODELO (ver
+// MODELO_VENDEDOR_PROMPT.md), pra comparar like-with-like.
+function tipoImovelDominante_(unidades) {
+  const cont = {};
+  (unidades || []).forEach(u => {
+    const t = String(u.tipo || '').trim();
+    if (t) cont[t] = (cont[t] || 0) + 1;
+  });
+  let melhor = '', max = 0;
+  Object.keys(cont).forEach(t => { if (cont[t] > max) { max = cont[t]; melhor = t; } });
+  return melhor;
+}
+
+// Nota parcial (0-100) de um valor numérico contra uma faixa [min,max] --
+// 100 se estiver dentro da faixa, decai conforme se afasta pra fora dela.
+// Sem faixa gravada no modelo ou sem valor do empreendimento => null (essa
+// dimensão é ignorada no cálculo, não penaliza por falta de dado).
+function scoreFaixa_(valor, min, max) {
+  min = Number(min); max = Number(max);
+  if (!valor || !(min > 0) || !(max > 0)) return null;
+  if (valor >= min && valor <= max) return 100;
+  const fora = valor < min ? (min - valor) / min : (valor - max) / max;
+  return Math.max(0, Math.round(100 * (1 - fora)));
+}
+
+// Nota parcial (0-100) de sobreposição de lazer -- quantos itens do
+// `lazerComum` do modelo também aparecem no lazer do empreendimento.
+function scoreLazer_(lazerEmp, lazerComumModelo) {
+  const itens = String(lazerComumModelo || '').split(/[;,]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  if (!itens.length) return null;
+  const texto = String(lazerEmp || '').toLowerCase();
+  const bateu = itens.filter(it => texto.includes(it)).length;
+  return Math.round((bateu / itens.length) * 100);
+}
+
+// Aplica a cascata 1-3 (filtros) + nível 4 (nota parcial por característica)
+// contra a base de MODELOS_VENDEDORES. Retorna null se não existir NENHUM
+// modelo com o mesmo Tipo de Empreendimento (sem modelo comparável válido).
+function calcularSimilaridadeModelo_(e, modelos) {
+  const tipoEmp = String(e.tipoEmpreendimento || '').toLowerCase();
+  if (!tipoEmp) return null;
+
+  let cand = (modelos || []).filter(m => String(m.tipoEmpreendimento || '').toLowerCase() === tipoEmp);
+  if (!cand.length) return null;
+
+  const tipoImovel = tipoImovelDominante_(e.unidades).toLowerCase();
+  if (tipoImovel) {
+    const porTipoImovel = cand.filter(m => String(m.tipoImovel || '').toLowerCase() === tipoImovel);
+    if (porTipoImovel.length) cand = porTipoImovel;
+  }
+
+  const padrao = String(e.padrao || '').toLowerCase();
+  if (padrao) {
+    const porPadrao = cand.filter(m => String(m.tipoPadrao || '').toLowerCase() === padrao);
+    if (porPadrao.length) cand = porPadrao;
+  }
+
+  const areaUtilMedia   = mediaCampoUnidades_(e.unidades, 'areaUtil');
+  const quartosMedia    = mediaCampoUnidades_(e.unidades, 'quartos');
+  const precoMedioMedia = mediaCampoUnidades_(e.unidades, 'precoMedio');
+  const tempoObra       = calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega);
+
+  let melhor = null;
+  cand.forEach(m => {
+    let pesos;
+    try { pesos = JSON.parse(m.criteriosComparacao || '{}'); } catch (_) { pesos = {}; }
+    const dims = [
+      { peso: pesos.pesoAreaUtil   ?? 0.3,  score: scoreFaixa_(areaUtilMedia, m.faixaAreaUtilMin, m.faixaAreaUtilMax) },
+      { peso: pesos.pesoQuartos    ?? 0.15, score: scoreFaixa_(quartosMedia, m.faixaQuartosMin, m.faixaQuartosMax) },
+      { peso: pesos.pesoPrecoMedio ?? 0.3,  score: scoreFaixa_(precoMedioMedia, m.faixaPrecoMedioMin, m.faixaPrecoMedioMax) },
+      { peso: pesos.pesoTempoObra  ?? 0.15, score: tempoObra !== null ? scoreFaixa_(tempoObra, m.faixaTempoObraMin, m.faixaTempoObraMax) : null },
+      { peso: pesos.pesoLazer      ?? 0.1,  score: scoreLazer_(e.lazer, m.lazerComum) },
+    ].filter(d => d.score !== null);
+    if (!dims.length) return;
+    const pesoTotal = dims.reduce((s, d) => s + d.peso, 0) || 1;
+    const nota = Math.round(dims.reduce((s, d) => s + d.score * d.peso, 0) / pesoTotal);
+    if (!melhor || nota > melhor.nota) melhor = { nota, modelo: m };
+  });
+
+  if (!melhor) return null;
+  return { simil: melhor.nota, modeloRef: melhor.modelo };
+}
+
+// Calcula similaridade (0-100%) do empreendimento -- a partir de agora,
+// contra a base de MODELOS_VENDEDORES (calcularSimilaridadeModelo_ acima),
+// que é o MODELO COMPARATIVO real. PADROES_VENDEDORES virou só o painel
+// informativo de qualificação por tempo de venda, não é mais usado como
+// referência de comparação (decisão do usuário, 2026-07). Enquanto não
+// existir NENHUM modelo gravado ainda (base nova, zerada), cai pro cálculo
+// antigo (baseado em % vendido/ritmo vs. o melhor PADRÃO do mesmo tipo) pra
+// não zerar a nota de todo mundo de uma hora pra outra -- é só uma ponte de
+// transição até a IA assistente entregar os primeiros modelos.
+// Também detecta SOBRA SUSPEITA para flag visual independente (não muda).
+function calcularSimilaridadePadrao_(e, padroes, modelos) {
   const total   = Number(e.totalUnidades) || 0;
   const estoque = Number(e.estoque) || 0;
-  if (total === 0) return { simil: 0, isSobraSuspeita: false };
+  if (total === 0) return { simil: 0, isSobraSuspeita: false, modeloRef: null };
 
   const pctVendido  = ((total - estoque) / total) * 100;
   const prazoMaximo = Number(e.prazoMaximo) || 0;
   const isSobraSuspeita = pctVendido > 80 && prazoMaximo > 24;
+
+  if (modelos && modelos.length) {
+    const resultado = calcularSimilaridadeModelo_(e, modelos);
+    if (resultado) return { simil: resultado.simil, isSobraSuspeita, modeloRef: resultado.modeloRef };
+    return { simil: 0, isSobraSuspeita, modeloRef: null };
+  }
 
   const tipoPadrao = String(e.padrao || '').toLowerCase();
   const candidatos = (padroes || []).filter(p =>
@@ -2190,7 +2422,7 @@ function calcularSimilaridadePadrao_(e, padroes) {
   } catch(_) {}
 
   const simil = Math.round((pctDim * 0.6 + timeDim * 0.4) * 100);
-  return { simil, isSobraSuspeita };
+  return { simil, isSobraSuspeita, modeloRef: null };
 }
 
 // Mesma ordem/campos de CABECALHO_PADROES_VENDEDORES (code.txt) -- 1 linha
@@ -2321,6 +2553,7 @@ const CSV_CAMPOS_MODELOS_ = [
   'faixaPrecoMedioMin', 'faixaPrecoMedioMax',
   'faixaTempoObraMin', 'faixaTempoObraMax',
   'lazerComum', 'criteriosComparacao', 'observacao',
+  'tipoImovel',
 ];
 
 let _modelosParaImportar = [];
@@ -2387,6 +2620,7 @@ function renderPreviewModelos_() {
     <tr style="${m._erros.length ? 'background:rgba(255,90,90,.08)' : ''}">
       <td>${m.nomeModelo || '<span style="color:var(--danger)">— faltando —</span>'}</td>
       <td>${m.tipoEmpreendimento || '—'}</td>
+      <td>${m.tipoImovel || '—'}</td>
       <td>${m.tipoPadrao || '—'}</td>
       <td>${m.qtdEmpreendimentosBase || '—'}</td>
       <td style="font-size:11px;white-space:normal;max-width:220px">${(m.idsEmpreendimentosBase || '—').split(';').join(', ')}</td>
@@ -2419,7 +2653,7 @@ async function importarModelosCsv_() {
   }
   btn.disabled = false; btn.textContent = '✅ Importar todos';
   mostrarToast(`${ok} modelo(s) importado(s)${falhas ? `, ${falhas} falha(s)` : ''}.`, falhas && !ok ? 'erro' : 'ok');
-  if (ok) limparImportarModelos_();
+  if (ok) { limparImportarModelos_(); carregarModelosVendedores_(); }
 }
 
 function renderPadroesVendedores_(padroes) {
@@ -2461,13 +2695,15 @@ async function carregarLancamentos() {
     // cards (que pode vir filtrada por status, ver setFiltro) quanto no Mapa
     // Geral (sempre TODOS os lançamentos, sem filtro — evita 2 fetches
     // redundantes no carregamento inicial da página).
-    const [mapaScoreVendedor, listaPadroes] = await Promise.all([
+    const [mapaScoreVendedor, listaPadroes, listaModelos] = await Promise.all([
       buscarScoreVendedorPorLancamento_(),
       buscarPadroesVendedores_(),
+      buscarModelosVendedores_(),
     ]);
-    await renderLista(_todos, mapaScoreVendedor, listaPadroes);
-    atualizarMapaGeral_(_todos, mapaScoreVendedor, listaPadroes);
+    await renderLista(_todos, mapaScoreVendedor, listaPadroes, listaModelos);
+    atualizarMapaGeral_(_todos, mapaScoreVendedor, listaPadroes, listaModelos);
     carregarPadroesVendedores_(listaPadroes);
+    carregarModelosVendedores_(listaModelos);
   } catch {
     document.getElementById('lista-grid').innerHTML =
       '<div class="vazio"><h3>Erro ao carregar</h3><p>Verifique a conexão com o Apps Script.<br>O backend precisa ter a rota <code>listar_lancamentos</code> implantada.</p></div>';
@@ -2494,7 +2730,7 @@ function renderFiltros() {
 
 function setFiltro(s) {
   _filtroStatus = s; renderFiltros();
-  renderLista(s ? _todos.filter(l => l.status === s) : _todos, null, _listaPadroes);
+  renderLista(s ? _todos.filter(l => l.status === s) : _todos, null, _listaPadroes, _listaModelos);
 }
 
 // Agrupa linhas cruas (uma por unidade/tipologia, como vem de
@@ -2512,7 +2748,7 @@ function agruparPorEmpreendimento_(lista) {
   return Object.values(mapa);
 }
 
-async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam) {
+async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam, listaModelosParam) {
   const grid = document.getElementById('lista-grid');
   const cnt  = document.getElementById('lista-count');
 
@@ -2534,7 +2770,8 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam) {
   // no fetch próprio.
   const mapaScoreVendedor = mapaScoreVendedorParam || await buscarScoreVendedorPorLancamento_();
   const listaPadroes = listaPadroesParam !== undefined ? listaPadroesParam : _listaPadroes;
-  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor, listaPadroes);
+  const listaModelos = listaModelosParam !== undefined ? listaModelosParam : _listaModelos;
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor, listaPadroes, listaModelos);
   scored.forEach(s => { s.alerta = calcularAlertaTracao_(s); });
 
   // Ordem pedida pelo usuário: alerta POSITIVO primeiro, depois NEGATIVO,
@@ -2646,7 +2883,29 @@ function prazoDeVendaMeses_(dataLanc) {
   return Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
 }
 
-function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
+// "Tempo de obra" = meses entre a data de lançamento e a previsão de
+// entrega (admite passado, sem clampar em 0) -- mesmo cálculo usado na
+// coluna PV do Mapa Geral e no CSV enriquecido de PADRÃO VENDEDOR
+// (montarLinhaCsvPadrao_), extraído aqui pra reaproveitar também na nota de
+// Similaridade contra MODELOS_VENDEDORES (calcularSimilaridadeModelo_) e na
+// estimativa ao vivo durante a extração.
+function calcularTempoObraEntreDatas_(dataLancamentoStr, previsaoEntregaStr) {
+  if (!dataLancamentoStr || !previsaoEntregaStr) return null;
+  const inicio = parseDateLanc_(dataLancamentoStr);
+  if (!inicio) return null;
+  const ent = String(previsaoEntregaStr).trim();
+  let ano, mes;
+  const mDMA = ent.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (mDMA) { mes = +mDMA[2]; ano = +mDMA[3]; }
+  else {
+    const mMA = ent.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
+    if (mMA) { mes = MESES_ABREV_NUM_[mMA[1].toLowerCase()]; ano = +mMA[2]; }
+  }
+  if (!ano || !mes) return null;
+  return (ano - inicio.getFullYear()) * 12 + (mes - (inicio.getMonth() + 1));
+}
+
+function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam, listaModelosParam) {
   if (!lista.length) {
     _mapaRows = [];
     renderMapaGeral_();
@@ -2654,7 +2913,8 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
   }
   const empsBrutos = agruparPorEmpreendimento_(lista);
   const listaPadroes = listaPadroesParam !== undefined ? listaPadroesParam : _listaPadroes;
-  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedorParam || {}, listaPadroes);
+  const listaModelos = listaModelosParam !== undefined ? listaModelosParam : _listaModelos;
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedorParam || {}, listaPadroes, listaModelos);
   scored.forEach(s => { s.alerta = calcularAlertaTracao_(s); });
 
   _mapaRows = scored.map(s => {
@@ -2683,22 +2943,7 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
       isSobraSuspeita: s.isSobraSuspeita || false,
       prazo: parseInt(e.prazoMaximo, 10) || 0,
       prazoVenda: prazoDeVendaMeses_(e.dataLancamento),
-      prazoLancEntrega: (() => {
-        if (!e.dataLancamento || !e.previsaoEntrega) return null;
-        const inicio = parseDateLanc_(e.dataLancamento);
-        if (!inicio) return null;
-        // parseia a data de entrega sem clampar (admite passado)
-        const ent = String(e.previsaoEntrega).trim();
-        let ano, mes;
-        const mDMA = ent.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (mDMA) { mes = +mDMA[2]; ano = +mDMA[3]; }
-        else {
-          const mMA = ent.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
-          if (mMA) { mes = MESES_ABREV_NUM_[mMA[1].toLowerCase()]; ano = +mMA[2]; }
-        }
-        if (!ano || !mes) return null;
-        return (ano - inicio.getFullYear()) * 12 + (mes - (inicio.getMonth() + 1));
-      })(),
+      prazoLancEntrega: calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega),
     };
   });
   // Recarregou os dados -- reseta a seleção de Estágio pra não ficar preso
@@ -2943,9 +3188,10 @@ function calcularDispScoreTracao_(estoque, tipoEmpreendimento) {
 // lote por renderLista() antes de chamar esta função — ver
 // pvCarregarBadgesBatch_ (perfil-vendedor.js), mesmo endpoint usado nos
 // badges de urgência dos cards.
-function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes) {
+function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes, listaModelos) {
   mapaScoreVendedor = mapaScoreVendedor || {};
   listaPadroes      = listaPadroes      || [];
+  listaModelos      = listaModelos      || [];
   const m2s    = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
   const minM2  = m2s.length ? Math.min(...m2s) : 0;
   const maxM2  = m2s.length ? Math.max(...m2s) : 1;
@@ -2965,7 +3211,7 @@ function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes) {
     const prazoSc = calcularPrazoScoreTracao_(prazo, e.tipoEmpreendimento);
     const scoreVendedor = parseInt(mapaScoreVendedor[e.idLancamento]) || 0;
     const vendedorSc    = scoreVendedor / 10;
-    const { simil, isSobraSuspeita } = calcularSimilaridadePadrao_(e, listaPadroes);
+    const { simil, isSobraSuspeita, modeloRef } = calcularSimilaridadePadrao_(e, listaPadroes, listaModelos);
     const similSc = simil / 10; // 0-100 → 0-10
     const comp    = semDados ? 0 : (
       (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT + trac * PESO_TRAC +
@@ -2979,7 +3225,7 @@ function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes) {
     else if (pctDisp < 0.15){ perfil = 'Quase esgotado'; perfilCls = 'tp-esgot';}
     else                    { perfil = 'Investigar';     perfilCls = 'tp-warm'; }
     return { e, atrat, disp, trac, prazoSc, prazo, vendedorSc, scoreVendedor,
-             simil, similSc, isSobraSuspeita, comp, perfil, perfilCls };
+             simil, similSc, isSobraSuspeita, modeloRef, comp, perfil, perfilCls };
   }).sort((a, b) => b.comp - a.comp);
 }
 
