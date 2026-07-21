@@ -1107,8 +1107,11 @@ function extrairBloco1(txt) {
   if (estoqueM) b.estoque = estoqueM[1];
   const totalUnidM = txt.match(/Total\s+de\s+unidades:\s*(\d+)/i);
   if (totalUnidM) b.totalUnidades = totalUnidM[1];
-  const lancamentoM = txt.match(/Lan[çc]amento:\s*(\d{2}\/\d{2}\/\d{4})/i);
-  if (lancamentoM) b.dataLancamento = lancamentoM[1];
+  const lancamentoM = txt.match(/Lan[çc]amento:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if (lancamentoM) {
+    const lp = lancamentoM[1].split('/');
+    b.dataLancamento = lp[0].padStart(2,'0') + '/' + lp[1].padStart(2,'0') + '/' + lp[2];
+  }
   // "Número de andares: 12" e "Unidades por andar: 8" (Orulo, "Outras informações")
   const qtdAndaresM = txt.match(/N[uú]mero\s+de\s+andares:\s*(\d+)/i);
   if (qtdAndaresM) b.qtdAndares = qtdAndaresM[1];
