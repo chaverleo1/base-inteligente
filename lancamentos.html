@@ -743,6 +743,7 @@ select.form-input option { background: var(--surface2); }
         <div class="padroes-panel-title">⚡ Padrão Vendedor</div>
         <div class="padroes-panel-sub">Empreendimentos com alta velocidade de vendas (≥80% em ≤1 ano). SOBRA SUSPEITA = >80% vendido com entrega >24 meses.</div>
       </div>
+      <button class="btn-imprimir-lista" style="margin-left:auto" onclick="exportarPadroesVendedorCSV_()" title="Baixar tabela completa em .csv, pra enviar à IA assistente de modelos">⬇️ CSV</button>
     </div>
     <div class="padroes-wrap">
       <table class="padroes-tabela">
@@ -2178,6 +2179,45 @@ function formatarTipologiaResumo_(t) {
     partes.push('R$ ' + exibirPrecoBR(t.precoMedio) + faixa);
   }
   return partes.join(' · ') || '—';
+}
+
+// Mesma ordem/campos de CABECALHO_PADROES_VENDEDORES (code.txt) -- 1 linha
+// de CSV por empreendimento, `tipologias` numa célula só como JSON bruto.
+// Propositalmente o MESMO formato que MODELO_VENDEDOR_PROMPT.md já descreve
+// como entrada esperada da IA assistente de modelos -- evita ter 2 formatos
+// diferentes pros mesmos dados (a API JSON e o CSV exportado).
+const CSV_CAMPOS_PADROES_ = [
+  'dataCadastro', 'idEmpreendimento', 'idLancamento', 'nomeEmpreendimento',
+  'construtora', 'tipoPadrao', 'classificacao', 'pctVendido',
+  'totalUnidades', 'estoque', 'prazoMaximo', 'dataPrimeiroEstoque',
+  'dataClassificacao', 'bairro', 'observacao',
+  'tipoEmpreendimento', 'cidade', 'estado', 'lazer', 'conceito',
+  'qtdAndares', 'aptoPorAndar', 'tempoObra', 'tipologias',
+];
+function csvEscapar_(v) {
+  const s = (v === null || v === undefined) ? '' : String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function exportarPadroesVendedorCSV_() {
+  if (!_listaPadroes.length) { mostrarToast('Nenhum Padrão Vendedor pra exportar ainda.', 'erro'); return; }
+  const linhas = [CSV_CAMPOS_PADROES_.map(csvEscapar_).join(',')];
+  _listaPadroes.forEach(p => {
+    linhas.push(CSV_CAMPOS_PADROES_.map(campo => csvEscapar_(p[campo])).join(','));
+  });
+  // BOM na frente -- sem isso o Excel abre acento/ç errado em CSV UTF-8.
+  // String.fromCharCode em vez de literal, pra não depender de um caractere
+  // invisível sobrevivendo intacto no arquivo-fonte.
+  const csv  = String.fromCharCode(0xFEFF) + linhas.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'padroes_vendedores_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast(`CSV baixado com ${_listaPadroes.length} empreendimento${_listaPadroes.length !== 1 ? 's' : ''}.`, 'ok');
 }
 
 function renderPadroesVendedores_(padroes) {

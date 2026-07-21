@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 62) — Botão "⬇️ CSV" no painel Padrão Vendedor
+
+Pedido do usuário: um botão/ícone pra baixar a tabela completa de Padrão Vendedor em .csv, pra enviar
+à IA assistente de modelos.
+
+Botão "⬇️ CSV" no cabeçalho do painel, ao lado do título. `exportarPadroesVendedorCSV_()` gera o CSV
+com os mesmos 24 campos e a mesma ordem de `CABECALHO_PADROES_VENDEDORES` — de propósito o MESMO
+formato que `MODELO_VENDEDOR_PROMPT.md` já documenta como entrada esperada pela IA (1 linha por
+empreendimento, `tipologias` como JSON bruto numa célula só), pra não ter 2 formatos diferentes dos
+mesmos dados circulando.
+
+Escapamento de CSV correto (`csvEscapar_`): valores com vírgula, aspas ou quebra de linha entram
+entre aspas duplas, com aspas internas duplicadas — cobre o JSON de `tipologias`, que sempre tem
+aspas internas. BOM UTF-8 no início do arquivo (via `String.fromCharCode(0xFEFF)`, não um caractere
+literal no código-fonte) — sem isso o Excel abre acento/ç errado num CSV UTF-8.
+
+Testado em Node (escapamento em todos os casos, ordem/contagem dos 24 campos) e ao vivo no navegador,
+interceptando `URL.createObjectURL` e `HTMLAnchorElement.click` pra inspecionar o Blob gerado sem
+precisar confiar num download real: conteúdo do CSV conferido linha a linha, e os 3 primeiros bytes
+do arquivo confirmados como `ef bb bf` (BOM UTF-8 correto) via `Blob.arrayBuffer()`.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 61) — Painel Padrão Vendedor mostra todas as características (pra enviar à IA de modelos)
 
 Bug reportado pelo usuário: a tabela do painel "Padrão Vendedor" (acima do Mapa Geral) não mostrava
