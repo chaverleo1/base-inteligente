@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 58) — Mapa Geral: coluna "Tipo/S%" + verificação da coluna PV
+
+Pedido do usuário: (1) na coluna S%, mostrar também o Tipo (padrão de preço) — renomeada pra "Tipo/S%",
+plotando as duas informações juntas (ex: "Médio/88%"); (2) na coluna PV, plotar
+"(diferença lançamento→entrega + resultado)=(prazo de venda)" com verde se a entrega ainda não passou,
+vermelho se já passou.
+
+**Item 1 — implementado**: `_mapaRows` ganhou o campo `padrao` (extraído de `e.padrao`, já existente em
+cada lançamento); a célula agora mostra `Tipo/S%` junto (`Médio/88%`), com tooltip explicando as duas
+partes separadamente. Fallback `—` quando não há nem tipo nem similaridade calculada.
+
+**Item 2 — já estava correto, nenhuma mudança de código necessária**: conferido com os números exatos
+do exemplo do usuário (prazo de venda 56, diferença 48, resultado 8) — a coluna PV já produzia
+`(48+8)=56` na cor vermelha. A regra de cor atual (`prazoVenda > prazoLancEntrega`) é matematicamente
+equivalente a "hoje já passou da data de entrega", que é exatamente a regra pedida — só descrita de um
+jeito diferente. Confirmado também o caso inverso (entrega ainda no futuro → verde).
+
+Testado ao vivo no navegador: cabeçalho "Tipo/S%" correto, badge "Médio/88%" com tooltip, fallback "—"
+quando faltam os dois dados, e a coluna PV reproduzindo exatamente o exemplo do usuário (cor e formato).
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 57) — Sincronização com sessão paralela (PADRÃO VENDEDOR) + reconciliação de code.txt
 
 O usuário tinha feito uma edição manual local em `code.txt` (não commitada) e pediu pra puxar as

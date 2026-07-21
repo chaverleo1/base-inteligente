@@ -785,7 +785,7 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
           <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
-          <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
+          <th onclick="ordenarMapaGeral_('s')" title="Padrão de preço (Popular/Médio/Alto/Luxo) e Similaridade com Padrão Vendedor (0–100%)">Tipo/S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
           <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
           <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
           <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
@@ -2404,6 +2404,7 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
       alertaRank: s.alerta ? (s.alerta.tipo === 'positivo' ? 2 : 1) : 0,
       comp: s.comp || 0,
       scoreVendedor: s.scoreVendedor || 0,
+      padrao: e.padrao || '',
       simil: s.simil || 0,
       isSobraSuspeita: s.isSobraSuspeita || false,
       prazo: parseInt(e.prazoMaximo, 10) || 0,
@@ -2545,7 +2546,12 @@ function renderMapaGeral_() {
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
       <td>${r.construtora}</td>
       <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
-      <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge" title="Similaridade com Padrão Vendedor">${r.simil}%</span>` : '—'}</td>
+      <td class="mapa-simil">${(() => {
+        if (!r.padrao && !(r.simil > 0)) return '—';
+        const tipo = r.padrao || '—';
+        const pct  = r.simil > 0 ? r.simil + '%' : '—';
+        return `<span class="simil-badge" title="Padrão de preço: ${tipo} · Similaridade com Padrão Vendedor: ${pct}">${tipo}/${pct}</span>`;
+      })()}</td>
       <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
       <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
