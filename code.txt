@@ -780,6 +780,7 @@ function doPost(e) {
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
   if (d.acao === 'excluir_lancamento')    return ok(excluirLancamento_(d));
   if (d.acao === 'salvar_modelo_vendedor') return ok(salvarModeloVendedor_(d.dados || d));
+  if (d.acao === 'excluir_modelo_vendedor') return ok(excluirModeloVendedor_(d.dados || d));
   if (d.acao === 'importar_revendas_construtoras') return ok(importarRevendasConstrutoras_(d.dados || d));
   if (d.acao === 'excluir_revenda_construtora')     return ok(excluirRevendaConstrutora_(d));
   if (d.acao === 'excluir_todos_revendas_construtora') return ok(excluirTodosRevendasConstrutora_(d));
@@ -3668,6 +3669,22 @@ function salvarModeloVendedor_(dados) {
   });
   aba.appendRow(linha);
   return { ok: true, idModelo: idModelo };
+}
+
+// Exclui um MODELO VENDEDOR pelo idModelo (MOD-NNN). Usado pelo botão
+// "🗑" na tabela de Modelos Vendedores (Lançamentos → Importar Modelos).
+function excluirModeloVendedor_(dados) {
+  var idModelo = String(dados && dados.idModelo || '').trim();
+  if (!idModelo) return { ok: false, erro: 'idModelo obrigatorio' };
+  var aba = obterAbaModelosVendedores_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'nenhum modelo cadastrado' };
+  var idsAtuais = aba.getRange(2, 1, lr - 1, 1).getValues().flat();
+  var apagou = false;
+  for (var i = idsAtuais.length - 1; i >= 0; i--) {
+    if (String(idsAtuais[i]) === idModelo) { aba.deleteRow(i + 2); apagou = true; }
+  }
+  return apagou ? { ok: true } : { ok: false, erro: 'modelo nao encontrado: ' + idModelo };
 }
 
 // ═══════════════════════════════════════════════════════════════

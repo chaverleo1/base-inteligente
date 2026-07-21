@@ -827,6 +827,7 @@ select.form-input option { background: var(--surface2); }
             <th>Área útil</th>
             <th>Preço médio</th>
             <th>Criado em</th>
+            <th>Ação</th>
           </tr>
         </thead>
         <tbody id="modelosBody"></tbody>
@@ -2213,6 +2214,13 @@ async function buscarModelosVendedores_() {
   try {
     const resp = await fetch(`${WEBHOOK_URL}?acao=listar_modelos_vendedores&token=${encodeURIComponent(tokenSessao())}`);
     const json = await resp.json();
+    if (json && json.status === 'acao desconhecida') {
+      // Backend (Apps Script) ainda não tem essa rota implantada -- fica
+      // silencioso na tela (tabela some, sem quebrar nada), mas registra no
+      // console pra não virar um "some sem explicação" na hora de debugar.
+      console.warn('listar_modelos_vendedores: backend respondeu "ação desconhecida" -- provavelmente falta colar code.txt/code.gs.txt atualizado no Apps Script e reimplantar.');
+      return [];
+    }
     if (!json || json.ok === false) return [];
     return Array.isArray(json) ? json : (json.dados || []);
   } catch(_) { return []; }
@@ -2229,7 +2237,7 @@ async function carregarModelosVendedores_(listaPrefetch) {
   } catch(_) {
     const tbody = document.getElementById('modelosBody');
     if (tbody) tbody.innerHTML =
-      '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:12px">Erro ao carregar Modelos Vendedores.</td></tr>';
+      '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:12px">Erro ao carregar Modelos Vendedores.</td></tr>';
   }
 }
 
@@ -2252,7 +2260,35 @@ function renderModelosVendedores_(modelos) {
     <td>${m.faixaAreaUtilMin || m.faixaAreaUtilMax ? `${m.faixaAreaUtilMin || '?'}–${m.faixaAreaUtilMax || '?'}m²` : '—'}</td>
     <td>${m.faixaPrecoMedioMin || m.faixaPrecoMedioMax ? `${formatarMoedaCompacta_(m.faixaPrecoMedioMin)}–${formatarMoedaCompacta_(m.faixaPrecoMedioMax)}` : '—'}</td>
     <td style="white-space:nowrap;font-size:11px">${m.dataCriacao || '—'}</td>
+    <td><button class="btn-del-emp" style="padding:3px 8px;font-size:12px" title="Excluir modelo"
+        onclick="excluirModeloVendedor_('${String(m.idModelo||'').replace(/'/g,"\\'")}','${String(m.nomeModelo||'').replace(/'/g,"\\'")}')">🗑</button></td>
   </tr>`).join('');
+}
+
+// Exclui um MODELO VENDEDOR (botão 🗑 na tabela acima) -- pede confirmação
+// antes, já que não tem desfazer. Recarrega a tabela depois de excluir.
+async function excluirModeloVendedor_(idModelo, nomeModelo) {
+  if (!idModelo) { mostrarToast('Modelo sem idModelo — não dá pra excluir.', 'erro'); return; }
+  if (!confirm(`Excluir o modelo "${nomeModelo || idModelo}"? Essa ação não pode ser desfeita.`)) return;
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_modelo_vendedor', dados: { idModelo }, token: tokenSessao() }) })
+    });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json && json.ok) {
+      mostrarToast(`Modelo "${nomeModelo || idModelo}" excluído.`, 'ok');
+      carregarModelosVendedores_();
+    } else {
+      const motivo = json && json.status === 'acao desconhecida'
+        ? 'o backend (Apps Script) ainda não tem essa função implantada -- cole code.txt/code.gs.txt atualizado no editor e reimplante'
+        : (json && json.erro) || 'erro desconhecido do servidor';
+      mostrarToast(`Não consegui excluir: ${motivo}`, 'erro');
+    }
+  } catch (e) {
+    mostrarToast('Erro de conexão ao excluir modelo.', 'erro');
+  }
 }
 
 // Formata um valor de preço de forma compacta (ex: 420000 -> "420 mil"), só
@@ -2639,6 +2675,7 @@ async function importarModelosCsv_() {
   const btn = document.getElementById('btnImportarModelos');
   btn.disabled = true; btn.textContent = '⏳ Importando...';
   let ok = 0, falhas = 0;
+  let primeiroErro = '';
   for (const m of validos) {
     try {
       const payload = {};
@@ -2648,11 +2685,29 @@ async function importarModelosCsv_() {
         body: new URLSearchParams({ dados: JSON.stringify({ acao: 'salvar_modelo_vendedor', dados: payload, token: tokenSessao() }) })
       });
       const json = await resp.json();
-      if (json && json.ok) ok++; else falhas++;
-    } catch (e) { falhas++; }
+      if (trataNaoAutenticado(json)) { falhas++; if (!primeiroErro) primeiroErro = 'sessão expirou (faça login de novo)'; continue; }
+      // 'acao desconhecida' = o backend (Apps Script) ainda não tem essa rota
+      // implantada -- sintoma típico de esquecer de colar code.txt/reimplantar
+      // depois de uma mudança no backend. Sem isso ficar visível, o usuário só
+      // via "N falha(s)" sem entender por quê (foi exatamente o que aconteceu
+      // 2026-07: importação "falhando" sem explicação nenhuma na tela).
+      if (json && json.ok) { ok++; }
+      else {
+        falhas++;
+        const motivo = json && json.status === 'acao desconhecida'
+          ? 'o backend (Apps Script) ainda não tem essa função implantada -- cole code.txt/code.gs.txt atualizado no editor e reimplante'
+          : (json && json.erro) || 'erro desconhecido do servidor';
+        if (!primeiroErro) primeiroErro = motivo;
+        console.error('Falha ao importar modelo', m.nomeModelo, '—', json);
+      }
+    } catch (e) {
+      falhas++;
+      if (!primeiroErro) primeiroErro = 'erro de conexão (' + (e && e.message || e) + ')';
+    }
   }
   btn.disabled = false; btn.textContent = '✅ Importar todos';
-  mostrarToast(`${ok} modelo(s) importado(s)${falhas ? `, ${falhas} falha(s)` : ''}.`, falhas && !ok ? 'erro' : 'ok');
+  const resumo = `${ok} modelo(s) importado(s)${falhas ? `, ${falhas} falha(s)` : ''}.`;
+  mostrarToast(falhas ? `${resumo} Motivo: ${primeiroErro}` : resumo, falhas && !ok ? 'erro' : 'ok');
   if (ok) { limparImportarModelos_(); carregarModelosVendedores_(); }
 }
 

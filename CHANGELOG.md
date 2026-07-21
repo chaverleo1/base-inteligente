@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 66) — Diagnóstico do erro de importação + excluir Modelo Vendedor
+
+Usuário reportou: importação de Modelos Vendedores "falhando" e a tabela de modelos já cadastrados
+não aparecendo, sem nenhuma explicação na tela. Investigando o `doGet`/`doPost` do `code.txt`,
+confirmado: quando uma rota não está implantada no Apps Script (ex: backend antigo, sem colar o
+`code.gs.txt` mais recente), o servidor responde `{status: 'acao desconhecida'}` — e o frontend
+tratava isso como uma falha genérica e **silenciosa**: `buscarModelosVendedores_()` só devolvia
+`[]` (tabela some sem aviso nenhum) e `importarModelosCsv_()` só contava "falha" sem dizer o
+motivo. Sintoma bate exatamente com o relato: tudo aponta pra **backend ainda não reimplantado**
+com as rotas de MODELOS_VENDEDORES adicionadas nas partes anteriores.
+
+**Diagnóstico visível agora**:
+- `buscarModelosVendedores_()` — loga um aviso claro no console quando o backend responde "ação
+  desconhecida", explicando que falta reimplantar.
+- `importarModelosCsv_()` — o toast final agora mostra o motivo real da falha (sessão expirada,
+  rota não implantada, ou o erro exato devolvido pelo servidor), em vez de só "N falha(s)".
+
+**Excluir Modelo Vendedor** (pedido do usuário) — botão 🗑 em cada linha da tabela "Modelos
+Vendedores": `excluirModeloVendedor_()` (frontend, pede confirmação antes) → nova rota
+`excluir_modelo_vendedor` (POST) → `excluirModeloVendedor_()` (backend, `code.txt`, apaga a(s)
+linha(s) com aquele `idModelo` em `MODELOS_VENDEDORES`). Recarrega a tabela automaticamente depois
+de excluir.
+
+Testado ao vivo no navegador: botão de exclusão dispara o payload correto
+(`acao: excluir_modelo_vendedor`), e a simulação de uma resposta "ação desconhecida" do backend
+confirma que o toast de erro agora mostra a mensagem de diagnóstico certa.
+
+⚠️ **Backend**: `code.txt` mudou (`excluirModeloVendedor_` + rota `excluir_modelo_vendedor`) — soma
+com o `tipoImovel` da parte 65, que **ainda não tinha sido reimplantado**. Precisa colar o
+`code.gs.txt` atualizado no editor do Apps Script e reimplantar — isso resolve tanto a importação
+quanto a tabela não aparecendo.
+
 ## 2026-07-21 (parte 65) — Tabela de Modelos importados + nota de Similaridade agora usa cascata contra MODELOS_VENDEDORES
 
 Pedido do usuário: (A) mostrar, acima do formulário "Importar Modelos", uma tabela com os MODELOS
