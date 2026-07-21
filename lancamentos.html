@@ -1779,11 +1779,8 @@ function calcularPrazoDeVenda_() {
   if (!mLanc) { el.value = ''; return; }
   const inicio = new Date(+mLanc[3], +mLanc[2] - 1, +mLanc[1]);
   const hoje = new Date();
-  const mesesDesde = Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
-  const entr = (document.getElementById('f-entrega')?.value || '').trim();
-  const mesesAte = entr ? calcularMesesAteEntrega_(entr) : null;
-  const total = mesesDesde + (mesesAte !== null ? Math.max(0, mesesAte) : 0);
-  el.value = total >= 1 ? total + ' meses' : 'Menos de 1 mês';
+  const meses = Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
+  el.value = meses >= 1 ? meses + ' meses' : 'Menos de 1 mês';
 }
 
 // Exibe "antes → atual" em f-novoEstoque.
@@ -2358,16 +2355,13 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam) {
 // só uma segunda forma de visualizar o mesmo dado, lado a lado numa tabela.
 const MAPA_ESTAGIO_ORDEM_ = { 'Em planta': 1, 'Em obras': 2, 'Pronto': 3, 'Pronto novo': 3, 'Entregue': 4 };
 
-function prazoDeVendaMeses_(dataLanc, previsaoEntrega) {
-  if (!dataLanc || !previsaoEntrega) return 0;
+function prazoDeVendaMeses_(dataLanc) {
+  if (!dataLanc) return 0;
   const m = String(dataLanc).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!m) return 0;
   const inicio = new Date(+m[3], +m[2] - 1, +m[1]);
   const hoje = new Date();
-  const mesesDesde = Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
-  const mesesAte = calcularMesesAteEntrega_(previsaoEntrega);
-  if (mesesAte === null) return 0;
-  return mesesDesde + Math.max(0, mesesAte);
+  return Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
 }
 
 function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
@@ -2405,7 +2399,7 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
       simil: s.simil || 0,
       isSobraSuspeita: s.isSobraSuspeita || false,
       prazo: parseInt(e.prazoMaximo, 10) || 0,
-      prazoVenda: prazoDeVendaMeses_(e.dataLancamento, e.previsaoEntrega),
+      prazoVenda: prazoDeVendaMeses_(e.dataLancamento),
     };
   });
   // Recarregou os dados -- reseta a seleção de Estágio pra não ficar preso
