@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 61) — Painel Padrão Vendedor mostra todas as características (pra enviar à IA de modelos)
+
+Bug reportado pelo usuário: a tabela do painel "Padrão Vendedor" (acima do Mapa Geral) não mostrava
+todas as características que a parte 59 passou a gravar em `PADROES_VENDEDORES` — faltavam justamente
+os campos que `MODELO_VENDEDOR_PROMPT.md` pede pra enviar à IA assistente de modelos.
+
+Painel foi de 11 pra 20 colunas. Adicionado: Tipo de Empreendimento, Padrão (renomeado de "Tipo" pra
+não confundir com a coluna nova de Tipo de Empreendimento), Cidade, UF, Tempo Obra, Qtd Andares,
+Apto/Andar, Lazer/Diferenciais, Conceito, e Tipologias — esta última mostra, um por linha, TODAS as
+características de cada tipologia comercializada (tipo, quartos/suítes/banheiros/vagas, escaninho,
+área útil/terreno, preço médio com faixa mín–máx), lendo o JSON já gravado por
+`registrarPadraoVendedor_` (parte 59).
+
+`formatarTipologiaResumo_(t)` (nova) monta essa linha compacta por tipologia — nada fica escondido
+atrás de tooltip, tudo visível direto na célula (`<br>` entre tipologias do mesmo empreendimento).
+
+Fonte reduzida (12px→11px tabela, 10px→9px cabeçalho) pra caber as 20 colunas — mesmo tratamento já
+usado no Mapa Geral quando ele cresceu de 8 pra 11 colunas.
+
+Testado ao vivo no navegador: 20 cabeçalhos na ordem certa, linha renderizada com um empreendimento
+de 2 tipologias mostrando todas as características de cada uma corretamente.
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 60) — MODELO_VENDEDOR_PROMPT.md — instruções pra IA assistente de modelos
 
 Pedido do usuário: um relatório de orientações pra outra IA (IA ASSISTENTE DE MODELOS) ler o
