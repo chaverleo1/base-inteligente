@@ -2409,9 +2409,20 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
       prazo: parseInt(e.prazoMaximo, 10) || 0,
       prazoVenda: prazoDeVendaMeses_(e.dataLancamento),
       prazoLancEntrega: (() => {
-        const pv = prazoDeVendaMeses_(e.dataLancamento);
-        const ate = e.previsaoEntrega ? calcularMesesAteEntrega_(e.previsaoEntrega) : null;
-        return (pv > 0 && ate !== null) ? pv + ate : null;
+        if (!e.dataLancamento || !e.previsaoEntrega) return null;
+        const inicio = parseDateLanc_(e.dataLancamento);
+        if (!inicio) return null;
+        // parseia a data de entrega sem clampar (admite passado)
+        const ent = String(e.previsaoEntrega).trim();
+        let ano, mes;
+        const mDMA = ent.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (mDMA) { mes = +mDMA[2]; ano = +mDMA[3]; }
+        else {
+          const mMA = ent.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
+          if (mMA) { mes = MESES_ABREV_NUM_[mMA[1].toLowerCase()]; ano = +mMA[2]; }
+        }
+        if (!ano || !mes) return null;
+        return (ano - inicio.getFullYear()) * 12 + (mes - (inicio.getMonth() + 1));
       })(),
     };
   });
