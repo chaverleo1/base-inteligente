@@ -365,6 +365,10 @@ function doGet(e) {
     try { migrarCabecalhoModelosVendedores(); return ok({ status: 'ok', msg: 'MODELOS_VENDEDORES criado/atualizado.' }); }
     catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
   }
+  if (acao === 'adm_recalcular_padroes_vendedores') {
+    try { return ok(recalcularPadroesVendedores_()); }
+    catch(err) { return ok({ status: 'erro', motivo: String(err) }); }
+  }
 
   if (acao === 'adm_dados_insights') {
     try {
@@ -3540,6 +3544,61 @@ function avaliarPadraoVendedor_(dados, histArr) {
   }
 
   return null;
+}
+
+// Remove a linha de PADROES_VENDEDORES de um idEmpreendimento, se existir --
+// usado por recalcularPadroesVendedores_ quando um empreendimento não se
+// qualifica mais sob o critério atual. Retorna true se removeu alguma linha.
+function removerPadraoVendedor_(idEmp) {
+  if (!idEmp) return false;
+  var aba = obterAbaPadroesVendedores_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return false;
+  var idxIdEmp = CABECALHO_PADROES_VENDEDORES.indexOf('idEmpreendimento') + 1;
+  if (idxIdEmp <= 0) return false;
+  var ids = aba.getRange(2, idxIdEmp, lr - 1, 1).getValues().flat();
+  var removeu = false;
+  for (var i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i]) === String(idEmp)) { aba.deleteRow(i + 2); removeu = true; }
+  }
+  return removeu;
+}
+
+// Recalcula PADROES_VENDEDORES pra TODOS os lançamentos ativos, usando o
+// historicoEstoque JÁ GRAVADO (preserva a granularidade real das datas de
+// cruzamento -- ao contrário de apagar e recadastrar, que perde isso e cai
+// no fallback "hoje"). Precisa ser chamado manualmente sempre que o critério
+// de avaliarPadraoVendedor_ mudar -- entradas já gravadas em
+// PADROES_VENDEDORES NÃO se atualizam sozinhas, só quando o lançamento é
+// salvo de novo (ver CHANGELOG partes 67/68). Rota: ?acao=adm_recalcular_padroes_vendedores.
+function recalcularPadroesVendedores_() {
+  var lista = (listarLancamentos_().lancamentos) || [];
+  var porEmpreendimento = {};
+  lista.forEach(function(l) {
+    var key = l.idLancamento;
+    if (key && !porEmpreendimento[key]) porEmpreendimento[key] = l;
+  });
+
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  var avaliados = 0, classificados = 0, removidos = 0;
+
+  Object.keys(porEmpreendimento).forEach(function(idLan) {
+    var dados = porEmpreendimento[idLan];
+    var histArr = [];
+    try { histArr = JSON.parse(dados.historicoEstoque || '[]'); } catch(e_) {}
+    if (!Array.isArray(histArr)) histArr = [];
+
+    avaliados++;
+    var resultado = avaliarPadraoVendedor_(dados, histArr);
+    if (resultado && !resultado.apenasAlerta) {
+      registrarPadraoVendedor_(dados.idEmpreendimento, idLan, dados, resultado, agora);
+      classificados++;
+    } else if (removerPadraoVendedor_(dados.idEmpreendimento)) {
+      removidos++;
+    }
+  });
+
+  return { ok: true, avaliados: avaliados, classificados: classificados, removidos: removidos };
 }
 
 function registrarPadraoVendedor_(idEmp, idLan, dados, resultado, agora) {

@@ -1,5 +1,36 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 69) — Ação de recálculo em lote de PADROES_VENDEDORES
+
+Usuário reportou: depois do ajuste de limiares (parte 68), a classificação de empreendimentos já
+importados (ex: Vivah Condomínio Clube, 98% vendido) continuou mostrando POTENCIAL em vez de
+FORTE. Causa: `PADROES_VENDEDORES` é uma FOTO gravada no momento do cadastro — mudar o critério no
+código não reclassifica linhas já existentes, só um novo `salvarLancamento_` faz isso (já
+documentado como limitação conhecida na parte 67, mas sem solução até agora).
+
+**`recalcularPadroesVendedores_()`** (nova, `code.txt`) — lê todos os lançamentos ATIVOS (agrupados
+por `idLancamento`, um por empreendimento), usa o `historicoEstoque` JÁ GRAVADO de cada um (preserva
+a granularidade real das datas de cruzamento — ao contrário de apagar e recadastrar, que perde isso
+e cai no fallback "hoje"), roda `avaliarPadraoVendedor_` de novo com o critério ATUAL, e:
+- se qualificar (EXTREMO/FORTE/POTENCIAL/MODERADO) → grava/atualiza via `registrarPadraoVendedor_`
+- se NÃO qualificar mais (nem SOBRA SUSPEITA) → remove a linha antiga via `removerPadraoVendedor_` (nova)
+- SOBRA SUSPEITA nunca é gravada (mesma regra de sempre)
+
+Rota nova: `?acao=adm_recalcular_padroes_vendedores` (GET, mesmo padrão dos `adm_migrar_cabecalho_*`
+já existentes — sem botão na UI, dispara colando a URL no navegador). Retorna
+`{ok, avaliados, classificados, removidos}`.
+
+Testado em Node com planilhas mockadas (LANCAMENTOS + PADROES_VENDEDORES em memória): um
+empreendimento novo que passa a qualificar (EXTREMO), um que tinha classificação ANTIGA ('ALTO') e
+foi corretamente reclassificado pro critério novo (FORTE), um que não qualifica mais e teve a linha
+removida, e um excluído que corretamente não entrou na conta.
+
+⚠️ **Backend**: `code.txt` mudou (`removerPadraoVendedor_`, `recalcularPadroesVendedores_`, rota
+`adm_recalcular_padroes_vendedores`) — precisa colar `code.gs.txt` no Apps Script e reimplantar como
+nova versão. Depois de reimplantar, acesse
+`<WEBHOOK_URL>?acao=adm_recalcular_padroes_vendedores&token=<seu token>` no navegador uma vez pra
+corrigir as classificações já importadas.
+
 ## 2026-07-21 (parte 68) — Ajuste dos limiares de FORTE (≥90%) e MODERADO (≥80%)
 
 Pedido do usuário: depois de validar as primeiras obras importadas (ver parte 67), ajustar 2
