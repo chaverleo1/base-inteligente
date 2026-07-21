@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 68) — Ajuste dos limiares de FORTE (≥90%) e MODERADO (≥80%)
+
+Pedido do usuário: depois de validar as primeiras obras importadas (ver parte 67), ajustar 2
+limiares — FORTE deixa de exigir 100% (agora ≥90% antes da entrega) e MODERADO deixa de exigir
+90% (agora ≥80% em até 1 ano depois da entrega). EXTREMO (100% em ≤1 ano do lançamento) e SOBRA
+SUSPEITA (80%+ mais de 2 anos depois da entrega, alerta) continuam iguais.
+
+`avaliarPadraoVendedor_()` (code.txt) reordenada: checa EXTREMO primeiro (subconjunto mais estrito
+de FORTE), depois FORTE contra o cruzamento de 90%, depois POTENCIAL contra 70% -- e Cenário 2
+(MODERADO) e Cenário 3 (SOBRA SUSPEITA) passam a compartilhar o MESMO cruzamento de 80% (só o
+prazo depois da entrega muda: ≤1 ano vs. >2 anos), simplificando o que antes eram 2 buscas
+separadas (90% e 80%).
+
+Efeito prático: uma obra com 98% vendido ainda em obra, que antes ficava em POTENCIAL (não bate
+100% cravado), agora corretamente vira FORTE.
+
+Testado em Node: 11 cenários (EXTREMO/FORTE em 2 variações/POTENCIAL/MODERADO/SOBRA SUSPEITA/zona
+cinzenta/sem entrega/abaixo do piso/caso real dos 98%) — todos passando.
+
+⚠️ **Backend**: `code.txt` mudou (limiares de `avaliarPadraoVendedor_`) — precisa colar o
+`code.gs.txt` atualizado no Apps Script e reimplantar como nova versão.
+
 ## 2026-07-21 (parte 67) — Critério de PADRÃO VENDEDOR redefinido (referência vira a data de entrega)
 
 Pedido do usuário: substituir o critério antigo (ALTO/EXTREMO baseado no 1º registro de estoque,

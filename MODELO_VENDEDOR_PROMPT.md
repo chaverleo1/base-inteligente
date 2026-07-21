@@ -34,11 +34,11 @@ num destes critérios, entra no repositório `PADROES_VENDEDORES`:
 
 **Durante a obra** (o limiar foi atingido antes da entrega):
 - **EXTREMO** — vendeu 100% em até 1 ano desde o lançamento.
-- **FORTE** — vendeu 100% antes da entrega, mas levou mais de 1 ano desde o lançamento pra isso.
-- **POTENCIAL** — vendeu 70% antes da entrega (sem necessariamente chegar a 100%).
+- **FORTE** — vendeu 90% ou mais antes da entrega (e não se qualificou pra EXTREMO).
+- **POTENCIAL** — vendeu 70% ou mais antes da entrega.
 
 **Depois da entrega**:
-- **MODERADO** — vendeu 90% em até 1 ano depois da entrega.
+- **MODERADO** — vendeu 80% ou mais em até 1 ano depois da entrega.
 
 Existe ainda um 4º sinal, **SOBRA SUSPEITA** (vendeu 80%, mas isso só aconteceu mais de 2 anos
 depois da entrega) — **esse NÃO entra neste repositório**, é só um alerta calculado ao vivo no

@@ -3349,14 +3349,14 @@ function excluirLancamento_(dados) {
 //
 // Cenário 1 — durante a obra (limiar cruzado ANTES da entrega):
 //   EXTREMO   — 100% vendido em até 1 ano desde o LANÇAMENTO
-//   FORTE     — 100% vendido antes da entrega (mas depois de 1 ano do lançamento)
-//   POTENCIAL — 70% vendido antes da entrega
+//   FORTE     — 90%+ vendido antes da entrega (e não se qualificou pra EXTREMO)
+//   POTENCIAL — 70%+ vendido antes da entrega
 // Cenário 2 — depois da entrega:
-//   MODERADO  — 90% vendido em até 1 ano depois da entrega
+//   MODERADO  — 80%+ vendido em até 1 ano depois da entrega
 // Cenário 3 — NÃO é PADRÃO VENDEDOR, não entra neste repositório — vira só
 // um alerta ao vivo no Mapa Geral (ver calcularSimilaridadePadrao_ em
 // lancamentos.html):
-//   SOBRA SUSPEITA — 80% vendido, mas isso só aconteceu mais de 2 anos
+//   SOBRA SUSPEITA — 80%+ vendido, mas isso só aconteceu mais de 2 anos
 //   depois da entrega
 // ═══════════════════════════════════════════════════════════════
 
@@ -3501,38 +3501,39 @@ function avaliarPadraoVendedor_(dados, histArr) {
   // usa hoje como aproximação de quando cruzou -- melhor esforço, não trava
   // a classificação por falta de um snapshot exato.
   var dataCruzou70  = acharCruzamentoEstoque_(histArr, totalUnidades, 70)  || (pctVendido >= 70  ? hoje : null);
-  var dataCruzou90  = acharCruzamentoEstoque_(histArr, totalUnidades, 90)  || (pctVendido >= 90  ? hoje : null);
   var dataCruzou80  = acharCruzamentoEstoque_(histArr, totalUnidades, 80)  || (pctVendido >= 80  ? hoje : null);
+  var dataCruzou90  = acharCruzamentoEstoque_(histArr, totalUnidades, 90)  || (pctVendido >= 90  ? hoje : null);
   var dataCruzou100 = acharCruzamentoEstoque_(histArr, totalUnidades, 100) || (pctVendido >= 100 ? hoje : null);
 
-  // Cenário 1 — durante a obra (cruzou o limiar antes da entrega)
-  if (dataCruzou100 && dataCruzou100 <= dataEntrega) {
-    if (dataLancamento) {
-      var umAnoAposLancamento = new Date(dataLancamento.getTime());
-      umAnoAposLancamento.setFullYear(umAnoAposLancamento.getFullYear() + 1);
-      if (dataCruzou100 <= umAnoAposLancamento) {
-        return { classificacao: 'EXTREMO', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
-      }
+  // Cenário 1 — durante a obra (cruzou o limiar antes da entrega). EXTREMO é
+  // um subconjunto mais estrito de FORTE (100% em vez de 90%+, dentro de 1
+  // ano do lançamento) -- por isso checa EXTREMO primeiro; se não bater
+  // (ex: 100% só depois de 1 ano do lançamento, ou nunca chegou a 100% mas
+  // chegou em 90%+), cai pro teste de FORTE.
+  if (dataCruzou100 && dataCruzou100 <= dataEntrega && dataLancamento) {
+    var umAnoAposLancamento = new Date(dataLancamento.getTime());
+    umAnoAposLancamento.setFullYear(umAnoAposLancamento.getFullYear() + 1);
+    if (dataCruzou100 <= umAnoAposLancamento) {
+      return { classificacao: 'EXTREMO', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
     }
+  }
+  if (dataCruzou90 && dataCruzou90 <= dataEntrega) {
     return { classificacao: 'FORTE', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
   }
   if (dataCruzou70 && dataCruzou70 <= dataEntrega) {
     return { classificacao: 'POTENCIAL', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
   }
 
-  // Cenário 2 — depois da entrega
-  if (dataCruzou90 && dataCruzou90 > dataEntrega) {
-    var diasApos90 = Math.floor((dataCruzou90 - dataEntrega) / 86400000);
-    if (diasApos90 <= 365) {
-      return { classificacao: 'MODERADO', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
-    }
-  }
-
-  // Cenário 3 — NÃO é padrão vendedor, só alerta (registrarPadraoVendedor_
-  // nunca é chamado pra esse retorno, ver apenasAlerta abaixo e o call site
-  // em salvarLancamento_)
+  // Cenário 2 — depois da entrega (80%+ em até 1 ano) / Cenário 3 — alerta
+  // de SOBRA SUSPEITA (mesmo limiar de 80%, só que mais de 2 anos depois --
+  // NÃO é padrão vendedor, registrarPadraoVendedor_ nunca é chamado pra esse
+  // retorno, ver apenasAlerta abaixo e o call site em salvarLancamento_).
+  // Entre 1 e 2 anos depois da entrega: zona cinzenta, sem classificação.
   if (dataCruzou80 && dataCruzou80 > dataEntrega) {
     var diasApos80 = Math.floor((dataCruzou80 - dataEntrega) / 86400000);
+    if (diasApos80 <= 365) {
+      return { classificacao: 'MODERADO', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData };
+    }
     if (diasApos80 > 730) {
       return { classificacao: 'SOBRA SUSPEITA', pctVendido: pctVendido, dataPrimeiroEstoque: primeiraData, apenasAlerta: true };
     }
