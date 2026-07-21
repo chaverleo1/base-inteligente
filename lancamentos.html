@@ -1774,18 +1774,15 @@ function calcularPrazoDeVenda_() {
   const el = document.getElementById('f-prazoDeVenda');
   if (!el) return;
   const lanc = (document.getElementById('f-dataLancamento')?.value || '').trim();
-  const entr = (document.getElementById('f-entrega')?.value || '').trim();
-  if (!lanc || !entr) { el.value = ''; return; }
+  if (!lanc) { el.value = ''; return; }
   const mLanc = lanc.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!mLanc) { el.value = ''; return; }
-  const mesesDesde = (() => {
-    const inicio = new Date(+mLanc[3], +mLanc[2] - 1, +mLanc[1]);
-    const hoje = new Date();
-    return Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
-  })();
-  const mesesAte = calcularMesesAteEntrega_(entr);
-  if (mesesAte === null) { el.value = ''; return; }
-  const total = mesesDesde + Math.max(0, mesesAte);
+  const inicio = new Date(+mLanc[3], +mLanc[2] - 1, +mLanc[1]);
+  const hoje = new Date();
+  const mesesDesde = Math.max(0, (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth()));
+  const entr = (document.getElementById('f-entrega')?.value || '').trim();
+  const mesesAte = entr ? calcularMesesAteEntrega_(entr) : null;
+  const total = mesesDesde + (mesesAte !== null ? Math.max(0, mesesAte) : 0);
   el.value = total >= 1 ? total + ' meses' : 'Menos de 1 mês';
 }
 
