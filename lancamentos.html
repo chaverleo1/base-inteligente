@@ -612,7 +612,7 @@ select.form-input option { background: var(--surface2); }
           <input class="form-input" id="f-entrega" placeholder="Ex: Dez/2026" onchange="preencherPrazoMaximoAuto_()">
         </div>
         <div class="form-group">
-          <div class="form-label">Prazo máximo (meses)</div>
+          <div class="form-label">Prazo de pagamento (meses)</div>
           <input class="form-input" id="f-prazoMaximo" type="number" min="0" placeholder="Ex: 30">
         </div>
         <div class="form-group">
@@ -625,7 +625,11 @@ select.form-input option { background: var(--surface2); }
         </div>
         <div class="form-group">
           <div class="form-label">Data de lançamento</div>
-          <input class="form-input" id="f-dataLancamento" placeholder="Ex: 01/12/2020">
+          <input class="form-input" id="f-dataLancamento" placeholder="Ex: 01/12/2020" oninput="calcularPrazoDeVenda_()">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Prazo de venda</div>
+          <input class="form-input" id="f-prazoDeVenda" readonly placeholder="—" style="color:var(--text3);cursor:default" title="Meses desde o lançamento até hoje — usado no PADRÃO VENDEDOR">
         </div>
         <div class="form-group" id="grp-dataTabela">
           <div class="form-label">Data da tabela de preços <span class="alerta-tabela-tag" id="lbl-dataTabela" style="display:none">⚠ VERIFICAR PREÇOS</span></div>
@@ -1762,6 +1766,21 @@ function preencherPrazoMaximoAuto_() {
   if (meses !== null) document.getElementById('f-prazoMaximo').value = meses;
 }
 
+// Prazo de venda = meses desde a data de lançamento até hoje (read-only).
+// Usado pelo PADRÃO VENDEDOR como referência de 12 meses.
+function calcularPrazoDeVenda_() {
+  const el = document.getElementById('f-prazoDeVenda');
+  if (!el) return;
+  const val = (document.getElementById('f-dataLancamento')?.value || '').trim();
+  if (!val) { el.value = ''; return; }
+  const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) { el.value = ''; return; }
+  const inicio = new Date(+m[3], +m[2] - 1, +m[1]);
+  const hoje = new Date();
+  const meses = (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth());
+  el.value = meses >= 1 ? meses + ' meses' : 'Menos de 1 mês';
+}
+
 // Exibe "antes → atual" em f-novoEstoque.
 // _estoqueAnterior é '' em Novo Lançamento (sem histórico) e preenchido com
 // o estoque original em lancamentos-editar.html (via preencherForm).
@@ -1792,6 +1811,7 @@ function renderB1(b) {
   set('f-estoque', b.estoque);
   set('f-totalUnidades', b.totalUnidades);
   set('f-dataLancamento', b.dataLancamento);
+  calcularPrazoDeVenda_();
   set('f-urlSite', b.urlSite);
   set('f-lazer', b.lazer);
   set('f-conceito', b.conceito);
@@ -1927,7 +1947,7 @@ function limparMotor() {
   document.getElementById('lbl-dataTabela').style.display = 'none';
   document.querySelectorAll('input[name="statusTabela"]').forEach(r => r.checked = false);
   ['f-nome','f-construtora','f-cidade','f-estado','f-bairro','f-endereco','f-entrega','f-dataTabela',
-   'f-estoque','f-totalUnidades','f-dataLancamento','f-prazoMaximo',
+   'f-estoque','f-totalUnidades','f-dataLancamento','f-prazoMaximo','f-prazoDeVenda',
    'f-urlSite','f-lazer','f-conceito',
    'f-qtdAndares','f-aptoPorAndar','f-dataAtualizacaoOrulo','f-novoEstoque','f-obs'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }

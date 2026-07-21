@@ -320,7 +320,7 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
         <input class="form-input" id="f-previsaoEntrega" placeholder="MM/AAAA ou AAAA-MM-DD">
       </div>
       <div class="form-group">
-        <label class="form-label">Prazo máximo (meses)</label>
+        <label class="form-label">Prazo de pagamento (meses)</label>
         <input class="form-input" id="f-prazoMaximo" type="number" min="0" placeholder="Ex: 120">
       </div>
     </div>
@@ -336,7 +336,11 @@ textarea.form-input{resize:vertical;min-height:64px;line-height:1.5}
       </div>
       <div class="form-group">
         <label class="form-label">Data de lançamento</label>
-        <input class="form-input" id="f-dataLancamento" placeholder="Ex: 01/12/2020">
+        <input class="form-input" id="f-dataLancamento" placeholder="Ex: 01/12/2020" oninput="calcularPrazoDeVenda_()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prazo de venda</label>
+        <input class="form-input" id="f-prazoDeVenda" readonly placeholder="—" style="color:var(--text3);cursor:default" title="Meses desde o lançamento até hoje — usado no PADRÃO VENDEDOR">
       </div>
     </div>
     <div class="form-grid">
@@ -476,6 +480,7 @@ function preencherForm(e) {
   // Guarda estoque original para exibir "antes → atual" no campo f-novoEstoque
   _estoqueAnterior = String(e.estoque || '');
   atualizarNovoEstoque_();
+  calcularPrazoDeVenda_();
 
   const unidades = e.unidades && e.unidades.length ? e.unidades : [{}];
   unidades.forEach(u => addUnidade(u));
@@ -528,7 +533,22 @@ function salvarGerenteDrawer() {
 
 // Percentual vendido = derivado de Estoque/Total de unidades (Alterações
 // 08/07, parte 2) — recalcula ao vivo sempre que um dos dois campos muda.
-// "Financiamento em" (input type=month, "AAAA-MM") → "Prazo máximo (meses)":
+// Prazo de venda = meses desde a data de lançamento até hoje (read-only).
+// Usado pelo PADRÃO VENDEDOR como referência de 12 meses.
+function calcularPrazoDeVenda_() {
+  const el = document.getElementById('f-prazoDeVenda');
+  if (!el) return;
+  const val = (document.getElementById('f-dataLancamento')?.value || '').trim();
+  if (!val) { el.value = ''; return; }
+  const m = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) { el.value = ''; return; }
+  const inicio = new Date(+m[3], +m[2] - 1, +m[1]);
+  const hoje = new Date();
+  const meses = (hoje.getFullYear() - inicio.getFullYear()) * 12 + (hoje.getMonth() - inicio.getMonth());
+  el.value = meses >= 1 ? meses + ' meses' : 'Menos de 1 mês';
+}
+
+// "Financiamento em" (input type=month, "AAAA-MM") → "Prazo de pagamento (meses)":
 // calcula quantos meses faltam de HOJE até a data informada e preenche
 // f-prazoMaximo automaticamente. Campo continua editável manualmente depois
 // (não é somente-leitura) — isso só roda quando "Financiamento em" muda.
