@@ -1,5 +1,43 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 57) — Sincronização com sessão paralela (PADRÃO VENDEDOR) + reconciliação de code.txt
+
+O usuário tinha feito uma edição manual local em `code.txt` (não commitada) e pediu pra puxar as
+atualizações que outra sessão (rodando na máquina servidor) já tinha publicado no GitHub — 20 commits
+à frente, adicionando um sistema inteiro de **PADRÃO VENDEDOR**.
+
+**O que a sessão paralela construiu** (resumo, commits já documentados individualmente no git log):
+- `idEmpreendimento` (EMP-NNN) — ID estável por par NOME+CONSTRUTORA, sobrevive a recadastro/reextração
+  (diferente de `idLancamento`, que é por importação/sessão).
+- `historicoEstoque` — JSON `[{data, valor}]`, uma entrada nova só quando o estoque realmente muda ao
+  salvar. É a peça de infraestrutura que eu tinha apontado como faltante na proposta do Indicador de
+  ACEITAÇÃO (ver artefato compartilhado antes) — já existe, ainda que disparada por salvamento manual,
+  não por um gatilho periódico automático.
+- **PADRÃO VENDEDOR**: aba `PADROES_VENDEDORES` nova, classificação automática ao salvar
+  (`avaliarPadraoVendedor_`) — EXTREMO (100% vendido em ≤1 ano), ALTO (≥80% em ≤1 ano), SOBRA SUSPEITA
+  (>80% vendido + prazo de pagamento >24 meses) — e painel acima do Mapa Geral.
+- `calcularSimilaridadePadrao_()` — motor de similaridade (frontend) que compara o empreendimento atual
+  contra os padrões já arquivados do mesmo tipo; vira novo eixo `PESO_SIMIL=5` no Score de Tração
+  (peso total 15→20). Isto é, na prática, uma primeira versão funcionando do "motor de comparação" que
+  eu tinha proposto como item novo a construir na mesma nota do Indicador de ACEITAÇÃO — vale reler os
+  dois lados juntos antes de continuar aquele desenvolvimento, pra não duplicar trabalho.
+- Extração da Orulo agora também captura andares, apto/andar e data de atualização; formulário ganhou
+  campos de Novo Estoque (com diff "antes → atual") e Observação; Mapa Geral ganhou colunas ID, S% e
+  PG/PV (prazo de pagamento/prazo de venda, com indicador vermelho/verde vs. prazo até a entrega).
+
+**Reconciliação**: a edição manual local tinha uma versão mais antiga do mesmo
+`avaliarPadraoVendedor_` (calculando o prazo a partir do primeiro registro de `historicoEstoque`, em
+vez de `dataLancamento`) — divergência real de comportamento, não só conflito mecânico de merge.
+Resolvido mantendo a versão já publicada/testada pela sessão paralela (10+ commits de ajuste fino em
+cima dela); a única peça da edição local preservada foi uma correção defensiva não conflitante
+(`setNumberFormat('@')` na coluna `dataLancamento`, evita que o Sheets converta o texto em Date
+automaticamente).
+
+Sintaxe validada em `code.txt`, `lancamentos.html` e `lancamentos-editar.html` após o merge.
+
+⚠️ Backend: precisa colar `Downloads/code.gs.txt` no Apps Script e reimplantar como "Nova versão" —
+inclui tanto as mudanças da sessão paralela quanto a correção defensiva preservada da edição local.
+
 ## 2026-07-17 (parte 56) — Mapa Geral: título da coluna "% Estoque / Estoque" → "Estoque"
 
 Pedido do usuário: renomear o cabeçalho da coluna, mantendo o mesmo conteúdo (badge % vendido | estoque).
