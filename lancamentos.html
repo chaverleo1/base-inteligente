@@ -2408,6 +2408,11 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam) {
       isSobraSuspeita: s.isSobraSuspeita || false,
       prazo: parseInt(e.prazoMaximo, 10) || 0,
       prazoVenda: prazoDeVendaMeses_(e.dataLancamento),
+      prazoLancEntrega: (() => {
+        const pv = prazoDeVendaMeses_(e.dataLancamento);
+        const ate = e.previsaoEntrega ? calcularMesesAteEntrega_(e.previsaoEntrega) : null;
+        return (pv > 0 && ate !== null) ? pv + ate : null;
+      })(),
     };
   });
   // Recarregou os dados -- reseta a seleção de Estágio pra não ficar preso
@@ -2535,7 +2540,7 @@ function renderMapaGeral_() {
       <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
       <td class="mapa-num">${badgeVendidoHTML(r.pctVendido, r.estoque) || '—'}</td>
       <td class="mapa-num">${r.prazo > 0 ? r.prazo + 'm' : '—'}</td>
-      <td class="mapa-num">${r.prazoVenda > 0 ? r.prazoVenda + 'm' : '—'}</td>
+      <td class="mapa-num" ${r.prazoLancEntrega !== null && r.prazoVenda > 0 ? `style="color:${r.prazoVenda > r.prazoLancEntrega ? 'var(--danger)' : 'var(--accent2)'}"` : ''}>${r.prazoVenda > 0 ? r.prazoVenda + 'm' : '—'}</td>
       <td>${r.estagio}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
     </tr>`).join('');
