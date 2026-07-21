@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 63) — Painel Padrão Vendedor volta compacto; CSV busca dado fresco do lançamento
+
+Pedido do usuário: a tabela em tela ficou com linhas altas demais depois da expansão pra 20 colunas
+(parte 61) — voltar ao formato compacto de 11 colunas. Mas o CSV exportado (parte 62) continua
+precisando de todas as características, buscando a informação nos campos do empreendimento **já
+cadastrado**, não só no snapshot congelado.
+
+**Tabela em tela**: revertida pras 11 colunas originais (ID, Empreendimento, Construtora, Tipo,
+Classificação, % Vendido, Estoque, Total, PV, 1º Estoque, Bairro) e fonte/padding de volta ao
+tamanho normal. `formatarTipologiaResumo_` removida (ficou sem uso depois da reversão).
+
+**CSV — busca dado fresco**: um registro em `PADROES_VENDEDORES` é um snapshot, gravado só no momento
+em que o empreendimento qualificou — se ele for salvo de novo depois (reextração, edição), o
+snapshot antigo não se atualiza sozinho. Registros criados antes da expansão de campos (parte 59)
+ficam com as colunas novas vazias pra sempre, a menos que o empreendimento seja resalvo.
+
+`montarLinhaCsvPadrao_(p, porIdLancamento)` (nova) busca o lançamento **já cadastrado** que gerou
+aquele Padrão Vendedor (via `_mapaRows`, que já tem os dados atuais + `prazoLancEntrega` calculado) e
+usa os campos de lá — nome, construtora, estoque, prazo, bairro, tipo de empreendimento, cidade,
+estado, lazer, conceito, andares, tempo de obra e tipologias (reconstruídas das unidades atuais).
+Só cai de volta pro snapshot congelado quando o lançamento não existe mais (ex: foi excluído desde
+que qualificou) — nesse caso é o único dado que resta.
+
+Testado em Node (dado fresco prevalece quando o lançamento existe; fallback pro snapshot quando não
+existe mais) e ao vivo no navegador: tabela em tela confirmada com 11 colunas, CSV exportado
+confirmado com os 24 campos usando os valores atuais do lançamento (não os do snapshot antigo
+passado de propósito no teste).
+
+100% frontend (lancamentos.html) — sem alterações em code.txt, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 62) — Botão "⬇️ CSV" no painel Padrão Vendedor
 
 Pedido do usuário: um botão/ícone pra baixar a tabela completa de Padrão Vendedor em .csv, pra enviar

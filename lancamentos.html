@@ -348,13 +348,13 @@ select.form-input option { background: var(--surface2); }
 }
 .padroes-panel-sub { font-size: 11px; color: var(--text3); }
 .padroes-wrap { overflow-x: auto; }
-.padroes-tabela { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+.padroes-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
 .padroes-tabela th {
-  padding: 6px 8px; text-align: left; font-size: 9px; font-weight: 700;
+  padding: 7px 10px; text-align: left; font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .5px; color: var(--text3);
   background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap;
 }
-.padroes-tabela td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.padroes-tabela td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .padroes-tabela tr:last-child td { border-bottom: none; }
 .padrao-badge {
   display: inline-block; padding: 2px 8px; border-radius: 99px;
@@ -752,27 +752,18 @@ select.form-input option { background: var(--surface2); }
             <th>ID</th>
             <th>Empreendimento</th>
             <th>Construtora</th>
+            <th>Tipo</th>
             <th>Classificação</th>
             <th title="% de unidades vendidas">% Vendido</th>
             <th>Estoque</th>
             <th>Total</th>
             <th title="Prazo de Venda — meses desde o lançamento">PV</th>
             <th>1º Estoque</th>
-            <th title="Tipo de Empreendimento">Tipo Empreend.</th>
-            <th title="Padrão de preço (Popular/Médio/Alto/Luxo)">Padrão</th>
             <th>Bairro</th>
-            <th>Cidade</th>
-            <th>UF</th>
-            <th title="Meses entre Data de Lançamento e Previsão de Entrega">Tempo Obra</th>
-            <th>Qtd Andares</th>
-            <th>Apto/Andar</th>
-            <th>Lazer / Diferenciais</th>
-            <th>Conceito</th>
-            <th title="Uma linha por tipologia comercializada: tipo · quartos/suítes/banheiros/vagas · área · preço médio (mín–máx)">Tipologias</th>
           </tr>
         </thead>
         <tbody id="padroesBody">
-          <tr><td colspan="20" style="text-align:center;color:var(--text3);padding:18px">Carregando…</td></tr>
+          <tr><td colspan="11" style="text-align:center;color:var(--text3);padding:18px">Carregando…</td></tr>
         </tbody>
       </table>
     </div>
@@ -2158,29 +2149,6 @@ function calcularSimilaridadePadrao_(e, padroes) {
   return { simil, isSobraSuspeita };
 }
 
-// Resume uma tipologia (item do JSON `tipologias`) numa linha compacta com
-// TODAS as características de "Sobre os apartamentos" -- pra ficar visível
-// direto na tabela, sem esconder nada atrás de tooltip.
-function formatarTipologiaResumo_(t) {
-  const partes = [];
-  if (t.tipo) partes.push(t.tipo);
-  const qsb = [
-    t.quartos   ? t.quartos   + 'q' : '',
-    t.suites    ? t.suites    + 's' : '',
-    t.banheiros ? t.banheiros + 'wc' : '',
-    t.vagas     ? t.vagas     + 'v'  : '',
-  ].filter(Boolean).join(' ');
-  if (qsb) partes.push(qsb);
-  if (t.escaninho) partes.push('esc');
-  if (t.areaUtil) partes.push(Number(t.areaUtil).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'm²');
-  if (t.areaTerr) partes.push(Number(t.areaTerr).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'm² terreno');
-  if (t.precoMedio) {
-    const faixa = (t.precoMin || t.precoMax) ? ` (${exibirPrecoBR(t.precoMin || t.precoMedio)}–${exibirPrecoBR(t.precoMax || t.precoMedio)})` : '';
-    partes.push('R$ ' + exibirPrecoBR(t.precoMedio) + faixa);
-  }
-  return partes.join(' · ') || '—';
-}
-
 // Mesma ordem/campos de CABECALHO_PADROES_VENDEDORES (code.txt) -- 1 linha
 // de CSV por empreendimento, `tipologias` numa célula só como JSON bruto.
 // Propositalmente o MESMO formato que MODELO_VENDEDOR_PROMPT.md já descreve
@@ -2198,11 +2166,55 @@ function csvEscapar_(v) {
   const s = (v === null || v === undefined) ? '' : String(v);
   return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
+
+// A tabela na tela ficou compacta de novo (só o essencial), mas o CSV
+// exportado tem que trazer TODAS as características -- e da fonte mais
+// FRESCA disponível, não só o snapshot congelado em PADROES_VENDEDORES
+// (que só é regravado quando o empreendimento é salvo de novo; um registro
+// antigo pode ter ficado pra trás sem os campos mais novos). Por isso busca
+// primeiro no lançamento JÁ CADASTRADO (via _mapaRows, que tem os dados
+// atuais + tempoObra já calculado), e só cai pro snapshot se o
+// empreendimento não existir mais (excluído, por exemplo).
+function montarLinhaCsvPadrao_(p, porIdLancamento) {
+  const live = porIdLancamento[p.idLancamento];
+  if (!live) {
+    return CSV_CAMPOS_PADROES_.map(campo => csvEscapar_(p[campo]));
+  }
+  const e = live.e;
+  const tipologias = JSON.stringify((e.unidades || []).map(u => ({
+    tipo: u.tipo || '', quartos: u.quartos || '', suites: u.suites || '',
+    banheiros: u.banheiros || '', vagas: u.vagas || '', escaninho: u.escaninho || '',
+    areaUtil: u.areaUtil || '', areaTerr: u.areaTerr || '',
+    precoMedio: u.precoMedio || '', precoMin: u.precoMin || '', precoMax: u.precoMax || '',
+  })));
+  const linha = Object.assign({}, p, {
+    nomeEmpreendimento: e.nomeEmpreendimento || p.nomeEmpreendimento,
+    construtora:        e.construtora        || p.construtora,
+    totalUnidades:      e.totalUnidades      || p.totalUnidades,
+    estoque:            e.estoque !== undefined && e.estoque !== '' ? e.estoque : p.estoque,
+    prazoMaximo:        e.prazoMaximo        || p.prazoMaximo,
+    bairro:             e.bairro             || p.bairro,
+    tipoEmpreendimento: e.tipoEmpreendimento || p.tipoEmpreendimento,
+    cidade:             e.cidade             || p.cidade,
+    estado:             e.estado             || p.estado,
+    lazer:              e.lazer              || p.lazer,
+    conceito:           e.conceito           || p.conceito,
+    qtdAndares:         e.qtdAndares         || p.qtdAndares,
+    aptoPorAndar:       e.aptoPorAndar       || p.aptoPorAndar,
+    tempoObra:          live.prazoLancEntrega !== null && live.prazoLancEntrega !== undefined ? live.prazoLancEntrega : p.tempoObra,
+    tipologias,
+  });
+  return CSV_CAMPOS_PADROES_.map(campo => csvEscapar_(linha[campo]));
+}
+
 function exportarPadroesVendedorCSV_() {
   if (!_listaPadroes.length) { mostrarToast('Nenhum Padrão Vendedor pra exportar ainda.', 'erro'); return; }
+  const porIdLancamento = {};
+  _mapaRows.forEach(r => { if (r.e && r.e.idLancamento) porIdLancamento[r.e.idLancamento] = r; });
+
   const linhas = [CSV_CAMPOS_PADROES_.map(csvEscapar_).join(',')];
   _listaPadroes.forEach(p => {
-    linhas.push(CSV_CAMPOS_PADROES_.map(campo => csvEscapar_(p[campo])).join(','));
+    linhas.push(montarLinhaCsvPadrao_(p, porIdLancamento).join(','));
   });
   // BOM na frente -- sem isso o Excel abre acento/ç errado em CSV UTF-8.
   // String.fromCharCode em vez de literal, pra não depender de um caractere
@@ -2232,34 +2244,18 @@ function renderPadroesVendedores_(padroes) {
   tbody.innerHTML = padroes.map(p => {
     const cls = CLASS_MAP[p.classificacao] || 'padrao-alto';
     const pct = p.pctVendido ? `<span class="padrao-pct">${p.pctVendido}%</span>` : '—';
-    let tipologiasHtml = '—';
-    try {
-      const arr = JSON.parse(p.tipologias || '[]');
-      if (Array.isArray(arr) && arr.length) {
-        tipologiasHtml = arr.map(t => formatarTipologiaResumo_(t)).join('<br>');
-      }
-    } catch(_) {}
     return `<tr>
       <td class="padrao-id">${p.idEmpreendimento || '—'}</td>
       <td><strong>${p.nomeEmpreendimento || '—'}</strong></td>
       <td>${p.construtora || '—'}</td>
+      <td>${p.tipoPadrao || '—'}</td>
       <td><span class="padrao-badge ${cls}">${p.classificacao || '—'}</span></td>
       <td>${pct}</td>
       <td>${p.estoque !== undefined && p.estoque !== '' ? p.estoque : '—'}</td>
       <td>${p.totalUnidades || '—'}</td>
       <td>${(()=>{const pv=prazoDeVendaMeses_(p.dataPrimeiroEstoque);return pv>0?pv+'m':'—';})()}</td>
       <td style="white-space:nowrap;font-size:11px">${p.dataPrimeiroEstoque || '—'}</td>
-      <td>${p.tipoEmpreendimento || '—'}</td>
-      <td>${p.tipoPadrao || '—'}</td>
       <td>${p.bairro || '—'}</td>
-      <td>${p.cidade || '—'}</td>
-      <td>${p.estado || '—'}</td>
-      <td>${p.tempoObra !== undefined && p.tempoObra !== null && p.tempoObra !== '' ? p.tempoObra + 'm' : '—'}</td>
-      <td>${p.qtdAndares || '—'}</td>
-      <td>${p.aptoPorAndar || '—'}</td>
-      <td style="max-width:220px;white-space:normal">${p.lazer || '—'}</td>
-      <td style="max-width:220px;white-space:normal">${p.conceito || '—'}</td>
-      <td style="white-space:nowrap;font-size:11px">${tipologiasHtml}</td>
     </tr>`;
   }).join('');
 }
