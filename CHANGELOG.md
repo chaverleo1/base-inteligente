@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-21 (parte 70) — Classificação de Padrão Vendedor 100% ao vivo (tabela + badge no card)
+
+Pedido do usuário: a coluna "Classificação" (painel Padrão Vendedor) deve recalcular sempre que a
+página carrega, e a classificação também deve aparecer com destaque no card do empreendimento.
+Resolve de vez o problema da parte 69 (snapshot desatualizado até rodar recálculo manual) — agora
+nem precisa mais rodar o recálculo em lote pra ver a classificação certa na tela.
+
+**`avaliarPadraoVendedorAoVivo_(e)`** (nova, `lancamentos.html`) — espelho EXATO em JS de
+`avaliarPadraoVendedor_` (code.txt), reaproveitando os helpers já existentes
+(`acharDataCruzamentoEstoque_`, `parseDataFlexivelParaDate_`). Testado em Node com paridade
+1-a-1 contra o backend em 10 cenários (EXTREMO/FORTE em 2 variações/POTENCIAL/MODERADO/SOBRA
+SUSPEITA/zona cinzenta/sem entrega/abaixo do piso/caso real dos 98% do Vivah) — mesma
+classificação, mesmo % vendido, mesmo apenasAlerta nos dois lados.
+
+**Tabela "Padrão Vendedor"** (`renderPadroesVendedores_`) — a LISTA de quais empreendimentos
+aparecem continua vindo do snapshot em `PADROES_VENDEDORES` (mesma fonte de sempre, é o que
+alimenta o CSV pra IA assistente de modelos), mas a coluna Classificação/% Vendido agora é
+recalculada ao vivo a partir do lançamento atual (`_mapaRows`) sempre que ele ainda existe — só
+cai pro valor congelado do snapshot se o lançamento foi excluído ou a reavaliação não bate em
+nada.
+
+**Badge no card** (`renderLista`) — novo banner `.card-padrao-vendedor` no topo do card (mesmo
+tratamento visual do alerta de Score de Tração), mostrando "⚡ PADRÃO VENDEDOR: EXTREMO/FORTE/
+POTENCIAL/MODERADO" quando o empreendimento se qualifica, sempre calculado ao vivo. SOBRA
+SUSPEITA não aparece aqui (já tem o próprio alerta separado, `sobra-flag`).
+
+Testado ao vivo no navegador: card renderiza o banner corretamente (98% vendido → "PADRÃO
+VENDEDOR: FORTE"), e a tabela do painel mostra a classificação ao vivo mesmo passando um
+snapshot propositalmente desatualizado (POTENCIAL) — a tela mostra FORTE.
+
+100% frontend — sem alterações em `code.txt`, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 69) — Ação de recálculo em lote de PADROES_VENDEDORES
 
 Usuário reportou: depois do ajuste de limiares (parte 68), a classificação de empreendimentos já

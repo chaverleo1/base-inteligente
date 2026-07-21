@@ -366,6 +366,19 @@ select.form-input option { background: var(--surface2); }
 .padrao-moderado  { background: rgba(180,150,255,.12); color: #b496ff; border: 1px solid rgba(180,150,255,.3); }
 .padrao-sobra     { background: rgba(255,80,80,.1);  color: #e05555; border: 1px solid rgba(255,80,80,.25); }
 
+/* Banner de destaque no topo do card do empreendimento (Empreendimentos
+   Cadastrados) -- mesma paleta de cor dos badges acima, só que em faixa
+   cheia (mesmo tratamento visual do card-alerta de Score de Tração), pra
+   chamar atenção pra classificação de Padrão Vendedor de bater o olho. */
+.card-padrao-vendedor {
+  padding: 6px 16px; font-size: 12px; font-weight: 800; letter-spacing: .5px;
+  text-align: center;
+}
+.card-padrao-vendedor.padrao-extremo   { background: rgba(255,200,0,.22); color: #e6ac00; }
+.card-padrao-vendedor.padrao-forte     { background: rgba(0,212,170,.2);  color: var(--accent2); }
+.card-padrao-vendedor.padrao-potencial { background: rgba(90,160,255,.2); color: #5aa0ff; }
+.card-padrao-vendedor.padrao-moderado  { background: rgba(180,150,255,.2); color: #b496ff; }
+
 /* ── SIMILARIDADE PADRÃO VENDEDOR ── */
 .simil-badge {
   display: inline-block; padding: 2px 7px; border-radius: 99px;
@@ -2467,6 +2480,62 @@ function calcularSobraSuspeita_(e, total, pctVendido) {
   return diasApos > 730;
 }
 
+// Espelho EXATO, em JS, de avaliarPadraoVendedor_ (code.txt) -- calculado
+// SEMPRE AO VIVO a partir dos dados atuais do lançamento (nunca do snapshot
+// congelado em PADROES_VENDEDORES), pra tabela/badge nunca ficarem
+// desatualizados quando o critério mudar ou o estoque for atualizado --
+// nasceu do caso real 2026-07: mudou o limiar de FORTE/MODERADO no backend,
+// e um empreendimento continuou mostrando a classificação antiga até
+// alguém rodar o recálculo em lote manualmente. Ver os 2 cenários + o
+// alerta no comentário de avaliarPadraoVendedor_ em code.txt.
+function avaliarPadraoVendedorAoVivo_(e) {
+  const totalUnidades = Number(e.totalUnidades) || 0;
+  const estoque       = Number(e.estoque) || 0;
+  if (!totalUnidades) return null;
+
+  const pctVendido = Math.round(((totalUnidades - estoque) / totalUnidades) * 100);
+  if (pctVendido < 70) return null;
+
+  const dataEntrega    = parseDataFlexivelParaDate_(e.previsaoEntrega);
+  const dataLancamento = parseDataFlexivelParaDate_(e.dataLancamento);
+  if (!dataEntrega) return null;
+
+  let hist;
+  try { hist = JSON.parse(e.historicoEstoque || '[]'); } catch (_) { hist = []; }
+  if (!Array.isArray(hist) || !hist.length) return null;
+
+  const hoje = new Date();
+  const dataCruzou70  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 70)  || (pctVendido >= 70  ? hoje : null);
+  const dataCruzou80  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 80)  || (pctVendido >= 80  ? hoje : null);
+  const dataCruzou90  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 90)  || (pctVendido >= 90  ? hoje : null);
+  const dataCruzou100 = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 100) || (pctVendido >= 100 ? hoje : null);
+  const primeiraData  = hist[0].data || '';
+
+  if (dataCruzou100 && dataCruzou100 <= dataEntrega && dataLancamento) {
+    const umAnoAposLancamento = new Date(dataLancamento.getTime());
+    umAnoAposLancamento.setFullYear(umAnoAposLancamento.getFullYear() + 1);
+    if (dataCruzou100 <= umAnoAposLancamento) {
+      return { classificacao: 'EXTREMO', pctVendido, dataPrimeiroEstoque: primeiraData };
+    }
+  }
+  if (dataCruzou90 && dataCruzou90 <= dataEntrega) {
+    return { classificacao: 'FORTE', pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
+  if (dataCruzou70 && dataCruzou70 <= dataEntrega) {
+    return { classificacao: 'POTENCIAL', pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
+  if (dataCruzou80 && dataCruzou80 > dataEntrega) {
+    const diasApos80 = Math.floor((dataCruzou80 - dataEntrega) / 86400000);
+    if (diasApos80 <= 365) {
+      return { classificacao: 'MODERADO', pctVendido, dataPrimeiroEstoque: primeiraData };
+    }
+    if (diasApos80 > 730) {
+      return { classificacao: 'SOBRA SUSPEITA', pctVendido, dataPrimeiroEstoque: primeiraData, apenasAlerta: true };
+    }
+  }
+  return null;
+}
+
 // Calcula similaridade (0-100%) do empreendimento -- a partir de agora,
 // contra a base de MODELOS_VENDEDORES (calcularSimilaridadeModelo_ acima),
 // que é o MODELO COMPARATIVO real. PADROES_VENDEDORES virou só o painel
@@ -2786,20 +2855,46 @@ function renderPadroesVendedores_(padroes) {
     'EXTREMO': 'padrao-extremo', 'FORTE': 'padrao-forte', 'POTENCIAL': 'padrao-potencial',
     'MODERADO': 'padrao-moderado', 'SOBRA SUSPEITA': 'padrao-sobra',
   };
+  // Quais empreendimentos aparecem aqui ainda vem do snapshot gravado em
+  // PADROES_VENDEDORES (_listaPadroes/padroes) -- mas a CLASSIFICAÇÃO e o %
+  // vendido exibidos são recalculados AO VIVO (avaliarPadraoVendedorAoVivo_)
+  // a partir do lançamento atual em _mapaRows, sempre que ele ainda existe.
+  // Sem isso, mudar o critério (ex: partes 67/68) ou o estoque não refletia
+  // na tela até alguém resalvar o lançamento ou rodar o recálculo em lote --
+  // caso real reportado pelo usuário 2026-07. Se o lançamento não existe
+  // mais (excluído) ou a reavaliação não bate mais em nada, cai pro
+  // snapshot congelado como fallback.
+  const porIdLancamento = {};
+  _mapaRows.forEach(r => { if (r.e && r.e.idLancamento) porIdLancamento[r.e.idLancamento] = r; });
+
   tbody.innerHTML = padroes.map(p => {
-    const cls = CLASS_MAP[p.classificacao] || 'padrao-forte';
-    const pct = p.pctVendido ? `<span class="padrao-pct">${p.pctVendido}%</span>` : '—';
+    let classificacao = p.classificacao, pctVendido = p.pctVendido;
+    let estoqueExib = p.estoque, totalExib = p.totalUnidades, dataPrimeiroEstoqueExib = p.dataPrimeiroEstoque;
+    const live = porIdLancamento[p.idLancamento];
+    if (live) {
+      const e = live.e;
+      estoqueExib = e.estoque !== undefined && e.estoque !== '' ? e.estoque : p.estoque;
+      totalExib   = e.totalUnidades || p.totalUnidades;
+      const resultado = avaliarPadraoVendedorAoVivo_(e);
+      if (resultado && !resultado.apenasAlerta) {
+        classificacao = resultado.classificacao;
+        pctVendido = resultado.pctVendido;
+        dataPrimeiroEstoqueExib = resultado.dataPrimeiroEstoque;
+      }
+    }
+    const cls = CLASS_MAP[classificacao] || 'padrao-forte';
+    const pct = pctVendido ? `<span class="padrao-pct">${pctVendido}%</span>` : '—';
     return `<tr>
       <td class="padrao-id">${p.idEmpreendimento || '—'}</td>
       <td><strong>${p.nomeEmpreendimento || '—'}</strong></td>
       <td>${p.construtora || '—'}</td>
       <td>${p.tipoPadrao || '—'}</td>
-      <td><span class="padrao-badge ${cls}">${p.classificacao || '—'}</span></td>
+      <td><span class="padrao-badge ${cls}">${classificacao || '—'}</span></td>
       <td>${pct}</td>
-      <td>${p.estoque !== undefined && p.estoque !== '' ? p.estoque : '—'}</td>
-      <td>${p.totalUnidades || '—'}</td>
-      <td>${(()=>{const pv=prazoDeVendaMeses_(p.dataPrimeiroEstoque);return pv>0?pv+'m':'—';})()}</td>
-      <td style="white-space:nowrap;font-size:11px">${p.dataPrimeiroEstoque || '—'}</td>
+      <td>${estoqueExib !== undefined && estoqueExib !== '' ? estoqueExib : '—'}</td>
+      <td>${totalExib || '—'}</td>
+      <td>${(()=>{const pv=prazoDeVendaMeses_(dataPrimeiroEstoqueExib);return pv>0?pv+'m':'—';})()}</td>
+      <td style="white-space:nowrap;font-size:11px">${dataPrimeiroEstoqueExib || '—'}</td>
       <td>${p.bairro || '—'}</td>
     </tr>`;
   }).join('');
@@ -2946,8 +3041,19 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam, lis
     const tvHtml = s.comp > 0 ? `
         <div class="tv-score-badge ${classeScoreTracao_(s.comp)}" title="Score de Tração ${s.comp.toFixed(1)} — ${s.perfil} · Similaridade Padrão Vendedor ${s.simil}%">T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div>
         <div class="tv-eixos-mini">Prazo ${s.prazoSc.toFixed(1)} · Força ${s.trac.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)} ${similHtml}${sobraFlagHtml}</div>` : '';
+    // Banner de destaque com a classificação de Padrão Vendedor, calculada
+    // SEMPRE AO VIVO (avaliarPadraoVendedorAoVivo_) a partir do lançamento
+    // atual -- nunca do snapshot congelado em PADROES_VENDEDORES. SOBRA
+    // SUSPEITA não aparece aqui (não é padrão vendedor, ver sobraFlagHtml
+    // acima, que já cobre esse alerta separadamente).
+    const padraoAoVivo = avaliarPadraoVendedorAoVivo_(e);
+    const CARD_PADRAO_CLASS_ = { 'EXTREMO':'padrao-extremo', 'FORTE':'padrao-forte', 'POTENCIAL':'padrao-potencial', 'MODERADO':'padrao-moderado' };
+    const padraoCardHtml = (padraoAoVivo && !padraoAoVivo.apenasAlerta && CARD_PADRAO_CLASS_[padraoAoVivo.classificacao])
+      ? `<div class="card-padrao-vendedor ${CARD_PADRAO_CLASS_[padraoAoVivo.classificacao]}">⚡ PADRÃO VENDEDOR: ${padraoAoVivo.classificacao}</div>`
+      : '';
     return `
     <div class="emp-card" id="ec-${i}" data-pv-badge-lanc="${pvId}">
+      ${padraoCardHtml}
       ${alertaHtml}
       <div class="emp-card-header">
         <div class="badge-vendido-row">${badgeVendidoHTML(pctVendido, e.estoque)}</div>
