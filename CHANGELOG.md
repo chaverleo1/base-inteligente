@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 95) — Mapa Geral: coluna ID move pro final, depois de Alerta
+
+Pedido do usuário: mover a coluna "ID" pra depois de "Alerta" (última coluna da tabela). Cabeçalho e
+célula de cada linha movidos juntos; ordenação por ID continua funcionando igual (`mapaCampoValor_`
+já era indexado por nome de campo, não por posição).
+
+Verificado ao vivo no navegador: ID aparece como última coluna tanto no cabeçalho quanto nas linhas,
+ordenar por ID continua funcionando. Regressão dos filtros de Estágio/seleção múltipla sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 94) — Mapa Geral: seleção múltipla + imprimir PDF só dos marcados
 
 Pedido do usuário: adicionar checkbox de múltipla escolha em cada empreendimento do Mapa Geral, e

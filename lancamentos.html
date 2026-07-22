@@ -780,7 +780,6 @@ select.form-input option { background: var(--surface2); }
       <thead>
         <tr>
           <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
-          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
           <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
@@ -795,6 +794,7 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('pv')" title="Prazo de Venda — meses desde o lançamento">PV<span class="mapa-seta" id="seta-mapa-pv"></span></th>
           <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
           <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
+          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
         </tr>
       </thead>
       <tbody id="mapa-tbody">
@@ -3305,7 +3305,6 @@ function renderMapaGeral_() {
   tbody.innerHTML = linhas.map(({ r, i }) => `
     <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar" class="${_mapaSelecionados.has(i) ? 'mapa-row-selecionada' : ''}">
       <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
-      <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
       <td>${r.construtora}</td>
@@ -3325,6 +3324,7 @@ function renderMapaGeral_() {
       })()}</td>
       <td>${r.estagio}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
+      <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
     </tr>`).join('');
 
   atualizarSetasMapaGeral_();
@@ -3371,7 +3371,7 @@ function atualizarUiSelecaoMapa_() {
 }
 
 function atualizarSetasMapaGeral_() {
-  ['id','nome','t','construtora','v','tipo','s','area','preco','m2','vendido','prazo','pv','estagio','alerta'].forEach(campo => {
+  ['nome','t','construtora','v','tipo','s','area','preco','m2','vendido','prazo','pv','estagio','alerta','id'].forEach(campo => {
     const el = document.getElementById('seta-mapa-' + campo);
     if (!el) return;
     if (_mapaSort.campo !== campo) { el.textContent = '▾'; el.classList.remove('on'); return; }
