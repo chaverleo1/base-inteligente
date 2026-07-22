@@ -1,5 +1,20 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 79) — Coluna "Situação" (Novo/Na planta) nas tabelas de Estratégias
+
+Pedido do usuário: coluna nova nas tabelas de Mix Estratégico (`estrategias.html`) informando se o
+empreendimento é Novo ou Na planta — mesma terminologia do campo "Situação do imóvel" de Contatos
+(parte 75; "Usado" não se aplica a lançamento).
+
+Derivada do estágio já cadastrado (`status`), sem campo novo: Em planta/Em obras → **Na planta**
+(azul); Pronto/Pronto novo/Entregue → **Novo** (verde). Posicionada entre Estoque e Tabela
+(`situacaoBadgeHtml_` + `.situacao-badge`).
+
+Testado ao vivo no navegador com fetch mockado cobrindo os 5 estágios: cada um mapeia pro badge
+certo, estágio desconhecido/vazio cai em "—".
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 78) — Botão "🏷️ Vendedor" na tabela de Vendedor Sem Avaliação
 
 Pedido do usuário: na tabela "Lançamentos com Vendedor Sem Avaliação" (`insight-detail.html`,

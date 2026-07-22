@@ -118,6 +118,14 @@ a { text-decoration: none; color: inherit; }
 .tabela-badge.atualizada    { background:rgba(0,212,170,.15); color:var(--accent2); border:1px solid rgba(0,212,170,.3); }
 .tabela-badge.desatualizada { background:rgba(255,90,90,.2);  color:var(--coral);   border:1px solid rgba(255,90,90,.45); }
 
+/* Badge de situação do empreendimento (Novo/Na planta) -- mesmas cores dos
+   chips do campo equivalente em Contatos (azul pra em-construção, verde pra
+   pronto). */
+.situacao-badge { display:inline-flex; align-items:center; font-size:11px; font-weight:700;
+  padding:3px 9px; border-radius:4px; letter-spacing:.3px; white-space:nowrap; }
+.situacao-badge.novo      { background:rgba(0,212,170,.15); color:var(--accent2); border:1px solid rgba(0,212,170,.3); }
+.situacao-badge.na-planta { background:rgba(79,124,255,.15); color:var(--accent);  border:1px solid rgba(79,124,255,.3); }
+
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(15,17,23,.85); z-index: 9500;
   display: none; align-items: center; justify-content: center; padding: 20px;
@@ -735,6 +743,16 @@ function tabelaBadgeHtml_(statusTabela) {
   return '—';
 }
 
+// Situação do empreendimento pro mix -- mesma terminologia do campo
+// "Situação do imóvel" de Contatos (Novo/Na planta; "Usado" não se aplica a
+// lançamento). Deriva do estágio já cadastrado: Em planta/Em obras = ainda
+// não entregue = "Na planta"; Pronto/Pronto novo/Entregue = "Novo".
+function situacaoBadgeHtml_(status) {
+  if (status === 'Em planta' || status === 'Em obras') return `<span class="situacao-badge na-planta">Na planta</span>`;
+  if (status === 'Pronto' || status === 'Pronto novo' || status === 'Entregue') return `<span class="situacao-badge novo">Novo</span>`;
+  return '—';
+}
+
 let _resultadosPorSegmento = {};
 let _padraoAtivo = 'Todos';
 
@@ -797,10 +815,10 @@ function renderBlocosSegmentos_() {
     const corpo = r.aviso
       ? `<div class="vazio-segmento">${r.aviso}</div>`
       : `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
-          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Tabela</th>
+          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th>
         </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
           const item = r.papeis[papel];
-          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="5" style="color:var(--text3)">— não preenchido —</td></tr>`;
+          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="6" style="color:var(--text3)">— não preenchido —</td></tr>`;
           return `<tr>
             <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
             <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
@@ -808,6 +826,7 @@ function renderBlocosSegmentos_() {
             <td><span class="tracao-badge ${classeScoreTracao_(item.comp)}">${item.comp.toFixed(1)}</span></td>
             <td>${fmtR$_(item.menorPreco)}</td>
             <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
+            <td>${situacaoBadgeHtml_(item.e.status)}</td>
             <td>${tabelaBadgeHtml_(item.e.statusTabela)}</td>
           </tr>`;
         }).join('')}</tbody></table></div>`;
