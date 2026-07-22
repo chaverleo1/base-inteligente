@@ -591,6 +591,13 @@ input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;bac
           </div>
 
           <hr class="divider">
+          <div class="field"><label>Situação do imóvel</label>
+            <div class="chip-group">
+              <div class="chip" onclick="toggleChip(this,'situacaoImovel')">Usado</div>
+              <div class="chip" onclick="toggleChip(this,'situacaoImovel')">Novo</div>
+              <div class="chip" onclick="toggleChip(this,'situacaoImovel')">Na planta</div>
+            </div>
+          </div>
           <div class="field"><label>Padrão</label>
             <div class="chip-group">
               <div class="chip" onclick="toggleChip(this,'padrao');updateScore()">Econômico</div>
@@ -1284,6 +1291,7 @@ function renderDrawer(c, score) {
       <div class="d-section-title">Perfil de busca</div>
       <div class="d-grid">
         ${campo('Segmento', c.segmento)}
+        ${campo('Situação do imóvel', c.situacaoImovel)}
         ${campo('Padrão', c.padrao)}
         ${campo('Preço limite', precoLimiteTxt, true)}
         ${campo('Bairro de interesse', c.bairroInteresse, true)}
@@ -1761,6 +1769,7 @@ function buildSummary() {
     { key: 'Área útil',       val: g('areaUtil') ? g('areaUtil') + 'm²' : '' },
     { key: 'Área de terreno', val: g('areaTerreno') ? g('areaTerreno') + 'm²' : '' },
     { key: 'Comodidades',     val: comodidadesSelecionadas() },
+    { key: 'Situação do imóvel', val: chipState['situacaoImovel'] },
     { key: 'Padrão',          val: chipState['padrao'] },
     { key: 'Preço limite',    val: g('precoLimite') ? 'R$ ' + g('precoLimite') : '' },
     { key: 'Finalidade',      val: chipState['finalidade'] },
@@ -1844,6 +1853,7 @@ async function saveClient() {
     elevador:        chipState['elevador']      || '',
     acessibilidade:  chipState['acessibilidade']|| '',
     comodidadesOutras: g('comodidadesOutras'),
+    situacaoImovel:  chipState['situacaoImovel'] || '',
     padrao:          chipState['padrao']        || '',
     precoLimite:     g('precoLimite'),
     finalidade:      chipState['finalidade']    || '',
@@ -2050,6 +2060,7 @@ function carregarContato(c) {
   ativarChip('condFechado',    c.condFechado);
   ativarChip('elevador',       c.elevador);
   ativarChip('acessibilidade', c.acessibilidade);
+  ativarChip('situacaoImovel', c.situacaoImovel);
   ativarChip('padrao',      c.padrao);
   ativarChip('finalidade',  c.finalidade);
   ativarChip('fgts',        c.fgts);

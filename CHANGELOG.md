@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 75) — Novo campo "Situação do imóvel" em Contatos
+
+Pedido do usuário: campo novo na etapa "O que essa pessoa quer comprar?" de `contatos.html`, antes
+de "Padrão" — chips de múltipla escolha: Usado, Novo, Na planta.
+
+Seguido o mesmo padrão já usado por "Padrão"/"Finalidade" (chip multi-select via `toggleChip`, sem
+afetar o motor de Busca Aberta/matching, que não foi tocado — só um campo de perfil novo, não um
+critério de pontuação):
+- `code.txt`: `situacaoImovel` adicionado ao final de `CABECALHO` (migração via
+  `migrarCabecalhoContatos()`, que só sabe anexar colunas — mesmo padrão de sempre).
+- `contatos.html`: chip-group novo antes de "Padrão"; incluído no resumo (`buildSummary`), no
+  payload de salvar/atualizar, no carregamento pra edição (`ativarChip`) e na tela de detalhe do
+  contato (drawer).
+- `dashboard.html`: mesmo campo adicionado na tela de detalhe do contato (drawer espelhado, mesma
+  função `campo()`) — mantém as duas telas de detalhe consistentes.
+
+Testado: sintaxe de `contatos.html`/`code.txt` sem erros; lógica de `toggleChip`/`ativarChip`
+testada isoladamente no navegador (multi-seleção acumula, desmarcar remove, `ativarChip` restaura
+a seleção certa ao editar um contato existente).
+
+⚠️ **Backend**: `code.txt` mudou (`situacaoImovel` em `CABECALHO`) — precisa colar
+`code.gs.txt` no Apps Script e reimplantar como nova versão pra o campo persistir de verdade
+(sem isso, o valor é enviado mas a coluna não existe na planilha ainda).
+
 ## 2026-07-22 (parte 74) — Novo módulo ESTRATÉGIAS: Mix de 7 ofertas + Tráfego Pago
 
 Usuário compartilhou um estudo ("MODULO_ESTRATEGIAS_Especificacao.txt", feito por uma IA MENTORA
