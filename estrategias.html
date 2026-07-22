@@ -675,12 +675,17 @@ function organizarPorSegmento_(itens) {
 // INFERIOR = preço; ALVO 1-2-3 = Score de Tração; COMPLEMENTAR = melhor
 // Tração de Tipo de Imóvel diferente do Alvo Primário (ou o melhor restante,
 // se não houver); ÂNCORA SUPERIOR = menor preço do segmento imediatamente
-// ACIMA (não consome produto do segmento atual). Mínimo de 5 produtos com
-// Score de Tração > 0 pro mix funcionar -- abaixo disso, só emite aviso.
-function selecionarMixEstrategico_(candidatos, candidatosAcima) {
+// ACIMA (não consome produto do segmento atual). `minimo` (default 5) é o
+// piso de produtos com Score de Tração > 0 pro mix valer -- 5 no modo
+// campanha (mix incompleto não sustenta a estratégia de tráfego), 1 no modo
+// cliente (se só existe 1 lançamento compatível com o perfil, é ele que o
+// corretor precisa ver -- caso real 2026-07: perfil com preço limite justo
+// caía pra 1 compatível e a tela não mostrava imóvel nenhum).
+function selecionarMixEstrategico_(candidatos, candidatosAcima, minimo) {
+  minimo = minimo || 5;
   const validos = (candidatos || []).filter(c => c.comp > 0);
-  if (validos.length < 5) {
-    return { papeis: {}, aviso: `Só ${validos.length} produto(s) com Score de Tração neste segmento (mínimo 5 pro mix funcionar).` };
+  if (validos.length < minimo) {
+    return { papeis: {}, aviso: `Só ${validos.length} produto(s) com Score de Tração neste segmento (mínimo ${minimo} pro mix funcionar).` };
   }
   const usados = new Set();
   const usar = item => { usados.add(item.e.idLancamento); return item; };
@@ -929,7 +934,9 @@ async function carregarEstrategiaCliente_() {
     const pool      = limite > 0 ? compat.filter(it => it.menorPreco > 0 && it.menorPreco <= limite) : compat;
     const poolAcima = limite > 0 ? compat.filter(it => it.menorPreco > limite) : [];
 
-    const resultado = selecionarMixEstrategico_(pool, poolAcima);
+    // minimo = 1: no modo cliente, mesmo 1 único lançamento compatível deve
+    // aparecer (vira o Alvo Primário) -- a regra dos 5 é só do modo campanha.
+    const resultado = selecionarMixEstrategico_(pool, poolAcima, 1);
     const r = { ...resultado, total: pool.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
 
     const filtrosDesc = [
@@ -939,7 +946,12 @@ async function carregarEstrategiaCliente_() {
     ].join(' · ');
 
     const covHtml = r.cobertura ? `<span class="cobertura-badge cobertura-${r.cobertura.nivel}">${r.cobertura.nivel === 'forte' ? '🟢' : r.cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${r.cobertura.nivel}</span>` : '';
-    const corpo = r.aviso ? `<div class="vazio-segmento">${r.aviso}</div>` : tabelaMixHtml_(r);
+    const avisoParcial = (!r.aviso && r.total < 5)
+      ? `<div style="padding:8px 18px;font-size:12px;color:var(--amber);background:rgba(245,158,11,.08);border-bottom:1px solid var(--border)">⚠ Menos de 5 lançamentos compatíveis com o perfil — mix parcial (papéis sem produto ficam vazios).</div>`
+      : '';
+    const corpo = r.aviso
+      ? `<div class="vazio-segmento">Nenhum lançamento compatível com o perfil deste cliente no momento.</div>`
+      : avisoParcial + tabelaMixHtml_(r);
 
     cont.innerHTML = `<div class="segmento-block">
       <div class="segmento-header">

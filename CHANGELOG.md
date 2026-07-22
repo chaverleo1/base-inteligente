@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 82) — Modo cliente mostra mix parcial (mínimo cai de 5 pra 1)
+
+Caso real do usuário: cliente com preço limite R$ 400 mil ficou com só 1 lançamento compatível —
+a tela dizia "1 lançamento compatível" no subtítulo mas não mostrava imóvel nenhum, porque
+`selecionarMixEstrategico_` exigia mínimo de 5 produtos (regra pensada pro modo campanha, onde mix
+incompleto não sustenta a estratégia de tráfego) e devolvia só o aviso.
+
+`selecionarMixEstrategico_` ganhou o parâmetro `minimo` (default 5 — modo campanha intacto);
+o modo cliente passa `1`: mesmo um único lançamento compatível aparece (vira o Alvo Primário),
+papéis sem produto ficam "— não preenchido —", e uma faixa de aviso âmbar avisa "menos de 5
+compatíveis — mix parcial". Pool zerado mostra "Nenhum lançamento compatível com o perfil deste
+cliente no momento" em vez da mensagem técnica de mínimo.
+
+Testado ao vivo no navegador reproduzindo o caso exato (1 dentro do limite + 2 acima): o compatível
+aparece como Alvo Primário, um dos acima do limite vira Âncora Superior, aviso parcial visível.
+Regressão do modo campanha sem quebras (mínimo 5 continua o default).
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 81) — Botão "🎯 Estratégias" condicionado à Situação do imóvel
 
 Refinamento do usuário sobre a parte 80: o botão "🎯 Estratégias" na tabela de Contatos só aparece
