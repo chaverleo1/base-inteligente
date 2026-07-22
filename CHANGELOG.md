@@ -1,5 +1,32 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 83) — Abas NOVOS | NA PLANTA no modo campanha de Estratégias
+
+Pedido do usuário: imóvel novo/pronto e imóvel em obras/na planta não podem entrar juntos no mesmo
+mix de 7 papéis — são estratégias de campanha diferentes (público, mensagem e urgência distintos).
+
+`estrategias.html` (modo campanha, `🎯 Estratégias de Tráfego Pago`) ganhou duas abas ao lado do
+título: **NOVOS** (Pronto/Pronto novo/Entregue) e **NA PLANTA** (Em planta/Em obras), usando a mesma
+divisão de estágios já usada na coluna Situação e no modo cliente. Trocar de aba não refaz fetch —
+`_itensScoredCache` guarda os itens já pontuados uma vez, e `recalcularSegmentos_()` só refiltra por
+status e reconstrói os mixes por segmento (`selecionarMixEstrategico_`), inclusive a Âncora Superior,
+que agora só puxa candidato do segmento acima dentro da mesma aba. NOVOS começa ativa por padrão.
+
+Nome do segmento nos exports (CSV, título do modal e prompt pra IA de Campanhas) agora inclui a aba
+ativa, ex: "Popular (NA PLANTA)", pra não confundir duas exportações do mesmo segmento em situações
+diferentes. Modo cliente (`?cliente=CTT-NNN`) não é afetado — continua com seu próprio filtro de
+Situação do imóvel do perfil e as abas ficam ocultas (`display:none`) nesse modo.
+
+Testado: suíte Node nova (`test_abas_situacao.js`) monta pool misto Novo+Na planta em dois segmentos
+adjacentes (Médio/Alto Padrão) e confirma que nenhum papel do mix — incluindo Âncora Superior — vaza
+item da situação errada, nos dois sentidos. Verificado ao vivo no navegador (mock de fetch, sem
+credenciais reais): troca de aba reconstrói a tabela na hora com os ids corretos, classe `.active`
+troca de botão, e título/prompt de exportação mostram "(NA PLANTA)" corretamente. Regressão das
+suítes existentes (`test_mix_estrategico.js`, `test_paridade_motor_estrategias.js`,
+`test_alerta_vendedor_sem_avaliacao.js`) sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 82) — Modo cliente mostra mix parcial (mínimo cai de 5 pra 1)
 
 Caso real do usuário: cliente com preço limite R$ 400 mil ficou com só 1 lançamento compatível —

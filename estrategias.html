@@ -57,6 +57,14 @@ a { text-decoration: none; color: inherit; }
 .sec-title { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; }
 .sec-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
 
+/* Abas NOVOS | NA PLANTA ao lado do título -- mesma linguagem visual das
+   .lanc-tabs de lancamentos.html (pílula com fundo surface2, ativa acesa). */
+.situacao-tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 10px; padding: 4px; }
+.situacao-tab { padding: 7px 18px; border-radius: 8px; border: none; background: transparent; color: var(--text2);
+  font-size: 12px; font-weight: 700; letter-spacing: .5px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
+.situacao-tab.active { background: var(--accent); color: #fff; }
+.situacao-tab:hover:not(.active) { color: var(--text); }
+
 .filtro-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
 .filtro-chip {
   padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border);
@@ -222,8 +230,14 @@ a { text-decoration: none; color: inherit; }
 
 <div class="main">
   <div class="sec-header">
-    <div class="sec-title">🎯 Estratégias de Tráfego Pago</div>
-    <div class="sec-sub">Mix estratégico de 7 ofertas por Padrão/Faixa de preço — calculado ao vivo a partir do Score de Tração e Similaridade já usados em Lançamentos. Nenhum dado novo é gravado aqui.</div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div class="sec-title">🎯 Estratégias de Tráfego Pago</div>
+      <div class="situacao-tabs" id="situacaoTabs" style="display:none">
+        <button class="situacao-tab active" id="tabAbaNovos" onclick="setSituacaoAba_('NOVOS')">NOVOS</button>
+        <button class="situacao-tab" id="tabAbaNaPlanta" onclick="setSituacaoAba_('NA_PLANTA')">NA PLANTA</button>
+      </div>
+    </div>
+    <div class="sec-sub">Mix estratégico de 7 ofertas por Padrão/Faixa de preço — calculado ao vivo a partir do Score de Tração e Similaridade já usados em Lançamentos. NOVOS (prontos/entregues) e NA PLANTA (em obras/lançamentos) nunca se misturam no mesmo mix.</div>
   </div>
 
   <div class="filtro-bar" id="filtroPadrao"></div>
@@ -786,21 +800,53 @@ async function carregarItensScored_() {
   }).filter(it => it.padrao && it.e.statusAtivo !== 'Excluído');
 }
 
+// Abas NOVOS | NA PLANTA (regra do usuário, 2026-07): imóvel pronto e
+// imóvel em obras NUNCA entram no mesmo mix -- cada aba monta os 7 papéis
+// só com a sua situação. Mesma divisão de estágios da coluna Situação
+// (situacaoBadgeHtml_) e do modo cliente (SITUACAO_STATUS_CLIENTE_).
+let _situacaoAtiva = 'NOVOS';
+let _itensScoredCache = null;
+const SITUACAO_ABA_STATUS_ = {
+  'NOVOS':     ['Pronto', 'Pronto novo', 'Entregue'],
+  'NA_PLANTA': ['Em planta', 'Em obras'],
+};
+function situacaoAtivaLabel_() { return _situacaoAtiva === 'NOVOS' ? 'NOVOS' : 'NA PLANTA'; }
+
+// Reconstrói os mixes por segmento a partir do cache de itens já pontuados,
+// filtrando pela aba de situação ativa -- trocar de aba não refaz nenhum
+// fetch, só refiltra e reseleciona os papéis. A ÂNCORA SUPERIOR também vem
+// do conjunto filtrado (segmento acima DENTRO da mesma situação), então a
+// separação Novo/Na planta vale pros 7 papéis, sem exceção.
+function recalcularSegmentos_() {
+  const statusPermitidos = new Set(SITUACAO_ABA_STATUS_[_situacaoAtiva]);
+  const itens = (_itensScoredCache || []).filter(it => statusPermitidos.has(it.e.status));
+  const porSegmento = organizarPorSegmento_(itens);
+  _resultadosPorSegmento = {};
+  ORDEM_SEGMENTOS_.forEach((seg, idx) => {
+    const candidatos = porSegmento[seg] || [];
+    const segAcima = ORDEM_SEGMENTOS_[idx + 1];
+    const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
+    const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
+    _resultadosPorSegmento[seg] = { ...resultado, total: candidatos.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
+  });
+}
+
+function setSituacaoAba_(aba) {
+  _situacaoAtiva = aba;
+  document.getElementById('tabAbaNovos').classList.toggle('active', aba === 'NOVOS');
+  document.getElementById('tabAbaNaPlanta').classList.toggle('active', aba === 'NA_PLANTA');
+  recalcularSegmentos_();
+  renderBlocosSegmentos_();
+}
+
 async function carregarEstrategias() {
   try {
     const itens = await carregarItensScored_();
     if (itens === null) return;
+    _itensScoredCache = itens;
+    document.getElementById('situacaoTabs').style.display = '';
 
-    const porSegmento = organizarPorSegmento_(itens);
-    _resultadosPorSegmento = {};
-    ORDEM_SEGMENTOS_.forEach((seg, idx) => {
-      const candidatos = porSegmento[seg] || [];
-      const segAcima = ORDEM_SEGMENTOS_[idx + 1];
-      const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
-      const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
-      _resultadosPorSegmento[seg] = { ...resultado, total: candidatos.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
-    });
-
+    recalcularSegmentos_();
     renderFiltroPadrao_();
     renderBlocosSegmentos_();
   } catch (e) {
@@ -843,7 +889,7 @@ function renderBlocosSegmentos_() {
       </div>
       ${corpo}
     </div>`;
-  }).join('') || '<div class="vazio-segmento">Nenhum segmento com dados suficientes ainda.</div>';
+  }).join('') || `<div class="vazio-segmento">Nenhum segmento com dados suficientes em ${situacaoAtivaLabel_()} ainda.</div>`;
 }
 
 // Tabela dos 7 papéis -- mesmo formato pros blocos por segmento e pro modo
@@ -1021,7 +1067,7 @@ function exportarCSV_(seg) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `estrategia_${seg.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.href = url; a.download = `estrategia_${situacaoAtivaLabel_().replace(/\s+/g,'_')}_${seg.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
   mostrarToast(`CSV do segmento "${seg}" baixado.`, 'ok');
@@ -1031,7 +1077,7 @@ function montarPromptEstrategia_(seg) {
   const linhas = montarLinhasCsvSegmento_(seg);
   return `Você é uma IA especialista em campanhas Google Ads para o mercado imobiliário brasileiro.
 
-Recebi um CSV com ${linhas.length} empreendimento(s) selecionados para uma campanha de tráfego pago no segmento "${seg}".
+Recebi um CSV com ${linhas.length} empreendimento(s) selecionados para uma campanha de tráfego pago no segmento "${seg}" (${situacaoAtivaLabel_()}).
 
 Cada linha representa um produto com seu PAPEL NO MIX estratégico:
 - ISCA: produto de entrada pra atrair clique (não precisa vender sozinho)
@@ -1055,7 +1101,7 @@ ${montarCsvSegmento_(seg)}`;
 function abrirModalExport_(seg) {
   const linhas = montarLinhasCsvSegmento_(seg);
   if (!linhas.length) { mostrarToast('Nenhum produto pra exportar neste segmento ainda.', 'erro'); return; }
-  document.getElementById('modalExportTitulo').textContent = `Exportar Estratégia — ${seg}`;
+  document.getElementById('modalExportTitulo').textContent = `Exportar Estratégia — ${seg} (${situacaoAtivaLabel_()})`;
   document.getElementById('modalExportTexto').value = montarPromptEstrategia_(seg);
   document.getElementById('modalExport').classList.add('show');
 }
