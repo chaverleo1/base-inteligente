@@ -896,6 +896,15 @@ function render(lista) {
     ${tabela(ordenada)}`;
 }
 
+// O botão "🎯 Estratégias" só aparece pra cliente que marcou "Novo" e/ou
+// "Na planta" em Situação do imóvel (regra do usuário) -- quem só marcou
+// "Usado" (ou não marcou nada) não tem interesse em lançamento, o mix não
+// se aplica. Campo é multi-select ("Usado, Novo" etc), por isso o split.
+function temInteresseLancamento_(c) {
+  const situacoes = String(c.situacaoImovel || '').split(',').map(s => s.trim());
+  return situacoes.includes('Novo') || situacoes.includes('Na planta');
+}
+
 function tabela(items) {
   if (!items.length) return '<div class="empty">Nenhum contato encontrado.</div>';
   const rows = items.map(c => {
@@ -909,7 +918,7 @@ function tabela(items) {
     <td>${scoreEl(score)}</td>
     <td>${statusFrescorEl(c.dataAtualizacao)}</td>
     <td>${formatarDataDisplay_(c.dataAtualizacao)}</td>
-    <td>${c.idCliente
+    <td>${c.idCliente && temInteresseLancamento_(c)
       ? `<button class="btn-estrategias" onclick="window.location.href='estrategias.html?cliente=${encodeURIComponent(c.idCliente)}'" title="Mix de 7 ofertas de lançamento montado pro perfil deste cliente">🎯 Estratégias</button>`
       : '<span class="badge badge-muted">—</span>'}</td>
     <td class="td-acoes">

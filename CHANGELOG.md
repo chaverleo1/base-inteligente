@@ -1,5 +1,17 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 81) — Botão "🎯 Estratégias" condicionado à Situação do imóvel
+
+Refinamento do usuário sobre a parte 80: o botão "🎯 Estratégias" na tabela de Contatos só aparece
+se o cadastro do cliente tiver "Novo" e/ou "Na planta" marcados em Situação do imóvel — quem só
+marcou "Usado" (ou não marcou nada, incluindo cadastros anteriores à criação do campo na parte 75)
+vê "—" no lugar (`temInteresseLancamento_`, `contatos.html`).
+
+Testado em Node cobrindo as 6 combinações: só Novo ✓, só Na planta ✓, Usado+Novo ✓, só Usado ✗,
+campo vazio ✗, campo ausente (cadastro antigo) ✗.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 80) — Botão "🎯 Estratégias" em Contatos abre o mix de 7 ofertas do cliente
 
 Pedido do usuário: coluna "Estratégias" na tabela de Contatos com botão de destaque que abre uma
