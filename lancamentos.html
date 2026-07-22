@@ -3246,6 +3246,13 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam, lis
 // só uma segunda forma de visualizar o mesmo dado, lado a lado numa tabela.
 const MAPA_ESTAGIO_ORDEM_ = { 'Em planta': 1, 'Em obras': 2, 'Pronto': 3, 'Pronto novo': 3, 'Entregue': 4 };
 
+// Agrupamento só pros BOTÕES de filtro do Mapa Geral (pedido do usuário,
+// 2026-07): "Em obras" e "Em planta" viram um chip único "Na planta" (soma
+// as duas contagens, clique liga/desliga os dois estágios juntos). A coluna
+// "Estágio" da tabela continua mostrando o valor exato -- é texto extraído
+// direto do Órulo, não um rótulo pro usuário escolher.
+const MAPA_ESTAGIO_GRUPO_FILTRO_ = { 'Em obras': 'Na planta', 'Em planta': 'Na planta' };
+
 function parseDateLanc_(s) {
   if (!s) return null;
   const d1 = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);
@@ -3336,15 +3343,25 @@ function renderMapaEstagioFiltros_() {
   if (!bar) return;
   const total = _mapaRows.length;
   if (!total) { bar.innerHTML = ''; return; }
-  const estagios = [...new Set(_mapaRows.map(r => r.estagio).filter(e => e && e !== '—'))];
+  // Agrupa os estágios brutos em chips -- "Em obras"/"Em planta" caem no
+  // mesmo grupo "Na planta" (MAPA_ESTAGIO_GRUPO_FILTRO_), os demais viram
+  // grupo de 1 estágio só (comportamento igual a antes).
+  const gruposMap = {};
+  _mapaRows.forEach(r => {
+    if (!r.estagio || r.estagio === '—') return;
+    const label = MAPA_ESTAGIO_GRUPO_FILTRO_[r.estagio] || r.estagio;
+    (gruposMap[label] = gruposMap[label] || new Set()).add(r.estagio);
+  });
   const todosOn = _mapaEstagiosAtivos.size === 0;
   let html = `<button type="button" class="filtro-chip${todosOn ? ' on' : ''}" onclick="limparMapaEstagioFiltro_()">Todos (${total}|100%)</button>`;
-  html += estagios.map(es => {
-    const qtd = _mapaRows.filter(r => r.estagio === es).length;
+  html += Object.keys(gruposMap).map(label => {
+    const estagiosDoGrupo = [...gruposMap[label]];
+    const qtd = _mapaRows.filter(r => estagiosDoGrupo.includes(r.estagio)).length;
     const pct = Math.round((qtd / total) * 100);
+    const ativo = estagiosDoGrupo.every(es => _mapaEstagiosAtivos.has(es));
     return `
-    <button type="button" class="filtro-chip${_mapaEstagiosAtivos.has(es) ? ' on' : ''}"
-      onclick="toggleMapaEstagioFiltro_('${es.replace(/'/g,"\\'")}')">${es} (${qtd}|${pct}%)</button>
+    <button type="button" class="filtro-chip${ativo ? ' on' : ''}"
+      onclick='toggleMapaEstagioFiltro_(${JSON.stringify(estagiosDoGrupo)})'>${label} (${qtd}|${pct}%)</button>
   `;
   }).join('');
   bar.innerHTML = html;
@@ -3356,9 +3373,13 @@ function limparMapaEstagioFiltro_() {
   renderMapaGeral_();
 }
 
-function toggleMapaEstagioFiltro_(estagio) {
-  if (_mapaEstagiosAtivos.has(estagio)) _mapaEstagiosAtivos.delete(estagio);
-  else _mapaEstagiosAtivos.add(estagio);
+// Aceita 1 estágio (chip antigo, compatibilidade) ou uma lista (chip
+// agrupado, ex: "Na planta" = ['Em obras','Em planta']) -- ativa/desativa
+// todos os estágios do grupo juntos, num clique só.
+function toggleMapaEstagioFiltro_(estagios) {
+  const lista = Array.isArray(estagios) ? estagios : [estagios];
+  const todosAtivos = lista.every(es => _mapaEstagiosAtivos.has(es));
+  lista.forEach(es => { if (todosAtivos) _mapaEstagiosAtivos.delete(es); else _mapaEstagiosAtivos.add(es); });
   renderMapaEstagioFiltros_();
   renderMapaGeral_();
 }

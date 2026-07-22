@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 89) — Mapa Geral: filtro de Estágio unifica Em obras/Em planta num chip "Na planta"
+
+Pedido do usuário: os chips de filtro de Estágio no Mapa Geral (`lancamentos.html`) mostravam "Em
+obras" e "Em planta" como botões separados; viram um chip único "Na planta", somando as duas
+contagens (ex: 34 + 5 = "Na planta (39)"). A coluna "Estágio" da tabela continua mostrando o valor
+exato de cada linha (é texto extraído direto do Órulo, não deve ser normalizado).
+
+Novo `MAPA_ESTAGIO_GRUPO_FILTRO_` mapeia `'Em obras'`/`'Em planta'` → `'Na planta'`;
+`renderMapaEstagioFiltros_()` agrupa por esse rótulo antes de montar os chips (outros estágios viram
+grupo de 1 só, comportamento igual a antes). `toggleMapaEstagioFiltro_` passou a aceitar uma lista de
+estágios (o clique no chip "Na planta" ativa/desativa `Em obras` e `Em planta` juntos no
+`_mapaEstagiosAtivos`) — continua aceitando uma string única também, sem quebrar nada que já
+funcionava. O filtro de linhas da tabela (`_mapaEstagiosAtivos.has(r.estagio)`) não mudou, porque ele
+já trabalha com os valores brutos.
+
+Sobre o relato de que empreendimentos "Em obras"/"Em planta" com nota de Tração > 5 não apareciam no
+total da aba "Na Planta" de `estrategias.html`: revisei o filtro de lá (`carregarItensScored_`) e não
+achei um bug concreto — o candidato mais provável é `padrao` (Popular/Médio/Alto/Luxo) não
+classificado nesses lançamentos especificamente, já que o mix é organizado por padrão e um item sem
+padrão não tem segmento onde entrar. Não é algo que dá pra confirmar sem os dados reais da planilha;
+fica pendente de mais informação do usuário pra decidir se isso merece um contador "sem padrão" à
+parte ou é comportamento esperado.
+
+Testado: `test_mapa_estagio_grupo.js` cobre a soma exata do caso relatado (34+5=39), toggle
+agrupado liga/desliga os dois estágios reais juntos, chip aparece "ligado" quando os dois estão
+ativos, e compatibilidade com toggle de estágio único (não agrupado). Verificado ao vivo no
+navegador: chip único "Na planta (6|67%)" pra um pool de 4 Em obras + 2 Em planta, clique ativa os
+dois estágios reais no filtro, e `_mapaRows` (fonte da coluna Estágio) continua com os valores
+distintos por linha.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 88) — Estratégias: total de cada situação nas abas NOVOS | NA PLANTA
 
 Pedido do usuário: mostrar quantos lançamentos a base tem em cada situação, junto das abas.
