@@ -93,6 +93,11 @@ a { text-decoration: none; color: inherit; }
   .mapa-tabela, .mapa-tabela th, .mapa-tabela td { color: #000 !important; background: #fff !important; }
   .mapa-tabela th { background: #eee !important; }
   .mapa-wrap { border-color: #999 !important; overflow: visible; }
+  /* Marcação de seleção é só uma ferramenta de tela -- nunca aparece no
+     papel. Com "imprimir-so-selecionados" ligado (algum item marcado na
+     hora de clicar em Imprimir), some com as linhas não marcadas também. */
+  .mapa-check-col { display: none !important; }
+  body.imprimir-so-selecionados .mapa-tabela tbody tr:not(.mapa-row-selecionada) { display: none !important; }
 }
 
 /* ── SECTION HEADER ── */
@@ -298,6 +303,11 @@ select.form-input option { background: var(--surface2); }
 .mapa-alerta-positivo { background: rgba(0,212,170,.14); color: var(--accent2); }
 .mapa-alerta-negativo { background: rgba(255,90,90,.14); color: var(--danger); }
 .mapa-vazio { text-align: center; color: var(--text3); padding: 24px 0 !important; }
+.mapa-check-col { width: 1%; text-align: center; }
+.mapa-check-col input { cursor: pointer; width: 15px; height: 15px; accent-color: var(--accent); }
+.mapa-tabela tbody tr.mapa-row-selecionada { background: rgba(79,124,255,.1); }
+.mapa-tabela tbody tr.mapa-row-selecionada:hover { background: rgba(79,124,255,.16); }
+.mapa-selecao-count { font-size: 12px; color: var(--accent); font-weight: 600; white-space: nowrap; }
 
 /* ── CARD EMPREENDIMENTO ── */
 .emp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
@@ -758,16 +768,18 @@ select.form-input option { background: var(--surface2); }
   <div id="tabPainelMapa" class="tab-panel">
   <div class="sec-header">
     <div class="sec-title">Mapa Geral</div>
-    <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique num Estágio pra filtrar (múltipla escolha), numa coluna pra ordenar, numa linha pra editar.</div>
+    <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique num Estágio pra filtrar (múltipla escolha), numa coluna pra ordenar, numa linha pra editar. Marque itens na primeira coluna pra imprimir só eles em PDF.</div>
     <div class="mapa-toolbar">
       <div class="filtro-bar" id="mapa-estagio-filtros"></div>
-      <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem)">🖨️ PDF</button>
+      <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
+      <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem) -- com itens marcados, imprime só eles">🖨️ PDF</button>
     </div>
   </div>
   <div class="mapa-wrap">
     <table class="mapa-tabela">
       <thead>
         <tr>
+          <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
           <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
           <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
@@ -786,7 +798,7 @@ select.form-input option { background: var(--surface2); }
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="15" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="16" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -1470,8 +1482,14 @@ function imprimirListaAtiva_() {
     mostrarToast('Abra "Cadastrados" ou "Mapa Geral" antes de imprimir.', 'erro');
     return;
   }
+  // Com itens marcados no Mapa Geral, imprime só eles (classe no <body> liga
+  // a regra de @media print que esconde as linhas não marcadas) -- sem
+  // marcação nenhuma, imprime a lista inteira como sempre.
+  const soSelecionados = emMapa && _mapaSelecionados.size > 0;
+  document.body.classList.toggle('imprimir-so-selecionados', soSelecionados);
   window.print();
 }
+window.addEventListener('afterprint', () => document.body.classList.remove('imprimir-so-selecionados'));
 
 function extrairDados() {
   const txtB1 = document.getElementById('txtBloco1').value.trim();
@@ -3151,9 +3169,10 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam, l
       prazoLancEntrega: calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega),
     };
   });
-  // Recarregou os dados -- reseta a seleção de Estágio pra não ficar preso
-  // num valor que talvez nem exista mais no dataset novo.
+  // Recarregou os dados -- reseta a seleção de Estágio e de itens marcados
+  // (índices/estágios talvez nem existam mais no dataset novo).
   _mapaEstagiosAtivos = new Set();
+  _mapaSelecionados = new Set();
   renderMapaEstagioFiltros_();
   renderMapaGeral_();
 }
@@ -3247,8 +3266,10 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="15" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
+    atualizarUiSelecaoMapa_();
     return;
   }
 
@@ -3260,8 +3281,10 @@ function renderMapaGeral_() {
     .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="15" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
+    atualizarUiSelecaoMapa_();
     return;
   }
 
@@ -3278,8 +3301,10 @@ function renderMapaGeral_() {
   // Caixas T/V reaproveitam o mesmo estilo/cor do quadrado [T|V] dos cards
   // (classeScoreTracao_, baseado no score composto) — aqui cada nota vira
   // sua própria coluna em vez de um badge combinado.
+  _mapaIndicesVisiveis = linhas.map(({ i }) => i);
   tbody.innerHTML = linhas.map(({ r, i }) => `
-    <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar">
+    <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar" class="${_mapaSelecionados.has(i) ? 'mapa-row-selecionada' : ''}">
+      <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
       <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
@@ -3303,6 +3328,46 @@ function renderMapaGeral_() {
     </tr>`).join('');
 
   atualizarSetasMapaGeral_();
+  atualizarUiSelecaoMapa_();
+}
+
+// ── SELEÇÃO MÚLTIPLA (Mapa Geral) ──────────────────────────────────────────
+// _mapaSelecionados guarda índices ORIGINAIS de _mapaRows (mesma convenção
+// de editarEmpMapa_/`i` acima) -- sobrevive a filtro/ordenação, só é
+// resetada quando os dados são recarregados do zero (atualizarMapaGeral_).
+// _mapaIndicesVisiveis é a lista de índices realmente na tela AGORA (depois
+// do filtro de Estágio), usada só pelo "marcar todos".
+let _mapaSelecionados = new Set();
+let _mapaIndicesVisiveis = [];
+
+function toggleMapaSelecao_(i, marcado) {
+  if (marcado) _mapaSelecionados.add(i); else _mapaSelecionados.delete(i);
+  const tr = document.querySelector(`#mapa-tbody tr:nth-child(${_mapaIndicesVisiveis.indexOf(i) + 1})`);
+  if (tr) tr.classList.toggle('mapa-row-selecionada', marcado);
+  atualizarUiSelecaoMapa_();
+}
+
+function toggleMapaSelecaoTodos_(marcarTodos) {
+  if (marcarTodos) _mapaIndicesVisiveis.forEach(i => _mapaSelecionados.add(i));
+  else _mapaIndicesVisiveis.forEach(i => _mapaSelecionados.delete(i));
+  renderMapaGeral_();
+}
+
+// Contador + estado do checkbox "marcar todos" (indeterminado quando só
+// parte dos visíveis está marcada).
+function atualizarUiSelecaoMapa_() {
+  const qtd = _mapaSelecionados.size;
+  const count = document.getElementById('mapa-selecao-count');
+  if (count) {
+    count.style.display = qtd ? '' : 'none';
+    count.textContent = qtd ? `${qtd} selecionado${qtd !== 1 ? 's' : ''}` : '';
+  }
+  const checkTodos = document.getElementById('mapaCheckTodos');
+  if (checkTodos) {
+    const visiveisMarcados = _mapaIndicesVisiveis.filter(i => _mapaSelecionados.has(i)).length;
+    checkTodos.checked = _mapaIndicesVisiveis.length > 0 && visiveisMarcados === _mapaIndicesVisiveis.length;
+    checkTodos.indeterminate = visiveisMarcados > 0 && visiveisMarcados < _mapaIndicesVisiveis.length;
+  }
 }
 
 function atualizarSetasMapaGeral_() {

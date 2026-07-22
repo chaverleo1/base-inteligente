@@ -1,5 +1,33 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 94) — Mapa Geral: seleção múltipla + imprimir PDF só dos marcados
+
+Pedido do usuário: adicionar checkbox de múltipla escolha em cada empreendimento do Mapa Geral, e
+poder imprimir em PDF (paisagem, formato já existente) só os itens marcados.
+
+Nova primeira coluna com checkbox por linha + checkbox "marcar todos" no cabeçalho (aplica só aos
+itens VISÍVEIS no momento — respeita o filtro de Estágio ativo, fica indeterminado quando só parte
+dos visíveis está marcada). `_mapaSelecionados` guarda os índices originais de `_mapaRows` — sobrevive
+a trocar de filtro/ordenação, só reseta quando os dados são recarregados do zero. Contador
+"N selecionado(s)" aparece na barra de ferramentas quando há alguma marcação.
+
+O botão "🖨️ PDF" (`imprimirListaAtiva_`) passou a checar se há itens marcados no Mapa Geral: havendo,
+liga uma classe no `<body>` que a regra `@media print` usa pra esconder as linhas não marcadas —
+sem marcação nenhuma, continua imprimindo a lista inteira como sempre (comportamento antigo
+preservado). A coluna de checkbox nunca aparece no papel (`display:none` em `@media print`,
+independente de haver seleção ou não). Clicar no checkbox não abre o modal de editar (a linha inteira
+já é clicável pra isso — `stopPropagation` isola o clique).
+
+Testado: `test_mapa_selecao_multipla.js` (novo) cobre marcar/desmarcar individual, "marcar todos"
+respeitando só os visíveis, e o estado indeterminado do checkbox de topo. Verificado ao vivo no
+navegador: contagem e destaque visual das linhas corretos, "marcar todos" com filtro de Estágio ativo
+seleciona só o que está na tela, clique no checkbox não dispara a edição (clique no resto da linha
+continua abrindo), classe de impressão liga/desliga corretamente conforme há ou não seleção, e as
+regras de `@media print` (esconder coluna de checkbox + esconder linhas não marcadas) estão presentes
+na folha de estilo. Regressão dos filtros de Estágio (Mapa Geral e lista de cards) sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 93) — Mapa Geral: coluna "Tipo/S%" separada em "Tipo" e "S%"
 
 Pedido do usuário: a coluna combinada "Tipo/S%" (ex: "Médio/65%") virou duas colunas independentes —
