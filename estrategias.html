@@ -659,24 +659,59 @@ async function buscarModelosVendedores_() {
 // divididas em TERÇOS pelo menor preço observado na carteira atual (não são
 // valores fixos em R$) -- se ajusta sozinho conforme a base muda, sem
 // precisar de tela de configuração pra manter atualizada. A = terço mais
-// caro, C = terço mais barato (mesma convenção que já existia em Médio
-// A/Médio B, agora estendida pra 3 faixas em todo padrão).
-const ORDEM_SEGMENTOS_ = [
-  'Popular C', 'Popular B', 'Popular A',
-  'Médio C', 'Médio B', 'Médio A',
-  'Alto Padrão C', 'Alto Padrão B', 'Alto Padrão A',
-  'Luxo C', 'Luxo B', 'Luxo A',
-];
+// caro, C = terço mais barato.
+//
+// ADAPTATIVO por volume (2026-07, corrige caso real: aba NA PLANTA com 37
+// itens válidos espalhados em até 12 buckets -- padrão x faixa -- ficava com
+// ~3 por bucket, abaixo do mínimo de 5, e NENHUM mix se formava). Sem
+// volume suficiente pra sustentar 3 faixas, cai pra 2 (A/B por mediana,
+// igual ao design anterior a essa parte) ou 1 ("Única") -- os buckets ficam
+// maiores e o mix tem chance real de se formar. LIMIAR_3_FAIXAS/2_FAIXAS são
+// contados sobre TODOS os itens do padrão nessa aba (não só os com Score de
+// Tração > 0), porque a divisão de preço precisa existir antes de saber
+// quantos vão ter Tração válida.
+// IMPORTANTE: o valor de padrão gravado no lançamento é "Alto" (ver
+// classificarPadraoPorM2Medio_ em config.js e o <select> de padrão em
+// lancamentos.html), NUNCA "Alto Padrão" -- "Alto Padrão" é só o RÓTULO
+// visível pro usuário (filtro/título de segmento). Bug real encontrado
+// 2026-07: ORDEM_PADROES_MIX_ usava "Alto Padrão" como se fosse o valor
+// interno, então NENHUM lançamento com padrão "Alto" jamais caía em
+// nenhum segmento -- 1/4 da base ficava invisível em Estratégias, em
+// qualquer aba/situação, desde a criação desta página.
+const ORDEM_PADROES_MIX_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
+const PADRAO_LABEL_MIX_ = { 'Popular': 'Popular', 'Médio': 'Médio', 'Alto': 'Alto Padrão', 'Luxo': 'Luxo' };
+const LIMIAR_3_FAIXAS_ = 15; // ~5 por faixa no pior caso
+const LIMIAR_2_FAIXAS_ = 8;  // ~4 por faixa -- abaixo disso, faixa única
 
 function calcularFaixaPreco_(padrao, menorPreco, cortesPorPadrao) {
   const cortes = cortesPorPadrao[padrao];
-  if (!cortes) return 'B';
+  if (!cortes || cortes.faixas === 1) return 'Única';
+  if (cortes.faixas === 2) return menorPreco >= cortes.p1 ? 'A' : 'B';
   if (menorPreco >= cortes.p2) return 'A';
   if (menorPreco >= cortes.p1) return 'B';
   return 'C';
 }
+// seg = valor INTERNO ("Alto B", "Alto", "Médio C"...) -- usado como chave
+// de agrupamento/filtro. segmentoLabelDisplay_ (abaixo) traduz isso pro
+// rótulo visível ("Alto Padrão B") só na hora de mostrar pro usuário.
 function segmentoDe_(padrao, faixa) {
-  return `${padrao} ${faixa}`;
+  return faixa === 'Única' ? padrao : `${padrao} ${faixa}`;
+}
+function segmentoLabelDisplay_(seg) {
+  const partes = seg.split(' ');
+  const ultima = partes[partes.length - 1];
+  const temFaixa = /^[ABC]$/.test(ultima);
+  const padraoInterno = temFaixa ? partes.slice(0, -1).join(' ') : seg;
+  const faixa = temFaixa ? ' ' + ultima : '';
+  return (PADRAO_LABEL_MIX_[padraoInterno] || padraoInterno) + faixa;
+}
+// Letras na ordem barato->caro pro número de faixas decidido pro padrão --
+// usada tanto aqui quanto na hora de montar a ordem de segmentos pro render
+// (ANCORA_SUP depende dessa ordem refletir a granularidade real).
+function faixasOrdemPadrao_(numFaixas) {
+  if (numFaixas === 1) return ['Única'];
+  if (numFaixas === 2) return ['B', 'A'];
+  return ['C', 'B', 'A'];
 }
 function organizarPorSegmento_(itens) {
   const porPadrao = {};
@@ -684,7 +719,14 @@ function organizarPorSegmento_(itens) {
   const cortesPorPadrao = {};
   Object.keys(porPadrao).forEach(p => {
     const vals = (porPadrao[p] || []).filter(v => v > 0).sort((a, b) => a - b);
-    if (vals.length) cortesPorPadrao[p] = { p1: vals[Math.floor(vals.length / 3)], p2: vals[Math.floor(2 * vals.length / 3)] };
+    if (!vals.length) return;
+    if (vals.length >= LIMIAR_3_FAIXAS_) {
+      cortesPorPadrao[p] = { faixas: 3, p1: vals[Math.floor(vals.length / 3)], p2: vals[Math.floor(2 * vals.length / 3)] };
+    } else if (vals.length >= LIMIAR_2_FAIXAS_) {
+      cortesPorPadrao[p] = { faixas: 2, p1: vals[Math.floor(vals.length / 2)] };
+    } else {
+      cortesPorPadrao[p] = { faixas: 1 };
+    }
   });
   const porSegmento = {};
   itens.forEach(it => {
@@ -692,7 +734,15 @@ function organizarPorSegmento_(itens) {
     const seg = segmentoDe_(it.padrao, faixa);
     (porSegmento[seg] = porSegmento[seg] || []).push(it);
   });
-  return porSegmento;
+  // Ordem de segmentos pra ESSA chamada (barato->caro dentro de cada padrão,
+  // padrões em ordem crescente) -- reflete a granularidade real decidida
+  // acima, não um layout fixo de 3 faixas por padrão.
+  const ordemSegmentos = [];
+  ORDEM_PADROES_MIX_.forEach(padrao => {
+    const numFaixas = cortesPorPadrao[padrao] ? cortesPorPadrao[padrao].faixas : 3;
+    faixasOrdemPadrao_(numFaixas).forEach(faixa => ordemSegmentos.push(segmentoDe_(padrao, faixa)));
+  });
+  return { porSegmento, ordemSegmentos };
 }
 
 // Seleciona os 7 papéis dentro de um segmento (Padrão+Faixa). ISCA/ÂNCORA
@@ -847,14 +897,17 @@ function atualizarContadoresAba_() {
 // fetch, só refiltra e reseleciona os papéis. A ÂNCORA SUPERIOR também vem
 // do conjunto filtrado (segmento acima DENTRO da mesma situação), então a
 // separação Novo/Na planta vale pros 7 papéis, sem exceção.
+let _ordemSegmentosAtual = [];
+
 function recalcularSegmentos_() {
   const statusPermitidos = new Set(SITUACAO_ABA_STATUS_[_situacaoAtiva]);
   const itens = (_itensScoredCache || []).filter(it => statusPermitidos.has(it.e.status));
-  const porSegmento = organizarPorSegmento_(itens);
+  const { porSegmento, ordemSegmentos } = organizarPorSegmento_(itens);
+  _ordemSegmentosAtual = ordemSegmentos;
   _resultadosPorSegmento = {};
-  ORDEM_SEGMENTOS_.forEach((seg, idx) => {
+  ordemSegmentos.forEach((seg, idx) => {
     const candidatos = porSegmento[seg] || [];
-    const segAcima = ORDEM_SEGMENTOS_[idx + 1];
+    const segAcima = ordemSegmentos[idx + 1];
     const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
     const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
     _resultadosPorSegmento[seg] = { ...resultado, total: candidatos.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
@@ -888,14 +941,19 @@ async function carregarEstrategias() {
 
 function renderFiltroPadrao_() {
   const bar = document.getElementById('filtroPadrao');
-  const padroes = ['Todos', 'Popular', 'Médio', 'Alto Padrão', 'Luxo'];
-  bar.innerHTML = padroes.map(p => `<button class="filtro-chip ${p === _padraoAtivo ? 'on' : ''}" onclick="setFiltroPadrao_('${p}')">${p}</button>`).join('');
+  // Valor interno (usado no filtro/comparação de segmento) é "Alto", não
+  // "Alto Padrão" -- o rótulo do botão continua "Alto Padrão" (PADRAO_LABEL_MIX_).
+  const padroes = ['Todos', ...ORDEM_PADROES_MIX_];
+  bar.innerHTML = padroes.map(p => {
+    const label = p === 'Todos' ? 'Todos' : PADRAO_LABEL_MIX_[p];
+    return `<button class="filtro-chip ${p === _padraoAtivo ? 'on' : ''}" onclick="setFiltroPadrao_('${p}')">${label}</button>`;
+  }).join('');
 }
 function setFiltroPadrao_(p) { _padraoAtivo = p; renderFiltroPadrao_(); renderBlocosSegmentos_(); }
 
 function renderBlocosSegmentos_() {
   const cont = document.getElementById('blocosSegmentos');
-  const segmentosParaMostrar = ORDEM_SEGMENTOS_.filter(seg => {
+  const segmentosParaMostrar = _ordemSegmentosAtual.filter(seg => {
     if (_padraoAtivo === 'Todos') return true;
     return seg === _padraoAtivo || seg.startsWith(_padraoAtivo + ' ');
   });
@@ -909,7 +967,7 @@ function renderBlocosSegmentos_() {
     return `<div class="segmento-block">
       <div class="segmento-header">
         <div>
-          <div class="segmento-titulo">${seg}</div>
+          <div class="segmento-titulo">${segmentoLabelDisplay_(seg)}</div>
           <div class="segmento-sub">${r.total} empreendimento${r.total !== 1 ? 's' : ''} no segmento</div>
         </div>
         ${covHtml}
@@ -1063,10 +1121,17 @@ function csvEscapar_(v) {
 function montarLinhasCsvSegmento_(seg) {
   const r = _resultadosPorSegmento[seg];
   if (!r || r.aviso) return [];
-  // Todo segmento agora é "Padrão Letra" (ex: "Popular C", "Alto Padrão A") --
-  // a última palavra é sempre a faixa, mesmo em padrões com espaço no nome.
-  const ultimoEspaco = seg.lastIndexOf(' ');
-  const [padraoNome, faixaNome] = ultimoEspaco > -1 ? [seg.slice(0, ultimoEspaco), seg.slice(ultimoEspaco + 1)] : [seg, ''];
+  // `seg` é o valor INTERNO ("Popular C", "Alto A"...) quando tem faixa, ou só
+  // o padrão interno ("Alto" sozinho) quando o volume não deu pra dividir
+  // (faixa única -- ver organizarPorSegmento_). Checar se a última palavra é
+  // exatamente A/B/C evita confundir a última palavra de um padrão com espaço
+  // no nome (ex: um "Alto Padrão" bruto, se algum dia existir) com uma faixa.
+  // padraoNome (abaixo) já traduz pro rótulo bonito via PADRAO_LABEL_MIX_.
+  const partesSeg = seg.split(' ');
+  const ultimaPalavra = partesSeg[partesSeg.length - 1];
+  const temFaixa = /^[ABC]$/.test(ultimaPalavra);
+  const [padraoInterno, faixaNome] = temFaixa ? [partesSeg.slice(0, -1).join(' '), ultimaPalavra] : [seg, 'Única'];
+  const padraoNome = PADRAO_LABEL_MIX_[padraoInterno] || padraoInterno;
   return ORDEM_PAPEIS_.filter(p => r.papeis[p]).map(papel => {
     const item = r.papeis[papel];
     const e = item.e;
@@ -1099,17 +1164,17 @@ function exportarCSV_(seg) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `estrategia_${situacaoAtivaLabel_().replace(/\s+/g,'_')}_${seg.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.href = url; a.download = `estrategia_${situacaoAtivaLabel_().replace(/\s+/g,'_')}_${segmentoLabelDisplay_(seg).replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  mostrarToast(`CSV do segmento "${seg}" baixado.`, 'ok');
+  mostrarToast(`CSV do segmento "${segmentoLabelDisplay_(seg)}" baixado.`, 'ok');
 }
 
 function montarPromptEstrategia_(seg) {
   const linhas = montarLinhasCsvSegmento_(seg);
   return `Você é uma IA especialista em campanhas Google Ads para o mercado imobiliário brasileiro.
 
-Recebi um CSV com ${linhas.length} empreendimento(s) selecionados para uma campanha de tráfego pago no segmento "${seg}" (${situacaoAtivaLabel_()}).
+Recebi um CSV com ${linhas.length} empreendimento(s) selecionados para uma campanha de tráfego pago no segmento "${segmentoLabelDisplay_(seg)}" (${situacaoAtivaLabel_()}).
 
 Cada linha representa um produto com seu PAPEL NO MIX estratégico:
 - ISCA: produto de entrada pra atrair clique (não precisa vender sozinho)
@@ -1133,7 +1198,7 @@ ${montarCsvSegmento_(seg)}`;
 function abrirModalExport_(seg) {
   const linhas = montarLinhasCsvSegmento_(seg);
   if (!linhas.length) { mostrarToast('Nenhum produto pra exportar neste segmento ainda.', 'erro'); return; }
-  document.getElementById('modalExportTitulo').textContent = `Exportar Estratégia — ${seg} (${situacaoAtivaLabel_()})`;
+  document.getElementById('modalExportTitulo').textContent = `Exportar Estratégia — ${segmentoLabelDisplay_(seg)} (${situacaoAtivaLabel_()})`;
   document.getElementById('modalExportTexto').value = montarPromptEstrategia_(seg);
   document.getElementById('modalExport').classList.add('show');
 }

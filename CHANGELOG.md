@@ -1,5 +1,45 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 90) — Estratégias: 2 bugs que zeravam mix em NA PLANTA (faixas adaptativas + "Alto" vs "Alto Padrão")
+
+Caso real do usuário: aba NA PLANTA contava 37 empreendimentos, mas nenhum mix se formava em nenhum
+segmento. Diagnóstico via `AskUserQuestion` confirmou que o aviso de cada segmento mostrava poucos
+produtos válidos (ex: "Só 3 produto(s)... mínimo 5"), não zero — ou seja, itens tinham Score de
+Tração de verdade, só ficaram espalhados demais. Investigação achou DOIS problemas empilhados:
+
+**1) Faixas A/B/C adaptativas por volume.** Dividir todo padrão em 3 faixas fixas (parte 86) somado
+à separação NOVOS/NA PLANTA (parte 83) fragmentou demais um pool de 37 itens em até 12 buckets —
+~3 por bucket, abaixo do mínimo de 5. `organizarPorSegmento_` agora decide quantas faixas usar por
+padrão, baseado no volume disponível NAQUELA aba: ≥15 itens → 3 faixas (C/B/A) por terço; 8–14 →
+2 faixas (B/A) por mediana; <8 → 1 faixa única (sem sufixo). `ORDEM_SEGMENTOS_` (lista fixa de 12)
+foi substituída por uma ordem de segmentos calculada dinamicamente a cada chamada
+(`organizarPorSegmento_` agora retorna `{ porSegmento, ordemSegmentos }`), já que a granularidade
+varia por aba/padrão — a ÂNCORA SUPERIOR continua puxando do próximo item dessa lista (preço
+imediatamente acima), agora refletindo a granularidade real.
+
+**2) "Alto" vs "Alto Padrão" — bug mais grave, preexistente.** O valor de padrão gravado no
+lançamento é `"Alto"` (`classificarPadraoPorM2Medio_` em `config.js`, `<select>` de padrão em
+`lancamentos.html`) — nunca `"Alto Padrão"`. Mas a lista de padrões do modo campanha usava
+`"Alto Padrão"` como se fosse esse valor interno (desde a criação da página, sobrevivendo a duas
+reescritas de faixa nesta sessão). Resultado: **nenhum lançamento com padrão "Alto" jamais entrava em
+nenhum segmento** — 1/4 da base ficava invisível em Estratégias, em qualquer aba, desde sempre.
+Corrigido: `ORDEM_PADROES_MIX_` agora usa o valor interno certo (`'Alto'`); um novo
+`PADRAO_LABEL_MIX_`/`segmentoLabelDisplay_()` traduz pro rótulo visível ("Alto Padrão") só na hora de
+mostrar — título do segmento, chip de filtro, campo `padrao_campanha` do CSV, nome do arquivo, título
+do modal e texto do prompt pra IA. O modo cliente já usava o valor certo (`PADRAO_CLIENTE_LANC_`
+sempre mapeou pra `'Alto'`) — não foi afetado por este bug.
+
+Testado: `test_mix_estrategico.js` ganhou casos pros 3 níveis de faixa (3/2/1) e reproduz o cenário
+real (37 itens em 4 padrões pequenos, antes 0 buckets com mínimo, agora pelo menos 1). Novo
+`test_padrao_alto_bug.js` prova que itens com padrão "Alto" agora formam segmento de verdade (antes:
+zero preservados) e que o rótulo exibido continua "Alto Padrão". `test_abas_situacao.js` atualizado
+pra nova assinatura de `organizarPorSegmento_`. Verificado ao vivo no navegador reproduzindo a
+distribuição relatada (10 Popular + 15 Médio + 8 Alto + 4 Luxo = 37 em NA PLANTA): total bate
+(5+5+5+5+5+4+4+4=37), segmentos "Alto Padrão B/A" aparecem pela primeira vez, filtro por padrão e
+exportação CSV mostram o rótulo correto.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 89) — Mapa Geral: filtro de Estágio unifica Em obras/Em planta num chip "Na planta"
 
 Pedido do usuário: os chips de filtro de Estágio no Mapa Geral (`lancamentos.html`) mostravam "Em
