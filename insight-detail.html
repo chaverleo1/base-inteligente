@@ -279,6 +279,12 @@ function toggleFavCli(cKey, btn) {
 function tableLancamentos(items) {
   if (!items.length) return '<div class="empty">Nenhum lançamento encontrado.</div>';
   const fmt = v => { const n=parseInt(String(v||'').replace(/\D/g,'')); if(!n)return'—'; return n>=1e6?'R$'+(n/1e6).toFixed(1)+'M':'R$'+(n/1e3).toFixed(0)+'k'; };
+  // Colunas extras (Estoque/Vendedor/Tabela) só aparecem quando pelo menos
+  // um item traz esse dado -- os usos antigos (entrega ≤180 dias, padrões
+  // sem demanda) não têm esses campos e continuam com a tabela original.
+  const temEstoque  = items.some(l => l.estoque !== undefined && l.estoque !== null && l.estoque !== '');
+  const temVendedor = items.some(l => l._scoreVendedor !== undefined);
+  const temTabela   = items.some(l => l._tabelaStatus !== undefined);
   const rows = items.map(l => `<tr>
     <td class="td-nome">${l.nomeEmpreendimento||l.nome||'—'}</td>
     <td><span class="badge badge-blue">${l.padrao||'—'}</span></td>
@@ -286,9 +292,12 @@ function tableLancamentos(items) {
     <td>${l.previsaoEntrega||'—'}</td>
     <td>${fmt(l.precoMedio||l.preco)}</td>
     <td>${l.construtora||'—'}</td>
+    ${temEstoque  ? `<td>${l.estoque !== undefined && l.estoque !== null && l.estoque !== '' ? l.estoque : '—'}</td>` : ''}
+    ${temVendedor ? `<td><span class="badge ${l._scoreVendedor > 0 ? 'badge-green' : 'badge-muted'}">${l._scoreVendedor > 0 ? l._scoreVendedor : 'Sem avaliação'}</span></td>` : ''}
+    ${temTabela   ? `<td><span class="badge ${l._tabelaStatus === 'Desatualizada' ? 'badge-red' : 'badge-green'}">${l._tabelaStatus || '—'}</span></td>` : ''}
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Empreendimento</th><th>Padrão</th><th>Status</th><th>Previsão Entrega</th><th>Preço Médio</th><th>Construtora</th></tr></thead>
+    <thead><tr><th>Empreendimento</th><th>Padrão</th><th>Status</th><th>Previsão Entrega</th><th>Preço Médio</th><th>Construtora</th>${temEstoque?'<th>Estoque</th>':''}${temVendedor?'<th>Vendedor</th>':''}${temTabela?'<th>Tabela</th>':''}</tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }

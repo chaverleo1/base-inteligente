@@ -1,5 +1,49 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 76) — 3 cards novos na Visão Geral + coluna Estoque em Estratégias + fix do alerta de Vendedor Sem Avaliação
+
+Lista de tarefas do usuário, 4 itens:
+
+**1. Card "Estoque pronto"** (Visão Geral, `dashboard.html`) — soma o `estoque` de todos os
+empreendimentos já "Pronto"/"Pronto novo"/"Entregue" (agrupados por `idLancamento`, já que
+LANCAMENTOS tem 1 linha por unidade/tipologia). "Ver →" abre `insight-detail.html` com a lista dos
+empreendimentos que compõem o total.
+
+**2. Coluna "Estoque"** nas tabelas de Mix Estratégico (`estrategias.html`) — adicionada entre
+Preço e Ação, mostra `item.e.estoque` de cada papel preenchido.
+
+**3. Card "Tabela desatualizada"** (Visão Geral) — conta empreendimentos com
+`statusTabela === 'Desatualizada'` (mesmo campo que já gera o badge "⚠ Tabela desatualizada" nos
+cards de `lancamentos.html`). "Ver →" mesmo mecanismo do card acima.
+
+**4. Card "Vendedor sem avaliação"** (Visão Geral) + revisão + fix do alerta:
+- Card novo conta lançamentos com score de vendedor = 0 (busca `listarPerfisVendedor`, mesmo
+  endpoint usado pelos badges de urgência — score ausente ou 0 explícito contam igual, mesma
+  convenção já usada em `pvSetBotaoScore_`).
+- **Revisão pedida**: conferido que a nota do vendedor SÓ aparece no botão "🏷️ Vendedor" dos cards
+  quando `scoreVendedor > 0` (`pvSetBotaoScore_` em `perfil-vendedor.js`, comportamento já
+  existente e intencional — "sem isso, ficava um '0' pendurado" — não precisou de mudança).
+- **Fix**: `ALERTAS_TRACAO` (`lancamentos.html`) tratava `scoreVendedor <= 30` como "risco de
+  qualidade", incluindo o caso `=== 0` — que na real significa "perfil nunca avaliado", não
+  "avaliado como péssimo". Cenário `risco_vendedor` agora exige `scoreVendedor > 0`, e um cenário
+  novo (`vendedor_sem_avaliacao`) cobre exatamente o caso `=== 0` com a mensagem
+  "⚠️ Vendedor Sem Avaliação!" em vez de "⚠️ Risco de Qualidade do Vendedor".
+
+`insight-detail.html`: `tableLancamentos()` ganhou 3 colunas opcionais (Estoque/Vendedor/Tabela),
+cada uma só aparece se pelo menos 1 item da lista trouxer aquele dado — os usos antigos (entrega
+≤180 dias, padrões sem demanda) continuam com a tabela original, sem coluna a mais.
+
+Testado em Node: lógica do novo cenário de alerta (8 casos: score=0 dispara Sem Avaliação, score
+15/30 dispara Risco, score 31 não dispara nenhum, score=0 sem as outras condições não dispara,
+oportunidade continua igual). Regressão completa das suítes anteriores sem quebras. Testado ao
+vivo no navegador com fetch mockado: os 3 valores dos cards batem exatamente com os dados de teste
+(estoque somado, contagem de tabela desatualizada, contagem de sem-avaliação incluindo os 2 casos
+— sem perfil e score=0 explícito), "Ver →" abre `insight-detail.html` com as colunas certas, coluna
+Estoque aparece na tabela de Estratégias, e o card do lançamento mostra "Vendedor Sem Avaliação!"
+em vez do alerta antigo quando aplicável.
+
+100% frontend — sem alterações em `code.txt`, não precisa reimplantar o Apps Script.
+
 ## 2026-07-22 (parte 75) — Novo campo "Situação do imóvel" em Contatos
 
 Pedido do usuário: campo novo na etapa "O que essa pessoa quer comprar?" de `contatos.html`, antes

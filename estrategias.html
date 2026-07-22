@@ -769,10 +769,10 @@ function renderBlocosSegmentos_() {
     const corpo = r.aviso
       ? `<div class="vazio-segmento">${r.aviso}</div>`
       : `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
-          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Similaridade</th><th>Preço</th><th>Ação</th>
+          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Similaridade</th><th>Preço</th><th>Estoque</th><th>Ação</th>
         </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
           const item = r.papeis[papel];
-          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="5" style="color:var(--text3)">— não preenchido —</td><td></td></tr>`;
+          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="6" style="color:var(--text3)">— não preenchido —</td><td></td></tr>`;
           return `<tr>
             <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
             <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
@@ -780,6 +780,7 @@ function renderBlocosSegmentos_() {
             <td>${item.comp.toFixed(1)}</td>
             <td>${item.simil}%</td>
             <td>${fmtR$_(item.menorPreco)}</td>
+            <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
             <td><button class="btn-mini" onclick="verDetalhesItem_('${seg.replace(/'/g,"\\'")}','${papel}')">Detalhes</button></td>
           </tr>`;
         }).join('')}</tbody></table></div>`;

@@ -3642,8 +3642,17 @@ const ALERTAS_TRACAO = [
     bate: s => s.scoreVendedor >= 70 && s.trac >= 3 && (Number(s.e.prazoMaximo)||0) >= 24 && (Number(s.e.estoque)||0) <= 15,
   },
   {
+    // scoreVendedor = 0 significa "perfil ainda não avaliado" (ver
+    // pvSetBotaoScore_ em perfil-vendedor.js), não "avaliado como péssimo" —
+    // por isso esse cenário exige > 0 explicitamente, e vira um alerta
+    // separado (vendedor_sem_avaliacao, abaixo) em vez de "risco de
+    // qualidade" quando não há avaliação nenhuma ainda.
     id: 'risco_vendedor', tipo: 'negativo', titulo: '⚠️ Risco de Qualidade do Vendedor',
-    bate: s => s.scoreVendedor <= 30 && s.trac >= 3 && (Number(s.e.prazoMaximo)||0) >= 24 && (Number(s.e.estoque)||0) >= 20,
+    bate: s => s.scoreVendedor > 0 && s.scoreVendedor <= 30 && s.trac >= 3 && (Number(s.e.prazoMaximo)||0) >= 24 && (Number(s.e.estoque)||0) >= 20,
+  },
+  {
+    id: 'vendedor_sem_avaliacao', tipo: 'negativo', titulo: '⚠️ Vendedor Sem Avaliação!',
+    bate: s => s.scoreVendedor === 0 && s.trac >= 3 && (Number(s.e.prazoMaximo)||0) >= 24 && (Number(s.e.estoque)||0) >= 20,
   },
 ];
 function calcularAlertaTracao_(s) {

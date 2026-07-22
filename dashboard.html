@@ -2064,7 +2064,95 @@ async function carregarLancamentosDash() {
     if (vgVal) vgVal.textContent = empIds.size;
     if (vgSub) vgSub.textContent = total + ' tipologias cadastradas';
 
+    // Novos cards da Visão Geral (2026-07): Estoque Pronto, Tabela
+    // Desatualizada, Vendedor Sem Avaliação — todos derivados dos mesmos
+    // lançamentos já buscados acima.
+    await atualizarCardsVisaoGeralLancamentos_(lista);
+
   } catch(e) { /* silent */ }
+}
+
+// LANCAMENTOS tem 1 linha por unidade/tipologia — agrupa por idLancamento e
+// fica só com a 1ª ocorrência (status/statusTabela/estoque são os mesmos em
+// todas as linhas do mesmo empreendimento, preenchidos uma vez no cadastro).
+function agruparLancamentosPorEmpreendimentoDash_(lista) {
+  const mapa = {};
+  lista.forEach(l => {
+    const key = l.idLancamento || l.nomeEmpreendimento;
+    if (!mapa[key]) mapa[key] = l;
+  });
+  return Object.values(mapa).filter(e => e.statusAtivo !== 'Excluído');
+}
+
+// "Prontos" = já saiu da obra — mesmos 3 estágios que MAPA_ESTAGIO_ORDEM_
+// (lancamentos.html) trata como "adiante" de Em obras.
+const ESTAGIOS_PRONTOS_DASH_ = ['Pronto', 'Pronto novo', 'Entregue'];
+
+// Calcula os 3 cards novos e registra os detalhes em window._insightDetails
+// pra abrir em insight-detail.html (mesmo mecanismo de verInsight() já usado
+// pelos cards de Insights). scoreVendedor exige uma segunda chamada
+// (listarPerfisVendedor, autenticada) — as outras 2 métricas já vêm da
+// lista de lançamentos.
+async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
+  const emps = agruparLancamentosPorEmpreendimentoDash_(listaBruta);
+
+  // 1) Estoque Pronto — soma do estoque de empreendimentos já prontos/entregues.
+  const prontos = emps.filter(e => ESTAGIOS_PRONTOS_DASH_.includes(e.status));
+  const estoqueProntoTotal = prontos.reduce((s, e) => s + (parseInt(e.estoque) || 0), 0);
+  const valEstoque = document.getElementById('cardEstoqueProntosValue');
+  const subEstoque = document.getElementById('cardEstoqueProntosSub');
+  if (valEstoque) valEstoque.textContent = estoqueProntoTotal;
+  if (subEstoque) subEstoque.textContent = `em ${prontos.length} empreendimento${prontos.length !== 1 ? 's' : ''} pronto${prontos.length !== 1 ? 's' : ''}`;
+
+  // 2) Tabela Desatualizada — count de empreendimentos com statusTabela = Desatualizada.
+  const desatualizados = emps.filter(e => e.statusTabela === 'Desatualizada');
+  const valTabela = document.getElementById('cardTabelaDesatualizadaValue');
+  if (valTabela) valTabela.textContent = desatualizados.length;
+
+  // 3) Vendedor Sem Avaliação — score 0 (nunca avaliado; mesma convenção do
+  // resto do sistema: sem perfil cadastrado === score ausente === 0).
+  let semAvaliacao = [];
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listarPerfisVendedor&token=${encodeURIComponent(tokenSessao())}`);
+    const perfis = await resp.json();
+    const mapaScore = {};
+    if (Array.isArray(perfis)) perfis.forEach(p => { if (p.origemImovel === 'LANCAMENTOS' && p.codigo) mapaScore[p.codigo] = parseInt(p.scoreVendedor) || 0; });
+    semAvaliacao = emps.filter(e => (parseInt(mapaScore[e.idLancamento]) || 0) === 0);
+  } catch(e) {}
+  const valVend = document.getElementById('cardVendedorSemAvaliacaoValue');
+  if (valVend) valVend.textContent = semAvaliacao.length;
+
+  window._insightDetails = window._insightDetails || {};
+  window._insightDetails['insEstoqueProntos'] = {
+    title: 'Estoque pronto em empreendimentos entregues', icon: '🏗️', color: '#00d4aa', type: 'lancamentos',
+    items: prontos,
+  };
+  window._insightDetails['insTabelaDesatualizada'] = {
+    title: 'Empreendimentos com tabela de preços desatualizada', icon: '⚠️', color: '#ff5a5a', type: 'lancamentos',
+    items: desatualizados.map(e => ({ ...e, _tabelaStatus: 'Desatualizada' })),
+  };
+  window._insightDetails['insVendedorSemAvaliacao'] = {
+    title: 'Lançamentos com Vendedor Sem Avaliação', icon: '🏷️', color: '#f5a623', type: 'lancamentos',
+    items: semAvaliacao.map(e => ({ ...e, _scoreVendedor: 0 })),
+  };
+
+  ligarVerCardVG_('cardEstoqueProntos', 'insEstoqueProntos');
+  ligarVerCardVG_('cardTabelaDesatualizada', 'insTabelaDesatualizada');
+  ligarVerCardVG_('cardVendedorSemAvaliacao', 'insVendedorSemAvaliacao');
+}
+
+// Liga o botão "Ver →" de um card .vg-stat a um id de window._insightDetails
+// -- só aparece se houver itens (mesmo critério do card builder ic() usado
+// pelos cards de Insights).
+function ligarVerCardVG_(cardId, detId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  const btn = card.querySelector('.vg-stat-link');
+  if (!btn) return;
+  const d = window._insightDetails[detId];
+  const hasItems = d && d.items && d.items.length > 0;
+  if (hasItems) { btn.style.display = ''; btn.onclick = () => verInsight(detId); }
+  else { btn.style.display = 'none'; }
 }
 
 // Card "Revendas-Construtoras" na Visão Geral — mostra "atuais | novas",
@@ -2123,6 +2211,24 @@ function renderDados(json) {
       <div class="vg-stat-top"><span class="vg-stat-icon">🆕</span><span class="vg-stat-label">Novos imóveis</span></div>
       <div class="vg-stat-value" id="cardNovidadesValue" style="color:var(--accent2)">—</div>
       <div class="vg-stat-sub">novos/modificados</div>
+    </div>
+    <div class="vg-stat" id="cardEstoqueProntos">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🏗️</span><span class="vg-stat-label">Estoque pronto</span></div>
+      <div class="vg-stat-value" id="cardEstoqueProntosValue" style="color:var(--accent2)">—</div>
+      <div class="vg-stat-sub" id="cardEstoqueProntosSub">calculando...</div>
+      <button class="vg-stat-link" style="display:none;color:var(--accent2);background:rgba(0,212,170,.1);border-color:rgba(0,212,170,.25);font-family:inherit">Ver →</button>
+    </div>
+    <div class="vg-stat" id="cardTabelaDesatualizada">
+      <div class="vg-stat-top"><span class="vg-stat-icon">⚠️</span><span class="vg-stat-label">Tabela desatualizada</span></div>
+      <div class="vg-stat-value" id="cardTabelaDesatualizadaValue" style="color:#ff5a5a">—</div>
+      <div class="vg-stat-sub">empreendimentos</div>
+      <button class="vg-stat-link" style="display:none;color:#ff5a5a;background:rgba(255,90,90,.1);border-color:rgba(255,90,90,.25);font-family:inherit">Ver →</button>
+    </div>
+    <div class="vg-stat" id="cardVendedorSemAvaliacao">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🏷️</span><span class="vg-stat-label">Vendedor sem avaliação</span></div>
+      <div class="vg-stat-value" id="cardVendedorSemAvaliacaoValue" style="color:#f5a623">—</div>
+      <div class="vg-stat-sub">lançamentos</div>
+      <button class="vg-stat-link" style="display:none;color:#f5a623;background:rgba(245,158,35,.1);border-color:rgba(245,158,35,.25);font-family:inherit">Ver →</button>
     </div>`;
 
   // ── Matches
