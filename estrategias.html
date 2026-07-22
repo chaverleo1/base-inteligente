@@ -654,34 +654,40 @@ async function buscarModelosVendedores_() {
 // exclusiva desta página, não existe em lancamentos.html.
 // ═══════════════════════════════════════════════════════════════════════
 
-// Faixas A/B dentro de Médio e Alto Padrão, divididas pela MEDIANA do menor
-// preço observado na carteira atual (não são valores fixos em R$) -- se
-// ajusta sozinho conforme a base muda, sem precisar de tela de configuração
-// pra manter atualizada. Popular e Luxo ficam numa faixa única cada.
-const ORDEM_SEGMENTOS_ = ['Popular', 'Médio B', 'Médio A', 'Alto Padrão B', 'Alto Padrão A', 'Luxo'];
+// Faixas A/B/C dentro de CADA padrão (Popular, Médio, Alto Padrão, Luxo),
+// divididas em TERÇOS pelo menor preço observado na carteira atual (não são
+// valores fixos em R$) -- se ajusta sozinho conforme a base muda, sem
+// precisar de tela de configuração pra manter atualizada. A = terço mais
+// caro, C = terço mais barato (mesma convenção que já existia em Médio
+// A/Médio B, agora estendida pra 3 faixas em todo padrão).
+const ORDEM_SEGMENTOS_ = [
+  'Popular C', 'Popular B', 'Popular A',
+  'Médio C', 'Médio B', 'Médio A',
+  'Alto Padrão C', 'Alto Padrão B', 'Alto Padrão A',
+  'Luxo C', 'Luxo B', 'Luxo A',
+];
 
-function calcularFaixaPreco_(padrao, menorPreco, medianaPorPadrao) {
-  if (padrao !== 'Médio' && padrao !== 'Alto Padrão') return 'Única';
-  const mediana = medianaPorPadrao[padrao];
-  if (!mediana) return 'Única';
-  return menorPreco >= mediana ? 'A' : 'B';
+function calcularFaixaPreco_(padrao, menorPreco, cortesPorPadrao) {
+  const cortes = cortesPorPadrao[padrao];
+  if (!cortes) return 'B';
+  if (menorPreco >= cortes.p2) return 'A';
+  if (menorPreco >= cortes.p1) return 'B';
+  return 'C';
 }
 function segmentoDe_(padrao, faixa) {
-  if (padrao === 'Popular') return 'Popular';
-  if (padrao === 'Luxo') return 'Luxo';
   return `${padrao} ${faixa}`;
 }
 function organizarPorSegmento_(itens) {
   const porPadrao = {};
   itens.forEach(it => { (porPadrao[it.padrao] = porPadrao[it.padrao] || []).push(it.menorPreco); });
-  const medianaPorPadrao = {};
-  ['Médio', 'Alto Padrão'].forEach(p => {
+  const cortesPorPadrao = {};
+  Object.keys(porPadrao).forEach(p => {
     const vals = (porPadrao[p] || []).filter(v => v > 0).sort((a, b) => a - b);
-    if (vals.length) medianaPorPadrao[p] = vals[Math.floor(vals.length / 2)];
+    if (vals.length) cortesPorPadrao[p] = { p1: vals[Math.floor(vals.length / 3)], p2: vals[Math.floor(2 * vals.length / 3)] };
   });
   const porSegmento = {};
   itens.forEach(it => {
-    const faixa = calcularFaixaPreco_(it.padrao, it.menorPreco, medianaPorPadrao);
+    const faixa = calcularFaixaPreco_(it.padrao, it.menorPreco, cortesPorPadrao);
     const seg = segmentoDe_(it.padrao, faixa);
     (porSegmento[seg] = porSegmento[seg] || []).push(it);
   });
@@ -1035,9 +1041,10 @@ function csvEscapar_(v) {
 function montarLinhasCsvSegmento_(seg) {
   const r = _resultadosPorSegmento[seg];
   if (!r || r.aviso) return [];
-  const [padraoNome, faixaNome] = seg.includes(' ') && (seg.startsWith('Médio') || seg.startsWith('Alto'))
-    ? [seg.slice(0, seg.lastIndexOf(' ')), seg.slice(seg.lastIndexOf(' ') + 1)]
-    : [seg, 'Única'];
+  // Todo segmento agora é "Padrão Letra" (ex: "Popular C", "Alto Padrão A") --
+  // a última palavra é sempre a faixa, mesmo em padrões com espaço no nome.
+  const ultimoEspaco = seg.lastIndexOf(' ');
+  const [padraoNome, faixaNome] = ultimoEspaco > -1 ? [seg.slice(0, ultimoEspaco), seg.slice(ultimoEspaco + 1)] : [seg, ''];
   return ORDEM_PAPEIS_.filter(p => r.papeis[p]).map(papel => {
     const item = r.papeis[papel];
     const e = item.e;

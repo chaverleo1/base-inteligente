@@ -1,5 +1,38 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 86) — Estratégias: 3 faixas de preço (A/B/C) em todo padrão, não só Médio/Alto
+
+Pedido do usuário: em vez de só Médio e Alto Padrão terem faixa de preço (A/B, dividido pela
+mediana), Popular e Luxo também passam a ter faixas — e todos os 4 padrões (Popular, Médio, Alto
+Padrão, Luxo) ganham 3 faixas (A/B/C) em vez de 2. Confirmado com o usuário: **A = terço mais caro,
+C = terço mais barato** (mesma convenção que já existia em Médio A/Médio B, só estendida).
+
+`organizarPorSegmento_` agora calcula os cortes por TERÇOS (não mais mediana) do menor preço, pra
+QUALQUER padrão presente no pool (antes só rodava pra Médio/Alto Padrão) — `cortesPorPadrao[padrao] =
+{ p1, p2 }` (p1 = corte do 1º terço, p2 = corte do 2º terço). `calcularFaixaPreco_` deixou de ter
+caso especial "Popular/Luxo sempre Única" — todo padrão vira C/B/A. `segmentoDe_` simplificou pra
+sempre `"${padrao} ${faixa}"`. `ORDEM_SEGMENTOS_` passou de 6 pra 12 segmentos: `Popular C/B/A, Médio
+C/B/A, Alto Padrão C/B/A, Luxo C/B/A` (ordem crescente de preço preservada, então a Âncora Superior —
+que pega o "segmento acima" na lista — continua puxando do próximo terço mais caro corretamente,
+inclusive na virada de padrão, ex: Popular A → Médio C).
+
+`montarLinhasCsvSegmento_` (exportação CSV/prompt IA) generalizou o parsing do nome do segmento —
+antes só reconhecia sufixo A/B em "Médio"/"Alto"; agora qualquer segmento é "Padrão Letra" e a
+extração usa a última palavra como faixa, funcionando pra Popular/Luxo também.
+
+Só afeta o modo campanha (blocos por segmento); o modo cliente (`?cliente=CTT-NNN`) não organiza por
+faixa de preço (usa o padrão único do cadastro do cliente) e não foi tocado.
+
+Testado: `test_mix_estrategico.js` e `test_abas_situacao.js` reescritos pra extrair as funções direto
+de `estrategias.html` (em vez de manter uma cópia manual em rascunho, que já tinha ficado
+desatualizada duas vezes nesta sessão) — cobrem os 12 segmentos, corte por terços, fallback sem
+dados, e a separação NOVOS/NA PLANTA continua correta com a nova contagem de segmentos. Verificado ao
+vivo no navegador: 12 blocos de segmento aparecem com o rótulo certo, filtro de padrão isola só os 3
+do padrão escolhido, e o CSV exporta `padrao_campanha`/`faixa_campanha` corretos pra um segmento de
+nome composto ("Alto Padrão B").
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 85) — Tabelas ordenáveis em insight-detail.html (novo padrão pra toda tabela)
 
 Pedido do usuário: clicar no nome do cabeçalho de uma tabela ordena os dados — do maior pro menor em
