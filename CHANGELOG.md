@@ -1,5 +1,57 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 74) — Novo módulo ESTRATÉGIAS: Mix de 7 ofertas + Tráfego Pago
+
+Usuário compartilhou um estudo ("MODULO_ESTRATEGIAS_Especificacao.txt", feito por uma IA MENTORA
+externa) propondo um módulo novo de Estratégias. Boa parte do estudo redefinia conceitos já
+construídos e validados nesta sessão com dado real (Modelo Vendedor, Nota de Similaridade, Score
+de Tração, schema de MODELOS_VENDEDORES) de forma DIFERENTE e conflitante — inclusive citando o
+conceito "Indicador de Aceitação" que o usuário já tinha mandado abandonar. Combinado com o
+usuário: implementar só as partes genuinamente novas (Mix Estratégico de 7 papéis, Estratégias de
+Tráfego Pago, exportação pra IA de Campanhas), reaproveitando o Score de Tração/Similaridade/
+Padrão Vendedor/Modelos Vendedores já existentes — sem recriar essas fórmulas do zero.
+
+**Nova página `estrategias.html`** (Subseção B — Tráfego Pago, primeira fase acordada; Subseção A —
+Clientes fica pra depois):
+
+- **Faixas de preço dinâmicas** — em vez de uma aba CONFIGURACOES com valores fixos em R$ (como o
+  estudo sugeria), Médio e Alto Padrão são divididos em Faixa A/B pela MEDIANA do menor preço da
+  carteira atual (`organizarPorSegmento_`/`calcularFaixaPreco_`) — se ajusta sozinho conforme a
+  base muda. Popular e Luxo ficam numa faixa única cada. 6 segmentos ao todo: Popular, Médio B/A,
+  Alto Padrão B/A, Luxo (`ORDEM_SEGMENTOS_`).
+- **Mix Estratégico de 7 papéis** (`selecionarMixEstrategico_`) — por segmento: ISCA/ÂNCORA
+  INFERIOR (menor preço), ALVO 1-2-3 (maior Score de Tração), COMPLEMENTAR (melhor Tração de Tipo
+  de Imóvel diferente do Alvo Primário, ou o melhor restante), ÂNCORA SUPERIOR (menor preço do
+  segmento imediatamente acima, sem consumir produto do segmento atual). Mínimo de 5 produtos com
+  Score de Tração > 0 pro mix funcionar — abaixo disso, aviso claro em vez de mix incompleto
+  silencioso.
+- **Score de Cobertura do Mix** (`calcularCoberturaMix_`, semáforo 🟢/🟡/🔴) — mede papéis
+  preenchidos, quantos com Tração ≥6, presença das duas âncoras, diversidade de construtoras.
+- **Exportação CSV + prompt pra IA de Campanhas** (`exportarCSV_`/`montarPromptEstrategia_`) — CSV
+  com só campos que o sistema realmente tem (sem inventar colunas tipo VSO/margem_estimada/
+  tem_decorado que o estudo sugeria mas não existem na base), botão "🤖 Enviar para IA de
+  Campanhas" abre modal com prompt completo + CSV, pronto pra copiar e colar numa conversa com
+  Claude/ChatGPT.
+- **Nav "Estratégias"** adicionado em todas as páginas do sistema (10 arquivos).
+
+**Duplicação deliberada do motor de cálculo** — `estrategias.html` tem sua própria cópia das
+funções de Score de Tração/Similaridade/Padrão Vendedor (mesmas de `lancamentos.html`), em vez de
+extrair pra um arquivo compartilhado: `lancamentos.html` está em produção sendo validado com dado
+real agora, e um refactor grande ali tinha risco desnecessário pra esta entrega. Mitigação: criado
+`test_paridade_motor_estrategias.js` (scratchpad da sessão), que roda as duas cópias com os mesmos
+dados e compara resultado — já pegou 1 divergência real (texto de `observacao` diferente entre os
+dois arquivos) antes de ir pro ar. Qualquer mudança futura de critério precisa espelhar nas duas
+cópias e rodar esse teste.
+
+Testado em Node: lógica de faixas/segmentação, seleção dos 7 papéis (grupo válido, grupo pequeno
+demais com aviso, preenchimento sem duplicar produto, Complementar com/sem tipo diferente
+disponível, Âncora Superior puxando do segmento de cima), Score de Cobertura, e paridade completa
+do motor duplicado. Testado ao vivo no navegador com fetch mockado: página carrega, filtro por
+Padrão funciona, blocos renderizam com os 7 papéis, exportação CSV gera arquivo bem formado, modal
+de exportação mostra prompt+CSV corretos.
+
+100% frontend — sem alterações em `code.txt`, não precisa reimplantar o Apps Script.
+
 ## 2026-07-21 (parte 73) — Bug: previsaoEntrega em formato ISO travava a classificação inteira
 
 Usuário reportou: 3 obras já entregues ("Pronto novo"), com Data de Entrega preenchida e % vendido

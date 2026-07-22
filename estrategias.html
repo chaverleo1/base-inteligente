@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estratégias — BASE INTELIGENTE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --bg:        #0f1117;
+  --surface:   #181c27;
+  --surface2:  #1e2335;
+  --surface3:  #242840;
+  --border:    #2a3050;
+  --border2:   #343d60;
+  --accent:    #4f7cff;
+  --accent2:   #00d4aa;
+  --amber:     #f59e0b;
+  --coral:     #ff6b6b;
+  --danger:    #ff6b6b;
+  --text:      #e8ecf4;
+  --text2:     #8892aa;
+  --text3:     #4a5470;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+a { text-decoration: none; color: inherit; }
+
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: -.3px; flex-shrink:0; }
+.logo span { color: var(--text2); font-weight: 400; }
+.nav-tabs { display: flex; background: var(--bg); border-radius: 8px; padding: 3px; gap: 2px;
+            overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; min-width:0; }
+.nav-tabs::-webkit-scrollbar { display:none; }
+.nav-tab { padding: 6px 16px; border-radius: 6px; border: none; background: transparent; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .2s; font-family: 'Inter', sans-serif; text-decoration: none; display: inline-block; flex-shrink:0; }
+.nav-tab.active { background: var(--accent); color: #fff; }
+.refresh-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:13px;font-weight:500;padding:6px 14px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;flex-shrink:0}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+@media (max-width:640px) {
+  .header { padding:12px 14px; gap:8px; }
+  .logo { font-size:13px; }
+  .nav-tab { padding:6px 11px; font-size:12px; }
+}
+
+.main { max-width: 1200px; margin: 0 auto; padding: 28px 24px 80px; }
+
+.sec-header { margin-bottom: 18px; }
+.sec-title { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; }
+.sec-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+.filtro-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+.filtro-chip {
+  padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s;
+}
+.filtro-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.filtro-chip:hover:not(.on) { border-color: var(--border2); color: var(--text); }
+
+.segmento-block {
+  margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.segmento-header {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.segmento-titulo { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.segmento-sub { font-size: 11px; color: var(--text3); }
+.segmento-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn-mini {
+  padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-mini:hover { border-color: var(--accent); color: var(--text); }
+.cobertura-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+.cobertura-forte    { background: rgba(0,212,170,.15); color: var(--accent2); }
+.cobertura-adequado { background: rgba(245,158,11,.15); color: var(--amber); }
+.cobertura-fraco     { background: rgba(255,107,107,.15); color: var(--coral); }
+
+.mapa-wrap { overflow-x: auto; }
+.mapa-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+.mapa-tabela th, .mapa-tabela td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.mapa-tabela th { background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+.mapa-tabela tbody tr:hover { background: var(--surface2); }
+.papel-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+.papel-ISCA         { background: rgba(79,124,255,.15); color: var(--accent); }
+.papel-ANCORA_INF   { background: rgba(136,146,170,.15); color: var(--text2); }
+.papel-ALVO_1       { background: rgba(0,212,170,.18); color: var(--accent2); }
+.papel-ALVO_2, .papel-ALVO_3 { background: rgba(0,212,170,.1); color: var(--accent2); }
+.papel-ANCORA_SUP   { background: rgba(245,158,11,.15); color: var(--amber); }
+.papel-COMPLEMENTAR { background: rgba(167,139,250,.15); color: #a78bfa; }
+.vazio-segmento { padding: 30px 18px; text-align: center; color: var(--text3); font-size: 13px; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(15,17,23,.85); z-index: 9500;
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; width: 100%; max-width: 720px; max-height: 85vh; display: flex; flex-direction: column;
+}
+.modal-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+.modal-textarea {
+  flex: 1; min-height: 320px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 11px; font-family: monospace;
+  padding: 12px; outline: none; resize: vertical; white-space: pre-wrap;
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 14px; justify-content: flex-end; }
+.btn-extrair {
+  padding: 10px 20px; border-radius: var(--radius-sm); background: var(--accent);
+  color: #fff; border: none; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all .18s;
+}
+.btn-extrair:hover { background: #3d6aee; }
+.btn-sec {
+  padding: 10px 16px; border-radius: var(--radius-sm); background: var(--surface2);
+  color: var(--text2); border: 1px solid var(--border); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all .15s;
+}
+.btn-sec:hover { border-color: var(--border2); color: var(--text); }
+
+.login-overlay {
+  position: fixed; inset: 0; background: rgba(15,17,23,.96);
+  display: flex; align-items: center; justify-content: center; z-index: 9000;
+}
+.login-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; width: 340px; }
+.login-title { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.login-sub { font-size: 13px; color: var(--text3); margin-bottom: 24px; line-height: 1.5; }
+.login-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); color: var(--text); font-size: 14px;
+  font-family: 'Inter', sans-serif; padding: 11px 14px; outline: none;
+  margin-bottom: 12px; transition: border .2s;
+}
+.login-input:focus { border-color: var(--accent); }
+.btn-login { width: 100%; padding: 12px; border-radius: var(--radius-xs); background: var(--accent); color: #fff; border: none; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
+.btn-login:disabled { opacity: .6; cursor: default; }
+.login-erro { font-size: 12px; color: var(--coral); margin-top: 8px; text-align: center; }
+
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: var(--surface3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 12px 18px; font-size: 13px;
+  transform: translateY(120%); opacity: 0; transition: all .25s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.ok   { border-left: 3px solid var(--accent2); }
+.toast.erro { border-left: 3px solid var(--coral); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-title">BASE INTELIGENTE</div>
+    <div class="login-sub">Acesse com sua senha para continuar.</div>
+    <input class="login-input" type="password" id="login-senha" placeholder="Senha de acesso" onkeydown="if(event.key==='Enter')entrar()">
+    <button class="btn-login" id="btn-login" onclick="entrar()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="logo">BASE <span>INTELIGENTE</span></div>
+  <div class="nav-tabs">
+    <a href="contatos.html"    class="nav-tab">Contatos</a>
+    <a href="dashboard.html"   class="nav-tab">Dashboard</a>
+    <a href="busca.html"       class="nav-tab">Busca Aberta</a>
+    <a href="lancamentos.html" class="nav-tab">Lançamentos</a>
+    <a href="estrategias.html" class="nav-tab active">Estratégias</a>
+    <a href="revendas-lista.html" class="nav-tab">Revendas</a>
+    <a href="revendas-construtoras.html" class="nav-tab">Revendas-Construtoras</a>
+    <a href="dashboard.html?secao=baseimob"   class="nav-tab">BaseImob</a>
+    <a href="leads-imobzi.html"   class="nav-tab">Leads Imobzi</a>
+    <a href="dashboard.html?secao=adm"   class="nav-tab">ADM</a>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+    <button class="refresh-btn" onclick="sair()"
+      onmouseover="this.style.borderColor='#ff5a5a';this.style.color='#ff5a5a'"
+      onmouseout="this.style.borderColor='transparent';this.style.color='var(--text3)'"
+      style="border-color:transparent;color:var(--text3)">Sair</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sec-header">
+    <div class="sec-title">🎯 Estratégias de Tráfego Pago</div>
+    <div class="sec-sub">Mix estratégico de 7 ofertas por Padrão/Faixa de preço — calculado ao vivo a partir do Score de Tração e Similaridade já usados em Lançamentos. Nenhum dado novo é gravado aqui.</div>
+  </div>
+
+  <div class="filtro-bar" id="filtroPadrao"></div>
+
+  <div id="blocosSegmentos">
+    <div class="vazio-segmento">Carregando...</div>
+  </div>
+</div>
+
+<!-- MODAL EXPORTAÇÃO -->
+<div class="modal-overlay" id="modalExport">
+  <div class="modal-box">
+    <div class="modal-title" id="modalExportTitulo">Exportar Estratégia</div>
+    <div class="modal-sub">Copie o conteúdo abaixo (prompt + CSV) e cole numa conversa com a IA de sua escolha (Claude, ChatGPT, etc.) pra gerar o briefing de campanha.</div>
+    <textarea class="modal-textarea" id="modalExportTexto" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn-sec" onclick="fecharModalExport_()">Fechar</button>
+      <button class="btn-extrair" onclick="copiarModalExport_()">📋 Copiar tudo</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+const SESS_KEY       = 'bi_session';
+const SESS_TOKEN_KEY = 'bi_session_token';
+const USER_EMAIL = 'chaverleo@gmail.com';
+
+function tokenSessao() { return sessionStorage.getItem(SESS_TOKEN_KEY) || ''; }
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') { sessionStorage.removeItem(SESS_KEY); sessionStorage.removeItem(SESS_TOKEN_KEY); document.getElementById('login-overlay').style.display = 'flex'; return true; }
+  return false;
+}
+async function sha256(txt) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+async function verificarAuth() {
+  if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) fecharLogin();
+}
+async function entrar() {
+  const senha = document.getElementById('login-senha').value.trim();
+  const btn   = document.getElementById('btn-login');
+  const erro  = document.getElementById('login-erro');
+  if (!senha) return;
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  erro.textContent = '';
+  try {
+    const hash = await sha256(senha);
+    const r = await fetch(`${WEBHOOK_URL}?acao=verificar_senha&email=${encodeURIComponent(USER_EMAIL)}&hash=${hash}`);
+    const j = await r.json();
+    if (j.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); sessionStorage.setItem(SESS_TOKEN_KEY, j.token); fecharLogin(); carregarEstrategias(); }
+    else { erro.textContent = 'Senha incorreta.'; btn.textContent = 'Entrar'; btn.disabled = false; }
+  } catch { erro.textContent = 'Erro de conexão.'; btn.textContent = 'Entrar'; btn.disabled = false; }
+}
+function fecharLogin() { document.getElementById('login-overlay').style.display = 'none'; }
+function sair() {
+  sessionStorage.removeItem(SESS_KEY);
+  sessionStorage.removeItem(SESS_TOKEN_KEY);
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+let _tt;
+function mostrarToast(msg, tipo = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${tipo} show`;
+  clearTimeout(_tt); _tt = setTimeout(() => t.classList.remove('show'), 3800);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MOTOR DE TRAÇÃO/SIMILARIDADE/PADRÃO VENDEDOR — cópia funcional de
+// lancamentos.html (mesmas funções, mesmo comportamento). Duplicado de
+// propósito em vez de extraído pra um arquivo compartilhado: lancamentos.html
+// já está em produção sendo validado com dado real, e um refactor grande
+// ali agora tinha risco alto sem necessidade imediata. Ver
+// test_paridade_motor_estrategias.js (scratchpad da sessão que criou este
+// arquivo) pro teste que comparava as duas cópias linha a linha na hora da
+// criação -- se qualquer critério de Score de Tração/Similaridade/Padrão
+// Vendedor mudar num arquivo, precisa espelhar aqui também.
+// ═══════════════════════════════════════════════════════════════════════
+const MESES_ABREV_NUM_ = { jan:1, fev:2, mar:3, abr:4, mai:5, jun:6, jul:7, ago:8, set:9, out:10, nov:11, dez:12 };
+
+function agruparPorEmpreendimento_(lista) {
+  const mapa = {};
+  for (const l of lista) {
+    const key = l.idLancamento || l.nomeEmpreendimento;
+    if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
+    mapa[key].unidades.push(l);
+  }
+  return Object.values(mapa);
+}
+
+function mediaCampoUnidades_(unidades, campo) {
+  const vals = (unidades || []).map(u => Number(u[campo]) || 0).filter(v => v > 0);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
+
+function tipoImovelDominante_(unidades) {
+  const cont = {};
+  (unidades || []).forEach(u => {
+    const t = String(u.tipo || '').trim();
+    if (t) cont[t] = (cont[t] || 0) + 1;
+  });
+  let melhor = '', max = 0;
+  Object.keys(cont).forEach(t => { if (cont[t] > max) { max = cont[t]; melhor = t; } });
+  return melhor;
+}
+
+function scoreFaixa_(valor, min, max) {
+  min = Number(min); max = Number(max);
+  if (!valor || !(min > 0) || !(max > 0)) return null;
+  if (valor >= min && valor <= max) return 100;
+  const fora = valor < min ? (min - valor) / min : (valor - max) / max;
+  return Math.max(0, Math.round(100 * (1 - fora)));
+}
+
+function scoreLazer_(lazerEmp, lazerComumModelo) {
+  const itens = String(lazerComumModelo || '').split(/[;,]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  if (!itens.length) return null;
+  const texto = String(lazerEmp || '').toLowerCase();
+  const bateu = itens.filter(it => texto.includes(it)).length;
+  return Math.round((bateu / itens.length) * 100);
+}
+
+function parseDataFlexivelParaDate_(v) {
+  v = String(v || '').trim();
+  const m1 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m1) return new Date(+m1[3], +m1[2] - 1, +m1[1]);
+  const m3 = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m3) return new Date(+m3[1], +m3[2] - 1, +m3[3]);
+  const m2 = v.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
+  if (m2) return new Date(+m2[2], MESES_ABREV_NUM_[m2[1].toLowerCase()] - 1, 1);
+  return null;
+}
+
+function parseDataHistoricoLinha_(str) {
+  const partes = String(str || '').split(/[\s\/]+/);
+  const dia = parseInt(partes[0], 10), mes = parseInt(partes[1], 10) - 1, ano = parseInt(partes[2], 10);
+  if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return null;
+  return new Date(ano, mes, dia);
+}
+
+function acharDataCruzamentoEstoque_(historicoEstoqueJson, totalUnidades, limiarPct) {
+  let hist;
+  try { hist = JSON.parse(historicoEstoqueJson || '[]'); } catch (_) { return null; }
+  if (!Array.isArray(hist) || !hist.length || !totalUnidades) return null;
+  for (const ponto of hist) {
+    const valor = Number(ponto.valor);
+    if (isNaN(valor)) continue;
+    const pctNessePonto = Math.round(((totalUnidades - valor) / totalUnidades) * 100);
+    if (pctNessePonto < limiarPct) continue;
+    const data = parseDataHistoricoLinha_(ponto.data);
+    if (data) return data;
+  }
+  return null;
+}
+
+function calcularTempoObraEntreDatas_(dataLancamentoStr, previsaoEntregaStr) {
+  if (!dataLancamentoStr || !previsaoEntregaStr) return null;
+  const inicio = parseDataFlexivelParaDate_(dataLancamentoStr);
+  const fim    = parseDataFlexivelParaDate_(previsaoEntregaStr);
+  if (!inicio || !fim) return null;
+  return (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
+}
+
+function calcularSobraSuspeita_(e, total, pctVendido) {
+  if (pctVendido < 80) return false;
+  const dataEntrega = parseDataFlexivelParaDate_(e.previsaoEntrega);
+  if (!dataEntrega) return false;
+  const dataCruzou80 = acharDataCruzamentoEstoque_(e.historicoEstoque, total, 80);
+  if (!dataCruzou80) return false;
+  const diasApos = Math.floor((dataCruzou80 - dataEntrega) / 86400000);
+  return diasApos > 730;
+}
+
+function avaliarPadraoVendedorAoVivo_(e) {
+  const totalUnidades = Number(e.totalUnidades) || 0;
+  const estoque       = Number(e.estoque) || 0;
+  if (!totalUnidades) return null;
+  const pctVendido = Math.round(((totalUnidades - estoque) / totalUnidades) * 100);
+  if (pctVendido < 70) return null;
+  const dataEntrega    = parseDataFlexivelParaDate_(e.previsaoEntrega);
+  const dataLancamento = parseDataFlexivelParaDate_(e.dataLancamento);
+  if (!dataEntrega) return null;
+  let hist;
+  try { hist = JSON.parse(e.historicoEstoque || '[]'); } catch (_) { hist = []; }
+  if (!Array.isArray(hist) || !hist.length) return null;
+  const hoje = new Date();
+  const dataCruzou70  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 70)  || (pctVendido >= 70  ? hoje : null);
+  const dataCruzou80  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 80)  || (pctVendido >= 80  ? hoje : null);
+  const dataCruzou90  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 90)  || (pctVendido >= 90  ? hoje : null);
+  const dataCruzou100 = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 100) || (pctVendido >= 100 ? hoje : null);
+  const primeiraData  = hist[0].data || '';
+  if (dataCruzou100 && dataCruzou100 <= dataEntrega && dataLancamento) {
+    const umAnoAposLancamento = new Date(dataLancamento.getTime());
+    umAnoAposLancamento.setFullYear(umAnoAposLancamento.getFullYear() + 1);
+    if (dataCruzou100 <= umAnoAposLancamento) return { classificacao: 'EXTREMO', pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
+  if (dataCruzou90 && dataCruzou90 <= dataEntrega) return { classificacao: 'FORTE', pctVendido, dataPrimeiroEstoque: primeiraData };
+  if (dataCruzou70 && dataCruzou70 <= dataEntrega) return { classificacao: 'POTENCIAL', pctVendido, dataPrimeiroEstoque: primeiraData };
+  if (dataCruzou80 && dataCruzou80 > dataEntrega) {
+    const diasApos80 = Math.floor((dataCruzou80 - dataEntrega) / 86400000);
+    if (diasApos80 <= 365) return { classificacao: 'MODERADO', pctVendido, dataPrimeiroEstoque: primeiraData };
+    if (diasApos80 > 730) return { classificacao: 'SOBRA SUSPEITA', pctVendido, dataPrimeiroEstoque: primeiraData, apenasAlerta: true };
+  }
+  return null;
+}
+
+function construirModelosVendedoresDinamicos_(empsBrutos) {
+  const qualificados = [];
+  (empsBrutos || []).forEach(e => {
+    const resultado = avaliarPadraoVendedorAoVivo_(e);
+    if (!resultado || resultado.apenasAlerta) return;
+    const tipoImovel = tipoImovelDominante_(e.unidades);
+    if (!e.tipoEmpreendimento || !tipoImovel || !e.padrao) return;
+    qualificados.push({ e, tipoImovel });
+  });
+  const grupos = {};
+  qualificados.forEach(({ e, tipoImovel }) => {
+    const key = `${e.tipoEmpreendimento}||${tipoImovel}||${e.padrao}`;
+    (grupos[key] = grupos[key] || []).push({ e, tipoImovel });
+  });
+  const modelos = [];
+  Object.keys(grupos).forEach(key => {
+    const membros = grupos[key];
+    if (membros.length < 3) return;
+    const [tipoEmpreendimento, tipoImovel, tipoPadrao] = key.split('||');
+    const unidadesDoTipo = [];
+    membros.forEach(({ e }) => { (e.unidades || []).forEach(u => { if (String(u.tipo || '') === tipoImovel) unidadesDoTipo.push(u); }); });
+    const areaUteis  = unidadesDoTipo.map(u => Number(u.areaUtil)   || 0).filter(v => v > 0);
+    const quartosArr = unidadesDoTipo.map(u => Number(u.quartos)    || 0).filter(v => v > 0);
+    const precos     = unidadesDoTipo.map(u => Number(u.precoMedio) || 0).filter(v => v > 0);
+    const temposObra = membros.map(({ e }) => calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega)).filter(v => v !== null);
+    const contagemLazer = {};
+    membros.forEach(({ e }) => { String(e.lazer || '').split(',').map(s => s.trim()).filter(Boolean).forEach(item => { contagemLazer[item] = (contagemLazer[item] || 0) + 1; }); });
+    const lazerComum = Object.keys(contagemLazer).filter(item => contagemLazer[item] / membros.length > 0.5).join(';');
+    const slug = key.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+    modelos.push({
+      idModelo: 'AUTO-' + slug,
+      nomeModelo: `${tipoEmpreendimento} ${tipoPadrao} — ${tipoImovel} (auto)`,
+      dataCriacao: '', criadoPor: 'AUTO_CLUSTER',
+      tipoEmpreendimento, tipoPadrao, tipoImovel,
+      qtdEmpreendimentosBase: membros.length,
+      idsEmpreendimentosBase: membros.map(({ e }) => e.idEmpreendimento).filter(Boolean).join(';'),
+      faixaAreaUtilMin: areaUteis.length ? Math.min(...areaUteis) : '',
+      faixaAreaUtilMax: areaUteis.length ? Math.max(...areaUteis) : '',
+      faixaQuartosMin: quartosArr.length ? Math.min(...quartosArr) : '',
+      faixaQuartosMax: quartosArr.length ? Math.max(...quartosArr) : '',
+      faixaPrecoMedioMin: precos.length ? Math.min(...precos) : '',
+      faixaPrecoMedioMax: precos.length ? Math.max(...precos) : '',
+      faixaTempoObraMin: temposObra.length ? Math.min(...temposObra) : '',
+      faixaTempoObraMax: temposObra.length ? Math.max(...temposObra) : '',
+      lazerComum, criteriosComparacao: '{}',
+      observacao: `Gerado automaticamente a partir de ${membros.length} empreendimentos com Padrão Vendedor (EXTREMO/FORTE/POTENCIAL/MODERADO).`,
+    });
+  });
+  return modelos;
+}
+
+function mesclarModelosVendedores_(importados, dinamicos) {
+  const chaves = new Set((importados || []).map(m => `${m.tipoEmpreendimento}||${m.tipoImovel}||${m.tipoPadrao}`));
+  const dinamicosSemSobreposicao = (dinamicos || []).filter(m => !chaves.has(`${m.tipoEmpreendimento}||${m.tipoImovel}||${m.tipoPadrao}`));
+  return [...(importados || []), ...dinamicosSemSobreposicao];
+}
+
+function calcularSimilaridadeModelo_(e, modelos) {
+  const tipoEmp = String(e.tipoEmpreendimento || '').toLowerCase();
+  if (!tipoEmp) return null;
+  let cand = (modelos || []).filter(m => String(m.tipoEmpreendimento || '').toLowerCase() === tipoEmp);
+  if (!cand.length) return null;
+  const tipoImovel = tipoImovelDominante_(e.unidades).toLowerCase();
+  if (tipoImovel) {
+    const porTipoImovel = cand.filter(m => String(m.tipoImovel || '').toLowerCase() === tipoImovel);
+    if (porTipoImovel.length) cand = porTipoImovel;
+  }
+  const padrao = String(e.padrao || '').toLowerCase();
+  if (padrao) {
+    const porPadrao = cand.filter(m => String(m.tipoPadrao || '').toLowerCase() === padrao);
+    if (porPadrao.length) cand = porPadrao;
+  }
+  const areaUtilMedia   = mediaCampoUnidades_(e.unidades, 'areaUtil');
+  const quartosMedia    = mediaCampoUnidades_(e.unidades, 'quartos');
+  const precoMedioMedia = mediaCampoUnidades_(e.unidades, 'precoMedio');
+  const tempoObra       = calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega);
+  let melhor = null;
+  cand.forEach(m => {
+    let pesos;
+    try { pesos = JSON.parse(m.criteriosComparacao || '{}'); } catch (_) { pesos = {}; }
+    const dims = [
+      { peso: pesos.pesoAreaUtil   ?? 0.3,  score: scoreFaixa_(areaUtilMedia, m.faixaAreaUtilMin, m.faixaAreaUtilMax) },
+      { peso: pesos.pesoQuartos    ?? 0.15, score: scoreFaixa_(quartosMedia, m.faixaQuartosMin, m.faixaQuartosMax) },
+      { peso: pesos.pesoPrecoMedio ?? 0.3,  score: scoreFaixa_(precoMedioMedia, m.faixaPrecoMedioMin, m.faixaPrecoMedioMax) },
+      { peso: pesos.pesoTempoObra  ?? 0.15, score: tempoObra !== null ? scoreFaixa_(tempoObra, m.faixaTempoObraMin, m.faixaTempoObraMax) : null },
+      { peso: pesos.pesoLazer      ?? 0.1,  score: scoreLazer_(e.lazer, m.lazerComum) },
+    ].filter(d => d.score !== null);
+    if (!dims.length) return;
+    const pesoTotal = dims.reduce((s, d) => s + d.peso, 0) || 1;
+    const nota = Math.round(dims.reduce((s, d) => s + d.score * d.peso, 0) / pesoTotal);
+    if (!melhor || nota > melhor.nota) melhor = { nota, modelo: m };
+  });
+  if (!melhor) return null;
+  return { simil: melhor.nota, modeloRef: melhor.modelo };
+}
+
+function calcularSimilaridadePadrao_(e, padroes, modelos) {
+  const total   = Number(e.totalUnidades) || 0;
+  const estoque = Number(e.estoque) || 0;
+  if (total === 0) return { simil: 0, isSobraSuspeita: false, modeloRef: null };
+  const pctVendido  = ((total - estoque) / total) * 100;
+  const isSobraSuspeita = calcularSobraSuspeita_(e, total, pctVendido);
+  if (modelos && modelos.length) {
+    const resultado = calcularSimilaridadeModelo_(e, modelos);
+    if (resultado) return { simil: resultado.simil, isSobraSuspeita, modeloRef: resultado.modeloRef };
+    return { simil: 0, isSobraSuspeita, modeloRef: null };
+  }
+  const tipoPadrao = String(e.padrao || '').toLowerCase();
+  const candidatos = (padroes || []).filter(p => String(p.tipoPadrao || '').toLowerCase() === tipoPadrao && p.classificacao !== 'SOBRA SUSPEITA');
+  let refPct = 80;
+  if (candidatos.length) refPct = Math.max(...candidatos.map(p => Number(p.pctVendido) || 80));
+  const pctDim = Math.min(pctVendido / Math.max(refPct, 1), 1);
+  let timeDim = 0.5;
+  try {
+    const hist = JSON.parse(e.historicoEstoque || '[]');
+    if (Array.isArray(hist) && hist.length > 0) {
+      const partes = (hist[0].data || '').split(/[\s\/]+/);
+      const d = parseInt(partes[0], 10), m = parseInt(partes[1], 10) - 1, y = parseInt(partes[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        const dias = Math.max(1, Math.floor((Date.now() - new Date(y, m, d)) / 86400000));
+        timeDim = Math.min((pctVendido / dias) * 365 / Math.max(refPct, 1), 1);
+      }
+    }
+  } catch(_) {}
+  const simil = Math.round((pctDim * 0.6 + timeDim * 0.4) * 100);
+  return { simil, isSobraSuspeita, modeloRef: null };
+}
+
+const TRACAO_TETO_PRAZO_MESES = { 'Condomínio Vertical': 36, 'Condomínio Horizontal': 240 };
+function calcularPrazoScoreTracao_(prazo, tipoEmpreendimento) {
+  if (prazo <= 0) return 0;
+  const teto = TRACAO_TETO_PRAZO_MESES[tipoEmpreendimento] || TRACAO_TETO_PRAZO_MESES['Condomínio Vertical'];
+  return Math.min(10, 10 * (prazo / teto));
+}
+const TRACAO_TETO_DISP_ESTOQUE = { 'Condomínio Vertical': 150, 'Condomínio Horizontal': 300 };
+function calcularDispScoreTracao_(estoque, tipoEmpreendimento) {
+  if (estoque <= 0) return 0;
+  const teto = TRACAO_TETO_DISP_ESTOQUE[tipoEmpreendimento] || TRACAO_TETO_DISP_ESTOQUE['Condomínio Vertical'];
+  return Math.min(10, 10 * (estoque / teto));
+}
+
+function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes, listaModelos) {
+  mapaScoreVendedor = mapaScoreVendedor || {};
+  listaPadroes      = listaPadroes      || [];
+  listaModelos      = listaModelos      || [];
+  const m2s    = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
+  const minM2  = m2s.length ? Math.min(...m2s) : 0;
+  const maxM2  = m2s.length ? Math.max(...m2s) : 1;
+  const PESO_PRAZO = 3, PESO_DISP = 1, PESO_ATRAT = 2, PESO_TRAC = 4, PESO_VENDEDOR = 5, PESO_SIMIL = 5;
+  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_TRAC + PESO_VENDEDOR + PESO_SIMIL;
+  return emps.map(e => {
+    const total   = Number(e.totalUnidades) || 0;
+    const estoque = Number(e.estoque) || 0;
+    const m2      = calcularM2Medio(e.unidades) || 0;
+    const prazo   = Number(e.prazoMaximo) || 0;
+    const semDados = (total === 0 || m2 === 0);
+    const atrat   = semDados ? 0 : (maxM2 === minM2 ? 5 : 10 * (1 - (m2 - minM2) / (maxM2 - minM2)));
+    const disp    = calcularDispScoreTracao_(estoque, e.tipoEmpreendimento);
+    const trac    = total > 0 ? ((total - estoque) / total) * 10 : 0;
+    const prazoSc = calcularPrazoScoreTracao_(prazo, e.tipoEmpreendimento);
+    const scoreVendedor = parseInt(mapaScoreVendedor[e.idLancamento]) || 0;
+    const vendedorSc    = scoreVendedor / 10;
+    const { simil, isSobraSuspeita, modeloRef } = calcularSimilaridadePadrao_(e, listaPadroes, listaModelos);
+    const similSc = simil / 10;
+    const comp    = semDados ? 0 : (
+      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT + trac * PESO_TRAC +
+       vendedorSc * PESO_VENDEDOR + similSc * PESO_SIMIL) / PESO_TOTAL
+    );
+    return { e, atrat, disp, trac, prazoSc, prazo, vendedorSc, scoreVendedor, simil, similSc, isSobraSuspeita, modeloRef, comp };
+  }).sort((a, b) => b.comp - a.comp);
+}
+
+async function buscarScoreVendedorPorLancamento_() {
+  const mapa = {};
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listarPerfisVendedor&token=${encodeURIComponent(tokenSessao())}`);
+    const lista = await resp.json();
+    if (Array.isArray(lista)) lista.forEach(p => { if (p.origemImovel === 'LANCAMENTOS' && p.codigo) mapa[p.codigo] = parseInt(p.scoreVendedor) || 0; });
+  } catch(e) {}
+  return mapa;
+}
+async function buscarPadroesVendedores_() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_padroes_vendedores&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (!json || json.ok === false) return [];
+    return Array.isArray(json) ? json : (json.dados || []);
+  } catch(_) { return []; }
+}
+async function buscarModelosVendedores_() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_modelos_vendedores&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (json && json.status === 'acao desconhecida') return [];
+    if (!json || json.ok === false) return [];
+    return Array.isArray(json) ? json : (json.dados || []);
+  } catch(_) { return []; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MIX ESTRATÉGICO DE 7 PAPÉIS (novo, 2026-07) — a partir daqui é lógica
+// exclusiva desta página, não existe em lancamentos.html.
+// ═══════════════════════════════════════════════════════════════════════
+
+// Faixas A/B dentro de Médio e Alto Padrão, divididas pela MEDIANA do menor
+// preço observado na carteira atual (não são valores fixos em R$) -- se
+// ajusta sozinho conforme a base muda, sem precisar de tela de configuração
+// pra manter atualizada. Popular e Luxo ficam numa faixa única cada.
+const ORDEM_SEGMENTOS_ = ['Popular', 'Médio B', 'Médio A', 'Alto Padrão B', 'Alto Padrão A', 'Luxo'];
+
+function calcularFaixaPreco_(padrao, menorPreco, medianaPorPadrao) {
+  if (padrao !== 'Médio' && padrao !== 'Alto Padrão') return 'Única';
+  const mediana = medianaPorPadrao[padrao];
+  if (!mediana) return 'Única';
+  return menorPreco >= mediana ? 'A' : 'B';
+}
+function segmentoDe_(padrao, faixa) {
+  if (padrao === 'Popular') return 'Popular';
+  if (padrao === 'Luxo') return 'Luxo';
+  return `${padrao} ${faixa}`;
+}
+function organizarPorSegmento_(itens) {
+  const porPadrao = {};
+  itens.forEach(it => { (porPadrao[it.padrao] = porPadrao[it.padrao] || []).push(it.menorPreco); });
+  const medianaPorPadrao = {};
+  ['Médio', 'Alto Padrão'].forEach(p => {
+    const vals = (porPadrao[p] || []).filter(v => v > 0).sort((a, b) => a - b);
+    if (vals.length) medianaPorPadrao[p] = vals[Math.floor(vals.length / 2)];
+  });
+  const porSegmento = {};
+  itens.forEach(it => {
+    const faixa = calcularFaixaPreco_(it.padrao, it.menorPreco, medianaPorPadrao);
+    const seg = segmentoDe_(it.padrao, faixa);
+    (porSegmento[seg] = porSegmento[seg] || []).push(it);
+  });
+  return porSegmento;
+}
+
+// Seleciona os 7 papéis dentro de um segmento (Padrão+Faixa). ISCA/ÂNCORA
+// INFERIOR = preço; ALVO 1-2-3 = Score de Tração; COMPLEMENTAR = melhor
+// Tração de Tipo de Imóvel diferente do Alvo Primário (ou o melhor restante,
+// se não houver); ÂNCORA SUPERIOR = menor preço do segmento imediatamente
+// ACIMA (não consome produto do segmento atual). Mínimo de 5 produtos com
+// Score de Tração > 0 pro mix funcionar -- abaixo disso, só emite aviso.
+function selecionarMixEstrategico_(candidatos, candidatosAcima) {
+  const validos = (candidatos || []).filter(c => c.comp > 0);
+  if (validos.length < 5) {
+    return { papeis: {}, aviso: `Só ${validos.length} produto(s) com Score de Tração neste segmento (mínimo 5 pro mix funcionar).` };
+  }
+  const usados = new Set();
+  const usar = item => { usados.add(item.e.idLancamento); return item; };
+  const disponiveis = () => validos.filter(c => !usados.has(c.e.idLancamento));
+  const porTracao = () => [...disponiveis()].sort((a, b) => b.comp - a.comp);
+  const porPreco   = () => [...disponiveis()].sort((a, b) => a.menorPreco - b.menorPreco);
+
+  const papeis = {};
+  papeis.ALVO_1 = usar(porTracao()[0]);
+  const t2 = porTracao(); papeis.ALVO_2 = t2.length ? usar(t2[0]) : null;
+  const t3 = porTracao(); papeis.ALVO_3 = t3.length ? usar(t3[0]) : null;
+  const p1 = porPreco(); papeis.ISCA = p1.length ? usar(p1[0]) : null;
+  const p2 = porPreco(); papeis.ANCORA_INF = p2.length ? usar(p2[0]) : null;
+
+  const tipoAlvo1 = tipoImovelDominante_(papeis.ALVO_1.e.unidades);
+  const restantes = disponiveis();
+  papeis.COMPLEMENTAR = restantes.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo1) || restantes[0] || null;
+  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
+
+  const acimaValidos = candidatosAcima || [];
+  papeis.ANCORA_SUP = acimaValidos.length ? [...acimaValidos].sort((a, b) => a.menorPreco - b.menorPreco)[0] : null;
+
+  return { papeis, aviso: null };
+}
+
+// Score de Cobertura (semáforo) — quão bem o mix ficou preenchido: papéis
+// com nota alta de Tração, presença das duas âncoras (preço comparável pra
+// cima e pra baixo) e diversidade de construtoras (concentração é risco).
+function calcularCoberturaMix_(papeis) {
+  const preenchidos = Object.values(papeis).filter(Boolean);
+  const comTracaoAlta = preenchidos.filter(p => p.comp >= 6).length;
+  const temAncoras = !!(papeis.ANCORA_INF && papeis.ANCORA_SUP);
+  const construtoras = new Set(preenchidos.map(p => p.e.construtora));
+  const diversidade = preenchidos.length ? construtoras.size / preenchidos.length : 0;
+  let nivel = 'fraco';
+  if (preenchidos.length >= 6 && comTracaoAlta >= 3 && temAncoras) nivel = 'forte';
+  else if (preenchidos.length >= 5) nivel = 'adequado';
+  return { nivel, preenchidos: preenchidos.length, comTracaoAlta, temAncoras, diversidadeConstrutoras: Math.round(diversidade * 100) };
+}
+
+const PAPEL_LABEL_ = {
+  ISCA: '🎣 Isca', ANCORA_INF: '⬇ Âncora Inf.', ALVO_1: '⭐ Alvo Primário',
+  ALVO_2: '🔄 Alvo Secundário', ALVO_3: '🔄 Alvo Secundário', ANCORA_SUP: '⬆ Âncora Sup.', COMPLEMENTAR: '🔀 Complementar',
+};
+const ORDEM_PAPEIS_ = ['ISCA', 'ANCORA_INF', 'ALVO_1', 'ALVO_2', 'ALVO_3', 'ANCORA_SUP', 'COMPLEMENTAR'];
+
+function fmtR$_(v) {
+  if (!v) return '—';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+let _resultadosPorSegmento = {};
+let _padraoAtivo = 'Todos';
+
+async function carregarEstrategias() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    const todos = json.lancamentos || [];
+    const empsBrutos = agruparPorEmpreendimento_(todos);
+
+    const [mapaScoreVendedor, listaPadroes, listaModelosImportados] = await Promise.all([
+      buscarScoreVendedorPorLancamento_(), buscarPadroesVendedores_(), buscarModelosVendedores_(),
+    ]);
+    const listaModelos = mesclarModelosVendedores_(listaModelosImportados, construirModelosVendedoresDinamicos_(empsBrutos));
+    const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor, listaPadroes, listaModelos);
+
+    const itens = scored.map(s => {
+      const e = s.e;
+      const precos = (e.unidades || []).map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+      return { e, comp: s.comp, simil: s.simil, scoreVendedor: s.scoreVendedor,
+                menorPreco: precos.length ? Math.min(...precos) : 0, padrao: e.padrao || '' };
+    }).filter(it => it.padrao && it.e.statusAtivo !== 'Excluído');
+
+    const porSegmento = organizarPorSegmento_(itens);
+    _resultadosPorSegmento = {};
+    ORDEM_SEGMENTOS_.forEach((seg, idx) => {
+      const candidatos = porSegmento[seg] || [];
+      const segAcima = ORDEM_SEGMENTOS_[idx + 1];
+      const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
+      const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
+      _resultadosPorSegmento[seg] = { ...resultado, total: candidatos.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
+    });
+
+    renderFiltroPadrao_();
+    renderBlocosSegmentos_();
+  } catch (e) {
+    document.getElementById('blocosSegmentos').innerHTML =
+      '<div class="vazio-segmento">Erro ao carregar. Verifique a conexão com o Apps Script.</div>';
+  }
+}
+
+function renderFiltroPadrao_() {
+  const bar = document.getElementById('filtroPadrao');
+  const padroes = ['Todos', 'Popular', 'Médio', 'Alto Padrão', 'Luxo'];
+  bar.innerHTML = padroes.map(p => `<button class="filtro-chip ${p === _padraoAtivo ? 'on' : ''}" onclick="setFiltroPadrao_('${p}')">${p}</button>`).join('');
+}
+function setFiltroPadrao_(p) { _padraoAtivo = p; renderFiltroPadrao_(); renderBlocosSegmentos_(); }
+
+function renderBlocosSegmentos_() {
+  const cont = document.getElementById('blocosSegmentos');
+  const segmentosParaMostrar = ORDEM_SEGMENTOS_.filter(seg => {
+    if (_padraoAtivo === 'Todos') return true;
+    return seg === _padraoAtivo || seg.startsWith(_padraoAtivo + ' ');
+  });
+  cont.innerHTML = segmentosParaMostrar.map(seg => {
+    const r = _resultadosPorSegmento[seg];
+    if (!r || !r.total) return '';
+    const covHtml = r.cobertura ? `<span class="cobertura-badge cobertura-${r.cobertura.nivel}">${r.cobertura.nivel === 'forte' ? '🟢' : r.cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${r.cobertura.nivel}</span>` : '';
+    const corpo = r.aviso
+      ? `<div class="vazio-segmento">${r.aviso}</div>`
+      : `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
+          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Similaridade</th><th>Preço</th><th>Ação</th>
+        </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
+          const item = r.papeis[papel];
+          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="5" style="color:var(--text3)">— não preenchido —</td><td></td></tr>`;
+          return `<tr>
+            <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
+            <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
+            <td>${item.e.construtora || '—'}</td>
+            <td>${item.comp.toFixed(1)}</td>
+            <td>${item.simil}%</td>
+            <td>${fmtR$_(item.menorPreco)}</td>
+            <td><button class="btn-mini" onclick="verDetalhesItem_('${seg.replace(/'/g,"\\'")}','${papel}')">Detalhes</button></td>
+          </tr>`;
+        }).join('')}</tbody></table></div>`;
+    return `<div class="segmento-block">
+      <div class="segmento-header">
+        <div>
+          <div class="segmento-titulo">${seg}</div>
+          <div class="segmento-sub">${r.total} empreendimento${r.total !== 1 ? 's' : ''} no segmento</div>
+        </div>
+        ${covHtml}
+        <div class="segmento-actions">
+          <button class="btn-mini" onclick="exportarCSV_('${seg.replace(/'/g,"\\'")}')">📥 Exportar CSV</button>
+          <button class="btn-mini" onclick="abrirModalExport_('${seg.replace(/'/g,"\\'")}')">🤖 Enviar para IA de Campanhas</button>
+        </div>
+      </div>
+      ${corpo}
+    </div>`;
+  }).join('') || '<div class="vazio-segmento">Nenhum segmento com dados suficientes ainda.</div>';
+}
+
+function verDetalhesItem_(seg, papel) {
+  const item = _resultadosPorSegmento[seg]?.papeis?.[papel];
+  if (!item) return;
+  mostrarToast(`${item.e.nomeEmpreendimento}: Tração ${item.comp.toFixed(1)} · Similaridade ${item.simil}% · Vendedor ${item.scoreVendedor}`, 'ok');
+}
+
+// ── EXPORTAÇÃO CSV + PROMPT PRA IA DE CAMPANHAS ────────────────────────────
+const CSV_CAMPOS_ESTRATEGIA_ = [
+  'papel_no_mix', 'padrao_campanha', 'faixa_campanha', 'nome_empreendimento', 'construtora',
+  'tipo_imovel', 'tipo_empreendimento', 'bairro', 'cidade',
+  'metragem_min', 'metragem_max', 'preco_entrada', 'preco_m2_medio',
+  'situacao', 'prazo_entrega', 'total_unidades', 'unidades_vendidas', 'unidades_disponiveis', 'pct_vendido',
+  'nota_tracao', 'nota_similaridade', 'nota_vendedor', 'lazer', 'conceito',
+];
+function csvEscapar_(v) {
+  const s = (v === null || v === undefined) ? '' : String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function montarLinhasCsvSegmento_(seg) {
+  const r = _resultadosPorSegmento[seg];
+  if (!r || r.aviso) return [];
+  const [padraoNome, faixaNome] = seg.includes(' ') && (seg.startsWith('Médio') || seg.startsWith('Alto'))
+    ? [seg.slice(0, seg.lastIndexOf(' ')), seg.slice(seg.lastIndexOf(' ') + 1)]
+    : [seg, 'Única'];
+  return ORDEM_PAPEIS_.filter(p => r.papeis[p]).map(papel => {
+    const item = r.papeis[papel];
+    const e = item.e;
+    const areas = (e.unidades || []).map(u => Number(u.areaUtil) || 0).filter(v => v > 0);
+    const precos = (e.unidades || []).map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+    const linha = {
+      papel_no_mix: papel, padrao_campanha: padraoNome, faixa_campanha: faixaNome,
+      nome_empreendimento: e.nomeEmpreendimento, construtora: e.construtora,
+      tipo_imovel: tipoImovelDominante_(e.unidades), tipo_empreendimento: e.tipoEmpreendimento,
+      bairro: e.bairro, cidade: e.cidade,
+      metragem_min: areas.length ? Math.min(...areas) : '', metragem_max: areas.length ? Math.max(...areas) : '',
+      preco_entrada: item.menorPreco, preco_m2_medio: precos.length && areas.length ? Math.round(precos[0] / (areas[0] || 1)) : '',
+      situacao: e.status, prazo_entrega: e.previsaoEntrega,
+      total_unidades: e.totalUnidades, unidades_vendidas: (Number(e.totalUnidades) || 0) - (Number(e.estoque) || 0),
+      unidades_disponiveis: e.estoque, pct_vendido: calcularPercentualVendido(e.estoque, e.totalUnidades),
+      nota_tracao: item.comp.toFixed(1), nota_similaridade: item.simil, nota_vendedor: item.scoreVendedor,
+      lazer: e.lazer, conceito: e.conceito,
+    };
+    return CSV_CAMPOS_ESTRATEGIA_.map(c => csvEscapar_(linha[c])).join(',');
+  });
+}
+function montarCsvSegmento_(seg) {
+  const linhas = [CSV_CAMPOS_ESTRATEGIA_.join(','), ...montarLinhasCsvSegmento_(seg)];
+  return linhas.join('\r\n');
+}
+function exportarCSV_(seg) {
+  const linhas = montarLinhasCsvSegmento_(seg);
+  if (!linhas.length) { mostrarToast('Nenhum produto pra exportar neste segmento ainda.', 'erro'); return; }
+  const csv = String.fromCharCode(0xFEFF) + montarCsvSegmento_(seg);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `estrategia_${seg.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast(`CSV do segmento "${seg}" baixado.`, 'ok');
+}
+
+function montarPromptEstrategia_(seg) {
+  const linhas = montarLinhasCsvSegmento_(seg);
+  return `Você é uma IA especialista em campanhas Google Ads para o mercado imobiliário brasileiro.
+
+Recebi um CSV com ${linhas.length} empreendimento(s) selecionados para uma campanha de tráfego pago no segmento "${seg}".
+
+Cada linha representa um produto com seu PAPEL NO MIX estratégico:
+- ISCA: produto de entrada pra atrair clique (não precisa vender sozinho)
+- ANCORA_INF: produto básico pra criar contraste positivo com o Alvo
+- ALVO_1/2/3: produtos principais onde concentrar o esforço de conversão
+- ANCORA_SUP: produto acima da faixa, pra ancoragem de preço (faz o Alvo parecer acessível)
+- COMPLEMENTAR: alternativa de tipo de imóvel ou padrão diferente
+
+Com base nos dados do CSV, crie:
+1. Estratégia geral da campanha (objetivo, orçamento sugerido por produto conforme nota_tracao, CPL meta)
+2. Estrutura do Google Ads (campanhas, grupos de anúncio por produto)
+3. Anúncios por produto (mínimo 3 variações cada, headlines até 30 caracteres, descrições até 90 caracteres)
+4. Palavras-chave por grupo de anúncio (foco em intenção de compra, com negativas sugeridas)
+5. Especificação da landing page (ordem de apresentação dos produtos pelo papel no mix, CTAs por produto)
+6. Abordagem de conversão (como conduzir o lead do produto ISCA pro ALVO correspondente)
+
+Dados do CSV:
+${montarCsvSegmento_(seg)}`;
+}
+
+function abrirModalExport_(seg) {
+  const linhas = montarLinhasCsvSegmento_(seg);
+  if (!linhas.length) { mostrarToast('Nenhum produto pra exportar neste segmento ainda.', 'erro'); return; }
+  document.getElementById('modalExportTitulo').textContent = `Exportar Estratégia — ${seg}`;
+  document.getElementById('modalExportTexto').value = montarPromptEstrategia_(seg);
+  document.getElementById('modalExport').classList.add('show');
+}
+function fecharModalExport_() { document.getElementById('modalExport').classList.remove('show'); }
+function copiarModalExport_() {
+  const ta = document.getElementById('modalExportTexto');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => mostrarToast('Copiado! Cole numa conversa com a IA de campanhas.', 'ok'))
+    .catch(() => mostrarToast('Não consegui copiar automaticamente — selecione e copie manualmente.', 'erro'));
+}
+
+window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) carregarEstrategias(); };
+</script>
+</body>
+</html>
