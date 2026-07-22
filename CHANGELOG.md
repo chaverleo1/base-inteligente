@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 93) — Mapa Geral: coluna "Tipo/S%" separada em "Tipo" e "S%"
+
+Pedido do usuário: a coluna combinada "Tipo/S%" (ex: "Médio/65%") virou duas colunas independentes —
+"Tipo" (padrão de preço) e "S%" (Similaridade com Padrão Vendedor) — cada uma ordenável por conta
+própria (`ordenarMapaGeral_('tipo')` novo, separado de `('s')`, que antes ordenava as duas coisas
+juntas pela nota de similaridade só).
+
+Tabela foi de 14 para 15 colunas — `colspan` das mensagens de "carregando"/vazio do Mapa Geral
+ajustado (a tabela de unidades do formulário de extração também tinha `colspan="14"` por coincidência,
+mas é uma tabela sem relação nenhuma — conferido que não foi tocada).
+
+Testado ao vivo no navegador: cabeçalho mostra "Tipo" e "S%" como colunas distintas, célula da linha
+mostra o padrão e a similaridade em `<td>` separados, ordenar por "Tipo" funciona independente de
+"S%". Sem erros de console. Regressão dos filtros de Estágio (Mapa Geral e lista de cards) sem
+quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 92) — Lançamentos: removida a sessão "Importar Modelos Vendedores"
 
 Pedido do usuário: excluir a sessão de import manual de Modelos Vendedores (CSV/IA) da aba "Modelos e

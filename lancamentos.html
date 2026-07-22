@@ -773,7 +773,8 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
           <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
-          <th onclick="ordenarMapaGeral_('s')" title="Padrão de preço (Popular/Médio/Alto/Luxo) e Similaridade com Padrão Vendedor (0–100%)">Tipo/S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
+          <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Tipo<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
+          <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
           <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
           <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
           <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
@@ -785,7 +786,7 @@ select.form-input option { background: var(--surface2); }
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="14" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="15" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -1913,7 +1914,7 @@ function renderB2(unidades) {
   const tbody = document.getElementById('unidades-tbody');
   tbody.innerHTML = '';
   if (!unidades.length) {
-    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:16px 0">Nenhuma unidade detectada — use "+ Linha" para adicionar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:16px 0">Nenhuma unidade detectada — use "+ Linha" para adicionar.</td></tr>';
     return;
   }
   unidades.forEach(u => tbody.appendChild(criarLinha(u)));
@@ -3214,6 +3215,7 @@ function mapaCampoValor_(r, campo) {
   if (campo === 't')           return r.comp;
   if (campo === 'construtora') return r.construtora.toLowerCase();
   if (campo === 'v')           return r.scoreVendedor;
+  if (campo === 'tipo')        return (r.padrao || '').toLowerCase();
   if (campo === 's')           return r.simil;
   if (campo === 'area')        return r.areaMin;
   if (campo === 'preco')       return r.menorPreco;
@@ -3245,7 +3247,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="14" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -3258,7 +3260,7 @@ function renderMapaGeral_() {
     .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="14" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
     atualizarSetasMapaGeral_();
     return;
   }
@@ -3283,12 +3285,8 @@ function renderMapaGeral_() {
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
       <td>${r.construtora}</td>
       <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
-      <td class="mapa-simil">${(() => {
-        if (!r.padrao && !(r.simil > 0)) return '—';
-        const tipo = r.padrao || '—';
-        const pct  = r.simil > 0 ? r.simil + '%' : '—';
-        return `<span class="simil-badge" title="Padrão de preço: ${tipo} · Similaridade com Padrão Vendedor: ${pct}">${tipo}/${pct}</span>`;
-      })()}</td>
+      <td>${r.padrao || '—'}</td>
+      <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>` : '—'}</td>
       <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
       <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
@@ -3308,7 +3306,7 @@ function renderMapaGeral_() {
 }
 
 function atualizarSetasMapaGeral_() {
-  ['id','nome','t','construtora','v','s','area','preco','m2','vendido','prazo','pv','estagio','alerta'].forEach(campo => {
+  ['id','nome','t','construtora','v','tipo','s','area','preco','m2','vendido','prazo','pv','estagio','alerta'].forEach(campo => {
     const el = document.getElementById('seta-mapa-' + campo);
     if (!el) return;
     if (_mapaSort.campo !== campo) { el.textContent = '▾'; el.classList.remove('on'); return; }
