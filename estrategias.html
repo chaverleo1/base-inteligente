@@ -64,6 +64,7 @@ a { text-decoration: none; color: inherit; }
   font-size: 12px; font-weight: 700; letter-spacing: .5px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
 .situacao-tab.active { background: var(--accent); color: #fff; }
 .situacao-tab:hover:not(.active) { color: var(--text); }
+.situacao-tab-count { opacity: .65; font-weight: 600; margin-left: 3px; }
 
 .filtro-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
 .filtro-chip {
@@ -233,8 +234,8 @@ a { text-decoration: none; color: inherit; }
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
       <div class="sec-title">🎯 Estratégias de Tráfego Pago</div>
       <div class="situacao-tabs" id="situacaoTabs" style="display:none">
-        <button class="situacao-tab active" id="tabAbaNovos" onclick="setSituacaoAba_('NOVOS')">NOVOS</button>
-        <button class="situacao-tab" id="tabAbaNaPlanta" onclick="setSituacaoAba_('NA_PLANTA')">NA PLANTA</button>
+        <button class="situacao-tab active" id="tabAbaNovos" onclick="setSituacaoAba_('NOVOS')">NOVOS <span class="situacao-tab-count" id="countAbaNovos"></span></button>
+        <button class="situacao-tab" id="tabAbaNaPlanta" onclick="setSituacaoAba_('NA_PLANTA')">NA PLANTA <span class="situacao-tab-count" id="countAbaNaPlanta"></span></button>
       </div>
     </div>
     <div class="sec-sub">Mix estratégico de 7 ofertas por Padrão/Faixa de preço — calculado ao vivo a partir do Score de Tração e Similaridade já usados em Lançamentos. NOVOS (prontos/entregues) e NA PLANTA (em obras/lançamentos) nunca se misturam no mesmo mix.</div>
@@ -830,6 +831,17 @@ const SITUACAO_ABA_STATUS_ = {
 };
 function situacaoAtivaLabel_() { return _situacaoAtiva === 'NOVOS' ? 'NOVOS' : 'NA PLANTA'; }
 
+// Total de lançamentos que a base tem em cada situação -- conta sobre o
+// cache já pontuado (mesmo pool que as abas filtram), não muda ao trocar de
+// aba, só é recalculado quando os dados são recarregados do zero.
+function atualizarContadoresAba_() {
+  const itens = _itensScoredCache || [];
+  const countNovos    = itens.filter(it => SITUACAO_ABA_STATUS_['NOVOS'].includes(it.e.status)).length;
+  const countNaPlanta = itens.filter(it => SITUACAO_ABA_STATUS_['NA_PLANTA'].includes(it.e.status)).length;
+  document.getElementById('countAbaNovos').textContent = `(${countNovos})`;
+  document.getElementById('countAbaNaPlanta').textContent = `(${countNaPlanta})`;
+}
+
 // Reconstrói os mixes por segmento a partir do cache de itens já pontuados,
 // filtrando pela aba de situação ativa -- trocar de aba não refaz nenhum
 // fetch, só refiltra e reseleciona os papéis. A ÂNCORA SUPERIOR também vem
@@ -863,6 +875,7 @@ async function carregarEstrategias() {
     if (itens === null) return;
     _itensScoredCache = itens;
     document.getElementById('situacaoTabs').style.display = '';
+    atualizarContadoresAba_();
 
     recalcularSegmentos_();
     renderFiltroPadrao_();

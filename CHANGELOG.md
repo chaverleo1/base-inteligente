@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 88) — Estratégias: total de cada situação nas abas NOVOS | NA PLANTA
+
+Pedido do usuário: mostrar quantos lançamentos a base tem em cada situação, junto das abas.
+
+Cada botão de aba (`estrategias.html`) ganhou a contagem entre parênteses, ex: "NOVOS (10)" / "NA
+PLANTA (6)" — `atualizarContadoresAba_()` conta sobre `_itensScoredCache` (o pool completo já
+pontuado, antes do filtro de aba) quantos batem `SITUACAO_ABA_STATUS_['NOVOS']` vs
+`['NA_PLANTA']`. Roda uma vez ao carregar os dados; trocar de aba não refaz a contagem (o total dos
+dois lados é fixo, só a lista visível muda).
+
+Testado: `test_contador_abas.js` cobre contagem mista e cache vazio. Verificado ao vivo no navegador:
+pool fake com 10 "Novos" (7 Pronto + 3 Entregue) e 6 "Na planta" (4 Em obras + 2 Em planta) mostrou
+"NOVOS (10)" e "NA PLANTA (6)" corretamente, mantendo os números ao trocar de aba. Regressão das
+suítes de mix/paridade/exportação sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 87) — Estratégias: exportação (CSV/prompt IA) para de distinguir Em obras/Em planta
 
 Bug reportado pelo usuário: o badge "Situação" da tabela e as abas NOVOS/NA PLANTA já tratavam "Em
