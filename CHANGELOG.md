@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 78) — Botão "🏷️ Vendedor" na tabela de Vendedor Sem Avaliação
+
+Pedido do usuário: na tabela "Lançamentos com Vendedor Sem Avaliação" (`insight-detail.html`,
+aberta pelo card novo da Visão Geral), a coluna "Vendedor" ganha um botão que abre o cadastro de
+avaliação direto dali, sem precisar ir em Lançamentos primeiro.
+
+`insight-detail.html` passou a carregar `perfil-vendedor.js` (mesmo modal usado em
+lancamentos.html/busca.html/revendas-construtoras.html) — precisou de 2 funções globais que essa
+página ainda não tinha e o `perfil-vendedor.js` exige: `tokenSessao()` e `trataNaoAutenticado()`
+(usada internamente pra detectar sessão expirada e redirecionar). Sem elas, o modal abria mas
+travava com "Erro ao carregar: trataNaoAutenticado is not defined" — encontrado e corrigido durante
+o teste.
+
+Diferente de `abrirPvLanc` (lancamentos.html), que recarrega a página inteira ao salvar (porque o
+score entra no Score de Tração e reordena o ranking inteiro), aqui o callback só atualiza o badge
+da célula na hora (`abrirAvaliacaoVendedor_`) — essa tela mostra um snapshot congelado em
+`sessionStorage`, recarregar não traria dado novo nenhum de qualquer forma.
+
+Testado ao vivo no navegador: botão abre o modal com o título certo ("Perfil do Vendedor — [nome]");
+confirmado que o fluxo de sessão expirada agora redireciona corretamente em vez de travar com erro
+de JS (só não deu pra testar o fluxo completo de salvar, que exige sessão autenticada de verdade).
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 77) — Ajustes na tabela de Estratégias: coluna Tabela, remove Similaridade/Ação, destaca Tração
 
 Pedido do usuário, na tabela de Mix Estratégico (`estrategias.html`):

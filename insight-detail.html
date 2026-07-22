@@ -110,6 +110,13 @@ a { text-decoration:none; color:inherit; }
 .badge-purple { background:rgba(167,139,250,.12); color:#a78bfa; border-color:rgba(167,139,250,.2); }
 .badge-muted  { background:rgba(74,84,112,.1); color:var(--text3); border-color:var(--border); }
 
+.btn-pv-avaliar {
+  margin-left:6px; padding:2px 9px; border-radius:6px; border:1px solid var(--border2);
+  background:var(--surface2); color:var(--text2); font-size:10px; font-weight:700;
+  cursor:pointer; font-family:'Inter',sans-serif; transition:all .15s; white-space:nowrap;
+}
+.btn-pv-avaliar:hover { border-color:var(--accent); color:var(--text); }
+
 .score-num { font-family:'Space Grotesk',sans-serif; font-weight:700; }
 .score-hot  { color:#ff5a5a; }
 .score-warm { color:#f5a623; }
@@ -166,9 +173,22 @@ a { text-decoration:none; color:inherit; }
 </div>
 
 <script src="config.js"></script>
+<script src="perfil-vendedor.js"></script>
 <script>
 const SESS_KEY  = 'bi_session';
 const TOKEN_KEY = 'bi_session_token';
+function tokenSessao() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
+// perfil-vendedor.js chama isso ao detectar sessão expirada (usado pelo
+// modal de Avaliação do Vendedor, aberto direto desta página).
+function trataNaoAutenticado(json) {
+  if (json && json.status === 'nao_autenticado') {
+    sessionStorage.removeItem(SESS_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    window.location.href = 'index.html';
+    return true;
+  }
+  return false;
+}
 let _imoveisDetail = [];
 
 (function init() {
@@ -293,13 +313,34 @@ function tableLancamentos(items) {
     <td>${fmt(l.precoMedio||l.preco)}</td>
     <td>${l.construtora||'—'}</td>
     ${temEstoque  ? `<td>${l.estoque !== undefined && l.estoque !== null && l.estoque !== '' ? l.estoque : '—'}</td>` : ''}
-    ${temVendedor ? `<td><span class="badge ${l._scoreVendedor > 0 ? 'badge-green' : 'badge-muted'}">${l._scoreVendedor > 0 ? l._scoreVendedor : 'Sem avaliação'}</span></td>` : ''}
+    ${temVendedor ? `<td>
+      <span class="badge badge-score-vendedor ${l._scoreVendedor > 0 ? 'badge-green' : 'badge-muted'}">${l._scoreVendedor > 0 ? l._scoreVendedor : 'Sem avaliação'}</span>
+      <button class="btn-pv-avaliar" onclick="abrirAvaliacaoVendedor_(this,'${String(l.idLancamento||'').replace(/'/g,"\\'")}','${String(l.nomeEmpreendimento||'').replace(/'/g,"\\'")}')">🏷️ Vendedor</button>
+    </td>` : ''}
     ${temTabela   ? `<td><span class="badge ${l._tabelaStatus === 'Desatualizada' ? 'badge-red' : 'badge-green'}">${l._tabelaStatus || '—'}</span></td>` : ''}
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">
     <thead><tr><th>Empreendimento</th><th>Padrão</th><th>Status</th><th>Previsão Entrega</th><th>Preço Médio</th><th>Construtora</th>${temEstoque?'<th>Estoque</th>':''}${temVendedor?'<th>Vendedor</th>':''}${temTabela?'<th>Tabela</th>':''}</tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
+}
+
+// Abre o modal de Perfil do Vendedor (perfil-vendedor.js) direto da tabela
+// de "Vendedor Sem Avaliação" -- não recarrega a página inteira ao salvar
+// (diferente de lancamentos.html) porque essa tela só mostra um snapshot
+// congelado em sessionStorage; em vez disso, atualiza o badge na hora com o
+// score recém-salvo, pra já sair da lista de "sem avaliação" no próximo
+// carregamento do Dashboard sem precisar de reload aqui.
+function abrirAvaliacaoVendedor_(btn, idLancamento, nomeEmpreendimento) {
+  abrirPerfilVendedor_(idLancamento, 'LANCAMENTOS', ['PJ'], nomeEmpreendimento, function(json) {
+    const sv = parseInt(json.scoreVendedor) || 0;
+    const badge = btn.parentElement.querySelector('.badge-score-vendedor');
+    if (badge) {
+      badge.textContent = sv > 0 ? sv : 'Sem avaliação';
+      badge.className = 'badge badge-score-vendedor ' + (sv > 0 ? 'badge-green' : 'badge-muted');
+    }
+    setTimeout(() => fecharPvModal_(), 900);
+  });
 }
 
 function tableLeads(items) {
