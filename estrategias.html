@@ -101,6 +101,23 @@ a { text-decoration: none; color: inherit; }
 .papel-COMPLEMENTAR { background: rgba(167,139,250,.15); color: #a78bfa; }
 .vazio-segmento { padding: 30px 18px; text-align: center; color: var(--text3); font-size: 13px; }
 
+/* Badge de destaque da Nota de Tração -- mesma paleta/limiares de
+   classeScoreTracao_ em lancamentos.html (tp-hot/tp-warm/tp-esgot/tp-cold),
+   reproduzida aqui pra não depender de CSS compartilhado entre as páginas. */
+.tracao-badge { display:inline-flex; align-items:center; font-size:13px; font-weight:800;
+  padding:3px 11px; border-radius:6px; border:1px solid transparent; white-space:nowrap; }
+.tp-hot   { background:rgba(0,212,170,.15); color:var(--accent2); border-color:rgba(0,212,170,.3); }
+.tp-warm  { background:rgba(245,158,11,.15); color:var(--amber);  border-color:rgba(245,158,11,.3); }
+.tp-esgot { background:rgba(255,90,90,.12); color:var(--coral);   border-color:rgba(255,90,90,.25); }
+.tp-cold  { background:rgba(74,84,112,.1);  color:var(--text3);  border-color:var(--border); }
+
+/* Badge de status da tabela de preços -- mesma convenção visual de
+   lancamentos.html (.tabela-badge). */
+.tabela-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700;
+  padding:3px 9px; border-radius:4px; letter-spacing:.3px; white-space:nowrap; }
+.tabela-badge.atualizada    { background:rgba(0,212,170,.15); color:var(--accent2); border:1px solid rgba(0,212,170,.3); }
+.tabela-badge.desatualizada { background:rgba(255,90,90,.2);  color:var(--coral);   border:1px solid rgba(255,90,90,.45); }
+
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(15,17,23,.85); z-index: 9500;
   display: none; align-items: center; justify-content: center; padding: 20px;
@@ -707,6 +724,17 @@ function fmtR$_(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
+// Mesma faixa/limiares de classeScoreTracao_ em lancamentos.html.
+function classeScoreTracao_(comp) {
+  return comp >= 7 ? 'tp-hot' : comp >= 5 ? 'tp-warm' : comp >= 3 ? 'tp-esgot' : 'tp-cold';
+}
+
+function tabelaBadgeHtml_(statusTabela) {
+  if (statusTabela === 'Desatualizada') return `<span class="tabela-badge desatualizada">⚠ Desatualizada</span>`;
+  if (statusTabela === 'Atualizada')    return `<span class="tabela-badge atualizada">✓ Atualizada</span>`;
+  return '—';
+}
+
 let _resultadosPorSegmento = {};
 let _padraoAtivo = 'Todos';
 
@@ -769,19 +797,18 @@ function renderBlocosSegmentos_() {
     const corpo = r.aviso
       ? `<div class="vazio-segmento">${r.aviso}</div>`
       : `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
-          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Similaridade</th><th>Preço</th><th>Estoque</th><th>Ação</th>
+          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Tabela</th>
         </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
           const item = r.papeis[papel];
-          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="6" style="color:var(--text3)">— não preenchido —</td><td></td></tr>`;
+          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="5" style="color:var(--text3)">— não preenchido —</td></tr>`;
           return `<tr>
             <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
             <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
             <td>${item.e.construtora || '—'}</td>
-            <td>${item.comp.toFixed(1)}</td>
-            <td>${item.simil}%</td>
+            <td><span class="tracao-badge ${classeScoreTracao_(item.comp)}">${item.comp.toFixed(1)}</span></td>
             <td>${fmtR$_(item.menorPreco)}</td>
             <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
-            <td><button class="btn-mini" onclick="verDetalhesItem_('${seg.replace(/'/g,"\\'")}','${papel}')">Detalhes</button></td>
+            <td>${tabelaBadgeHtml_(item.e.statusTabela)}</td>
           </tr>`;
         }).join('')}</tbody></table></div>`;
     return `<div class="segmento-block">
@@ -799,12 +826,6 @@ function renderBlocosSegmentos_() {
       ${corpo}
     </div>`;
   }).join('') || '<div class="vazio-segmento">Nenhum segmento com dados suficientes ainda.</div>';
-}
-
-function verDetalhesItem_(seg, papel) {
-  const item = _resultadosPorSegmento[seg]?.papeis?.[papel];
-  if (!item) return;
-  mostrarToast(`${item.e.nomeEmpreendimento}: Tração ${item.comp.toFixed(1)} · Similaridade ${item.simil}% · Vendedor ${item.scoreVendedor}`, 'ok');
 }
 
 // ── EXPORTAÇÃO CSV + PROMPT PRA IA DE CAMPANHAS ────────────────────────────

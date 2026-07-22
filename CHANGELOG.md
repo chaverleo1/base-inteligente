@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 77) — Ajustes na tabela de Estratégias: coluna Tabela, remove Similaridade/Ação, destaca Tração
+
+Pedido do usuário, na tabela de Mix Estratégico (`estrategias.html`):
+- Coluna **Tabela** nova — badge com destaque (✓ Atualizada / ⚠ Desatualizada), mesmo campo
+  `statusTabela` que já alimenta o card "Tabela desatualizada" da Visão Geral.
+- Coluna **Similaridade** removida (continua no CSV exportado, só saiu da tela).
+- Coluna **Ação** (botão "Detalhes") removida — `verDetalhesItem_()` ficou sem uso, deletada.
+- Nota de **Tração** ganhou destaque visual: badge colorido (`.tracao-badge`) usando os mesmos
+  limiares de `classeScoreTracao_` em `lancamentos.html` (verde ≥7, âmbar ≥5, vermelho ≥3, cinza
+  abaixo) — antes era só texto plano.
+
+Testado ao vivo no navegador com fetch mockado: coluna Tabela aparece e alterna corretamente
+Atualizada/Desatualizada por item, Similaridade e Ação sumiram da tabela, badge de Tração aparece
+com a classe de cor certa. Regressão das suítes de Mix Estratégico/paridade do motor sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 76) — 3 cards novos na Visão Geral + coluna Estoque em Estratégias + fix do alerta de Vendedor Sem Avaliação
 
 Lista de tarefas do usuário, 4 itens:
