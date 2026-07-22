@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 96) — Nota de Similaridade discrimina de verdade (pico na mediana, não binário)
+
+Caso real do usuário: de 69 empreendimentos, só 3 tinham nota de Similaridade abaixo de 90% — a nota
+não discriminava quase nada. Diagnóstico: o Modelo automático usa min/max de TODOS os empreendimentos
+do padrão como "faixa normal", e `scoreFaixa_` dava nota 100 pra QUALQUER valor dentro dela (só
+penalizava, bem suavemente, quem caía fora) — como o próprio conjunto que gera o modelo virou a
+faixa, quase tudo do mesmo padrão caía dentro por definição.
+
+Sugestão apresentada ao usuário e aprovada: `scoreFaixa_` agora tem PICO no centro típico da faixa —
+a MEDIANA calculada pelo modelo automático (`mediana_`, nova, guardada em `faixaAreaUtilMediana`/
+`faixaQuartosMediana`/`faixaPrecoMedioMediana`/`faixaTempoObraMediana`), ou o midpoint min/max nos
+modelos sem mediana (ex: importados manualmente antes da remoção dessa funcionalidade, parte 92) — e
+decai conforme o valor se afasta desse centro, mesmo ainda tecnicamente dentro do min-max. Quem está
+exatamente na borda da faixa observada (mesma distância do centro que o min ou o max) tira
+`NOTA_BORDA_FAIXA_` = 75, não mais 100; o mesmo ritmo de queda continua além da borda, até 0. Mudança
+espelhada nas duas cópias do motor (`lancamentos.html` e `estrategias.html`, cobertas pelo teste de
+paridade).
+
+Testado: `test_similaridade_modelo.js` atualizado pras novas notas exatas de `scoreFaixa_` (a
+assertiva antiga — "dentro da faixa sempre 100" — descrevia exatamente o comportamento que este fix
+corrige, então precisava mudar). Novo `test_similaridade_discrimina_mais.js` reproduz o cenário real
+(modelo construído a partir de uma base com área útil espalhada de 55 a 130m², mediana 80) e confirma
+que empreendimentos nos extremos agora tiram nota visivelmente menor que o típico — antes do fix,
+todos tirariam 100 igual. Suíte de paridade (`test_paridade_motor_estrategias.js`) e as suítes de
+modelos/padrão vendedor relacionadas sem quebras. Verificado ao vivo no navegador: um cluster de 10
+empreendimentos com áreas de 55 a 130m² (mediana 80) gerou notas de 100 (nos mais típicos) até 77 (no
+mais extremo) — antes seria 100 pra todos os 10.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 95) — Mapa Geral: coluna ID move pro final, depois de Alerta
 
 Pedido do usuário: mover a coluna "ID" pra depois de "Alerta" (última coluna da tabela). Cabeçalho e

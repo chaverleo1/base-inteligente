@@ -2358,15 +2358,35 @@ function tipoImovelDominante_(unidades) {
 }
 
 // Nota parcial (0-100) de um valor numérico contra uma faixa [min,max] --
-// 100 se estiver dentro da faixa, decai conforme se afasta pra fora dela.
-// Sem faixa gravada no modelo ou sem valor do empreendimento => null (essa
-// dimensão é ignorada no cálculo, não penaliza por falta de dado).
-function scoreFaixa_(valor, min, max) {
+// tem PICO no centro típico (mediana do modelo, quando o modelo calculou
+// uma -- ver mediana_/construirModelosVendedoresDinamicos_; midpoint
+// min/max nos modelos sem mediana, ex: importados manualmente antes desta
+// parte) e decai conforme o valor se afasta desse centro, mesmo ainda
+// tecnicamente dentro do min-max. Sem faixa gravada no modelo ou sem valor
+// do empreendimento => null (dimensão ignorada, não penaliza por falta de
+// dado).
+//
+// Corrige caso real 2026-07: o modelo automático usa min/max de TODOS os
+// empreendimentos do padrão como faixa -- então quase tudo "cabia" e
+// ganhava nota 100 (69 empreendimentos, só 3 com nota <90%; a nota não
+// discriminava nada). NOTA_BORDA_FAIXA_ é a nota de quem está a uma
+// meia-largura de distância do centro (a "borda" da faixa observada); o
+// mesmo ritmo de queda continua além disso, até 0.
+const NOTA_BORDA_FAIXA_ = 75;
+function scoreFaixa_(valor, min, max, centro) {
   min = Number(min); max = Number(max);
   if (!valor || !(min > 0) || !(max > 0)) return null;
-  if (valor >= min && valor <= max) return 100;
-  const fora = valor < min ? (min - valor) / min : (valor - max) / max;
-  return Math.max(0, Math.round(100 * (1 - fora)));
+  const meiaLargura = (max - min) / 2;
+  if (!(meiaLargura > 0)) {
+    // Faixa degenerada (só 1 valor observado, min===max) -- sem "largura"
+    // pra normalizar a distância, usa o mesmo degradê relativo de antes.
+    if (valor === min) return 100;
+    const fora = Math.abs((valor - min) / min);
+    return Math.max(0, Math.round(100 - (100 - NOTA_BORDA_FAIXA_) * fora));
+  }
+  const c = (centro !== undefined && centro !== null && centro !== '' && Number(centro) > 0) ? Number(centro) : (min + max) / 2;
+  const relDist = Math.abs(valor - c) / meiaLargura;
+  return Math.max(0, Math.round(100 - (100 - NOTA_BORDA_FAIXA_) * relDist));
 }
 
 // Nota parcial (0-100) de sobreposição de lazer -- quantos itens do
@@ -2411,10 +2431,10 @@ function calcularSimilaridadeModelo_(e, modelos) {
     let pesos;
     try { pesos = JSON.parse(m.criteriosComparacao || '{}'); } catch (_) { pesos = {}; }
     const dims = [
-      { peso: pesos.pesoAreaUtil   ?? 0.3,  score: scoreFaixa_(areaUtilMedia, m.faixaAreaUtilMin, m.faixaAreaUtilMax) },
-      { peso: pesos.pesoQuartos    ?? 0.15, score: scoreFaixa_(quartosMedia, m.faixaQuartosMin, m.faixaQuartosMax) },
-      { peso: pesos.pesoPrecoMedio ?? 0.3,  score: scoreFaixa_(precoMedioMedia, m.faixaPrecoMedioMin, m.faixaPrecoMedioMax) },
-      { peso: pesos.pesoTempoObra  ?? 0.15, score: tempoObra !== null ? scoreFaixa_(tempoObra, m.faixaTempoObraMin, m.faixaTempoObraMax) : null },
+      { peso: pesos.pesoAreaUtil   ?? 0.3,  score: scoreFaixa_(areaUtilMedia, m.faixaAreaUtilMin, m.faixaAreaUtilMax, m.faixaAreaUtilMediana) },
+      { peso: pesos.pesoQuartos    ?? 0.15, score: scoreFaixa_(quartosMedia, m.faixaQuartosMin, m.faixaQuartosMax, m.faixaQuartosMediana) },
+      { peso: pesos.pesoPrecoMedio ?? 0.3,  score: scoreFaixa_(precoMedioMedia, m.faixaPrecoMedioMin, m.faixaPrecoMedioMax, m.faixaPrecoMedioMediana) },
+      { peso: pesos.pesoTempoObra  ?? 0.15, score: tempoObra !== null ? scoreFaixa_(tempoObra, m.faixaTempoObraMin, m.faixaTempoObraMax, m.faixaTempoObraMediana) : null },
       { peso: pesos.pesoLazer      ?? 0.1,  score: scoreLazer_(e.lazer, m.lazerComum) },
     ].filter(d => d.score !== null);
     if (!dims.length) return;
@@ -2565,6 +2585,16 @@ function avaliarPadraoVendedorAoVivo_(e) {
 // manualmente (via CSV/IA) continuam tendo prioridade sobre um dinâmico do
 // mesmo segmento -- ver mesclarModelosVendedores_ logo abaixo.
 
+// Mediana de uma lista de números -- "centro típico" da faixa do modelo,
+// usado por scoreFaixa_ pra dar o pico da nota aí (não em qualquer ponto do
+// min-max, que é só o extremo observado).
+function mediana_(arr) {
+  if (!arr || !arr.length) return null;
+  const ordenado = [...arr].sort((a, b) => a - b);
+  const meio = Math.floor(ordenado.length / 2);
+  return ordenado.length % 2 ? ordenado[meio] : (ordenado[meio - 1] + ordenado[meio]) / 2;
+}
+
 // Constrói a lista de modelos dinâmicos a partir dos empreendimentos que JÁ
 // qualificam como Padrão Vendedor (ao vivo -- avaliarPadraoVendedorAoVivo_).
 // `empsBrutos` é o mesmo formato de agruparPorEmpreendimento_(_todos).
@@ -2626,12 +2656,16 @@ function construirModelosVendedoresDinamicos_(empsBrutos) {
       idsEmpreendimentosBase: membros.map(({ e }) => e.idEmpreendimento).filter(Boolean).join(';'),
       faixaAreaUtilMin: areaUteis.length ? Math.min(...areaUteis) : '',
       faixaAreaUtilMax: areaUteis.length ? Math.max(...areaUteis) : '',
+      faixaAreaUtilMediana: mediana_(areaUteis),
       faixaQuartosMin: quartosArr.length ? Math.min(...quartosArr) : '',
       faixaQuartosMax: quartosArr.length ? Math.max(...quartosArr) : '',
+      faixaQuartosMediana: mediana_(quartosArr),
       faixaPrecoMedioMin: precos.length ? Math.min(...precos) : '',
       faixaPrecoMedioMax: precos.length ? Math.max(...precos) : '',
+      faixaPrecoMedioMediana: mediana_(precos),
       faixaTempoObraMin: temposObra.length ? Math.min(...temposObra) : '',
       faixaTempoObraMax: temposObra.length ? Math.max(...temposObra) : '',
+      faixaTempoObraMediana: mediana_(temposObra),
       lazerComum,
       // criteriosComparacao vazio de propósito -- calcularSimilaridadeModelo_
       // já aplica os pesos padrão quando esse campo está ausente/vazio, não
