@@ -277,7 +277,7 @@ async function entrar() {
     const hash = await sha256(senha);
     const r = await fetch(`${WEBHOOK_URL}?acao=verificar_senha&email=${encodeURIComponent(USER_EMAIL)}&hash=${hash}`);
     const j = await r.json();
-    if (j.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); sessionStorage.setItem(SESS_TOKEN_KEY, j.token); fecharLogin(); carregarEstrategias(); }
+    if (j.ok) { sessionStorage.setItem(SESS_KEY, 'ok'); sessionStorage.setItem(SESS_TOKEN_KEY, j.token); fecharLogin(); carregarPagina_(); }
     else { erro.textContent = 'Senha incorreta.'; btn.textContent = 'Entrar'; btn.disabled = false; }
   } catch { erro.textContent = 'Erro de conexão.'; btn.textContent = 'Entrar'; btn.disabled = false; }
 }
@@ -756,26 +756,35 @@ function situacaoBadgeHtml_(status) {
 let _resultadosPorSegmento = {};
 let _padraoAtivo = 'Todos';
 
+// Busca lançamentos + scores + padrões + modelos e devolve os itens já
+// pontuados no formato que o Mix consome -- compartilhado entre o modo
+// normal (blocos por segmento) e o modo cliente (?cliente=CTT-NNN).
+// Retorna null se a sessão expirou (trataNaoAutenticado já redirecionou).
+async function carregarItensScored_() {
+  const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos&token=${encodeURIComponent(tokenSessao())}`);
+  const json = await resp.json();
+  if (trataNaoAutenticado(json)) return null;
+  const todos = json.lancamentos || [];
+  const empsBrutos = agruparPorEmpreendimento_(todos);
+
+  const [mapaScoreVendedor, listaPadroes, listaModelosImportados] = await Promise.all([
+    buscarScoreVendedorPorLancamento_(), buscarPadroesVendedores_(), buscarModelosVendedores_(),
+  ]);
+  const listaModelos = mesclarModelosVendedores_(listaModelosImportados, construirModelosVendedoresDinamicos_(empsBrutos));
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor, listaPadroes, listaModelos);
+
+  return scored.map(s => {
+    const e = s.e;
+    const precos = (e.unidades || []).map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+    return { e, comp: s.comp, simil: s.simil, scoreVendedor: s.scoreVendedor,
+              menorPreco: precos.length ? Math.min(...precos) : 0, padrao: e.padrao || '' };
+  }).filter(it => it.padrao && it.e.statusAtivo !== 'Excluído');
+}
+
 async function carregarEstrategias() {
   try {
-    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos&token=${encodeURIComponent(tokenSessao())}`);
-    const json = await resp.json();
-    if (trataNaoAutenticado(json)) return;
-    const todos = json.lancamentos || [];
-    const empsBrutos = agruparPorEmpreendimento_(todos);
-
-    const [mapaScoreVendedor, listaPadroes, listaModelosImportados] = await Promise.all([
-      buscarScoreVendedorPorLancamento_(), buscarPadroesVendedores_(), buscarModelosVendedores_(),
-    ]);
-    const listaModelos = mesclarModelosVendedores_(listaModelosImportados, construirModelosVendedoresDinamicos_(empsBrutos));
-    const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor, listaPadroes, listaModelos);
-
-    const itens = scored.map(s => {
-      const e = s.e;
-      const precos = (e.unidades || []).map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
-      return { e, comp: s.comp, simil: s.simil, scoreVendedor: s.scoreVendedor,
-                menorPreco: precos.length ? Math.min(...precos) : 0, padrao: e.padrao || '' };
-    }).filter(it => it.padrao && it.e.statusAtivo !== 'Excluído');
+    const itens = await carregarItensScored_();
+    if (itens === null) return;
 
     const porSegmento = organizarPorSegmento_(itens);
     _resultadosPorSegmento = {};
@@ -814,22 +823,7 @@ function renderBlocosSegmentos_() {
     const covHtml = r.cobertura ? `<span class="cobertura-badge cobertura-${r.cobertura.nivel}">${r.cobertura.nivel === 'forte' ? '🟢' : r.cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${r.cobertura.nivel}</span>` : '';
     const corpo = r.aviso
       ? `<div class="vazio-segmento">${r.aviso}</div>`
-      : `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
-          <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th>
-        </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
-          const item = r.papeis[papel];
-          if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="6" style="color:var(--text3)">— não preenchido —</td></tr>`;
-          return `<tr>
-            <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
-            <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
-            <td>${item.e.construtora || '—'}</td>
-            <td><span class="tracao-badge ${classeScoreTracao_(item.comp)}">${item.comp.toFixed(1)}</span></td>
-            <td>${fmtR$_(item.menorPreco)}</td>
-            <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
-            <td>${situacaoBadgeHtml_(item.e.status)}</td>
-            <td>${tabelaBadgeHtml_(item.e.statusTabela)}</td>
-          </tr>`;
-        }).join('')}</tbody></table></div>`;
+      : tabelaMixHtml_(r);
     return `<div class="segmento-block">
       <div class="segmento-header">
         <div>
@@ -845,6 +839,124 @@ function renderBlocosSegmentos_() {
       ${corpo}
     </div>`;
   }).join('') || '<div class="vazio-segmento">Nenhum segmento com dados suficientes ainda.</div>';
+}
+
+// Tabela dos 7 papéis -- mesmo formato pros blocos por segmento e pro modo
+// cliente (?cliente=CTT-NNN), pra manter as duas visões idênticas.
+function tabelaMixHtml_(r) {
+  return `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
+      <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th>
+    </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
+      const item = r.papeis[papel];
+      if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="6" style="color:var(--text3)">— não preenchido —</td></tr>`;
+      return `<tr>
+        <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
+        <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
+        <td>${item.e.construtora || '—'}</td>
+        <td><span class="tracao-badge ${classeScoreTracao_(item.comp)}">${item.comp.toFixed(1)}</span></td>
+        <td>${fmtR$_(item.menorPreco)}</td>
+        <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
+        <td>${situacaoBadgeHtml_(item.e.status)}</td>
+        <td>${tabelaBadgeHtml_(item.e.statusTabela)}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+// ── MODO CLIENTE (?cliente=CTT-NNN, aberto pelo botão "🎯 Estratégias" em
+// contatos.html) -- monta UM mix de 7 ofertas a partir do perfil do cliente
+// em vez dos blocos por segmento ─────────────────────────────────────────
+const _clienteIdParam = new URLSearchParams(window.location.search).get('cliente') || '';
+
+// "Situação do imóvel" do perfil (Contatos) → estágios de lançamento
+// compatíveis. "Usado" não tem equivalente em lançamentos (é ignorado aqui
+// -- revenda é outro fluxo).
+const SITUACAO_STATUS_CLIENTE_ = {
+  'Novo':      ['Pronto', 'Pronto novo', 'Entregue'],
+  'Na planta': ['Em planta', 'Em obras'],
+};
+
+// Padrão do perfil do cliente (chips de Contatos) → padrão de lançamento
+// (classificarPadraoPorM2Medio_). Chave normalizada sem acento/minúscula.
+const PADRAO_CLIENTE_LANC_ = {
+  'economico': 'Popular', 'medio padrao': 'Médio', 'alto padrao': 'Alto', 'luxo': 'Luxo',
+};
+function normClienteTxt_(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+async function carregarEstrategiaCliente_() {
+  const cont = document.getElementById('blocosSegmentos');
+  document.getElementById('filtroPadrao').style.display = 'none';
+  try {
+    const respC = await fetch(`${WEBHOOK_URL}?acao=buscar&q=${encodeURIComponent(_clienteIdParam)}&token=${encodeURIComponent(tokenSessao())}`);
+    const listaC = await respC.json();
+    if (trataNaoAutenticado(listaC)) return;
+    const cliente = Array.isArray(listaC)
+      ? (listaC.find(c => String(c.idCliente) === _clienteIdParam) || listaC[0])
+      : null;
+    if (!cliente) {
+      cont.innerHTML = `<div class="vazio-segmento">Cliente "${_clienteIdParam}" não encontrado. <a href="contatos.html" style="color:var(--accent)">← Voltar pra Contatos</a></div>`;
+      return;
+    }
+
+    document.querySelector('.sec-title').textContent = `🎯 Estratégias para ${cliente.nome || _clienteIdParam}`;
+    document.querySelector('.sec-sub').textContent =
+      'Mix de 7 ofertas de lançamento montado a partir do perfil deste cliente (situação do imóvel, padrão e preço limite do cadastro).';
+
+    const itens = await carregarItensScored_();
+    if (itens === null) return;
+
+    // 1º filtro: Situação do imóvel do perfil (Novo/Na planta). Sem opção
+    // marcada no cadastro, considera as duas (todo lançamento é uma ou
+    // outra) -- com aviso visível de que o perfil não especificou.
+    const situacoes = String(cliente.situacaoImovel || '').split(',').map(s => s.trim()).filter(s => SITUACAO_STATUS_CLIENTE_[s]);
+    const semOpcaoSituacao = situacoes.length === 0;
+    const statusPermitidos = new Set((semOpcaoSituacao ? Object.keys(SITUACAO_STATUS_CLIENTE_) : situacoes).flatMap(s => SITUACAO_STATUS_CLIENTE_[s]));
+
+    // 2º filtro: padrão do perfil (multi-select), mapeado pro padrão de
+    // lançamento. Sem padrão no cadastro, não filtra.
+    const padroesCliente = String(cliente.padrao || '').split(',').map(s => PADRAO_CLIENTE_LANC_[normClienteTxt_(s)]).filter(Boolean);
+
+    const compat = itens.filter(it =>
+      statusPermitidos.has(it.e.status) &&
+      (!padroesCliente.length || padroesCliente.includes(it.padrao))
+    );
+
+    // 3º filtro: preço limite do cadastro. Quem passa do limite não entra no
+    // mix principal, mas vira candidato natural de ÂNCORA SUPERIOR (produto
+    // acima da faixa, só pra ancoragem de preço).
+    const limite = parseInt(String(cliente.precoLimite || '').replace(/\D/g, '')) || 0;
+    const pool      = limite > 0 ? compat.filter(it => it.menorPreco > 0 && it.menorPreco <= limite) : compat;
+    const poolAcima = limite > 0 ? compat.filter(it => it.menorPreco > limite) : [];
+
+    const resultado = selecionarMixEstrategico_(pool, poolAcima);
+    const r = { ...resultado, total: pool.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
+
+    const filtrosDesc = [
+      semOpcaoSituacao ? '⚠ perfil sem "Situação do imóvel" marcada — considerando Novo e Na planta' : `Situação: ${situacoes.join(' + ')}`,
+      padroesCliente.length ? `Padrão: ${padroesCliente.join(', ')}` : 'sem filtro de padrão',
+      limite > 0 ? `Preço até ${fmtR$_(limite)}` : 'sem preço limite',
+    ].join(' · ');
+
+    const covHtml = r.cobertura ? `<span class="cobertura-badge cobertura-${r.cobertura.nivel}">${r.cobertura.nivel === 'forte' ? '🟢' : r.cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${r.cobertura.nivel}</span>` : '';
+    const corpo = r.aviso ? `<div class="vazio-segmento">${r.aviso}</div>` : tabelaMixHtml_(r);
+
+    cont.innerHTML = `<div class="segmento-block">
+      <div class="segmento-header">
+        <div>
+          <div class="segmento-titulo">🎯 Ofertas para ${cliente.nome || '—'}</div>
+          <div class="segmento-sub">${filtrosDesc} · ${r.total} ${r.total !== 1 ? 'lançamentos compatíveis' : 'lançamento compatível'}</div>
+        </div>
+        ${covHtml}
+        <div class="segmento-actions">
+          <a class="btn-mini" href="contatos.html">← Voltar pra Contatos</a>
+        </div>
+      </div>
+      ${corpo}
+    </div>`;
+  } catch (e) {
+    cont.innerHTML = '<div class="vazio-segmento">Erro ao carregar. Verifique a conexão com o Apps Script.</div>';
+  }
 }
 
 // ── EXPORTAÇÃO CSV + PROMPT PRA IA DE CAMPANHAS ────────────────────────────
@@ -943,7 +1055,13 @@ function copiarModalExport_() {
     .catch(() => mostrarToast('Não consegui copiar automaticamente — selecione e copie manualmente.', 'erro'));
 }
 
-window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) carregarEstrategias(); };
+// Despacho por modo: com ?cliente=CTT-NNN na URL, a página vira o mix
+// personalizado de um cliente; sem, os blocos por segmento de sempre.
+function carregarPagina_() {
+  if (_clienteIdParam) carregarEstrategiaCliente_();
+  else carregarEstrategias();
+}
+window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) carregarPagina_(); };
 </script>
 </body>
 </html>

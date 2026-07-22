@@ -1,5 +1,36 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 80) — Botão "🎯 Estratégias" em Contatos abre o mix de 7 ofertas do cliente
+
+Pedido do usuário: coluna "Estratégias" na tabela de Contatos com botão de destaque que abre uma
+página com o mix de 7 ofertas montado a partir do perfil do cliente (se ele optou por imóvel Novo
+e/ou Na planta), no mesmo formato das tabelas de `estrategias.html`.
+
+**`contatos.html`** — coluna "Estratégias" nova (antes de "Ações") com botão destacado
+(`.btn-estrategias`, âmbar cheio — mais forte que os demais botões da linha, pedido explícito de
+destaque). Abre `estrategias.html?cliente=CTT-NNN`. Contato sem `idCliente` mostra "—".
+
+**`estrategias.html`** — novo modo cliente (`?cliente=`):
+- Busca o cliente (`acao=buscar`, que já aceita idCliente) e monta UM mix de 7 papéis a partir do
+  perfil, na mesma tabela dos blocos por segmento (extraída pra `tabelaMixHtml_` compartilhada;
+  carregamento de dados também unificado em `carregarItensScored_`).
+- Cascata de filtros do perfil: **Situação do imóvel** (Novo → Pronto/Pronto novo/Entregue; Na
+  planta → Em planta/Em obras; sem opção marcada → considera as duas, com aviso visível),
+  **Padrão** (Econômico→Popular, Médio padrão→Médio, Alto padrão→Alto, Luxo→Luxo; multi-select),
+  **Preço limite** (quem passa do limite sai do mix principal mas vira candidato natural de
+  ÂNCORA SUPERIOR — produto acima da faixa só pra ancoragem de preço).
+- Cabeçalho vira "🎯 Estratégias para [nome]", sub descreve os filtros aplicados, filtro de Padrão
+  da página some, botão "← Voltar pra Contatos".
+
+Testado ao vivo no navegador com fetch mockado (cliente "Na planta" + "Médio padrão" + limite
+R$ 500k sobre 8 lançamentos): o "Pronto novo" ficou de fora, o acima do limite apareceu só como
+Âncora Superior, os 7 papéis preencheram no formato idêntico ao dos segmentos. Render da tabela de
+Contatos testado em Node (coluna nova alinhada, link certo, "—" sem idCliente). Regressão das
+suítes de Mix/paridade sem quebras. Pego durante o teste: plural errado "compatívelis" no subtítulo
+— corrigido pra "compatíveis".
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 79) — Coluna "Situação" (Novo/Na planta) nas tabelas de Estratégias
 
 Pedido do usuário: coluna nova nas tabelas de Mix Estratégico (`estrategias.html`) informando se o

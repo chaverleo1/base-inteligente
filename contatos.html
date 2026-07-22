@@ -114,6 +114,13 @@ a { text-decoration:none; color:inherit; }
               border-radius:var(--radius-xs); padding:5px 12px; font-size:12px; font-weight:600;
               cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap; }
 .btn-ver-matches:hover { background:rgba(0,212,170,.2); }
+/* Botão de destaque (pedido do usuário): mais forte que os demais da linha
+   -- fundo cheio em vez de tint, cor própria (âmbar) pra saltar aos olhos. */
+.btn-estrategias { background:#f59e0b; border:1px solid #f59e0b; color:#0f1117;
+              border-radius:var(--radius-xs); padding:5px 12px; font-size:12px; font-weight:800;
+              cursor:pointer; font-family:'Inter',sans-serif; transition:all .18s; white-space:nowrap; }
+.btn-estrategias:hover { background:#ffb42e; border-color:#ffb42e; }
+.btn-estrategias:disabled { opacity:.35; cursor:default; }
 
 .empty { text-align:center; padding:48px; color:var(--text3); }
 .count-info { font-size:12px; color:var(--text3); margin-bottom:14px; }
@@ -902,6 +909,9 @@ function tabela(items) {
     <td>${scoreEl(score)}</td>
     <td>${statusFrescorEl(c.dataAtualizacao)}</td>
     <td>${formatarDataDisplay_(c.dataAtualizacao)}</td>
+    <td>${c.idCliente
+      ? `<button class="btn-estrategias" onclick="window.location.href='estrategias.html?cliente=${encodeURIComponent(c.idCliente)}'" title="Mix de 7 ofertas de lançamento montado pro perfil deste cliente">🎯 Estratégias</button>`
+      : '<span class="badge badge-muted">—</span>'}</td>
     <td class="td-acoes">
       <button class="btn-editar" onclick="editar(${c._linha})">✏️ Editar</button>
       <button class="btn-ver-matches" onclick="abrirCliente(${abrirArgs.join(', ')})">📊 Ver Matchs</button>
@@ -912,7 +922,7 @@ function tabela(items) {
     <thead><tr>
       <th>Código</th><th>Nome</th><th>Pipeline</th><th>Segmento</th><th>Score</th>
       <th title="Status por tempo de cadastro — diferente do Quente/Morno/Frio da home, que é sobre qualidade de match">Status</th>
-      <th>Atualizado em</th><th>Ações</th>
+      <th>Atualizado em</th><th>Estratégias</th><th>Ações</th>
     </tr></thead><tbody>${rows}</tbody>
   </table></div>`;
 }
