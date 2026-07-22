@@ -595,8 +595,11 @@ function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes, listaModelos
   const m2s    = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
   const minM2  = m2s.length ? Math.min(...m2s) : 0;
   const maxM2  = m2s.length ? Math.max(...m2s) : 1;
-  const PESO_PRAZO = 3, PESO_DISP = 1, PESO_ATRAT = 2, PESO_TRAC = 4, PESO_VENDEDOR = 5, PESO_SIMIL = 5;
-  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_TRAC + PESO_VENDEDOR + PESO_SIMIL;
+  // Pesos (2026-07, parte 84): Similaridade 5 / Atratividade 4 / Estoque 3 /
+  // Vendedor 2 / Prazo 1 — soma 15. Espelha lancamentos.html (Força de Venda
+  // saiu do composto; trac continua calculado/retornado, só não pesa mais).
+  const PESO_PRAZO = 1, PESO_DISP = 3, PESO_ATRAT = 4, PESO_VENDEDOR = 2, PESO_SIMIL = 5;
+  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_VENDEDOR + PESO_SIMIL;
   return emps.map(e => {
     const total   = Number(e.totalUnidades) || 0;
     const estoque = Number(e.estoque) || 0;
@@ -612,7 +615,7 @@ function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes, listaModelos
     const { simil, isSobraSuspeita, modeloRef } = calcularSimilaridadePadrao_(e, listaPadroes, listaModelos);
     const similSc = simil / 10;
     const comp    = semDados ? 0 : (
-      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT + trac * PESO_TRAC +
+      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT +
        vendedorSc * PESO_VENDEDOR + similSc * PESO_SIMIL) / PESO_TOTAL
     );
     return { e, atrat, disp, trac, prazoSc, prazo, vendedorSc, scoreVendedor, simil, similSc, isSobraSuspeita, modeloRef, comp };

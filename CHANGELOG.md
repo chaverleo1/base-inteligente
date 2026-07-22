@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 84) — Novos pesos do Score de Tração (Força de Venda sai do composto)
+
+Pedido do usuário: recalibrar os pesos da Nota de Tração e remover o eixo Força de Venda do composto.
+
+Pesos antigos (soma 20): Vendedor 5 / Similaridade 5 / Força de Venda 4 / Prazo 3 / Atratividade 2 /
+Estoque 1. Pesos novos (soma 15): **Similaridade 5** / **Atratividade 4** / **Estoque 3** /
+**Vendedor 2** / **Prazo 1** — Força de Venda **retirado** do composto.
+
+O eixo `trac` (Força de Venda, % vendido) continua calculado e retornado por `calcularScoreTracao`
+porque `ALERTAS_TRACAO` ainda o usa como sinal independente (cruza Vendedor/Força/Prazo/Estoque
+brutos pra decidir alertas como "🚀 Oportunidade" e "⏳ Estoque Esgotando") — só deixou de entrar na
+média ponderada da Nota de Tração em si. Mudança espelhada nas duas cópias do motor
+(`lancamentos.html` e `estrategias.html`, cobertas pelo teste de paridade). O texto pequeno abaixo do
+badge [T|V] no card (`tv-eixos-mini`) não mostra mais "Força X ·", já que esse eixo não compõe mais o
+composto exibido ali.
+
+Testado: novo `test_novos_pesos_tracao.js` chama `calcularScoreTracao` direto (extraído dos dois
+arquivos) e confirma — com valores calculados à mão — que o composto bate com a fórmula nova, que
+`trac` continua calculado corretamente, e que dois empreendimentos com Força de Venda bem diferente
+(86% vs 92% vendido) agora dão a MESMA nota composta (antes dariam notas diferentes). Suítes
+existentes (`test_paridade_motor_estrategias.js`, `test_mix_estrategico.js`,
+`test_alerta_vendedor_sem_avaliacao.js`) sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 83) — Abas NOVOS | NA PLANTA no modo campanha de Estratégias
 
 Pedido do usuário: imóvel novo/pronto e imóvel em obras/na planta não podem entrar juntos no mesmo

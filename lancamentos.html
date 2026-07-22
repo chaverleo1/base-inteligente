@@ -315,9 +315,10 @@ select.form-input option { background: var(--surface2); }
 /* Quadrado com a nota de Tração [T] e do Vendedor [V] lado a lado, abaixo do
    nome/construtora/bairro — reaproveita as cores tp-hot/tp-warm/tp-esgot/
    tp-cold (mesma faixa de score usada antes no painel de ranking, que foi
-   retirado da tela). As notas que COMPÕEM o composto (Prazo/Força de Venda/
-   Atratividade/Estoque) aparecem pequenas e sem destaque logo abaixo, só
-   como referência — não são um badge, é texto simples. */
+   retirado da tela). As notas que COMPÕEM o composto (Prazo/Atratividade/
+   Estoque — Força de Venda saiu do composto, parte 84) aparecem pequenas e
+   sem destaque logo abaixo, só como referência — não são um badge, é texto
+   simples. */
 .tv-score-badge { display:inline-flex; align-items:center; gap:2px; font-size:12px; font-weight:700;
                   padding:3px 10px; border-radius:6px; margin-top:8px; width:fit-content;
                   border:1px solid transparent; white-space:nowrap; }
@@ -3190,7 +3191,7 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam, lis
     const sobraFlagHtml   = s.isSobraSuspeita ? `<span class="sobra-flag" title="SOBRA SUSPEITA: vendeu 80%+, mas isso só aconteceu mais de 2 anos depois da entrega">⚠ Sobra suspeita</span>` : '';
     const tvHtml = s.comp > 0 ? `
         <div class="tv-score-badge ${classeScoreTracao_(s.comp)}" title="Score de Tração ${s.comp.toFixed(1)} — ${s.perfil} · Similaridade Padrão Vendedor ${s.simil}%">T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div>
-        <div class="tv-eixos-mini">Prazo ${s.prazoSc.toFixed(1)} · Força ${s.trac.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)} ${similHtml}${sobraFlagHtml}</div>` : '';
+        <div class="tv-eixos-mini">Prazo ${s.prazoSc.toFixed(1)} · Atrat ${s.atrat.toFixed(1)} · Estoque ${s.disp.toFixed(1)} ${similHtml}${sobraFlagHtml}</div>` : '';
     // Banner de destaque com a classificação de Padrão Vendedor, calculada
     // SEMPRE AO VIVO (avaliarPadraoVendedorAoVivo_) a partir do lançamento
     // atual -- nunca do snapshot congelado em PADROES_VENDEDORES. SOBRA
@@ -3476,8 +3477,8 @@ function abrirPvLanc(btn, idLancamento, label, idx) {
     pvAtualizarBadgeLanc_(idLancamento, json.urgenciaNivel, idx);
     pvSetBotaoScore_(btn, '🏷️ Vendedor', json.scoreVendedor);
     // Fecha o modal e recarrega a página inteira: o score do vendedor entra
-    // no Score de Tração com peso 5 (o maior), então salvar aqui muda a nota
-    // do card, a posição no ranking e o composto de TODOS os empreendimentos
+    // no Score de Tração (peso 2), então salvar aqui muda a nota do card,
+    // a posição no ranking e o composto de TODOS os empreendimentos
     // (os eixos Preço Médio/Atratividade são relativos ao conjunto) — mais
     // simples e confiável recarregar do que repintar cada pedaço na mão.
     // Delay curto pra dar tempo de ver o score calculado e o toast "Perfil salvo".
@@ -3567,10 +3568,13 @@ function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes, listaModelos
   const m2s    = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
   const minM2  = m2s.length ? Math.min(...m2s) : 0;
   const maxM2  = m2s.length ? Math.max(...m2s) : 1;
-  // Pesos (2026-07): Vendedor 5 / Similaridade Padrão Vendedor 5 / Força de
-  // Venda 4 / Prazo 3 / Preço Médio 2 / Estoque 1 — soma 20.
-  const PESO_PRAZO = 3, PESO_DISP = 1, PESO_ATRAT = 2, PESO_TRAC = 4, PESO_VENDEDOR = 5, PESO_SIMIL = 5;
-  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_TRAC + PESO_VENDEDOR + PESO_SIMIL;
+  // Pesos (2026-07, parte 84): Similaridade Padrão Vendedor 5 / Preço Médio
+  // (Atratividade) 4 / Estoque (Disponibilidade) 3 / Vendedor 2 / Prazo 1 —
+  // soma 15. Força de Venda (trac) saiu do composto por pedido do usuário;
+  // o eixo continua calculado e retornado — ainda é sinal independente em
+  // ALERTAS_TRACAO (mais abaixo), só não entra mais na Nota de Tração.
+  const PESO_PRAZO = 1, PESO_DISP = 3, PESO_ATRAT = 4, PESO_VENDEDOR = 2, PESO_SIMIL = 5;
+  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_VENDEDOR + PESO_SIMIL;
   return emps.map(e => {
     const total   = Number(e.totalUnidades) || 0;
     const estoque = Number(e.estoque) || 0;
@@ -3586,7 +3590,7 @@ function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes, listaModelos
     const { simil, isSobraSuspeita, modeloRef } = calcularSimilaridadePadrao_(e, listaPadroes, listaModelos);
     const similSc = simil / 10; // 0-100 → 0-10
     const comp    = semDados ? 0 : (
-      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT + trac * PESO_TRAC +
+      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT +
        vendedorSc * PESO_VENDEDOR + similSc * PESO_SIMIL)
       / PESO_TOTAL
     );
