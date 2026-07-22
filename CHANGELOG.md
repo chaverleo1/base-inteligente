@@ -1,5 +1,34 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 85) — Tabelas ordenáveis em insight-detail.html (novo padrão pra toda tabela)
+
+Pedido do usuário: clicar no nome do cabeçalho de uma tabela ordena os dados — do maior pro menor em
+colunas numéricas, alfabética em colunas de texto — e isso vira o padrão a seguir em toda tabela
+construída daqui pra frente no projeto.
+
+As 6 tabelas de `insight-detail.html` (Clientes, Lançamentos, Leads, Imóveis, Ações, Padrões sem
+demanda) ganharam cabeçalho clicável. Cada `tableX(items)` agora monta um array `colunas`
+(`{ label, tipo:'num'|'texto'|null, valor: item => valorBruto }`) e usa o novo `theadOrdenavel_(colunas)`
+no lugar de `<th>` fixo — colunas com `tipo: null` (ex: botão de Favoritar) ficam sem clique, o resto
+vira `<th class="th-sort" onclick="ordenarTabelaAtual_(idx)">`. Primeiro clique numa coluna numérica
+ordena desc (maior→menor); numa coluna de texto, ordena asc (A→Z, `localeCompare` em pt-BR); clicar de
+novo na mesma coluna inverte a direção. Seta ▲/▼ no cabeçalho mostra o estado atual.
+
+A ordenação reordena o array `_dAtual.items` de verdade (não só as linhas na tela) e chama
+`renderDetail(_dAtual)` de novo — por isso funciona igual em qualquer tabela nova, preserva pares de
+linha (ex: a linha de observação da tabela de Imóveis, que vem colada na linha principal) e mantém
+índices de botões corretos (ex: `abrirMatchesPanel(imIdx)`, que depende da posição no array).
+
+Testado: `test_tabelas_ordenaveis.js` cobre texto asc/desc, numérico desc/asc, coluna não-ordenável
+(tipo null) e geração correta do onclick no thead. Verificado ao vivo no navegador (dados mockados via
+sessionStorage): clique real via `dispatchEvent` confirma alternância asc/desc, seta correta, e — na
+tabela de Imóveis — que a linha de observação (`obs-row`) e os índices dos botões de Match continuam
+corretos depois de reordenar.
+
+100% frontend — sem alterações em `code.txt`. Padrão vale daqui pra frente pra tabelas novas; as
+tabelas já existentes em outras páginas (lancamentos.html, contatos.html, estrategias.html etc.) não
+foram retrofitadas nesta parte — só a pedida explicitamente (insight-detail.html).
+
 ## 2026-07-22 (parte 84) — Novos pesos do Score de Tração (Força de Venda sai do composto)
 
 Pedido do usuário: recalibrar os pesos da Nota de Tração e remover o eixo Força de Venda do composto.

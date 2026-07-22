@@ -72,6 +72,8 @@ a { text-decoration:none; color:inherit; }
   background:var(--surface2); border-bottom:1px solid var(--border);
   white-space:nowrap;
 }
+.detail-table th.th-sort { cursor:pointer; user-select:none; transition:color .15s; }
+.detail-table th.th-sort:hover { color:var(--text2); }
 .detail-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
 .detail-table tr:last-child td { border-bottom:none; }
 .detail-table tr:hover td { background:rgba(255,255,255,.02); }
@@ -190,6 +192,45 @@ function trataNaoAutenticado(json) {
   return false;
 }
 let _imoveisDetail = [];
+let _dAtual = null;
+
+// ── TABELAS ORDENÁVEIS (padrão pra toda tabela construída daqui pra frente) ──
+// Clique no <th> ordena: coluna numérica começa do MAIOR pro menor (desc);
+// coluna de texto começa em ordem ALFABÉTICA (asc). Clicar de novo no mesmo
+// <th> inverte a direção. Cada função tableX(items) monta um array `colunas`
+// -- [{ label, tipo:'num'|'texto'|null, valor: item => valorBruto }], usa
+// theadOrdenavel_(colunas) no lugar de escrever <th> fixo, e o resto da
+// tabela (linhas, badges, botões) continua igual. Coluna com tipo null vira
+// <th> comum, sem clique (ex: coluna de botão de ação, sem valor pra ordenar).
+let _colunasAtuais = null;
+let _ordenacaoAtual = { colIdx: null, dir: null };
+
+function theadOrdenavel_(colunas) {
+  _colunasAtuais = colunas;
+  return '<tr>' + colunas.map((c, idx) => {
+    if (!c.tipo) return `<th>${c.label}</th>`;
+    const ativa = _ordenacaoAtual.colIdx === idx;
+    const seta  = ativa ? (_ordenacaoAtual.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return `<th class="th-sort" onclick="ordenarTabelaAtual_(${idx})" title="Ordenar por ${c.label}">${c.label}${seta}</th>`;
+  }).join('') + '</tr>';
+}
+
+function ordenarTabelaAtual_(idx) {
+  const c = (_colunasAtuais || [])[idx];
+  if (!c || !c.tipo || !_dAtual) return;
+  const mesmaColuna = _ordenacaoAtual.colIdx === idx;
+  const dir = mesmaColuna ? (_ordenacaoAtual.dir === 'asc' ? 'desc' : 'asc') : (c.tipo === 'num' ? 'desc' : 'asc');
+  _ordenacaoAtual = { colIdx: idx, dir };
+  (_dAtual.items || []).sort((a, b) => {
+    if (c.tipo === 'num') {
+      const va = Number(c.valor(a)) || 0, vb = Number(c.valor(b)) || 0;
+      return dir === 'asc' ? va - vb : vb - va;
+    }
+    const va = String(c.valor(a) || '').toLowerCase(), vb = String(c.valor(b) || '').toLowerCase();
+    return dir === 'asc' ? va.localeCompare(vb, 'pt-BR') : vb.localeCompare(va, 'pt-BR');
+  });
+  renderDetail(_dAtual);
+}
 
 (function init() {
   if (sessionStorage.getItem(SESS_KEY) !== 'ok') { window.location.href = 'index.html'; return; }
@@ -215,6 +256,7 @@ let _imoveisDetail = [];
 })();
 
 function renderDetail(d) {
+  _dAtual = d;
   const items = d.items || [];
   const color = d.color || 'var(--accent)';
   let tableHtml;
@@ -266,6 +308,14 @@ function urgBadge(urg) {
 function tableClientes(items) {
   if (!items.length) return '<div class="empty">Nenhum cliente encontrado.</div>';
   const favs = JSON.parse(localStorage.getItem('bi_cli_favs') || '{}');
+  const colunas = [
+    { label: 'Nome',            tipo: 'texto', valor: c => c.nome },
+    { label: 'Segmento',        tipo: 'texto', valor: c => c.segmento || c.seg },
+    { label: 'Urgência',        tipo: 'texto', valor: c => c.urgencia || c.urg },
+    { label: 'Score',           tipo: 'num',   valor: c => c.score },
+    { label: 'Último contato',  tipo: 'num',   valor: c => c.dias },
+    { label: 'Favoritar',       tipo: null },
+  ];
   const rows = items.map(c => {
     const dias   = c.dias ? `<span class="dias-chip">${c.dias}d atrás</span>` : '';
     const cKey   = String(c.cod || c.codCliente || c.nome || '').replace(/'/g, "\\'");
@@ -280,10 +330,7 @@ function tableClientes(items) {
     </tr>`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr>
-      <th>Nome</th><th>Segmento</th><th>Urgência</th><th>Score</th>
-      <th>Último contato</th><th>Favoritar</th>
-    </tr></thead><tbody>${rows}</tbody>
+    <thead>${theadOrdenavel_(colunas)}</thead><tbody>${rows}</tbody>
   </table></div>`;
 }
 
@@ -305,6 +352,17 @@ function tableLancamentos(items) {
   const temEstoque  = items.some(l => l.estoque !== undefined && l.estoque !== null && l.estoque !== '');
   const temVendedor = items.some(l => l._scoreVendedor !== undefined);
   const temTabela   = items.some(l => l._tabelaStatus !== undefined);
+  const colunas = [
+    { label: 'Empreendimento',   tipo: 'texto', valor: l => l.nomeEmpreendimento || l.nome },
+    { label: 'Padrão',           tipo: 'texto', valor: l => l.padrao },
+    { label: 'Status',           tipo: 'texto', valor: l => l.status },
+    { label: 'Previsão Entrega', tipo: 'texto', valor: l => l.previsaoEntrega },
+    { label: 'Preço Médio',      tipo: 'num',   valor: l => parseInt(String(l.precoMedio || l.preco || '').replace(/\D/g,'')) || 0 },
+    { label: 'Construtora',      tipo: 'texto', valor: l => l.construtora },
+  ];
+  if (temEstoque)  colunas.push({ label: 'Estoque',  tipo: 'num',   valor: l => l.estoque });
+  if (temVendedor) colunas.push({ label: 'Vendedor', tipo: 'num',   valor: l => l._scoreVendedor });
+  if (temTabela)   colunas.push({ label: 'Tabela',   tipo: 'texto', valor: l => l._tabelaStatus });
   const rows = items.map(l => `<tr>
     <td class="td-nome">${l.nomeEmpreendimento||l.nome||'—'}</td>
     <td><span class="badge badge-blue">${l.padrao||'—'}</span></td>
@@ -320,7 +378,7 @@ function tableLancamentos(items) {
     ${temTabela   ? `<td><span class="badge ${l._tabelaStatus === 'Desatualizada' ? 'badge-red' : 'badge-green'}">${l._tabelaStatus || '—'}</span></td>` : ''}
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Empreendimento</th><th>Padrão</th><th>Status</th><th>Previsão Entrega</th><th>Preço Médio</th><th>Construtora</th>${temEstoque?'<th>Estoque</th>':''}${temVendedor?'<th>Vendedor</th>':''}${temTabela?'<th>Tabela</th>':''}</tr></thead>
+    <thead>${theadOrdenavel_(colunas)}</thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
@@ -345,6 +403,13 @@ function abrirAvaliacaoVendedor_(btn, idLancamento, nomeEmpreendimento) {
 
 function tableLeads(items) {
   if (!items.length) return '<div class="empty">Nenhum lead encontrado.</div>';
+  const colunas = [
+    { label: 'Nome',         tipo: 'texto', valor: l => l.nome },
+    { label: 'Telefone',     tipo: 'texto', valor: l => l.telefone },
+    { label: 'Tipo Contato', tipo: 'texto', valor: l => l.tipo_contato },
+    { label: 'Canal',        tipo: 'texto', valor: l => l.canal },
+    { label: 'Score',        tipo: 'num',   valor: l => l.score },
+  ];
   const rows = items.map(l => `<tr>
     <td class="td-nome">${l.nome||'—'}</td>
     <td class="td-tel">${l.telefone||'—'}${wpp(l.telefone)}</td>
@@ -353,7 +418,7 @@ function tableLeads(items) {
     <td>${scoreEl(l.score)}</td>
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Nome</th><th>Telefone</th><th>Tipo Contato</th><th>Canal</th><th>Score</th></tr></thead>
+    <thead>${theadOrdenavel_(colunas)}</thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
@@ -362,6 +427,17 @@ function tableImoveis(items) {
   if (!items.length) return '<div class="empty">Nenhum imóvel encontrado.</div>';
   _imoveisDetail = items;
   const fmt = v => { const n = parseInt(String(v||'').replace(/\D/g,'')); if (!n) return '—'; return 'R$ ' + n.toLocaleString('pt-BR'); };
+  const colunas = [
+    { label: 'Código',     tipo: 'texto', valor: im => im.codigo },
+    { label: 'Tipo',       tipo: 'texto', valor: im => im.tipo },
+    { label: 'Local',      tipo: 'texto', valor: im => [im.condominio, im.bairro].filter(Boolean).join(' — ') },
+    { label: 'Specs',      tipo: 'num',   valor: im => Number(im.areaUtil) || 0 },
+    { label: 'Valor',      tipo: 'num',   valor: im => parseInt(String(im.valorVenda||'').replace(/\D/g,'')) || 0 },
+    { label: 'Fonte',      tipo: 'texto', valor: im => im.fonte },
+    { label: 'Movimento',  tipo: 'texto', valor: im => im._movimento },
+    { label: 'Matches 🎯', tipo: 'num',   valor: im => (im._matches||[]).length },
+    { label: 'Score',      tipo: 'num',   valor: im => { const mList = im._matches||[]; return mList.length ? Math.max(...mList.map(m=>m.score||0)) : (im._bestScore>0?im._bestScore:-1); } },
+  ];
   const rows = items.map((im, imIdx) => {
     const local  = [im.condominio, im.bairro].filter(Boolean).join(' — ');
     const specs  = [
@@ -395,13 +471,20 @@ function tableImoveis(items) {
     </tr>${obsRow}`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Código</th><th>Tipo</th><th>Local</th><th>Specs</th><th>Valor</th><th>Fonte</th><th>Movimento</th><th>Matches 🎯</th><th>Score</th></tr></thead>
+    <thead>${theadOrdenavel_(colunas)}</thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
 
 function tableAcoes(items) {
   if (!items.length) return '<div class="empty">Nenhuma ação planejada nos próximos 7 dias.</div>';
+  const colunas = [
+    { label: 'Nome',            tipo: 'texto', valor: a => a.nome },
+    { label: 'Telefone',        tipo: 'texto', valor: a => a.telefone },
+    { label: 'Ação planejada',  tipo: 'texto', valor: a => a.proximaAcao },
+    { label: 'Data',            tipo: 'texto', valor: a => a.proximaAcaoData },
+    { label: 'Situação',        tipo: 'num',   valor: a => Number(a.dias) || 0 },
+  ];
   const rows = items.map(a => {
     const tel = a.telefone || '—';
     const situacao = a.dias > 0  ? `<span class="badge badge-red">Venceu há ${a.dias} dia${a.dias===1?'':'s'}</span>`
@@ -416,19 +499,23 @@ function tableAcoes(items) {
     </tr>`;
   }).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Nome</th><th>Telefone</th><th>Ação planejada</th><th>Data</th><th>Situação</th></tr></thead>
+    <thead>${theadOrdenavel_(colunas)}</thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
 
 function tablePads(items) {
   if (!items.length) return '<div class="empty">Nenhum padrão sem demanda encontrado.</div>';
+  const colunas = [
+    { label: 'Padrão no lançamento', tipo: 'texto', valor: p => p.padrao || p.pad },
+    { label: 'Situação',             tipo: null },
+  ];
   const rows = items.map(p => `<tr>
     <td class="td-nome">${p.padrao||p.pad||'—'}</td>
     <td><span class="badge badge-red">Sem clientes cadastrados</span></td>
   </tr>`).join('');
   return `<div class="detail-wrap"><table class="detail-table">
-    <thead><tr><th>Padrão no lançamento</th><th>Situação</th></tr></thead>
+    <thead>${theadOrdenavel_(colunas)}</thead>
     <tbody>${rows}</tbody>
   </table></div>`;
 }
