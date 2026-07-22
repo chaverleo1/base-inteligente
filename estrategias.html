@@ -697,14 +697,29 @@ function calcularFaixaPreco_(padrao, menorPreco, cortesPorPadrao) {
 function segmentoDe_(padrao, faixa) {
   return faixa === 'Única' ? padrao : `${padrao} ${faixa}`;
 }
-function segmentoLabelDisplay_(seg) {
+// Extrai o padrão interno de uma chave de segmento ("Alto B" -> "Alto",
+// "Alto" sozinho -> "Alto") -- checar se a última palavra é exatamente
+// A/B/C evita confundir a última palavra de um padrão com espaço no nome
+// com uma faixa. Compartilhado por segmentoLabelDisplay_, o CSV/prompt de
+// exportação, e o filtro por padrão (que agrupa Alto Padrão + Luxo num chip
+// só "Alto" -- ver PADRAO_GRUPO_FILTRO_).
+function padraoInternoDoSegmento_(seg) {
   const partes = seg.split(' ');
   const ultima = partes[partes.length - 1];
-  const temFaixa = /^[ABC]$/.test(ultima);
-  const padraoInterno = temFaixa ? partes.slice(0, -1).join(' ') : seg;
-  const faixa = temFaixa ? ' ' + ultima : '';
+  return /^[ABC]$/.test(ultima) ? partes.slice(0, -1).join(' ') : seg;
+}
+function segmentoLabelDisplay_(seg) {
+  const padraoInterno = padraoInternoDoSegmento_(seg);
+  const faixa = seg.length > padraoInterno.length ? seg.slice(padraoInterno.length) : '';
   return (PADRAO_LABEL_MIX_[padraoInterno] || padraoInterno) + faixa;
 }
+// Grupo de filtro (pedido do usuário, 2026-07): "Alto Padrão" e "Luxo"
+// mostram um chip único "Alto" -- clicar nele mostra os segmentos dos dois
+// padrões juntos. A segmentação/mix interno continua com os 2 padrões
+// separados (faixas de preço próprias, títulos de segmento "Alto Padrão
+// .../Luxo ..." continuam distintos) -- só o CHIP de filtro mescla.
+const PADRAO_GRUPO_FILTRO_ = { 'Popular': 'Popular', 'Médio': 'Médio', 'Alto': 'Alto', 'Luxo': 'Alto' };
+const ORDEM_GRUPOS_FILTRO_ = ['Popular', 'Médio', 'Alto'];
 // Letras na ordem barato->caro pro número de faixas decidido pro padrão --
 // usada tanto aqui quanto na hora de montar a ordem de segmentos pro render
 // (ANCORA_SUP depende dessa ordem refletir a granularidade real).
@@ -941,13 +956,12 @@ async function carregarEstrategias() {
 
 function renderFiltroPadrao_() {
   const bar = document.getElementById('filtroPadrao');
-  // Valor interno (usado no filtro/comparação de segmento) é "Alto", não
-  // "Alto Padrão" -- o rótulo do botão continua "Alto Padrão" (PADRAO_LABEL_MIX_).
-  const padroes = ['Todos', ...ORDEM_PADROES_MIX_];
-  bar.innerHTML = padroes.map(p => {
-    const label = p === 'Todos' ? 'Todos' : PADRAO_LABEL_MIX_[p];
-    return `<button class="filtro-chip ${p === _padraoAtivo ? 'on' : ''}" onclick="setFiltroPadrao_('${p}')">${label}</button>`;
-  }).join('');
+  // Chip usa o GRUPO de filtro ("Alto" representa Alto Padrão + Luxo juntos),
+  // não o padrão interno puro -- ver PADRAO_GRUPO_FILTRO_/ORDEM_GRUPOS_FILTRO_.
+  // Rótulo do botão é o nome curto do grupo ("Alto"), diferente do título do
+  // segmento (que continua "Alto Padrão" -- ver PADRAO_LABEL_MIX_).
+  const grupos = ['Todos', ...ORDEM_GRUPOS_FILTRO_];
+  bar.innerHTML = grupos.map(g => `<button class="filtro-chip ${g === _padraoAtivo ? 'on' : ''}" onclick="setFiltroPadrao_('${g}')">${g}</button>`).join('');
 }
 function setFiltroPadrao_(p) { _padraoAtivo = p; renderFiltroPadrao_(); renderBlocosSegmentos_(); }
 
@@ -955,7 +969,8 @@ function renderBlocosSegmentos_() {
   const cont = document.getElementById('blocosSegmentos');
   const segmentosParaMostrar = _ordemSegmentosAtual.filter(seg => {
     if (_padraoAtivo === 'Todos') return true;
-    return seg === _padraoAtivo || seg.startsWith(_padraoAtivo + ' ');
+    const padraoInterno = padraoInternoDoSegmento_(seg);
+    return (PADRAO_GRUPO_FILTRO_[padraoInterno] || padraoInterno) === _padraoAtivo;
   });
   cont.innerHTML = segmentosParaMostrar.map(seg => {
     const r = _resultadosPorSegmento[seg];
@@ -1121,16 +1136,9 @@ function csvEscapar_(v) {
 function montarLinhasCsvSegmento_(seg) {
   const r = _resultadosPorSegmento[seg];
   if (!r || r.aviso) return [];
-  // `seg` é o valor INTERNO ("Popular C", "Alto A"...) quando tem faixa, ou só
-  // o padrão interno ("Alto" sozinho) quando o volume não deu pra dividir
-  // (faixa única -- ver organizarPorSegmento_). Checar se a última palavra é
-  // exatamente A/B/C evita confundir a última palavra de um padrão com espaço
-  // no nome (ex: um "Alto Padrão" bruto, se algum dia existir) com uma faixa.
-  // padraoNome (abaixo) já traduz pro rótulo bonito via PADRAO_LABEL_MIX_.
-  const partesSeg = seg.split(' ');
-  const ultimaPalavra = partesSeg[partesSeg.length - 1];
-  const temFaixa = /^[ABC]$/.test(ultimaPalavra);
-  const [padraoInterno, faixaNome] = temFaixa ? [partesSeg.slice(0, -1).join(' '), ultimaPalavra] : [seg, 'Única'];
+  // padraoNome traduz o padrão interno pro rótulo bonito via PADRAO_LABEL_MIX_.
+  const padraoInterno = padraoInternoDoSegmento_(seg);
+  const faixaNome = seg.length > padraoInterno.length ? seg.slice(padraoInterno.length + 1) : 'Única';
   const padraoNome = PADRAO_LABEL_MIX_[padraoInterno] || padraoInterno;
   return ORDEM_PAPEIS_.filter(p => r.papeis[p]).map(papel => {
     const item = r.papeis[papel];

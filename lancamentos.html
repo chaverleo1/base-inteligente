@@ -55,7 +55,8 @@ a { text-decoration: none; color: inherit; }
 /* ── MAIN ── */
 .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; }
 
-/* ── ABAS (Empreendimentos Cadastrados / Novo Lançamento) ── */
+/* ── ABAS (Mapa Geral / Extrair Modelo 1 / Cadastrados / Extrair Modelo 2 /
+   Modelos e Padrões Vendedores) ── */
 .lanc-tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 10px; padding: 4px; margin-bottom: 24px; width: fit-content; }
 .lanc-tab { padding: 10px 20px; border-radius: 8px; border: none; background: transparent; color: var(--text2);
   font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
@@ -504,18 +505,18 @@ select.form-input option { background: var(--surface2); }
 
   <!-- ABAS -->
   <div class="lanc-tabs">
-    <button class="lanc-tab active" id="tabBtnLista" onclick="mudarAbaLancamentos('lista')">Empreendimentos Cadastrados</button>
-    <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Novo Lançamento</button>
-    <button class="lanc-tab" id="tabBtnOutros" onclick="mudarAbaLancamentos('outros')">Outros</button>
-    <button class="lanc-tab" id="tabBtnMapa" onclick="mudarAbaLancamentos('mapa')">Mapa Geral</button>
-    <button class="lanc-tab" id="tabBtnImportar" onclick="mudarAbaLancamentos('importar')">Importar Modelos</button>
+    <button class="lanc-tab active" id="tabBtnMapa" onclick="mudarAbaLancamentos('mapa')">Mapa Geral</button>
+    <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Extrair Modelo 1</button>
+    <button class="lanc-tab" id="tabBtnLista" onclick="mudarAbaLancamentos('lista')">Cadastrados</button>
+    <button class="lanc-tab" id="tabBtnOutros" onclick="mudarAbaLancamentos('outros')">Extrair Modelo 2</button>
+    <button class="lanc-tab" id="tabBtnModelos" onclick="mudarAbaLancamentos('modelos')">Modelos e Padrões Vendedores</button>
   </div>
 
   <!-- MOTOR -->
   <div id="tabPainelNovo" class="tab-panel" style="display:none">
   <div class="sec-header">
-    <div class="sec-title">Novo Lançamento</div>
-    <div class="sec-sub">Cole a URL do empreendimento para referência, os dados gerais no BOX 1 e a tabela de unidades no BOX 2 — o motor estrutura e agrupa as tipologias automaticamente.</div>
+    <div class="sec-title">Extrair Modelo 1</div>
+    <div class="sec-sub">Extração padrão via Órulo: cole a URL do empreendimento para referência, os dados gerais no BOX 1 e a tabela de unidades no BOX 2 — o motor estrutura e agrupa as tipologias automaticamente.</div>
   </div>
 
   <div class="motor-box">
@@ -739,8 +740,8 @@ select.form-input option { background: var(--surface2); }
   <!-- OUTROS -->
   <div id="tabPainelOutros" class="tab-panel" style="display:none">
   <div class="sec-header">
-    <div class="sec-title">Outros formatos</div>
-    <div class="sec-sub">Cole aqui o texto já organizado por um assistente de IA (ficha técnica, book, site — qualquer formato que não seja Orulo). Veja <code>ORGANIZADOR_PROMPT.md</code> no projeto pras instruções que esse assistente precisa seguir.</div>
+    <div class="sec-title">Extrair Modelo 2</div>
+    <div class="sec-sub">Extração alternativa: cole aqui o texto já organizado por um assistente de IA (ficha técnica, book, site — qualquer formato que não seja Órulo). Veja <code>ORGANIZADOR_PROMPT.md</code> no projeto pras instruções que esse assistente precisa seguir.</div>
   </div>
   <div class="motor-box">
     <div class="motor-label">Texto organizado</div>
@@ -748,73 +749,13 @@ select.form-input option { background: var(--surface2); }
     <div class="motor-actions">
       <button class="btn-extrair" id="btnExtrairOutros" onclick="extrairOutros()">⚡ Extrair Dados</button>
       <button class="btn-sec" onclick="document.getElementById('txtOutros').value=''">✕ Limpar</button>
-      <span class="motor-hint">Extrai pro mesmo formulário de revisão da aba "Novo Lançamento".</span>
+      <span class="motor-hint">Extrai pro mesmo formulário de revisão da aba "Extrair Modelo 1".</span>
     </div>
   </div>
   </div>
 
   <!-- MAPA GERAL -->
-  <div id="tabPainelMapa" class="tab-panel" style="display:none">
-  <!-- MODELOS VENDEDORES -->
-  <div id="modelosPainel" class="padroes-panel" style="display:none;margin-bottom:24px">
-    <div class="sec-header">
-      <div class="sec-title">Modelos Vendedores</div>
-      <div class="sec-sub">Modelos usados como referência pra calcular a nota de Similaridade — alguns importados manualmente (via CSV/IA), outros gerados automaticamente a partir dos empreendimentos já classificados como Padrão Vendedor (veja abaixo).</div>
-    </div>
-    <div class="mapa-wrap">
-      <table class="mapa-tabela">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome do Modelo</th>
-            <th>Tipo Empreend.</th>
-            <th>Tipo Imóvel</th>
-            <th>Padrão</th>
-            <th>Qtd Base</th>
-            <th>Área útil</th>
-            <th>Preço médio</th>
-            <th>Criado em</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody id="modelosBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- PADRÃO VENDEDOR -->
-  <div class="padroes-panel" id="padroesPainel" style="display:none">
-    <div class="padroes-panel-header">
-      <div>
-        <div class="padroes-panel-title">⚡ Padrão Vendedor</div>
-        <div class="padroes-panel-sub">EXTREMO = 100% em ≤1 ano do lançamento · FORTE = ≥90% antes da entrega · POTENCIAL = ≥70% antes da entrega · MODERADO = ≥80% em ≤1 ano depois da entrega. SOBRA SUSPEITA não entra aqui — vira alerta no Mapa Geral.</div>
-      </div>
-      <button class="btn-imprimir-lista" style="margin-left:auto" onclick="exportarPadroesVendedorCSV_()" title="Baixar tabela completa em .csv, pra enviar à IA assistente de modelos">⬇️ CSV</button>
-    </div>
-    <div class="padroes-wrap">
-      <table class="padroes-tabela">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Empreendimento</th>
-            <th>Construtora</th>
-            <th>Tipo</th>
-            <th>Classificação</th>
-            <th title="% de unidades vendidas">% Vendido</th>
-            <th>Estoque</th>
-            <th>Total</th>
-            <th title="Prazo de Venda — meses desde o lançamento">PV</th>
-            <th>1º Estoque</th>
-            <th>Bairro</th>
-          </tr>
-        </thead>
-        <tbody id="padroesBody">
-          <tr><td colspan="11" style="text-align:center;color:var(--text3);padding:18px">Carregando…</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
+  <div id="tabPainelMapa" class="tab-panel">
   <div class="sec-header">
     <div class="sec-title">Mapa Geral</div>
     <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique num Estágio pra filtrar (múltipla escolha), numa coluna pra ordenar, numa linha pra editar.</div>
@@ -850,14 +791,48 @@ select.form-input option { background: var(--surface2); }
   </div>
   </div>
 
-  <!-- IMPORTAR MODELOS -->
-  <div id="tabPainelImportar" class="tab-panel" style="display:none">
-
+  <!-- MODELOS E PADRÕES VENDEDORES (consolida Modelos Vendedores + Importar
+       Modelos + Padrão Vendedor, que antes ficavam espalhados entre a aba
+       Mapa Geral e a aba própria "Importar Modelos") -->
+  <div id="tabPainelModelos" class="tab-panel" style="display:none">
   <div class="sec-header">
-    <div class="sec-title">Importar Modelos Vendedores</div>
-    <div class="sec-sub">A tabela de Modelos (importados + automáticos) agora fica na aba "Mapa Geral", acima do Padrão Vendedor. Aqui você só importa: cole ou envie o .csv que a IA assistente de modelos gerou (ver <code>MODELO_VENDEDOR_PROMPT.md</code>) — um MODELO por linha. Confira a pré-visualização antes de importar.</div>
+    <div class="sec-title">Modelos e Padrões Vendedores</div>
+    <div class="sec-sub">Modelos usados como referência pra calcular a nota de Similaridade (importados via CSV/IA ou gerados automaticamente), e a classificação Padrão Vendedor ao vivo de cada empreendimento já cadastrado.</div>
   </div>
-  <div class="motor-box">
+
+  <!-- MODELOS VENDEDORES -->
+  <div id="modelosPainel" class="padroes-panel" style="display:none;margin-bottom:24px">
+    <div class="sec-header">
+      <div class="sec-title">Modelos Vendedores</div>
+      <div class="sec-sub">Modelos usados como referência pra calcular a nota de Similaridade — alguns importados manualmente (via CSV/IA), outros gerados automaticamente a partir dos empreendimentos já classificados como Padrão Vendedor (veja abaixo).</div>
+    </div>
+    <div class="mapa-wrap">
+      <table class="mapa-tabela">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome do Modelo</th>
+            <th>Tipo Empreend.</th>
+            <th>Tipo Imóvel</th>
+            <th>Padrão</th>
+            <th>Qtd Base</th>
+            <th>Área útil</th>
+            <th>Preço médio</th>
+            <th>Criado em</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="modelosBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- IMPORTAR MODELOS (antes era aba própria "Importar Modelos") -->
+  <div class="sec-header" style="margin-bottom:14px">
+    <div class="sec-title" style="font-size:16px">Importar Modelos Vendedores</div>
+    <div class="sec-sub">Cole ou envie o .csv que a IA assistente de modelos gerou (ver <code>MODELO_VENDEDOR_PROMPT.md</code>) — um MODELO por linha. Confira a pré-visualização antes de importar.</div>
+  </div>
+  <div class="motor-box" style="margin-bottom:24px">
     <div class="motor-label">Arquivo .csv</div>
     <input type="file" id="fileImportarModelos" accept=".csv,text/csv" onchange="lerArquivoModelosCsv_(this)">
     <div class="motor-label" style="margin-top:14px">…ou cole o conteúdo do .csv aqui</div>
@@ -869,7 +844,7 @@ select.form-input option { background: var(--surface2); }
     </div>
   </div>
 
-  <div id="previewModelosBox" style="display:none;margin-top:20px">
+  <div id="previewModelosBox" style="display:none;margin-top:20px;margin-bottom:24px">
     <div class="sec-title" style="font-size:14px;margin-bottom:10px">Pré-visualização (<span id="previewModelosCount">0</span> modelo(s))</div>
     <div class="mapa-wrap">
       <table class="mapa-tabela">
@@ -891,14 +866,47 @@ select.form-input option { background: var(--surface2); }
       <button class="btn-extrair" id="btnImportarModelos" onclick="importarModelosCsv_()">✅ Importar todos</button>
     </div>
   </div>
+
+  <!-- PADRÃO VENDEDOR -->
+  <div class="padroes-panel" id="padroesPainel" style="display:none">
+    <div class="padroes-panel-header">
+      <div>
+        <div class="padroes-panel-title">⚡ Padrão Vendedor</div>
+        <div class="padroes-panel-sub">EXTREMO = 100% em ≤1 ano do lançamento · FORTE = ≥90% antes da entrega · POTENCIAL = ≥70% antes da entrega · MODERADO = ≥80% em ≤1 ano depois da entrega. SOBRA SUSPEITA não entra aqui — vira alerta no Mapa Geral.</div>
+      </div>
+      <button class="btn-imprimir-lista" style="margin-left:auto" onclick="exportarPadroesVendedorCSV_()" title="Baixar tabela completa em .csv, pra enviar à IA assistente de modelos">⬇️ CSV</button>
+    </div>
+    <div class="padroes-wrap">
+      <table class="padroes-tabela">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Empreendimento</th>
+            <th>Construtora</th>
+            <th>Tipo</th>
+            <th>Classificação</th>
+            <th title="% de unidades vendidas">% Vendido</th>
+            <th>Estoque</th>
+            <th>Total</th>
+            <th title="Prazo de Venda — meses desde o lançamento">PV</th>
+            <th>1º Estoque</th>
+            <th>Bairro</th>
+          </tr>
+        </thead>
+        <tbody id="padroesBody">
+          <tr><td colspan="11" style="text-align:center;color:var(--text3);padding:18px">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
   </div>
 
   <!-- LISTA -->
-  <div id="tabPainelLista" class="tab-panel">
+  <div id="tabPainelLista" class="tab-panel" style="display:none">
 
   <div class="lista-header">
     <div>
-      <div class="sec-title">Empreendimentos cadastrados</div>
+      <div class="sec-title">Cadastrados</div>
       <div class="lista-count" id="lista-count">Carregando...</div>
     </div>
     <div class="filtro-bar" id="filtro-bar"></div>
@@ -1469,23 +1477,26 @@ function atualizarUrlLink(val) {
   }
 }
 
-// ── ABAS (Empreendimentos Cadastrados / Novo Lançamento / Outros) ────────────
+// ── ABAS (Mapa Geral / Extrair Modelo 1 / Cadastrados / Extrair Modelo 2 /
+// Modelos e Padrões Vendedores) -- nomes internos (nome/id) ficam iguais aos
+// de sempre, só o rótulo visível e a ordem mudaram; "importar" virou
+// "modelos" (a aba de import se fundiu com Modelos e Padrão Vendedor). ──────
 function mudarAbaLancamentos(nome) {
-  document.getElementById('tabPainelLista').style.display    = nome === 'lista'    ? '' : 'none';
-  document.getElementById('tabPainelNovo').style.display     = nome === 'novo'     ? '' : 'none';
-  document.getElementById('tabPainelOutros').style.display   = nome === 'outros'   ? '' : 'none';
-  document.getElementById('tabPainelMapa').style.display     = nome === 'mapa'     ? '' : 'none';
-  document.getElementById('tabPainelImportar').style.display = nome === 'importar' ? '' : 'none';
-  document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
-  document.getElementById('tabBtnNovo').classList.toggle('active', nome === 'novo');
-  document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
+  document.getElementById('tabPainelMapa').style.display    = nome === 'mapa'    ? '' : 'none';
+  document.getElementById('tabPainelNovo').style.display    = nome === 'novo'    ? '' : 'none';
+  document.getElementById('tabPainelLista').style.display   = nome === 'lista'   ? '' : 'none';
+  document.getElementById('tabPainelOutros').style.display  = nome === 'outros'  ? '' : 'none';
+  document.getElementById('tabPainelModelos').style.display = nome === 'modelos' ? '' : 'none';
   document.getElementById('tabBtnMapa').classList.toggle('active', nome === 'mapa');
-  document.getElementById('tabBtnImportar').classList.toggle('active', nome === 'importar');
+  document.getElementById('tabBtnNovo').classList.toggle('active', nome === 'novo');
+  document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
+  document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
+  document.getElementById('tabBtnModelos').classList.toggle('active', nome === 'modelos');
 }
 
 // Imprime/gera PDF só da aba de LISTA que estiver ativa no momento
-// (Empreendimentos Cadastrados ou Mapa Geral) — a aba inativa já não está
-// no fluxo (display:none via mudarAbaLancamentos), então o CSS de
+// (Cadastrados ou Mapa Geral) — a aba inativa já não está no fluxo
+// (display:none via mudarAbaLancamentos), então o CSS de
 // @media print só precisa esconder o chrome (header/abas/filtros/botões de
 // ação) pra "imprimir só a lista ativa" acontecer sozinho. @page no CSS já
 // pede paisagem por padrão; o navegador confirma isso no diálogo de
@@ -1494,7 +1505,7 @@ function imprimirListaAtiva_() {
   const emLista = document.getElementById('tabPainelLista').style.display !== 'none';
   const emMapa  = document.getElementById('tabPainelMapa').style.display !== 'none';
   if (!emLista && !emMapa) {
-    mostrarToast('Abra "Empreendimentos Cadastrados" ou "Mapa Geral" antes de imprimir.', 'erro');
+    mostrarToast('Abra "Cadastrados" ou "Mapa Geral" antes de imprimir.', 'erro');
     return;
   }
   window.print();
@@ -1812,8 +1823,9 @@ function extrairOutros() {
       document.getElementById('f-bairro').className = 'form-input ' + (b1.bairro             ? 'ok' : 'warn');
 
       document.getElementById('preview-box').style.display = 'block';
-      // O preview mora na aba "Novo Lançamento" — "Outros" é só uma entrada
-      // de texto alternativa que alimenta o mesmo formulário de revisão/salvar.
+      // O preview mora na aba "Extrair Modelo 1" — "Extrair Modelo 2" é só
+      // uma entrada de texto alternativa que alimenta o mesmo formulário de
+      // revisão/salvar.
       mudarAbaLancamentos('novo');
       document.getElementById('preview-box').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
@@ -3078,6 +3090,11 @@ async function carregarLancamentos() {
   }
 }
 
+// Mesmo agrupamento do Mapa Geral (MAPA_ESTAGIO_GRUPO_FILTRO_): "Em obras" e
+// "Em planta" viram um chip único "Na planta" -- os cards continuam
+// mostrando o estágio exato (badge st-obras/st-planta), só o FILTRO agrupa
+// os dois. _filtroStatus vira '' (Todos), string única (estágio não
+// agrupado, ex: "Pronto"), ou array (grupo, ex: ['Em obras','Em planta']).
 function renderFiltros() {
   const statuses = [...new Set(_todos.map(l => l.status).filter(Boolean))];
   const bar = document.getElementById('filtro-bar');
@@ -3087,17 +3104,30 @@ function renderFiltros() {
   all.className = 'filtro-chip' + (!_filtroStatus ? ' on' : '');
   all.textContent = 'Todos'; all.onclick = () => setFiltro('');
   bar.appendChild(all);
+  const gruposMap = {};
   statuses.forEach(s => {
+    const label = MAPA_ESTAGIO_GRUPO_FILTRO_[s] || s;
+    (gruposMap[label] = gruposMap[label] || new Set()).add(s);
+  });
+  Object.keys(gruposMap).forEach(label => {
+    const estagiosDoGrupo = [...gruposMap[label]];
+    const ativo = Array.isArray(_filtroStatus)
+      ? estagiosDoGrupo.length === _filtroStatus.length && estagiosDoGrupo.every(es => _filtroStatus.includes(es))
+      : estagiosDoGrupo.length === 1 && estagiosDoGrupo[0] === _filtroStatus;
     const c = document.createElement('button');
-    c.className = 'filtro-chip' + (_filtroStatus === s ? ' on' : '');
-    c.textContent = s; c.onclick = () => setFiltro(s);
+    c.className = 'filtro-chip' + (ativo ? ' on' : '');
+    c.textContent = label;
+    c.onclick = () => setFiltro(estagiosDoGrupo.length === 1 ? estagiosDoGrupo[0] : estagiosDoGrupo);
     bar.appendChild(c);
   });
 }
 
 function setFiltro(s) {
   _filtroStatus = s; renderFiltros();
-  renderLista(s ? _todos.filter(l => l.status === s) : _todos, null, _listaPadroes, _listaModelos);
+  const lista = !s ? _todos
+    : Array.isArray(s) ? _todos.filter(l => s.includes(l.status))
+    : _todos.filter(l => l.status === s);
+  renderLista(lista, null, _listaPadroes, _listaModelos);
 }
 
 // Agrupa linhas cruas (uma por unidade/tipologia, como vem de

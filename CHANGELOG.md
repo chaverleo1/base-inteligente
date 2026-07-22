@@ -1,5 +1,41 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 91) — Estratégias: filtro Alto+Luxo mesclado / Lançamentos: abas reorganizadas
+
+Dois pedidos do usuário nesta parte, um em cada página.
+
+**estrategias.html** — os chips de filtro por padrão "Alto Padrão" e "Luxo" viram um chip único
+"Alto" (rótulo curto, diferente do título do segmento que continua "Alto Padrão"/"Luxo" — só o
+FILTRO mescla). A segmentação/mix interno continua com os 2 padrões separados (faixas de preço
+próprias). Novo `PADRAO_GRUPO_FILTRO_`/`ORDEM_GRUPOS_FILTRO_` fazem esse agrupamento; extraído
+`padraoInternoDoSegmento_()` compartilhado (antes essa lógica de "extrair padrão de uma chave de
+segmento" estava duplicada em `segmentoLabelDisplay_` e no export CSV).
+
+**lancamentos.html** — reorganização completa das abas:
+- Nova ordem: **Mapa Geral** (abre por padrão agora, era "Empreendimentos Cadastrados") → **Extrair
+  Modelo 1** (era "Novo Lançamento") → **Cadastrados** (era "Empreendimentos Cadastrados") → **Extrair
+  Modelo 2** (era "Outros") → **Modelos e Padrões Vendedores** (nova aba, no final).
+- A aba "Importar Modelos" (standalone) deixou de existir — seu formulário de import se fundiu na
+  nova aba, junto com a tabela Modelos Vendedores e a tabela Padrão Vendedor, que antes viviam dentro
+  de "Mapa Geral". Mapa Geral agora só tem a tabela de lançamentos (mais enxuto).
+- Subtítulos das abas renomeadas atualizados pra refletir o novo nome/contexto.
+- Filtro de status na lista de cards (aba Cadastrados) ganhou o mesmo agrupamento já aplicado no
+  Mapa Geral (parte 89): "Em obras"/"Em planta" viram um chip único "Na planta" — os cards continuam
+  com o badge do estágio exato, só o filtro mescla.
+- Nenhum ID de elemento mudou (`modelosPainel`, `padroesPainel`, formulário de import) — só a
+  localização no DOM, então todo o JS que já manipulava essas tabelas por ID continua funcionando
+  sem alteração.
+
+Testado: `test_filtro_alto_luxo.js` (novo) cobre o agrupamento de padrão em Estratégias.
+`test_filtro_lista_cards.js` (novo) cobre o agrupamento de estágio na lista de cards, espelhando
+`test_mapa_estagio_grupo.js` (parte 89, sem regressão). Verificado ao vivo no navegador: ordem/rótulo
+das 5 abas, Mapa Geral ativo por padrão, as 3 peças (Modelos/Import/Padrão Vendedor) dentro da nova
+aba e fora de Mapa Geral, carregamento de dados sem erros de console, filtro "Na planta" na lista de
+cards mostrando os 2 estágios juntos com badges distintos. Suíte completa (12 arquivos, 135
+verificações) sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 90) — Estratégias: 2 bugs que zeravam mix em NA PLANTA (faixas adaptativas + "Alto" vs "Alto Padrão")
 
 Caso real do usuário: aba NA PLANTA contava 37 empreendimentos, mas nenhum mix se formava em nenhum
