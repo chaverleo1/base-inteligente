@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 92) — Lançamentos: removida a sessão "Importar Modelos Vendedores"
+
+Pedido do usuário: excluir a sessão de import manual de Modelos Vendedores (CSV/IA) da aba "Modelos e
+Padrões Vendedores" (parte 91). Modelos agora só nascem automaticamente, a partir dos empreendimentos
+já classificados como Padrão Vendedor — sem caminho manual de cadastro em lote pela UI.
+
+Removido por completo, não só escondido: a seção HTML (upload de arquivo, textarea de colar CSV,
+botão Analisar, tabela de pré-visualização, botão Importar todos) e as funções JS que só existiam
+pra sustentar esse fluxo — `parseCsv_`, `CSV_CAMPOS_MODELOS_`, `_modelosParaImportar`,
+`lerArquivoModelosCsv_`, `limparImportarModelos_`, `validarModeloImportado_`, `analisarModelosCsv_`,
+`renderPreviewModelos_`, `importarModelosCsv_` — nenhuma delas era usada em mais nada. Os subtítulos
+da aba e do painel "Modelos Vendedores" foram ajustados pra não mencionarem mais o import manual.
+Excluir um modelo (🗑, `excluirModeloVendedor_`) continua funcionando normalmente — só o CADASTRO
+manual em lote saiu.
+
+Verificado ao vivo no navegador: o texto "Importar Modelos Vendedores" não aparece mais em lugar
+nenhum, as tabelas Modelos Vendedores e Padrão Vendedor continuam carregando normalmente dentro da
+aba, sem erros de console. Suítes de regressão relacionadas (filtros de estágio/Mapa Geral, lista de
+cards) sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 91) — Estratégias: filtro Alto+Luxo mesclado / Lançamentos: abas reorganizadas
 
 Dois pedidos do usuário nesta parte, um em cada página.
