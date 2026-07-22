@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-22 (parte 87) — Estratégias: exportação (CSV/prompt IA) para de distinguir Em obras/Em planta
+
+Bug reportado pelo usuário: o badge "Situação" da tabela e as abas NOVOS/NA PLANTA já tratavam "Em
+obras" e "Em planta" como a mesma coisa ("Na planta") — mas a exportação CSV/prompt pra IA de
+Campanhas (`montarLinhasCsvSegmento_`) usava `e.status` bruto no campo `situacao`, então um mix com
+um produto "Em obras" e outro "Em planta" saía com dois valores diferentes nessa coluna, quebrando a
+promessa de que os dois nunca se misturam/distinguem em Estratégias.
+
+Extraído `situacaoTexto_(status)` (versão texto de `situacaoBadgeHtml_`, mesma regra: Em
+planta/Em obras → "Na planta", Pronto/Pronto novo/Entregue → "Novo") e usado no campo `situacao` do
+CSV/prompt em vez do status bruto.
+
+Testado: `test_situacao_texto_export.js` cobre as 3 conversões e confirma que o texto bate com o
+badge (mesma fonte de verdade). Verificado ao vivo no navegador: um mix fake com um produto "Em
+obras" e outro "Em planta" agora exporta "Na planta" pros dois na coluna `situacao`. Regressão das
+suítes de mix/paridade sem quebras.
+
+100% frontend — sem alterações em `code.txt`.
+
 ## 2026-07-22 (parte 86) — Estratégias: 3 faixas de preço (A/B/C) em todo padrão, não só Médio/Alto
 
 Pedido do usuário: em vez de só Médio e Alto Padrão terem faixa de preço (A/B, dividido pela

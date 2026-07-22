@@ -774,7 +774,16 @@ function tabelaBadgeHtml_(statusTabela) {
 // Situação do empreendimento pro mix -- mesma terminologia do campo
 // "Situação do imóvel" de Contatos (Novo/Na planta; "Usado" não se aplica a
 // lançamento). Deriva do estágio já cadastrado: Em planta/Em obras = ainda
-// não entregue = "Na planta"; Pronto/Pronto novo/Entregue = "Novo".
+// não entregue = "Na planta"; Pronto/Pronto novo/Entregue = "Novo". "Em
+// obras" e "Em planta" são estágios internos do cadastro (útil em
+// lancamentos.html), mas em Estratégias os dois SEMPRE contam como a mesma
+// situação -- inclusive na exportação (CSV/prompt de IA), que antes vazava o
+// status bruto e mostrava os dois como valores diferentes.
+function situacaoTexto_(status) {
+  if (status === 'Em planta' || status === 'Em obras') return 'Na planta';
+  if (status === 'Pronto' || status === 'Pronto novo' || status === 'Entregue') return 'Novo';
+  return status || '—';
+}
 function situacaoBadgeHtml_(status) {
   if (status === 'Em planta' || status === 'Em obras') return `<span class="situacao-badge na-planta">Na planta</span>`;
   if (status === 'Pronto' || status === 'Pronto novo' || status === 'Entregue') return `<span class="situacao-badge novo">Novo</span>`;
@@ -1057,7 +1066,7 @@ function montarLinhasCsvSegmento_(seg) {
       bairro: e.bairro, cidade: e.cidade,
       metragem_min: areas.length ? Math.min(...areas) : '', metragem_max: areas.length ? Math.max(...areas) : '',
       preco_entrada: item.menorPreco, preco_m2_medio: precos.length && areas.length ? Math.round(precos[0] / (areas[0] || 1)) : '',
-      situacao: e.status, prazo_entrega: e.previsaoEntrega,
+      situacao: situacaoTexto_(e.status), prazo_entrega: e.previsaoEntrega,
       total_unidades: e.totalUnidades, unidades_vendidas: (Number(e.totalUnidades) || 0) - (Number(e.estoque) || 0),
       unidades_disponiveis: e.estoque, pct_vendido: calcularPercentualVendido(e.estoque, e.totalUnidades),
       nota_tracao: item.comp.toFixed(1), nota_similaridade: item.simil, nota_vendedor: item.scoreVendedor,
