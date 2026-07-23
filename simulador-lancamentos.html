@@ -6,604 +6,742 @@
 <title>Simulador de Lançamentos — Leonardo Viana</title>
 <style>
 :root {
-  --bg:      #0f1117;
-  --surface: #181c27;
-  --surface2:#1e2335;
-  --border:  #2a3050;
+  --bg:      #09090f;
+  --s1:      #0f1018;
+  --s2:      #13151f;
+  --s3:      #181b28;
+  --border:  #1e2232;
+  --border2: #252840;
   --accent:  #4f7cff;
-  --accent2: #00d4aa;
-  --danger:  #ff6b6b;
-  --text:    #e8ecf4;
-  --text2:   #8892aa;
-  --text3:   #4a5470;
-  --radius:  14px;
-  --radius-sm:8px;
+  --green:   #00d4aa;
+  --danger:  #ff5252;
+  --text:    #eef0f6;
+  --text2:   #7a839e;
+  --text3:   #3a4060;
+  --r:       12px;
+  --r-sm:    8px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; font-size: 15px; }
 body {
   background: var(--bg); color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 15px; min-height: 100vh;
-  display: flex; flex-direction: column;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100%; display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ── TOPO ── */
+/* ── TOPO ─────────────────────────────────────────────────────────────── */
 .topo {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 14px 20px; position: sticky; top: 0; z-index: 10;
+  background: var(--s1); border-bottom: 1px solid var(--border);
+  padding: 14px 20px; position: sticky; top: 0; z-index: 20;
 }
-.topo-inner { max-width: 540px; margin: 0 auto; }
+.topo-inner { max-width: 520px; margin: 0 auto; }
 .topo-logo {
-  font-size: 13px; font-weight: 700; color: var(--accent);
-  letter-spacing: -.2px; margin-bottom: 10px;
+  font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 1.2px;
+  text-transform: uppercase; margin-bottom: 10px;
 }
-.topo-logo span { color: var(--text2); font-weight: 400; }
+.progress-row { display: flex; align-items: center; gap: 10px; }
+.progress-track { flex: 1; height: 3px; background: var(--s3); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s cubic-bezier(.4,0,.2,1); }
+.progress-step { font-size: 11px; color: var(--text3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* Progress */
-.progress-wrap { display: flex; align-items: center; gap: 8px; }
-.progress-bar {
-  flex: 1; height: 4px; background: var(--surface2);
-  border-radius: 99px; overflow: hidden;
-}
-.progress-fill {
-  height: 100%; border-radius: 99px;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  transition: width .4s ease;
-}
-.progress-label { font-size: 11px; color: var(--text3); white-space: nowrap; }
+/* ── CONTEÚDO ─────────────────────────────────────────────────────────── */
+.main { flex: 1; padding: 32px 20px 110px; }
+.step-wrap { max-width: 520px; margin: 0 auto; }
 
-/* ── CONTEÚDO ── */
-.main { flex: 1; overflow-y: auto; padding: 28px 20px 100px; }
-.step-wrap { max-width: 540px; margin: 0 auto; }
-
-/* Step */
-.step { display: none; animation: fadeUp .3s ease; }
-.step.ativo { display: block; }
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(12px); }
+.step { display: none; }
+.step.ativo { display: block; animation: fadeSlide .28s cubic-bezier(.4,0,.2,1); }
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── TIPOGRAFIA ──────────────────────────────────────────────────────── */
+.step-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 10px;
+}
 .step-title {
-  font-size: 22px; font-weight: 700; line-height: 1.3;
-  margin-bottom: 8px; letter-spacing: -.3px;
+  font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: -.4px;
+  color: var(--text); margin-bottom: 8px;
 }
 .step-sub {
-  font-size: 14px; color: var(--text2); margin-bottom: 28px; line-height: 1.5;
+  font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 28px;
 }
 
-/* Cards de seleção única */
-.cards-grid { display: flex; flex-direction: column; gap: 10px; }
-.card-sel {
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: var(--radius); padding: 16px 18px;
-  cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 14px;
-  user-select: none;
+/* ── CARDS DE SELEÇÃO ÚNICA ───────────────────────────────────────────── */
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt {
+  background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--r); padding: 16px 18px;
+  cursor: pointer; transition: border-color .15s, background .15s;
+  display: flex; align-items: center; gap: 16px; user-select: none;
 }
-.card-sel:hover { border-color: var(--accent); }
-.card-sel.selecionado { border-color: var(--accent); background: rgba(79,124,255,.08); }
-.card-sel .card-icon { font-size: 22px; flex-shrink: 0; }
-.card-sel .card-label { font-size: 15px; font-weight: 600; }
-.card-sel .card-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
-.card-sel .card-check {
-  margin-left: auto; width: 22px; height: 22px; border-radius: 50%;
-  border: 2px solid var(--border2, #343d60); flex-shrink: 0; transition: all .18s;
-  display: flex; align-items: center; justify-content: center; font-size: 12px;
+.opt:hover { border-color: var(--border2); }
+.opt.on { border-color: var(--accent); background: rgba(79,124,255,.05); }
+.opt-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--s3); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--text2); transition: color .15s, background .15s;
 }
-.card-sel.selecionado .card-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+.opt.on .opt-icon { background: rgba(79,124,255,.15); color: var(--accent); }
+.opt-text { flex: 1; }
+.opt-label { font-size: 14px; font-weight: 600; color: var(--text); }
+.opt-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.opt-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--border2); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.opt.on .opt-check { background: var(--accent); border-color: var(--accent); }
+.opt.on .opt-check svg { display: block; }
+.opt-check svg { display: none; color: #fff; }
 
-/* Chips multi-select */
-.chips-wrap { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+/* ── CHIPS ────────────────────────────────────────────────────────────── */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
-  padding: 10px 16px; border-radius: 99px;
-  border: 1.5px solid var(--border);
-  background: var(--surface); color: var(--text2);
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  transition: all .15s; user-select: none;
-  display: flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 99px;
+  border: 1.5px solid var(--border); background: var(--s2);
+  color: var(--text2); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s; user-select: none;
 }
-.chip:hover { border-color: var(--accent2); color: var(--text); }
-.chip.selecionado { background: rgba(0,212,170,.1); border-color: var(--accent2); color: var(--accent2); }
-.chip-hint { font-size: 12px; color: var(--text3); margin-top: 6px; }
+.chip:hover { border-color: var(--border2); color: var(--text); }
+.chip.on { border-color: var(--green); color: var(--green); background: rgba(0,212,170,.07); }
+.chip-hint { font-size: 12px; color: var(--text3); margin-top: 10px; }
 
-/* Slider */
-.slider-block { margin-bottom: 32px; }
-.slider-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.slider-labels span { font-size: 12px; color: var(--text2); }
-.slider-val {
-  font-size: 28px; font-weight: 700; color: var(--text);
-  margin-bottom: 10px; letter-spacing: -.5px;
+/* ── SLIDER + CONTADOR ────────────────────────────────────────────────── */
+.slider-section { margin-bottom: 0; }
+
+.contador-hero {
+  text-align: center;
+  padding: 36px 20px 28px;
+  position: relative;
 }
-.slider-val small { font-size: 15px; font-weight: 400; color: var(--text2); }
+.contador-label-top {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 16px;
+}
+.contador-numero {
+  font-size: 96px; font-weight: 800; color: var(--text);
+  line-height: 1; letter-spacing: -6px;
+  transition: color .2s;
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+.contador-numero.pulso {
+  animation: contadorPulso .35s cubic-bezier(.4,0,.2,1);
+}
+@keyframes contadorPulso {
+  0%   { transform: scale(1);    color: var(--text); }
+  35%  { transform: scale(1.06); color: var(--accent); }
+  100% { transform: scale(1);    color: var(--text); }
+}
+.contador-label-bot {
+  font-size: 13px; color: var(--text2); margin-top: 10px; letter-spacing: .1px;
+}
+
+.slider-label-row {
+  display: flex; justify-content: space-between; margin-bottom: 6px;
+}
+.slider-label-row span { font-size: 11px; color: var(--text3); }
+.slider-val-atual {
+  text-align: center; font-size: 14px; font-weight: 600; color: var(--text2);
+  margin-bottom: 10px;
+}
+.slider-val-atual strong { color: var(--text); }
+
 input[type=range] {
   -webkit-appearance: none; appearance: none;
-  width: 100%; height: 5px;
-  background: var(--surface2); border-radius: 99px; outline: none;
-  cursor: pointer; margin-bottom: 8px;
+  width: 100%; height: 3px;
+  background: var(--s3); border-radius: 99px; outline: none; cursor: pointer;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: 24px; height: 24px; border-radius: 50%;
-  background: var(--accent); cursor: pointer;
-  box-shadow: 0 0 0 4px rgba(79,124,255,.2);
-  transition: box-shadow .2s;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--text);
+  cursor: pointer; box-shadow: 0 0 0 0 rgba(79,124,255,0);
+  transition: box-shadow .2s, transform .1s;
 }
-input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(79,124,255,.3); }
+input[type=range]:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 8px rgba(79,124,255,.18); transform: scale(1.1);
+}
 input[type=range]::-moz-range-thumb {
-  width: 24px; height: 24px; border-radius: 50%;
-  background: var(--accent); cursor: pointer; border: none;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--text);
+  cursor: pointer; border: none;
 }
-.contador-vivo {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(79,124,255,.1); border: 1px solid rgba(79,124,255,.3);
-  border-radius: 99px; padding: 6px 14px; margin-top: 4px;
-}
-.contador-num { font-size: 17px; font-weight: 700; color: var(--accent); }
-.contador-txt { font-size: 12px; color: var(--text2); }
 
-/* Resultado pós-captura */
-.resultado-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 24px 20px; margin-bottom: 16px;
+/* ── RESULTADO PARCIAL (TEASER) ──────────────────────────────────────── */
+.teaser-num {
+  font-size: 64px; font-weight: 800; color: var(--text);
+  letter-spacing: -4px; line-height: 1; margin: 24px 0 4px;
+  display: block;
 }
-.res-titulo { font-size: 13px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 16px; }
+.teaser-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--border); border-radius: var(--r); overflow: hidden; margin-top: 20px;
+}
+.teaser-stat {
+  background: var(--s2); padding: 16px;
+}
+.teaser-stat-label { font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: .8px; text-transform: uppercase; margin-bottom: 4px; }
+.teaser-stat-val { font-size: 15px; font-weight: 700; color: var(--text); }
 
-.score-wrap { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
-.score-circle {
-  width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
-  background: conic-gradient(var(--accent2) 0% var(--score-pct, 0%), var(--surface2) 0%);
-  display: flex; align-items: center; justify-content: center;
-  position: relative;
-}
-.score-circle::after {
-  content: ''; position: absolute;
-  width: 54px; height: 54px; border-radius: 50%; background: var(--surface);
-}
-.score-num {
-  position: relative; z-index: 1;
-  font-size: 16px; font-weight: 700; color: var(--accent2);
-}
-.score-desc { flex: 1; }
-.score-label { font-size: 18px; font-weight: 700; }
-.score-sub { font-size: 13px; color: var(--text2); margin-top: 3px; line-height: 1.4; }
+.score-bar-wrap { margin: 20px 0; }
+.score-bar-label { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.score-bar-label span { font-size: 12px; color: var(--text2); }
+.score-bar-label strong { font-size: 14px; color: var(--text); }
+.score-bar-track { height: 6px; background: var(--s3); border-radius: 99px; overflow: hidden; }
+.score-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .8s cubic-bezier(.4,0,.2,1); }
 
-.res-dados { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-.res-linha {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px; background: var(--surface2);
-  border-radius: var(--radius-sm);
+.blurred-cta {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px;
+  text-align: center; margin-top: 20px;
 }
-.res-icon { font-size: 18px; flex-shrink: 0; }
-.res-info-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
-.res-info-val { font-size: 14px; font-weight: 600; margin-top: 1px; }
+.blurred-cta p { font-size: 13px; color: var(--text2); line-height: 1.6; }
 
-.estagios-wrap { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
-.estagio-pill {
-  padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 600;
-  background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
-}
-.estagio-pill.destaque { border-color: var(--accent2); color: var(--accent2); background: rgba(0,212,170,.08); }
-
-/* Captura */
-.form-field { margin-bottom: 16px; }
+/* ── CAPTURA ─────────────────────────────────────────────────────────── */
+.form-field { margin-bottom: 14px; }
 .form-field label {
-  display: block; font-size: 12px; font-weight: 700; color: var(--text2);
-  text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px;
+  display: block; font-size: 10px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px;
 }
 .form-field input {
-  width: 100%; background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm); color: var(--text); font-size: 16px;
+  width: 100%; background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text); font-size: 16px;
   font-family: inherit; padding: 14px 16px; outline: none; transition: border .2s;
+  -webkit-appearance: none;
 }
 .form-field input:focus { border-color: var(--accent); }
 .form-field input::placeholder { color: var(--text3); }
+.privacy-note { font-size: 12px; color: var(--text3); margin-top: 14px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; }
 
-.privacidade { font-size: 12px; color: var(--text3); margin-top: 6px; line-height: 1.4; }
+/* ── MELHOR MATCH ────────────────────────────────────────────────────── */
+.match-header {
+  margin-bottom: 20px;
+}
+.match-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(0,212,170,.1); border: 1px solid rgba(0,212,170,.25);
+  border-radius: 99px; padding: 4px 12px;
+  font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: .5px;
+  margin-bottom: 12px;
+}
+.match-score-num { font-size: 80px; font-weight: 800; color: var(--text); letter-spacing: -4px; line-height: 1; }
+.match-score-pct { font-size: 32px; font-weight: 700; color: var(--text2); letter-spacing: -1px; }
+.match-score-desc { font-size: 14px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
 
-/* Agradecimento */
-.obrigado-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+.match-divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+.match-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  background: var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 12px;
+}
+.match-cell {
+  background: var(--s2); padding: 14px 16px;
+}
+.match-cell.full { grid-column: 1 / -1; }
+.match-cell-label { font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: .8px; text-transform: uppercase; margin-bottom: 4px; }
+.match-cell-val { font-size: 14px; font-weight: 600; color: var(--text); }
+.match-cell-val.destaque { color: var(--green); }
+.match-cell-val.alerta { color: #f5a623; }
+
+.urgencia-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,166,35,.1); border: 1px solid rgba(245,166,35,.25);
+  border-radius: 99px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #f5a623;
+  margin-bottom: 20px;
+}
+
+/* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
+.btn-final-wrap {
+  margin-top: 24px;
+  border: 1.5px solid var(--border2); border-radius: var(--r);
+  padding: 20px; background: var(--s2);
+}
+.btn-final-wrap p {
+  font-size: 13px; color: var(--text2); line-height: 1.5; margin-bottom: 16px; text-align: center;
+}
+.btn-final {
+  width: 100%; padding: 18px 20px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r-sm);
+  font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-final:hover { background: #3d6aee; }
+.btn-final:active { transform: scale(.98); }
+.btn-final.confirmado { background: var(--green); cursor: default; }
+.btn-final-sub { font-size: 12px; color: var(--text3); text-align: center; margin-top: 10px; }
+
+/* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
+.check-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(0,212,170,.12); border: 1.5px solid rgba(0,212,170,.3);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.perfil-resumo {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px; margin: 20px 0;
+}
+.perfil-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.perfil-item:last-child { border-bottom: none; }
+.perfil-item-k { color: var(--text3); }
+.perfil-item-v { color: var(--text); font-weight: 600; text-align: right; }
+
 .whats-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  background: #25D366; color: #fff;
-  border: none; border-radius: var(--radius-sm);
-  padding: 16px 20px; width: 100%; font-size: 16px; font-weight: 700;
-  font-family: inherit; cursor: pointer; text-decoration: none;
-  transition: opacity .2s; margin-top: 24px;
+  background: #25D366; color: #fff; border: none; border-radius: var(--r-sm);
+  padding: 16px 20px; width: 100%; font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; text-decoration: none; transition: opacity .2s;
 }
 .whats-btn:hover { opacity: .9; }
-.whats-icon { font-size: 20px; }
 
-/* ── RODAPÉ DE NAVEGAÇÃO ── */
+/* ── RODAPÉ NAV ──────────────────────────────────────────────────────── */
 .nav-bar {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: var(--surface); border-top: 1px solid var(--border);
-  padding: 14px 20px; z-index: 10;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--s1); border-top: 1px solid var(--border);
+  padding: 14px 20px;
 }
-.nav-inner {
-  max-width: 540px; margin: 0 auto;
-  display: flex; gap: 10px;
-}
+.nav-inner { max-width: 520px; margin: 0 auto; display: flex; gap: 8px; }
 .btn-nav {
-  flex: 1; padding: 14px; border-radius: var(--radius-sm);
-  border: none; font-size: 15px; font-weight: 700; font-family: inherit;
-  cursor: pointer; transition: all .18s;
+  flex: 1; padding: 14px; border-radius: var(--r-sm); border: none;
+  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .18s;
 }
-.btn-nav.primario { background: var(--accent); color: #fff; }
-.btn-nav.primario:hover { background: #3d6aee; }
-.btn-nav.primario:disabled { opacity: .4; cursor: default; }
-.btn-nav.secundario { background: var(--surface2); color: var(--text2); }
-.btn-nav.secundario:hover { color: var(--text); }
-.btn-nav.oculto { display: none; }
+.btn-prim { background: var(--accent); color: #fff; }
+.btn-prim:hover { background: #3d6aee; }
+.btn-prim:disabled { opacity: .35; cursor: default; }
+.btn-sec { background: var(--s3); color: var(--text2); }
+.btn-sec:hover { color: var(--text); }
+.btn-hide { display: none; }
 
-/* Toast */
+/* ── TOAST ────────────────────────────────────────────────────────────── */
 .toast {
-  position: fixed; top: 72px; left: 50%; transform: translateX(-50%) translateY(-10px);
-  background: var(--danger); color: #fff;
-  padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 600;
-  opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap;
-  pointer-events: none;
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-8px);
+  background: var(--s3); border: 1px solid var(--border2); color: var(--text2);
+  padding: 10px 18px; border-radius: 99px; font-size: 13px; font-weight: 600;
+  opacity: 0; transition: all .22s; z-index: 999; pointer-events: none; white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* Utilitários */
-.divider { height: 1px; background: var(--border); margin: 20px 0; }
-.badge-teaser {
-  display: inline-block; background: rgba(79,124,255,.15); border: 1px solid rgba(79,124,255,.3);
-  color: var(--accent); border-radius: 99px; padding: 4px 12px;
-  font-size: 12px; font-weight: 700; letter-spacing: .3px;
+/* ── UTILITÁRIOS ─────────────────────────────────────────────────────── */
+.label-section {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--text3); margin: 28px 0 12px;
 }
 </style>
 </head>
 <body>
 
-<!-- TOPO -->
-<div class="topo">
-  <div class="topo-inner">
-    <div class="topo-logo">LEONARDO VIANA <span>· Corretor em Goiânia</span></div>
-    <div class="progress-wrap">
-      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-      <div class="progress-label" id="progressLabel">Início</div>
-    </div>
-  </div>
-</div>
+<!-- ÍCONES SVG inline (reutilizados via JS) -->
+<svg style="display:none" id="svgDefs">
+  <symbol id="ico-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z"/>
+    <path d="M9 22V12h6v10"/>
+  </symbol>
+  <symbol id="ico-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+  </symbol>
+  <symbol id="ico-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+  </symbol>
+  <symbol id="ico-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </symbol>
+  <symbol id="ico-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </symbol>
+  <symbol id="ico-frame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+    <path d="M3 9h18M9 21V9"/>
+  </symbol>
+  <symbol id="ico-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+  </symbol>
+  <symbol id="ico-tree" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 22V14.5M12 5l-9 10h18L12 5zM7 22V14.5M12 22V14.5"/>
+  </symbol>
+  <symbol id="ico-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  </symbol>
+  <symbol id="ico-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+  </symbol>
+  <symbol id="ico-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-4 4h16l-4-4z"/><circle cx="17" cy="14" r="1" fill="currentColor"/>
+  </symbol>
+  <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </symbol>
+  <symbol id="ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </symbol>
+  <symbol id="ico-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+  </symbol>
+  <symbol id="ico-whats" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </symbol>
+</svg>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- TOPO -->
+<div class="topo">
+  <div class="topo-inner">
+    <div class="topo-logo">Leonardo Viana &middot; Corretor em Goiânia</div>
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-step" id="progressStep">0 / 6</div>
+    </div>
+  </div>
+</div>
 
 <!-- CONTEÚDO -->
 <div class="main">
 <div class="step-wrap">
 
-  <!-- STEP 0 — Abertura -->
+  <!-- STEP 0 — ABERTURA -->
   <div class="step ativo" id="step-0">
-    <div style="margin-bottom:28px;margin-top:8px">
-      <div style="font-size:36px;margin-bottom:16px">👋</div>
-      <div class="step-title">Olá! Vou te mostrar o que temos disponível agora para o seu perfil.</div>
-      <div class="step-sub">São 6 perguntas rápidas. Em 2 minutos você descobre quantos empreendimentos combinam com o que você procura — com área, parcelas estimadas e estágio da obra.</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:28px">
-        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)">
-          <span style="color:var(--accent2);font-size:16px">✓</span> Dados reais da base — atualizados semanalmente
+    <div style="margin-bottom:32px">
+      <div class="step-tag">Simulador de Lançamentos</div>
+      <div class="step-title">Descubra quantos empreendimentos combinam com o que você procura</div>
+      <div class="step-sub">6 perguntas. Dados reais da base, atualizados semanalmente. Sem spam — só entramos em contato se você confirmar.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
+          <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
+          <span style="font-size:13px;color:var(--text2)">Resultados calculados em tempo real com a base atual</span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)">
-          <span style="color:var(--accent2);font-size:16px">✓</span> Sem spam — contato só se você quiser
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
+          <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
+          <span style="font-size:13px;color:var(--text2)">Resultado personalizado — não é lista genérica</span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)">
-          <span style="color:var(--accent2);font-size:16px">✓</span> Resultado personalizado para o seu perfil
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
+          <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
+          <span style="font-size:13px;color:var(--text2)">Você controla — só recebe atendimento se confirmar</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- STEP 1 — Moradia atual -->
+  <!-- STEP 1 — MORADIA ATUAL -->
   <div class="step" id="step-1">
+    <div class="step-tag">Pergunta 1 de 6</div>
     <div class="step-title">Como você mora hoje?</div>
-    <div class="step-sub">Isso ajuda a entender seu momento e as melhores opções para você.</div>
-    <div class="cards-grid" id="cards-moradia">
-      <div class="card-sel" onclick="selecionarCard('moradia',this,'aluguel')">
-        <span class="card-icon">🏙️</span>
-        <div>
-          <div class="card-label">Moro de aluguel</div>
-          <div class="card-desc">Quero sair do aluguel e ter meu próprio</div>
+    <div class="step-sub">Define o ponto de partida para entender o melhor caminho.</div>
+    <div class="options" id="opts-moradia">
+      <div class="opt" onclick="selecionarOpt('moradia',this,'aluguel')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-home"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Moro de aluguel</div>
+          <div class="opt-desc">Quero sair do aluguel e ter meu próprio</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
-      <div class="card-sel" onclick="selecionarCard('moradia',this,'proprio')">
-        <span class="card-icon">🏡</span>
-        <div>
-          <div class="card-label">Tenho imóvel próprio</div>
-          <div class="card-desc">Quero trocar, investir ou adquirir um segundo</div>
+      <div class="opt" onclick="selecionarOpt('moradia',this,'proprio')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-swap"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Tenho imóvel próprio</div>
+          <div class="opt-desc">Quero trocar, investir ou adquirir um segundo</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
-      <div class="card-sel" onclick="selecionarCard('moradia',this,'familia')">
-        <span class="card-icon">👨‍👩‍👧</span>
-        <div>
-          <div class="card-label">Moro com família ou amigos</div>
-          <div class="card-desc">Chegou a hora de ter meu próprio espaço</div>
+      <div class="opt" onclick="selecionarOpt('moradia',this,'familia')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-users"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Moro com família ou amigos</div>
+          <div class="opt-desc">É hora de ter meu próprio espaço</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
     </div>
   </div>
 
-  <!-- STEP 2 — O que mais importa -->
+  <!-- STEP 2 — PRIORIDADES -->
   <div class="step" id="step-2">
+    <div class="step-tag">Pergunta 2 de 6</div>
     <div class="step-title">O que é mais importante para você?</div>
-    <div class="step-sub">Escolha até 2 prioridades — vamos usar isso para filtrar o que realmente importa.</div>
-    <div class="chips-wrap" id="chips-prioridade">
-      <div class="chip" onclick="toggleChip(this,'localizacao')"><span>📍</span> Localização e bairro</div>
-      <div class="chip" onclick="toggleChip(this,'entrega_rapida')"><span>⚡</span> Entrega rápida</div>
-      <div class="chip" onclick="toggleChip(this,'planta')"><span>📐</span> Planta espaçosa</div>
-      <div class="chip" onclick="toggleChip(this,'parcela')"><span>💰</span> Parcela que cabe</div>
-      <div class="chip" onclick="toggleChip(this,'lazer')"><span>🌳</span> Área de lazer</div>
+    <div class="step-sub">Selecione até 2 prioridades. Usaremos isso para destacar o que mais importa no resultado.</div>
+    <div class="chips" id="chips-prioridade">
+      <div class="chip" data-val="localizacao" onclick="toggleChip(this)">Localização e bairro</div>
+      <div class="chip" data-val="entrega_rapida" onclick="toggleChip(this)">Entrega rápida</div>
+      <div class="chip" data-val="planta" onclick="toggleChip(this)">Planta espaçosa</div>
+      <div class="chip" data-val="parcela" onclick="toggleChip(this)">Parcela que cabe</div>
+      <div class="chip" data-val="lazer" onclick="toggleChip(this)">Área de lazer</div>
     </div>
-    <div class="chip-hint" id="chipHint">Selecione pelo menos 1 prioridade</div>
+    <div class="chip-hint" id="chipHint">Selecione ao menos 1 prioridade</div>
   </div>
 
-  <!-- STEP 3 — Faixa de preço (slider) -->
+  <!-- STEP 3 — PREÇO (slider) -->
   <div class="step" id="step-3">
+    <div class="step-tag">Pergunta 3 de 6</div>
     <div class="step-title">Qual faixa de investimento você considera?</div>
-    <div class="step-sub">Valor total do imóvel. Ajuste o controle e veja quantas opções existem.</div>
-    <div class="slider-block">
-      <div class="slider-val" id="sliderPrecoVal">até <span id="sliderPrecoDisplay">R$&nbsp;500.000</span></div>
-      <input type="range" id="sliderPreco" min="200" max="1000" value="500" step="25"
-             oninput="atualizarSliderPreco(this.value)">
-      <div class="slider-labels">
-        <span>R$ 200k</span><span>R$ 400k</span><span>R$ 600k</span><span>R$ 800k</span><span>R$ 1M+</span>
-      </div>
+    <div class="step-sub">Valor total do imóvel. Mova o controle e veja as opções atualizarem.</div>
+    <div class="contador-hero">
+      <div class="contador-label-top">Opções disponíveis nesta faixa</div>
+      <span class="contador-numero" id="cntPreco">—</span>
+      <div class="contador-label-bot" id="cntPrecoLabel">—</div>
     </div>
-    <div class="contador-vivo">
-      <span class="contador-num" id="contadorPreco">—</span>
-      <span class="contador-txt">empreendimentos disponíveis nesta faixa</span>
+    <div class="slider-val-atual">Até <strong id="sliderPrecoTxt">R$ 500.000</strong></div>
+    <input type="range" id="sliderPreco" min="200" max="1000" value="500" step="25"
+           oninput="atualizarPreco(this.value)">
+    <div class="slider-label-row">
+      <span>R$ 200k</span><span>R$ 500k</span><span>R$ 750k</span><span>R$ 1M+</span>
     </div>
   </div>
 
-  <!-- STEP 4 — Área útil (slider) -->
+  <!-- STEP 4 — ÁREA (slider) -->
   <div class="step" id="step-4">
+    <div class="step-tag">Pergunta 4 de 6</div>
     <div class="step-title">Qual área útil você busca?</div>
-    <div class="step-sub">Tamanho mínimo que faz sentido para você. O contador afina com a combinação preço + área.</div>
-    <div class="slider-block">
-      <div class="slider-val" id="sliderAreaVal">a partir de <span id="sliderAreaDisplay">60 m²</span></div>
-      <input type="range" id="sliderArea" min="35" max="140" value="60" step="5"
-             oninput="atualizarSliderArea(this.value)">
-      <div class="slider-labels">
-        <span>35m²</span><span>60m²</span><span>90m²</span><span>120m²+</span>
-      </div>
+    <div class="step-sub">Tamanho mínimo que faz sentido para você. O contador combina com a faixa de preço anterior.</div>
+    <div class="contador-hero">
+      <div class="contador-label-top">Opções no perfil preço + área</div>
+      <span class="contador-numero" id="cntArea">—</span>
+      <div class="contador-label-bot" id="cntAreaLabel">—</div>
     </div>
-    <div class="contador-vivo">
-      <span class="contador-num" id="contadorArea">—</span>
-      <span class="contador-txt">empreendimentos no perfil preço + área</span>
+    <div class="slider-val-atual">A partir de <strong id="sliderAreaTxt">60 m²</strong></div>
+    <input type="range" id="sliderArea" min="35" max="140" value="60" step="5"
+           oninput="atualizarArea(this.value)">
+    <div class="slider-label-row">
+      <span>35 m²</span><span>70 m²</span><span>100 m²</span><span>140 m²+</span>
     </div>
   </div>
 
-  <!-- STEP 5 — Momento financeiro -->
+  <!-- STEP 5 — MOMENTO FINANCEIRO -->
   <div class="step" id="step-5">
+    <div class="step-tag">Pergunta 5 de 6</div>
     <div class="step-title">Como está sua situação financeira agora?</div>
-    <div class="step-sub">Não precisa ser exata — só nos ajuda a entender o melhor caminho.</div>
-    <div class="cards-grid" id="cards-financeiro">
-      <div class="card-sel" onclick="selecionarCard('financeiro',this,'entrada_disponivel')">
-        <span class="card-icon">💵</span>
-        <div>
-          <div class="card-label">Tenho entrada ou FGTS disponível</div>
-          <div class="card-desc">Já tenho valor para dar de entrada (acima de R$ 20k)</div>
+    <div class="step-sub">Ajuda a entender o melhor caminho — não precisa ser exata.</div>
+    <div class="options" id="opts-financeiro">
+      <div class="opt" onclick="selecionarOpt('financeiro',this,'entrada_ok')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-wallet"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Tenho entrada ou FGTS disponível</div>
+          <div class="opt-desc">Já tenho valor para dar de entrada (acima de R$ 20k)</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
-      <div class="card-sel" onclick="selecionarCard('financeiro',this,'juntando')">
-        <span class="card-icon">🏦</span>
-        <div>
-          <div class="card-label">Estou juntando a entrada</div>
-          <div class="card-desc">Tenho prazo para organizar — quero saber pra quanto me preparar</div>
+      <div class="opt" onclick="selecionarOpt('financeiro',this,'juntando')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-dollar"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Estou juntando a entrada</div>
+          <div class="opt-desc">Quero saber para quanto me preparar</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
-      <div class="card-sel" onclick="selecionarCard('financeiro',this,'entender')">
-        <span class="card-icon">📋</span>
-        <div>
-          <div class="card-label">Preciso entender o financiamento</div>
-          <div class="card-desc">Quero saber como funciona antes de decidir</div>
+      <div class="opt" onclick="selecionarOpt('financeiro',this,'entender')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-frame"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Preciso entender o financiamento</div>
+          <div class="opt-desc">Quero saber como funciona antes de decidir</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
     </div>
   </div>
 
-  <!-- STEP 6 — Urgência -->
+  <!-- STEP 6 — URGÊNCIA -->
   <div class="step" id="step-6">
+    <div class="step-tag">Pergunta 6 de 6</div>
     <div class="step-title">Qual é o seu prazo para decidir?</div>
-    <div class="step-sub">Sem compromisso — só para entendermos com que atenção devemos te contatar.</div>
-    <div class="cards-grid" id="cards-urgencia">
-      <div class="card-sel" onclick="selecionarCard('urgencia',this,'3meses')">
-        <span class="card-icon">⚡</span>
-        <div>
-          <div class="card-label">Preciso resolver em até 3 meses</div>
-          <div class="card-desc">Situação específica que precisa de solução rápida</div>
+    <div class="step-sub">Sem compromisso — só para sabermos com que prioridade te contatar.</div>
+    <div class="options" id="opts-urgencia">
+      <div class="opt" onclick="selecionarOpt('urgencia',this,'3meses')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-zap"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Até 3 meses</div>
+          <div class="opt-desc">Tenho uma situação que precisa de resolução rápida</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
-      <div class="card-sel" onclick="selecionarCard('urgencia',this,'12meses')">
-        <span class="card-icon">📅</span>
-        <div>
-          <div class="card-label">Tenho de 3 a 12 meses</div>
-          <div class="card-desc">Posso pesquisar com calma e comparar opções</div>
+      <div class="opt" onclick="selecionarOpt('urgencia',this,'12meses')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-calendar"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">3 a 12 meses</div>
+          <div class="opt-desc">Posso pesquisar com calma e comparar opções</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
-      <div class="card-sel" onclick="selecionarCard('urgencia',this,'pesquisando')">
-        <span class="card-icon">🔍</span>
-        <div>
-          <div class="card-label">Estou pesquisando, sem prazo</div>
-          <div class="card-desc">Curioso sobre o que existe antes de decidir qualquer coisa</div>
+      <div class="opt" onclick="selecionarOpt('urgencia',this,'pesquisando')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-clock"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Ainda estou pesquisando</div>
+          <div class="opt-desc">Curioso sobre o que existe, sem prazo definido</div>
         </div>
-        <div class="card-check">✓</div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
     </div>
   </div>
 
-  <!-- STEP 7 — Resultado parcial (teaser) -->
+  <!-- STEP 7 — RESULTADO PARCIAL (TEASER) -->
   <div class="step" id="step-7">
-    <div class="step-title" id="resTitle">Encontrei opções para o seu perfil</div>
-    <div class="step-sub" id="resSub">Com base nas suas respostas, aqui está um resumo do que existe na nossa base agora:</div>
+    <div class="step-tag">Resultado parcial</div>
+    <div class="step-title">Encontrei opções para o seu perfil</div>
+    <div class="step-sub">Um resumo do que existe agora — os detalhes completos aparecem após você deixar seu contato.</div>
 
-    <div class="resultado-card">
-      <div class="res-titulo">Compatibilidade com o seu perfil</div>
-      <div class="score-wrap">
-        <div class="score-circle" id="scoreCircle" style="--score-pct:0%">
-          <span class="score-num" id="scoreNum">–</span>
-        </div>
-        <div class="score-desc">
-          <div class="score-label" id="scoreLabel">Calculando...</div>
-          <div class="score-sub" id="scoreSubLabel">–</div>
-        </div>
+    <div class="label-section">Empreendimentos encontrados</div>
+    <span class="teaser-num" id="teaserTotal">—</span>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:4px" id="teaserTotalDesc">—</div>
+
+    <div class="score-bar-wrap">
+      <div class="score-bar-label">
+        <span>Score de compatibilidade com seu perfil</span>
+        <strong id="scoreBarPct">—%</strong>
       </div>
-
-      <div class="divider"></div>
-      <div class="res-titulo">O que existe disponível</div>
-
-      <div class="res-dados">
-        <div class="res-linha">
-          <span class="res-icon">🏗</span>
-          <div>
-            <div class="res-info-label">Empreendimentos encontrados</div>
-            <div class="res-info-val" id="resTotalEmps">—</div>
-          </div>
-        </div>
-        <div class="res-linha">
-          <span class="res-icon">📐</span>
-          <div>
-            <div class="res-info-label">Faixa de área</div>
-            <div class="res-info-val" id="resFaixaArea">—</div>
-          </div>
-        </div>
-        <div class="res-linha">
-          <span class="res-icon">💰</span>
-          <div>
-            <div class="res-info-label">Parcelas estimadas</div>
-            <div class="res-info-val" id="resParcelas">—</div>
-          </div>
-        </div>
-        <div class="res-linha" id="resMatchPrioridade" style="display:none">
-          <span class="res-icon" id="resMatchIcon">✨</span>
-          <div>
-            <div class="res-info-label">Destaque da sua prioridade</div>
-            <div class="res-info-val" id="resMatchTxt">—</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="res-titulo">Estágio das obras</div>
-      <div class="estagios-wrap" id="estagiosWrap"></div>
+      <div class="score-bar-track"><div class="score-bar-fill" id="scoreBarFill" style="width:0%"></div></div>
     </div>
 
-    <div style="background:rgba(79,124,255,.06);border:1px solid rgba(79,124,255,.2);border-radius:var(--radius);padding:16px 18px;text-align:center">
-      <div style="font-size:14px;color:var(--text2);line-height:1.5">
-        Para ver os empreendimentos completos — nome, localização, plantas e condições de pagamento — deixe seu contato abaixo. Leva 30 segundos.
-      </div>
+    <div class="teaser-stats" id="teaserStats"></div>
+
+    <div class="blurred-cta">
+      <p>Para ver o empreendimento com maior compatibilidade com o seu perfil — área, parcelas, estágio da obra e condições — deixe seu contato abaixo.</p>
     </div>
   </div>
 
-  <!-- STEP 8 — Captura -->
+  <!-- STEP 8 — CAPTURA -->
   <div class="step" id="step-8">
-    <div class="step-title">Quase lá — para onde enviamos as opções?</div>
-    <div class="step-sub">Leonardo vai te enviar as opções diretamente no WhatsApp, com detalhes e condições.</div>
+    <div class="step-tag">Quase lá</div>
+    <div class="step-title">Para onde enviamos as opções?</div>
+    <div class="step-sub">Leonardo vai te enviar os detalhes diretamente no WhatsApp — com plantas, localização e condições reais.</div>
     <div class="form-field">
       <label>Seu nome</label>
       <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
     </div>
     <div class="form-field">
-      <label>WhatsApp (com DDD)</label>
+      <label>WhatsApp com DDD</label>
       <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
     </div>
-    <div class="privacidade">🔒 Seus dados ficam somente com Leonardo. Nada de listas de email ou spam.</div>
+    <div class="privacy-note">
+      <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text3)"><use href="#ico-check"/></svg>
+      <span>Seus dados ficam somente com Leonardo. Nenhuma lista de e-mail ou retorno de terceiros.</span>
+    </div>
   </div>
 
-  <!-- STEP 9 — Agradecimento -->
+  <!-- STEP 9 — MELHOR MATCH -->
   <div class="step" id="step-9">
-    <div class="obrigado-icon">🎯</div>
-    <div class="step-title" style="text-align:center">Perfeito, <span id="obrigadoNome">!</span></div>
-    <div class="step-sub" style="text-align:center">Leonardo já recebeu seu perfil e vai te enviar as opções em breve — geralmente em menos de 2 horas.</div>
-
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin:24px 0">
-      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px">Resumo do seu perfil</div>
-      <div id="resumoPerfil" style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--text2)"></div>
+    <div class="match-header">
+      <div class="match-tag">
+        <svg width="12" height="12"><use href="#ico-star"/></svg>
+        Melhor match para o seu perfil
+      </div>
+      <div class="step-title" style="margin-bottom:4px">Empreendimento selecionado</div>
+      <div class="step-sub" style="margin-bottom:0">Com base nas suas respostas, este é o que melhor se encaixa. O nome e endereço serão apresentados pelo Leonardo no atendimento.</div>
     </div>
 
-    <div style="font-size:14px;color:var(--text2);text-align:center;margin-bottom:4px">Prefere falar agora?</div>
+    <div class="match-divider"></div>
+
+    <div style="margin-bottom:20px">
+      <div class="label-section" style="margin-top:0">Score de compatibilidade</div>
+      <div style="display:flex;align-items:baseline;gap:4px">
+        <span class="match-score-num" id="matchScoreNum">—</span>
+        <span class="match-score-pct">%</span>
+      </div>
+      <div class="match-score-desc" id="matchScoreDesc">—</div>
+    </div>
+
+    <div id="urgenciaPill" style="display:none" class="urgencia-pill">
+      <svg width="12" height="12"><use href="#ico-zap"/></svg>
+      <span id="urgenciaMsg"></span>
+    </div>
+
+    <div class="match-grid" id="matchGrid">
+      <!-- populado por JS -->
+    </div>
+
+    <div style="font-size:11px;color:var(--text3);margin-bottom:24px">* Parcela estimada com base em financiamento de 240 meses. Simulação sem caráter contratual.</div>
+
+    <div class="btn-final-wrap">
+      <p>Para receber os detalhes completos, agendar uma visita e conversar com Leonardo sobre as melhores condições, confirme abaixo.</p>
+      <button class="btn-final" id="btnFinal" onclick="confirmarAtendimento()">
+        <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+        Confirmar e receber atendimento
+      </button>
+      <div class="btn-final-sub">Leonardo entra em contato em até 2 horas pelo WhatsApp</div>
+    </div>
+  </div>
+
+  <!-- STEP 10 — AGRADECIMENTO -->
+  <div class="step" id="step-10">
+    <div class="check-circle">
+      <svg width="28" height="28" style="color:var(--green)"><use href="#ico-check"/></svg>
+    </div>
+    <div class="step-title" style="text-align:center;margin-bottom:6px">Confirmado, <span id="obrigadoNome"></span></div>
+    <div class="step-sub" style="text-align:center">Leonardo recebeu seu perfil e vai entrar em contato em até 2 horas com as opções e os próximos passos.</div>
+
+    <div class="perfil-resumo" id="perfilResumo">
+      <!-- populado por JS -->
+    </div>
+
+    <div style="font-size:13px;color:var(--text2);text-align:center;margin-bottom:12px">Prefere falar agora?</div>
     <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
-      <span class="whats-icon">📱</span> Falar agora com Leonardo
+      <svg width="20" height="20"><use href="#ico-whats"/></svg>
+      Falar agora com Leonardo
     </a>
-    <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:12px">Abre diretamente no WhatsApp</div>
+    <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
   </div>
 
 </div><!-- /step-wrap -->
 </div><!-- /main -->
 
-<!-- NAVEGAÇÃO -->
+<!-- NAV BAR -->
 <div class="nav-bar">
   <div class="nav-inner">
-    <button class="btn-nav secundario oculto" id="btnVoltar" onclick="voltarStep()">← Voltar</button>
-    <button class="btn-nav primario" id="btnAvancar" onclick="avancarStep()">Começar →</button>
+    <button class="btn-nav btn-sec btn-hide" id="btnVoltar" onclick="voltarStep()">Voltar</button>
+    <button class="btn-nav btn-prim" id="btnAvancar" onclick="avancarStep()">Começar</button>
   </div>
 </div>
 
 <script>
-// ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
-
-const WHATSAPP_NUM = '5562999999999'; // trocar pelo número real
-
-// Mock da base de lançamentos — substitui dados reais do GAS quando carregados
-// Cada item: { precoK: preço em milhares, areaMin, estagio, temLazer }
+// ── BASE MOCK ────────────────────────────────────────────────────────────────
+// Substitui dados reais carregados do GAS quando a rota for implementada.
+// Campos: precoK (milhar), areaMin, areaMax, quartos, estagio, entregaPrev,
+// prazoPag (meses), pctVendido, zona, temLazer, tipo.
 const MOCK_BASE = [
-  { precoK: 290, areaMin: 48, estagio: 'Em obras',           temLazer: true  },
-  { precoK: 340, areaMin: 55, estagio: 'Em obras',           temLazer: true  },
-  { precoK: 280, areaMin: 44, estagio: 'Lançamento recente', temLazer: false },
-  { precoK: 480, areaMin: 68, estagio: 'Em obras',           temLazer: true  },
-  { precoK: 395, areaMin: 57, estagio: 'Pronto pra morar',   temLazer: false },
-  { precoK: 560, areaMin: 76, estagio: 'Em obras',           temLazer: true  },
-  { precoK: 215, areaMin: 42, estagio: 'Lançamento recente', temLazer: false },
-  { precoK: 720, areaMin: 88, estagio: 'Em obras',           temLazer: true  },
-  { precoK: 365, areaMin: 59, estagio: 'Pronto pra morar',   temLazer: true  },
-  { precoK: 440, areaMin: 65, estagio: 'Em obras',           temLazer: false },
-  { precoK: 590, areaMin: 81, estagio: 'Lançamento recente', temLazer: true  },
-  { precoK: 260, areaMin: 46, estagio: 'Pronto pra morar',   temLazer: false },
+  { id:1,  precoK:290, areaMin:48, areaMax:68,  quartos:'2',   estagio:'Em obras',           entregaPrev:'Dez/2026', prazoPag:180, pctVendido:74, zona:'Setor Sul',          temLazer:true,  tipo:'Vertical'   },
+  { id:2,  precoK:340, areaMin:55, areaMax:78,  quartos:'2/3', estagio:'Em obras',           entregaPrev:'Ago/2026', prazoPag:200, pctVendido:61, zona:'Setor Bueno',        temLazer:true,  tipo:'Vertical'   },
+  { id:3,  precoK:280, areaMin:44, areaMax:63,  quartos:'2',   estagio:'Lançamento recente', entregaPrev:'Mar/2028', prazoPag:240, pctVendido:22, zona:'Setor Aeroporto',    temLazer:false, tipo:'Vertical'   },
+  { id:4,  precoK:480, areaMin:68, areaMax:95,  quartos:'3',   estagio:'Em obras',           entregaPrev:'Nov/2026', prazoPag:160, pctVendido:83, zona:'Setor Marista',      temLazer:true,  tipo:'Vertical'   },
+  { id:5,  precoK:395, areaMin:57, areaMax:80,  quartos:'2/3', estagio:'Pronto pra morar',   entregaPrev:'Entregue', prazoPag:180, pctVendido:91, zona:'Setor Nova Suiça',   temLazer:false, tipo:'Vertical'   },
+  { id:6,  precoK:560, areaMin:76, areaMax:110, quartos:'3',   estagio:'Em obras',           entregaPrev:'Jun/2027', prazoPag:200, pctVendido:55, zona:'Jardim Goiás',       temLazer:true,  tipo:'Vertical'   },
+  { id:7,  precoK:215, areaMin:42, areaMax:58,  quartos:'2',   estagio:'Lançamento recente', entregaPrev:'Jan/2028', prazoPag:240, pctVendido:18, zona:'Setor Leste Universitário', temLazer:false, tipo:'Vertical' },
+  { id:8,  precoK:720, areaMin:88, areaMax:130, quartos:'3/4', estagio:'Em obras',           entregaPrev:'Set/2027', prazoPag:180, pctVendido:67, zona:'Setor Oeste',        temLazer:true,  tipo:'Vertical'   },
+  { id:9,  precoK:365, areaMin:59, areaMax:84,  quartos:'2/3', estagio:'Pronto pra morar',   entregaPrev:'Entregue', prazoPag:200, pctVendido:88, zona:'Setor Pedro Ludovico', temLazer:true, tipo:'Vertical'  },
+  { id:10, precoK:440, areaMin:65, areaMax:92,  quartos:'3',   estagio:'Em obras',           entregaPrev:'Abr/2027', prazoPag:180, pctVendido:49, zona:'Setor Bela Vista',   temLazer:false, tipo:'Vertical'   },
+  { id:11, precoK:590, areaMin:81, areaMax:118, quartos:'3/4', estagio:'Lançamento recente', entregaPrev:'Dez/2027', prazoPag:240, pctVendido:31, zona:'Parque Amazônia',    temLazer:true,  tipo:'Vertical'   },
+  { id:12, precoK:260, areaMin:46, areaMax:64,  quartos:'2',   estagio:'Pronto pra morar',   entregaPrev:'Entregue', prazoPag:160, pctVendido:95, zona:'Setor dos Funcionários', temLazer:false, tipo:'Vertical' },
 ];
 
+const WHATSAPP_NUM = '5562999999999';
+
 // ── ESTADO ────────────────────────────────────────────────────────────────────
-
 let stepAtual = 0;
-const TOTAL_STEPS = 9;
+const TOTAL = 11; // steps 0..10
 
-const dados = {
-  moradia:      null,
-  prioridades:  [],
-  precoMaxK:    500,  // em milhares
-  areaMinM2:    60,
-  financeiro:   null,
-  urgencia:     null,
-  nome:         '',
-  whatsapp:     '',
-  // Comportamental
-  tsInicio:     Date.now(),
-  stepAbandono: null,
-  precoInicial: null,
-  precoFinal:   null,
-  areaInicial:  null,
-  areaFinal:    null,
+const D = {
+  moradia: null, prioridades: [], precoMaxK: 500, areaMinM2: 60,
+  financeiro: null, urgencia: null, nome: '', whatsapp: '',
+  tsInicio: Date.now(), precoInicial: null, precoFinal: null,
+  areaInicial: null, areaFinal: null, stepAbandono: null,
 };
 
-// ── PROGRESSO ─────────────────────────────────────────────────────────────────
-
+// ── PROGRESSO ──────────────────────────────────────────────────────────────
 function atualizarProgresso() {
-  const labels = ['Início','Moradia','Prioridades','Preço','Área','Financeiro','Prazo','Resultado','Contato','Concluído'];
-  const pct = stepAtual === 0 ? 0 : Math.round((stepAtual / (TOTAL_STEPS - 1)) * 100);
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressLabel').textContent = labels[stepAtual] || '';
+  const interativas = 6; // steps 1..6
+  const n = Math.max(0, Math.min(stepAtual - 1, interativas));
+  document.getElementById('progressFill').style.width = (n / interativas * 100) + '%';
+  document.getElementById('progressStep').textContent = n + ' / ' + interativas;
 }
 
-// ── NAVEGAÇÃO ─────────────────────────────────────────────────────────────────
-
+// ── NAV ─────────────────────────────────────────────────────────────────────
 function irParaStep(n) {
   document.getElementById('step-' + stepAtual).classList.remove('ativo');
   stepAtual = n;
@@ -614,25 +752,13 @@ function irParaStep(n) {
 }
 
 function avancarStep() {
-  if (!validarStepAtual()) return;
-  if (stepAtual === 0) {
-    irParaStep(1);
-    return;
-  }
-  if (stepAtual === 6) {
-    montarResultado();
-    irParaStep(7);
-    return;
-  }
-  if (stepAtual === 7) {
-    irParaStep(8);
-    return;
-  }
-  if (stepAtual === 8) {
-    submeterCaptura();
-    return;
-  }
-  if (stepAtual < TOTAL_STEPS - 1) irParaStep(stepAtual + 1);
+  if (!validar()) return;
+
+  if (stepAtual === 0) { irParaStep(1); return; }
+  if (stepAtual === 6) { montarTeaser(); irParaStep(7); return; }
+  if (stepAtual === 7) { irParaStep(8); return; }
+  if (stepAtual === 8) { submeter(); return; }
+  if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
 function voltarStep() {
@@ -640,290 +766,293 @@ function voltarStep() {
 }
 
 function atualizarBotoes() {
-  const btnV = document.getElementById('btnVoltar');
-  const btnA = document.getElementById('btnAvancar');
+  const bV = document.getElementById('btnVoltar');
+  const bA = document.getElementById('btnAvancar');
+  // Após captura, sem botão de nav (step 9 tem seu próprio CTA, step 10 sem nav)
+  const semNav = stepAtual >= 9;
+  bA.classList.toggle('btn-hide', semNav);
+  bV.classList.toggle('btn-hide', stepAtual <= 1 || semNav);
 
-  btnV.classList.toggle('oculto', stepAtual <= 1);
-
-  if (stepAtual === 0) { btnA.textContent = 'Começar →'; btnA.disabled = false; }
-  else if (stepAtual === 8) { btnA.textContent = 'Ver meus resultados →'; btnA.disabled = false; }
-  else if (stepAtual === 9) { btnA.classList.add('oculto'); btnV.classList.add('oculto'); return; }
-  else { btnA.textContent = 'Próximo →'; btnA.disabled = false; }
-
-  btnA.classList.remove('oculto');
+  if (stepAtual === 0)      bA.textContent = 'Começar';
+  else if (stepAtual === 7) bA.textContent = 'Deixar meu contato';
+  else if (stepAtual === 8) bA.textContent = 'Ver meu resultado';
+  else                      bA.textContent = 'Próximo';
 }
 
-// ── VALIDAÇÃO ─────────────────────────────────────────────────────────────────
-
-function validarStepAtual() {
-  if (stepAtual === 1 && !dados.moradia)       { toast('Selecione uma opção para continuar');  return false; }
-  if (stepAtual === 2 && !dados.prioridades.length) { toast('Selecione ao menos 1 prioridade'); return false; }
-  if (stepAtual === 5 && !dados.financeiro)    { toast('Selecione uma opção para continuar'); return false; }
-  if (stepAtual === 6 && !dados.urgencia)      { toast('Selecione uma opção para continuar'); return false; }
+// ── VALIDAÇÃO ─────────────────────────────────────────────────────────────
+function validar() {
+  if (stepAtual === 1 && !D.moradia)              { toast('Selecione uma opção para continuar'); return false; }
+  if (stepAtual === 2 && !D.prioridades.length)   { toast('Selecione ao menos 1 prioridade');   return false; }
+  if (stepAtual === 5 && !D.financeiro)           { toast('Selecione uma opção para continuar'); return false; }
+  if (stepAtual === 6 && !D.urgencia)             { toast('Selecione uma opção para continuar'); return false; }
   if (stepAtual === 8) {
     const nome  = document.getElementById('fNome').value.trim();
     const whats = document.getElementById('fWhats').value.replace(/\D/g,'');
-    if (!nome)         { toast('Informe seu nome para continuar'); return false; }
+    if (!nome)           { toast('Informe seu nome para continuar'); return false; }
     if (whats.length < 10) { toast('Informe um WhatsApp válido com DDD'); return false; }
-    dados.nome     = nome;
-    dados.whatsapp = whats;
+    D.nome = nome; D.whatsapp = whats;
   }
   return true;
 }
 
-// ── INTERAÇÕES ────────────────────────────────────────────────────────────────
-
-function selecionarCard(grupo, el, valor) {
-  document.querySelectorAll('#cards-' + grupo + ' .card-sel').forEach(c => c.classList.remove('selecionado'));
-  el.classList.add('selecionado');
-  dados[grupo] = valor;
+// ── SELEÇÃO ────────────────────────────────────────────────────────────────
+function selecionarOpt(grupo, el, val) {
+  document.querySelectorAll('#opts-' + grupo + ' .opt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on');
+  D[grupo] = val;
 }
 
-const MAX_CHIPS = 2;
-function toggleChip(el, valor) {
-  const sel = el.classList.contains('selecionado');
-  if (!sel && dados.prioridades.length >= MAX_CHIPS) {
-    toast('Máximo de 2 prioridades');
-    return;
-  }
-  el.classList.toggle('selecionado');
-  if (sel) {
-    dados.prioridades = dados.prioridades.filter(v => v !== valor);
-  } else {
-    dados.prioridades.push(valor);
-  }
+function toggleChip(el) {
+  const val = el.dataset.val;
+  const on  = el.classList.contains('on');
+  if (!on && D.prioridades.length >= 2) { toast('Máximo de 2 prioridades'); return; }
+  el.classList.toggle('on');
+  D.prioridades = on ? D.prioridades.filter(v => v !== val) : [...D.prioridades, val];
   const hint = document.getElementById('chipHint');
-  hint.textContent = dados.prioridades.length === 0
-    ? 'Selecione pelo menos 1 prioridade'
-    : dados.prioridades.length === MAX_CHIPS
-      ? 'Máximo atingido — desmarque um para trocar'
-      : 'Você pode marcar mais 1';
+  hint.textContent = D.prioridades.length === 0 ? 'Selecione ao menos 1 prioridade'
+    : D.prioridades.length === 2 ? 'Máximo atingido — desmarque um para trocar'
+    : 'Você pode marcar mais 1';
 }
 
-// ── SLIDERS ───────────────────────────────────────────────────────────────────
-
-function contarPorFiltro(precoMaxK, areaMinM2) {
-  return MOCK_BASE.filter(e => e.precoK <= precoMaxK && e.areaMin <= areaMinM2).length;
+// ── SLIDERS ────────────────────────────────────────────────────────────────
+function filtrados() {
+  return MOCK_BASE.filter(e => e.precoK <= D.precoMaxK && e.areaMin <= D.areaMinM2);
 }
 
-function atualizarSliderPreco(val) {
+function animar(id, novoVal) {
+  const el = document.getElementById(id);
+  const txt = String(novoVal);
+  if (el.textContent === txt) return;
+  el.textContent = txt;
+  el.classList.remove('pulso');
+  void el.offsetWidth;
+  el.classList.add('pulso');
+}
+
+function labelCnt(n) {
+  if (n === 0) return 'nenhum encontrado nesta faixa';
+  return n === 1 ? 'empreendimento disponível' : 'empreendimentos disponíveis';
+}
+
+function atualizarPreco(val) {
   const v = parseInt(val);
-  if (dados.precoInicial === null) dados.precoInicial = v;
-  dados.precoMaxK = v;
-  dados.precoFinal = v;
-  const label = v >= 1000 ? 'R$ 1M ou mais' : 'R$ ' + v + '.000';
-  document.getElementById('sliderPrecoDisplay').textContent = label;
-  const cnt = contarPorFiltro(v, dados.areaMinM2);
-  document.getElementById('contadorPreco').textContent = cnt;
+  if (D.precoInicial === null) D.precoInicial = v;
+  D.precoMaxK = v; D.precoFinal = v;
+  const label = v >= 1000 ? 'R$ 1.000.000 ou mais' : 'R$ ' + v.toLocaleString('pt-BR') + '.000';
+  document.getElementById('sliderPrecoTxt').textContent = label;
+  const cnt = MOCK_BASE.filter(e => e.precoK <= v).length;
+  animar('cntPreco', cnt);
+  document.getElementById('cntPrecoLabel').textContent = labelCnt(cnt);
 }
 
-function atualizarSliderArea(val) {
+function atualizarArea(val) {
   const v = parseInt(val);
-  if (dados.areaInicial === null) dados.areaInicial = v;
-  dados.areaMinM2 = v;
-  dados.areaFinal = v;
-  document.getElementById('sliderAreaDisplay').textContent = v + ' m²';
-  const cnt = contarPorFiltro(dados.precoMaxK, v);
-  document.getElementById('contadorArea').textContent = cnt;
+  if (D.areaInicial === null) D.areaInicial = v;
+  D.areaMinM2 = v; D.areaFinal = v;
+  document.getElementById('sliderAreaTxt').textContent = v + ' m²';
+  const cnt = filtrados().length;
+  animar('cntArea', cnt);
+  document.getElementById('cntAreaLabel').textContent = labelCnt(cnt);
 }
 
-// ── RESULTADO PARCIAL ─────────────────────────────────────────────────────────
+// ── SCORE DE MATCH ─────────────────────────────────────────────────────────
+function scoreMatch(e) {
+  let s = 30;
+  if (e.temLazer && D.prioridades.includes('lazer'))                           s += 22;
+  if (e.estagio === 'Pronto pra morar' && D.urgencia === '3meses')             s += 28;
+  if (e.estagio === 'Pronto pra morar' && D.urgencia === '12meses')            s += 14;
+  if (D.prioridades.includes('parcela') && e.precoK < D.precoMaxK * 0.72)     s += 14;
+  if (D.prioridades.includes('planta') && e.areaMax >= D.areaMinM2 + 15)      s += 12;
+  if (D.prioridades.includes('entrega_rapida') && e.pctVendido > 80)          s += 10;
+  if (e.areaMin <= D.areaMinM2 && e.areaMax >= D.areaMinM2)                   s += 10;
+  s += Math.min(14, Math.round(e.pctVendido / 8));
+  return Math.min(s, 98);
+}
 
-function montarResultado() {
-  const emps = MOCK_BASE.filter(e => e.precoK <= dados.precoMaxK && e.areaMin <= dados.areaMinM2);
+function scoreCompatibilidade() {
+  let s = 52;
+  if (D.moradia === 'aluguel')                 s += 10;
+  if (D.prioridades.includes('parcela'))       s += 8;
+  if (D.financeiro === 'entrada_ok')           s += 10;
+  if (D.urgencia === '3meses')                 s += 8;
+  else if (D.urgencia === '12meses')           s += 4;
+  const cnt = filtrados().length;
+  s += cnt >= 6 ? 8 : cnt >= 3 ? 4 : 0;
+  return Math.min(s, 98);
+}
+
+// ── TEASER ────────────────────────────────────────────────────────────────
+function montarTeaser() {
+  const emps = filtrados();
   const total = emps.length;
+  const score = scoreCompatibilidade();
 
-  // Score de compatibilidade
-  let score = 55;
-  if (dados.moradia === 'aluguel')              score += 12;
-  if (dados.prioridades.includes('parcela'))    score += 8;
-  if (dados.financeiro === 'entrada_disponivel') score += 10;
-  if (dados.urgencia === '3meses')              score += 8;
-  if (dados.urgencia === '12meses')             score += 4;
-  if (total >= 6)                               score += 7;
-  else if (total >= 3)                          score += 4;
-  score = Math.min(score, 98);
+  document.getElementById('teaserTotal').textContent = total || '0';
+  document.getElementById('teaserTotalDesc').textContent =
+    total === 0 ? 'Nenhum encontrado nesta faixa exata — Leonardo pode ter opções próximas'
+    : total === 1 ? 'empreendimento disponível com o seu perfil'
+    : 'empreendimentos disponíveis com o seu perfil';
 
-  document.getElementById('scoreCircle').style.setProperty('--score-pct', score + '%');
-  document.getElementById('scoreNum').textContent = score + '%';
+  document.getElementById('scoreBarPct').textContent = score + '%';
+  setTimeout(() => {
+    document.getElementById('scoreBarFill').style.width = score + '%';
+  }, 120);
 
-  const scoreLabelMap = { 90: 'Compatibilidade muito alta', 75: 'Alta compatibilidade', 60: 'Boa compatibilidade', 0: 'Compatibilidade moderada' };
-  const scoreSubMap   = { 90: 'Seu perfil se encaixa muito bem com o que temos disponível.', 75: 'Existem boas opções alinhadas com o que você busca.', 60: 'Encontramos opções que vale conhecer.', 0: 'Algumas opções podem combinar com você.' };
-  const limiar = [90, 75, 60, 0].find(l => score >= l);
-  document.getElementById('scoreLabel').textContent   = scoreLabelMap[limiar];
-  document.getElementById('scoreSubLabel').textContent = scoreSubMap[limiar];
-
-  // Total
-  document.getElementById('resTotalEmps').textContent = total > 0
-    ? total + ' empreendimento' + (total > 1 ? 's' : '') + ' disponíve' + (total > 1 ? 'is' : 'l')
-    : 'Nenhum encontrado nesta faixa exata — mas Leonardo pode ter opções próximas';
-
-  // Área
+  // Stats
+  const stats = document.getElementById('teaserStats');
   if (emps.length) {
-    const areas = emps.map(e => e.areaMin);
-    const aMin  = Math.min(...areas);
-    const aMax  = Math.max(...areas);
-    document.getElementById('resFaixaArea').textContent =
-      aMin === aMax ? aMin + ' m²' : 'de ' + aMin + ' a ' + (aMax + 20) + ' m²';
+    const areas  = emps.map(e => e.areaMin);
+    const precos = emps.map(e => e.precoK);
+    const prontos = emps.filter(e => e.estagio === 'Pronto pra morar').length;
+    const parMin = Math.round(Math.min(...precos) * 1000 / 240 / 100) * 100;
+    const parMax = Math.round(Math.max(...precos) * 1000 / 180 / 100) * 100;
+    stats.innerHTML = `
+      <div class="teaser-stat"><div class="teaser-stat-label">Faixa de área</div><div class="teaser-stat-val">${Math.min(...areas)}m² a ${Math.max(...areas)+18}m²</div></div>
+      <div class="teaser-stat"><div class="teaser-stat-label">Parcelas estimadas</div><div class="teaser-stat-val">R$${parMin.toLocaleString('pt-BR')} a R$${parMax.toLocaleString('pt-BR')}/mês</div></div>
+      <div class="teaser-stat"><div class="teaser-stat-label">Prontos pra morar</div><div class="teaser-stat-val">${prontos} disponíve${prontos===1?'l':'is'}</div></div>
+      <div class="teaser-stat"><div class="teaser-stat-label">Novos lançamentos</div><div class="teaser-stat-val">${emps.filter(e=>e.estagio==='Lançamento recente').length} em aberto</div></div>`;
   } else {
-    document.getElementById('resFaixaArea').textContent = '—';
+    stats.innerHTML = '';
   }
-
-  // Parcelas estimadas (preço / 240 meses a preço / 180 meses, grosseiro mas útil)
-  if (emps.length) {
-    const precos = emps.map(e => e.precoK * 1000);
-    const pMin   = Math.min(...precos);
-    const pMax   = Math.max(...precos);
-    const parMin = Math.round(pMin / 240 / 100) * 100;
-    const parMax = Math.round(pMax / 180 / 100) * 100;
-    document.getElementById('resParcelas').textContent =
-      'R$ ' + parMin.toLocaleString('pt-BR') + ' a R$ ' + parMax.toLocaleString('pt-BR') + '/mês*';
-  }
-
-  // Match de prioridade
-  const prioMatch = {
-    lazer:        { icon: '🌳', txt: emps.filter(e => e.temLazer).length + ' empreendimento(s) têm área de lazer completa' },
-    entrega_rapida: { icon: '⚡', txt: emps.filter(e => e.estagio === 'Pronto pra morar').length + ' já pronto(s) para morar agora' },
-    planta:       { icon: '📐', txt: 'Filtramos somente imóveis acima de ' + dados.areaMinM2 + 'm² — dentro da sua faixa' },
-    parcela:      { icon: '💰', txt: 'Estimamos parcelas dentro do perfil selecionado' },
-    localizacao:  { icon: '📍', txt: 'Leonardo vai apresentar os bairros de cada opção no atendimento' },
-  };
-  const p = dados.prioridades[0];
-  if (p && prioMatch[p]) {
-    const el = document.getElementById('resMatchPrioridade');
-    el.style.display = 'flex';
-    document.getElementById('resMatchIcon').textContent = prioMatch[p].icon;
-    document.getElementById('resMatchTxt').textContent  = prioMatch[p].txt;
-  }
-
-  // Estágios
-  const estagioCounts = {};
-  emps.forEach(e => { estagioCounts[e.estagio] = (estagioCounts[e.estagio] || 0) + 1; });
-  const estagiosEl = document.getElementById('estagiosWrap');
-  estagiosEl.innerHTML = '';
-  Object.entries(estagioCounts).forEach(([est, cnt]) => {
-    const pill = document.createElement('div');
-    pill.className = 'estagio-pill' + (est === 'Pronto pra morar' ? ' destaque' : '');
-    pill.textContent = cnt + ' ' + est;
-    estagiosEl.appendChild(pill);
-  });
-  if (!emps.length) estagiosEl.innerHTML = '<div class="estagio-pill">Aguarde — Leonardo vai buscar opções próximas</div>';
 }
 
-// ── SUBMISSÃO ─────────────────────────────────────────────────────────────────
-
-function submeterCaptura() {
+// ── SUBMISSÃO ─────────────────────────────────────────────────────────────
+function submeter() {
   const btnA = document.getElementById('btnAvancar');
   btnA.textContent = 'Enviando...';
   btnA.disabled = true;
 
   const payload = {
-    nome:           dados.nome,
-    whatsapp:       dados.whatsapp,
-    moradia:        dados.moradia,
-    prioridades:    dados.prioridades.join(','),
-    precoMaxK:      dados.precoMaxK,
-    areaMinM2:      dados.areaMinM2,
-    financeiro:     dados.financeiro,
-    urgencia:       dados.urgencia,
-    canal:          'simulador-lancamentos',
-    tempoSegundos:  Math.round((Date.now() - dados.tsInicio) / 1000),
-    precoInicial:   dados.precoInicial,
-    precoFinal:     dados.precoFinal,
-    areaInicial:    dados.areaInicial,
-    areaFinal:      dados.areaFinal,
+    nome: D.nome, whatsapp: D.whatsapp, moradia: D.moradia,
+    prioridades: D.prioridades.join(','), precoMaxK: D.precoMaxK,
+    areaMinM2: D.areaMinM2, financeiro: D.financeiro, urgencia: D.urgencia,
+    canal: 'simulador-lancamentos',
+    tempoSegundos: Math.round((Date.now() - D.tsInicio) / 1000),
+    precoInicial: D.precoInicial, precoFinal: D.precoFinal,
+    areaInicial: D.areaInicial, areaFinal: D.areaFinal,
   };
 
   const url = (typeof WEBHOOK_URL !== 'undefined')
-    ? WEBHOOK_URL + '?acao=registrar_lead_simulador'
-    : null;
+    ? WEBHOOK_URL + '?acao=registrar_lead_simulador' : null;
 
-  const finalizarUX = () => {
-    montarAgradecimento();
-    irParaStep(9);
-  };
+  const continuar = () => { montarMatch(); irParaStep(9); };
 
   if (url) {
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    .then(() => finalizarUX())
-    .catch(() => finalizarUX()); // sempre avança — o lead foi registrado ou não, a UX não pode travar
+    fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      .then(continuar).catch(continuar);
   } else {
-    // Sem config.js (teste local): só avança
     console.log('[simulador] payload:', payload);
-    setTimeout(finalizarUX, 600);
+    setTimeout(continuar, 500);
   }
 }
 
+// ── MELHOR MATCH ──────────────────────────────────────────────────────────
+function montarMatch() {
+  const emps = filtrados();
+  const best = emps.sort((a, b) => scoreMatch(b) - scoreMatch(a))[0];
+  const sc   = best ? scoreMatch(best) : 0;
+
+  document.getElementById('matchScoreNum').textContent = sc || '—';
+  const descs = sc >= 88 ? 'Compatibilidade muito alta — este empreendimento reflete bem o que você busca.'
+    : sc >= 72 ? 'Alta compatibilidade — há uma boa sobreposição com as suas prioridades.'
+    : 'Compatibilidade moderada — algumas características se encaixam. Há alternativas para revisar juntos.';
+  document.getElementById('matchScoreDesc').textContent = descs;
+
+  // Pílula de urgência
+  if (best && best.pctVendido >= 80 && best.estagio !== 'Pronto pra morar') {
+    document.getElementById('urgenciaPill').style.display = 'inline-flex';
+    document.getElementById('urgenciaMsg').textContent = best.pctVendido + '% vendido — unidades limitadas';
+  }
+
+  if (!best) {
+    document.getElementById('matchGrid').innerHTML = '<div class="match-cell full"><div class="match-cell-label">Resultado</div><div class="match-cell-val">Nenhum empreendimento na faixa exata. Leonardo vai buscar opções próximas.</div></div>';
+    return;
+  }
+
+  const parEst = Math.round(best.precoK * 1000 / best.prazoPag / 100) * 100;
+  const destaqueLazer = D.prioridades.includes('lazer') && best.temLazer;
+  const destaqueEntrega = D.prioridades.includes('entrega_rapida') && best.estagio === 'Pronto pra morar';
+
+  document.getElementById('matchGrid').innerHTML = `
+    <div class="match-cell"><div class="match-cell-label">Tipo</div><div class="match-cell-val">Condomínio ${best.tipo}</div></div>
+    <div class="match-cell"><div class="match-cell-label">Estágio</div><div class="match-cell-val ${destaqueEntrega ? 'destaque' : ''}">${best.estagio}</div></div>
+    <div class="match-cell"><div class="match-cell-label">Previsão de entrega</div><div class="match-cell-val">${best.entregaPrev}</div></div>
+    <div class="match-cell"><div class="match-cell-label">Região</div><div class="match-cell-val">${best.zona}</div></div>
+    <div class="match-cell"><div class="match-cell-label">Quartos disponíveis</div><div class="match-cell-val">${best.quartos} quartos</div></div>
+    <div class="match-cell"><div class="match-cell-label">Área útil</div><div class="match-cell-val">${best.areaMin} a ${best.areaMax} m²</div></div>
+    <div class="match-cell"><div class="match-cell-label">A partir de</div><div class="match-cell-val">R$ ${(best.precoK*1000).toLocaleString('pt-BR')}</div></div>
+    <div class="match-cell"><div class="match-cell-label">Parcela estimada *</div><div class="match-cell-val">R$ ${parEst.toLocaleString('pt-BR')}/mês</div></div>
+    <div class="match-cell"><div class="match-cell-label">Prazo de pagamento</div><div class="match-cell-val">${best.prazoPag} meses</div></div>
+    <div class="match-cell"><div class="match-cell-label">Área de lazer</div><div class="match-cell-val ${destaqueLazer ? 'destaque' : ''}">${best.temLazer ? 'Completa' : 'Não incluso'}</div></div>
+    <div class="match-cell full"><div class="match-cell-label">Percentual vendido</div><div class="match-cell-val ${best.pctVendido>=80?'alerta':''}">${best.pctVendido}% das unidades já foram vendidas</div></div>
+  `;
+}
+
+function confirmarAtendimento() {
+  const btn = document.getElementById('btnFinal');
+  btn.disabled = true;
+  btn.textContent = 'Confirmado';
+  btn.classList.add('confirmado');
+  setTimeout(() => {
+    montarAgradecimento();
+    irParaStep(10);
+  }, 700);
+}
+
+// ── AGRADECIMENTO ─────────────────────────────────────────────────────────
 function montarAgradecimento() {
-  document.getElementById('obrigadoNome').textContent = dados.nome + '!';
+  document.getElementById('obrigadoNome').textContent = D.nome.split(' ')[0] + '!';
 
-  // Resumo do perfil
-  const moradiaLabel = { aluguel: '🏙️ Mora de aluguel', proprio: '🏡 Tem imóvel próprio', familia: '👨‍👩‍👧 Mora com família' };
-  const financeiroLabel = { entrada_disponivel: '💵 Tem entrada disponível', juntando: '🏦 Juntando a entrada', entender: '📋 Quer entender o financiamento' };
-  const urgenciaLabel   = { '3meses': '⚡ Prazo: até 3 meses', '12meses': '📅 Prazo: 3 a 12 meses', pesquisando: '🔍 Pesquisando sem prazo' };
-  const prioLabels = { localizacao:'Localização', entrega_rapida:'Entrega rápida', planta:'Planta espaçosa', parcela:'Parcela que cabe', lazer:'Área de lazer' };
+  const prioMap = { localizacao:'Localização e bairro', entrega_rapida:'Entrega rápida', planta:'Planta espaçosa', parcela:'Parcela que cabe', lazer:'Área de lazer' };
+  const moradiaMap = { aluguel:'Moro de aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família' };
+  const finMap = { entrada_ok:'Tem entrada ou FGTS', juntando:'Juntando a entrada', entender:'Quer entender o financiamento' };
+  const urgMap = { '3meses':'Até 3 meses', '12meses':'3 a 12 meses', pesquisando:'Pesquisando' };
 
-  const linhas = [
-    moradiaLabel[dados.moradia] || '',
-    '🏠 Faixa de preço: até R$ ' + dados.precoMaxK + '.000',
-    '📐 Área mínima: ' + dados.areaMinM2 + ' m²',
-    dados.prioridades.length ? '⭐ Prioridades: ' + dados.prioridades.map(p => prioLabels[p]).join(', ') : '',
-    financeiroLabel[dados.financeiro] || '',
-    urgenciaLabel[dados.urgencia] || '',
-  ].filter(Boolean);
-
-  document.getElementById('resumoPerfil').innerHTML = linhas.map(l =>
-    '<div style="display:flex;align-items:center;gap:8px">' + l + '</div>'
+  const itens = [
+    ['Situação atual', moradiaMap[D.moradia] || '—'],
+    ['Preço até',      'R$ ' + D.precoMaxK + '.000'],
+    ['Área mínima',    D.areaMinM2 + ' m²'],
+    ['Prioridades',    D.prioridades.map(p => prioMap[p]).join(', ') || '—'],
+    ['Momento financeiro', finMap[D.financeiro] || '—'],
+    ['Prazo de decisão', urgMap[D.urgencia] || '—'],
+  ];
+  document.getElementById('perfilResumo').innerHTML = itens.map(([k,v]) =>
+    `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`
   ).join('');
 
-  // Link WhatsApp
-  const prioTxt = dados.prioridades.map(p => ({ localizacao:'localização', entrega_rapida:'entrega rápida', planta:'planta espaçosa', parcela:'parcela', lazer:'lazer' }[p])).join(' e ');
+  const prioTxt = D.prioridades.map(p => ({localizacao:'localização', entrega_rapida:'entrega rápida', planta:'planta espaçosa', parcela:'parcela acessível', lazer:'área de lazer'}[p])).join(' e ');
   const msg = encodeURIComponent(
-    'Olá Leonardo! Acabei de preencher o simulador. ' +
-    'Tenho interesse em imóveis até R$ ' + dados.precoMaxK + 'k, a partir de ' + dados.areaMinM2 + 'm². ' +
-    (prioTxt ? 'Prioridade: ' + prioTxt + '. ' : '') +
-    'Pode me enviar as opções?'
+    'Olá Leonardo! Acabei de usar o simulador. Tenho interesse em imóveis até R$ ' + D.precoMaxK + 'k, a partir de ' + D.areaMinM2 + 'm²' +
+    (prioTxt ? ', com prioridade em ' + prioTxt : '') + '. Pode me enviar as opções?'
   );
   document.getElementById('whatsLink').href = 'https://wa.me/' + WHATSAPP_NUM + '?text=' + msg;
 }
 
-// ── UTILITÁRIOS ───────────────────────────────────────────────────────────────
-
+// ── UTILITÁRIOS ────────────────────────────────────────────────────────────
 function mascaraTel(el) {
-  let v = el.value.replace(/\D/g,'');
-  if (v.length > 11) v = v.slice(0,11);
+  let v = el.value.replace(/\D/g,'').slice(0,11);
   if (v.length > 6) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
   else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
-  else if (v.length > 0) v = '(' + v;
+  else if (v.length) v = '(' + v;
   el.value = v;
 }
 
-let _toastTimer;
+let _tt;
 function toast(msg) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-
 window.addEventListener('beforeunload', () => {
-  if (stepAtual > 0 && stepAtual < 9) dados.stepAbandono = stepAtual;
+  if (stepAtual > 0 && stepAtual < 9) D.stepAbandono = stepAtual;
 });
 
-// Inicializa contadores dos sliders
-atualizarSliderPreco(500);
-atualizarSliderArea(60);
+// INIT
+atualizarPreco(500);
+atualizarArea(60);
 atualizarProgresso();
 </script>
-
-<!-- Carrega WEBHOOK_URL do config.js se disponível (opcional — simulador funciona sem ele) -->
 <script src="config.js" onerror="void(0)"></script>
 </body>
 </html>
