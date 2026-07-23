@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Lançamentos — Leonardo Viana</title>
+<style>
+:root {
+  --bg:      #0f1117;
+  --surface: #181c27;
+  --surface2:#1e2335;
+  --border:  #2a3050;
+  --accent:  #4f7cff;
+  --accent2: #00d4aa;
+  --danger:  #ff6b6b;
+  --text:    #e8ecf4;
+  --text2:   #8892aa;
+  --text3:   #4a5470;
+  --radius:  14px;
+  --radius-sm:8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px; min-height: 100vh;
+  display: flex; flex-direction: column;
+}
+
+/* ── TOPO ── */
+.topo {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 20px; position: sticky; top: 0; z-index: 10;
+}
+.topo-inner { max-width: 540px; margin: 0 auto; }
+.topo-logo {
+  font-size: 13px; font-weight: 700; color: var(--accent);
+  letter-spacing: -.2px; margin-bottom: 10px;
+}
+.topo-logo span { color: var(--text2); font-weight: 400; }
+
+/* Progress */
+.progress-wrap { display: flex; align-items: center; gap: 8px; }
+.progress-bar {
+  flex: 1; height: 4px; background: var(--surface2);
+  border-radius: 99px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width .4s ease;
+}
+.progress-label { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+/* ── CONTEÚDO ── */
+.main { flex: 1; overflow-y: auto; padding: 28px 20px 100px; }
+.step-wrap { max-width: 540px; margin: 0 auto; }
+
+/* Step */
+.step { display: none; animation: fadeUp .3s ease; }
+.step.ativo { display: block; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.step-title {
+  font-size: 22px; font-weight: 700; line-height: 1.3;
+  margin-bottom: 8px; letter-spacing: -.3px;
+}
+.step-sub {
+  font-size: 14px; color: var(--text2); margin-bottom: 28px; line-height: 1.5;
+}
+
+/* Cards de seleção única */
+.cards-grid { display: flex; flex-direction: column; gap: 10px; }
+.card-sel {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 14px;
+  user-select: none;
+}
+.card-sel:hover { border-color: var(--accent); }
+.card-sel.selecionado { border-color: var(--accent); background: rgba(79,124,255,.08); }
+.card-sel .card-icon { font-size: 22px; flex-shrink: 0; }
+.card-sel .card-label { font-size: 15px; font-weight: 600; }
+.card-sel .card-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.card-sel .card-check {
+  margin-left: auto; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid var(--border2, #343d60); flex-shrink: 0; transition: all .18s;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.card-sel.selecionado .card-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* Chips multi-select */
+.chips-wrap { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.chip {
+  padding: 10px 16px; border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text2);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all .15s; user-select: none;
+  display: flex; align-items: center; gap: 6px;
+}
+.chip:hover { border-color: var(--accent2); color: var(--text); }
+.chip.selecionado { background: rgba(0,212,170,.1); border-color: var(--accent2); color: var(--accent2); }
+.chip-hint { font-size: 12px; color: var(--text3); margin-top: 6px; }
+
+/* Slider */
+.slider-block { margin-bottom: 32px; }
+.slider-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.slider-labels span { font-size: 12px; color: var(--text2); }
+.slider-val {
+  font-size: 28px; font-weight: 700; color: var(--text);
+  margin-bottom: 10px; letter-spacing: -.5px;
+}
+.slider-val small { font-size: 15px; font-weight: 400; color: var(--text2); }
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 5px;
+  background: var(--surface2); border-radius: 99px; outline: none;
+  cursor: pointer; margin-bottom: 8px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(79,124,255,.2);
+  transition: box-shadow .2s;
+}
+input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(79,124,255,.3); }
+input[type=range]::-moz-range-thumb {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent); cursor: pointer; border: none;
+}
+.contador-vivo {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(79,124,255,.1); border: 1px solid rgba(79,124,255,.3);
+  border-radius: 99px; padding: 6px 14px; margin-top: 4px;
+}
+.contador-num { font-size: 17px; font-weight: 700; color: var(--accent); }
+.contador-txt { font-size: 12px; color: var(--text2); }
+
+/* Resultado pós-captura */
+.resultado-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px 20px; margin-bottom: 16px;
+}
+.res-titulo { font-size: 13px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 16px; }
+
+.score-wrap { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.score-circle {
+  width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0;
+  background: conic-gradient(var(--accent2) 0% var(--score-pct, 0%), var(--surface2) 0%);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.score-circle::after {
+  content: ''; position: absolute;
+  width: 54px; height: 54px; border-radius: 50%; background: var(--surface);
+}
+.score-num {
+  position: relative; z-index: 1;
+  font-size: 16px; font-weight: 700; color: var(--accent2);
+}
+.score-desc { flex: 1; }
+.score-label { font-size: 18px; font-weight: 700; }
+.score-sub { font-size: 13px; color: var(--text2); margin-top: 3px; line-height: 1.4; }
+
+.res-dados { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.res-linha {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: var(--surface2);
+  border-radius: var(--radius-sm);
+}
+.res-icon { font-size: 18px; flex-shrink: 0; }
+.res-info-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+.res-info-val { font-size: 14px; font-weight: 600; margin-top: 1px; }
+
+.estagios-wrap { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.estagio-pill {
+  padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 600;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+}
+.estagio-pill.destaque { border-color: var(--accent2); color: var(--accent2); background: rgba(0,212,170,.08); }
+
+/* Captura */
+.form-field { margin-bottom: 16px; }
+.form-field label {
+  display: block; font-size: 12px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px;
+}
+.form-field input {
+  width: 100%; background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 16px;
+  font-family: inherit; padding: 14px 16px; outline: none; transition: border .2s;
+}
+.form-field input:focus { border-color: var(--accent); }
+.form-field input::placeholder { color: var(--text3); }
+
+.privacidade { font-size: 12px; color: var(--text3); margin-top: 6px; line-height: 1.4; }
+
+/* Agradecimento */
+.obrigado-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
+.whats-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #25D366; color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  padding: 16px 20px; width: 100%; font-size: 16px; font-weight: 700;
+  font-family: inherit; cursor: pointer; text-decoration: none;
+  transition: opacity .2s; margin-top: 24px;
+}
+.whats-btn:hover { opacity: .9; }
+.whats-icon { font-size: 20px; }
+
+/* ── RODAPÉ DE NAVEGAÇÃO ── */
+.nav-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 14px 20px; z-index: 10;
+}
+.nav-inner {
+  max-width: 540px; margin: 0 auto;
+  display: flex; gap: 10px;
+}
+.btn-nav {
+  flex: 1; padding: 14px; border-radius: var(--radius-sm);
+  border: none; font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: all .18s;
+}
+.btn-nav.primario { background: var(--accent); color: #fff; }
+.btn-nav.primario:hover { background: #3d6aee; }
+.btn-nav.primario:disabled { opacity: .4; cursor: default; }
+.btn-nav.secundario { background: var(--surface2); color: var(--text2); }
+.btn-nav.secundario:hover { color: var(--text); }
+.btn-nav.oculto { display: none; }
+
+/* Toast */
+.toast {
+  position: fixed; top: 72px; left: 50%; transform: translateX(-50%) translateY(-10px);
+  background: var(--danger); color: #fff;
+  padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 600;
+  opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Utilitários */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.badge-teaser {
+  display: inline-block; background: rgba(79,124,255,.15); border: 1px solid rgba(79,124,255,.3);
+  color: var(--accent); border-radius: 99px; padding: 4px 12px;
+  font-size: 12px; font-weight: 700; letter-spacing: .3px;
+}
+</style>
+</head>
+<body>
+
+<!-- TOPO -->
+<div class="topo">
+  <div class="topo-inner">
+    <div class="topo-logo">LEONARDO VIANA <span>· Corretor em Goiânia</span></div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-label" id="progressLabel">Início</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONTEÚDO -->
+<div class="main">
+<div class="step-wrap">
+
+  <!-- STEP 0 — Abertura -->
+  <div class="step ativo" id="step-0">
+    <div style="margin-bottom:28px;margin-top:8px">
+      <div style="font-size:36px;margin-bottom:16px">👋</div>
+      <div class="step-title">Olá! Vou te mostrar o que temos disponível agora para o seu perfil.</div>
+      <div class="step-sub">São 6 perguntas rápidas. Em 2 minutos você descobre quantos empreendimentos combinam com o que você procura — com área, parcelas estimadas e estágio da obra.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:28px">
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)">
+          <span style="color:var(--accent2);font-size:16px">✓</span> Dados reais da base — atualizados semanalmente
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)">
+          <span style="color:var(--accent2);font-size:16px">✓</span> Sem spam — contato só se você quiser
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)">
+          <span style="color:var(--accent2);font-size:16px">✓</span> Resultado personalizado para o seu perfil
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1 — Moradia atual -->
+  <div class="step" id="step-1">
+    <div class="step-title">Como você mora hoje?</div>
+    <div class="step-sub">Isso ajuda a entender seu momento e as melhores opções para você.</div>
+    <div class="cards-grid" id="cards-moradia">
+      <div class="card-sel" onclick="selecionarCard('moradia',this,'aluguel')">
+        <span class="card-icon">🏙️</span>
+        <div>
+          <div class="card-label">Moro de aluguel</div>
+          <div class="card-desc">Quero sair do aluguel e ter meu próprio</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+      <div class="card-sel" onclick="selecionarCard('moradia',this,'proprio')">
+        <span class="card-icon">🏡</span>
+        <div>
+          <div class="card-label">Tenho imóvel próprio</div>
+          <div class="card-desc">Quero trocar, investir ou adquirir um segundo</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+      <div class="card-sel" onclick="selecionarCard('moradia',this,'familia')">
+        <span class="card-icon">👨‍👩‍👧</span>
+        <div>
+          <div class="card-label">Moro com família ou amigos</div>
+          <div class="card-desc">Chegou a hora de ter meu próprio espaço</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 — O que mais importa -->
+  <div class="step" id="step-2">
+    <div class="step-title">O que é mais importante para você?</div>
+    <div class="step-sub">Escolha até 2 prioridades — vamos usar isso para filtrar o que realmente importa.</div>
+    <div class="chips-wrap" id="chips-prioridade">
+      <div class="chip" onclick="toggleChip(this,'localizacao')"><span>📍</span> Localização e bairro</div>
+      <div class="chip" onclick="toggleChip(this,'entrega_rapida')"><span>⚡</span> Entrega rápida</div>
+      <div class="chip" onclick="toggleChip(this,'planta')"><span>📐</span> Planta espaçosa</div>
+      <div class="chip" onclick="toggleChip(this,'parcela')"><span>💰</span> Parcela que cabe</div>
+      <div class="chip" onclick="toggleChip(this,'lazer')"><span>🌳</span> Área de lazer</div>
+    </div>
+    <div class="chip-hint" id="chipHint">Selecione pelo menos 1 prioridade</div>
+  </div>
+
+  <!-- STEP 3 — Faixa de preço (slider) -->
+  <div class="step" id="step-3">
+    <div class="step-title">Qual faixa de investimento você considera?</div>
+    <div class="step-sub">Valor total do imóvel. Ajuste o controle e veja quantas opções existem.</div>
+    <div class="slider-block">
+      <div class="slider-val" id="sliderPrecoVal">até <span id="sliderPrecoDisplay">R$&nbsp;500.000</span></div>
+      <input type="range" id="sliderPreco" min="200" max="1000" value="500" step="25"
+             oninput="atualizarSliderPreco(this.value)">
+      <div class="slider-labels">
+        <span>R$ 200k</span><span>R$ 400k</span><span>R$ 600k</span><span>R$ 800k</span><span>R$ 1M+</span>
+      </div>
+    </div>
+    <div class="contador-vivo">
+      <span class="contador-num" id="contadorPreco">—</span>
+      <span class="contador-txt">empreendimentos disponíveis nesta faixa</span>
+    </div>
+  </div>
+
+  <!-- STEP 4 — Área útil (slider) -->
+  <div class="step" id="step-4">
+    <div class="step-title">Qual área útil você busca?</div>
+    <div class="step-sub">Tamanho mínimo que faz sentido para você. O contador afina com a combinação preço + área.</div>
+    <div class="slider-block">
+      <div class="slider-val" id="sliderAreaVal">a partir de <span id="sliderAreaDisplay">60 m²</span></div>
+      <input type="range" id="sliderArea" min="35" max="140" value="60" step="5"
+             oninput="atualizarSliderArea(this.value)">
+      <div class="slider-labels">
+        <span>35m²</span><span>60m²</span><span>90m²</span><span>120m²+</span>
+      </div>
+    </div>
+    <div class="contador-vivo">
+      <span class="contador-num" id="contadorArea">—</span>
+      <span class="contador-txt">empreendimentos no perfil preço + área</span>
+    </div>
+  </div>
+
+  <!-- STEP 5 — Momento financeiro -->
+  <div class="step" id="step-5">
+    <div class="step-title">Como está sua situação financeira agora?</div>
+    <div class="step-sub">Não precisa ser exata — só nos ajuda a entender o melhor caminho.</div>
+    <div class="cards-grid" id="cards-financeiro">
+      <div class="card-sel" onclick="selecionarCard('financeiro',this,'entrada_disponivel')">
+        <span class="card-icon">💵</span>
+        <div>
+          <div class="card-label">Tenho entrada ou FGTS disponível</div>
+          <div class="card-desc">Já tenho valor para dar de entrada (acima de R$ 20k)</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+      <div class="card-sel" onclick="selecionarCard('financeiro',this,'juntando')">
+        <span class="card-icon">🏦</span>
+        <div>
+          <div class="card-label">Estou juntando a entrada</div>
+          <div class="card-desc">Tenho prazo para organizar — quero saber pra quanto me preparar</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+      <div class="card-sel" onclick="selecionarCard('financeiro',this,'entender')">
+        <span class="card-icon">📋</span>
+        <div>
+          <div class="card-label">Preciso entender o financiamento</div>
+          <div class="card-desc">Quero saber como funciona antes de decidir</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6 — Urgência -->
+  <div class="step" id="step-6">
+    <div class="step-title">Qual é o seu prazo para decidir?</div>
+    <div class="step-sub">Sem compromisso — só para entendermos com que atenção devemos te contatar.</div>
+    <div class="cards-grid" id="cards-urgencia">
+      <div class="card-sel" onclick="selecionarCard('urgencia',this,'3meses')">
+        <span class="card-icon">⚡</span>
+        <div>
+          <div class="card-label">Preciso resolver em até 3 meses</div>
+          <div class="card-desc">Situação específica que precisa de solução rápida</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+      <div class="card-sel" onclick="selecionarCard('urgencia',this,'12meses')">
+        <span class="card-icon">📅</span>
+        <div>
+          <div class="card-label">Tenho de 3 a 12 meses</div>
+          <div class="card-desc">Posso pesquisar com calma e comparar opções</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+      <div class="card-sel" onclick="selecionarCard('urgencia',this,'pesquisando')">
+        <span class="card-icon">🔍</span>
+        <div>
+          <div class="card-label">Estou pesquisando, sem prazo</div>
+          <div class="card-desc">Curioso sobre o que existe antes de decidir qualquer coisa</div>
+        </div>
+        <div class="card-check">✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 7 — Resultado parcial (teaser) -->
+  <div class="step" id="step-7">
+    <div class="step-title" id="resTitle">Encontrei opções para o seu perfil</div>
+    <div class="step-sub" id="resSub">Com base nas suas respostas, aqui está um resumo do que existe na nossa base agora:</div>
+
+    <div class="resultado-card">
+      <div class="res-titulo">Compatibilidade com o seu perfil</div>
+      <div class="score-wrap">
+        <div class="score-circle" id="scoreCircle" style="--score-pct:0%">
+          <span class="score-num" id="scoreNum">–</span>
+        </div>
+        <div class="score-desc">
+          <div class="score-label" id="scoreLabel">Calculando...</div>
+          <div class="score-sub" id="scoreSubLabel">–</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="res-titulo">O que existe disponível</div>
+
+      <div class="res-dados">
+        <div class="res-linha">
+          <span class="res-icon">🏗</span>
+          <div>
+            <div class="res-info-label">Empreendimentos encontrados</div>
+            <div class="res-info-val" id="resTotalEmps">—</div>
+          </div>
+        </div>
+        <div class="res-linha">
+          <span class="res-icon">📐</span>
+          <div>
+            <div class="res-info-label">Faixa de área</div>
+            <div class="res-info-val" id="resFaixaArea">—</div>
+          </div>
+        </div>
+        <div class="res-linha">
+          <span class="res-icon">💰</span>
+          <div>
+            <div class="res-info-label">Parcelas estimadas</div>
+            <div class="res-info-val" id="resParcelas">—</div>
+          </div>
+        </div>
+        <div class="res-linha" id="resMatchPrioridade" style="display:none">
+          <span class="res-icon" id="resMatchIcon">✨</span>
+          <div>
+            <div class="res-info-label">Destaque da sua prioridade</div>
+            <div class="res-info-val" id="resMatchTxt">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="res-titulo">Estágio das obras</div>
+      <div class="estagios-wrap" id="estagiosWrap"></div>
+    </div>
+
+    <div style="background:rgba(79,124,255,.06);border:1px solid rgba(79,124,255,.2);border-radius:var(--radius);padding:16px 18px;text-align:center">
+      <div style="font-size:14px;color:var(--text2);line-height:1.5">
+        Para ver os empreendimentos completos — nome, localização, plantas e condições de pagamento — deixe seu contato abaixo. Leva 30 segundos.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 8 — Captura -->
+  <div class="step" id="step-8">
+    <div class="step-title">Quase lá — para onde enviamos as opções?</div>
+    <div class="step-sub">Leonardo vai te enviar as opções diretamente no WhatsApp, com detalhes e condições.</div>
+    <div class="form-field">
+      <label>Seu nome</label>
+      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
+    </div>
+    <div class="form-field">
+      <label>WhatsApp (com DDD)</label>
+      <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+    </div>
+    <div class="privacidade">🔒 Seus dados ficam somente com Leonardo. Nada de listas de email ou spam.</div>
+  </div>
+
+  <!-- STEP 9 — Agradecimento -->
+  <div class="step" id="step-9">
+    <div class="obrigado-icon">🎯</div>
+    <div class="step-title" style="text-align:center">Perfeito, <span id="obrigadoNome">!</span></div>
+    <div class="step-sub" style="text-align:center">Leonardo já recebeu seu perfil e vai te enviar as opções em breve — geralmente em menos de 2 horas.</div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin:24px 0">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px">Resumo do seu perfil</div>
+      <div id="resumoPerfil" style="display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--text2)"></div>
+    </div>
+
+    <div style="font-size:14px;color:var(--text2);text-align:center;margin-bottom:4px">Prefere falar agora?</div>
+    <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
+      <span class="whats-icon">📱</span> Falar agora com Leonardo
+    </a>
+    <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:12px">Abre diretamente no WhatsApp</div>
+  </div>
+
+</div><!-- /step-wrap -->
+</div><!-- /main -->
+
+<!-- NAVEGAÇÃO -->
+<div class="nav-bar">
+  <div class="nav-inner">
+    <button class="btn-nav secundario oculto" id="btnVoltar" onclick="voltarStep()">← Voltar</button>
+    <button class="btn-nav primario" id="btnAvancar" onclick="avancarStep()">Começar →</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
+
+const WHATSAPP_NUM = '5562999999999'; // trocar pelo número real
+
+// Mock da base de lançamentos — substitui dados reais do GAS quando carregados
+// Cada item: { precoK: preço em milhares, areaMin, estagio, temLazer }
+const MOCK_BASE = [
+  { precoK: 290, areaMin: 48, estagio: 'Em obras',           temLazer: true  },
+  { precoK: 340, areaMin: 55, estagio: 'Em obras',           temLazer: true  },
+  { precoK: 280, areaMin: 44, estagio: 'Lançamento recente', temLazer: false },
+  { precoK: 480, areaMin: 68, estagio: 'Em obras',           temLazer: true  },
+  { precoK: 395, areaMin: 57, estagio: 'Pronto pra morar',   temLazer: false },
+  { precoK: 560, areaMin: 76, estagio: 'Em obras',           temLazer: true  },
+  { precoK: 215, areaMin: 42, estagio: 'Lançamento recente', temLazer: false },
+  { precoK: 720, areaMin: 88, estagio: 'Em obras',           temLazer: true  },
+  { precoK: 365, areaMin: 59, estagio: 'Pronto pra morar',   temLazer: true  },
+  { precoK: 440, areaMin: 65, estagio: 'Em obras',           temLazer: false },
+  { precoK: 590, areaMin: 81, estagio: 'Lançamento recente', temLazer: true  },
+  { precoK: 260, areaMin: 46, estagio: 'Pronto pra morar',   temLazer: false },
+];
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+
+let stepAtual = 0;
+const TOTAL_STEPS = 9;
+
+const dados = {
+  moradia:      null,
+  prioridades:  [],
+  precoMaxK:    500,  // em milhares
+  areaMinM2:    60,
+  financeiro:   null,
+  urgencia:     null,
+  nome:         '',
+  whatsapp:     '',
+  // Comportamental
+  tsInicio:     Date.now(),
+  stepAbandono: null,
+  precoInicial: null,
+  precoFinal:   null,
+  areaInicial:  null,
+  areaFinal:    null,
+};
+
+// ── PROGRESSO ─────────────────────────────────────────────────────────────────
+
+function atualizarProgresso() {
+  const labels = ['Início','Moradia','Prioridades','Preço','Área','Financeiro','Prazo','Resultado','Contato','Concluído'];
+  const pct = stepAtual === 0 ? 0 : Math.round((stepAtual / (TOTAL_STEPS - 1)) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = labels[stepAtual] || '';
+}
+
+// ── NAVEGAÇÃO ─────────────────────────────────────────────────────────────────
+
+function irParaStep(n) {
+  document.getElementById('step-' + stepAtual).classList.remove('ativo');
+  stepAtual = n;
+  document.getElementById('step-' + stepAtual).classList.add('ativo');
+  atualizarProgresso();
+  atualizarBotoes();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function avancarStep() {
+  if (!validarStepAtual()) return;
+  if (stepAtual === 0) {
+    irParaStep(1);
+    return;
+  }
+  if (stepAtual === 6) {
+    montarResultado();
+    irParaStep(7);
+    return;
+  }
+  if (stepAtual === 7) {
+    irParaStep(8);
+    return;
+  }
+  if (stepAtual === 8) {
+    submeterCaptura();
+    return;
+  }
+  if (stepAtual < TOTAL_STEPS - 1) irParaStep(stepAtual + 1);
+}
+
+function voltarStep() {
+  if (stepAtual > 1) irParaStep(stepAtual - 1);
+}
+
+function atualizarBotoes() {
+  const btnV = document.getElementById('btnVoltar');
+  const btnA = document.getElementById('btnAvancar');
+
+  btnV.classList.toggle('oculto', stepAtual <= 1);
+
+  if (stepAtual === 0) { btnA.textContent = 'Começar →'; btnA.disabled = false; }
+  else if (stepAtual === 8) { btnA.textContent = 'Ver meus resultados →'; btnA.disabled = false; }
+  else if (stepAtual === 9) { btnA.classList.add('oculto'); btnV.classList.add('oculto'); return; }
+  else { btnA.textContent = 'Próximo →'; btnA.disabled = false; }
+
+  btnA.classList.remove('oculto');
+}
+
+// ── VALIDAÇÃO ─────────────────────────────────────────────────────────────────
+
+function validarStepAtual() {
+  if (stepAtual === 1 && !dados.moradia)       { toast('Selecione uma opção para continuar');  return false; }
+  if (stepAtual === 2 && !dados.prioridades.length) { toast('Selecione ao menos 1 prioridade'); return false; }
+  if (stepAtual === 5 && !dados.financeiro)    { toast('Selecione uma opção para continuar'); return false; }
+  if (stepAtual === 6 && !dados.urgencia)      { toast('Selecione uma opção para continuar'); return false; }
+  if (stepAtual === 8) {
+    const nome  = document.getElementById('fNome').value.trim();
+    const whats = document.getElementById('fWhats').value.replace(/\D/g,'');
+    if (!nome)         { toast('Informe seu nome para continuar'); return false; }
+    if (whats.length < 10) { toast('Informe um WhatsApp válido com DDD'); return false; }
+    dados.nome     = nome;
+    dados.whatsapp = whats;
+  }
+  return true;
+}
+
+// ── INTERAÇÕES ────────────────────────────────────────────────────────────────
+
+function selecionarCard(grupo, el, valor) {
+  document.querySelectorAll('#cards-' + grupo + ' .card-sel').forEach(c => c.classList.remove('selecionado'));
+  el.classList.add('selecionado');
+  dados[grupo] = valor;
+}
+
+const MAX_CHIPS = 2;
+function toggleChip(el, valor) {
+  const sel = el.classList.contains('selecionado');
+  if (!sel && dados.prioridades.length >= MAX_CHIPS) {
+    toast('Máximo de 2 prioridades');
+    return;
+  }
+  el.classList.toggle('selecionado');
+  if (sel) {
+    dados.prioridades = dados.prioridades.filter(v => v !== valor);
+  } else {
+    dados.prioridades.push(valor);
+  }
+  const hint = document.getElementById('chipHint');
+  hint.textContent = dados.prioridades.length === 0
+    ? 'Selecione pelo menos 1 prioridade'
+    : dados.prioridades.length === MAX_CHIPS
+      ? 'Máximo atingido — desmarque um para trocar'
+      : 'Você pode marcar mais 1';
+}
+
+// ── SLIDERS ───────────────────────────────────────────────────────────────────
+
+function contarPorFiltro(precoMaxK, areaMinM2) {
+  return MOCK_BASE.filter(e => e.precoK <= precoMaxK && e.areaMin <= areaMinM2).length;
+}
+
+function atualizarSliderPreco(val) {
+  const v = parseInt(val);
+  if (dados.precoInicial === null) dados.precoInicial = v;
+  dados.precoMaxK = v;
+  dados.precoFinal = v;
+  const label = v >= 1000 ? 'R$ 1M ou mais' : 'R$ ' + v + '.000';
+  document.getElementById('sliderPrecoDisplay').textContent = label;
+  const cnt = contarPorFiltro(v, dados.areaMinM2);
+  document.getElementById('contadorPreco').textContent = cnt;
+}
+
+function atualizarSliderArea(val) {
+  const v = parseInt(val);
+  if (dados.areaInicial === null) dados.areaInicial = v;
+  dados.areaMinM2 = v;
+  dados.areaFinal = v;
+  document.getElementById('sliderAreaDisplay').textContent = v + ' m²';
+  const cnt = contarPorFiltro(dados.precoMaxK, v);
+  document.getElementById('contadorArea').textContent = cnt;
+}
+
+// ── RESULTADO PARCIAL ─────────────────────────────────────────────────────────
+
+function montarResultado() {
+  const emps = MOCK_BASE.filter(e => e.precoK <= dados.precoMaxK && e.areaMin <= dados.areaMinM2);
+  const total = emps.length;
+
+  // Score de compatibilidade
+  let score = 55;
+  if (dados.moradia === 'aluguel')              score += 12;
+  if (dados.prioridades.includes('parcela'))    score += 8;
+  if (dados.financeiro === 'entrada_disponivel') score += 10;
+  if (dados.urgencia === '3meses')              score += 8;
+  if (dados.urgencia === '12meses')             score += 4;
+  if (total >= 6)                               score += 7;
+  else if (total >= 3)                          score += 4;
+  score = Math.min(score, 98);
+
+  document.getElementById('scoreCircle').style.setProperty('--score-pct', score + '%');
+  document.getElementById('scoreNum').textContent = score + '%';
+
+  const scoreLabelMap = { 90: 'Compatibilidade muito alta', 75: 'Alta compatibilidade', 60: 'Boa compatibilidade', 0: 'Compatibilidade moderada' };
+  const scoreSubMap   = { 90: 'Seu perfil se encaixa muito bem com o que temos disponível.', 75: 'Existem boas opções alinhadas com o que você busca.', 60: 'Encontramos opções que vale conhecer.', 0: 'Algumas opções podem combinar com você.' };
+  const limiar = [90, 75, 60, 0].find(l => score >= l);
+  document.getElementById('scoreLabel').textContent   = scoreLabelMap[limiar];
+  document.getElementById('scoreSubLabel').textContent = scoreSubMap[limiar];
+
+  // Total
+  document.getElementById('resTotalEmps').textContent = total > 0
+    ? total + ' empreendimento' + (total > 1 ? 's' : '') + ' disponíve' + (total > 1 ? 'is' : 'l')
+    : 'Nenhum encontrado nesta faixa exata — mas Leonardo pode ter opções próximas';
+
+  // Área
+  if (emps.length) {
+    const areas = emps.map(e => e.areaMin);
+    const aMin  = Math.min(...areas);
+    const aMax  = Math.max(...areas);
+    document.getElementById('resFaixaArea').textContent =
+      aMin === aMax ? aMin + ' m²' : 'de ' + aMin + ' a ' + (aMax + 20) + ' m²';
+  } else {
+    document.getElementById('resFaixaArea').textContent = '—';
+  }
+
+  // Parcelas estimadas (preço / 240 meses a preço / 180 meses, grosseiro mas útil)
+  if (emps.length) {
+    const precos = emps.map(e => e.precoK * 1000);
+    const pMin   = Math.min(...precos);
+    const pMax   = Math.max(...precos);
+    const parMin = Math.round(pMin / 240 / 100) * 100;
+    const parMax = Math.round(pMax / 180 / 100) * 100;
+    document.getElementById('resParcelas').textContent =
+      'R$ ' + parMin.toLocaleString('pt-BR') + ' a R$ ' + parMax.toLocaleString('pt-BR') + '/mês*';
+  }
+
+  // Match de prioridade
+  const prioMatch = {
+    lazer:        { icon: '🌳', txt: emps.filter(e => e.temLazer).length + ' empreendimento(s) têm área de lazer completa' },
+    entrega_rapida: { icon: '⚡', txt: emps.filter(e => e.estagio === 'Pronto pra morar').length + ' já pronto(s) para morar agora' },
+    planta:       { icon: '📐', txt: 'Filtramos somente imóveis acima de ' + dados.areaMinM2 + 'm² — dentro da sua faixa' },
+    parcela:      { icon: '💰', txt: 'Estimamos parcelas dentro do perfil selecionado' },
+    localizacao:  { icon: '📍', txt: 'Leonardo vai apresentar os bairros de cada opção no atendimento' },
+  };
+  const p = dados.prioridades[0];
+  if (p && prioMatch[p]) {
+    const el = document.getElementById('resMatchPrioridade');
+    el.style.display = 'flex';
+    document.getElementById('resMatchIcon').textContent = prioMatch[p].icon;
+    document.getElementById('resMatchTxt').textContent  = prioMatch[p].txt;
+  }
+
+  // Estágios
+  const estagioCounts = {};
+  emps.forEach(e => { estagioCounts[e.estagio] = (estagioCounts[e.estagio] || 0) + 1; });
+  const estagiosEl = document.getElementById('estagiosWrap');
+  estagiosEl.innerHTML = '';
+  Object.entries(estagioCounts).forEach(([est, cnt]) => {
+    const pill = document.createElement('div');
+    pill.className = 'estagio-pill' + (est === 'Pronto pra morar' ? ' destaque' : '');
+    pill.textContent = cnt + ' ' + est;
+    estagiosEl.appendChild(pill);
+  });
+  if (!emps.length) estagiosEl.innerHTML = '<div class="estagio-pill">Aguarde — Leonardo vai buscar opções próximas</div>';
+}
+
+// ── SUBMISSÃO ─────────────────────────────────────────────────────────────────
+
+function submeterCaptura() {
+  const btnA = document.getElementById('btnAvancar');
+  btnA.textContent = 'Enviando...';
+  btnA.disabled = true;
+
+  const payload = {
+    nome:           dados.nome,
+    whatsapp:       dados.whatsapp,
+    moradia:        dados.moradia,
+    prioridades:    dados.prioridades.join(','),
+    precoMaxK:      dados.precoMaxK,
+    areaMinM2:      dados.areaMinM2,
+    financeiro:     dados.financeiro,
+    urgencia:       dados.urgencia,
+    canal:          'simulador-lancamentos',
+    tempoSegundos:  Math.round((Date.now() - dados.tsInicio) / 1000),
+    precoInicial:   dados.precoInicial,
+    precoFinal:     dados.precoFinal,
+    areaInicial:    dados.areaInicial,
+    areaFinal:      dados.areaFinal,
+  };
+
+  const url = (typeof WEBHOOK_URL !== 'undefined')
+    ? WEBHOOK_URL + '?acao=registrar_lead_simulador'
+    : null;
+
+  const finalizarUX = () => {
+    montarAgradecimento();
+    irParaStep(9);
+  };
+
+  if (url) {
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    .then(() => finalizarUX())
+    .catch(() => finalizarUX()); // sempre avança — o lead foi registrado ou não, a UX não pode travar
+  } else {
+    // Sem config.js (teste local): só avança
+    console.log('[simulador] payload:', payload);
+    setTimeout(finalizarUX, 600);
+  }
+}
+
+function montarAgradecimento() {
+  document.getElementById('obrigadoNome').textContent = dados.nome + '!';
+
+  // Resumo do perfil
+  const moradiaLabel = { aluguel: '🏙️ Mora de aluguel', proprio: '🏡 Tem imóvel próprio', familia: '👨‍👩‍👧 Mora com família' };
+  const financeiroLabel = { entrada_disponivel: '💵 Tem entrada disponível', juntando: '🏦 Juntando a entrada', entender: '📋 Quer entender o financiamento' };
+  const urgenciaLabel   = { '3meses': '⚡ Prazo: até 3 meses', '12meses': '📅 Prazo: 3 a 12 meses', pesquisando: '🔍 Pesquisando sem prazo' };
+  const prioLabels = { localizacao:'Localização', entrega_rapida:'Entrega rápida', planta:'Planta espaçosa', parcela:'Parcela que cabe', lazer:'Área de lazer' };
+
+  const linhas = [
+    moradiaLabel[dados.moradia] || '',
+    '🏠 Faixa de preço: até R$ ' + dados.precoMaxK + '.000',
+    '📐 Área mínima: ' + dados.areaMinM2 + ' m²',
+    dados.prioridades.length ? '⭐ Prioridades: ' + dados.prioridades.map(p => prioLabels[p]).join(', ') : '',
+    financeiroLabel[dados.financeiro] || '',
+    urgenciaLabel[dados.urgencia] || '',
+  ].filter(Boolean);
+
+  document.getElementById('resumoPerfil').innerHTML = linhas.map(l =>
+    '<div style="display:flex;align-items:center;gap:8px">' + l + '</div>'
+  ).join('');
+
+  // Link WhatsApp
+  const prioTxt = dados.prioridades.map(p => ({ localizacao:'localização', entrega_rapida:'entrega rápida', planta:'planta espaçosa', parcela:'parcela', lazer:'lazer' }[p])).join(' e ');
+  const msg = encodeURIComponent(
+    'Olá Leonardo! Acabei de preencher o simulador. ' +
+    'Tenho interesse em imóveis até R$ ' + dados.precoMaxK + 'k, a partir de ' + dados.areaMinM2 + 'm². ' +
+    (prioTxt ? 'Prioridade: ' + prioTxt + '. ' : '') +
+    'Pode me enviar as opções?'
+  );
+  document.getElementById('whatsLink').href = 'https://wa.me/' + WHATSAPP_NUM + '?text=' + msg;
+}
+
+// ── UTILITÁRIOS ───────────────────────────────────────────────────────────────
+
+function mascaraTel(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (v.length > 11) v = v.slice(0,11);
+  if (v.length > 6) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+  else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+  else if (v.length > 0) v = '(' + v;
+  el.value = v;
+}
+
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+
+window.addEventListener('beforeunload', () => {
+  if (stepAtual > 0 && stepAtual < 9) dados.stepAbandono = stepAtual;
+});
+
+// Inicializa contadores dos sliders
+atualizarSliderPreco(500);
+atualizarSliderArea(60);
+atualizarProgresso();
+</script>
+
+<!-- Carrega WEBHOOK_URL do config.js se disponível (opcional — simulador funciona sem ele) -->
+<script src="config.js" onerror="void(0)"></script>
+</body>
+</html>
