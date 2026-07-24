@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 107) — Simulador de Lançamentos: remove 2 textos da pergunta 3 (perfil de apartamento)
+
+A pedido do usuário, removidos dois textos de `simulador-lancamentos.html`, na pergunta 3 (perfil de
+apartamento): o subtítulo "Mexa nas barras abaixo: o investimento estimado e quantos empreendimentos
+têm esse apartamento pra você vão mudando na hora." (`step-sub` da etapa), e o texto
+"empreendimentos têm esse apartamento" que aparecia embaixo do número na caixa do contador
+(`#cntComboLabel`, populado por `labelCombo_()`). Ambos os elementos e a função `labelCombo_()`
+(que ficou sem nenhum uso) foram removidos do HTML/JS, não só esvaziados.
+
 ## 2026-07-24 (parte 106) — Simulador de Lançamentos: corrige sobreposição mobile entre investimento e contador de empreendimentos
 
 Usuário reportou que no mobile a caixa "Empreendimentos com esse apartamento" sobrepunha o
