@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 105) — Simulador de Lançamentos: valor dinâmico dos sliders em azul de destaque
+
+Depois que a parte 104 mudou todo texto cinza pra branco, os valores dinâmicos dentro das caixas de
+slider ("R$ 7.450 por m²", "60 m²") ficaram brancos iguais ao resto do texto, perdendo o destaque que
+tinham antes (quando o texto ao redor era cinza e só o valor era branco). `.slider-val-atual strong`
+mudou de `var(--text)` pra `var(--accent)` (o mesmo azul usado no investimento estimado e nos números
+em destaque do resto da página), deixando esses dois valores — o coração de cada slider — visualmente
+destacados de novo. Testado ao vivo: ambos os valores renderizam em `rgb(79,124,255)`.
+
 ## 2026-07-24 (parte 104) — Simulador de Lançamentos: tabela de opções com código, situação em destaque, botões coloridos, e correções de responsividade
 
 Lote de 12 pedidos do usuário em `simulador-lancamentos.html`:
