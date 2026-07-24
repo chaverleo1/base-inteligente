@@ -1,5 +1,24 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 117) — Simulador de Lançamentos: abertura vira 1 número gigante + bullets reescritos
+
+A pedido do usuário, a tela de abertura (step-0) de `simulador-lancamentos.html`:
+
+**1) As 3 caixinhas de estatística viraram 1 número gigante.** Era "empreendimentos" (26px) +
+"a partir de/m²" (15px) + "de área útil" (15px) lado a lado; agora é só o total de lançamentos, em
+`clamp(56px,18vw,88px)` laranja (`var(--orange)`), com o rótulo "LANÇAMENTOS CADASTRADOS" embaixo.
+`montarStatsAbertura_()` simplificada — só popula `#statsTotalEmp`, os elementos/lógica de preço e
+área foram removidos (não existem mais na tela).
+
+**2) Bullets da abertura reescritos.** "Feito na hora, com o que tem disponível agora" e "Um
+resultado só seu — nada de lista genérica" saíram; entraram "Prontos, Novos, Em obras, Na planta —
+pra você escolher" e "Dados reais — com o que temos disponível na grande Goiânia e região". O
+terceiro bullet ("Você no controle!...", já destacado desde a parte 114) não mudou.
+
+Testado ao vivo: "67" renderiza em 59.76px (desktop) / 67.5px (mobile 375px) laranja, com "LANÇAMENTOS
+CADASTRADOS" embaixo; os 3 bullets novos aparecem na ordem certa; sem sobreposição em nenhuma largura
+testada.
+
 ## 2026-07-24 (parte 116) — Simulador de Lançamentos: destaques em laranja na etapa de melhor match
 
 A pedido do usuário, `montarMatch()` em `simulador-lancamentos.html`:
