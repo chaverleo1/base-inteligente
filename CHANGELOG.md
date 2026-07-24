@@ -1,5 +1,41 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 109) — Simulador de Lançamentos: captura de WhatsApp vira penúltima etapa (depois da tabela de opções)
+
+Reordenação de fluxo pedida pelo usuário em `simulador-lancamentos.html` — 4 itens:
+
+**1) Resultado Parcial (step-4).** Removido o bloco `.blurred-cta` ("Quer ver agora mesmo... Leva 30
+segundos"). No lugar, um botão inline em cores quentes (`.btn-quente`) "QUERO VER MINHAS OPÇÕES". O
+botão "VER MEUS RESULTADOS" do rodapé fixo foi removido (escondido via `atualizarBotoes()`).
+
+**2) Captura de WhatsApp virou a penúltima etapa** — antes vinha logo depois do resultado parcial e
+antes da tabela de opções; agora vem DEPOIS da tabela (o cliente já viu as opções, só falta confirmar
+contato). Texto trocado pra refletir isso: `montarCapturaTitulo_()` agora monta
+"{Nome}, essa é a penúltima etapa antes de encerrar" (era "...pra você conhecer todas as opções...").
+
+**3) Botão "Confirmar Atendimento Humano" na tabela de opções agora abre a etapa de captura** — antes
+esse clique já finalizava tudo direto (chamava `confirmarAtendimento()`, que desabilitava o botão,
+mostrava "Confirmado" e ia pro agradecimento). Agora só navega pra etapa de captura
+(`avancarStep()` com a branch `stepAtual === 4` chamando `montarMatch()` + indo pro step-5, e
+`stepAtual === 5` chamando `montarCapturaTitulo_()` + indo pro step-6).
+
+**4) Fluxo encerra com a tela "Confirmado" só depois do WhatsApp cadastrado** — a animação de
+"Confirmado" (botão desabilita, texto muda, espera 700ms) que antes vivia numa função separada
+`confirmarAtendimento()` foi incorporada dentro de `submeter()` (que já fazia o POST do lead) — agora
+ela dispara no botão de submissão da captura (`#btnConfirmarFinal`, renomeado de "Confirmar
+Atendimento" — dropped "Humano" pra não repetir o texto do botão anterior), só depois do
+envio confirmado (ou do fallback offline).
+
+Numeração de step renumerada: 4=resultado parcial, 5=melhor match/tabela (era 6), 6=captura (era 5),
+7=confirmado (sem mudança). `avancarStep()`, `validar()`, `atualizarBotoes()` e o guard de
+`beforeunload` (abandono) todos atualizados pra bater com a nova ordem. CSS morto removido
+(`.blurred-cta`, `.btn-final.btn-amarelo` — sem nenhum uso depois da reordenação).
+
+Testado ao vivo (viewport mobile 375×812) do início ao fim, incluindo o fallback offline de
+`submeter()` (sem WEBHOOK_URL, pra não gravar lead de teste real): fluxo completo
+abertura→motivação→nome→perfil→resultado parcial→tabela→captura→confirmado, sem nenhuma sobreposição
+detectada em nenhuma etapa.
+
 ## 2026-07-24 (parte 108) — Simulador de Lançamentos: barras de arrastar em laranja
 
 A pedido do usuário, os sliders (preço/m² e metragem) de `simulador-lancamentos.html` passaram a usar

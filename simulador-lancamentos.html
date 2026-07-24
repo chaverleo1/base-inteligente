@@ -169,13 +169,6 @@ input[type=range]::-moz-range-track {
 .score-bar-track { height: 6px; background: var(--s3); border-radius: 99px; overflow: hidden; }
 .score-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .8s cubic-bezier(.4,0,.2,1); }
 
-.blurred-cta {
-  background: var(--s2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 20px;
-  text-align: center; margin-top: 20px;
-}
-.blurred-cta p { font-size: 13px; color: var(--text); line-height: 1.6; }
-
 /* ── CAPTURA ─────────────────────────────────────────────────────────── */
 .form-field { margin-bottom: 14px; }
 .form-field label {
@@ -278,10 +271,6 @@ input[type=range]::-moz-range-track {
    vermelho/amarelo/laranja, pra chamar mais atenção que o resto da tela) ── */
 .btn-final.btn-quente { background: linear-gradient(135deg, #ff9d2e, #ff5252); color: #1a0a00; }
 .btn-final.btn-quente:hover { filter: brightness(1.08); }
-
-/* ── BOTÃO AMARELO (ver minhas opções — pedido: fundo amarelo, letra preta) ── */
-.btn-final.btn-amarelo { background: #ffc531; color: #1a1a1a; }
-.btn-final.btn-amarelo:hover { background: #ffd25c; }
 
 /* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
 .check-circle {
@@ -529,45 +518,15 @@ input[type=range]::-moz-range-track {
 
     <div class="teaser-stats" id="teaserStats"></div>
 
-    <div class="blurred-cta">
-      <p style="font-size:15px;color:var(--text);font-weight:600;margin-bottom:6px">Quer ver <span style="color:var(--accent)">agora mesmo</span> o empreendimento que mais combina com você?</p>
-      <p>Área exata, parcelas, fase da obra e condições de pagamento — é só deixar seu contato abaixo. Leva 30 segundos.</p>
-    </div>
-  </div>
-
-  <!-- STEP 5 — CAPTURA -->
-  <div class="step" id="step-5">
-    <div class="step-tag">Quase lá</div>
-    <div class="step-title" id="capturaTitulo">Pra você conhecer todas as opções, deixa seu WhatsApp aqui embaixo</div>
-    <div class="step-sub">É rapidinho: a gente te chama por lá assim que você confirmar.</div>
-
-    <div class="whats-box">
-      <div class="form-field">
-        <label>Seu WhatsApp com DDD</label>
-        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
-      </div>
-      <div class="form-field" style="margin-bottom:0">
-        <label>Confirme o WhatsApp</label>
-        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
-      </div>
-    </div>
-
-    <div class="privacy-note">
-      <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text)"><use href="#ico-check"/></svg>
-      <span>Seus dados ficam somente com Leonardo. Nenhuma lista de e-mail ou retorno de terceiros.</span>
-    </div>
-
-    <p style="font-size:14px;color:var(--text);line-height:1.5;text-align:center;margin:20px 0 14px">
-      Veja suas opções resumidas, e confirme o atendimento humano completo em seguida!
-    </p>
-    <button class="btn-final btn-amarelo" onclick="avancarStep()">
+    <button class="btn-final btn-quente" style="margin-top:20px" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-      Ver minhas opções
+      QUERO VER MINHAS OPÇÕES
     </button>
   </div>
 
-  <!-- STEP 6 — MELHOR MATCH -->
-  <div class="step" id="step-6">
+  <!-- STEP 5 — MELHOR MATCH / TABELA DE OPÇÕES (agora vem antes da captura de
+       telefone -- o cliente vê as opções primeiro, só depois confirma contato) -->
+  <div class="step" id="step-5">
     <div class="match-header">
       <div class="match-tag">
         <svg width="12" height="12"><use href="#ico-star"/></svg>
@@ -597,13 +556,42 @@ input[type=range]::-moz-range-track {
     <div class="opcoes-tabela" id="opcoesTabela"><!-- populado por JS --></div>
 
     <div class="btn-final-wrap">
-      <p>Confirme abaixo pra receber todos os detalhes, agendar uma visita e conversar com o Leonardo sobre as melhores condições.</p>
-      <button class="btn-final btn-quente" id="btnFinal" onclick="confirmarAtendimento()">
+      <p>Pra confirmar esse atendimento e receber todos os detalhes, informe seu WhatsApp na próxima etapa.</p>
+      <button class="btn-final btn-quente" onclick="avancarStep()">
         <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
         CONFIRMAR ATENDIMENTO HUMANO
       </button>
-      <div class="btn-final-sub">Leonardo entra em contato em até 2 horas pelo WhatsApp</div>
     </div>
+  </div>
+
+  <!-- STEP 6 — CAPTURA (agora penúltima etapa -- o cliente já viu as opções,
+       só falta confirmar o WhatsApp antes de encerrar) -->
+  <div class="step" id="step-6">
+    <div class="step-tag">Quase lá</div>
+    <div class="step-title" id="capturaTitulo">Essa é a penúltima etapa antes de encerrar</div>
+    <div class="step-sub">Confirme seu WhatsApp abaixo pra finalizar o seu atendimento.</div>
+
+    <div class="whats-box">
+      <div class="form-field">
+        <label>Seu WhatsApp com DDD</label>
+        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+      </div>
+      <div class="form-field" style="margin-bottom:0">
+        <label>Confirme o WhatsApp</label>
+        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+      </div>
+    </div>
+
+    <div class="privacy-note">
+      <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text)"><use href="#ico-check"/></svg>
+      <span>Seus dados ficam somente com Leonardo. Nenhuma lista de e-mail ou retorno de terceiros.</span>
+    </div>
+
+    <button class="btn-final btn-quente" id="btnConfirmarFinal" style="margin-top:20px" onclick="avancarStep()">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+      CONFIRMAR ATENDIMENTO
+    </button>
+    <div class="btn-final-sub">Leonardo entra em contato em até 2 horas pelo WhatsApp</div>
   </div>
 
   <!-- STEP 7 — AGRADECIMENTO -->
@@ -793,8 +781,9 @@ function avancarStep() {
   if (stepAtual === 0) { irParaStep(1); return; }
   if (stepAtual === 2) { montarStep3Titulo_(); irParaStep(3); return; }
   if (stepAtual === 3) { montarTeaser(); irParaStep(4); return; }
-  if (stepAtual === 4) { montarCapturaTitulo_(); irParaStep(5); return; }
-  if (stepAtual === 5) { submeter(); return; }
+  if (stepAtual === 4) { montarMatch(); irParaStep(5); return; }
+  if (stepAtual === 5) { montarCapturaTitulo_(); irParaStep(6); return; }
+  if (stepAtual === 6) { submeter(); return; }
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
@@ -810,7 +799,7 @@ function montarStep3Titulo_() {
 function montarCapturaTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('capturaTitulo').textContent =
-    `${primeiroNome}, pra você conhecer todas as opções, deixa seu WhatsApp aqui embaixo`;
+    `${primeiroNome}, essa é a penúltima etapa antes de encerrar`;
 }
 
 function voltarStep() {
@@ -820,16 +809,13 @@ function voltarStep() {
 function atualizarBotoes() {
   const bV = document.getElementById('btnVoltar');
   const bA = document.getElementById('btnAvancar');
-  // Etapa 5 (captura) tem seu próprio botão inline ("Ver minhas opções", amarelo,
-  // logo abaixo do texto de reforço) -- o botão de avançar do rodapé fica
-  // escondido pra não duplicar a ação.
-  const semAvancarRodape = stepAtual === 5 || stepAtual >= 6;
-  bA.classList.toggle('btn-hide', semAvancarRodape);
-  bV.classList.toggle('btn-hide', stepAtual <= 1 || stepAtual >= 6);
+  // Etapas 4 (resultado parcial), 5 (melhor match) e 6 (captura) têm cada
+  // uma seu próprio botão inline em destaque -- o botão de avançar do
+  // rodapé só aparece nas perguntas normais (1 a 3).
+  bA.classList.toggle('btn-hide', stepAtual >= 4);
+  bV.classList.toggle('btn-hide', stepAtual <= 1 || stepAtual === 7);
 
-  if (stepAtual === 0)      bA.textContent = 'Começar';
-  else if (stepAtual === 4) bA.textContent = 'VER MEUS RESULTADOS';
-  else                      bA.textContent = 'Próximo';
+  bA.textContent = stepAtual === 0 ? 'Começar' : 'Próximo';
 }
 
 // ── VALIDAÇÃO ───────────────────────────────────────────────────────────
@@ -840,7 +826,7 @@ function validar() {
     if (!nome) { toast('Informe seu nome para continuar'); return false; }
     D.nome = nome;
   }
-  if (stepAtual === 5) {
+  if (stepAtual === 6) {
     const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
     const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
     if (whats.length < 10)  { toast('Informe um WhatsApp válido com DDD'); return false; }
@@ -1029,11 +1015,18 @@ function montarTeaser() {
 // já existe no backend (salvarInteresse_, code.txt) e é a MESMA rota que
 // alimenta a aba "BaseImob" do dashboard (listarLeadsBaseimob_).
 function submeter() {
-  const btnA = document.getElementById('btnAvancar');
-  btnA.textContent = 'Enviando...';
-  btnA.disabled = true;
+  const btn = document.getElementById('btnConfirmarFinal');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
 
-  const continuar = () => { montarMatch(); irParaStep(6); btnA.disabled = false; };
+  // Encerra com a tela de "Confirmado" só depois do WhatsApp confirmado --
+  // pedido explícito do usuário (a captura agora é a penúltima etapa, e o
+  // fluxo só termina depois que os telefones são cadastrados).
+  const continuar = () => {
+    btn.textContent = 'Confirmado';
+    btn.classList.add('confirmado');
+    setTimeout(() => { montarAgradecimento(); irParaStep(7); }, 700);
+  };
 
   if (typeof WEBHOOK_URL === 'undefined') {
     console.log('[simulador] WEBHOOK_URL indisponível — pulando envio.', D);
@@ -1153,14 +1146,6 @@ function montarMatch() {
   }).join('');
 }
 
-function confirmarAtendimento() {
-  const btn = document.getElementById('btnFinal');
-  btn.disabled = true;
-  btn.textContent = 'Confirmado';
-  btn.classList.add('confirmado');
-  setTimeout(() => { montarAgradecimento(); irParaStep(7); }, 700);
-}
-
 // ── AGRADECIMENTO ─────────────────────────────────────────────────────────
 function montarAgradecimento() {
   document.getElementById('obrigadoNome').textContent = D.nome.split(' ')[0] + '!';
@@ -1241,7 +1226,7 @@ function toast(msg) {
 }
 
 window.addEventListener('beforeunload', () => {
-  if (stepAtual > 0 && stepAtual < 6) D.stepAbandono = stepAtual;
+  if (stepAtual > 0 && stepAtual < 7) D.stepAbandono = stepAtual;
 });
 
 // INIT
