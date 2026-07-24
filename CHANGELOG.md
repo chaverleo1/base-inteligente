@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 116) — Simulador de Lançamentos: destaques em laranja na etapa de melhor match
+
+A pedido do usuário, `montarMatch()` em `simulador-lancamentos.html`:
+
+**1) Preço mínimo e barra de vendidos em destaque, no card #1.** "A partir de" foi de 13px/branco pra
+20px/laranja (`var(--orange)`); a barra de "Unidades vendidas" foi de 6px pra 10px de altura e agora é
+sempre laranja (antes só ficava laranja quando ≥80% vendido, azul o resto do tempo).
+
+**2) Linhas compactas (opções 2 a 7) ganharam a região e "A partir de" antes do preço, com o preço
+destacado.** Formato mudou de `{situação} · {área} · {preço}` pra
+`{situação} · {área} · {região} - A partir de {preço em laranja e negrito}` (reaproveita `c.regiao`,
+o mesmo campo já usado no card #1).
+
+**3) Removida a coluna de porcentagem** ("100%", "93%"...) das linhas compactas — `.opcao-match` saiu
+do HTML e a classe CSS correspondente (que ficou sem uso) foi removida; `.opcao-row` voltou a ter só
+2 colunas de grid (era 3, a terceira ["auto"] existia só pra essa porcentagem). `corMatch_()` continua
+em uso no número grande do card #1.
+
+Testado ao vivo: "A partir de" em 20px `rgb(255,138,0)`; barra em 10px, sempre laranja; linha compacta
+mostrando "Em obras · 50.8-248.3m² · Setor Pedro Ludovico · goiania - A partir de R$ 544.482" com o
+preço em `rgb(255,138,0)` negrito; sem porcentagem nas linhas; sem sobreposição em mobile (375px).
+
 ## 2026-07-24 (parte 115) — Simulador de Lançamentos: nome move pro "Deu match!" no resultado parcial
 
 A pedido do usuário, o headline do resultado parcial (`montarTeaser()`) mudou de "Deu match! Temos N

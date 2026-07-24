@@ -238,14 +238,13 @@ input[type=range]::-moz-range-track {
 .opcao-top-cell-label { font-size: 9px; font-weight: 700; color: var(--text); opacity: .6; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
 .opcao-top-cell-val { font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: break-word; }
 .opcao-row {
-  display: grid; grid-template-columns: 22px minmax(0,1fr) auto; align-items: center;
+  display: grid; grid-template-columns: 22px minmax(0,1fr); align-items: center;
   gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border);
 }
 .opcao-row:last-child { border-bottom: none; }
 .opcao-rank { font-size: 12px; font-weight: 700; color: var(--text); opacity: .5; text-align: center; }
 .opcao-row .opcao-codigo { font-size: 12px; }
 .opcao-row-info { font-size: 11px; color: var(--text); opacity: .7; margin-top: 2px; overflow-wrap: break-word; }
-.opcao-match { font-size: 13px; font-weight: 800; color: var(--text); text-align: right; white-space: nowrap; }
 
 /* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
 .btn-final-wrap {
@@ -1190,13 +1189,13 @@ function montarMatch() {
           <div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>
           <div><div class="opcao-top-cell-label">Região</div><div class="opcao-top-cell-val">${c.regiao}</div></div>
           <div><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
-          <div><div class="opcao-top-cell-label">A partir de</div><div class="opcao-top-cell-val">${formatBRL_(c.precoAPartir)}</div></div>
+          <div><div class="opcao-top-cell-label">A partir de</div><div class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</div></div>
           <div><div class="opcao-top-cell-label">Área de lazer</div><div class="opcao-top-cell-val" style="${c.temLazer?'color:var(--green)':''}">${c.temLazer?'Completa':'Não incluso'}</div></div>
           <div style="grid-column:1/-1">
             <div class="opcao-top-cell-label">Unidades vendidas</div>
-            <div class="opcao-top-cell-val" style="${c.pctVendido>=80?'color:#f5a623':''}">${c.pctVendido}% das unidades já foram vendidas</div>
-            <div style="height:6px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:6px">
-              <div style="height:100%;width:${c.pctVendido}%;background:${c.pctVendido>=80?'#f5a623':'var(--accent)'};border-radius:99px"></div>
+            <div class="opcao-top-cell-val" style="color:var(--orange)">${c.pctVendido}% das unidades já foram vendidas</div>
+            <div style="height:10px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:6px">
+              <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
             </div>
           </div>
         </div>
@@ -1207,9 +1206,8 @@ function montarMatch() {
         <div class="opcao-rank">${i+1}</div>
         <div>
           <div class="opcao-codigo">${c.id || '—'}</div>
-          <div class="opcao-row-info">${situacaoBadgeHTML_(c.estagio)} · ${c.areaMin}-${c.areaMax}m² · ${formatBRL_(c.precoAPartir)}</div>
+          <div class="opcao-row-info">${situacaoBadgeHTML_(c.estagio)} · ${c.areaMin}-${c.areaMax}m² · ${c.regiao} - A partir de <span style="color:var(--orange);font-weight:800">${formatBRL_(c.precoAPartir)}</span></div>
         </div>
-        <div class="opcao-match" style="color:${corMatch_(c.matchPref)}">${c.matchPref}%</div>
       </div>`;
   }).join('');
 }
