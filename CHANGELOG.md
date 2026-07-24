@@ -1,5 +1,25 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 110) — Simulador de Lançamentos: 2 textos da pergunta 3 + corrige cor do contador travando em branco
+
+A pedido do usuário, dois textos da pergunta 3 (perfil de apartamento) em `simulador-lancamentos.html`:
+
+1. Título personalizado agora inclui a dica de interação: `montarStep3Titulo_()` monta
+   "{Nome}, qual o perfil de apartamento que você procura? (Arraste as barras laterais para escolher)"
+   (era só a pergunta, sem a dica).
+2. Texto da caixa do contador trocado de "Empreendimentos com esse apartamento" (rótulo) + número
+   grande separado, pra uma frase única "Temos 5 opções reais", com o número em destaque
+   (maior, cor de destaque) dentro da própria frase.
+
+**Bug real encontrado e corrigido durante o teste:** o número dentro da caixa ficava sempre branco
+(`var(--text)`), nunca a cor de destaque que eu tinha acabado de aplicar. Causa: `animar()` adiciona a
+classe `.pulso` (efeito de "pulso" quando o contador muda) mas nunca a remove — o keyframe final da
+animação (`100% { color: var(--text) }`) ficava sobrepondo a cor própria do elemento pra sempre, já que
+a classe nunca saía do elemento. Antes disso era invisível (a cor própria já era `var(--text)`, igual
+ao keyframe), mas virou visível assim que o número passou a ter uma cor diferente. Corrigido com um
+`setTimeout` que remove a classe `.pulso` 350ms depois (duração da animação), garantindo que a cor
+property do elemento volta a valer depois do efeito.
+
 ## 2026-07-24 (parte 109) — Simulador de Lançamentos: captura de WhatsApp vira penúltima etapa (depois da tabela de opções)
 
 Reordenação de fluxo pedida pelo usuário em `simulador-lancamentos.html` — 4 itens:

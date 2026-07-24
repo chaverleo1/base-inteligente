@@ -464,7 +464,7 @@ input[type=range]::-moz-range-track {
        logo abaixo, tudo atualizando em tempo real junto). -->
   <div class="step" id="step-3">
     <div class="step-tag">Pergunta 3 de 3</div>
-    <div class="step-title" id="step3Titulo" style="margin-bottom:16px">Qual o perfil de <span style="color:var(--accent)">apartamento</span> que você procura?</div>
+    <div class="step-title" id="step3Titulo" style="margin-bottom:16px">Qual o perfil de <span style="color:var(--accent)">apartamento</span> que você procura? <span style="font-size:14px;font-weight:500;color:var(--text)">(Arraste as barras laterais para escolher)</span></div>
 
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
       <div style="flex:1;min-width:0">
@@ -473,8 +473,7 @@ input[type=range]::-moz-range-track {
         <div id="investimentoSub" style="font-size:11px;color:var(--text);margin-top:6px;overflow-wrap:break-word">—</div>
       </div>
       <div style="flex-shrink:0;background:var(--s2);border:1.5px solid var(--accent);border-radius:var(--r);padding:14px 14px;text-align:center;width:118px;max-width:118px">
-        <div style="font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--text);margin-bottom:6px;overflow-wrap:break-word">Empreendimentos com esse apartamento</div>
-        <div id="cntCombo" style="font-size:clamp(26px,8vw,36px);font-weight:800;color:var(--text);letter-spacing:-1px;line-height:1">—</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.4">Temos <span id="cntCombo" style="display:inline-block;font-size:clamp(22px,7vw,28px);font-weight:800;color:var(--accent);letter-spacing:-1px">—</span> opções reais</div>
       </div>
     </div>
 
@@ -793,7 +792,7 @@ function avancarStep() {
 function montarStep3Titulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('step3Titulo').innerHTML =
-    `${primeiroNome}, qual o perfil de <span style="color:var(--accent)">apartamento</span> que você procura?`;
+    `${primeiroNome}, qual o perfil de <span style="color:var(--accent)">apartamento</span> que você procura? <span style="font-size:14px;font-weight:500;color:var(--text)">(Arraste as barras laterais para escolher)</span>`;
 }
 
 function montarCapturaTitulo_() {
@@ -897,6 +896,11 @@ function animar(id, novoVal) {
   el.classList.remove('pulso');
   void el.offsetWidth;
   el.classList.add('pulso');
+  // Remove a classe depois da animação -- sem isso, o keyframe final
+  // (color: var(--text)) fica sobrepondo a cor própria do elemento pra
+  // sempre (ex.: o "5" de #cntCombo, que devia ficar var(--accent)).
+  clearTimeout(el._pulsoTimer);
+  el._pulsoTimer = setTimeout(() => el.classList.remove('pulso'), 350);
 }
 
 function formatBRL_(v) {
