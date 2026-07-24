@@ -1,5 +1,20 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 112) — Simulador de Lançamentos: remove 2 textos da pergunta 2 (perfil de apartamento)
+
+A pedido do usuário, dois textos em `simulador-lancamentos.html`:
+
+1. Removido o subtítulo da pergunta 2 (nome) — "Assim já vamos te chamando pelo nome no resto da
+   simulação."
+2. Título da pergunta 3 trocado de "{Nome}, qual o perfil de apartamento que você procura?" pra
+   "{Nome}, qual o orçamento ideal pra você? Por preço/m² e área útil?" (mantida a dica "(Arraste as
+   barras laterais para escolher)" já existente). Atualizado tanto no HTML estático quanto em
+   `montarStep3Titulo_()`.
+
+Testado ao vivo com nome "Maria": pergunta 2 sem subtítulo, pergunta 3 mostra "Maria, qual o
+orçamento ideal pra você? Por preço/m² e área útil? (Arraste as barras laterais para escolher)" — sem
+sobreposição em mobile (375px).
+
 ## 2026-07-24 (parte 111) — Simulador de Lançamentos: número da caixa "Temos N opções reais" gigante e laranja
 
 A pedido do usuário, o número dentro da caixa de contador (pergunta 3) ficou bem maior e em laranja:
