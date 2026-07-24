@@ -1,5 +1,19 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 98) — Simulador de Lançamentos: metragem primeiro, preço/m² + investimento depois
+
+Troca de ordem das perguntas 3 e 4 em `simulador-lancamentos.html`, a pedido do usuário: agora o
+cliente escolhe primeiro a **faixa de metragem** (pergunta 3, sem o valor de investimento ainda —
+só o contador de opções), e só na tela seguinte escolhe o **preço por m²** (pergunta 4), momento em
+que o "Investimento estimado" (preço/m² × metragem média da faixa escolhida) aparece, já que as duas
+respostas necessárias para compô-lo já existem. Reorder puramente de HTML/copy — nenhuma lógica JS
+mudou: `atualizarPrecoM2` e `atualizarMetragemLo/Hi` já chamavam `atualizarInvestimentoComposto_()`
+internamente, e essa função já tinha o guard `if (!D.precoM2Alvo || !D.areaRange) return;`, então o
+valor composto naturalmente só aparece quando as duas perguntas já foram respondidas, independente
+da ordem das telas. Testado ao vivo no navegador contra a base real: pergunta 3 mostra só o contador
+de metragem (sem investimento), pergunta 4 mostra preço/m² + investimento calculado corretamente
+(ex.: R$ 11.650/m² × 228m² = R$ 2.650.375).
+
 ## 2026-07-23 (parte 97) — Simulador de Lançamentos: dados reais + Score de Tração + lead no BaseImob
 
 Reescrita completa de `simulador-lancamentos.html` (a landing pública de qualificação de leads criada
@@ -32,8 +46,8 @@ idsInteresse, rankingDetalhado, tags, canal, tipo_contato, score`).
 (preço total, área) por: (1) slider simples de **preço por m²** com contador ao vivo, e (2) slider de
 **faixa dupla** (2 alças) pra metragem, também com contador ao vivo — igual ao funil de lotes, só
 trocando área de terreno por área útil (apartamentos). O "investimento estimado" (preço/m² × metragem
-média da faixa) aparece destacado no topo da tela de metragem, atualizando ao vivo — exatamente como
-pedido. O ranking/match usa a mesma lógica de distância relativa ao alvo do slider (`scoreCondo` em
+média da faixa) aparece destacado, atualizando ao vivo (ordem das duas telas ajustada na parte 98). O
+ranking/match usa a mesma lógica de distância relativa ao alvo do slider (`scoreCondo` em
 `baseimob-funil.html`), não corte rígido, com o Score de Tração real como critério de desempate.
 
 **Só 4 perguntas** (era 6): motivação (mantida) → situação financeira (agora multi-seleção, era
