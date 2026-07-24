@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 101) — Simulador de Lançamentos: metragem vira alça única (±20%) + caixas mais baixas com letra maior
+
+A pedido do usuário, dois ajustes em `simulador-lancamentos.html`:
+
+**Metragem deixou de ser faixa dupla (2 alças) e virou valor único, igual ao preço/m².** O cliente
+escolhe UM tamanho (ex.: 50m²) e o motor de match já embute uma tolerância de ±20% pra cima/baixo
+automaticamente (50m² → considera de 40m² a 60m² no cálculo) — sem precisar arrastar uma segunda alça
+pra definir isso manualmente. `sliderMetragemLo`/`sliderMetragemHi`/`faixaMetragemTrack` e toda a
+lógica de faixa dupla (`aplicarFaixaMetragem_`, CSS `.faixa-dupla-wrap`/`.faixa-track`/`.faixa-thumb`)
+saíram; entrou `atualizarMetragem(val)` com uma nova constante `TOLERANCIA_METRAGEM_ = 0.20`, que
+grava o valor escolhido em `D.metragemAlvo` e deriva `D.areaRange = [v*0.8, v*1.2]` automaticamente —
+o resto do motor (`temApartamentoCompativel_`, `scoreMatchPreferencia_`, `filtrados()`, teaser, match,
+agradecimento) continua recebendo `D.areaRange` exatamente como antes, sem precisar mudar. Um texto
+abaixo do slider ("Considerando também opções de 40m² a 60m² (±20%)") deixa a tolerância visível pro
+cliente. Telas que exibiam a faixa de metragem (resumo do perfil, agradecimento, mensagem de
+WhatsApp) passaram a mostrar o valor único escolhido com a faixa efetiva entre parênteses, em vez de
+só a faixa crua.
+
+**Caixas das barras de arrastar ficaram mais baixas, com letra interna maior.** Novas classes
+`.slider-card`/`.slider-card-label`/`.slider-card-hint` substituem os estilos inline repetidos;
+padding caiu de 20px pra 12px verticalmente, e as margens internas (label, valor atual, faixa
+min/max) foram reduzidas. Em compensação, os tamanhos de fonte subiram: label da pergunta de 13px
+pra 15px, valor atual (`.slider-val-atual`) de 20px pra 24px, e os rótulos de mín/máx
+(`.slider-label-row span`) de 11px pra 13px. Testado ao vivo: caixa de preço/m² caiu de ~190px pra
+137px de altura, caixa de metragem (com a dica de tolerância) ficou em 158px — ambas visivelmente
+mais compactas e legíveis.
+
+De quebra, removido CSS órfão (`.investimento-composto`/`.investimento-label`/`.investimento-valor`/
+`.investimento-sub`) que já estava sem uso desde a parte 99, quando esses valores passaram a usar
+estilo inline no cabeçalho combinado.
+
+Testado ao vivo no navegador: slider de metragem em 60m² mostra corretamente "Considerando também
+opções de 48m² a 72m² (±20%)" e `D.areaRange = [48, 72]`, com o contador de empreendimentos
+recalculando em tempo real (25 opções).
+
 ## 2026-07-24 (parte 100) — Simulador de Lançamentos: busca é por APARTAMENTO, e o total conta empreendimentos que têm esse apartamento
 
 Duas mudanças pedidas pelo usuário em `simulador-lancamentos.html`:

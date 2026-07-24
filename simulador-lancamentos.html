@@ -138,13 +138,22 @@ body {
 }
 .contador-label-bot { font-size: 16px; font-weight: 500; color: var(--text2); margin-top: 14px; letter-spacing: .1px; }
 
-.slider-label-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.slider-label-row span { font-size: 11px; color: var(--text3); }
+.slider-label-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.slider-label-row span { font-size: 13px; color: var(--text3); }
 .slider-val-atual {
-  text-align: center; font-size: 20px; font-weight: 600; color: var(--text2);
-  margin-bottom: 14px;
+  text-align: center; font-size: 24px; font-weight: 600; color: var(--text2);
+  margin-bottom: 10px;
 }
 .slider-val-atual strong { color: var(--text); font-weight: 700; }
+
+/* ── CAIXAS DAS BARRAS DE ARRASTAR (preço/m², metragem) — baixas e com
+   letra maior por dentro, pra caber mais tela sem perder legibilidade. ── */
+.slider-card {
+  background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r);
+  padding: 12px 18px;
+}
+.slider-card-label { font-size: 15px; color: var(--text2); margin-bottom: 8px; }
+.slider-card-hint { font-size: 13px; color: var(--text3); margin-top: 8px; text-align: center; }
 
 input[type=range] {
   -webkit-appearance: none; appearance: none;
@@ -164,27 +173,6 @@ input[type=range]::-moz-range-thumb {
   width: 26px; height: 26px; border-radius: 50%; background: var(--text);
   cursor: pointer; border: none;
 }
-
-/* ── SLIDER DE FAIXA DUPLA (metragem) — mesma metodologia de
-   baseimob-funil.html: 2 alças sobre 1 trilho, com destaque visual do
-   trecho selecionado (.faixa-track). ──────────────────────────────────── */
-.faixa-dupla-wrap { position: relative; width: 100%; height: 26px; display: flex; align-items: center; }
-.faixa-track-base { position: absolute; width: 100%; height: 3px; background: var(--s3); border-radius: 99px; }
-.faixa-track { position: absolute; height: 3px; background: var(--accent); border-radius: 99px; transition: left .05s, right .05s; }
-input[type=range].faixa-thumb {
-  position: absolute; width: 100%; height: 0; background: transparent; pointer-events: none;
-}
-input[type=range].faixa-thumb::-webkit-slider-thumb { pointer-events: auto; }
-input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
-
-/* ── INVESTIMENTO COMPOSTO (preço/m² × metragem, destacado) ───────────── */
-.investimento-composto {
-  text-align: center; margin: 22px 0 8px; padding: 22px 18px;
-  background: var(--s2); border: 1.5px solid var(--accent); border-radius: var(--r);
-}
-.investimento-label { font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
-.investimento-valor { font-size: 34px; font-weight: 800; color: var(--accent); letter-spacing: -1px; font-variant-numeric: tabular-nums; }
-.investimento-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
 
 /* ── RESULTADO PARCIAL (TEASER) ──────────────────────────────────────── */
 .teaser-num {
@@ -495,8 +483,8 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
       </div>
     </div>
 
-    <div style="background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Qual preço por m² do apartamento você considera ideal?</div>
+    <div class="slider-card" style="margin-bottom:16px">
+      <div class="slider-card-label">Qual preço por m² do apartamento você considera ideal?</div>
       <div class="slider-val-atual"><strong id="sliderPrecoM2Txt">—</strong> por m²</div>
       <input type="range" id="sliderPrecoM2" oninput="atualizarPrecoM2(this.value)">
       <div class="slider-label-row">
@@ -504,18 +492,14 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
       </div>
     </div>
 
-    <div style="background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r);padding:20px">
-      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Qual a faixa de metragem ideal do apartamento?</div>
+    <div class="slider-card">
+      <div class="slider-card-label">Qual a metragem ideal do apartamento?</div>
       <div class="slider-val-atual"><strong id="sliderMetragemTxt">—</strong></div>
-      <div class="faixa-dupla-wrap">
-        <div class="faixa-track-base"></div>
-        <div class="faixa-track" id="faixaMetragemTrack"></div>
-        <input type="range" id="sliderMetragemLo" class="faixa-thumb" oninput="atualizarMetragemLo(this.value)">
-        <input type="range" id="sliderMetragemHi" class="faixa-thumb" oninput="atualizarMetragemHi(this.value)">
-      </div>
+      <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
       <div class="slider-label-row">
         <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
       </div>
+      <div class="slider-card-hint" id="metragemFaixaSub">—</div>
     </div>
   </div>
 
@@ -764,7 +748,7 @@ let stepAtual = 0;
 const TOTAL = 8; // steps 0..7
 
 const D = {
-  moradia: null, financeiro: [], precoM2Alvo: null, areaRange: null,
+  moradia: null, financeiro: [], precoM2Alvo: null, metragemAlvo: null, areaRange: null,
   nome: '', whatsapp: '',
   tsInicio: Date.now(), precoM2Inicial: null, precoM2Final: null,
   areaInicial: null, areaFinal: null, stepAbandono: null,
@@ -916,14 +900,12 @@ function inicializarSliders() {
   document.getElementById('lblPrecoM2Max').textContent = formatBRL_(PRECO_M2_BOUNDS[1]) + '/m²';
   atualizarPrecoM2(sP.value);
 
-  const sLo = document.getElementById('sliderMetragemLo');
-  const sHi = document.getElementById('sliderMetragemHi');
-  sLo.min = sHi.min = AREA_BOUNDS[0]; sLo.max = sHi.max = AREA_BOUNDS[1]; sLo.step = sHi.step = 5;
-  sLo.value = AREA_BOUNDS[0]; sHi.value = AREA_BOUNDS[1];
+  const sM = document.getElementById('sliderMetragem');
+  sM.min = AREA_BOUNDS[0]; sM.max = AREA_BOUNDS[1]; sM.step = 5;
+  sM.value = Math.round((AREA_BOUNDS[0] + AREA_BOUNDS[1]) / 2);
   document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
   document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
-  atualizarMetragemLo(sLo.value);
-  atualizarMetragemHi(sHi.value);
+  atualizarMetragem(sM.value);
 }
 
 function atualizarPrecoM2(val) {
@@ -934,30 +916,20 @@ function atualizarPrecoM2(val) {
   atualizarComboUI_();
 }
 
-function atualizarMetragemLo(val) {
-  const sHi = document.getElementById('sliderMetragemHi');
-  const lo = Math.min(parseInt(val), parseInt(sHi.value) - 5);
-  document.getElementById('sliderMetragemLo').value = lo;
-  aplicarFaixaMetragem_(lo, parseInt(sHi.value));
-}
-function atualizarMetragemHi(val) {
-  const sLo = document.getElementById('sliderMetragemLo');
-  const hi = Math.max(parseInt(val), parseInt(sLo.value) + 5);
-  document.getElementById('sliderMetragemHi').value = hi;
-  aplicarFaixaMetragem_(parseInt(sLo.value), hi);
-}
-function aplicarFaixaMetragem_(lo, hi) {
-  if (D.areaInicial === null) D.areaInicial = (lo + hi) / 2;
-  D.areaRange = [lo, hi]; D.areaFinal = (lo + hi) / 2;
-  document.getElementById('sliderMetragemTxt').textContent = `${lo} a ${hi} m²`;
-
-  const [min, max] = AREA_BOUNDS;
-  const pctLo = ((lo - min) / (max - min)) * 100;
-  const pctHi = ((hi - min) / (max - min)) * 100;
-  const track = document.getElementById('faixaMetragemTrack');
-  track.style.left  = pctLo + '%';
-  track.style.right = (100 - pctHi) + '%';
-
+// Metragem é um valor único (mesma metodologia do preço/m², uma alça só) --
+// o cliente escolhe o tamanho que quer, e o motor de match já embute uma
+// tolerância de ±20% pra cima/baixo (ex.: escolheu 50m² -> entra no cálculo
+// de 40m² a 60m²), sem precisar de uma segunda alça pra isso.
+const TOLERANCIA_METRAGEM_ = 0.20;
+function atualizarMetragem(val) {
+  const v = parseInt(val);
+  if (D.areaInicial === null) D.areaInicial = v;
+  D.metragemAlvo = v; D.areaFinal = v;
+  const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
+  const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
+  D.areaRange = [lo, hi];
+  document.getElementById('sliderMetragemTxt').textContent = `${v} m²`;
+  document.getElementById('metragemFaixaSub').textContent = `Considerando também opções de ${lo}m² a ${hi}m² (±20%)`;
   atualizarComboUI_();
 }
 
@@ -967,12 +939,11 @@ function aplicarFaixaMetragem_(lo, hi) {
 // -- usa a mesma filtrados()/temApartamentoCompativel_ que já alimenta o
 // teaser e o match final.
 function atualizarComboUI_() {
-  if (!D.precoM2Alvo || !D.areaRange) return;
-  const areaMid = (D.areaRange[0] + D.areaRange[1]) / 2;
-  const total = areaMid * D.precoM2Alvo;
+  if (!D.precoM2Alvo || !D.metragemAlvo) return;
+  const total = D.metragemAlvo * D.precoM2Alvo;
   document.getElementById('investimentoComposto').textContent = formatBRL_(total);
   document.getElementById('investimentoSub').textContent =
-    `${formatBRL_(D.precoM2Alvo)}/m² × ${Math.round(areaMid)}m² (metragem média da faixa escolhida)`;
+    `${formatBRL_(D.precoM2Alvo)}/m² × ${D.metragemAlvo}m²`;
 
   const n = filtrados().length;
   animar('cntCombo', n);
@@ -1060,7 +1031,7 @@ function submeter() {
     }))),
     tags: JSON.stringify({
       moradia: D.moradia, financeiro: D.financeiro.map(f => financeiroMap[f] || f),
-      precoM2Alvo: D.precoM2Alvo, areaRange: D.areaRange,
+      precoM2Alvo: D.precoM2Alvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
       precoM2Inicial: D.precoM2Inicial, precoM2Final: D.precoM2Final,
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
       tempoSegundos: Math.round((Date.now() - D.tsInicio) / 1000),
@@ -1164,7 +1135,7 @@ function montarAgradecimento() {
     linhasProjecao.push([`Preço por m² até ${formatBRL_(D.precoM2Alvo)}`, `Encontrado a partir de ${formatBRL_(menorPreco)}`]);
   }
   if (maiorArea) {
-    linhasProjecao.push([`Metragem de ${D.areaRange[0]} a ${D.areaRange[1]} m²`, `Disponível até ${maiorArea} m² dentro do perfil`]);
+    linhasProjecao.push([`Apartamento de ${D.metragemAlvo} m² (±20%: ${D.areaRange[0]}–${D.areaRange[1]} m²)`, `Disponível até ${maiorArea} m² dentro do perfil`]);
   }
   if (prontos > 0) {
     linhasProjecao.push(['Prontos para morar agora', `<span style="color:var(--green);font-weight:700">${prontos} disponíve${prontos>1?'is':'l'}</span>`]);
@@ -1196,13 +1167,13 @@ function montarAgradecimento() {
   document.getElementById('perfilResumo').innerHTML = [
     ['Situação atual', moradiaMap[D.moradia] || '—'],
     ['Apartamento — preço por m²', formatBRL_(D.precoM2Alvo) + '/m²'],
-    ['Apartamento — metragem', D.areaRange ? `${D.areaRange[0]} a ${D.areaRange[1]} m²` : '—'],
+    ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
     ['Situação financeira', D.financeiro.map(f => financeiroMap[f]).join(', ') || '—'],
   ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
 
   const msg = encodeURIComponent(
     'Olá Leonardo! Acabei de confirmar no simulador. ' +
-    `Estou buscando um apartamento com preço por m² até ${formatBRL_(D.precoM2Alvo)}, metragem de ${D.areaRange[0]} a ${D.areaRange[1]}m²` +
+    `Estou buscando um apartamento com preço por m² até ${formatBRL_(D.precoM2Alvo)}, metragem de ${D.metragemAlvo}m² (considerando ${D.areaRange[0]} a ${D.areaRange[1]}m²)` +
     (total ? `. O simulador encontrou ${total} empreendimento${total>1?'s':''} com esse apartamento — pode me enviar os detalhes?` : '. Pode me enviar os detalhes?')
   );
   document.getElementById('whatsLink').href = 'https://wa.me/' + WHATSAPP_NUM + '?text=' + msg;
