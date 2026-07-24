@@ -1,5 +1,51 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 102) — Simulador de Lançamentos: nome logo na pergunta 2, headlines personalizadas, pré-cadastro com WhatsApp em dobro
+
+Lote de 7 ajustes pedidos pelo usuário em `simulador-lancamentos.html`:
+
+**1) Número de "Outros N empreendimentos" ganhou destaque** — no painel do melhor match
+(`montarMatch()`), o número dentro do título "Outros N empreendimentos com esse apartamento
+disponível" agora vem num `<span>` à parte, 18px e cor de destaque (`--accent`), em vez de herdar o
+mesmo tamanho pequeno/uppercase do resto do rótulo.
+
+**2) Título da pergunta 3 mudou pra "Qual o perfil de apartamento que você procura?"**
+(era "Qual o apartamento que você procura?").
+
+**3) Caixas das barras de arrastar ganharam mais brilho e letra maior** — `.slider-card-label` foi de
+`var(--text2)` pra `var(--text)` (a cor mais clara da paleta); `.slider-label-row span` (rótulos de
+mín/máx) e `.slider-card-hint` (a dica de tolerância ±20%) foram de `var(--text3)` (a mais apagada)
+pra `var(--text2)`, e de 11–13px pra 14px.
+
+**4) Etapa 2 deixou de perguntar sobre situação financeira e passou a perguntar o nome** — "Como
+podemos te chamar?" logo na pergunta 2 (era só coletado no fim, na captura). Isso: (a) já cria rapport
+mais cedo, e (b) libera o nome pra personalizar as headlines das telas seguintes. Removida toda a
+lógica de `D.financeiro`/chips multi-seleção (`toggleChip`, `.chips`/`.chip`/`.chip-hint` no CSS,
+`financeiroMap` em `submeter()` e `montarAgradecimento()`, a linha "Situação financeira" no resumo do
+perfil, e os 3 bônus de score ligados a ela em `scoreCompatibilidade()` — que foi rebalanceada com
+base+moradia maiores pra compensar). `validar()` agora exige o nome na etapa 2 em vez da faixa
+financeira.
+
+**Headlines personalizadas com o nome** — `montarTeaser()` monta dinamicamente
+`"{Nome}, temos {N} empreendimentos que têm o apartamento que você busca."` (número em destaque,
+`--accent`) com sub-texto "Selecionamos 1 opção com o maior score de compatibilidade com o seu
+perfil." (exatamente como pedido no item 5); `montarMatch()` agora seta
+`"{Nome}, este é o empreendimento com o apartamento ideal"` via novo `#matchTitulo`.
+
+**6) Captura virou só WhatsApp, em dobro, numa caixa destacada** — removido o campo de nome da tela
+de captura (já coletado na etapa 2); novo título "Para conhecer todas as opções que temos pra você,
+faça seu pré-cadastro"; novos campos `fWhats`/`fWhats2` dentro de uma `.whats-box` (fundo e borda na
+cor de destaque, mesmo padrão visual do `.investimento-composto`), com `validar()` na etapa 5 agora
+exigindo que os dois números batam (mesmo padrão de dupla confirmação de `baseimob-funil.html`).
+
+**7) Botão "Deixar meu contato" virou "VER MEUS RESULTADOS"** (maiúsculo, como pedido) — só no botão
+que leva do resultado parcial pra a captura; o botão de submissão em si continua "Ver meu resultado".
+
+Testado ao vivo no navegador do início ao fim (moradia → nome → perfil de apartamento → resultado
+parcial personalizado → pré-cadastro com validação de WhatsApp em dobro → melhor match → agradecimento),
+sem submeter de verdade (mock de `submeter()` evitado, chamando `montarMatch()`/`montarAgradecimento()`
+direto pra não gravar lead de teste na base real).
+
 ## 2026-07-24 (parte 101) — Simulador de Lançamentos: metragem vira alça única (±20%) + caixas mais baixas com letra maior
 
 A pedido do usuário, dois ajustes em `simulador-lancamentos.html`:

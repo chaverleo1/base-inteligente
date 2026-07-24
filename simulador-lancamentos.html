@@ -99,18 +99,6 @@ body {
 .opt.on .opt-check svg { display: block; }
 .opt-check svg { display: none; color: #fff; }
 
-/* ── CHIPS (multi-seleção) ────────────────────────────────────────────── */
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip {
-  padding: 9px 16px; border-radius: 99px;
-  border: 1.5px solid var(--border); background: var(--s2);
-  color: var(--text2); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all .15s; user-select: none;
-}
-.chip:hover { border-color: var(--border2); color: var(--text); }
-.chip.on { border-color: var(--green); color: var(--green); background: rgba(0,212,170,.07); }
-.chip-hint { font-size: 12px; color: var(--text3); margin-top: 10px; }
-
 /* ── SLIDER SIMPLES + CONTADOR ────────────────────────────────────────── */
 .contador-hero {
   text-align: center;
@@ -139,21 +127,22 @@ body {
 .contador-label-bot { font-size: 16px; font-weight: 500; color: var(--text2); margin-top: 14px; letter-spacing: .1px; }
 
 .slider-label-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.slider-label-row span { font-size: 13px; color: var(--text3); }
+.slider-label-row span { font-size: 14px; color: var(--text2); font-weight: 600; }
 .slider-val-atual {
   text-align: center; font-size: 24px; font-weight: 600; color: var(--text2);
   margin-bottom: 10px;
 }
 .slider-val-atual strong { color: var(--text); font-weight: 700; }
 
-/* ── CAIXAS DAS BARRAS DE ARRASTAR (preço/m², metragem) — baixas e com
-   letra maior por dentro, pra caber mais tela sem perder legibilidade. ── */
+/* ── CAIXAS DAS BARRAS DE ARRASTAR (preço/m², metragem) — baixas, com
+   letra maior e mais brilhante por dentro, pra caber mais tela sem perder
+   legibilidade. ────────────────────────────────────────────────────────── */
 .slider-card {
   background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r);
   padding: 12px 18px;
 }
-.slider-card-label { font-size: 15px; color: var(--text2); margin-bottom: 8px; }
-.slider-card-hint { font-size: 13px; color: var(--text3); margin-top: 8px; text-align: center; }
+.slider-card-label { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 8px; }
+.slider-card-hint { font-size: 14px; color: var(--text2); font-weight: 600; margin-top: 8px; text-align: center; }
 
 input[type=range] {
   -webkit-appearance: none; appearance: none;
@@ -217,6 +206,13 @@ input[type=range]::-moz-range-thumb {
 .form-field input:focus { border-color: var(--accent); }
 .form-field input::placeholder { color: var(--text3); }
 .privacy-note { font-size: 12px; color: var(--text3); margin-top: 14px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; }
+
+/* ── CAIXA DE CONFIRMAÇÃO DE WHATSAPP (2 campos, fundo destacado) ─────── */
+.whats-box {
+  background: rgba(79,124,255,.08); border: 1.5px solid var(--accent);
+  border-radius: var(--r); padding: 18px 18px 4px;
+}
+.whats-box .form-field label { color: var(--text2); }
 
 /* ── MELHOR MATCH ────────────────────────────────────────────────────── */
 .match-header { margin-bottom: 20px; }
@@ -446,19 +442,15 @@ input[type=range]::-moz-range-thumb {
     </div>
   </div>
 
-  <!-- STEP 2 — SITUAÇÃO FINANCEIRA (multi-seleção) -->
+  <!-- STEP 2 — NOME (pra já personalizar o resto da simulação pelo nome) -->
   <div class="step" id="step-2">
     <div class="step-tag">Pergunta 2 de 3</div>
-    <div class="step-title">Sua realidade financeira hoje</div>
-    <div class="step-sub">Selecione o que se aplica a você — pode marcar mais de um. Isso ajuda a entender o melhor caminho, sem precisar declarar renda.</div>
-    <div class="chips" id="chips-financeiro">
-      <div class="chip" data-val="fgts" onclick="toggleChip(this)">Tenho FGTS disponível</div>
-      <div class="chip" data-val="simulou" onclick="toggleChip(this)">Já simulei financiamento</div>
-      <div class="chip" data-val="entrada_ok" onclick="toggleChip(this)">Tenho entrada (acima de R$30k)</div>
-      <div class="chip" data-val="vender_antes" onclick="toggleChip(this)">Preciso vender algo antes</div>
-      <div class="chip" data-val="nao_sei" onclick="toggleChip(this)">Ainda não sei como vou pagar</div>
+    <div class="step-title">Como podemos te chamar?</div>
+    <div class="step-sub">Assim já vamos te chamando pelo nome no resto da simulação.</div>
+    <div class="form-field">
+      <label>Seu nome</label>
+      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
     </div>
-    <div class="chip-hint" id="chipHint">Selecione ao menos 1 opção</div>
   </div>
 
   <!-- STEP 3 — PREÇO/M² + METRAGEM + INVESTIMENTO + CONTADOR, tudo na mesma tela
@@ -467,7 +459,7 @@ input[type=range]::-moz-range-thumb {
        logo abaixo, tudo atualizando em tempo real junto). -->
   <div class="step" id="step-3">
     <div class="step-tag">Pergunta 3 de 3</div>
-    <div class="step-title">Qual o <span style="color:var(--accent)">apartamento</span> que você procura?</div>
+    <div class="step-title">Qual o perfil de <span style="color:var(--accent)">apartamento</span> que você procura?</div>
     <div class="step-sub">Defina o preço por m² e a metragem do apartamento — o investimento estimado e os empreendimentos com esse apartamento disponível atualizam em tempo real.</div>
 
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
@@ -506,8 +498,8 @@ input[type=range]::-moz-range-thumb {
   <!-- STEP 4 — RESULTADO PARCIAL (TEASER) -->
   <div class="step" id="step-4">
     <div class="step-tag">Resultado parcial</div>
-    <div class="step-title">Encontrei o apartamento que você busca</div>
-    <div class="step-sub">Um resumo do que existe agora — os detalhes completos aparecem após você deixar seu contato.</div>
+    <div class="step-title" id="teaserTitulo">—</div>
+    <div class="step-sub">Selecionamos 1 opção com o maior score de compatibilidade com o seu perfil.</div>
 
     <div class="label-section">Empreendimentos com esse apartamento disponível</div>
     <span class="teaser-num" id="teaserTotal">—</span>
@@ -532,16 +524,20 @@ input[type=range]::-moz-range-thumb {
   <!-- STEP 5 — CAPTURA -->
   <div class="step" id="step-5">
     <div class="step-tag">Quase lá</div>
-    <div class="step-title">Para onde enviamos os empreendimentos com esse apartamento?</div>
-    <div class="step-sub">Leonardo vai te enviar os detalhes diretamente no WhatsApp — com plantas, localização e condições reais.</div>
-    <div class="form-field">
-      <label>Seu nome</label>
-      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
+    <div class="step-title" id="capturaTitulo">Para conhecer todas as opções que temos pra você, faça seu pré-cadastro</div>
+    <div class="step-sub">Preencha seu WhatsApp abaixo e entraremos em contato rápido por lá.</div>
+
+    <div class="whats-box">
+      <div class="form-field">
+        <label>Seu WhatsApp com DDD</label>
+        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+      </div>
+      <div class="form-field" style="margin-bottom:0">
+        <label>Confirme o WhatsApp</label>
+        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+      </div>
     </div>
-    <div class="form-field">
-      <label>WhatsApp com DDD</label>
-      <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
-    </div>
+
     <div class="privacy-note">
       <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text3)"><use href="#ico-check"/></svg>
       <span>Seus dados ficam somente com Leonardo. Nenhuma lista de e-mail ou retorno de terceiros.</span>
@@ -555,7 +551,7 @@ input[type=range]::-moz-range-thumb {
         <svg width="12" height="12"><use href="#ico-star"/></svg>
         Melhor match para o seu perfil
       </div>
-      <div class="step-title" style="margin-bottom:4px">Empreendimento com o apartamento ideal</div>
+      <div class="step-title" style="margin-bottom:4px" id="matchTitulo">Empreendimento com o apartamento ideal</div>
       <div class="step-sub" style="margin-bottom:0">Este empreendimento tem o apartamento (metragem e preço) que mais combina com o que você busca. O nome e endereço serão apresentados pelo Leonardo no atendimento.</div>
     </div>
 
@@ -748,7 +744,7 @@ let stepAtual = 0;
 const TOTAL = 8; // steps 0..7
 
 const D = {
-  moradia: null, financeiro: [], precoM2Alvo: null, metragemAlvo: null, areaRange: null,
+  moradia: null, precoM2Alvo: null, metragemAlvo: null, areaRange: null,
   nome: '', whatsapp: '',
   tsInicio: Date.now(), precoM2Inicial: null, precoM2Final: null,
   areaInicial: null, areaFinal: null, stepAbandono: null,
@@ -794,21 +790,25 @@ function atualizarBotoes() {
   bV.classList.toggle('btn-hide', stepAtual <= 1 || semNav);
 
   if (stepAtual === 0)      bA.textContent = 'Começar';
-  else if (stepAtual === 4) bA.textContent = 'Deixar meu contato';
+  else if (stepAtual === 4) bA.textContent = 'VER MEUS RESULTADOS';
   else if (stepAtual === 5) bA.textContent = 'Ver meu resultado';
   else                      bA.textContent = 'Próximo';
 }
 
 // ── VALIDAÇÃO ───────────────────────────────────────────────────────────
 function validar() {
-  if (stepAtual === 1 && !D.moradia)          { toast('Selecione uma opção para continuar'); return false; }
-  if (stepAtual === 2 && !D.financeiro.length) { toast('Selecione ao menos 1 opção'); return false; }
+  if (stepAtual === 1 && !D.moradia) { toast('Selecione uma opção para continuar'); return false; }
+  if (stepAtual === 2) {
+    const nome = document.getElementById('fNome').value.trim();
+    if (!nome) { toast('Informe seu nome para continuar'); return false; }
+    D.nome = nome;
+  }
   if (stepAtual === 5) {
-    const nome  = document.getElementById('fNome').value.trim();
-    const whats = document.getElementById('fWhats').value.replace(/\D/g,'');
-    if (!nome)             { toast('Informe seu nome para continuar'); return false; }
-    if (whats.length < 10) { toast('Informe um WhatsApp válido com DDD'); return false; }
-    D.nome = nome; D.whatsapp = whats;
+    const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
+    const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
+    if (whats.length < 10)  { toast('Informe um WhatsApp válido com DDD'); return false; }
+    if (whats !== whats2)   { toast('Os números não coincidem — confira a confirmação'); return false; }
+    D.whatsapp = whats;
   }
   return true;
 }
@@ -818,13 +818,6 @@ function selecionarOpt(grupo, el, val) {
   document.querySelectorAll('#opts-' + grupo + ' .opt').forEach(o => o.classList.remove('on'));
   el.classList.add('on');
   D[grupo] = val;
-}
-
-function toggleChip(el) {
-  const val = el.dataset.val;
-  el.classList.toggle('on');
-  D.financeiro = el.classList.contains('on') ? [...D.financeiro, val] : D.financeiro.filter(v => v !== val);
-  document.getElementById('chipHint').textContent = D.financeiro.length === 0 ? 'Selecione ao menos 1 opção' : `${D.financeiro.length} selecionada${D.financeiro.length!==1?'s':''}`;
 }
 
 // ── FILTRO / MATCH ──────────────────────────────────────────────────────
@@ -952,13 +945,10 @@ function atualizarComboUI_() {
 
 // ── SCORE DE COMPATIBILIDADE (perfil geral, pro teaser) ────────────────────
 function scoreCompatibilidade() {
-  let s = 52;
-  if (D.moradia === 'aluguel')                    s += 10;
-  if (D.financeiro.includes('entrada_ok'))        s += 8;
-  if (D.financeiro.includes('fgts'))               s += 6;
-  if (D.financeiro.includes('simulou'))            s += 6;
+  let s = 60;
+  if (D.moradia === 'aluguel') s += 14;
   const cnt = filtrados().length;
-  s += cnt >= 6 ? 8 : cnt >= 3 ? 4 : 0;
+  s += cnt >= 6 ? 10 : cnt >= 3 ? 5 : 0;
   const top = rankeados()[0];
   if (top) s += Math.round(top.tracao / 2); // até +5, empurrado pela nota real de tração do melhor achado
   return Math.min(s, 98);
@@ -969,6 +959,11 @@ function montarTeaser() {
   const emps = filtrados();
   const total = emps.length;
   const score = scoreCompatibilidade();
+  const primeiroNome = D.nome.split(' ')[0];
+
+  document.getElementById('teaserTitulo').innerHTML = total > 0
+    ? `${primeiroNome}, temos <span style="color:var(--accent)">${total}</span> empreendimento${total>1?'s':''} que ${total>1?'têm':'tem'} o apartamento que você busca.`
+    : `${primeiroNome}, não encontramos um empreendimento com esse apartamento exato.`;
 
   document.getElementById('teaserTotal').textContent = total || '0';
   document.getElementById('teaserTotalDesc').textContent =
@@ -1016,7 +1011,6 @@ function submeter() {
   }
 
   const top5 = rankeados().slice(0, 5);
-  const financeiroMap = { fgts:'FGTS disponível', simulou:'Já simulou financiamento', entrada_ok:'Tem entrada (30k+)', vender_antes:'Precisa vender antes', nao_sei:'Ainda não sabe como pagar' };
   const payload = {
     acao: 'interesse_lancamento',
     nome: D.nome,
@@ -1030,7 +1024,7 @@ function submeter() {
       pctVendido: c.pctVendido, matchPref: c.matchPref, tracao: Math.round(c.tracao * 10) / 10,
     }))),
     tags: JSON.stringify({
-      moradia: D.moradia, financeiro: D.financeiro.map(f => financeiroMap[f] || f),
+      moradia: D.moradia,
       precoM2Alvo: D.precoM2Alvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
       precoM2Inicial: D.precoM2Inicial, precoM2Final: D.precoM2Final,
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
@@ -1051,7 +1045,9 @@ function montarMatch() {
   const emps = rankeados();
   const best = emps[0];
   const sc   = best ? best.matchPref : 0;
+  const primeiroNome = D.nome.split(' ')[0];
 
+  document.getElementById('matchTitulo').textContent = `${primeiroNome}, este é o empreendimento com o apartamento ideal`;
   document.getElementById('matchScoreNum').textContent = sc || '—';
   document.getElementById('matchScoreDesc').textContent =
     sc >= 88 ? 'Compatibilidade muito alta — este empreendimento reflete bem o que você busca.'
@@ -1095,7 +1091,7 @@ function montarMatch() {
 
   document.getElementById('panoramaBase').innerHTML = `
     <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px">
-      Outros ${demais.length} empreendimento${demais.length>1?'s':''} com esse apartamento disponível
+      Outros <span style="font-size:18px;font-weight:800;color:var(--accent);text-transform:none;letter-spacing:normal">${demais.length}</span> empreendimento${demais.length>1?'s':''} com esse apartamento disponível
     </div>
     <div class="match-grid">
       ${precos.length ? `<div class="match-cell"><div class="match-cell-label">A partir de</div><div class="match-cell-val">${formatBRL_(Math.min(...precos))}</div></div>` : ''}
@@ -1162,13 +1158,11 @@ function montarAgradecimento() {
   }
 
   const moradiaMap = { aluguel:'Quero sair do aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família' };
-  const financeiroMap = { fgts:'FGTS disponível', simulou:'Já simulou financiamento', entrada_ok:'Tem entrada (30k+)', vender_antes:'Precisa vender antes', nao_sei:'Ainda não sabe como pagar' };
 
   document.getElementById('perfilResumo').innerHTML = [
     ['Situação atual', moradiaMap[D.moradia] || '—'],
     ['Apartamento — preço por m²', formatBRL_(D.precoM2Alvo) + '/m²'],
     ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
-    ['Situação financeira', D.financeiro.map(f => financeiroMap[f]).join(', ') || '—'],
   ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
 
   const msg = encodeURIComponent(
