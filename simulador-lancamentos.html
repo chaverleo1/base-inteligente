@@ -388,7 +388,7 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
     <div class="topo-logo">Leonardo Viana &middot; Corretor em Goiânia</div>
     <div class="progress-row">
       <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-      <div class="progress-step" id="progressStep">0 / 4</div>
+      <div class="progress-step" id="progressStep">0 / 3</div>
     </div>
   </div>
 </div>
@@ -402,7 +402,7 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
     <div style="margin-bottom:32px">
       <div class="step-tag">Simulador de Lançamentos</div>
       <div class="step-title">Descubra quantos empreendimentos combinam com o que você procura</div>
-      <div class="step-sub" id="aberturaSub">4 perguntas. Dados reais da base, atualizados agora. Sem spam — só entramos em contato se você confirmar.</div>
+      <div class="step-sub" id="aberturaSub">3 perguntas. Dados reais da base, atualizados agora. Sem spam — só entramos em contato se você confirmar.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
         <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
           <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
@@ -422,7 +422,7 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
 
   <!-- STEP 1 — MOTIVAÇÃO -->
   <div class="step" id="step-1">
-    <div class="step-tag">Pergunta 1 de 4</div>
+    <div class="step-tag">Pergunta 1 de 3</div>
     <div class="step-title">O que melhor descreve você hoje?</div>
     <div class="step-sub">Define o ponto de partida para entender o melhor caminho.</div>
     <div class="options" id="opts-moradia">
@@ -455,7 +455,7 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
 
   <!-- STEP 2 — SITUAÇÃO FINANCEIRA (multi-seleção) -->
   <div class="step" id="step-2">
-    <div class="step-tag">Pergunta 2 de 4</div>
+    <div class="step-tag">Pergunta 2 de 3</div>
     <div class="step-title">Sua realidade financeira hoje</div>
     <div class="step-sub">Selecione o que se aplica a você — pode marcar mais de um. Isso ajuda a entender o melhor caminho, sem precisar declarar renda.</div>
     <div class="chips" id="chips-financeiro">
@@ -468,53 +468,54 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
     <div class="chip-hint" id="chipHint">Selecione ao menos 1 opção</div>
   </div>
 
-  <!-- STEP 3 — METRAGEM (slider de faixa dupla, mesma metodologia de baseimob-funil.html) -->
+  <!-- STEP 3 — PREÇO/M² + METRAGEM + INVESTIMENTO + CONTADOR, tudo na mesma tela
+       (mesma estrutura de baseimob-funil.html/"tela-config": investimento e
+       contador de opções lado a lado no topo, sliders de preço/m² e metragem
+       logo abaixo, tudo atualizando em tempo real junto). -->
   <div class="step" id="step-3">
-    <div class="step-tag">Pergunta 3 de 4</div>
-    <div class="step-title">Qual a faixa de metragem ideal?</div>
-    <div class="step-sub">Mova as alças e veja as opções da base atualizarem em tempo real.</div>
-    <div class="contador-hero">
-      <div class="contador-label-top">Opções nesta faixa de metragem</div>
-      <span class="contador-numero" id="cntMetragem">—</span>
-      <div class="contador-label-bot" id="cntMetragemLabel">—</div>
+    <div class="step-tag">Pergunta 3 de 3</div>
+    <div class="step-title">Ajuste ao seu perfil de investimento</div>
+    <div class="step-sub">Mova as barras abaixo — o investimento estimado e as opções compatíveis atualizam em tempo real.</div>
+
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Investimento estimado</div>
+        <div id="investimentoComposto" style="font-size:clamp(24px,7vw,32px);font-weight:800;color:var(--accent);letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1">—</div>
+        <div id="investimentoSub" style="font-size:11px;color:var(--text3);margin-top:6px">—</div>
+      </div>
+      <div style="flex-shrink:0;background:var(--s2);border:1.5px solid var(--accent);border-radius:var(--r);padding:16px 18px;text-align:center;min-width:110px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);margin-bottom:6px">Opções pra você</div>
+        <div id="cntCombo" style="font-size:clamp(26px,8vw,36px);font-weight:800;color:var(--text);letter-spacing:-1px;line-height:1">—</div>
+        <div id="cntComboLabel" style="font-size:10px;color:var(--text2);margin-top:6px;line-height:1.3">—</div>
+      </div>
     </div>
-    <div class="slider-val-atual"><strong id="sliderMetragemTxt">—</strong></div>
-    <div class="faixa-dupla-wrap">
-      <div class="faixa-track-base"></div>
-      <div class="faixa-track" id="faixaMetragemTrack"></div>
-      <input type="range" id="sliderMetragemLo" class="faixa-thumb" oninput="atualizarMetragemLo(this.value)">
-      <input type="range" id="sliderMetragemHi" class="faixa-thumb" oninput="atualizarMetragemHi(this.value)">
+
+    <div style="background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Qual preço por m² você considera ideal?</div>
+      <div class="slider-val-atual"><strong id="sliderPrecoM2Txt">—</strong> por m²</div>
+      <input type="range" id="sliderPrecoM2" oninput="atualizarPrecoM2(this.value)">
+      <div class="slider-label-row">
+        <span id="lblPrecoM2Min">—</span><span id="lblPrecoM2Max">—</span>
+      </div>
     </div>
-    <div class="slider-label-row">
-      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+
+    <div style="background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r);padding:20px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Qual a faixa de metragem ideal?</div>
+      <div class="slider-val-atual"><strong id="sliderMetragemTxt">—</strong></div>
+      <div class="faixa-dupla-wrap">
+        <div class="faixa-track-base"></div>
+        <div class="faixa-track" id="faixaMetragemTrack"></div>
+        <input type="range" id="sliderMetragemLo" class="faixa-thumb" oninput="atualizarMetragemLo(this.value)">
+        <input type="range" id="sliderMetragemHi" class="faixa-thumb" oninput="atualizarMetragemHi(this.value)">
+      </div>
+      <div class="slider-label-row">
+        <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+      </div>
     </div>
   </div>
 
-  <!-- STEP 4 — PREÇO POR M² + INVESTIMENTO COMPOSTO (metragem já escolhida na pergunta anterior) -->
+  <!-- STEP 4 — RESULTADO PARCIAL (TEASER) -->
   <div class="step" id="step-4">
-    <div class="step-tag">Pergunta 4 de 4</div>
-    <div class="step-title">Qual preço por m² você considera ideal?</div>
-    <div class="step-sub">Combinado com a metragem da pergunta anterior, o investimento estimado atualiza abaixo.</div>
-    <div class="contador-hero">
-      <div class="contador-label-top">Opções nesta faixa de preço</div>
-      <span class="contador-numero" id="cntPrecoM2">—</span>
-      <div class="contador-label-bot" id="cntPrecoM2Label">—</div>
-    </div>
-    <div class="slider-val-atual"><strong id="sliderPrecoM2Txt">—</strong> por m²</div>
-    <input type="range" id="sliderPrecoM2" oninput="atualizarPrecoM2(this.value)">
-    <div class="slider-label-row">
-      <span id="lblPrecoM2Min">—</span><span id="lblPrecoM2Max">—</span>
-    </div>
-
-    <div class="investimento-composto" style="margin-top:24px">
-      <div class="investimento-label">Investimento estimado</div>
-      <div class="investimento-valor" id="investimentoComposto">—</div>
-      <div class="investimento-sub" id="investimentoSub">—</div>
-    </div>
-  </div>
-
-  <!-- STEP 5 — RESULTADO PARCIAL (TEASER) -->
-  <div class="step" id="step-5">
     <div class="step-tag">Resultado parcial</div>
     <div class="step-title">Encontrei opções para o seu perfil</div>
     <div class="step-sub">Um resumo do que existe agora — os detalhes completos aparecem após você deixar seu contato.</div>
@@ -539,8 +540,8 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
     </div>
   </div>
 
-  <!-- STEP 6 — CAPTURA -->
-  <div class="step" id="step-6">
+  <!-- STEP 5 — CAPTURA -->
+  <div class="step" id="step-5">
     <div class="step-tag">Quase lá</div>
     <div class="step-title">Para onde enviamos as opções?</div>
     <div class="step-sub">Leonardo vai te enviar os detalhes diretamente no WhatsApp — com plantas, localização e condições reais.</div>
@@ -558,8 +559,8 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
     </div>
   </div>
 
-  <!-- STEP 7 — MELHOR MATCH -->
-  <div class="step" id="step-7">
+  <!-- STEP 6 — MELHOR MATCH -->
+  <div class="step" id="step-6">
     <div class="match-header">
       <div class="match-tag">
         <svg width="12" height="12"><use href="#ico-star"/></svg>
@@ -601,8 +602,8 @@ input[type=range].faixa-thumb::-moz-range-thumb { pointer-events: auto; }
     </div>
   </div>
 
-  <!-- STEP 8 — AGRADECIMENTO -->
-  <div class="step" id="step-8">
+  <!-- STEP 7 — AGRADECIMENTO -->
+  <div class="step" id="step-7">
     <div class="check-circle">
       <svg width="28" height="28" style="color:var(--green)"><use href="#ico-check"/></svg>
     </div>
@@ -742,7 +743,7 @@ const WHATSAPP_NUM = '5562999999999';
 
 // ── ESTADO ──────────────────────────────────────────────────────────────
 let stepAtual = 0;
-const TOTAL = 9; // steps 0..8
+const TOTAL = 8; // steps 0..7
 
 const D = {
   moradia: null, financeiro: [], precoM2Alvo: null, areaRange: null,
@@ -753,7 +754,7 @@ const D = {
 
 // ── PROGRESSO ────────────────────────────────────────────────────────────
 function atualizarProgresso() {
-  const interativas = 4; // steps 1..4
+  const interativas = 3; // steps 1..3
   const n = Math.max(0, Math.min(stepAtual - 1, interativas));
   document.getElementById('progressFill').style.width = (n / interativas * 100) + '%';
   document.getElementById('progressStep').textContent = n + ' / ' + interativas;
@@ -773,9 +774,9 @@ function avancarStep() {
   if (!validar()) return;
 
   if (stepAtual === 0) { irParaStep(1); return; }
-  if (stepAtual === 4) { montarTeaser(); irParaStep(5); return; }
-  if (stepAtual === 5) { irParaStep(6); return; }
-  if (stepAtual === 6) { submeter(); return; }
+  if (stepAtual === 3) { montarTeaser(); irParaStep(4); return; }
+  if (stepAtual === 4) { irParaStep(5); return; }
+  if (stepAtual === 5) { submeter(); return; }
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
@@ -786,13 +787,13 @@ function voltarStep() {
 function atualizarBotoes() {
   const bV = document.getElementById('btnVoltar');
   const bA = document.getElementById('btnAvancar');
-  const semNav = stepAtual >= 7;
+  const semNav = stepAtual >= 6;
   bA.classList.toggle('btn-hide', semNav);
   bV.classList.toggle('btn-hide', stepAtual <= 1 || semNav);
 
   if (stepAtual === 0)      bA.textContent = 'Começar';
-  else if (stepAtual === 5) bA.textContent = 'Deixar meu contato';
-  else if (stepAtual === 6) bA.textContent = 'Ver meu resultado';
+  else if (stepAtual === 4) bA.textContent = 'Deixar meu contato';
+  else if (stepAtual === 5) bA.textContent = 'Ver meu resultado';
   else                      bA.textContent = 'Próximo';
 }
 
@@ -800,7 +801,7 @@ function atualizarBotoes() {
 function validar() {
   if (stepAtual === 1 && !D.moradia)          { toast('Selecione uma opção para continuar'); return false; }
   if (stepAtual === 2 && !D.financeiro.length) { toast('Selecione ao menos 1 opção'); return false; }
-  if (stepAtual === 6) {
+  if (stepAtual === 5) {
     const nome  = document.getElementById('fNome').value.trim();
     const whats = document.getElementById('fWhats').value.replace(/\D/g,'');
     if (!nome)             { toast('Informe seu nome para continuar'); return false; }
@@ -867,6 +868,11 @@ function labelCnt(n) {
   return n === 1 ? 'empreendimento disponível' : 'empreendimentos disponíveis';
 }
 
+function labelCombo_(n) {
+  if (n === 0) return 'nenhuma nesta faixa';
+  return n === 1 ? 'opção para você' : 'opções para você';
+}
+
 function formatBRL_(v) {
   return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 }
@@ -885,8 +891,8 @@ function inicializarSliders() {
   sLo.value = AREA_BOUNDS[0]; sHi.value = AREA_BOUNDS[1];
   document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
   document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
-  atualizarMetragemLo(sLo.value, true);
-  atualizarMetragemHi(sHi.value, true);
+  atualizarMetragemLo(sLo.value);
+  atualizarMetragemHi(sHi.value);
 }
 
 function atualizarPrecoM2(val) {
@@ -894,25 +900,22 @@ function atualizarPrecoM2(val) {
   if (D.precoM2Inicial === null) D.precoM2Inicial = v;
   D.precoM2Alvo = v; D.precoM2Final = v;
   document.getElementById('sliderPrecoM2Txt').textContent = formatBRL_(v);
-  const cnt = TODOS_LANC.filter(c => Math.abs(c.precoM2 - v) / v <= 0.18).length;
-  animar('cntPrecoM2', cnt);
-  document.getElementById('cntPrecoM2Label').textContent = labelCnt(cnt);
-  atualizarInvestimentoComposto_();
+  atualizarComboUI_();
 }
 
-function atualizarMetragemLo(val, semRecalc) {
+function atualizarMetragemLo(val) {
   const sHi = document.getElementById('sliderMetragemHi');
   const lo = Math.min(parseInt(val), parseInt(sHi.value) - 5);
   document.getElementById('sliderMetragemLo').value = lo;
-  aplicarFaixaMetragem_(lo, parseInt(sHi.value), semRecalc);
+  aplicarFaixaMetragem_(lo, parseInt(sHi.value));
 }
-function atualizarMetragemHi(val, semRecalc) {
+function atualizarMetragemHi(val) {
   const sLo = document.getElementById('sliderMetragemLo');
   const hi = Math.max(parseInt(val), parseInt(sLo.value) + 5);
   document.getElementById('sliderMetragemHi').value = hi;
-  aplicarFaixaMetragem_(parseInt(sLo.value), hi, semRecalc);
+  aplicarFaixaMetragem_(parseInt(sLo.value), hi);
 }
-function aplicarFaixaMetragem_(lo, hi, semRecalc) {
+function aplicarFaixaMetragem_(lo, hi) {
   if (D.areaInicial === null) D.areaInicial = (lo + hi) / 2;
   D.areaRange = [lo, hi]; D.areaFinal = (lo + hi) / 2;
   document.getElementById('sliderMetragemTxt').textContent = `${lo} a ${hi} m²`;
@@ -924,24 +927,24 @@ function aplicarFaixaMetragem_(lo, hi, semRecalc) {
   track.style.left  = pctLo + '%';
   track.style.right = (100 - pctHi) + '%';
 
-  if (!semRecalc) {
-    const cnt = TODOS_LANC.filter(c => c.areaMax >= lo && c.areaMin <= hi).length;
-    animar('cntMetragem', cnt);
-    document.getElementById('cntMetragemLabel').textContent = labelCnt(cnt);
-  }
-  atualizarInvestimentoComposto_();
+  atualizarComboUI_();
 }
 
-function atualizarInvestimentoComposto_() {
+// Investimento + contador combinados (mesma estrutura de baseimob-funil.html:
+// um único "total de opções compatíveis" no topo, calculado com AMBOS os
+// sliders — não dois contadores parciais separados) -- usa a mesma
+// filtrados()/MATCH_THRESHOLD que já alimenta o teaser e o match final.
+function atualizarComboUI_() {
   if (!D.precoM2Alvo || !D.areaRange) return;
   const areaMid = (D.areaRange[0] + D.areaRange[1]) / 2;
   const total = areaMid * D.precoM2Alvo;
   document.getElementById('investimentoComposto').textContent = formatBRL_(total);
   document.getElementById('investimentoSub').textContent =
     `${formatBRL_(D.precoM2Alvo)}/m² × ${Math.round(areaMid)}m² (metragem média da faixa escolhida)`;
-  const cnt = TODOS_LANC.filter(c => c.areaMax >= D.areaRange[0] && c.areaMin <= D.areaRange[1]).length;
-  document.getElementById('cntMetragem').textContent = cnt;
-  document.getElementById('cntMetragemLabel').textContent = labelCnt(cnt);
+
+  const n = filtrados().length;
+  animar('cntCombo', n);
+  document.getElementById('cntComboLabel').textContent = labelCombo_(n);
 }
 
 // ── SCORE DE COMPATIBILIDADE (perfil geral, pro teaser) ────────────────────
@@ -1190,7 +1193,7 @@ function toast(msg) {
 }
 
 window.addEventListener('beforeunload', () => {
-  if (stepAtual > 0 && stepAtual < 7) D.stepAbandono = stepAtual;
+  if (stepAtual > 0 && stepAtual < 6) D.stepAbandono = stepAtual;
 });
 
 // INIT

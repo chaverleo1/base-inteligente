@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 99) — Simulador de Lançamentos: preço/m² e metragem na mesma tela (estrutura de baseimob-funil.html)
+
+A pedido do usuário, `simulador-lancamentos.html` deixou de ter uma pergunta por tela pros dois sliders
+(parte 98) e passou a usar a MESMA estrutura de `baseimob-funil.html` ("tela-config"): investimento
+estimado e contador de opções compatíveis lado a lado no topo, com as duas barras (preço por m² e
+faixa de metragem) logo abaixo, tudo na mesma tela, atualizando junto em tempo real.
+
+Isso reduziu o funil de 4 perguntas pra 3: motivação → situação financeira → preço/m²+metragem
+(combinado). `TOTAL` foi de 9 pra 8 telas, `interativas` (progress bar) de 4 pra 3, e todos os números
+de step subsequentes (teaser, captura, match, agradecimento) foram renumerados uma casa pra trás.
+
+Os DOIS contadores parciais que existiam antes (um pra "dentro da faixa de preço", outro pra "dentro
+da faixa de metragem", cada um com sua própria tolerância) viraram UM contador combinado
+("Opções pra você"), calculado com `filtrados()` — a mesma função de match (`scoreMatchPreferencia_`
++ `MATCH_THRESHOLD`) que já alimenta o teaser e a tela de melhor match, igual ao `cnt-compat-box`
+único de `baseimob-funil.html` (não dois contadores desencontrados). `atualizarPrecoM2` e
+`atualizarMetragemLo/Hi` agora chamam a mesma `atualizarComboUI_()` (substituiu
+`atualizarInvestimentoComposto_()`), que atualiza investimento E contador juntos a cada movimento de
+qualquer uma das duas barras.
+
+Testado ao vivo no navegador contra a base real: as duas barras aparecem juntas na pergunta 3 de 3,
+com investimento (R$ 2.650.375) e contador (67 opções) atualizando corretamente; fluxo completo
+verificado até a tela de captura (não submetido, pra não gravar lead de teste na base real).
+
 ## 2026-07-24 (parte 98) — Simulador de Lançamentos: metragem primeiro, preço/m² + investimento depois
 
 Troca de ordem das perguntas 3 e 4 em `simulador-lancamentos.html`, a pedido do usuário: agora o
