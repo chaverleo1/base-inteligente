@@ -1,5 +1,71 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 104) — Simulador de Lançamentos: tabela de opções com código, situação em destaque, botões coloridos, e correções de responsividade
+
+Lote de 12 pedidos do usuário em `simulador-lancamentos.html`:
+
+**1) Código do empreendimento visível pro cliente e no BaseImob.** A tela de melhor match
+(step-6) agora mostra o "Código: LAN-XXXXX" de cada empreendimento — em destaque na opção #1, e em
+cada linha da tabela compacta (itens 2 a 7). No BaseImob, o código já aparecia no drawer de detalhe
+do lead (`abrirDetalheLeadBI()` em `dashboard.html`, que lê `r.id` de dentro do `rankingDetalhado`
+salvo em `obs`) — não precisou de mudança lá, só passou a receber uma lista mais completa (ver item
+abaixo sobre `submeter()`).
+
+**2) Situação (Pronto pra morar / Na planta / Em obras) em destaque.** Nova
+`situacaoInfo_()`/`situacaoBadgeHTML_()` mapeia o campo `estagio` pra um badge colorido — verde
+("Pronto pra morar"), azul ("Na planta") ou laranja ("Em obras") — mostrado com bastante destaque
+(pill colorido, não mais escondido num rótulo pequeno de grid "Estágio").
+
+**3 e 12) Botão final com cor quente.** "CONFIRMAR ATENDIMENTO HUMANO" (era "Confirmar e receber
+atendimento") agora tem fundo em gradiente laranja→vermelho (`.btn-quente`), destacando bem mais que
+o resto da tela — pedido explícito de cores quentes (vermelho/amarelo/laranja).
+
+**4) Removidos "Parcela estimada" e "Prazo de pagamento"** dos resultados finais — junto com a nota de
+rodapé que só existia pra explicar esses dois campos (ficaria órfã sem eles). O campo `prazoPag`
+continua usado internamente no cálculo do Score de Tração, só não aparece mais pro cliente.
+
+**5) Correções de responsividade (mobile).** Dois bugs clássicos de CSS Grid/Flexbox que causam
+"caixas e letras se sobrepondo" em telas estreitas, corrigidos em todos os lugares onde apareciam:
+(a) grids com `grid-template-columns: 1fr 1fr` sem `minmax(0, ...)` — o valor `1fr` sozinho não deixa
+o item encolher abaixo do tamanho do conteúdo, então texto largo/números longos podiam vazar por cima
+da coluna vizinha (`.teaser-stats`, e a nova `.opcao-top-grid`/`.opcao-row` já nasceram com o fix);
+(b) linhas flex label→valor sem `min-width:0` (`.perfil-item` e as linhas inline de
+`montarAgradecimento()`) — mesmo problema, mas em flexbox. Testado em viewport mobile (375×812): zero
+elementos com `scrollWidth` maior que a tela em nenhuma etapa do funil.
+
+**6) Todas as letras cinzas viraram branco** (`var(--text2)`/`var(--text3)` → `var(--text)` em ~40
+lugares, CSS e inline) — as duas variáveis de cor cinza foram removidas do `:root` por ficarem sem
+uso. Única exceção deliberada: a cor do *placeholder* dos campos de texto continua cinza-azulado
+(agora um valor fixo `#6a7290`, não mais a variável) — texto de placeholder branco ficaria idêntico a
+um campo já preenchido, o que seria um problema de usabilidade, não uma correção de legibilidade.
+
+**7) Menos informação, menos rolagem, sliders mais acima.** `.main` (padding-top 32px→18px),
+`.step-sub` (margin-bottom 28px→16px), o cabeçalho investimento+contador da etapa 3 (28px→16px) e o
+espaço entre os dois cartões de slider (16px→10px) foram todos reduzidos. De quebra, removido CSS
+morto (`.contador-hero`/`.contador-numero`/`.contador-label-*`, sem nenhum uso desde a fusão dos
+contadores na parte 101) e corrigida a animação de "pulso" do contador (`.pulso`), que tecnicamente
+nunca disparava porque o seletor CSS exigia a classe `.contador-numero` que o elemento `#cntCombo`
+não tem mais.
+
+**8 e 9) Etapa "Quase lá" reestruturada.** Abaixo das caixas de WhatsApp, novo texto "Veja suas opções
+resumidas, e confirme o atendimento humano completo em seguida!" seguido de um botão inline amarelo
+com letra preta (`.btn-amarelo`) "Ver minhas opções" — substituindo o antigo botão "Ver meu resultado"
+do rodapé fixo, que foi escondido nessa etapa (`atualizarBotoes()`) pra não duplicar a ação.
+
+**10) Tabela de opções, top 7 por compatibilidade, só a primeira detalhada.** `montarMatch()`
+reescrito: em vez do card único + resumo agregado de "outros N empreendimentos" (que nunca mostrava
+código individual), agora monta uma tabela (`#opcoesTabela`) com até 7 linhas ordenadas por
+`matchPref` — a primeira em destaque (`.opcao-top`, com código, situação, tipo, previsão de entrega,
+região, área útil, a partir de, área de lazer e % vendido) e as demais em linha compacta (rank,
+código, situação, área, preço, % de match). `submeter()` também passou a mandar os mesmos 7 itens
+(era 5, e vinha de `rankeados()` sem filtro de compatibilidade — agora vem de `filtrados()`, garantindo
+que o BaseImob recebe exatamente a mesma lista que o cliente viu).
+
+Testado ao vivo no navegador (viewport mobile 375×812, fluxo completo do início ao fim): código e
+situação aparecem em todas as linhas da tabela, botão de confirmação em gradiente laranja→vermelho,
+botão amarelo/preto na etapa de captura, e nenhuma sobreposição de elementos detectada em nenhuma
+etapa.
+
 ## 2026-07-24 (parte 103) — Simulador de Lançamentos: nome na pergunta 3 também, "Deu match!" no resultado parcial, e copy mais humana em todo o fluxo
 
 Dois pedidos do usuário em `simulador-lancamentos.html`:
