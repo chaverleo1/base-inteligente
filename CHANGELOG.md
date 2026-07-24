@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 114) — Simulador de Lançamentos: destaca o bullet "você no controle" na abertura
+
+A pedido do usuário, o terceiro bullet da tela de abertura mudou de texto ("Você decide — só recebe
+contato se confirmar" → "Você no controle! Só vai receber atendimento humano se confirmar no final.")
+e ganhou destaque visual: borda e fundo na cor de destaque (`var(--accent)`, antes cinza igual aos
+outros dois bullets) e texto em negrito — diferenciando esse bullet específico (a promessa de
+privacidade/controle) dos outros dois. Testado ao vivo: borda `rgb(79,124,255)`, fundo
+`rgba(79,124,255,.1)`, `font-weight:700`, sem sobreposição em mobile (375px).
+
 ## 2026-07-24 (parte 113) — Simulador de Lançamentos: ajustes vindos da revisão da IA MENTORA
 
 Usuário pediu análise da IA MENTORA sobre o simulador, revisou item a item e aprovou 6 mudanças em
