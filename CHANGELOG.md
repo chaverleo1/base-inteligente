@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 106) — Simulador de Lançamentos: corrige sobreposição mobile entre investimento e contador de empreendimentos
+
+Usuário reportou que no mobile a caixa "Empreendimentos com esse apartamento" sobrepunha o
+investimento estimado. Causa raiz confirmada em teste real (viewport 375×812): a caixa do contador
+(`flex-shrink:0`, só com `min-width:120px`, sem `max-width`) não tinha nada limitando sua LARGURA —
+num item flexível, `flex-basis:auto` faz o item se dimensionar pelo conteúdo (max-content) quando não
+há restrição de largura, e o rótulo "Empreendimentos com esse apartamento" (uppercase, letter-spacing)
+queria caber numa linha só, esticando a caixa pra ~273px. Isso sobrava só ~45px pro investimento
+estimado (`flex:1`), forçando "R$ 2.679.500" a quebrar em várias linhas, com péssima aparência (o que
+o usuário viu como "sobreposição").
+
+Fix: a caixa do contador ganhou `width:118px;max-width:118px` (em vez de só `min-width:120px`) — agora
+ela é forçada a ter largura fixa, o rótulo quebra em 2-3 linhas normalmente (com
+`overflow-wrap:break-word` de segurança), e o investimento estimado recupera o espaço que precisa
+(~200px), voltando a caber numa linha só. `#investimentoComposto` também ganhou
+`overflow-wrap:break-word` e o `clamp()` de fonte foi ajustado (24–32px → 20–32px) como proteção extra
+contra números muito grandes.
+
+Testado ao vivo em viewport 375×812 com o cenário exato que causava o bug (investimento de
+R$ 2.679.500): investimento agora renderiza em uma linha (201px de largura), caixa do contador fixa
+em 118px, com 16px de vão limpo entre as duas — zero sobreposição, zero elemento com `scrollWidth`
+maior que a tela.
+
 ## 2026-07-24 (parte 105) — Simulador de Lançamentos: valor dinâmico dos sliders em azul de destaque
 
 Depois que a parte 104 mudou todo texto cinza pra branco, os valores dinâmicos dentro das caixas de
