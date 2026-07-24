@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 100) — Simulador de Lançamentos: busca é por APARTAMENTO, e o total conta empreendimentos que têm esse apartamento
+
+Duas mudanças pedidas pelo usuário em `simulador-lancamentos.html`:
+
+**1) Comunicação deixa claro que a busca é por APARTAMENTO, não por empreendimento.** Antes disso
+ficar implícito, agora é explícito e destacado: badge fixo "Busca por Apartamento" na barra superior
+(visível em toda a jornada, dentro de `.topo-inner`), título de abertura reescrito ("Descubra o
+APARTAMENTO ideal — e em quantos empreendimentos ele está disponível"), pergunta 3 de 3 renomeada pra
+"Qual o apartamento que você procura?", e toda a copy subsequente (teaser, melhor match, agradecimento,
+mensagem de WhatsApp) revisada pra sempre nomear o que está sendo buscado (apartamento) separado de
+onde ele está disponível (empreendimento) — ex.: "46 empreendimentos têm o apartamento que você busca"
+em vez de "46 opções pra você".
+
+**2) O "Total" agora conta empreendimentos que TÊM, de verdade, um apartamento com a metragem e o
+preço que a pessoa pediu — não a média/faixa geral do prédio batendo por acaso.** Antes, `filtrados()`
+usava só `scoreMatchPreferencia_` (distância até a média de área/preço do empreendimento inteiro) —
+um prédio com tipologias muito diferentes entre si (ex.: studios de 45m² e coberturas de 140m²) podia
+contar como "compatível" com uma busca por 130m² mesmo sem ter nenhuma unidade real nessa faixa,
+porque a MÉDIA das tipologias podia cair perto do alvo. Agora `carregarBaseReal()` preserva os dados
+de cada tipologia (`unidades: [{areaUtil, precoM2}]`, calculado por unidade antes de agregar) e uma
+nova `temApartamentoCompativel_(c, aRange, pM2Alvo)` verifica se ALGUMA tipologia individual tem área
+dentro da faixa escolhida E preço/m² dentro de 18% do alvo — só empreendimentos com essa combinação
+real entram no total (`filtrados()`, teaser, "outros N encontrados" do melhor match, payload enviado
+pro BaseImob). `scoreMatchPreferencia_` continua existindo só pra ORDENAR (que empreendimento aparece
+primeiro), não mais pra decidir quem conta.
+
+Testado com script Node dedicado (`test_apartamento_compativel.js`) provando o cenário de tipologias
+mistas (empreendimento com studio barato + cobertura cara não conta como compatível com uma busca por
+130m² a preço de studio, mesmo a média batendo) e ao vivo no navegador contra a base real — o contador
+caiu de 67 (métrica antiga, por distância agregada) para 46 (métrica nova, por tipologia real) com os
+mesmos valores de slider, confirmando que a mudança discrimina de verdade.
+
 ## 2026-07-24 (parte 99) — Simulador de Lançamentos: preço/m² e metragem na mesma tela (estrutura de baseimob-funil.html)
 
 A pedido do usuário, `simulador-lancamentos.html` deixou de ter uma pergunta por tela pros dois sliders
