@@ -1,5 +1,54 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 113) — Simulador de Lançamentos: ajustes vindos da revisão da IA MENTORA
+
+Usuário pediu análise da IA MENTORA sobre o simulador, revisou item a item e aprovou 6 mudanças em
+`simulador-lancamentos.html` (as demais foram mantidas como estão — decisão do usuário, ver
+conversa):
+
+**1) Dados comportamentais novos.** `ajustesSlider` (quantas vezes o cliente mexeu em qualquer um dos
+dois sliders — via novo flag `slidersProntos_`, que garante que só conta ajuste de verdade do
+cliente, não a inicialização programática dos sliders) e `origemAcesso` (lido de `?utm_source=` na
+URL, `'direto'` se não vier) — ambos adicionados ao `D` e ao payload de `submeter()`.
+
+**2) Barra visual de % vendido** no card em destaque da etapa de melhor match (embaixo do texto
+"X% das unidades já foram vendidas"), reforçando a sensação de escassez.
+
+**3) Score colorido nas opções.** Novo `corMatch_(score)`: verde (`var(--green)`) pra ≥88%, amarelo
+(`#f5c518`) pra ≥72%, cor padrão pro resto — aplicado tanto no número grande da opção #1
+(`matchScoreNum`) quanto no `%` de cada linha compacta da tabela (`.opcao-match`).
+
+**4) 4ª opção na pergunta de motivação — "Quero investir" (comprar para renda ou valorização)**, com
+ícone de carteira (`#ico-wallet`, já existia no SVG defs mas nunca tinha sido usado). "Tenho imóvel
+próprio" também teve a descrição simplificada pra "Quero trocar ou comprar um segundo" (tirando
+"investir" de lá, já que virou opção própria). `moradiaMap` (usado no resumo do agradecimento)
+atualizado com a nova opção.
+
+**5) Pergunta do nome movida pra depois dos sliders** (era: motivação → nome → sliders; agora:
+motivação → sliders → nome) — pega o dado técnico antes do dado pessoal, pra reduzir desconfiança
+logo no início (razão dada pelo usuário: prender a atenção no primeiro clique, antes de pedir
+qualquer informação pessoal). Como o nome deixou de estar disponível na tela dos sliders, o título
+dessa etapa voltou a ser estático (sem `{Nome}` no início) — a função `montarStep3Titulo_()`, que
+existia só pra personalizar essa tela, foi removida (fica sem uso depois da troca de ordem). A
+personalização com nome continua normalmente a partir da etapa seguinte (resultado parcial em
+diante), já que por ali o nome já foi coletado. `avancarStep()`/`validar()` atualizados pra validar o
+nome na etapa 3 (era 2) sem nenhuma outra renumeração de step necessária.
+
+**6) Estatísticas reais na tela de abertura** (observação do próprio usuário, não da IA MENTORA: a
+primeira tela estava "fria" — parecia mais uma landing page comum do que uma consultoria com dados
+reais de mercado). Nova `montarStatsAbertura_()`, chamada ao final de `carregarBaseReal()`, popula 3
+números direto da base assim que carrega: total de empreendimentos, preço por m² a partir de quanto, e
+faixa de área útil — tudo antes mesmo da primeira pergunta, pra passar a sensação de "isso aqui é
+diferente" já na capa.
+
+Testado ao vivo (desktop + mobile 375px): abertura mostra "67 empreendimentos / R$ 5.911 a partir
+de/m² / 33.5 a 420.8m² de área útil" com dado real; motivação com as 4 opções; ordem
+motivação→sliders→nome confirmada (nome aparece só na pergunta 3, sem personalização na tela dos
+sliders); `ajustesSlider` contou corretamente 2 movimentos reais sem contar a inicialização; score
+colorido (verde pra 100%) e barra de % vendido renderizando certo; fluxo completo do início ao fim
+(incluindo o fallback offline de `submeter()`, sem gravar lead de teste real) chegando em "Confirmado"
+sem nenhuma sobreposição em nenhuma etapa.
+
 ## 2026-07-24 (parte 112) — Simulador de Lançamentos: remove 2 textos da pergunta 2 (perfil de apartamento)
 
 A pedido do usuário, dois textos em `simulador-lancamentos.html`:

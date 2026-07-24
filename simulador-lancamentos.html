@@ -397,7 +397,23 @@ input[type=range]::-moz-range-track {
       <div class="step-tag">Simulador de Lançamentos</div>
       <div class="step-title">Vamos achar o <span style="color:var(--accent)">APARTAMENTO</span> ideal pra você — e mostrar em quantos empreendimentos ele existe</div>
       <div class="step-sub" id="aberturaSub">São só 3 perguntas rápidas sobre o apartamento que você quer (tamanho e preço). As opções são reais e atualizadas agora mesmo. Sem spam — só entramos em contato se você confirmar.</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:24px">
+
+      <div style="display:flex;gap:8px;margin:20px 0">
+        <div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 6px;text-align:center;min-width:0">
+          <div id="statsTotalEmp" style="font-size:26px;font-weight:800;color:var(--orange);letter-spacing:-1px;overflow-wrap:break-word">—</div>
+          <div style="font-size:9px;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">empreendimentos</div>
+        </div>
+        <div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 6px;text-align:center;min-width:0">
+          <div id="statsPrecoMin" style="font-size:15px;font-weight:800;color:var(--accent);letter-spacing:-1px;overflow-wrap:break-word">—</div>
+          <div style="font-size:9px;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">a partir de/m²</div>
+        </div>
+        <div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 6px;text-align:center;min-width:0">
+          <div id="statsAreaRange" style="font-size:15px;font-weight:800;color:var(--accent);letter-spacing:-1px;overflow-wrap:break-word">—</div>
+          <div style="font-size:9px;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">de área útil</div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
           <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
           <span style="font-size:13px;color:var(--text)">Feito na hora, com o que tem disponível agora</span>
@@ -432,7 +448,7 @@ input[type=range]::-moz-range-track {
         <div class="opt-icon"><svg width="18" height="18"><use href="#ico-swap"/></svg></div>
         <div class="opt-text">
           <div class="opt-label">Tenho imóvel próprio</div>
-          <div class="opt-desc">Quero trocar, investir ou adquirir um segundo</div>
+          <div class="opt-desc">Quero trocar ou comprar um segundo</div>
         </div>
         <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
@@ -444,26 +460,25 @@ input[type=range]::-moz-range-track {
         </div>
         <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
       </div>
+      <div class="opt" onclick="selecionarOpt('moradia',this,'investidor')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-wallet"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Quero investir</div>
+          <div class="opt-desc">Comprar para renda ou valorização</div>
+        </div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
+      </div>
     </div>
   </div>
 
-  <!-- STEP 2 — NOME (pra já personalizar o resto da simulação pelo nome) -->
-  <div class="step" id="step-2">
-    <div class="step-tag">Pergunta 2 de 3</div>
-    <div class="step-title">Como podemos te chamar?</div>
-    <div class="form-field">
-      <label>Seu nome</label>
-      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
-    </div>
-  </div>
-
-  <!-- STEP 3 — PREÇO/M² + METRAGEM + INVESTIMENTO + CONTADOR, tudo na mesma tela
+  <!-- STEP 2 — PREÇO/M² + METRAGEM + INVESTIMENTO + CONTADOR, tudo na mesma tela
        (mesma estrutura de baseimob-funil.html/"tela-config": investimento e
        contador de opções lado a lado no topo, sliders de preço/m² e metragem
-       logo abaixo, tudo atualizando em tempo real junto). -->
-  <div class="step" id="step-3">
-    <div class="step-tag">Pergunta 3 de 3</div>
-    <div class="step-title" id="step3Titulo" style="margin-bottom:16px">Qual o <span style="color:var(--accent)">orçamento</span> ideal pra você? Por preço/m² e área útil? <span style="font-size:14px;font-weight:500;color:var(--text)">(Arraste as barras laterais para escolher)</span></div>
+       logo abaixo, tudo atualizando em tempo real junto). Vem ANTES do nome
+       agora -- pega o dado técnico primeiro, personalização vem depois. -->
+  <div class="step" id="step-2">
+    <div class="step-tag">Pergunta 2 de 3</div>
+    <div class="step-title" style="margin-bottom:16px">Qual o <span style="color:var(--accent)">orçamento</span> ideal pra você? Por preço/m² e área útil? <span style="font-size:14px;font-weight:500;color:var(--text)">(Arraste as barras laterais para escolher)</span></div>
 
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
       <div style="flex:1;min-width:0">
@@ -493,6 +508,18 @@ input[type=range]::-moz-range-track {
         <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
       </div>
       <div class="slider-card-hint" id="metragemFaixaSub">—</div>
+    </div>
+  </div>
+
+  <!-- STEP 3 — NOME (pra já personalizar o resto da simulação pelo nome --
+       agora vem depois dos sliders: pega o dado técnico antes de pedir dado
+       pessoal, reduz desconfiança logo no início). -->
+  <div class="step" id="step-3">
+    <div class="step-tag">Pergunta 3 de 3</div>
+    <div class="step-title">Como podemos te chamar?</div>
+    <div class="form-field">
+      <label>Seu nome</label>
+      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
     </div>
   </div>
 
@@ -718,6 +745,27 @@ async function carregarBaseReal() {
     TODOS_LANC = [];
   }
   inicializarSliders();
+  montarStatsAbertura_();
+}
+
+// Estatísticas reais da base na tela de abertura -- pedido do usuário pra
+// a primeira tela não ficar "fria": mostrar de cara que é uma consultoria
+// com dados de mercado reais e atuais, não só mais uma landing page comum.
+function montarStatsAbertura_() {
+  const elTotal = document.getElementById('statsTotalEmp');
+  const elPreco = document.getElementById('statsPrecoMin');
+  const elArea  = document.getElementById('statsAreaRange');
+  if (!elTotal || !elPreco || !elArea) return;
+  if (!TODOS_LANC.length) {
+    elTotal.textContent = '—'; elPreco.textContent = '—'; elArea.textContent = '—';
+    return;
+  }
+  const precos   = TODOS_LANC.map(c => c.precoM2).filter(v => v > 0);
+  const areasMin = TODOS_LANC.map(c => c.areaMin).filter(v => v > 0);
+  const areasMax = TODOS_LANC.map(c => c.areaMax).filter(v => v > 0);
+  elTotal.textContent = TODOS_LANC.length;
+  elPreco.textContent = precos.length ? formatBRL_(Math.min(...precos)) : '—';
+  elArea.textContent  = (areasMin.length && areasMax.length) ? `${Math.min(...areasMin)} a ${Math.max(...areasMax)}m²` : '—';
 }
 
 // ── SCORE DE TRAÇÃO (versão pública e parcial) ─────────────────────────────
@@ -753,6 +801,8 @@ const D = {
   nome: '', whatsapp: '',
   tsInicio: Date.now(), precoM2Inicial: null, precoM2Final: null,
   areaInicial: null, areaFinal: null, stepAbandono: null,
+  ajustesSlider: 0,
+  origemAcesso: new URLSearchParams(location.search).get('utm_source') || 'direto',
 };
 
 // ── PROGRESSO ────────────────────────────────────────────────────────────
@@ -777,21 +827,11 @@ function avancarStep() {
   if (!validar()) return;
 
   if (stepAtual === 0) { irParaStep(1); return; }
-  if (stepAtual === 2) { montarStep3Titulo_(); irParaStep(3); return; }
   if (stepAtual === 3) { montarTeaser(); irParaStep(4); return; }
   if (stepAtual === 4) { montarMatch(); irParaStep(5); return; }
   if (stepAtual === 5) { montarCapturaTitulo_(); irParaStep(6); return; }
   if (stepAtual === 6) { submeter(); return; }
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
-}
-
-// Personaliza a pergunta 3 com o nome assim que a pessoa informou -- pedido
-// explícito do usuário: "depois que a pessoa preencheu o nome, deve usar na
-// próxima tela" (ex.: "Leo, qual o perfil de apartamento que você procura?").
-function montarStep3Titulo_() {
-  const primeiroNome = D.nome.split(' ')[0];
-  document.getElementById('step3Titulo').innerHTML =
-    `${primeiroNome}, qual o <span style="color:var(--accent)">orçamento</span> ideal pra você? Por preço/m² e área útil? <span style="font-size:14px;font-weight:500;color:var(--text)">(Arraste as barras laterais para escolher)</span>`;
 }
 
 function montarCapturaTitulo_() {
@@ -819,7 +859,7 @@ function atualizarBotoes() {
 // ── VALIDAÇÃO ───────────────────────────────────────────────────────────
 function validar() {
   if (stepAtual === 1 && !D.moradia) { toast('Selecione uma opção para continuar'); return false; }
-  if (stepAtual === 2) {
+  if (stepAtual === 3) {
     const nome = document.getElementById('fNome').value.trim();
     if (!nome) { toast('Informe seu nome para continuar'); return false; }
     D.nome = nome;
@@ -906,6 +946,11 @@ function formatBRL_(v) {
   return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
 }
 
+// Só conta como "ajuste" (ajustesSlider, dado comportamental pro BaseImob) o
+// que o cliente de fato mexeu -- as chamadas de inicializarSliders() setando
+// o valor padrão dos sliders não entram nessa conta.
+let slidersProntos_ = false;
+
 function inicializarSliders() {
   const sP = document.getElementById('sliderPrecoM2');
   sP.min = PRECO_M2_BOUNDS[0]; sP.max = PRECO_M2_BOUNDS[1]; sP.step = 50;
@@ -920,11 +965,14 @@ function inicializarSliders() {
   document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
   document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
   atualizarMetragem(sM.value);
+
+  slidersProntos_ = true;
 }
 
 function atualizarPrecoM2(val) {
   const v = parseInt(val);
   if (D.precoM2Inicial === null) D.precoM2Inicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
   D.precoM2Alvo = v; D.precoM2Final = v;
   document.getElementById('sliderPrecoM2Txt').textContent = formatBRL_(v);
   atualizarComboUI_();
@@ -938,6 +986,7 @@ const TOLERANCIA_METRAGEM_ = 0.20;
 function atualizarMetragem(val) {
   const v = parseInt(val);
   if (D.areaInicial === null) D.areaInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
   D.metragemAlvo = v; D.areaFinal = v;
   const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
   const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
@@ -1059,6 +1108,7 @@ function submeter() {
       precoM2Inicial: D.precoM2Inicial, precoM2Final: D.precoM2Final,
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
       tempoSegundos: Math.round((Date.now() - D.tsInicio) / 1000),
+      ajustesSlider: D.ajustesSlider, origemAcesso: D.origemAcesso,
     }),
     canal: 'Simulador Lançamentos',
     tipo_contato: 'LEAD QUENTE',
@@ -1093,6 +1143,14 @@ function situacaoBadgeHTML_(estagio) {
 // (mesma lógica de "rank-top" de baseimob-funil.html). Todas as linhas
 // mostram o código do empreendimento e a situação (Pronto pra morar / Na
 // planta / Em obras) em destaque -- pedidos explícitos do usuário.
+// Score colorido -- pedido do usuário: verde pra combinação muito alta,
+// amarelo pra alta, cor padrão pro resto. Mesmos cortes de matchScoreDesc.
+function corMatch_(score) {
+  if (score >= 88) return 'var(--green)';
+  if (score >= 72) return '#f5c518';
+  return 'var(--text)';
+}
+
 function montarMatch() {
   const top7 = filtrados().slice(0, 7);
   const best = top7[0];
@@ -1101,6 +1159,7 @@ function montarMatch() {
 
   document.getElementById('matchTitulo').textContent = `${primeiroNome}, este é o empreendimento com o apartamento ideal`;
   document.getElementById('matchScoreNum').textContent = sc || '—';
+  document.getElementById('matchScoreNum').style.color = best ? corMatch_(sc) : '';
   document.getElementById('matchScoreDesc').textContent = !best
     ? 'Nenhum empreendimento com esse apartamento exato. O Leonardo vai buscar opções próximas.'
     : sc >= 88 ? 'Combina muito bem com o que você está buscando.'
@@ -1133,7 +1192,13 @@ function montarMatch() {
           <div><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
           <div><div class="opcao-top-cell-label">A partir de</div><div class="opcao-top-cell-val">${formatBRL_(c.precoAPartir)}</div></div>
           <div><div class="opcao-top-cell-label">Área de lazer</div><div class="opcao-top-cell-val" style="${c.temLazer?'color:var(--green)':''}">${c.temLazer?'Completa':'Não incluso'}</div></div>
-          <div style="grid-column:1/-1"><div class="opcao-top-cell-label">Unidades vendidas</div><div class="opcao-top-cell-val" style="${c.pctVendido>=80?'color:#f5a623':''}">${c.pctVendido}% das unidades já foram vendidas</div></div>
+          <div style="grid-column:1/-1">
+            <div class="opcao-top-cell-label">Unidades vendidas</div>
+            <div class="opcao-top-cell-val" style="${c.pctVendido>=80?'color:#f5a623':''}">${c.pctVendido}% das unidades já foram vendidas</div>
+            <div style="height:6px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:6px">
+              <div style="height:100%;width:${c.pctVendido}%;background:${c.pctVendido>=80?'#f5a623':'var(--accent)'};border-radius:99px"></div>
+            </div>
+          </div>
         </div>
       </div>`;
     }
@@ -1144,7 +1209,7 @@ function montarMatch() {
           <div class="opcao-codigo">${c.id || '—'}</div>
           <div class="opcao-row-info">${situacaoBadgeHTML_(c.estagio)} · ${c.areaMin}-${c.areaMax}m² · ${formatBRL_(c.precoAPartir)}</div>
         </div>
-        <div class="opcao-match">${c.matchPref}%</div>
+        <div class="opcao-match" style="color:${corMatch_(c.matchPref)}">${c.matchPref}%</div>
       </div>`;
   }).join('');
 }
@@ -1196,7 +1261,7 @@ function montarAgradecimento() {
     projecaoEl.innerHTML = '';
   }
 
-  const moradiaMap = { aluguel:'Quero sair do aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família' };
+  const moradiaMap = { aluguel:'Quero sair do aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família', investidor:'Quero investir' };
 
   document.getElementById('perfilResumo').innerHTML = [
     ['Situação atual', moradiaMap[D.moradia] || '—'],
