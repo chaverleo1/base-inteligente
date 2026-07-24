@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 108) — Simulador de Lançamentos: barras de arrastar em laranja
+
+A pedido do usuário, os sliders (preço/m² e metragem) de `simulador-lancamentos.html` passaram a usar
+laranja (`--orange: #ff8a00`, nova variável) tanto na linha/trilho quanto na bola/alça — antes a linha
+era cinza-escuro (`var(--s3)`) e a bola branca (`var(--text)`). Ajustado pra `-webkit` (thumb + track,
+via o `background` do próprio input) e `-moz` (Firefox precisa de `::-moz-range-track` separado, que
+não existia antes — adicionado agora). Testado ao vivo: `getComputedStyle` confirma
+`rgb(255, 138, 0)` no trilho.
+
 ## 2026-07-24 (parte 107) — Simulador de Lançamentos: remove 2 textos da pergunta 3 (perfil de apartamento)
 
 A pedido do usuário, removidos dois textos de `simulador-lancamentos.html`, na pergunta 3 (perfil de
