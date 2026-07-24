@@ -1,5 +1,44 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 103) — Simulador de Lançamentos: nome na pergunta 3 também, "Deu match!" no resultado parcial, e copy mais humana em todo o fluxo
+
+Dois pedidos do usuário em `simulador-lancamentos.html`:
+
+**1) O nome (coletado na pergunta 2) agora também personaliza a pergunta 3.** Nova
+`montarStep3Titulo_()`, chamada na transição 2→3 de `avancarStep()`, troca o título estático "Qual o
+perfil de apartamento que você procura?" por `"{Nome}, qual o perfil de apartamento que você
+procura?"` — exatamente como pedido ("Leo qual o perfil de apartamento que você procura?"). Mesma
+ideia aplicada também na transição 4→5 (nova `montarCapturaTitulo_()`, título da tela de pré-cadastro
+agora começa com o nome) e no título do melhor match (`montarMatch()`), que já existia da parte
+anterior.
+
+**2) Resultado parcial ganhou o tom "Deu match!" pedido.** `montarTeaser()` agora monta
+`"Deu match! Temos {N} empreendimentos que têm o apartamento que você busca, {Nome}!"` (número em
+destaque) em vez do "Encontrei o apartamento que você busca" mais burocrático — no formato exato do
+exemplo dado ("Deu Match!...temos 17 empreendimentos que têm o apartamento que você busca Leo!").
+
+**Passada geral de humanização do texto** (pedido explícito: "criar textos mais humanizados, menos
+técnicos"), removendo jargão técnico e deixando os textos mais parecidos com uma conversa:
+- "Score de compatibilidade" → "Quanto isso combina com você" (teaser e melhor match).
+- Descrições de compatibilidade reescritas sem termos como "sobreposição com as suas prioridades".
+- "Considerando também opções de Xm² a Ym² (±20%)" → "A gente também considera apartamentos um pouco
+  menores ou maiores: de Xm² a Ym²" (tira a notação matemática "±20%").
+- "R$X/m² × Ym²" (fórmula com símbolo de multiplicação) → "Considerando R$X por m² num apartamento de
+  Ym²" (frase).
+- "Dados reais da base, atualizados agora" → "As opções são reais e atualizadas agora mesmo"; "O que a
+  base mostra para você" → "O que encontramos pra você" (tira o termo técnico "base").
+- "Para conhecer todas as opções que temos pra você, faça seu pré-cadastro" → "{Nome}, pra você
+  conhecer todas as opções, deixa seu WhatsApp aqui embaixo".
+- Subtítulos da abertura, motivação, pergunta 3 e teaser reescritos em tom mais direto/coloquial
+  ("Mexa nas barras abaixo...", "Isso ajuda a gente a entender melhor o seu momento", etc.);
+  checklist da abertura também reescrita ("Feito na hora, com o que tem disponível agora", "Um
+  resultado só seu — nada de lista genérica", "Você decide — só recebe contato se confirmar").
+
+Testado ao vivo no navegador do início ao fim com nome "Leonardo": pergunta 3 mostrou "Leonardo, qual
+o perfil de apartamento que você procura?", resultado parcial mostrou "Deu match! Temos 5
+empreendimentos que têm o apartamento que você busca, Leonardo!", e o restante do fluxo (pré-cadastro,
+melhor match, agradecimento) manteve a personalização e a nova copy consistentes.
+
 ## 2026-07-24 (parte 102) — Simulador de Lançamentos: nome logo na pergunta 2, headlines personalizadas, pré-cadastro com WhatsApp em dobro
 
 Lote de 7 ajustes pedidos pelo usuário em `simulador-lancamentos.html`:
