@@ -1,5 +1,13 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 115) — Simulador de Lançamentos: nome move pro "Deu match!" no resultado parcial
+
+A pedido do usuário, o headline do resultado parcial (`montarTeaser()`) mudou de "Deu match! Temos N
+empreendimentos que têm o apartamento que você busca, {Nome}!" pra "Deu match {Nome}! Temos N
+empreendimentos que têm o apartamento que você busca." — o nome sai do fim da segunda linha e entra
+logo depois de "Deu match" na primeira. Testado ao vivo: "Deu match Viana! Temos 5 empreendimentos que
+têm o apartamento que você busca."
+
 ## 2026-07-24 (parte 114) — Simulador de Lançamentos: destaca o bullet "você no controle" na abertura
 
 A pedido do usuário, o terceiro bullet da tela de abertura mudou de texto ("Você decide — só recebe
