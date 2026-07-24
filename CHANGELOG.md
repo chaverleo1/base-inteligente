@@ -1,5 +1,63 @@
 # Changelog — Base Inteligente
 
+## 2026-07-23 (parte 97) — Simulador de Lançamentos: dados reais + Score de Tração + lead no BaseImob
+
+Reescrita completa de `simulador-lancamentos.html` (a landing pública de qualificação de leads criada
+numa sessão paralela — commits `51c97ad`/`660a2f7`/`b68475b`), conectando o que antes era 100% mock
+ao resto do sistema, a pedido do usuário depois de reconciliar com o projeto da IA MENTORA.
+
+**Dados reais** — trocou `MOCK_BASE` (12 itens fixos) por `carregarBaseReal()`: busca
+`listar_lancamentos` (rota pública, já está em `ACOES_PUBLICAS_GET` — não precisa de token),
+agrupa por empreendimento (mesmo padrão de `agruparPorEmpreendimento_`) e filtra só
+`tipoEmpreendimento === 'Condomínio Vertical'` (lotes já têm o funil próprio em
+`baseimob-funil.html`). Bounds dos sliders (preço/m², metragem) calculados dinamicamente a partir da
+base real, não mais fixos.
+
+**Score de Tração reaproveitado (versão pública parcial)** — `scoreTracaoPublico_` usa a MESMA
+fórmula/pesos relativos do motor real (parte 84: Prazo 1 / Disponibilidade 3 / Atratividade 4), só
+sem os eixos Vendedor e Similaridade — esses exigem `listarPerfisVendedor`/
+`listar_padroes_vendedores`/`listar_modelos_vendedores`, que exigem sessão (não estão em
+`ACOES_PUBLICAS_GET`) e não podem ser chamados de uma página pública sem login. Documentado
+claramente no código pra não parecer um motor "esquecido pela metade".
+
+**Lead chega no BaseImob** — trocou o `fetch(...,{method:'POST'})` (quase certamente quebrado por
+CORS — Apps Script não trata bem o preflight de um POST com `Content-Type: application/json`) pelo
+mesmo padrão de `baseimob-funil.html`: GET com `?dados=<json>` (a "acao" fica dentro do JSON, truque
+no-cors já usado no projeto todo pra página pública sem sessão) chamando `acao: 'interesse_lancamento'`
+— rota que já existe (`salvarInteresse_`, `code.txt`) e é a MESMA que alimenta a aba "BaseImob" do
+dashboard (`listarLeadsBaseimob_`). Payload no formato exato esperado (`nome, telefone, qtdInteresse,
+idsInteresse, rankingDetalhado, tags, canal, tipo_contato, score`).
+
+**Metodologia de sliders de `baseimob-funil.html`** — trocou os 2 sliders de valor único
+(preço total, área) por: (1) slider simples de **preço por m²** com contador ao vivo, e (2) slider de
+**faixa dupla** (2 alças) pra metragem, também com contador ao vivo — igual ao funil de lotes, só
+trocando área de terreno por área útil (apartamentos). O "investimento estimado" (preço/m² × metragem
+média da faixa) aparece destacado no topo da tela de metragem, atualizando ao vivo — exatamente como
+pedido. O ranking/match usa a mesma lógica de distância relativa ao alvo do slider (`scoreCondo` em
+`baseimob-funil.html`), não corte rígido, com o Score de Tração real como critério de desempate.
+
+**Só 4 perguntas** (era 6): motivação (mantida) → situação financeira (agora multi-seleção, era
+single-select) → preço/m² → metragem. Removidas "prioridades" (chips) e "urgência" — a IA MENTORA
+enfatizou fricção mínima; os sinais de urgência que dependiam dessa pergunta (badge "unidades
+limitadas") agora disparam sempre que o melhor match tem ≥80% vendido, sem depender de resposta
+declarada.
+
+Dois bugs reais encontrados e corrigidos durante o teste ao vivo com dados reais: (1) "Previsão de
+entrega" vazava a data crua em ISO (`2027-10-31T03:00:00.000Z`) quando o campo vinha como Date do
+Sheets — novo `formatarDataEntrega_` corrige; (2) erro de pluralização pré-existente (herdado do
+arquivo original) — `opção${'ões'}` virava literalmente "opçãoões" em vez de "opções".
+
+Testado ao vivo no navegador com a base real de produção (67 lançamentos verticais carregados
+corretamente, bounds de slider calculados certos): fluxo completo dos 9 passos (0-8), sliders com
+contadores ao vivo corretos, clamping do slider de faixa dupla, payload de envio interceptado e
+validado campo a campo (sem escrever na produção de verdade), navegação "voltar" correta, e os 2 bugs
+acima corrigidos e reverificados. Casos-limite (0 correspondências, faixa nos extremos da base) não
+quebram a tela.
+
+`dashboard.html` não precisou de nenhuma mudança (a entrada em ADM → Landing Pages já apontava certo).
+
+100% frontend — sem alterações em `code.txt` (a rota `interesse_lancamento` já existia).
+
 ## 2026-07-22 (parte 96) — Nota de Similaridade discrimina de verdade (pico na mediana, não binário)
 
 Caso real do usuário: de 69 empreendimentos, só 3 tinham nota de Similaridade abaixo de 90% — a nota
