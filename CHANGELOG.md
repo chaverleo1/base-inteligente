@@ -1,5 +1,13 @@
 # Changelog — Base Inteligente
 
+## 2026-07-24 (parte 111) — Simulador de Lançamentos: número da caixa "Temos N opções reais" gigante e laranja
+
+A pedido do usuário, o número dentro da caixa de contador (pergunta 3) ficou bem maior e em laranja:
+`#cntCombo` foi de `clamp(22px,7vw,28px)` cor `var(--accent)` (azul) pra `clamp(44px,15vw,60px)` cor
+`var(--orange)`. Testado ao vivo em desktop (60px) e mobile 375px (56px) — a caixa de 118px de largura
+cresce em altura pra acomodar o número maior, sem sobrepor a caixa de investimento ao lado (mesmo bug
+já corrigido na parte 106) nem estourar a tela em nenhum dos dois casos.
+
 ## 2026-07-24 (parte 110) — Simulador de Lançamentos: 2 textos da pergunta 3 + corrige cor do contador travando em branco
 
 A pedido do usuário, dois textos da pergunta 3 (perfil de apartamento) em `simulador-lancamentos.html`:
