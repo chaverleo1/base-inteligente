@@ -331,6 +331,33 @@ input[type=range]::-moz-range-track {
   font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
   color: var(--text); margin: 18px 0 10px;
 }
+
+/* ── TELA DE CONFIRMAÇÃO DOS DADOS (entre sliders e motivação) ────────── */
+.conf-card {
+  background: var(--s2); border: 2px solid var(--accent);
+  border-radius: var(--r); overflow: hidden; margin: 20px 0;
+}
+.conf-item {
+  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+}
+.conf-item-last { border-bottom: none; padding-bottom: 20px; }
+.conf-item-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text); opacity: .55; margin-bottom: 8px;
+}
+.conf-item-val {
+  font-size: 38px; font-weight: 800; color: var(--orange);
+  letter-spacing: -1.5px; line-height: 1.05; overflow-wrap: break-word;
+}
+.conf-obs {
+  padding: 14px 20px; background: rgba(79,124,255,.07);
+  font-size: 13px; color: var(--text); line-height: 1.7;
+  border-top: 1px solid var(--border);
+}
+.conf-obs strong { color: var(--accent); font-weight: 700; }
+.conf-btns { display: flex; gap: 8px; margin-top: 16px; }
+.conf-btn-ref { flex: 1; }
+.conf-btn-sim { flex: 2; }
 </style>
 </head>
 <body>
@@ -419,44 +446,14 @@ input[type=range]::-moz-range-track {
     </div>
   </div>
 
-  <!-- STEP 1 — MOTIVAÇÃO -->
+  <!-- STEP 1 — NOME -->
   <div class="step" id="step-1">
     <div class="step-tag">Pergunta 1 de 3</div>
-    <div class="step-title">O que melhor descreve você hoje?</div>
-    <div class="step-sub">Isso ajuda a gente a entender melhor o seu momento.</div>
-    <div class="options" id="opts-moradia">
-      <div class="opt" onclick="selecionarOpt('moradia',this,'aluguel')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-home"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Quero sair do aluguel</div>
-          <div class="opt-desc">Já ando cansado de pagar aluguel todo mês</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
-      </div>
-      <div class="opt" onclick="selecionarOpt('moradia',this,'proprio')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-swap"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Tenho imóvel próprio</div>
-          <div class="opt-desc">Quero trocar ou comprar um segundo</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
-      </div>
-      <div class="opt" onclick="selecionarOpt('moradia',this,'familia')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-users"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Moro com família ou amigos</div>
-          <div class="opt-desc">É hora de ter meu próprio espaço</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
-      </div>
-      <div class="opt" onclick="selecionarOpt('moradia',this,'investidor')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-wallet"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Quero investir</div>
-          <div class="opt-desc">Comprar para renda ou valorização</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
-      </div>
+    <div class="step-title">Como podemos te chamar?</div>
+    <div class="step-sub">Só o primeiro nome já basta.</div>
+    <div class="form-field">
+      <label>Seu nome</label>
+      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
     </div>
   </div>
 
@@ -500,20 +497,76 @@ input[type=range]::-moz-range-track {
     </div>
   </div>
 
-  <!-- STEP 3 — NOME (pra já personalizar o resto da simulação pelo nome --
-       agora vem depois dos sliders: pega o dado técnico antes de pedir dado
-       pessoal, reduz desconfiança logo no início). -->
+  <!-- STEP 3 — CONFIRMAÇÃO DOS DADOS -->
   <div class="step" id="step-3">
-    <div class="step-tag">Pergunta 3 de 3</div>
-    <div class="step-title">Como podemos te chamar?</div>
-    <div class="form-field">
-      <label>Seu nome</label>
-      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
+    <div class="step-tag">Confirme seus dados</div>
+    <div class="step-title">Antes de seguirmos, <span style="color:var(--accent)">confirme</span> o que você configurou!</div>
+    <div class="step-sub">Se quiser ajustar, é só clicar em Refazer.</div>
+
+    <div class="conf-card">
+      <div class="conf-item">
+        <div class="conf-item-label">Seu orçamento estimado</div>
+        <div class="conf-item-val" id="confOrcamento">—</div>
+      </div>
+      <div class="conf-item conf-item-last">
+        <div class="conf-item-label">Área útil ideal do apartamento</div>
+        <div class="conf-item-val" id="confArea">—</div>
+      </div>
+      <div class="conf-obs">
+        Com o preço por m² de <strong id="confPrecoM2">—</strong><br>
+        Intervalo compatível: <strong id="confFaixa">—</strong>
+      </div>
+    </div>
+
+    <div class="conf-btns">
+      <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Refazer</button>
+      <button class="btn-nav btn-prim conf-btn-sim" onclick="avancarStep()">Confirmar</button>
     </div>
   </div>
 
-  <!-- STEP 4 — RESULTADO PARCIAL (TEASER) -->
+  <!-- STEP 4 — MOTIVAÇÃO (personalizada com o nome, colhido no step 1) -->
   <div class="step" id="step-4">
+    <div class="step-tag">Pergunta 3 de 3</div>
+    <div class="step-title" id="motivacaoTitulo">O que melhor descreve você hoje?</div>
+    <div class="step-sub">Isso ajuda a gente a entender melhor o seu momento.</div>
+    <div class="options" id="opts-moradia">
+      <div class="opt" onclick="selecionarOpt('moradia',this,'aluguel')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-home"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Quero sair do aluguel</div>
+          <div class="opt-desc">Já ando cansado de pagar aluguel todo mês</div>
+        </div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
+      </div>
+      <div class="opt" onclick="selecionarOpt('moradia',this,'proprio')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-swap"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Tenho imóvel próprio</div>
+          <div class="opt-desc">Quero trocar ou comprar um segundo</div>
+        </div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
+      </div>
+      <div class="opt" onclick="selecionarOpt('moradia',this,'familia')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-users"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Moro com família ou amigos</div>
+          <div class="opt-desc">É hora de ter meu próprio espaço</div>
+        </div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
+      </div>
+      <div class="opt" onclick="selecionarOpt('moradia',this,'investidor')">
+        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-wallet"/></svg></div>
+        <div class="opt-text">
+          <div class="opt-label">Quero investir</div>
+          <div class="opt-desc">Comprar para renda ou valorização</div>
+        </div>
+        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 — RESULTADO PARCIAL (TEASER) -->
+  <div class="step" id="step-5">
     <div class="step-tag">Resultado parcial</div>
     <div class="step-title" id="teaserTitulo">—</div>
     <div class="step-sub">Já escolhemos a opção que mais combina com você.</div>
@@ -538,9 +591,8 @@ input[type=range]::-moz-range-track {
     </button>
   </div>
 
-  <!-- STEP 5 — MELHOR MATCH / TABELA DE OPÇÕES (agora vem antes da captura de
-       telefone -- o cliente vê as opções primeiro, só depois confirma contato) -->
-  <div class="step" id="step-5">
+  <!-- STEP 6 — MELHOR MATCH / TABELA DE OPÇÕES -->
+  <div class="step" id="step-6">
     <div class="match-header">
       <div class="match-tag">
         <svg width="12" height="12"><use href="#ico-star"/></svg>
@@ -578,9 +630,8 @@ input[type=range]::-moz-range-track {
     </div>
   </div>
 
-  <!-- STEP 6 — CAPTURA (agora penúltima etapa -- o cliente já viu as opções,
-       só falta confirmar o WhatsApp antes de encerrar) -->
-  <div class="step" id="step-6">
+  <!-- STEP 7 — CAPTURA -->
+  <div class="step" id="step-7">
     <div class="step-tag">Quase lá</div>
     <div class="step-title" id="capturaTitulo">Essa é a penúltima etapa antes de encerrar</div>
     <div class="step-sub">Confirme seu WhatsApp abaixo pra finalizar o seu atendimento.</div>
@@ -608,8 +659,8 @@ input[type=range]::-moz-range-track {
     <div class="btn-final-sub">Leonardo entra em contato em até 2 horas pelo WhatsApp</div>
   </div>
 
-  <!-- STEP 7 — AGRADECIMENTO -->
-  <div class="step" id="step-7">
+  <!-- STEP 8 — AGRADECIMENTO -->
+  <div class="step" id="step-8">
     <div class="check-circle">
       <svg width="28" height="28" style="color:var(--green)"><use href="#ico-check"/></svg>
     </div>
@@ -772,7 +823,7 @@ const WHATSAPP_NUM = '5562999999999';
 
 // ── ESTADO ──────────────────────────────────────────────────────────────
 let stepAtual = 0;
-const TOTAL = 8; // steps 0..7
+const TOTAL = 9; // steps 0..8
 
 const D = {
   moradia: null, precoM2Alvo: null, metragemAlvo: null, areaRange: null,
@@ -785,10 +836,14 @@ const D = {
 
 // ── PROGRESSO ────────────────────────────────────────────────────────────
 function atualizarProgresso() {
-  const interativas = 3; // steps 1..3
-  const n = Math.max(0, Math.min(stepAtual - 1, interativas));
-  document.getElementById('progressFill').style.width = (n / interativas * 100) + '%';
-  document.getElementById('progressStep').textContent = n + ' / ' + interativas;
+  // 3 perguntas: step 1 (nome), step 2 (sliders), step 4 (motivação)
+  // step 3 (confirmação) conta como Q2 já respondida (está entre sliders e motivação)
+  let n = 0;
+  if (stepAtual >= 2) n = 1; // nome respondido
+  if (stepAtual >= 3) n = 2; // sliders respondidos
+  if (stepAtual >= 5) n = 3; // motivação respondida
+  document.getElementById('progressFill').style.width = (n / 3 * 100) + '%';
+  document.getElementById('progressStep').textContent = n + ' / 3';
 }
 
 // ── NAV ───────────────────────────────────────────────────────────────
@@ -805,10 +860,12 @@ function avancarStep() {
   if (!validar()) return;
 
   if (stepAtual === 0) { irParaStep(1); return; }
-  if (stepAtual === 3) { montarTeaser(); irParaStep(4); return; }
-  if (stepAtual === 4) { montarMatch(); irParaStep(5); return; }
-  if (stepAtual === 5) { montarCapturaTitulo_(); irParaStep(6); return; }
-  if (stepAtual === 6) { submeter(); return; }
+  if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }
+  if (stepAtual === 3) { montarMotivacaoTitulo_(); irParaStep(4); return; }
+  if (stepAtual === 4) { montarTeaser(); irParaStep(5); return; }
+  if (stepAtual === 5) { montarMatch(); irParaStep(6); return; }
+  if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
+  if (stepAtual === 7) { submeter(); return; }
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
@@ -818,6 +875,24 @@ function montarCapturaTitulo_() {
     `${primeiroNome}, essa é a penúltima etapa antes de encerrar`;
 }
 
+function montarConfirmacao_() {
+  const total = D.metragemAlvo * D.precoM2Alvo;
+  document.getElementById('confOrcamento').textContent = formatBRL_(total);
+  document.getElementById('confArea').textContent = D.metragemAlvo + ' m²';
+  document.getElementById('confPrecoM2').textContent = formatBRL_(D.precoM2Alvo) + '/m²';
+  document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
+}
+
+function montarMotivacaoTitulo_() {
+  const primeiroNome = D.nome.split(' ')[0];
+  document.getElementById('motivacaoTitulo').textContent =
+    primeiroNome + ', o que melhor descreve você hoje?';
+}
+
+function refazerSliders() {
+  irParaStep(2);
+}
+
 function voltarStep() {
   if (stepAtual > 1) irParaStep(stepAtual - 1);
 }
@@ -825,24 +900,23 @@ function voltarStep() {
 function atualizarBotoes() {
   const bV = document.getElementById('btnVoltar');
   const bA = document.getElementById('btnAvancar');
-  // Etapas 4 (resultado parcial), 5 (melhor match) e 6 (captura) têm cada
-  // uma seu próprio botão inline em destaque -- o botão de avançar do
-  // rodapé só aparece nas perguntas normais (1 a 3).
-  bA.classList.toggle('btn-hide', stepAtual >= 4);
-  bV.classList.toggle('btn-hide', stepAtual <= 1 || stepAtual === 7);
+  // step 3 (confirmação) tem Sim/Refazer inline; steps 5..8 têm botões próprios
+  const comBotaoInline = stepAtual === 3 || stepAtual >= 5;
+  bA.classList.toggle('btn-hide', comBotaoInline);
+  bV.classList.toggle('btn-hide', comBotaoInline || stepAtual <= 1 || stepAtual === 8);
 
   bA.textContent = stepAtual === 0 ? 'Começar' : 'Próximo';
 }
 
 // ── VALIDAÇÃO ───────────────────────────────────────────────────────────
 function validar() {
-  if (stepAtual === 1 && !D.moradia) { toast('Selecione uma opção para continuar'); return false; }
-  if (stepAtual === 3) {
+  if (stepAtual === 1) {
     const nome = document.getElementById('fNome').value.trim();
     if (!nome) { toast('Informe seu nome para continuar'); return false; }
     D.nome = nome;
   }
-  if (stepAtual === 6) {
+  if (stepAtual === 4 && !D.moradia) { toast('Selecione uma opção para continuar'); return false; }
+  if (stepAtual === 7) {
     const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
     const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
     if (whats.length < 10)  { toast('Informe um WhatsApp válido com DDD'); return false; }
@@ -1055,7 +1129,7 @@ function submeter() {
   const continuar = () => {
     btn.textContent = 'Confirmado';
     btn.classList.add('confirmado');
-    setTimeout(() => { montarAgradecimento(); irParaStep(7); }, 700);
+    setTimeout(() => { montarAgradecimento(); irParaStep(8); }, 700);
   };
 
   if (typeof WEBHOOK_URL === 'undefined') {
@@ -1271,7 +1345,7 @@ function toast(msg) {
 }
 
 window.addEventListener('beforeunload', () => {
-  if (stepAtual > 0 && stepAtual < 7) D.stepAbandono = stepAtual;
+  if (stepAtual > 0 && stepAtual < 8) D.stepAbandono = stepAtual;
 });
 
 // INIT
