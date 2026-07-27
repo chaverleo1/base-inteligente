@@ -206,6 +206,35 @@ a { text-decoration: none; color: inherit; }
 .toast.show { transform: translateY(0); opacity: 1; }
 .toast.ok   { border-left: 3px solid var(--accent2); }
 .toast.erro { border-left: 3px solid var(--coral); }
+
+/* ── Copy Brief Drawer ─────────────────────────────────────────────────── */
+.brief-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.48); z-index: 9200;
+  opacity: 0; transition: opacity .28s ease; pointer-events: none;
+}
+.brief-overlay.aberto { opacity: 1; pointer-events: all; }
+.brief-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(480px, 96vw);
+  background: var(--surface); border-left: 1px solid var(--border2);
+  z-index: 9201; overflow-y: auto; overflow-x: hidden;
+  transform: translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column;
+}
+.brief-drawer.aberto { transform: translateX(0); }
+.brief-drawer-header {
+  position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 18px 20px 14px; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.brief-drawer-body { padding: 18px 20px 40px; display: flex; flex-direction: column; gap: 16px; }
+.brief-box { border-radius: 12px; padding: 16px; }
+.brief-box-linha { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
+.brief-box-titulo { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.brief-box-body { font-size: 12px; color: var(--text2); line-height: 1.8; white-space: pre-line; }
+.brief-regra { font-size: 12px; color: var(--text3); line-height: 1.6; background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 10px 14px; }
+.mapa-tabela tr.papel-clickable { cursor: pointer; }
+.mapa-tabela tr.papel-clickable:hover td { background: var(--surface2) !important; }
+.mapa-tabela tr.papel-clickable td:last-child::after { content: ' ✏️'; opacity: .5; font-size: 11px; }
 </style>
 </head>
 <body>
@@ -1023,6 +1052,7 @@ function selecionarMixPorAlvo_(alvoItem, todosItens) {
 function renderMixProdutoAlvo_() {
   if (!_alvoSelecionado) return '';
   const mix = selecionarMixPorAlvo_(_alvoSelecionado, _itensScoredCache || []);
+  _mixAtualPapeis_ = mix.papeis || {};
   const cobertura = mix.aviso ? null : calcularCoberturaMix_(mix.papeis);
   const covHtml = cobertura ? `<span class="cobertura-badge cobertura-${cobertura.nivel}">${cobertura.nivel === 'forte' ? '🟢' : cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${cobertura.nivel}</span>` : '';
   return `
@@ -1037,11 +1067,11 @@ function renderMixProdutoAlvo_() {
       <div class="segmento-header">
         <div>
           <div class="segmento-titulo">Estratégia de 7 Ofertas</div>
-          <div class="segmento-sub">Mix montado a partir de <strong>${_alvoSelecionado.e.nomeEmpreendimento || '—'}</strong> como Alvo Primário</div>
+          <div class="segmento-sub">Mix montado a partir de <strong>${_alvoSelecionado.e.nomeEmpreendimento || '—'}</strong> como Alvo Primário · <span style="color:var(--text3)">clique numa linha para gerar briefing de post</span></div>
         </div>
         ${covHtml}
       </div>
-      ${mix.aviso ? `<div class="vazio-segmento">${mix.aviso}</div>` : tabelaMixHtml_(mix)}
+      ${mix.aviso ? `<div class="vazio-segmento">${mix.aviso}</div>` : tabelaMixHtml_(mix, true)}
     </div>`;
 }
 
@@ -1181,13 +1211,15 @@ function renderBlocosSegmentos_() {
 
 // Tabela dos 7 papéis -- mesmo formato pros blocos por segmento e pro modo
 // cliente (?cliente=CTT-NNN), pra manter as duas visões idênticas.
-function tabelaMixHtml_(r) {
+// clickable=true ativa linhas clicáveis que abrem o drawer de copy brief.
+function tabelaMixHtml_(r, clickable) {
   return `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
-      <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th>
+      <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th>${clickable ? '<th style="width:36px"></th>' : ''}
     </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
       const item = r.papeis[papel];
-      if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="6" style="color:var(--text3)">— não preenchido —</td></tr>`;
-      return `<tr>
+      if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="${clickable ? 7 : 6}" style="color:var(--text3)">— não preenchido —</td></tr>`;
+      const clkAttrs = clickable ? ` class="papel-clickable" onclick="abrirCopyBrief_('${papel}')" title="Gerar briefing de post para este produto"` : '';
+      return `<tr${clkAttrs}>
         <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
         <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
         <td>${item.e.construtora || '—'}</td>
@@ -1196,6 +1228,7 @@ function tabelaMixHtml_(r) {
         <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
         <td>${situacaoBadgeHtml_(item.e.status)}</td>
         <td>${tabelaBadgeHtml_(item.e.statusTabela)}</td>
+        ${clickable ? `<td style="text-align:center;color:var(--text3);font-size:13px" title="Gerar briefing">✏️</td>` : ''}
       </tr>`;
     }).join('')}</tbody></table></div>`;
 }
@@ -1408,6 +1441,168 @@ function carregarPagina_() {
   else carregarEstrategias();
 }
 window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) === 'ok' && tokenSessao()) carregarPagina_(); };
+
+// ── COPY BRIEF DRAWER ──────────────────────────────────────────────────────
+let _mixAtualPapeis_ = {};
+
+function abrirCopyBrief_(papel) {
+  const item = _mixAtualPapeis_[papel];
+  if (!item) return;
+  document.getElementById('copyBriefContent').innerHTML = renderCopyBriefContent_(item, papel);
+  document.getElementById('copyBriefOverlay').classList.add('aberto');
+  document.getElementById('copyBriefDrawer').classList.add('aberto');
+}
+
+function fecharCopyBrief_() {
+  document.getElementById('copyBriefOverlay').classList.remove('aberto');
+  document.getElementById('copyBriefDrawer').classList.remove('aberto');
+}
+
+function renderCopyBriefContent_(item, papel) {
+  const e = item.e;
+  const bairro = e.bairro || '';
+  const cidade = e.cidade || '';
+  const padrao = PADRAO_LABEL_MIX_[item.padrao] || item.padrao || '';
+  const preco = fmtR$_(item.menorPreco);
+  const situacao = situacaoTexto_(e.status);
+  const estoque = (e.estoque !== undefined && e.estoque !== null && e.estoque !== '') ? Number(e.estoque) : null;
+  const total = Number(e.totalUnidades) || 0;
+  const pctVendido = (total > 0 && estoque !== null) ? Math.round(((total - (estoque)) / total) * 100) : null;
+  const entrega = e.previsaoEntrega || '';
+  const areas = (e.unidades || []).map(u => Number(u.areaUtil) || Number(u.areaMin) || 0).filter(a => a > 0);
+  const areaMin = areas.length ? Math.min(...areas) : 0;
+  const areaMax = areas.length ? Math.max(...areas) : 0;
+  const tipoImovel = tipoImovelDominante_(e.unidades) || 'apartamento';
+  const localizacao = [bairro, cidade].filter(Boolean).join(', ') || 'localização privilegiada';
+  const areaStr = areaMax > areaMin && areaMin > 0 ? `${areaMin}–${areaMax} m²`
+                : areaMin > 0 ? `${areaMin} m²` : '';
+
+  const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel };
+  const briefs = gerarCopyBriefs_(item, papel, ctx);
+
+  const corsBrief = [
+    { bg: 'rgba(79,124,255,.08)', borda: 'rgba(79,124,255,.28)', badge: 'rgba(79,124,255,.15)', cor: 'var(--accent)' },
+    { bg: 'rgba(0,212,170,.08)',  borda: 'rgba(0,212,170,.28)',  badge: 'rgba(0,212,170,.15)',  cor: 'var(--accent2)' },
+    { bg: 'rgba(245,158,11,.08)', borda: 'rgba(245,158,11,.28)', badge: 'rgba(245,158,11,.15)', cor: 'var(--amber)' },
+  ];
+
+  return `
+    <div class="brief-drawer-header">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Briefing para Designer IA · Post 9:16</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${PAPEL_LABEL_[papel] || papel}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">${padrao} · ${localizacao} · ${situacao}</div>
+      </div>
+      <button class="btn-mini" style="flex-shrink:0;margin-top:2px" onclick="fecharCopyBrief_()">✕ Fechar</button>
+    </div>
+    <div class="brief-drawer-body">
+      <div class="brief-regra">⚠️ <strong>Regra de ouro:</strong> nenhuma das artes pode revelar o nome do empreendimento. O objetivo é gerar curiosidade e provocar o lead a entrar em contato — quem revela o nome primeiro, perde a tração.</div>
+      ${briefs.map((b, i) => {
+        const c = corsBrief[i];
+        return `<div class="brief-box" style="background:${c.bg};border:1.5px solid ${c.borda}">
+          <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
+          <div class="brief-box-titulo">${b.titulo}</div>
+          <div class="brief-box-body">${b.instrucoes}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function gerarCopyBriefs_(item, papel, ctx) {
+  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel } = ctx;
+  const estoqueStr = estoque !== null ? `${estoque} unidade${estoque !== 1 ? 's' : ''} disponíve${estoque !== 1 ? 'is' : 'l'}` : 'estoque limitado';
+  const pctStr = pctVendido !== null ? `${pctVendido}% já vendido` : '';
+  const areaInfo = areaStr ? ` · ${areaStr}` : '';
+  const entregaInfo = entrega ? `Entrega: ${entrega}` : (['Pronto', 'Pronto novo', 'Entregue'].includes(situacao) ? 'Pronto para morar' : '');
+  const isAlto = padrao === 'Alto Padrão' || padrao === 'Luxo';
+
+  return [
+    {
+      linha: 'Curiosidade & Mistério',
+      titulo: 'O endereço que não posso revelar — ainda',
+      instrucoes: `ABORDAGEM
+Provocar curiosidade sem entregar nada. O lead precisa sentir que está de fora de algo exclusivo — e a única saída é perguntar.
+
+TEXTO SUGERIDO PARA A ARTE
+Linha principal (grande, destaque):
+"Não vou te contar o nome... ainda."
+
+Subtítulo:
+"Mas esse ${tipoImovel} em ${localizacao} está fazendo muito barulho."
+
+Complemento:
+"Padrão ${padrao}${areaInfo} · A partir de ${preco}"
+
+CTA (rodapé):
+"Chama aqui e eu conto o resto 👇"
+
+DIREÇÃO VISUAL PARA O DESIGNER
+• Fundo escuro ou foto de interior desfocado (sem identificar o prédio)
+• Efeito de "tarja censura" ou adesivo sobre onde ficaria o nome
+• Tipografia pesada, grande — tom de suspense cinematográfico
+• Paleta: preto + cinza + 1 acento (dourado ou azul elétrico)
+• Formato: 9:16 Stories / WhatsApp Status`
+    },
+    {
+      linha: 'Estilo de Vida & Aspiração',
+      titulo: 'Vende o sentimento, não o produto',
+      instrucoes: `ABORDAGEM
+Fazer o lead imaginar como seria a vida lá. Emocional e aspiracional — a arte vende uma versão melhorada do dia a dia dele.
+
+TEXTO SUGERIDO PARA A ARTE
+Linha principal (leve, elegante):
+"Imagina sua manhã assim..."
+
+Subtítulo:
+"${isAlto ? 'Espaço, silêncio e vista. Tudo no mesmo endereço.' : 'Seu cantinho, do seu jeito, no lugar certo.'}"
+
+Complemento:
+"${localizacao}${areaInfo}${entregaInfo ? ' · ' + entregaInfo : ''}"
+
+CTA (rodapé):
+"Me pergunta como chegar lá 💬"
+
+DIREÇÃO VISUAL PARA O DESIGNER
+• Foto lifestyle de ambiente interno: café na varanda, luz natural, espaço arejado
+• Sem elementos que identifiquem o empreendimento (evitar fachada, placa, logo)
+• Tipografia leve, fina, moderna — sans-serif elegante
+• Paleta clara: branco, bege, verde-água ou azul suave
+• Texto mínimo — a imagem carrega a emoção
+• Formato: 9:16 Stories / WhatsApp Status`
+    },
+    {
+      linha: 'Dados & Urgência',
+      titulo: 'Para quem decide com números na cabeça',
+      instrucoes: `ABORDAGEM
+Dados concretos criam urgência real. Ideal para leads mais racionais e investidores — sem romantismo, só fatos.
+
+TEXTO SUGERIDO PARA A ARTE
+Linha principal (grande, impactante):
+"${pctStr ? pctStr + ' em poucos meses.' : 'Ritmo acelerado. Estoque não espera.'}"
+
+Subtítulo:
+"${estoqueStr}${entregaInfo ? ' · ' + entregaInfo : ''}"
+
+Complemento:
+"${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
+
+CTA (rodapé):
+"Não espera acabar. Chama agora 📲"
+
+DIREÇÃO VISUAL PARA O DESIGNER
+• Layout de dados em destaque — números grandes em tipografia bold
+• ${pctStr ? 'Incluir barra de progresso visual representando o percentual vendido' : 'Incluir ícone de escassez (relógio, contador, seta descendente)'}
+• Estilo sóbrio, direto — menos foto, mais dado
+• Paleta: fundo escuro + texto branco + acento em vermelho/laranja (urgência)
+• Formato: 9:16 Stories / WhatsApp Status`
+    },
+  ];
+}
 </script>
+
+<div id="copyBriefOverlay" class="brief-overlay" onclick="fecharCopyBrief_()"></div>
+<div id="copyBriefDrawer" class="brief-drawer">
+  <div id="copyBriefContent"></div>
+</div>
 </body>
 </html>
