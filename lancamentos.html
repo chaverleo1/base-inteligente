@@ -3280,13 +3280,17 @@ function renderMapaBairroFiltros_() {
   if (!bairros.length) { section.style.display = 'none'; return; }
   section.style.display = '';
   const todosOn = _mapaBairrosAtivos.size === 0;
-  let html = `<button type="button" class="filtro-chip${todosOn ? ' on' : ''}" onclick="limparMapaBairroFiltro_()">Todos (${_mapaRows.length})</button>`;
-  html += bairros.map(b => {
+  let html = `<button type="button" class="filtro-chip${todosOn ? ' on' : ''}" id="_bchip_todos">Todos (${_mapaRows.length})</button>`;
+  html += bairros.map((b, idx) => {
     const qtd = _mapaRows.filter(r => r.bairro === b).length;
     const on  = _mapaBairrosAtivos.has(b);
-    return `<button type="button" class="filtro-chip${on ? ' on' : ''}" onclick="toggleMapaBairroFiltro_(${JSON.stringify(b)})">${b} (${qtd})</button>`;
+    return `<button type="button" class="filtro-chip${on ? ' on' : ''}" data-bidx="${idx}">${b} (${qtd})</button>`;
   }).join('');
   bar.innerHTML = html;
+  bar.querySelector('#_bchip_todos').onclick = limparMapaBairroFiltro_;
+  bar.querySelectorAll('[data-bidx]').forEach(btn => {
+    btn.onclick = () => toggleMapaBairroFiltro_(bairros[+btn.dataset.bidx]);
+  });
 }
 
 function limparMapaBairroFiltro_() {
