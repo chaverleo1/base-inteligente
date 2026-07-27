@@ -489,15 +489,13 @@ input[type=range]::-moz-range-track {
     <div class="step-tag">Pergunta 1 de 3</div>
     <div class="step-title" style="margin-bottom:16px">Qual o <span style="color:var(--accent)">orçamento</span> ideal pra você? Por preço/m² e área útil? <span style="font-size:14px;font-weight:500;color:var(--text)">(Arraste as barras laterais para escolher)</span></div>
 
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text);margin-bottom:8px">Investimento estimado</div>
-        <div id="investimentoComposto" style="font-size:clamp(20px,6vw,32px);font-weight:800;color:var(--orange);letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:break-word">—</div>
-        <div id="investimentoSub" style="font-size:11px;color:var(--text);margin-top:6px;overflow-wrap:break-word">—</div>
+    <div style="background:rgba(79,124,255,.10);border:2px solid var(--accent);border-radius:var(--r);padding:20px 18px;text-align:center;margin-bottom:16px">
+      <div id="cntSituacaoLabel" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Todos os empreendimentos</div>
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:10px">
+        <span id="cntCombo" style="font-size:clamp(52px,18vw,72px);font-weight:800;color:var(--orange);letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums">—</span>
+        <span style="font-size:16px;font-weight:700;color:var(--text)">opções reais</span>
       </div>
-      <div style="flex-shrink:0;background:var(--s2);border:1.5px solid var(--accent);border-radius:var(--r);padding:14px 14px;text-align:center;width:118px;max-width:118px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.4">Temos <span id="cntCombo" style="display:inline-block;font-size:clamp(44px,15vw,60px);font-weight:800;color:var(--orange);letter-spacing:-1px;line-height:1">—</span> opções reais</div>
-      </div>
+      <div style="font-size:13px;color:var(--text);margin-top:6px">com apartamento no seu perfil</div>
     </div>
 
     <div class="slider-card" style="margin-bottom:10px">
@@ -507,6 +505,7 @@ input[type=range]::-moz-range-track {
       <div class="slider-label-row">
         <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
       </div>
+      <div class="slider-card-hint" id="precoFaixaSub">—</div>
     </div>
 
     <div class="slider-card">
@@ -944,10 +943,14 @@ function selecionarOpt(grupo, el, val) {
   D[grupo] = val;
 }
 
+const SITUACAO_LABEL_ = { todos: 'Todos os empreendimentos', pronto_novo: 'Somente Prontos Novos', em_obras: 'Somente Em Obras' };
+
 function selecionarSituacao_(el, val) {
   document.querySelectorAll('#tagsSituacao .tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.filtroSituacao = val;
+  const lbl = document.getElementById('cntSituacaoLabel');
+  if (lbl) lbl.textContent = SITUACAO_LABEL_[val] || 'Todos os empreendimentos';
   montarStatsAbertura_();
   if (D.precoAlvo && D.metragemAlvo) atualizarComboUI_();
 }
@@ -1094,10 +1097,10 @@ function atualizarMetragem(val) {
 // teaser e o match final.
 function atualizarComboUI_() {
   if (!D.precoAlvo || !D.metragemAlvo) return;
-  document.getElementById('investimentoComposto').textContent = formatBRL_(D.precoAlvo);
   const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
   const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
-  document.getElementById('investimentoSub').textContent = `Faixa aceita: ${min} a ${max}`;
+  document.getElementById('precoFaixaSub').textContent =
+    `A gente também considera apartamentos com investimento um pouco menor ou maior: de ${min} a ${max}`;
 
   const n = filtrados().length;
   animar('cntCombo', n);
