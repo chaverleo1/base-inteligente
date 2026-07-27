@@ -1022,31 +1022,89 @@ let _alvoBuscaQuery = '';
 let _alvoSelecionado = null;
 let _alvoResultadosBusca_ = [];
 
+// Monta o mix de 7 ofertas a partir do produto alvo selecionado.
+// Toda seleção é relativa ao preço do alvo (alvoPreco): ALVO_2/3 buscam
+// produtos no mesmo bracket de preço; ISCA é a melhor tração na faixa
+// imediatamente abaixo; ANCORA_INF cria contraste de preço.
+// Isso evita que um Alvo de R$ 1M ganhe uma Isca de R$ 280k — produtos
+// de padrões totalmente diferentes não se reforçam na apresentação.
 function selecionarMixPorAlvo_(alvoItem, todosItens) {
   const situacaoAlvo = SITUACAO_ABA_STATUS_['NOVOS'].includes(alvoItem.e.status) ? 'NOVOS' : 'NA_PLANTA';
   const statusAlvo = new Set(SITUACAO_ABA_STATUS_[situacaoAlvo]);
-  const pool = todosItens.filter(it => statusAlvo.has(it.e.status) && it.comp > 0);
-  if (pool.length < 2) return { papeis: { ALVO_1: alvoItem }, aviso: 'Poucos empreendimentos na base para montar o mix completo.' };
+  const alvoPreco  = alvoItem.menorPreco || 0;
+  const alvoPadrao = alvoItem.padrao || '';
+
+  // Pool: mesma situação (novo/planta), tração positiva, excluindo o alvo
+  const pool = todosItens.filter(it =>
+    statusAlvo.has(it.e.status) && it.comp > 0 && it.e.idLancamento !== alvoItem.e.idLancamento
+  );
+  if (!pool.length) return { papeis: { ALVO_1: alvoItem }, aviso: 'Base insuficiente para montar o mix completo.' };
 
   const usados = new Set([alvoItem.e.idLancamento]);
-  const disponiveis = () => pool.filter(c => !usados.has(c.e.idLancamento));
   const usar = item => { usados.add(item.e.idLancamento); return item; };
-  const porTracao = () => [...disponiveis()].sort((a, b) => b.comp - a.comp);
-  const porPreco  = () => [...disponiveis()].sort((a, b) => a.menorPreco - b.menorPreco);
+  const disp = () => pool.filter(c => !usados.has(c.e.idLancamento));
+
+  // Filtra disponíveis por faixa proporcional ao preço do alvo
+  const faixaP = (minR, maxR) =>
+    disp().filter(it => it.menorPreco > 0 && it.menorPreco >= alvoPreco * minR && it.menorPreco <= alvoPreco * maxR);
+
+  // Ordenação: mesmo padrão do alvo primeiro → maior tração
+  const porPadraoTracao = arr =>
+    [...arr].sort((a, b) =>
+      (b.padrao === alvoPadrao ? 1 : 0) - (a.padrao === alvoPadrao ? 1 : 0) || b.comp - a.comp
+    );
 
   const papeis = {};
   papeis.ALVO_1 = alvoItem;
-  const t2 = porTracao(); papeis.ALVO_2 = t2.length ? usar(t2[0]) : null;
-  const t3 = porTracao(); papeis.ALVO_3 = t3.length ? usar(t3[0]) : null;
-  const p1 = porPreco();  papeis.ISCA = p1.length ? usar(p1[0]) : null;
-  const p2 = porPreco();  papeis.ANCORA_INF = p2.length ? usar(p2[0]) : null;
-  const tipoAlvo1 = tipoImovelDominante_(alvoItem.e.unidades);
-  const restantes = disponiveis();
-  papeis.COMPLEMENTAR = restantes.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo1) || restantes[0] || null;
+
+  // ÂNCORA SUPERIOR: produto >5% acima do alvo — faz o alvo parecer acessível
+  // Usa o mais barato acima do limiar para não assustar o cliente
+  const acima = disp().filter(it => it.menorPreco > alvoPreco * 1.05).sort((a, b) => a.menorPreco - b.menorPreco);
+  papeis.ANCORA_SUP = acima.length ? usar(acima[0]) : null;
+
+  // ALVO_2 & ALVO_3: mesmo bracket de preço do alvo (65–155%), mesmo padrão preferido
+  // São os produtos que você realmente quer vender junto com ALVO_1
+  const c2 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_2 = c2.length ? usar(c2[0]) : null;
+  const c3 = porPadraoTracao(faixaP(0.65, 1.55));
+  // Fallback ALVO_3: se não há mais no bracket, usa o de maior tração disponível
+  papeis.ALVO_3 = c3.length ? usar(c3[0])
+    : ([...disp()].sort((a, b) => b.comp - a.comp)[0] ? usar([...disp()].sort((a, b) => b.comp - a.comp)[0]) : null);
+
+  // ISCA: melhor tração na faixa de 40–88% do alvo — ponto de entrada que
+  // atrai o mesmo perfil de cliente sem ser barato demais
+  const ci = [...faixaP(0.40, 0.88)].sort((a, b) => b.comp - a.comp);
+  if (ci.length) {
+    papeis.ISCA = usar(ci[0]);
+  } else {
+    // Fallback: produto mais caro disponível abaixo do alvo (mais próximo do perfil)
+    const abaixo = disp().filter(it => it.menorPreco > 0 && it.menorPreco < alvoPreco).sort((a, b) => b.menorPreco - a.menorPreco);
+    papeis.ISCA = abaixo.length ? usar(abaixo[0]) : null;
+  }
+
+  // ÂNCORA INFERIOR: produto na faixa de 20–62% do alvo — cria contraste de
+  // preço e faz o alvo parecer melhor custo-benefício por comparação
+  const cai = [...faixaP(0.20, 0.62)].sort((a, b) => a.menorPreco - b.menorPreco);
+  if (cai.length) {
+    papeis.ANCORA_INF = usar(cai[0]);
+  } else {
+    const abaixo = disp().filter(it => it.menorPreco > 0 && it.menorPreco < alvoPreco).sort((a, b) => a.menorPreco - b.menorPreco);
+    papeis.ANCORA_INF = abaixo.length ? usar(abaixo[0]) : null;
+  }
+
+  // COMPLEMENTAR: tipo de imóvel diferente do alvo, ou melhor tração restante
+  const tipoAlvo = tipoImovelDominante_(alvoItem.e.unidades);
+  const restantes = disp();
+  papeis.COMPLEMENTAR = restantes.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo) || restantes[0] || null;
   if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
-  const acima = pool.filter(c => !usados.has(c.e.idLancamento) && c.menorPreco > alvoItem.menorPreco);
-  papeis.ANCORA_SUP = acima.length ? acima.sort((a, b) => a.menorPreco - b.menorPreco)[0] : null;
-  return { papeis, aviso: null };
+
+  // Aviso quando o mix ficou incompleto por escassez no segmento
+  const vazios = ['ALVO_2','ALVO_3','ISCA','ANCORA_INF','ANCORA_SUP','COMPLEMENTAR'].filter(r => !papeis[r]);
+  const aviso = vazios.length >= 2
+    ? `Mix parcial: base tem poucos empreendimentos no segmento de preço do alvo. ${vazios.length} papel(éis) sem produto correspondente.`
+    : null;
+
+  return { papeis, aviso };
 }
 
 function renderMixProdutoAlvo_() {
