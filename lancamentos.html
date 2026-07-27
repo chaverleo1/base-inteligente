@@ -67,6 +67,9 @@ a { text-decoration: none; color: inherit; }
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
    baixos que os padrões do resto da tela. */
+.mapa-bairro-section { margin-top: 12px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; }
+.mapa-bairro-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
+.mapa-bairro-section .filtro-chip { padding: 3px 10px; font-size: 11px; }
 .mapa-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .mapa-toolbar .filtro-chip { padding: 3px 10px; font-size: 11px; }
 .btn-imprimir-lista { padding: 3px 12px; border-radius: 99px; border: 1px solid var(--border2); background: var(--surface);
@@ -769,6 +772,10 @@ select.form-input option { background: var(--surface2); }
   <div class="sec-header">
     <div class="sec-title">Mapa Geral</div>
     <div class="sec-sub">Todos os lançamentos cadastrados lado a lado — clique num Estágio pra filtrar (múltipla escolha), numa coluna pra ordenar, numa linha pra editar. Marque itens na primeira coluna pra imprimir só eles em PDF.</div>
+    <div class="mapa-bairro-section" id="mapa-bairro-section" style="display:none">
+      <div class="mapa-bairro-label">Filtrar por bairro</div>
+      <div class="filtro-bar" id="mapa-bairro-filtros"></div>
+    </div>
     <div class="mapa-toolbar">
       <div class="filtro-bar" id="mapa-estagio-filtros"></div>
       <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
@@ -2192,7 +2199,8 @@ async function salvarLancamento() {
 // ─── CARREGAR LISTA ───────────────────────────────────────────────────────────
 let _todos = [], _filtroStatus = '', _emps = [];
 let _mapaRows = [], _mapaSort = { campo: null, dir: 'desc' };
-let _mapaEstagiosAtivos = new Set(); // vazio = mostra todos (mesma convenção do filtro-bar de status da lista de cards)
+let _mapaEstagiosAtivos = new Set();
+let _mapaBairrosAtivos  = new Set(); // vazio = mostra todos
 
 let _listaPadroes = [];
 let _listaModelos = [];
@@ -3201,12 +3209,14 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam, l
       prazo: parseInt(e.prazoMaximo, 10) || 0,
       prazoVenda: prazoDeVendaMeses_(e.dataLancamento),
       prazoLancEntrega: calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega),
+      bairro: e.bairro || '—',
     };
   });
-  // Recarregou os dados -- reseta a seleção de Estágio e de itens marcados
-  // (índices/estágios talvez nem existam mais no dataset novo).
+  // Recarregou os dados -- reseta filtros e seleção.
   _mapaEstagiosAtivos = new Set();
+  _mapaBairrosAtivos  = new Set();
   _mapaSelecionados = new Set();
+  renderMapaBairroFiltros_();
   renderMapaEstagioFiltros_();
   renderMapaGeral_();
 }
@@ -3262,6 +3272,36 @@ function toggleMapaEstagioFiltro_(estagios) {
   renderMapaGeral_();
 }
 
+function renderMapaBairroFiltros_() {
+  const section = document.getElementById('mapa-bairro-section');
+  const bar = document.getElementById('mapa-bairro-filtros');
+  if (!bar || !section) return;
+  const bairros = [...new Set(_mapaRows.map(r => r.bairro).filter(b => b && b !== '—'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  if (!bairros.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  const todosOn = _mapaBairrosAtivos.size === 0;
+  let html = `<button type="button" class="filtro-chip${todosOn ? ' on' : ''}" onclick="limparMapaBairroFiltro_()">Todos (${_mapaRows.length})</button>`;
+  html += bairros.map(b => {
+    const qtd = _mapaRows.filter(r => r.bairro === b).length;
+    const on  = _mapaBairrosAtivos.has(b);
+    return `<button type="button" class="filtro-chip${on ? ' on' : ''}" onclick="toggleMapaBairroFiltro_(${JSON.stringify(b)})">${b} (${qtd})</button>`;
+  }).join('');
+  bar.innerHTML = html;
+}
+
+function limparMapaBairroFiltro_() {
+  _mapaBairrosAtivos = new Set();
+  renderMapaBairroFiltros_();
+  renderMapaGeral_();
+}
+
+function toggleMapaBairroFiltro_(bairro) {
+  if (_mapaBairrosAtivos.has(bairro)) _mapaBairrosAtivos.delete(bairro);
+  else _mapaBairrosAtivos.add(bairro);
+  renderMapaBairroFiltros_();
+  renderMapaGeral_();
+}
+
 function mapaCampoValor_(r, campo) {
   if (campo === 'id')          return r.idEmpreendimento;
   if (campo === 'nome')        return r.nome.toLowerCase();
@@ -3312,10 +3352,11 @@ function renderMapaGeral_() {
   // depende disso), não pro índice dentro do resultado filtrado/ordenado.
   let linhas = _mapaRows
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => !_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio));
+    .filter(({ r }) => (!_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio))
+                    && (!_mapaBairrosAtivos.size  || _mapaBairrosAtivos.has(r.bairro)));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento com esse Estágio.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
