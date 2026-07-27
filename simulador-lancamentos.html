@@ -358,6 +358,24 @@ input[type=range]::-moz-range-track {
 .conf-btns { display: flex; gap: 8px; margin-top: 16px; }
 .conf-btn-ref { flex: 1; }
 .conf-btn-sim { flex: 2; }
+
+/* ── TAG BUTTONS (filtros de seleção rápida) ─────────────────────────── */
+.tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-btn {
+  display: inline-flex; align-items: center; padding: 10px 18px;
+  border: 1.5px solid var(--border2); border-radius: 99px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.tag-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tag-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
+.ajustar-btn {
+  display: inline-flex; align-items: center; gap: 6px; background: none;
+  border: 1px solid var(--border2); border-radius: 99px; padding: 7px 14px;
+  font-size: 12px; font-weight: 600; color: var(--text2);
+  cursor: pointer; font-family: inherit; margin-bottom: 16px; transition: all .15s;
+}
+.ajustar-btn:hover { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -432,15 +450,20 @@ input[type=range]::-moz-range-track {
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
           <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
-          <span style="font-size:13px;color:var(--text)">Prontos, Novos, Em obras, Na planta — pra você escolher</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
-          <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
           <span style="font-size:13px;color:var(--text)">Dados reais — com o que temos disponível na grande Goiânia e região</span>
         </div>
         <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(79,124,255,.10);border-radius:var(--r-sm);border:1.5px solid var(--accent)">
           <svg width="16" height="16" style="color:var(--accent);flex-shrink:0"><use href="#ico-check"/></svg>
           <span style="font-size:13px;font-weight:700;color:var(--text)">Você no controle! Só vai receber atendimento humano se confirmar no final.</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding:16px 18px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r)">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Qual situação ideal do imóvel pra você?</div>
+        <div class="tag-group" id="tagsSituacao">
+          <button class="tag-btn on" onclick="selecionarSituacao_(this,'todos')">Todos</button>
+          <button class="tag-btn" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto Novo</button>
+          <button class="tag-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
         </div>
       </div>
     </div>
@@ -469,7 +492,7 @@ input[type=range]::-moz-range-track {
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
       <div style="flex:1;min-width:0">
         <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text);margin-bottom:8px">Investimento estimado</div>
-        <div id="investimentoComposto" style="font-size:clamp(20px,6vw,32px);font-weight:800;color:var(--accent);letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:break-word">—</div>
+        <div id="investimentoComposto" style="font-size:clamp(20px,6vw,32px);font-weight:800;color:var(--orange);letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:break-word">—</div>
         <div id="investimentoSub" style="font-size:11px;color:var(--text);margin-top:6px;overflow-wrap:break-word">—</div>
       </div>
       <div style="flex-shrink:0;background:var(--s2);border:1.5px solid var(--accent);border-radius:var(--r);padding:14px 14px;text-align:center;width:118px;max-width:118px">
@@ -478,11 +501,11 @@ input[type=range]::-moz-range-track {
     </div>
 
     <div class="slider-card" style="margin-bottom:10px">
-      <div class="slider-card-label">Qual preço por m² do apartamento você considera ideal?</div>
-      <div class="slider-val-atual"><strong id="sliderPrecoM2Txt">—</strong> por m²</div>
-      <input type="range" id="sliderPrecoM2" oninput="atualizarPrecoM2(this.value)">
+      <div class="slider-card-label">Qual o valor total do apartamento que você busca?</div>
+      <div class="slider-val-atual"><strong id="sliderPrecoTxt">—</strong></div>
+      <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
       <div class="slider-label-row">
-        <span id="lblPrecoM2Min">—</span><span id="lblPrecoM2Max">—</span>
+        <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
       </div>
     </div>
 
@@ -513,8 +536,8 @@ input[type=range]::-moz-range-track {
         <div class="conf-item-val" id="confArea">—</div>
       </div>
       <div class="conf-obs">
-        Com o preço por m² de <strong id="confPrecoM2">—</strong><br>
-        Intervalo compatível: <strong id="confFaixa">—</strong>
+        Faixa de investimento (±20%): <strong id="confPrecoFaixa">—</strong><br>
+        Intervalo de área compatível: <strong id="confFaixa">—</strong>
       </div>
     </div>
 
@@ -528,45 +551,26 @@ input[type=range]::-moz-range-track {
   <div class="step" id="step-4">
     <div class="step-tag">Pergunta 3 de 3</div>
     <div class="step-title" id="motivacaoTitulo">O que melhor descreve você hoje?</div>
-    <div class="step-sub">Isso ajuda a gente a entender melhor o seu momento.</div>
-    <div class="options" id="opts-moradia">
-      <div class="opt" onclick="selecionarOpt('moradia',this,'aluguel')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-home"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Quero sair do aluguel</div>
-          <div class="opt-desc">Já ando cansado de pagar aluguel todo mês</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
-      </div>
-      <div class="opt" onclick="selecionarOpt('moradia',this,'proprio')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-swap"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Tenho imóvel próprio</div>
-          <div class="opt-desc">Quero trocar ou comprar um segundo</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
-      </div>
-      <div class="opt" onclick="selecionarOpt('moradia',this,'familia')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-users"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Moro com família ou amigos</div>
-          <div class="opt-desc">É hora de ter meu próprio espaço</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
-      </div>
-      <div class="opt" onclick="selecionarOpt('moradia',this,'investidor')">
-        <div class="opt-icon"><svg width="18" height="18"><use href="#ico-wallet"/></svg></div>
-        <div class="opt-text">
-          <div class="opt-label">Quero investir</div>
-          <div class="opt-desc">Comprar para renda ou valorização</div>
-        </div>
-        <div class="opt-check"><svg width="10" height="10"><use href="#ico-check"/></svg></div>
+    <div class="step-sub" style="margin-bottom:14px">Pode marcar mais de uma opção.</div>
+    <div class="tag-group" id="tagsMoradia">
+      <button class="tag-btn" onclick="toggleMoradia_(this,'aluguel')">Quero sair do aluguel</button>
+      <button class="tag-btn" onclick="toggleMoradia_(this,'proprio')">Tenho imóvel próprio</button>
+      <button class="tag-btn" onclick="toggleMoradia_(this,'familia')">Moro com família ou amigos</button>
+      <button class="tag-btn" onclick="toggleMoradia_(this,'investidor')">Quero investir</button>
+    </div>
+    <div style="margin-top:28px">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
+      <div class="tag-group" id="tagsAltura">
+        <button class="tag-btn" onclick="selecionarAltura_(this,'baixo')">Até o 5º andar</button>
+        <button class="tag-btn" onclick="selecionarAltura_(this,'medio')">Do 5º ao 10º andar</button>
+        <button class="tag-btn" onclick="selecionarAltura_(this,'alto')">Acima do 10º andar</button>
       </div>
     </div>
   </div>
 
   <!-- STEP 5 — RESULTADO PARCIAL (TEASER) -->
   <div class="step" id="step-5">
+    <button class="ajustar-btn" onclick="refinarBusca_()">← Ajustar filtros</button>
     <div class="step-tag">Resultado parcial</div>
     <div class="step-title" id="teaserTitulo">—</div>
     <div class="step-sub">Já escolhemos a opção que mais combina com você.</div>
@@ -593,6 +597,7 @@ input[type=range]::-moz-range-track {
 
   <!-- STEP 6 — MELHOR MATCH / TABELA DE OPÇÕES -->
   <div class="step" id="step-6">
+    <button class="ajustar-btn" onclick="refinarBusca_()">← Ajustar filtros</button>
     <div class="match-header">
       <div class="match-tag">
         <svg width="12" height="12"><use href="#ico-star"/></svg>
@@ -700,7 +705,7 @@ input[type=range]::-moz-range-track {
 // "Condomínio Vertical" entra aqui -- lotes/Condomínio Horizontal já têm o
 // funil próprio em baseimob-funil.html.
 let TODOS_LANC = [];
-let PRECO_M2_BOUNDS = [3000, 9000];
+let PRECO_BOUNDS = [200000, 2000000];
 let AREA_BOUNDS = [40, 140];
 
 function tipoImovelDominanteSimulador_(unidades) {
@@ -753,9 +758,9 @@ async function carregarBaseReal() {
         .map(u => {
           const a = Number(u.areaUtil) || 0;
           const p = Number(u.precoMedio) || 0;
-          return { areaUtil: a, precoM2: (a > 0 && p > 0) ? p / a : 0 };
+          return { areaUtil: a, precoTotal: p, precoM2: (a > 0 && p > 0) ? p / a : 0 };
         })
-        .filter(u => u.areaUtil > 0 && u.precoM2 > 0);
+        .filter(u => u.areaUtil > 0 && u.precoTotal > 0);
       return {
         id: g.idLancamento, nome: g.nomeEmpreendimento || '—',
         regiao: [g.bairro, g.cidade].filter(Boolean).join(' · ') || 'Goiânia',
@@ -771,14 +776,14 @@ async function carregarBaseReal() {
         pctVendido: calcularPercentualVendido(estoque, total),
         temLazer: !!String(g.lazer || '').trim(),
       };
-    }).filter(c => c.areaMin > 0 && c.precoM2 > 0);
+    }).filter(c => c.areaMin > 0 && c.precoAPartir > 0);
 
     if (TODOS_LANC.length) {
-      const precos    = TODOS_LANC.map(c => c.precoM2);
+      const totais  = TODOS_LANC.map(c => c.precoAPartir).filter(v => v > 0);
       const areasMin  = TODOS_LANC.map(c => c.areaMin);
       const areasMax  = TODOS_LANC.map(c => c.areaMax);
-      PRECO_M2_BOUNDS = [Math.floor(Math.min(...precos) / 100) * 100, Math.ceil(Math.max(...precos) / 100) * 100];
-      AREA_BOUNDS     = [Math.floor(Math.min(...areasMin) / 5) * 5, Math.ceil(Math.max(...areasMax) / 5) * 5];
+      PRECO_BOUNDS = [Math.floor(Math.min(...totais) / 25000) * 25000, Math.ceil(Math.max(...totais) / 25000) * 25000];
+      AREA_BOUNDS  = [Math.floor(Math.min(...areasMin) / 5) * 5, Math.ceil(Math.max(...areasMax) / 5) * 5];
     }
   } catch (e) {
     console.error('[simulador] erro ao carregar base real:', e);
@@ -794,7 +799,10 @@ async function carregarBaseReal() {
 function montarStatsAbertura_() {
   const elTotal = document.getElementById('statsTotalEmp');
   if (!elTotal) return;
-  elTotal.textContent = TODOS_LANC.length || '—';
+  const count = D.filtroSituacao === 'todos'
+    ? TODOS_LANC.length
+    : TODOS_LANC.filter(c => matchSituacao_(c.estagio, D.filtroSituacao)).length;
+  elTotal.textContent = count || '—';
 }
 
 // ── SCORE DE TRAÇÃO (versão pública e parcial) ─────────────────────────────
@@ -810,10 +818,10 @@ const TETO_ESTOQUE_VERTICAL = 150;
 const PESO_PRAZO_PUB = 1, PESO_DISP_PUB = 3, PESO_ATRAT_PUB = 4;
 
 function scoreTracaoPublico_(c) {
-  const precos = TODOS_LANC.map(x => x.precoM2).filter(v => v > 0);
-  const minP = precos.length ? Math.min(...precos) : c.precoM2;
-  const maxP = precos.length ? Math.max(...precos) : c.precoM2;
-  const atrat   = (maxP === minP) ? 5 : 10 * (1 - (c.precoM2 - minP) / (maxP - minP));
+  const precos = TODOS_LANC.map(x => x.precoAPartir).filter(v => v > 0);
+  const minP = precos.length ? Math.min(...precos) : c.precoAPartir;
+  const maxP = precos.length ? Math.max(...precos) : c.precoAPartir;
+  const atrat   = (maxP === minP) ? 5 : 10 * (1 - (c.precoAPartir - minP) / (maxP - minP));
   const disp    = Math.min(10, 10 * (c.estoque / TETO_ESTOQUE_VERTICAL));
   const prazoSc = c.prazoPag > 0 ? Math.min(10, 10 * (c.prazoPag / TETO_PRAZO_VERTICAL)) : 0;
   return (prazoSc * PESO_PRAZO_PUB + disp * PESO_DISP_PUB + atrat * PESO_ATRAT_PUB) / (PESO_PRAZO_PUB + PESO_DISP_PUB + PESO_ATRAT_PUB);
@@ -826,9 +834,10 @@ let stepAtual = 0;
 const TOTAL = 9; // steps 0..8
 
 const D = {
-  moradia: null, precoM2Alvo: null, metragemAlvo: null, areaRange: null,
+  filtroSituacao: 'todos', moradias: new Set(), alturaPref: null,
+  precoAlvo: null, metragemAlvo: null, areaRange: null,
   nome: '', whatsapp: '',
-  tsInicio: Date.now(), precoM2Inicial: null, precoM2Final: null,
+  tsInicio: Date.now(), precoInicial: null, precoFinal: null,
   areaInicial: null, areaFinal: null, stepAbandono: null,
   ajustesSlider: 0,
   origemAcesso: new URLSearchParams(location.search).get('utm_source') || 'direto',
@@ -874,10 +883,11 @@ function montarCapturaTitulo_() {
 }
 
 function montarConfirmacao_() {
-  const total = D.metragemAlvo * D.precoM2Alvo;
-  document.getElementById('confOrcamento').textContent = formatBRL_(total);
+  document.getElementById('confOrcamento').textContent = formatBRL_(D.precoAlvo);
   document.getElementById('confArea').textContent = D.metragemAlvo + ' m²';
-  document.getElementById('confPrecoM2').textContent = formatBRL_(D.precoM2Alvo) + '/m²';
+  const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
+  const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
+  document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
 }
 
@@ -916,7 +926,7 @@ function validar() {
     if (!nome) { toast('Informe seu nome para continuar'); return false; }
     D.nome = nome;
   }
-  if (stepAtual === 4 && !D.moradia) { toast('Selecione uma opção para continuar'); return false; }
+  if (stepAtual === 4 && D.moradias.size === 0) { toast('Selecione pelo menos uma opção para continuar'); return false; }
   if (stepAtual === 7) {
     const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
     const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
@@ -934,6 +944,28 @@ function selecionarOpt(grupo, el, val) {
   D[grupo] = val;
 }
 
+function selecionarSituacao_(el, val) {
+  document.querySelectorAll('#tagsSituacao .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.filtroSituacao = val;
+  montarStatsAbertura_();
+  if (D.precoAlvo && D.metragemAlvo) atualizarComboUI_();
+}
+
+function toggleMoradia_(el, val) {
+  el.classList.toggle('on');
+  if (el.classList.contains('on')) D.moradias.add(val);
+  else D.moradias.delete(val);
+}
+
+function selecionarAltura_(el, val) {
+  document.querySelectorAll('#tagsAltura .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.alturaPref = val;
+}
+
+function refinarBusca_() { irParaStep(2); }
+
 // ── FILTRO / MATCH ──────────────────────────────────────────────────────
 // scoreMatchPreferencia_ (distância relativa ao alvo do slider, mesma
 // metodologia de baseimob-funil.html) só ordena -- decide QUEM aparece
@@ -943,40 +975,46 @@ function selecionarOpt(grupo, el, val) {
 // tolerância) que a pessoa pediu -- não basta a MÉDIA/faixa geral do prédio
 // bater por acaso enquanto nenhum apartamento específico atende aos dois
 // critérios ao mesmo tempo.
-const TOLERANCIA_PRECO_M2_UNIDADE_ = 0.18;
+const TOLERANCIA_PRECO_ = 0.20;
 
-function scoreMatchPreferencia_(c, aRange, pM2Alvo) {
+function matchSituacao_(estagio, filtro) {
+  if (filtro === 'pronto_novo') return ['Pronto', 'Pronto novo', 'Entregue'].includes(estagio);
+  if (filtro === 'em_obras')   return ['Em obras', 'Em planta'].includes(estagio);
+  return true;
+}
+
+function scoreMatchPreferencia_(c, aRange, precoAlvo) {
   const userMid  = (aRange[0] + aRange[1]) / 2;
   const cMid     = (c.areaMin + c.areaMax) / 2;
   const aDist    = Math.abs(cMid - userMid) / userMid;
-  const pDist    = Math.abs(c.precoM2 - pM2Alvo) / pM2Alvo;
+  const pDist    = Math.abs(c.precoAPartir - precoAlvo) / precoAlvo;
   const overlap  = c.areaMax >= aRange[0] && c.areaMin <= aRange[1];
   let s = 100 - aDist * 45 - pDist * 45;
   s += overlap ? 12 : -22;
   return Math.max(0, Math.min(100, Math.round(s)));
 }
 
-function temApartamentoCompativel_(c, aRange, pM2Alvo) {
+function temApartamentoCompativel_(c, aRange, precoAlvo) {
   return (c.unidades || []).some(u =>
     u.areaUtil >= aRange[0] && u.areaUtil <= aRange[1] &&
-    Math.abs(u.precoM2 - pM2Alvo) / pM2Alvo <= TOLERANCIA_PRECO_M2_UNIDADE_
+    Math.abs(u.precoTotal - precoAlvo) / precoAlvo <= TOLERANCIA_PRECO_
   );
 }
 
 function rankeados() {
-  if (!D.areaRange || !D.precoM2Alvo) return [];
+  if (!D.areaRange || !D.precoAlvo) return [];
   return TODOS_LANC
     .map(c => ({
       ...c,
-      matchPref: scoreMatchPreferencia_(c, D.areaRange, D.precoM2Alvo),
+      matchPref: scoreMatchPreferencia_(c, D.areaRange, D.precoAlvo),
       tracao: scoreTracaoPublico_(c),
-      compativel: temApartamentoCompativel_(c, D.areaRange, D.precoM2Alvo),
+      compativel: temApartamentoCompativel_(c, D.areaRange, D.precoAlvo),
     }))
     .sort((a, b) => b.matchPref !== a.matchPref ? b.matchPref - a.matchPref : b.tracao - a.tracao);
 }
 
 function filtrados() {
-  return rankeados().filter(c => c.compativel);
+  return rankeados().filter(c => c.compativel && matchSituacao_(c.estagio, D.filtroSituacao));
 }
 
 // ── SLIDERS ──────────────────────────────────────────────────────────────
@@ -1005,12 +1043,12 @@ function formatBRL_(v) {
 let slidersProntos_ = false;
 
 function inicializarSliders() {
-  const sP = document.getElementById('sliderPrecoM2');
-  sP.min = PRECO_M2_BOUNDS[0]; sP.max = PRECO_M2_BOUNDS[1]; sP.step = 50;
-  sP.value = Math.round((PRECO_M2_BOUNDS[0] + PRECO_M2_BOUNDS[1]) / 2);
-  document.getElementById('lblPrecoM2Min').textContent = formatBRL_(PRECO_M2_BOUNDS[0]) + '/m²';
-  document.getElementById('lblPrecoM2Max').textContent = formatBRL_(PRECO_M2_BOUNDS[1]) + '/m²';
-  atualizarPrecoM2(sP.value);
+  const sP = document.getElementById('sliderPreco');
+  sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
+  sP.value = Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
+  document.getElementById('lblPrecoMin').textContent = formatBRL_(PRECO_BOUNDS[0]);
+  document.getElementById('lblPrecoMax').textContent = formatBRL_(PRECO_BOUNDS[1]);
+  atualizarPreco(sP.value);
 
   const sM = document.getElementById('sliderMetragem');
   sM.min = AREA_BOUNDS[0]; sM.max = AREA_BOUNDS[1]; sM.step = 5;
@@ -1022,12 +1060,12 @@ function inicializarSliders() {
   slidersProntos_ = true;
 }
 
-function atualizarPrecoM2(val) {
+function atualizarPreco(val) {
   const v = parseInt(val);
-  if (D.precoM2Inicial === null) D.precoM2Inicial = v;
+  if (D.precoInicial === null) D.precoInicial = v;
   if (slidersProntos_) D.ajustesSlider++;
-  D.precoM2Alvo = v; D.precoM2Final = v;
-  document.getElementById('sliderPrecoM2Txt').textContent = formatBRL_(v);
+  D.precoAlvo = v; D.precoFinal = v;
+  document.getElementById('sliderPrecoTxt').textContent = formatBRL_(v);
   atualizarComboUI_();
 }
 
@@ -1055,11 +1093,11 @@ function atualizarMetragem(val) {
 // -- usa a mesma filtrados()/temApartamentoCompativel_ que já alimenta o
 // teaser e o match final.
 function atualizarComboUI_() {
-  if (!D.precoM2Alvo || !D.metragemAlvo) return;
-  const total = D.metragemAlvo * D.precoM2Alvo;
-  document.getElementById('investimentoComposto').textContent = formatBRL_(total);
-  document.getElementById('investimentoSub').textContent =
-    `Considerando ${formatBRL_(D.precoM2Alvo)} por m² num apartamento de ${D.metragemAlvo}m²`;
+  if (!D.precoAlvo || !D.metragemAlvo) return;
+  document.getElementById('investimentoComposto').textContent = formatBRL_(D.precoAlvo);
+  const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
+  const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
+  document.getElementById('investimentoSub').textContent = `Faixa aceita: ${min} a ${max}`;
 
   const n = filtrados().length;
   animar('cntCombo', n);
@@ -1068,7 +1106,7 @@ function atualizarComboUI_() {
 // ── SCORE DE COMPATIBILIDADE (perfil geral, pro teaser) ────────────────────
 function scoreCompatibilidade() {
   let s = 60;
-  if (D.moradia === 'aluguel') s += 14;
+  if (D.moradias.has('aluguel')) s += 14;
   const cnt = filtrados().length;
   s += cnt >= 6 ? 10 : cnt >= 3 ? 5 : 0;
   const top = rankeados()[0];
@@ -1156,9 +1194,9 @@ function submeter() {
       pctVendido: c.pctVendido, matchPref: c.matchPref, tracao: Math.round(c.tracao * 10) / 10,
     }))),
     tags: JSON.stringify({
-      moradia: D.moradia,
-      precoM2Alvo: D.precoM2Alvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
-      precoM2Inicial: D.precoM2Inicial, precoM2Final: D.precoM2Final,
+      moradias: [...D.moradias], alturaPref: D.alturaPref, filtroSituacao: D.filtroSituacao,
+      precoAlvo: D.precoAlvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
+      precoInicial: D.precoInicial, precoFinal: D.precoFinal,
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
       tempoSegundos: Math.round((Date.now() - D.tsInicio) / 1000),
       ajustesSlider: D.ajustesSlider, origemAcesso: D.origemAcesso,
@@ -1258,9 +1296,15 @@ function montarMatch() {
     return `
       <div class="opcao-row">
         <div class="opcao-rank">${i+1}</div>
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="opcao-codigo">${c.id || '—'}</div>
           <div class="opcao-row-info">${situacaoBadgeHTML_(c.estagio)} · ${c.areaMin}-${c.areaMax}m² · ${c.regiao} - A partir de <span style="color:var(--orange);font-weight:800">${formatBRL_(c.precoAPartir)}</span></div>
+          <div style="margin-top:6px">
+            <div style="font-size:11px;color:var(--text);margin-bottom:3px">${c.pctVendido}% vendido</div>
+            <div style="height:6px;background:var(--s3);border-radius:99px;overflow:hidden">
+              <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
+            </div>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -1284,7 +1328,7 @@ function montarAgradecimento() {
     linhasProjecao.push(['Empreendimentos com o apartamento que você busca', `<span style="color:var(--accent);font-weight:700">${total} empreendimento${total>1?'s':''}</span>`]);
   }
   if (menorPreco) {
-    linhasProjecao.push([`Preço por m² até ${formatBRL_(D.precoM2Alvo)}`, `Encontrado a partir de ${formatBRL_(menorPreco)}`]);
+    linhasProjecao.push([`Investimento estimado: ${formatBRL_(D.precoAlvo)}`, `Encontrado a partir de ${formatBRL_(menorPreco)}`]);
   }
   if (maiorArea) {
     linhasProjecao.push([`Apartamento de ${D.metragemAlvo} m² (±20%: ${D.areaRange[0]}–${D.areaRange[1]} m²)`, `Disponível até ${maiorArea} m² dentro do perfil`]);
@@ -1314,16 +1358,19 @@ function montarAgradecimento() {
   }
 
   const moradiaMap = { aluguel:'Quero sair do aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família', investidor:'Quero investir' };
+  const alturaMap  = { baixo:'Até o 5º andar', medio:'Do 5º ao 10º andar', alto:'Acima do 10º andar' };
+  const moradiasStr = D.moradias.size ? [...D.moradias].map(k => moradiaMap[k] || k).join(', ') : '—';
 
   document.getElementById('perfilResumo').innerHTML = [
-    ['Situação atual', moradiaMap[D.moradia] || '—'],
-    ['Apartamento — preço por m²', formatBRL_(D.precoM2Alvo) + '/m²'],
+    ['Situação atual', moradiasStr],
+    ['Investimento estimado', formatBRL_(D.precoAlvo)],
     ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
+    ['Andar preferido', alturaMap[D.alturaPref] || '—'],
   ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
 
   const msg = encodeURIComponent(
     'Olá Leonardo! Acabei de confirmar no simulador. ' +
-    `Estou buscando um apartamento com preço por m² até ${formatBRL_(D.precoM2Alvo)}, metragem de ${D.metragemAlvo}m² (considerando ${D.areaRange[0]} a ${D.areaRange[1]}m²)` +
+    `Estou buscando um apartamento com investimento estimado de ${formatBRL_(D.precoAlvo)}, metragem de ${D.metragemAlvo}m² (considerando ${D.areaRange[0]} a ${D.areaRange[1]}m²)` +
     (total ? `. O simulador encontrou ${total} empreendimento${total>1?'s':''} com esse apartamento — pode me enviar os detalhes?` : '. Pode me enviar os detalhes?')
   );
   document.getElementById('whatsLink').href = 'https://wa.me/' + WHATSAPP_NUM + '?text=' + msg;
