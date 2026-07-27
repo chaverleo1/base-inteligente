@@ -448,7 +448,7 @@ input[type=range]::-moz-range-track {
 
   <!-- STEP 1 — NOME -->
   <div class="step" id="step-1">
-    <div class="step-tag">Pergunta 1 de 3</div>
+    <div class="step-tag">Pergunta 2 de 3</div>
     <div class="step-title">Como podemos te chamar?</div>
     <div class="step-sub">Só o primeiro nome já basta.</div>
     <div class="form-field">
@@ -463,7 +463,7 @@ input[type=range]::-moz-range-track {
        logo abaixo, tudo atualizando em tempo real junto). Vem ANTES do nome
        agora -- pega o dado técnico primeiro, personalização vem depois. -->
   <div class="step" id="step-2">
-    <div class="step-tag">Pergunta 2 de 3</div>
+    <div class="step-tag">Pergunta 1 de 3</div>
     <div class="step-title" style="margin-bottom:16px">Qual o <span style="color:var(--accent)">orçamento</span> ideal pra você? Por preço/m² e área útil? <span style="font-size:14px;font-weight:500;color:var(--text)">(Arraste as barras laterais para escolher)</span></div>
 
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
@@ -836,12 +836,9 @@ const D = {
 
 // ── PROGRESSO ────────────────────────────────────────────────────────────
 function atualizarProgresso() {
-  // 3 perguntas: step 1 (nome), step 2 (sliders), step 4 (motivação)
-  // step 3 (confirmação) conta como Q2 já respondida (está entre sliders e motivação)
-  let n = 0;
-  if (stepAtual >= 2) n = 1; // nome respondido
-  if (stepAtual >= 3) n = 2; // sliders respondidos
-  if (stepAtual >= 5) n = 3; // motivação respondida
+  // Fluxo: 0(capa) → 2(sliders/P1) → 3(conf) → 1(nome/P2) → 4(motiv/P3) → 5+
+  const PROG = { 0:0, 2:0, 3:1, 1:1, 4:2, 5:3, 6:3, 7:3, 8:3 };
+  const n = PROG[stepAtual] ?? 0;
   document.getElementById('progressFill').style.width = (n / 3 * 100) + '%';
   document.getElementById('progressStep').textContent = n + ' / 3';
 }
@@ -859,9 +856,10 @@ function irParaStep(n) {
 function avancarStep() {
   if (!validar()) return;
 
-  if (stepAtual === 0) { irParaStep(1); return; }
-  if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }
-  if (stepAtual === 3) { montarMotivacaoTitulo_(); irParaStep(4); return; }
+  if (stepAtual === 0) { irParaStep(2); return; }                           // capa → sliders
+  if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
+  if (stepAtual === 3) { irParaStep(1); return; }                           // confirmação → nome
+  if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
   if (stepAtual === 4) { montarTeaser(); irParaStep(5); return; }
   if (stepAtual === 5) { montarMatch(); irParaStep(6); return; }
   if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
@@ -894,7 +892,9 @@ function refazerSliders() {
 }
 
 function voltarStep() {
-  if (stepAtual > 1) irParaStep(stepAtual - 1);
+  if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
+  if (stepAtual === 4) { irParaStep(1); return; } // motivação → nome
+  if (stepAtual > 2) irParaStep(stepAtual - 1);
 }
 
 function atualizarBotoes() {
@@ -903,7 +903,8 @@ function atualizarBotoes() {
   // step 3 (confirmação) tem Sim/Refazer inline; steps 5..8 têm botões próprios
   const comBotaoInline = stepAtual === 3 || stepAtual >= 5;
   bA.classList.toggle('btn-hide', comBotaoInline);
-  bV.classList.toggle('btn-hide', comBotaoInline || stepAtual <= 1 || stepAtual === 8);
+  // Voltar visível em: step 1 (nome→confirmação) e step 4 (motivação→nome)
+  bV.classList.toggle('btn-hide', comBotaoInline || stepAtual === 0 || stepAtual === 2 || stepAtual === 8);
 
   bA.textContent = stepAtual === 0 ? 'Começar' : 'Próximo';
 }
