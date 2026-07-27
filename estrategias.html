@@ -1554,7 +1554,8 @@ function renderCopyBriefContent_(item, papel) {
   const areaStr = areaMax > areaMin && areaMin > 0 ? `${areaMin}–${areaMax} m²`
                 : areaMin > 0 ? `${areaMin} m²` : '';
 
-  const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel };
+  const empId = e.idEmpreendimento || '';
+  const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId };
   const briefs = gerarCopyBriefs_(item, papel, ctx);
 
   const corsBrief = [
@@ -1586,12 +1587,15 @@ function renderCopyBriefContent_(item, papel) {
 }
 
 function gerarCopyBriefs_(item, papel, ctx) {
-  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel } = ctx;
+  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId } = ctx;
   const estoqueStr = estoque !== null ? `${estoque} unidade${estoque !== 1 ? 's' : ''} disponíve${estoque !== 1 ? 'is' : 'l'}` : 'estoque limitado';
   const pctStr = pctVendido !== null ? `${pctVendido}% já vendido` : '';
   const areaInfo = areaStr ? ` · ${areaStr}` : '';
   const entregaInfo = entrega ? `Entrega: ${entrega}` : (['Pronto', 'Pronto novo', 'Entregue'].includes(situacao) ? 'Pronto para morar' : '');
   const isAlto = padrao === 'Alto Padrão' || padrao === 'Luxo';
+  const idBloco = empId
+    ? `\n\nID DO EMPREENDIMENTO — obrigatório na arte\nCódigo: ${empId}\n• Posicionar em canto discreto (ex: rodapé ou canto inferior direito)\n• Fonte pequena, cor neutra — visível mas sem chamar atenção\n• Permite rastrear qual criativo gerou retorno quando o lead entrar em contato`
+    : '';
 
   return [
     {
@@ -1618,7 +1622,7 @@ DIREÇÃO VISUAL PARA O DESIGNER
 • Efeito de "tarja censura" ou adesivo sobre onde ficaria o nome
 • Tipografia pesada, grande — tom de suspense cinematográfico
 • Paleta: preto + cinza + 1 acento (dourado ou azul elétrico)
-• Formato: 9:16 Stories / WhatsApp Status`
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`
     },
     {
       linha: 'Estilo de Vida & Aspiração',
@@ -1645,7 +1649,7 @@ DIREÇÃO VISUAL PARA O DESIGNER
 • Tipografia leve, fina, moderna — sans-serif elegante
 • Paleta clara: branco, bege, verde-água ou azul suave
 • Texto mínimo — a imagem carrega a emoção
-• Formato: 9:16 Stories / WhatsApp Status`
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`
     },
     {
       linha: 'Dados & Urgência',
@@ -1671,7 +1675,7 @@ DIREÇÃO VISUAL PARA O DESIGNER
 • ${pctStr ? 'Incluir barra de progresso visual representando o percentual vendido' : 'Incluir ícone de escassez (relógio, contador, seta descendente)'}
 • Estilo sóbrio, direto — menos foto, mais dado
 • Paleta: fundo escuro + texto branco + acento em vermelho/laranja (urgência)
-• Formato: 9:16 Stories / WhatsApp Status`
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`
     },
   ];
 }
