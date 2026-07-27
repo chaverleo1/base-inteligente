@@ -135,6 +135,20 @@ a { text-decoration: none; color: inherit; }
 .situacao-badge.novo      { background:rgba(0,212,170,.15); color:var(--accent2); border:1px solid rgba(0,212,170,.3); }
 .situacao-badge.na-planta { background:rgba(79,124,255,.15); color:var(--accent);  border:1px solid rgba(79,124,255,.3); }
 
+.alvo-search-wrap { position: relative; margin-bottom: 20px; }
+.alvo-search-input { width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif; outline: none; box-sizing: border-box; }
+.alvo-search-input:focus { border-color: var(--accent); }
+.alvo-search-input::placeholder { color: var(--text3); }
+.alvo-results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); max-height: 260px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.alvo-result-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.alvo-result-item:hover { background: var(--surface2); }
+.alvo-result-item:last-child { border-bottom: none; }
+.alvo-result-nome { font-size: 13px; font-weight: 600; color: var(--text); }
+.alvo-result-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.alvo-selecionado { background: rgba(0,212,170,.07); border: 1.5px solid var(--accent2); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.alvo-selecionado-nome { font-weight: 700; font-size: 14px; color: var(--text); }
+.alvo-selecionado-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(15,17,23,.85); z-index: 9500;
   display: none; align-items: center; justify-content: center; padding: 20px;
@@ -236,6 +250,7 @@ a { text-decoration: none; color: inherit; }
       <div class="situacao-tabs" id="situacaoTabs" style="display:none">
         <button class="situacao-tab active" id="tabAbaNovos" onclick="setSituacaoAba_('NOVOS')">NOVOS <span class="situacao-tab-count" id="countAbaNovos"></span></button>
         <button class="situacao-tab" id="tabAbaNaPlanta" onclick="setSituacaoAba_('NA_PLANTA')">NA PLANTA <span class="situacao-tab-count" id="countAbaNaPlanta"></span></button>
+        <button class="situacao-tab" id="tabAbaProdutoAlvo" onclick="setSituacaoAba_('PRODUTO_ALVO')">PRODUTO ALVO <span class="situacao-tab-count" id="countAbaProdutoAlvo"></span></button>
       </div>
     </div>
     <div class="sec-sub">Mix estratégico de 7 ofertas por Padrão/Faixa de preço — calculado ao vivo a partir do Score de Tração e Similaridade já usados em Lançamentos. NOVOS (prontos/entregues) e NA PLANTA (em obras/lançamentos) nunca se misturam no mesmo mix.</div>
@@ -246,6 +261,7 @@ a { text-decoration: none; color: inherit; }
   <div id="blocosSegmentos">
     <div class="vazio-segmento">Carregando...</div>
   </div>
+  <div id="blocoProdutoAlvo" style="display:none"></div>
 </div>
 
 <!-- MODAL EXPORTAÇÃO -->
@@ -743,8 +759,8 @@ function segmentoLabelDisplay_(seg) {
 // padrões juntos. A segmentação/mix interno continua com os 2 padrões
 // separados (faixas de preço próprias, títulos de segmento "Alto Padrão
 // .../Luxo ..." continuam distintos) -- só o CHIP de filtro mescla.
-const PADRAO_GRUPO_FILTRO_ = { 'Popular': 'Popular', 'Médio': 'Médio', 'Alto': 'Alto', 'Luxo': 'Alto' };
-const ORDEM_GRUPOS_FILTRO_ = ['Popular', 'Médio', 'Alto'];
+const PADRAO_GRUPO_FILTRO_ = { 'Popular': 'Popular', 'Médio': 'Médio', 'Alto': 'Alto', 'Luxo': 'Luxo' };
+const ORDEM_GRUPOS_FILTRO_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
 // Letras na ordem barato->caro pro número de faixas decidido pro padrão --
 // usada tanto aqui quanto na hora de montar a ordem de segmentos pro render
 // (ANCORA_SUP depende dessa ordem refletir a granularidade real).
@@ -930,6 +946,7 @@ function atualizarContadoresAba_() {
   const countNaPlanta = itens.filter(it => SITUACAO_ABA_STATUS_['NA_PLANTA'].includes(it.e.status)).length;
   document.getElementById('countAbaNovos').textContent = `(${countNovos})`;
   document.getElementById('countAbaNaPlanta').textContent = `(${countNaPlanta})`;
+  document.getElementById('countAbaProdutoAlvo').textContent = `(${itens.length})`;
 }
 
 // Reconstrói os mixes por segmento a partir do cache de itens já pontuados,
@@ -958,8 +975,123 @@ function setSituacaoAba_(aba) {
   _situacaoAtiva = aba;
   document.getElementById('tabAbaNovos').classList.toggle('active', aba === 'NOVOS');
   document.getElementById('tabAbaNaPlanta').classList.toggle('active', aba === 'NA_PLANTA');
-  recalcularSegmentos_();
-  renderBlocosSegmentos_();
+  document.getElementById('tabAbaProdutoAlvo').classList.toggle('active', aba === 'PRODUTO_ALVO');
+  const isProdAlvo = aba === 'PRODUTO_ALVO';
+  document.getElementById('blocosSegmentos').style.display = isProdAlvo ? 'none' : '';
+  document.getElementById('blocoProdutoAlvo').style.display = isProdAlvo ? '' : 'none';
+  document.getElementById('filtroPadrao').style.display = isProdAlvo ? 'none' : '';
+  if (isProdAlvo) {
+    renderProdutoAlvoUI_();
+  } else {
+    recalcularSegmentos_();
+    renderBlocosSegmentos_();
+  }
+}
+
+// ── PRODUTO ALVO ────────────────────────────────────────────────────────────
+let _alvoBuscaQuery = '';
+let _alvoSelecionado = null;
+let _alvoResultadosBusca_ = [];
+
+function selecionarMixPorAlvo_(alvoItem, todosItens) {
+  const situacaoAlvo = SITUACAO_ABA_STATUS_['NOVOS'].includes(alvoItem.e.status) ? 'NOVOS' : 'NA_PLANTA';
+  const statusAlvo = new Set(SITUACAO_ABA_STATUS_[situacaoAlvo]);
+  const pool = todosItens.filter(it => statusAlvo.has(it.e.status) && it.comp > 0);
+  if (pool.length < 2) return { papeis: { ALVO_1: alvoItem }, aviso: 'Poucos empreendimentos na base para montar o mix completo.' };
+
+  const usados = new Set([alvoItem.e.idLancamento]);
+  const disponiveis = () => pool.filter(c => !usados.has(c.e.idLancamento));
+  const usar = item => { usados.add(item.e.idLancamento); return item; };
+  const porTracao = () => [...disponiveis()].sort((a, b) => b.comp - a.comp);
+  const porPreco  = () => [...disponiveis()].sort((a, b) => a.menorPreco - b.menorPreco);
+
+  const papeis = {};
+  papeis.ALVO_1 = alvoItem;
+  const t2 = porTracao(); papeis.ALVO_2 = t2.length ? usar(t2[0]) : null;
+  const t3 = porTracao(); papeis.ALVO_3 = t3.length ? usar(t3[0]) : null;
+  const p1 = porPreco();  papeis.ISCA = p1.length ? usar(p1[0]) : null;
+  const p2 = porPreco();  papeis.ANCORA_INF = p2.length ? usar(p2[0]) : null;
+  const tipoAlvo1 = tipoImovelDominante_(alvoItem.e.unidades);
+  const restantes = disponiveis();
+  papeis.COMPLEMENTAR = restantes.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo1) || restantes[0] || null;
+  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
+  const acima = pool.filter(c => !usados.has(c.e.idLancamento) && c.menorPreco > alvoItem.menorPreco);
+  papeis.ANCORA_SUP = acima.length ? acima.sort((a, b) => a.menorPreco - b.menorPreco)[0] : null;
+  return { papeis, aviso: null };
+}
+
+function renderMixProdutoAlvo_() {
+  if (!_alvoSelecionado) return '';
+  const mix = selecionarMixPorAlvo_(_alvoSelecionado, _itensScoredCache || []);
+  const cobertura = mix.aviso ? null : calcularCoberturaMix_(mix.papeis);
+  const covHtml = cobertura ? `<span class="cobertura-badge cobertura-${cobertura.nivel}">${cobertura.nivel === 'forte' ? '🟢' : cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${cobertura.nivel}</span>` : '';
+  return `
+    <div class="alvo-selecionado">
+      <div>
+        <div class="alvo-selecionado-nome">⭐ ${_alvoSelecionado.e.nomeEmpreendimento || '—'}</div>
+        <div class="alvo-selecionado-sub">${_alvoSelecionado.e.construtora || '—'} · ${PADRAO_LABEL_MIX_[_alvoSelecionado.padrao] || _alvoSelecionado.padrao || ''} · ${fmtR$_(_alvoSelecionado.menorPreco)} · ${situacaoTexto_(_alvoSelecionado.e.status)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">${covHtml}<button class="btn-mini" onclick="limparProdutoAlvo_()">✕ Limpar</button></div>
+    </div>
+    <div class="segmento-block">
+      <div class="segmento-header">
+        <div>
+          <div class="segmento-titulo">Estratégia de 7 Ofertas</div>
+          <div class="segmento-sub">Mix montado a partir de <strong>${_alvoSelecionado.e.nomeEmpreendimento || '—'}</strong> como Alvo Primário</div>
+        </div>
+        ${covHtml}
+      </div>
+      ${mix.aviso ? `<div class="vazio-segmento">${mix.aviso}</div>` : tabelaMixHtml_(mix)}
+    </div>`;
+}
+
+function renderProdutoAlvoUI_() {
+  const cont = document.getElementById('blocoProdutoAlvo');
+  if (!cont) return;
+  const query = _alvoBuscaQuery;
+  const resultados = query.length >= 2
+    ? (_itensScoredCache || []).filter(it => (it.e.nomeEmpreendimento || '').toLowerCase().includes(query.toLowerCase())).slice(0, 12)
+    : [];
+  _alvoResultadosBusca_ = resultados;
+
+  cont.innerHTML = `
+    <div class="alvo-search-wrap">
+      <input class="alvo-search-input" id="alvoSearchInput" type="text"
+        placeholder="Digite o nome do empreendimento alvo..."
+        value="${query.replace(/"/g, '&quot;')}"
+        oninput="onAlvoSearch_(this.value)" autocomplete="off">
+      ${resultados.length ? `<div class="alvo-results">${resultados.map((it, i) => `
+        <div class="alvo-result-item" data-aidx="${i}">
+          <div class="alvo-result-nome">${it.e.nomeEmpreendimento || '—'}</div>
+          <div class="alvo-result-sub">${it.e.construtora || ''} · ${PADRAO_LABEL_MIX_[it.padrao] || it.padrao || ''} · ${fmtR$_(it.menorPreco)}</div>
+        </div>`).join('')}</div>` : ''}
+    </div>
+    ${_alvoSelecionado ? renderMixProdutoAlvo_() : '<div class="vazio-segmento">Busque e selecione um empreendimento para montar a estratégia de 7 ofertas.</div>'}`;
+
+  // attach handlers via DOM (evita quoting issues)
+  cont.querySelectorAll('[data-aidx]').forEach(el => {
+    el.onclick = () => selecionarProdutoAlvo_(+el.dataset.aidx);
+  });
+  const inp = document.getElementById('alvoSearchInput');
+  if (inp && query && !_alvoSelecionado) inp.focus();
+}
+
+function onAlvoSearch_(val) {
+  _alvoBuscaQuery = val;
+  _alvoSelecionado = null;
+  renderProdutoAlvoUI_();
+}
+
+function selecionarProdutoAlvo_(idx) {
+  _alvoSelecionado = _alvoResultadosBusca_[idx] || null;
+  if (_alvoSelecionado) _alvoBuscaQuery = _alvoSelecionado.e.nomeEmpreendimento || '';
+  renderProdutoAlvoUI_();
+}
+
+function limparProdutoAlvo_() {
+  _alvoSelecionado = null;
+  _alvoBuscaQuery = '';
+  renderProdutoAlvoUI_();
 }
 
 async function carregarEstrategias() {
