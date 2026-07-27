@@ -1045,53 +1045,79 @@ function renderMixProdutoAlvo_() {
     </div>`;
 }
 
+// Monta a estrutura fixa uma vez (chamada ao trocar para a aba).
+// O <input> NUNCA é recriado — só o dropdown e o mix são atualizados,
+// evitando que o campo perca o foco e embaralhe os caracteres digitados.
 function renderProdutoAlvoUI_() {
   const cont = document.getElementById('blocoProdutoAlvo');
   if (!cont) return;
-  const query = _alvoBuscaQuery;
-  const resultados = query.length >= 2
-    ? (_itensScoredCache || []).filter(it => (it.e.nomeEmpreendimento || '').toLowerCase().includes(query.toLowerCase())).slice(0, 12)
-    : [];
-  _alvoResultadosBusca_ = resultados;
-
   cont.innerHTML = `
     <div class="alvo-search-wrap">
       <input class="alvo-search-input" id="alvoSearchInput" type="text"
         placeholder="Digite o nome do empreendimento alvo..."
-        value="${query.replace(/"/g, '&quot;')}"
-        oninput="onAlvoSearch_(this.value)" autocomplete="off">
-      ${resultados.length ? `<div class="alvo-results">${resultados.map((it, i) => `
-        <div class="alvo-result-item" data-aidx="${i}">
-          <div class="alvo-result-nome">${it.e.nomeEmpreendimento || '—'}</div>
-          <div class="alvo-result-sub">${it.e.construtora || ''} · ${PADRAO_LABEL_MIX_[it.padrao] || it.padrao || ''} · ${fmtR$_(it.menorPreco)}</div>
-        </div>`).join('')}</div>` : ''}
+        autocomplete="off">
+      <div id="alvoDropdown"></div>
     </div>
-    ${_alvoSelecionado ? renderMixProdutoAlvo_() : '<div class="vazio-segmento">Busque e selecione um empreendimento para montar a estratégia de 7 ofertas.</div>'}`;
+    <div id="alvoMixResult"></div>`;
+  const inp = document.getElementById('alvoSearchInput');
+  inp.value = _alvoBuscaQuery;
+  inp.addEventListener('input', () => onAlvoSearch_(inp.value));
+  renderAlvoDropdown_();
+  renderAlvoMix_();
+  if (!_alvoSelecionado) inp.focus();
+}
 
-  // attach handlers via DOM (evita quoting issues)
-  cont.querySelectorAll('[data-aidx]').forEach(el => {
+function renderAlvoDropdown_() {
+  const bar = document.getElementById('alvoDropdown');
+  if (!bar) return;
+  const resultados = _alvoBuscaQuery.length >= 2
+    ? (_itensScoredCache || []).filter(it => (it.e.nomeEmpreendimento || '').toLowerCase().includes(_alvoBuscaQuery.toLowerCase())).slice(0, 12)
+    : [];
+  _alvoResultadosBusca_ = resultados;
+  if (!resultados.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `<div class="alvo-results">${resultados.map((it, i) => `
+    <div class="alvo-result-item" data-aidx="${i}">
+      <div class="alvo-result-nome">${it.e.nomeEmpreendimento || '—'}</div>
+      <div class="alvo-result-sub">${it.e.construtora || ''} · ${PADRAO_LABEL_MIX_[it.padrao] || it.padrao || ''} · ${fmtR$_(it.menorPreco)}</div>
+    </div>`).join('')}</div>`;
+  bar.querySelectorAll('[data-aidx]').forEach(el => {
     el.onclick = () => selecionarProdutoAlvo_(+el.dataset.aidx);
   });
-  const inp = document.getElementById('alvoSearchInput');
-  if (inp && query && !_alvoSelecionado) inp.focus();
+}
+
+function renderAlvoMix_() {
+  const el = document.getElementById('alvoMixResult');
+  if (!el) return;
+  el.innerHTML = _alvoSelecionado
+    ? renderMixProdutoAlvo_()
+    : '<div class="vazio-segmento">Busque e selecione um empreendimento para montar a estratégia de 7 ofertas.</div>';
 }
 
 function onAlvoSearch_(val) {
   _alvoBuscaQuery = val;
   _alvoSelecionado = null;
-  renderProdutoAlvoUI_();
+  renderAlvoDropdown_();
+  renderAlvoMix_();
 }
 
 function selecionarProdutoAlvo_(idx) {
   _alvoSelecionado = _alvoResultadosBusca_[idx] || null;
   if (_alvoSelecionado) _alvoBuscaQuery = _alvoSelecionado.e.nomeEmpreendimento || '';
-  renderProdutoAlvoUI_();
+  const inp = document.getElementById('alvoSearchInput');
+  if (inp) inp.value = _alvoBuscaQuery;
+  const bar = document.getElementById('alvoDropdown');
+  if (bar) bar.innerHTML = '';
+  renderAlvoMix_();
 }
 
 function limparProdutoAlvo_() {
   _alvoSelecionado = null;
   _alvoBuscaQuery = '';
-  renderProdutoAlvoUI_();
+  const inp = document.getElementById('alvoSearchInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const bar = document.getElementById('alvoDropdown');
+  if (bar) bar.innerHTML = '';
+  renderAlvoMix_();
 }
 
 async function carregarEstrategias() {
