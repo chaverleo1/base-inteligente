@@ -228,9 +228,13 @@ a { text-decoration: none; color: inherit; }
 }
 .brief-drawer-body { padding: 18px 20px 40px; display: flex; flex-direction: column; gap: 16px; }
 .brief-box { border-radius: 12px; padding: 16px; }
-.brief-box-linha { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
+.brief-box-linha { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+.brief-box-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
 .brief-box-titulo { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
 .brief-box-body { font-size: 12px; color: var(--text2); line-height: 1.8; white-space: pre-line; }
+.btn-copy-brief { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text3); transition: all .15s; flex-shrink: 0; }
+.btn-copy-brief:hover { border-color: var(--accent); color: var(--accent); }
+.btn-copy-brief.copiado { border-color: var(--accent2); color: var(--accent2); }
 .brief-regra { font-size: 12px; color: var(--text3); line-height: 1.6; background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 10px 14px; }
 .mapa-tabela tr.papel-clickable { cursor: pointer; }
 .mapa-tabela tr.papel-clickable:hover td { background: var(--surface2) !important; }
@@ -1521,6 +1525,20 @@ window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) ==
 
 // ── COPY BRIEF DRAWER ──────────────────────────────────────────────────────
 let _mixAtualPapeis_ = {};
+let _copyBriefsAtual_ = [];
+
+function copiarBrief_(idx) {
+  const brief = _copyBriefsAtual_[idx];
+  if (!brief) return;
+  const texto = `${brief.linha.toUpperCase()}\n${brief.titulo}\n\n${brief.instrucoes}`;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById('btnCopy' + idx);
+    if (!btn) return;
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copiado');
+    setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copiado'); }, 2000);
+  });
+}
 
 function abrirCopyBrief_(papel) {
   const item = _mixAtualPapeis_[papel];
@@ -1557,6 +1575,7 @@ function renderCopyBriefContent_(item, papel) {
   const empId = e.idEmpreendimento || '';
   const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId };
   const briefs = gerarCopyBriefs_(item, papel, ctx);
+  _copyBriefsAtual_ = briefs;
 
   const corsBrief = [
     { bg: 'rgba(79,124,255,.08)', borda: 'rgba(79,124,255,.28)', badge: 'rgba(79,124,255,.15)', cor: 'var(--accent)' },
@@ -1578,7 +1597,10 @@ function renderCopyBriefContent_(item, papel) {
       ${briefs.map((b, i) => {
         const c = corsBrief[i];
         return `<div class="brief-box" style="background:${c.bg};border:1.5px solid ${c.borda}">
-          <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
+          <div class="brief-box-header">
+            <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
+            <button class="btn-copy-brief" id="btnCopy${i}" onclick="copiarBrief_(${i})" title="Copiar texto completo">📋 Copiar</button>
+          </div>
           <div class="brief-box-titulo">${b.titulo}</div>
           <div class="brief-box-body">${b.instrucoes}</div>
         </div>`;
