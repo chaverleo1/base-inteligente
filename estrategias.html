@@ -235,6 +235,18 @@ a { text-decoration: none; color: inherit; }
 .btn-copy-brief { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text3); transition: all .15s; flex-shrink: 0; }
 .btn-copy-brief:hover { border-color: var(--accent); color: var(--accent); }
 .btn-copy-brief.copiado { border-color: var(--accent2); color: var(--accent2); }
+.brief-tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 60px; z-index: 1; }
+.brief-tab { flex: 1; padding: 10px 8px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; border: none; background: none; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; font-family: 'Inter', sans-serif; }
+.brief-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.brief-tab:hover:not(.active) { color: var(--text2); }
+.brief-panel { display: none; }
+.brief-panel.active { display: contents; }
+.brief-legenda-box { margin-top: 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 14px; }
+.brief-legenda-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+.brief-legenda-body { font-size: 12px; color: var(--text2); line-height: 1.8; white-space: pre-line; }
+.btn-copy-legenda { margin-top: 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text3); transition: all .15s; font-family: 'Inter', sans-serif; }
+.btn-copy-legenda:hover { border-color: var(--accent); color: var(--accent); }
+.btn-copy-legenda.copiado { border-color: var(--accent2); color: var(--accent2); }
 .brief-regra { font-size: 12px; color: var(--text3); line-height: 1.6; background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 10px 14px; }
 .mapa-tabela tr.papel-clickable { cursor: pointer; }
 .mapa-tabela tr.papel-clickable:hover td { background: var(--surface2) !important; }
@@ -1526,6 +1538,7 @@ window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) ==
 // ── COPY BRIEF DRAWER ──────────────────────────────────────────────────────
 let _mixAtualPapeis_ = {};
 let _copyBriefsAtual_ = [];
+let _feedBriefsAtual_ = [];
 
 function copiarBrief_(idx) {
   const brief = _copyBriefsAtual_[idx];
@@ -1538,6 +1551,160 @@ function copiarBrief_(idx) {
     btn.classList.add('copiado');
     setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copiado'); }, 2000);
   });
+}
+
+function copiarFeedBrief_(idx) {
+  const brief = _feedBriefsAtual_[idx];
+  if (!brief) return;
+  const texto = `${brief.linha.toUpperCase()}\n${brief.titulo}\n\n${brief.instrucoes}\n\n── LEGENDA ──\n${brief.legenda}`;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById('btnCopyFeed' + idx);
+    if (!btn) return;
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copiado');
+    setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copiado'); }, 2000);
+  });
+}
+
+function copiarLegenda_(idx) {
+  const brief = _feedBriefsAtual_[idx];
+  if (!brief) return;
+  navigator.clipboard.writeText(brief.legenda).then(() => {
+    const btn = document.getElementById('btnLegenda' + idx);
+    if (!btn) return;
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copiado');
+    setTimeout(() => { btn.textContent = '📋 Copiar legenda'; btn.classList.remove('copiado'); }, 2000);
+  });
+}
+
+function switchBriefTab_(idx) {
+  document.querySelectorAll('.brief-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.brief-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
+}
+
+function gerarFeedBriefs_(item, papel, ctx) {
+  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId } = ctx;
+  const estoqueStr = estoque !== null ? `${estoque} unidade${estoque !== 1 ? 's' : ''} disponíve${estoque !== 1 ? 'is' : 'l'}` : 'estoque limitado';
+  const pctStr = pctVendido !== null ? `${pctVendido}% já vendido` : '';
+  const areaInfo = areaStr ? ` · ${areaStr}` : '';
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(situacao);
+  const entregaInfo = prontoParaMorar ? 'Pronto para Morar' : (entrega ? `Entrega: ${entrega}` : '');
+  const isAlto = padrao === 'Alto Padrão' || padrao === 'Luxo';
+
+  // Hashtags contextuais
+  const cidadeTag = '#' + (localizacao || '').split(',')[0].trim()
+    .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const padraoTag = '#' + (padrao || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const baseHash = `${cidadeTag} ${padraoTag} #lancamentoimobiliario #imoveis #corretorimóveis #imoveisparainvestir`;
+
+  const idBloco = empId
+    ? `\n\nID DO EMPREENDIMENTO — obrigatório na arte\nCódigo: ${empId}\n• Canto inferior direito, fonte pequena, cor neutra`
+    : '';
+
+  return [
+    {
+      linha: 'Dados & Urgência',
+      titulo: 'Escassez real — quem hesita perde',
+      instrucoes: `ABORDAGEM — FEED 3×4 (1080 × 1350 px)
+Versão Feed: mais espaço que Stories, use uma hierarquia visual clara em 3 blocos (topo / meio / rodapé). Precisa funcionar como thumbnail no grid — a leitura rápida do número grande deve impactar já na miniatura.
+
+COMPOSIÇÃO VISUAL
+• Topo: número destaque grande — "${pctStr ? pctStr : estoqueStr}"
+• Meio: foto de ambiente interno OU fachada desfocada (sem identificar)
+• Rodapé: dados do produto em linha compacta + CTA
+
+TEXTO NA ARTE
+Linha destaque: "${pctStr ? pctStr + ' já vendido.' : 'Estoque se esgotando.'}"
+Subtítulo: "${estoqueStr}${entregaInfo ? ' · ' + entregaInfo : ''}"
+Dados: "${localizacao} · ${padrao} · A partir de ${preco}${areaInfo}"
+CTA: "Chama agora antes que acabe 📲"
+
+PALETA: fundo escuro (preto/cinza grafite) + texto branco + acento vermelho ou laranja
+TIPOGRAFIA: bold pesado no número, regular nos dados
+Formato: 1080×1350 px (4:5 feed portrait)${idBloco}`,
+      legenda: `⏳ ${pctStr ? pctStr + ' em poucas semanas.' : 'O estoque está diminuindo.'}
+
+${estoqueStr}${entregaInfo ? ' · ' + entregaInfo + '.' : '.'}
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo}
+💰 A partir de ${preco}
+
+Quem hesita fica de fora. Se você já está no timing certo de comprar, me chama antes que acabe.
+
+👇 Me manda uma mensagem agora.
+
+${baseHash} #urgencia #oportunidade #investimento`,
+    },
+    {
+      linha: 'Perfil & Identificação',
+      titulo: 'Faz o lead certo se reconhecer sozinho',
+      instrucoes: `ABORDAGEM — FEED 3×4 (1080 × 1350 px)
+Versão Feed: o copy é o protagonista. Menos imagem, mais texto — post estilo "carta aberta" ou "post de texto com fundo". Ideal para salvar e compartilhar.
+
+COMPOSIÇÃO VISUAL
+• Fundo: cor sólida ou gradiente suave (sem foto de prédio)
+• Texto centralizado em tipografia média, confiante
+• Foto de apoio (opcional): pessoa/casal em momento de conquista — sem identificar o empreendimento
+
+TEXTO NA ARTE
+Linha destaque: "${isAlto ? 'Você já sabe o que quer. Falta o endereço certo.' : 'Tá na hora de parar de pagar aluguel.'}"
+Subtítulo: "${tipoImovel.charAt(0).toUpperCase() + tipoImovel.slice(1)} em ${localizacao}${entregaInfo ? ' · ' + entregaInfo : ''}"
+Dados: "Padrão ${padrao}${areaInfo} · A partir de ${preco}"
+CTA: "Esse pode ser o seu. Me chama 💬"
+
+PALETA: neutros elegantes — cinza chumbo, branco, dourado ou verde-água
+TIPOGRAFIA: médio, peso regular/semibold — tom de conversa direta
+Formato: 1080×1350 px (4:5 feed portrait)${idBloco}`,
+      legenda: `Esse post é pra você que já sabe o que quer, mas ainda não encontrou o empreendimento certo.
+
+${isAlto ? 'Um imóvel que combina com quem você é. No endereço que você merece.' : 'O lugar certo pra dar esse passo importante.'}
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}
+Não vou revelar o nome aqui — mas se o perfil faz sentido pra você, me chama no direct e eu te conto tudo 😏
+
+👇 Manda uma mensagem.
+
+${baseHash} #imovelcerto #sonhoproprio #momentodacompra`,
+    },
+    {
+      linha: 'Dados & Oportunidade',
+      titulo: 'Timing de mercado — a janela está aberta',
+      instrucoes: `ABORDAGEM — FEED 3×4 (1080 × 1350 px)
+Versão Feed: estilo editorial / infográfico. Dados bem organizados em blocos visuais. Tom executivo — fala com investidor ou comprador estratégico. Ótimo para salvar e compartilhar.
+
+COMPOSIÇÃO VISUAL
+• Topo: headline de oportunidade
+• Meio: bloco de dados organizados (pode usar ícones, tabela simples ou lista)
+• Rodapé: CTA direto
+
+TEXTO NA ARTE
+Linha destaque: "${prontoParaMorar ? 'Pronto. Sem risco de obra. Sem espera.' : 'Quem entrou antes já saiu na frente.'}"
+Subtítulo: "${localizacao} · ${padrao}${areaInfo} · A partir de ${preco}"
+Dado complementar: "${pctStr ? pctStr + ' já comprometido.' : 'Valorização em andamento.'}"
+${entregaInfo ? 'Situação: "' + entregaInfo + '"' : ''}
+CTA: "Quer entender o potencial? Me chama 📊"
+
+PALETA: azul marinho + branco + dourado (tom financeiro/executivo)
+TIPOGRAFIA: clean, moderna — hierarquia clara entre título e dados
+Formato: 1080×1350 px (4:5 feed portrait)${idBloco}`,
+      legenda: `Sabe qual é o custo real de esperar no mercado imobiliário?
+
+${pctStr ? pctStr + ' já comprometido. O que resta é a oportunidade que ainda sobrou.' : 'Cada mês que passa é valorização que sai do seu bolso.'}
+
+📍 ${localizacao}
+🏠 ${padrao}${areaInfo} · A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}
+Quem entrou cedo saiu na frente. Ainda dá tempo — mas o timing é agora.
+
+📊 Quer entender o potencial? Me chama.
+
+${baseHash} #investimento #valorizacao #mercadoimobiliario #timing`,
+    },
+  ];
 }
 
 function abrirCopyBrief_(papel) {
@@ -1575,36 +1742,63 @@ function renderCopyBriefContent_(item, papel) {
   const empId = e.idEmpreendimento || '';
   const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId };
   const briefs = gerarCopyBriefs_(item, papel, ctx);
+  const feedBriefs = gerarFeedBriefs_(item, papel, ctx);
   _copyBriefsAtual_ = briefs;
+  _feedBriefsAtual_ = feedBriefs;
 
-  const corsBrief = [
+  const cors = [
     { bg: 'rgba(79,124,255,.08)', borda: 'rgba(79,124,255,.28)', badge: 'rgba(79,124,255,.15)', cor: 'var(--accent)' },
     { bg: 'rgba(0,212,170,.08)',  borda: 'rgba(0,212,170,.28)',  badge: 'rgba(0,212,170,.15)',  cor: 'var(--accent2)' },
     { bg: 'rgba(245,158,11,.08)', borda: 'rgba(245,158,11,.28)', badge: 'rgba(245,158,11,.15)', cor: 'var(--amber)' },
   ];
 
+  const regra = `<div class="brief-regra">⚠️ <strong>Regra de ouro:</strong> nenhuma das artes pode revelar o nome do empreendimento. O objetivo é gerar curiosidade e provocar o lead a entrar em contato — quem revela o nome primeiro, perde a tração.</div>`;
+
+  const boxVertical = briefs.map((b, i) => {
+    const c = cors[i];
+    return `<div class="brief-box" style="background:${c.bg};border:1.5px solid ${c.borda}">
+      <div class="brief-box-header">
+        <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
+        <button class="btn-copy-brief" id="btnCopy${i}" onclick="copiarBrief_(${i})" title="Copiar instruções">📋 Copiar</button>
+      </div>
+      <div class="brief-box-titulo">${b.titulo}</div>
+      <div class="brief-box-body">${b.instrucoes}</div>
+    </div>`;
+  }).join('');
+
+  const boxFeed = feedBriefs.map((b, i) => {
+    const c = cors[i];
+    return `<div class="brief-box" style="background:${c.bg};border:1.5px solid ${c.borda}">
+      <div class="brief-box-header">
+        <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
+        <button class="btn-copy-brief" id="btnCopyFeed${i}" onclick="copiarFeedBrief_(${i})" title="Copiar tudo">📋 Copiar</button>
+      </div>
+      <div class="brief-box-titulo">${b.titulo}</div>
+      <div class="brief-box-body">${b.instrucoes}</div>
+      <div class="brief-legenda-box">
+        <div class="brief-legenda-label">Legenda + Hashtags</div>
+        <div class="brief-legenda-body">${b.legenda}</div>
+        <button class="btn-copy-legenda" id="btnLegenda${i}" onclick="copiarLegenda_(${i})">📋 Copiar legenda</button>
+      </div>
+    </div>`;
+  }).join('');
+
   return `
     <div class="brief-drawer-header">
       <div>
-        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Briefing para Designer IA · Post 9:16</div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Briefing para Designer IA</div>
         <div style="font-size:15px;font-weight:700;color:var(--text)">${PAPEL_LABEL_[papel] || papel}</div>
         <div style="font-size:12px;color:var(--text3);margin-top:3px">${padrao} · ${localizacao} · ${situacao}</div>
       </div>
       <button class="btn-mini" style="flex-shrink:0;margin-top:2px" onclick="fecharCopyBrief_()">✕ Fechar</button>
     </div>
+    <div class="brief-tab-bar">
+      <button class="brief-tab active" onclick="switchBriefTab_(0)">Formato Vertical</button>
+      <button class="brief-tab" onclick="switchBriefTab_(1)">Formato Feed 3×4</button>
+    </div>
     <div class="brief-drawer-body">
-      <div class="brief-regra">⚠️ <strong>Regra de ouro:</strong> nenhuma das artes pode revelar o nome do empreendimento. O objetivo é gerar curiosidade e provocar o lead a entrar em contato — quem revela o nome primeiro, perde a tração.</div>
-      ${briefs.map((b, i) => {
-        const c = corsBrief[i];
-        return `<div class="brief-box" style="background:${c.bg};border:1.5px solid ${c.borda}">
-          <div class="brief-box-header">
-            <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
-            <button class="btn-copy-brief" id="btnCopy${i}" onclick="copiarBrief_(${i})" title="Copiar texto completo">📋 Copiar</button>
-          </div>
-          <div class="brief-box-titulo">${b.titulo}</div>
-          <div class="brief-box-body">${b.instrucoes}</div>
-        </div>`;
-      }).join('')}
+      <div class="brief-panel active">${regra}${boxVertical}</div>
+      <div class="brief-panel">${regra}${boxFeed}</div>
     </div>`;
 }
 
