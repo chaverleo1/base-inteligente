@@ -235,18 +235,26 @@ a { text-decoration: none; color: inherit; }
 .btn-copy-brief { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text3); transition: all .15s; flex-shrink: 0; }
 .btn-copy-brief:hover { border-color: var(--accent); color: var(--accent); }
 .btn-copy-brief.copiado { border-color: var(--accent2); color: var(--accent2); }
-.brief-tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 60px; z-index: 1; }
-.brief-tab { flex: 1; padding: 10px 8px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; border: none; background: none; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; font-family: 'Inter', sans-serif; }
-.brief-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.brief-tab:hover:not(.active) { color: var(--text2); }
-.brief-panel { display: none; }
-.brief-panel.active { display: contents; }
-.brief-legenda-box { margin-top: 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 12px 14px; }
-.brief-legenda-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
-.brief-legenda-body { font-size: 12px; color: var(--text2); line-height: 1.8; white-space: pre-line; }
-.btn-copy-legenda { margin-top: 10px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text3); transition: all .15s; font-family: 'Inter', sans-serif; }
-.btn-copy-legenda:hover { border-color: var(--accent); color: var(--accent); }
-.btn-copy-legenda.copiado { border-color: var(--accent2); color: var(--accent2); }
+.brief-gt-section { margin-bottom: 6px; }
+.brief-gt-section-label { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+.brief-gt-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.brief-gt-table th { font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; padding: 7px 4px; text-align: center; }
+.brief-gt-table th.th-gatilho { text-align: left; padding-left: 0; }
+.brief-gt-table th.th-v { color: var(--accent); border-bottom: 2px solid var(--accent); background: rgba(79,124,255,.05); }
+.brief-gt-table th.th-fi { color: var(--accent2); border-bottom: 2px solid var(--accent2); background: rgba(0,212,170,.05); }
+.brief-gt-table th.th-fl { color: var(--accent2); border-bottom: 2px solid var(--accent2); background: rgba(0,212,170,.05); opacity: .8; }
+.brief-gt-table td { padding: 9px 4px; vertical-align: middle; border-bottom: 1px solid var(--border); }
+.brief-gt-table td.td-gatilho { font-size: 12px; font-weight: 600; color: var(--text2); padding-left: 0; line-height: 1.4; }
+.brief-gt-table td.td-num { font-size: 10px; font-weight: 700; color: var(--text3); text-align: center; width: 24px; padding-left: 0; }
+.brief-gt-table td.td-copy { text-align: center; width: 44px; }
+.brief-gt-table tr:last-child td { border-bottom: none; }
+.brief-gt-table tbody tr:hover td { background: var(--surface2); }
+.btn-copy-cell { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border2); background: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; color: var(--text3); font-family: 'Inter', sans-serif; }
+.btn-copy-cell:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,124,255,.07); }
+.btn-copy-cell.copiado { border-color: var(--accent2) !important; color: var(--accent2) !important; background: rgba(0,212,170,.1) !important; }
+.brief-preview { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.brief-preview-label { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 8px 14px 6px; border-bottom: 1px solid var(--border); }
+.brief-preview-body { font-size: 11px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; padding: 12px 14px; max-height: 200px; overflow-y: auto; font-family: monospace; }
 .brief-regra { font-size: 12px; color: var(--text3); line-height: 1.6; background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 10px 14px; }
 .mapa-tabela tr.papel-clickable { cursor: pointer; }
 .mapa-tabela tr.papel-clickable:hover td { background: var(--surface2) !important; }
@@ -1537,50 +1545,24 @@ window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) ==
 
 // ── COPY BRIEF DRAWER ──────────────────────────────────────────────────────
 let _mixAtualPapeis_ = {};
-let _copyBriefsAtual_ = [];
-let _feedBriefsAtual_ = [];
+let _gatilhosAtual_ = [];
 
-function copiarBrief_(idx) {
-  const brief = _copyBriefsAtual_[idx];
-  if (!brief) return;
-  const texto = `${brief.linha.toUpperCase()}\n${brief.titulo}\n\n${brief.instrucoes}`;
+function copiarEPreview_(tipo, i) {
+  const g = _gatilhosAtual_[i];
+  if (!g) return;
+  let texto, btnId;
+  if (tipo === 'v')        { texto = `${g.linha.toUpperCase()}\n${g.titulo}\n\n${g.vertical}`;      btnId = `btnV${i}`; }
+  else if (tipo === 'fi')  { texto = `${g.linha.toUpperCase()}\n${g.titulo}\n\n${g.feedInstrucoes}`; btnId = `btnFI${i}`; }
+  else                     { texto = g.legenda;                                                       btnId = `btnFL${i}`; }
+  const prev = document.getElementById('briefPreviewBody');
+  if (prev) prev.textContent = texto;
   navigator.clipboard.writeText(texto).then(() => {
-    const btn = document.getElementById('btnCopy' + idx);
+    const btn = document.getElementById(btnId);
     if (!btn) return;
-    btn.textContent = '✓ Copiado';
+    btn.innerHTML = '✓';
     btn.classList.add('copiado');
-    setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copiado'); }, 2000);
+    setTimeout(() => { btn.innerHTML = '📋'; btn.classList.remove('copiado'); }, 1800);
   });
-}
-
-function copiarFeedBrief_(idx) {
-  const brief = _feedBriefsAtual_[idx];
-  if (!brief) return;
-  const texto = `${brief.linha.toUpperCase()}\n${brief.titulo}\n\n${brief.instrucoes}\n\n── LEGENDA ──\n${brief.legenda}`;
-  navigator.clipboard.writeText(texto).then(() => {
-    const btn = document.getElementById('btnCopyFeed' + idx);
-    if (!btn) return;
-    btn.textContent = '✓ Copiado';
-    btn.classList.add('copiado');
-    setTimeout(() => { btn.textContent = '📋 Copiar'; btn.classList.remove('copiado'); }, 2000);
-  });
-}
-
-function copiarLegenda_(idx) {
-  const brief = _feedBriefsAtual_[idx];
-  if (!brief) return;
-  navigator.clipboard.writeText(brief.legenda).then(() => {
-    const btn = document.getElementById('btnLegenda' + idx);
-    if (!btn) return;
-    btn.textContent = '✓ Copiado';
-    btn.classList.add('copiado');
-    setTimeout(() => { btn.textContent = '📋 Copiar legenda'; btn.classList.remove('copiado'); }, 2000);
-  });
-}
-
-function switchBriefTab_(idx) {
-  document.querySelectorAll('.brief-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
-  document.querySelectorAll('.brief-panel').forEach((p, i) => p.classList.toggle('active', i === idx));
 }
 
 function gerarFeedBriefs_(item, papel, ctx) {
@@ -1707,6 +1689,259 @@ ${baseHash} #investimento #valorizacao #mercadoimobiliario #timing`,
   ];
 }
 
+function gerarGatilhos_(item, papel, ctx) {
+  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId } = ctx;
+  const estoqueStr = estoque !== null ? `${estoque} unidade${estoque !== 1 ? 's' : ''} disponíve${estoque !== 1 ? 'is' : 'l'}` : 'estoque limitado';
+  const pctStr = pctVendido !== null ? `${pctVendido}% já vendido` : '';
+  const areaInfo = areaStr ? ` · ${areaStr}` : '';
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(situacao);
+  const entregaInfo = prontoParaMorar ? 'Pronto para Morar' : (entrega ? `Entrega: ${entrega}` : '');
+  const isAlto = padrao === 'Alto Padrão' || padrao === 'Luxo';
+  const tipoM = tipoImovel.charAt(0).toUpperCase() + tipoImovel.slice(1);
+  const cidadeTag = '#' + (localizacao || '').split(',')[0].trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const padraoTag = '#' + (padrao || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const baseHash = `${cidadeTag} ${padraoTag} #lancamentoimobiliario #imoveis #corretorimoveis #imoveisparainvestir`;
+  const idBloco = empId ? `\n\nID NA ARTE — obrigatório\nCódigo: ${empId}\n• Canto inferior direito, fonte pequena, cor neutra` : '';
+
+  return [
+    {
+      linha: 'Exclusividade & Acesso',
+      titulo: 'Antes de sair pro mercado — você vê primeiro',
+      vertical: `ABORDAGEM
+Para quem já te acompanha. Recompensa a audiência com acesso privilegiado antes de qualquer divulgação ampla.
+
+TEXTO PARA A ARTE
+Linha principal: "Ainda não divulguei pra ninguém. Mas você me acompanha — então vê primeiro."
+Subtítulo: "${tipoM} em ${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
+Complemento: "${entregaInfo || 'Em lançamento'} · Unidades selecionadas"
+CTA: "Me chama antes que saia da lista 📲"
+
+DIREÇÃO VISUAL
+• Fundo escuro com textura premium (couro, mármore ou grafite)
+• Badge "EXCLUSIVO" ou "ACESSO ANTECIPADO" no topo
+• Dados sem revelar o nome — localização, padrão, faixa de preço
+• Paleta: preto + dourado + branco (tom VIP)
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post de acesso exclusivo. Visual premium que recompensa quem te acompanha.
+
+COMPOSIÇÃO VISUAL
+• Topo: badge "EXCLUSIVO" ou "ACESSO ANTECIPADO" em tipografia elegante
+• Meio: detalhe arquitetônico sofisticado (sem identificar o empreendimento)
+• Rodapé: dados compactos + CTA
+
+TEXTO NA ARTE
+Linha destaque: "Ainda não divulguei. Mas você me acompanha."
+Subtítulo: "${tipoM} em ${localizacao} · Padrão ${padrao}"
+Dados: "A partir de ${preco}${areaInfo}${entregaInfo ? ' · ' + entregaInfo : ''}"
+CTA: "Me chama antes que saia da lista 📲"
+
+PALETA: preto + dourado + branco (tom VIP/premium)
+TIPOGRAFIA: ultra-bold — hierarquia clara
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `Antes de divulgar pra todo mundo — você vê primeiro.
+
+Meus seguidores têm acesso antecipado ao que eu seleciono com critério.
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Não vou revelar o nome aqui. Quem me chama recebe as informações completas antes de qualquer um.
+
+👇 Manda mensagem — acesso antecipado é só pra quem pergunta.
+
+${baseHash} #exclusividade #acessoantecipado #viplist`,
+    },
+    {
+      linha: 'Autoridade Silenciosa',
+      titulo: 'Resultado implícito — sem precisar dizer que sou bom',
+      vertical: `ABORDAGEM
+Não é você dizendo que é bom — são os fatos. Clientes que fecharam, movimentação real. Para público quente, isso dispara o "por que eles sabiam e eu não?"
+
+TEXTO PARA A ARTE
+Linha principal: "${pctStr ? pctStr + ' comprometido. Clientes meus já garantiram posição.' : 'Clientes meus já fecharam aqui. O que eles viram primeiro?'}"
+Subtítulo: "${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
+Complemento: "${entregaInfo || 'Lançamento em andamento'}"
+CTA: "Me pergunta o que eu vi nesse produto 📊"
+
+DIREÇÃO VISUAL
+• Layout clean, sóbrio — fundo branco ou cinza claro
+• Silhueta de prédio desfocada OU ícone de "aprovado/validado"
+• Paleta: azul marinho + cinza + dourado (autoridade financeira)
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post tipo prova social indireta. O corretor como curador — não como vendedor.
+
+COMPOSIÇÃO VISUAL
+• Topo: número/dado de resultado em destaque (% vendido ou qtd de clientes)
+• Meio: copy de autoridade — sem revelar produto
+• Rodapé: dados compactos + CTA
+
+TEXTO NA ARTE
+Linha destaque: "${pctStr ? pctStr + ' comprometido.' : 'Clientes meus já garantiram posição.'}"
+Subtítulo: "O que eles viram antes de decidir?"
+Dados: "${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
+CTA: "Me pergunta o que eu vi nesse produto 📊"
+
+PALETA: azul marinho + cinza grafite + dourado (confiança, autoridade)
+TIPOGRAFIA: clean, semibold — tom de analista, não de vendedor
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `Clientes meus já garantiram posição nesse produto.
+
+${pctStr ? pctStr + ' já comprometido em poucas semanas.' : 'A movimentação está acima do esperado.'} E eu não precisei forçar nada — quem entendeu o produto, decidiu rápido.
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Não vou revelar o nome aqui. Se você quer entender o que eles viram, me chama no direct.
+
+📊 Vou te explicar o potencial sem enrolação.
+
+${baseHash} #resultados #investimentoimobiliario #corretordeconfianca`,
+    },
+    {
+      linha: 'Escassez Específica',
+      titulo: 'Números reais criam urgência que clichê nunca vai criar',
+      vertical: `ABORDAGEM
+Escassez vaga não funciona — números e contexto real sim. Para público quente já em modo de decisão, um dado concreto de estoque é o empurrão final.
+
+TEXTO PARA A ARTE
+Linha principal: "${pctStr ? pctStr + ' comprometido. O que sobrou ainda dá tempo de garantir.' : estoqueStr + ' disponíveis. Depois disso, acabou.'}"
+Subtítulo: "${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
+Complemento: "${entregaInfo || 'Lançamento em andamento'} · Não tem segunda chance no mesmo preço"
+CTA: "Me chama antes que feche 📲"
+
+DIREÇÃO VISUAL
+• Elemento central: barra de progresso OU número de unidades em tipografia pesada
+• Paleta: fundo escuro + acento vermelho/laranja (urgência real)
+• Sem revelar o empreendimento — o dado é o protagonista
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post de dado urgente. No feed, esse conteúdo gera salvamento — as pessoas guardam "pra quando estiver pronto pra decidir". A ironia: ao salvar, já decidiram.
+
+COMPOSIÇÃO VISUAL
+• Topo: número grande de estoque ou % vendido em tipografia pesada
+• Meio: barra de progresso visual preenchida conforme % vendido
+• Rodapé: dados + CTA
+
+TEXTO NA ARTE
+Linha destaque: "${pctStr ? pctStr + ' já vendido.' : estoqueStr + '.'}"
+Subtítulo: "${entregaInfo ? entregaInfo + ' · ' : ''}${localizacao}"
+Dados: "Padrão ${padrao}${areaInfo} · A partir de ${preco}"
+CTA: "Não espera acabar — me chama 📲"
+
+PALETA: fundo escuro (preto/grafite) + vermelho/laranja + branco
+TIPOGRAFIA: bold pesado no número principal
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `${pctStr ? pctStr + ' já comprometido.' : estoqueStr + ' disponíveis.'}
+
+Não é discurso de vendedor. É dado.
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo}
+💰 A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Quem estava me acompanhando e ainda não me chamou — a janela está fechando.
+
+📲 Me manda mensagem antes que feche.
+
+${baseHash} #escassez #estoqeulimitado #oportunidade`,
+    },
+    {
+      linha: 'Timing & Janela de Mercado',
+      titulo: 'A janela está aberta — quem entrar agora pega o melhor ponto',
+      vertical: `ABORDAGEM
+Para quem te acompanha, você é o termômetro de mercado. Esse gatilho não vende um produto — vende o MOMENTO. Ideal para leads quase decidindo que precisam de um sinal externo de autoridade.
+
+TEXTO PARA A ARTE
+Linha principal: "${prontoParaMorar ? 'Pronto. Sem risco de obra. Sem espera.' : 'A janela de entrada nesse produto está aberta — por enquanto.'}"
+Subtítulo: "${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
+Complemento: "${pctStr ? pctStr + ' já comprometido — o timing é agora.' : 'Quem entrar primeiro pega o melhor ponto da curva.'}"
+CTA: "Quer entender o potencial? Me chama 📊"
+
+DIREÇÃO VISUAL
+• Elemento visual: seta ascendente, linha do tempo ou gráfico de valorização
+• Tom executivo — fala com quem pensa em investimento, não só moradia
+• Paleta: azul marinho + cinza grafite + dourado (financeiro, estratégico)
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post estilo editorial/infográfico. Para feed, funciona como conteúdo de valor que o lead salva para mostrar ao cônjuge ou sócio.
+
+COMPOSIÇÃO VISUAL
+• Topo: headline de oportunidade estratégica
+• Meio: lista clean de dados (localização, padrão, preço, situação)
+• Rodapé: seta ascendente ou ícone de timing + CTA
+
+TEXTO NA ARTE
+Linha destaque: "${prontoParaMorar ? 'Pronto. Sem risco. Sem espera.' : 'Janela de mercado — por quanto tempo mais?'}"
+Subtítulo: "${localizacao} · Padrão ${padrao}${areaInfo}"
+Dados: "A partir de ${preco} · ${pctStr ? pctStr : entregaInfo || 'Em lançamento'}"
+CTA: "Quer entender o potencial? Me chama 📊"
+
+PALETA: azul marinho + cinza grafite + dourado (análise de mercado)
+TIPOGRAFIA: clean, moderna — hierarquia clara
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `Tem produtos que você entra no começo e sai na frente. Tem produtos que você entra depois e paga o preço de quem chegou tarde.
+
+Esse é o primeiro tipo.
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
+${pctStr ? '📊 ' + pctStr + ' já comprometido\n' : ''}${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Não vou revelar o nome aqui. Mas se você está avaliando imóvel nos próximos meses, essa conversa pode valer muito.
+
+📊 Me chama e eu te explico o timing.
+
+${baseHash} #timing #investimento #valorizacao #mercadoimobiliario`,
+    },
+    {
+      linha: 'Curiosidade Segmentada',
+      titulo: 'Só revela pra quem perguntar — e o lead quente sempre pergunta',
+      vertical: `ABORDAGEM
+O público quente tem baixa barreira para perguntar — diferente do frio. Esse gatilho omite informação estrategicamente para provocar a conversa. Não revelamos o produto — revelamos que existe algo relevante para um perfil específico.
+
+TEXTO PARA A ARTE
+Linha principal: "Tenho um produto pra um perfil específico. Se o seu for esse, você vai querer saber."
+Subtítulo: "${tipoM} · Padrão ${padrao} · ${localizacao}"
+Complemento: "A partir de ${preco}${areaInfo}${entregaInfo ? ' · ' + entregaInfo : ''}"
+CTA: "Me conta o que você busca. Vejo se encaixa. 💬"
+
+DIREÇÃO VISUAL
+• Visual minimalista — tipografia forte em fundo limpo
+• Nenhum elemento que identifique o empreendimento
+• Paleta neutra: branco + cinza + 1 acento (verde-água ou violeta)
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post minimalista de pergunta. No feed, funciona como "isca de curiosidade" — o lead salva e pensa "parece pra mim". Menos imagem, mais texto.
+
+COMPOSIÇÃO VISUAL
+• Fundo sólido ou gradiente suave — sem foto de empreendimento
+• Texto centralizado em tipografia limpa e confiante
+• Pode usar reticências ou interrogação como elemento gráfico
+
+TEXTO NA ARTE
+Linha destaque: "Tenho algo pra um perfil específico."
+Subtítulo: "${tipoM} · Padrão ${padrao} · ${localizacao}"
+Dados: "A partir de ${preco}${areaInfo}${entregaInfo ? ' · ' + entregaInfo : ''}"
+CTA: "Me conta o que você busca. Eu vejo se encaixa. 💬"
+
+PALETA: branco + cinza + acento em verde-água ou violeta
+TIPOGRAFIA: regular a semibold — tom de conversa direta, não de anúncio
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `Tenho um produto específico pra um perfil específico.
+
+Não vou revelar o nome aqui. Mas o perfil é esse:
+
+🏠 ${tipoM} · Padrão ${padrao}${areaInfo}
+📍 ${localizacao}
+💰 A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Se isso soa como o que você está buscando — me manda uma mensagem.
+
+Não tem enrolação. Me conta o que você quer e eu te digo se encaixa.
+
+💬 Direct aberto.
+
+${baseHash} #perfilcerto #imovelcerto #corretordireto`,
+    },
+  ];
+}
+
 function abrirCopyBrief_(papel) {
   const item = _mixAtualPapeis_[papel];
   if (!item) return;
@@ -1741,47 +1976,19 @@ function renderCopyBriefContent_(item, papel) {
 
   const empId = e.idEmpreendimento || '';
   const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId };
-  const briefs = gerarCopyBriefs_(item, papel, ctx);
-  const feedBriefs = gerarFeedBriefs_(item, papel, ctx);
-  _copyBriefsAtual_ = briefs;
-  _feedBriefsAtual_ = feedBriefs;
+  _gatilhosAtual_ = gerarGatilhos_(item, papel, ctx);
 
-  const cors = [
-    { bg: 'rgba(79,124,255,.08)', borda: 'rgba(79,124,255,.28)', badge: 'rgba(79,124,255,.15)', cor: 'var(--accent)' },
-    { bg: 'rgba(0,212,170,.08)',  borda: 'rgba(0,212,170,.28)',  badge: 'rgba(0,212,170,.15)',  cor: 'var(--accent2)' },
-    { bg: 'rgba(245,158,11,.08)', borda: 'rgba(245,158,11,.28)', badge: 'rgba(245,158,11,.15)', cor: 'var(--amber)' },
-  ];
-
-  const regra = `<div class="brief-regra">⚠️ <strong>Regra de ouro:</strong> nenhuma das artes pode revelar o nome do empreendimento. O objetivo é gerar curiosidade e provocar o lead a entrar em contato — quem revela o nome primeiro, perde a tração.</div>`;
-
-  const boxVertical = briefs.map((b, i) => {
-    const c = cors[i];
-    return `<div class="brief-box" style="background:${c.bg};border:1.5px solid ${c.borda}">
-      <div class="brief-box-header">
-        <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
-        <button class="btn-copy-brief" id="btnCopy${i}" onclick="copiarBrief_(${i})" title="Copiar instruções">📋 Copiar</button>
-      </div>
-      <div class="brief-box-titulo">${b.titulo}</div>
-      <div class="brief-box-body">${b.instrucoes}</div>
-    </div>`;
-  }).join('');
-
-  const boxFeed = feedBriefs.map((b, i) => {
-    const c = cors[i];
-    return `<div class="brief-box" style="background:${c.bg};border:1.5px solid ${c.borda}">
-      <div class="brief-box-header">
-        <span class="brief-box-linha" style="background:${c.badge};color:${c.cor}">Post ${i + 1} · ${b.linha}</span>
-        <button class="btn-copy-brief" id="btnCopyFeed${i}" onclick="copiarFeedBrief_(${i})" title="Copiar tudo">📋 Copiar</button>
-      </div>
-      <div class="brief-box-titulo">${b.titulo}</div>
-      <div class="brief-box-body">${b.instrucoes}</div>
-      <div class="brief-legenda-box">
-        <div class="brief-legenda-label">Legenda + Hashtags</div>
-        <div class="brief-legenda-body">${b.legenda}</div>
-        <button class="btn-copy-legenda" id="btnLegenda${i}" onclick="copiarLegenda_(${i})">📋 Copiar legenda</button>
-      </div>
-    </div>`;
-  }).join('');
+  const linhas = _gatilhosAtual_.map((g, i) => `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnV${i}" onclick="copiarEPreview_('v',${i})" title="Story / WhatsApp 9:16">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFI${i}" onclick="copiarEPreview_('fi',${i})" title="Feed 4:5 instrução">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Feed 4:5 legenda">📋</button></td>
+    </tr>`).join('');
 
   return `
     <div class="brief-drawer-header">
@@ -1792,13 +1999,25 @@ function renderCopyBriefContent_(item, papel) {
       </div>
       <button class="btn-mini" style="flex-shrink:0;margin-top:2px" onclick="fecharCopyBrief_()">✕ Fechar</button>
     </div>
-    <div class="brief-tab-bar">
-      <button class="brief-tab active" onclick="switchBriefTab_(0)">Formato Vertical</button>
-      <button class="brief-tab" onclick="switchBriefTab_(1)">Formato Feed 3×4</button>
-    </div>
     <div class="brief-drawer-body">
-      <div class="brief-panel active">${regra}${boxVertical}</div>
-      <div class="brief-panel">${regra}${boxFeed}</div>
+      <div class="brief-regra">⚠️ <strong>Regra de ouro:</strong> nenhuma arte pode revelar o nome do empreendimento — gere curiosidade e provoque o lead a entrar em contato.</div>
+      <div class="brief-gt-section">
+        <table class="brief-gt-table">
+          <thead>
+            <tr>
+              <th class="th-gatilho" colspan="2">Gatilho</th>
+              <th class="th-v">Vertical<br><span style="font-weight:400;font-size:9px;opacity:.8">9:16</span></th>
+              <th class="th-fi">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">instrução</span></th>
+              <th class="th-fl">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">legenda</span></th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <div class="brief-preview">
+        <div class="brief-preview-label">Prévia — clique em 📋 para visualizar e copiar</div>
+        <div class="brief-preview-body" id="briefPreviewBody" style="color:var(--text3);font-style:italic">— selecione um gatilho acima —</div>
+      </div>
     </div>`;
 }
 
