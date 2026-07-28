@@ -1,5 +1,52 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 122) — Fase 1 do "app-lancamentos.html": motor de seleção de ISCA (GAS) + publicação de mix
+
+Primeira fase de um projeto maior (conceito "Ilusão de Controle Estratégico", trazido pelo usuário
+via IA MENTORA): um app novo de simulação/captura onde o cliente configura filtros livremente,
+enquanto por baixo o sistema escolhe qual das 7 ofertas do mix (ISCA/ALVO_1-3/ANCORA_SUP/
+ANCORA_INF/COMPLEMENTAR) mostrar como "melhor match" — sem revelar que existe um alvo real
+diferente — e monta o roteiro de atendimento pro corretor. O simulador atual
+(`simulador-lancamentos.html`) continua intacto; nada nele foi tocado.
+
+Decisão de arquitetura (confirmada com o usuário): o GAS **não** reimplementa Score de
+Tração/Similaridade/Modelos Vendedores — isso continua vivendo só no front-end de
+`estrategias.html`, ainda em validação com dado real. Em vez disso:
+
+- **`estrategias.html`**: cada bloco de segmento com mix completo ganhou um botão "📤 Publicar
+  mix" (`publicarMixDoSegmento_`) que manda pro GAS só os 7 `idEmpreendimento` do mix já
+  calculado, mais a faixa de preço real do segmento naquele momento (min/max dos candidatos) — o
+  suficiente pra casar um cliente futuro com esse segmento sem o servidor precisar recalcular
+  percentil nenhum. Upsert por segmento+situação: publicar de novo substitui o snapshot anterior,
+  não acumula histórico.
+- **`code.txt`**: nova aba `MIX_SEGMENTOS_PUBLICADOS` + `publicarMixSegmento_`/
+  `listarMixSegmentosPublicados_`. O motor propriamente dito —
+  `escolherIscaEntrePapeis_` (função pura, testável isolada) — aplica a regra de isca por
+  motivação vinda da IA MENTORA, adaptada porque "parcela estimada" e "primeiro imóvel com FGTS"
+  dependem de dado que ainda não existe:
+  - sair do aluguel → produto mais barato do mix
+  - investir → maior % vendido do mix (prova de demanda)
+  - imóvel próprio (upgrade) → ANCORA_SUP (faixa acima) se existir, senão o mais caro do mix
+  - qualquer outro caso (ou nenhuma motivação reconhecida) → ISCA, com fallback pra ALVO_1
+  Quando o cliente marca mais de uma motivação, a prioridade é aluguel > investidor > próprio
+  (decisão arbitrária, documentada no código, fácil de reordenar depois).
+- `resumoEmpreendimento_` agrega as linhas por-unidade de um `idEmpreendimento` (preço a partir
+  de, %vendido, situação, bairro/cidade, aceita FGTS) direto do GAS, sem depender do navegador do
+  corretor estar aberto.
+- Nova ação pública `selecionar_isca` (GET, sem login — mesmo padrão de `listar_lancamentos`,
+  pensada pro app-lancamentos.html que ainda não existe). Ponto de atenção de segurança
+  deliberado: o wrapper público (`selecionarIscaPublico_`) devolve **só** os dados da isca — o
+  roteiro completo (que revelaria a existência de um alvo "melhor" escondido) nunca atravessa
+  pra esse endpoint, só fica disponível internamente pro motor.
+
+Testado: 20 casos via Node (regra de motivação com mix completo/incompleto/vazio, prioridade em
+motivação múltipla, agregação de %vendido/FGTS/faixas, casamento de preço com snapshot exato/fora
+da faixa) + teste ao vivo no console de `estrategias.html` (botão aparece só em segmento com mix
+completo, payload de publicação com os IDs e faixa de preço corretos).
+
+Próximas fases (não iniciadas): app-lancamentos.html em si (Fase 2), estrutura de dados/agendamento
+de visita (Fase 3), ficha de atendimento no dashboard (Fase 4).
+
 ## 2026-07-28 (parte 121) — Estratégias: substitui todas as abordagens por uma única linha editorial "Guia de Decisão"
 
 Usuário decidiu mudar de estratégia: em vez de várias abordagens de copy concorrentes na tabela,

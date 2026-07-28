@@ -169,7 +169,9 @@ const CABECALHO_LANCAMENTOS = [
 // exigem uma sessão já validada (senão ninguém conseguiria logar).
 // 'listar_lancamentos' também é pública: é lida pelo BASEIMOB (visitante
 // anônimo de anúncio, sem login nenhum), além do Base Inteligente.
-var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'rodar_matching'];
+// 'selecionar_isca' também é pública: chamada de app-lancamentos.html (landing
+// page de captura, sem login), igual listar_lancamentos.
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'rodar_matching', 'selecionar_isca'];
 
 function doGet(e) {
   if (!e || !e.parameter) return ok({ status: 'sem parametros' });
@@ -244,6 +246,12 @@ function doGet(e) {
   if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')         return ok(listarLancamentos_());
+  if (acao === 'listar_mix_segmentos')       return ok(listarMixSegmentosPublicados_());
+  if (acao === 'selecionar_isca') return ok(selecionarIscaPublico_({
+    motivacoes: String(e.parameter.motivacoes || '').split(',').filter(Boolean),
+    precoAlvo:  e.parameter.precoAlvo,
+    situacao:   e.parameter.situacao,
+  }));
   if (acao === 'listar_padroes_vendedores')  return ok(listarPadroesVendedores_());
   if (acao === 'listar_modelos_vendedores')  return ok(listarModelosVendedores_());
   if (acao === 'listar_revendas_construtoras') return ok(listarRevendasConstrutoras_());
@@ -813,6 +821,7 @@ function doPost(e) {
   if (d.acao === 'salvar_link_util')      return ok(salvarLinkUtil_(d));
   if (d.acao === 'excluir_link_util')     return ok(excluirLinkUtil_(d));
   if (d.acao === 'salvar_perfil_vendedor') return ok(salvarPerfilVendedor_(d));
+  if (d.acao === 'publicar_mix_segmento') return ok(publicarMixSegmento_(d));
   // Qualquer outra ação nomeada mas não reconhecida NÃO deve cair pra salvar() —
   // já criou um contato em branco na base por engano com uma ação com typo/nova
   // ainda não implantada. Só chega em salvar()/atualizar() sem "acao" no payload.
@@ -4504,6 +4513,25 @@ var CABECALHO_INTERESSES = [
   'canal', 'tipo_contato', 'score'
 ];
 
+// MIX_SEGMENTOS_PUBLICADOS — snapshot do mix de 7 papéis (ISCA/ALVO_1-3/
+// ANCORA_SUP/ANCORA_INF/COMPLEMENTAR) que o corretor "publica" a partir de
+// estrategias.html pra cada Segmento (Padrão+Faixa). O GAS NÃO reimplementa
+// Score de Tração/Similaridade/Modelos Vendedores (isso continua vivendo só
+// no front-end, ainda em validação) — ele só lê o resultado já calculado e
+// publicado aqui, junto com a faixa de preço (min/max) que esse segmento
+// representava NO MOMENTO da publicação. Guardar o min/max junto evita ter
+// que recalcular os cortes de percentil no servidor pra decidir "que faixa
+// de preço é essa" — casar um cliente do app novo com um segmento é só
+// comparar o preço dele contra esse intervalo já congelado. Upsert por
+// segmentoId+situacao: cada publicação SUBSTITUI a anterior do mesmo
+// segmento (não acumula histórico).
+var CABECALHO_MIX_SEGMENTOS = [
+  'segmentoId', 'padrao', 'situacao', 'faixaPrecoMin', 'faixaPrecoMax',
+  'dataPublicacao',
+  'isca_id', 'alvo1_id', 'alvo2_id', 'alvo3_id',
+  'ancoraSup_id', 'ancoraInf_id', 'complementar_id',
+];
+
 // FAVORITOS — imóveis que o corretor marcou como favorito pra um cliente
 // específico, na página de ofertas (drawer do dashboard). Dados do imóvel
 // vêm denormalizados (mesmos campos imo* de MATCHES) porque a aba MATCHES é
@@ -4823,6 +4851,257 @@ function obterAbaInteresses_() {
        .setFontWeight('bold').setBackground('#C55A11').setFontColor('#ffffff');
   }
   return aba;
+}
+
+function obterAbaMixSegmentos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('MIX_SEGMENTOS_PUBLICADOS');
+  if (!aba) {
+    aba = ss.insertSheet('MIX_SEGMENTOS_PUBLICADOS');
+    aba.setTabColor('#375623');
+    aba.appendRow(CABECALHO_MIX_SEGMENTOS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_MIX_SEGMENTOS.length)
+       .setFontWeight('bold').setBackground('#375623').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+// Grava o mix de 7 papéis de um segmento (chamado por "Publicar mix" em
+// estrategias.html). Upsert por segmentoId+situacao — cada publicação
+// SUBSTITUI a anterior do mesmo segmento, não acumula histórico.
+function publicarMixSegmento_(d) {
+  d = d || {};
+  var segmentoId = String(d.segmentoId || '').trim();
+  if (!segmentoId) return { ok: false, erro: 'segmentoId obrigatorio' };
+  var situacao = String(d.situacao || '').trim();
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba = obterAbaMixSegmentos_();
+    var idxSeg = CABECALHO_MIX_SEGMENTOS.indexOf('segmentoId');
+    var idxSit = CABECALHO_MIX_SEGMENTOS.indexOf('situacao');
+    var lr = aba.getLastRow();
+    var linhaExistente = -1;
+    if (lr >= 2) {
+      var dados = aba.getRange(2, 1, lr - 1, CABECALHO_MIX_SEGMENTOS.length).getValues();
+      for (var i = 0; i < dados.length; i++) {
+        if (String(dados[i][idxSeg] || '') === segmentoId && String(dados[i][idxSit] || '') === situacao) {
+          linhaExistente = i + 2;
+          break;
+        }
+      }
+    }
+
+    var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var papeis = d.papeis || {};
+    var linha = CABECALHO_MIX_SEGMENTOS.map(function(col) {
+      if (col === 'segmentoId')      return segmentoId;
+      if (col === 'situacao')        return situacao;
+      if (col === 'padrao')          return d.padrao || '';
+      if (col === 'faixaPrecoMin')   return Number(d.faixaPrecoMin) || 0;
+      if (col === 'faixaPrecoMax')   return Number(d.faixaPrecoMax) || 0;
+      if (col === 'dataPublicacao')  return agora;
+      if (col === 'isca_id')         return papeis.ISCA || '';
+      if (col === 'alvo1_id')        return papeis.ALVO_1 || '';
+      if (col === 'alvo2_id')        return papeis.ALVO_2 || '';
+      if (col === 'alvo3_id')        return papeis.ALVO_3 || '';
+      if (col === 'ancoraSup_id')    return papeis.ANCORA_SUP || '';
+      if (col === 'ancoraInf_id')    return papeis.ANCORA_INF || '';
+      if (col === 'complementar_id') return papeis.COMPLEMENTAR || '';
+      return '';
+    });
+
+    if (linhaExistente > 0) {
+      aba.getRange(linhaExistente, 1, 1, CABECALHO_MIX_SEGMENTOS.length).setValues([linha]);
+    } else {
+      aba.appendRow(linha);
+    }
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function listarMixSegmentosPublicados_() {
+  var aba = obterAbaMixSegmentos_();
+  var lr  = aba.getLastRow();
+  if (lr < 2) return { mixes: [] };
+  var dados = aba.getRange(2, 1, lr - 1, CABECALHO_MIX_SEGMENTOS.length).getValues();
+  var mixes = dados.filter(function(r) { return r[0]; }).map(function(r) {
+    var obj = {};
+    CABECALHO_MIX_SEGMENTOS.forEach(function(col, i) { obj[col] = r[i]; });
+    return obj;
+  });
+  return { mixes: mixes };
+}
+
+// Agrega as linhas (uma por tipologia/unidade) de um mesmo idEmpreendimento
+// num resumo público (preço a partir de, % vendido, situação, bairro/cidade,
+// aceita FGTS) — mesma lógica de agruparPorEmpreendimento_/pctVendido já
+// usada no front-end (estrategias.html/lancamentos.html), replicada aqui
+// pra não depender do navegador do corretor estar aberto.
+function resumoEmpreendimento_(idEmpreendimento, todasLinhas) {
+  var linhas = todasLinhas.filter(function(l) {
+    return l.idEmpreendimento === idEmpreendimento && l.statusAtivo !== 'Excluído';
+  });
+  if (!linhas.length) return null;
+
+  var precos = linhas.map(function(l) {
+    return Number(l.precoMin) || Number(l.precoMedio) || Number(l.preco) || 0;
+  }).filter(function(v) { return v > 0; });
+
+  var estoque       = Number(linhas[0].estoque) || 0;
+  var totalUnidades = Number(linhas[0].totalUnidades) || 0;
+  var pctVendido    = totalUnidades > 0 ? Math.round(((totalUnidades - estoque) / totalUnidades) * 100) : null;
+
+  var quartosVals = linhas.map(function(l) { return Number(l.quartos) || 0; }).filter(function(v) { return v > 0; });
+  var areaVals    = linhas.map(function(l) { return Number(l.areaUtil) || 0; }).filter(function(v) { return v > 0; });
+
+  return {
+    idEmpreendimento:  idEmpreendimento,
+    menorPreco:        precos.length ? Math.min.apply(null, precos) : 0,
+    percentualVendido: pctVendido,
+    situacao:          linhas[0].status || '',
+    bairro:            linhas[0].bairro || '',
+    cidade:            linhas[0].cidade || '',
+    previsaoEntrega:   linhas[0].previsaoEntrega || '',
+    aceitaFgts:        linhas.some(function(l) { return String(l.fgts).trim() === 'Sim'; }),
+    quartosMin:        quartosVals.length ? Math.min.apply(null, quartosVals) : null,
+    quartosMax:        quartosVals.length ? Math.max.apply(null, quartosVals) : null,
+    areaUtilMin:       areaVals.length ? Math.min.apply(null, areaVals) : null,
+    areaUtilMax:       areaVals.length ? Math.max.apply(null, areaVals) : null,
+  };
+}
+
+// Ordem de prioridade quando o cliente marca MAIS de uma motivação ao mesmo
+// tempo (o simulador permite múltipla escolha) — decisão arbitrária, fácil
+// de reordenar depois: segue a ordem em que a IA MENTORA listou os critérios.
+var ORDEM_PRIORIDADE_MOTIVACAO_ = ['aluguel', 'investidor', 'proprio'];
+
+// Núcleo PURO da escolha de isca — recebe só os resumos já agregados dos 7
+// papéis (sem tocar planilha), pra dar pra testar isoladamente. Critério por
+// motivação (ver NOVA ESTRATEGIA.txt, adaptado — sem "parcela estimada" nem
+// "primeiro imóvel com FGTS", que dependem de dado que ainda não existe):
+//   aluguel    -> menor preço entre os 7 (o mais acessível)
+//   investidor -> maior % vendido entre os 7 (prova de demanda)
+//   proprio    -> ANCORA_SUP se existir (produto de faixa acima, melhor
+//                 posicionamento); senão o de maior preço entre os 7
+//   default (familia, ou nenhuma motivação reconhecida) -> ISCA; na falta
+//                 dela, ALVO_1; na falta dele, o primeiro papel disponível
+function escolherIscaEntrePapeis_(papeis, motivacoes) {
+  var presentes = ORDEM_PAPEIS_MIX_.filter(function(p) { return papeis[p]; });
+  if (!presentes.length) return null;
+
+  var motivacaoEscolhida = ORDEM_PRIORIDADE_MOTIVACAO_.filter(function(m) {
+    return (motivacoes || []).indexOf(m) >= 0;
+  })[0];
+
+  function papelComMaior_(campo) {
+    return presentes.reduce(function(melhor, p) {
+      return (!melhor || papeis[p][campo] > papeis[melhor][campo]) ? p : melhor;
+    }, null);
+  }
+  function papelComMenor_(campo) {
+    return presentes.reduce(function(melhor, p) {
+      return (!melhor || papeis[p][campo] < papeis[melhor][campo]) ? p : melhor;
+    }, null);
+  }
+
+  var papelEscolhido;
+  if (motivacaoEscolhida === 'aluguel') {
+    papelEscolhido = papelComMenor_('menorPreco');
+  } else if (motivacaoEscolhida === 'investidor') {
+    papelEscolhido = papelComMaior_('percentualVendido');
+  } else if (motivacaoEscolhida === 'proprio') {
+    papelEscolhido = presentes.indexOf('ANCORA_SUP') >= 0 ? 'ANCORA_SUP' : papelComMaior_('menorPreco');
+  } else {
+    papelEscolhido = presentes.indexOf('ISCA') >= 0 ? 'ISCA'
+                    : presentes.indexOf('ALVO_1') >= 0 ? 'ALVO_1'
+                    : presentes[0];
+  }
+
+  return { papelEscolhido: papelEscolhido, motivacaoUsada: motivacaoEscolhida || null };
+}
+var ORDEM_PAPEIS_MIX_ = ['ISCA', 'ALVO_1', 'ALVO_2', 'ALVO_3', 'ANCORA_SUP', 'ANCORA_INF', 'COMPLEMENTAR'];
+
+// Escolhe, entre os snapshots de mix já publicados, o que melhor casa com o
+// preço declarado pelo cliente. Prioriza um snapshot cuja faixa [min,max]
+// CONTENHA o preço; se nenhum contém (preço fora de qualquer faixa
+// publicada), cai pro snapshot com a borda mais próxima.
+function encontrarSegmentoMaisProximo_(snapshots, precoAlvo) {
+  if (!snapshots.length) return null;
+  var contendo = snapshots.filter(function(s) {
+    return precoAlvo >= Number(s.faixaPrecoMin) && precoAlvo <= Number(s.faixaPrecoMax);
+  });
+  if (contendo.length) return contendo[0];
+
+  return snapshots.reduce(function(maisProximo, s) {
+    var dist = precoAlvo < Number(s.faixaPrecoMin) ? Number(s.faixaPrecoMin) - precoAlvo
+             : precoAlvo > Number(s.faixaPrecoMax) ? precoAlvo - Number(s.faixaPrecoMax) : 0;
+    if (!maisProximo || dist < maisProximo._dist) { s._dist = dist; return s; }
+    return maisProximo;
+  }, null);
+}
+
+// Motor completo (impuro — lê 2 abas): dado o perfil declarado no app novo
+// (motivações, preço-alvo, situação), decide a ISCA a mostrar pro cliente E
+// monta o roteiro das 7 ofertas pro corretor. IMPORTANTE: o roteiro (quem é
+// ALVO/ANCORA/etc) NUNCA pode ser devolvido pra o navegador do cliente —
+// ver selecionarIscaPublico_, o único wrapper que o webhook público chama.
+function selecionarIscaInterno_(perfil) {
+  perfil = perfil || {};
+  var precoAlvo  = Number(perfil.precoAlvo) || 0;
+  var situacao   = String(perfil.situacao || 'todos');
+  var motivacoes = perfil.motivacoes || [];
+
+  var situacaoBucket = situacao === 'pronto_novo' ? 'NOVOS' : situacao === 'em_obras' ? 'NA_PLANTA' : null;
+
+  var todosSnapshots = listarMixSegmentosPublicados_().mixes;
+  var candidatosSnapshot = situacaoBucket
+    ? todosSnapshots.filter(function(s) { return s.situacao === situacaoBucket; })
+    : todosSnapshots;
+  if (!candidatosSnapshot.length) candidatosSnapshot = todosSnapshots; // fallback: nenhum snapshot na situação pedida
+
+  var snapshot = encontrarSegmentoMaisProximo_(candidatosSnapshot, precoAlvo);
+  if (!snapshot) return { ok: false, erro: 'nenhum mix publicado ainda' };
+
+  var todasLinhas = listarLancamentos_().lancamentos;
+  var IDS_POR_PAPEL_ = {
+    ISCA: 'isca_id', ALVO_1: 'alvo1_id', ALVO_2: 'alvo2_id', ALVO_3: 'alvo3_id',
+    ANCORA_SUP: 'ancoraSup_id', ANCORA_INF: 'ancoraInf_id', COMPLEMENTAR: 'complementar_id',
+  };
+  var papeis = {};
+  ORDEM_PAPEIS_MIX_.forEach(function(p) {
+    var id = snapshot[IDS_POR_PAPEL_[p]];
+    papeis[p] = id ? resumoEmpreendimento_(id, todasLinhas) : null;
+  });
+
+  var escolha = escolherIscaEntrePapeis_(papeis, motivacoes);
+  if (!escolha) return { ok: false, erro: 'mix publicado sem nenhum papel valido' };
+
+  var roteiro = ORDEM_PAPEIS_MIX_.filter(function(p) { return papeis[p]; }).map(function(p) {
+    return { papel: p, escolhidoComoIsca: p === escolha.papelEscolhido, resumo: papeis[p] };
+  });
+
+  return {
+    ok: true,
+    segmentoUsado: snapshot.segmentoId,
+    motivacaoUsada: escolha.motivacaoUsada,
+    isca: papeis[escolha.papelEscolhido],
+    roteiro: roteiro,
+  };
+}
+
+// Wrapper PÚBLICO — chamado pelo webhook sem sessão (app-lancamentos.html é
+// uma landing page de captura, igual o simulador, sem login). Devolve SÓ os
+// dados da isca; o roteiro completo (que revela que existe uma alternativa
+// "melhor" sendo propositalmente escondida) nunca sai daqui.
+function selecionarIscaPublico_(perfil) {
+  var res = selecionarIscaInterno_(perfil);
+  if (!res.ok) return res;
+  return { ok: true, isca: res.isca };
 }
 
 // ID permanente do lead BaseImob (LL-NNNNN) — mesmo mecanismo de

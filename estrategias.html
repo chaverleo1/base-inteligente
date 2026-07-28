@@ -1062,7 +1062,17 @@ function recalcularSegmentos_() {
     const segAcima = ordemSegmentos[idx + 1];
     const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
     const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
-    _resultadosPorSegmento[seg] = { ...resultado, total: candidatos.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
+    // faixaPrecoMin/Max guarda o intervalo de preço REAL do segmento no
+    // momento do cálculo -- usado só por publicarMixDoSegmento_ (o app novo
+    // pro cliente casa o preço declarado contra esse intervalo já congelado,
+    // em vez de recalcular os cortes de percentil no servidor).
+    const precos = candidatos.map(c => c.menorPreco).filter(v => v > 0);
+    _resultadosPorSegmento[seg] = {
+      ...resultado, total: candidatos.length,
+      cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis),
+      faixaPrecoMin: precos.length ? Math.min(...precos) : 0,
+      faixaPrecoMax: precos.length ? Math.max(...precos) : 0,
+    };
   });
 }
 
@@ -1348,6 +1358,7 @@ function renderBlocosSegmentos_() {
         <div class="segmento-actions">
           <button class="btn-mini" onclick="exportarCSV_('${seg.replace(/'/g,"\\'")}')">📥 Exportar CSV</button>
           <button class="btn-mini" onclick="abrirModalExport_('${seg.replace(/'/g,"\\'")}')">🤖 Enviar para IA de Campanhas</button>
+          ${r.aviso ? '' : `<button class="btn-mini" onclick="publicarMixDoSegmento_('${seg.replace(/'/g,"\\'")}')">📤 Publicar mix</button>`}
         </div>
       </div>
       ${corpo}
@@ -1386,6 +1397,45 @@ function abrirCopyBriefSeg_(papel, seg) {
   if (!r || !r.papeis) return;
   _mixAtualPapeis_ = r.papeis;
   abrirCopyBrief_(papel);
+}
+
+// Publica o mix de 7 papéis deste segmento pro GAS ler depois em
+// selecionarIsca_ (motor do app-lancamentos.html, em construção). O GAS não
+// recalcula Score de Tração/Similaridade -- só lê este snapshot (7 IDs +
+// faixa de preço do segmento no momento da publicação) e aplica a regra de
+// motivação por cima. Cada publicação SUBSTITUI a anterior do mesmo
+// segmento -- não há histórico, é sempre "o mix vigente agora".
+async function publicarMixDoSegmento_(seg) {
+  const r = _resultadosPorSegmento[seg];
+  if (!r || !r.papeis) return;
+  const papeis = {};
+  ORDEM_PAPEIS_.forEach(papel => {
+    const item = r.papeis[papel];
+    if (item) papeis[papel] = item.e.idEmpreendimento;
+  });
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: new URLSearchParams({
+        dados: JSON.stringify({
+          acao: 'publicar_mix_segmento',
+          token: tokenSessao(),
+          segmentoId: seg,
+          padrao: padraoInternoDoSegmento_(seg),
+          situacao: _situacaoAtiva,
+          faixaPrecoMin: r.faixaPrecoMin,
+          faixaPrecoMax: r.faixaPrecoMax,
+          papeis,
+        }),
+      }),
+    });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) mostrarToast(`Mix de "${segmentoLabelDisplay_(seg)}" publicado.`);
+    else mostrarToast(json.erro || 'Erro ao publicar mix.', 'erro');
+  } catch (e) {
+    mostrarToast('Erro de conexão ao publicar mix.', 'erro');
+  }
 }
 
 // ── MODO CLIENTE (?cliente=CTT-NNN, aberto pelo botão "🎯 Estratégias" em
