@@ -874,22 +874,64 @@ function selecionarMixEstrategico_(candidatos, candidatosAcima, minimo) {
   const usar = item => { usados.add(item.e.idLancamento); return item; };
   const disponiveis = () => validos.filter(c => !usados.has(c.e.idLancamento));
   const porTracao = () => [...disponiveis()].sort((a, b) => b.comp - a.comp);
-  const porPreco   = () => [...disponiveis()].sort((a, b) => a.menorPreco - b.menorPreco);
-
   const papeis = {};
+
+  // 1. ALVO_1 — maior tração; define a referência de preço para as demais faixas
   papeis.ALVO_1 = usar(porTracao()[0]);
-  const t2 = porTracao(); papeis.ALVO_2 = t2.length ? usar(t2[0]) : null;
-  const t3 = porTracao(); papeis.ALVO_3 = t3.length ? usar(t3[0]) : null;
-  const p1 = porPreco(); papeis.ISCA = p1.length ? usar(p1[0]) : null;
-  const p2 = porPreco(); papeis.ANCORA_INF = p2.length ? usar(p2[0]) : null;
+  const alvo1Preco  = papeis.ALVO_1.menorPreco || 0;
+  const alvo1Padrao = papeis.ALVO_1.padrao || '';
 
-  const tipoAlvo1 = tipoImovelDominante_(papeis.ALVO_1.e.unidades);
-  const restantes = disponiveis();
-  papeis.COMPLEMENTAR = restantes.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo1) || restantes[0] || null;
-  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
+  // Faixas proporcionais ao preço do ALVO_1 (mesma lógica do Produto Alvo)
+  const faixaP = (minR, maxR) => disponiveis().filter(c =>
+    c.menorPreco > 0 && c.menorPreco >= alvo1Preco * minR && c.menorPreco <= alvo1Preco * maxR
+  );
+  const porPadraoTracao = arr => [...arr].sort((a, b) =>
+    (b.padrao === alvo1Padrao ? 1 : 0) - (a.padrao === alvo1Padrao ? 1 : 0) || b.comp - a.comp
+  );
 
+  // 2. ÂNCORA SUPERIOR — menor preço do segmento acima (não consome candidato atual)
   const acimaValidos = candidatosAcima || [];
-  papeis.ANCORA_SUP = acimaValidos.length ? [...acimaValidos].sort((a, b) => a.menorPreco - b.menorPreco)[0] : null;
+  papeis.ANCORA_SUP = acimaValidos.length
+    ? [...acimaValidos].sort((a, b) => a.menorPreco - b.menorPreco)[0]
+    : null;
+
+  // 3. ALVO_2 & ALVO_3 — faixa 65–155% do alvo, mesmo padrão preferido, maior tração
+  const c2 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_2 = c2.length ? usar(c2[0]) : null;
+  const c3 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_3 = c3.length ? usar(c3[0]) : null;
+
+  // 4. ISCA — faixa 62–84% do alvo, maior tração (não compete com ÂNCORA_INF)
+  const ci = [...faixaP(0.62, 0.84)].sort((a, b) => b.comp - a.comp);
+  if (ci.length) {
+    papeis.ISCA = usar(ci[0]);
+  } else {
+    const fb = disponiveis().filter(it => it.menorPreco > 0 && it.menorPreco < alvo1Preco)
+      .sort((a, b) => b.menorPreco - a.menorPreco);
+    papeis.ISCA = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 5. ÂNCORA INFERIOR — faixa 40–62%, mais barato na faixa
+  const cai = [...faixaP(0.40, 0.62)].sort((a, b) => a.menorPreco - b.menorPreco);
+  if (cai.length) {
+    papeis.ANCORA_INF = usar(cai[0]);
+  } else {
+    const fb = disponiveis().filter(it => it.menorPreco > 0 && it.menorPreco < alvo1Preco)
+      .sort((a, b) => b.menorPreco - a.menorPreco);
+    papeis.ANCORA_INF = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 6. ALVO_3 fallback — se step 3 não preencheu
+  if (!papeis.ALVO_3) {
+    const fb = [...disponiveis()].sort((a, b) => b.comp - a.comp);
+    papeis.ALVO_3 = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 7. COMPLEMENTAR — tipo diferente do ALVO_1, ou melhor tração restante
+  const tipoAlvo1 = tipoImovelDominante_(papeis.ALVO_1.e.unidades);
+  const rest = disponiveis();
+  papeis.COMPLEMENTAR = rest.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo1) || rest[0] || null;
+  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
 
   return { papeis, aviso: null };
 }
@@ -1170,7 +1212,10 @@ function renderMixProdutoAlvo_() {
           <div class="segmento-titulo">Estratégia de 7 Ofertas</div>
           <div class="segmento-sub">Mix montado a partir de <strong>${_alvoSelecionado.e.nomeEmpreendimento || '—'}</strong> como Alvo Primário · <span style="color:var(--text3)">clique numa linha para gerar briefing de post</span></div>
         </div>
-        ${covHtml}
+        <div style="display:flex;align-items:center;gap:8px">
+          ${covHtml}
+          <button class="btn-mini" onclick="abrirCopyBriefMixCompleto_()" title="Briefing de campanha estratégica para o mix completo" style="display:flex;align-items:center;gap:5px">✏️ Campanha</button>
+        </div>
       </div>
       ${mix.aviso ? `<div class="vazio-segmento">${mix.aviso}</div>` : tabelaMixHtml_(mix, true)}
     </div>`;
@@ -1292,7 +1337,7 @@ function renderBlocosSegmentos_() {
     const covHtml = r.cobertura ? `<span class="cobertura-badge cobertura-${r.cobertura.nivel}">${r.cobertura.nivel === 'forte' ? '🟢' : r.cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${r.cobertura.nivel}</span>` : '';
     const corpo = r.aviso
       ? `<div class="vazio-segmento">${r.aviso}</div>`
-      : tabelaMixHtml_(r);
+      : tabelaMixHtml_(r, true, seg);
     return `<div class="segmento-block">
       <div class="segmento-header">
         <div>
@@ -1313,14 +1358,16 @@ function renderBlocosSegmentos_() {
 // Tabela dos 7 papéis -- mesmo formato pros blocos por segmento e pro modo
 // cliente (?cliente=CTT-NNN), pra manter as duas visões idênticas.
 // clickable=true ativa linhas clicáveis que abrem o drawer de copy brief.
-function tabelaMixHtml_(r, clickable) {
+function tabelaMixHtml_(r, clickable, seg) {
   return `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
-      <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th>${clickable ? '<th style="width:36px"></th>' : ''}
+      <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th><th style="width:36px"></th>
     </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
       const item = r.papeis[papel];
-      if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="${clickable ? 7 : 6}" style="color:var(--text3)">— não preenchido —</td></tr>`;
-      const clkAttrs = clickable ? ` class="papel-clickable" onclick="abrirCopyBrief_('${papel}')" title="Gerar briefing de post para este produto"` : '';
-      return `<tr${clkAttrs}>
+      if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="8" style="color:var(--text3)">— não preenchido —</td></tr>`;
+      const onclk = seg
+        ? `abrirCopyBriefSeg_('${papel}','${seg.replace(/'/g,"\\'")}')`
+        : `abrirCopyBrief_('${papel}')`;
+      return `<tr class="papel-clickable" onclick="${onclk}" title="Gerar briefing de post para este produto">
         <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
         <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
         <td>${item.e.construtora || '—'}</td>
@@ -1329,9 +1376,16 @@ function tabelaMixHtml_(r, clickable) {
         <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
         <td>${situacaoBadgeHtml_(item.e.status)}</td>
         <td>${tabelaBadgeHtml_(item.e.statusTabela)}</td>
-        ${clickable ? `<td style="text-align:center;color:var(--text3);font-size:13px" title="Gerar briefing">✏️</td>` : ''}
+        <td style="text-align:center;color:var(--text3);font-size:13px" title="Gerar briefing">✏️</td>
       </tr>`;
     }).join('')}</tbody></table></div>`;
+}
+
+function abrirCopyBriefSeg_(papel, seg) {
+  const r = _resultadosPorSegmento[seg];
+  if (!r || !r.papeis) return;
+  _mixAtualPapeis_ = r.papeis;
+  abrirCopyBrief_(papel);
 }
 
 // ── MODO CLIENTE (?cliente=CTT-NNN, aberto pelo botão "🎯 Estratégias" em
@@ -1703,6 +1757,57 @@ function gerarGatilhos_(item, papel, ctx) {
   const baseHash = `${cidadeTag} ${padraoTag} #lancamentoimobiliario #imoveis #corretorimoveis #imoveisparainvestir`;
   const idBloco = empId ? `\n\nID NA ARTE — obrigatório\nCódigo: ${empId}\n• Canto inferior direito, fonte pequena, cor neutra` : '';
 
+  const isLuxo   = padrao === 'Luxo';
+  const isMedio  = !isAlto && (padrao === 'Médio' || padrao === 'Medio' || padrao === 'médio');
+  // isPopular = tudo que não é Alto Padrão, Luxo ou Médio
+
+  const tom = {
+    // CTAs por padrão
+    ctaPergunta:  isLuxo ? 'Detalhes sob solicitação.' : isAlto ? 'Me chama no direct 📲' : isMedio ? 'Me manda uma mensagem 💬' : 'Me chama agora 📲',
+    ctaExplica:   isLuxo ? 'Entre em contato — compartilho os detalhes com discrição.' : isAlto ? 'Me chama — explico o potencial 📊' : isMedio ? 'Me chama e te explico tudo 📊' : 'Me chama pra te contar mais 📊',
+    ctaUrgencia:  isLuxo ? 'Se este perfil é o seu, entre em contato com discrição.' : isAlto ? 'Não espera fechar. Me chama 📲' : isMedio ? 'Me manda mensagem antes que feche 📲' : 'Me chama antes que feche 📲',
+
+    // Abertura da legenda por padrão
+    aberturExcl:  isLuxo ? 'Uma curadoria que não circula em nenhum canal público.'
+                : isAlto ? 'Antes de sair pro mercado — quem me acompanha vê primeiro.'
+                : isMedio ? 'Antes de divulgar pra todo mundo, você sabe primeiro.'
+                : 'Você chega antes. Esse é o benefício de me seguir.',
+    aberturAutorid: isLuxo ? 'Quem compreende valor, decide com calma — mas decide.'
+                  : isAlto ? 'Clientes meus já garantiram posição nesse produto.'
+                  : isMedio ? 'Clientes meus já fecharam aqui. O que eles viram primeiro?'
+                  : 'Clientes meus já garantiram posição. Veja o que eles enxergaram.',
+    aberturTiming: isLuxo ? 'Há produtos que se adquire uma vez. Este é um deles.'
+                 : isAlto ? 'Tem produtos que você entra no começo e sai na frente.'
+                 : isMedio ? 'Tem produtos que você entra no começo e sai na frente.'
+                 : 'Esse é o tipo de produto que você entra cedo e sai na frente.',
+
+    // Paleta e tipografia por padrão
+    paletaVIP:      isLuxo ? 'PALETA: preto + champagne + off-white — minimalismo de alto luxo. Jamais use cores vivas. O silêncio visual é o luxo.'
+                  : isAlto ? 'PALETA: preto + dourado + branco (premium/VIP).'
+                  : isMedio ? 'PALETA: azul marinho + branco + prata (conquista, aspiração).'
+                  : 'PALETA: verde + amarelo + branco (acessível, confiante, popular).',
+    paletaAutor:    isLuxo ? 'PALETA: grafite escuro + tipografia branca + detalhe champagne. Sobriedade como sinal de autoridade.'
+                  : isAlto ? 'PALETA: azul marinho + cinza grafite + dourado (autoridade).'
+                  : isMedio ? 'PALETA: azul + cinza + acento dourado (profissional, confiável).'
+                  : 'PALETA: azul marinho + verde + branco (confiança acessível).',
+    paletaUrg:      isLuxo ? 'PALETA: grafite escuro + tipografia branca limpa. Urgência no Luxo é por escassez — jamais por alarme visual. Nada de vermelho.'
+                  : isAlto ? 'PALETA: fundo escuro + acento âmbar/dourado (urgência sóbria).'
+                  : isMedio ? 'PALETA: fundo escuro + acento laranja sutil (urgência com classe).'
+                  : 'PALETA: fundo escuro + vermelho/laranja em destaque (urgência direta).',
+    paletaTiming:   isLuxo ? 'PALETA: branco + grafite + toque de ouro (curadoria, análise de mercado).'
+                  : isAlto ? 'PALETA: azul marinho + grafite + dourado (executivo, estratégico).'
+                  : isMedio ? 'PALETA: azul + branco + cinza (profissional, confiável).'
+                  : 'PALETA: azul + verde + branco (crescimento, acessível).',
+    paletaCurio:    isLuxo ? 'PALETA: branco puro + grafite + mínimo detalhe em ouro. Menos é mais. Nenhum elemento desnecessário.'
+                  : isAlto ? 'PALETA: fundo claro + tipografia escura + acento ouro ou verde-musgo.'
+                  : isMedio ? 'PALETA: fundo neutro + bold typography + acento em verde-água.'
+                  : 'PALETA: fundo colorido ou vibrante + tipografia branca bold.',
+    tipo:           isLuxo ? 'TIPOGRAFIA: serifada elegante (Garamond, Playfair), peso leve/regular. O Luxo não grita — seduz.'
+                  : isAlto ? 'TIPOGRAFIA: sans-serif clean, peso semibold — hierarquia clara, tom premium.'
+                  : isMedio ? 'TIPOGRAFIA: sans-serif moderna, bold — confiante, direta, sem enfeites.'
+                  : 'TIPOGRAFIA: ultra-bold, grande, legível à distância — impacto visual imediato.',
+  };
+
   return [
     {
       linha: 'Exclusividade & Acesso',
@@ -1720,7 +1825,7 @@ DIREÇÃO VISUAL
 • Fundo escuro com textura premium (couro, mármore ou grafite)
 • Badge "EXCLUSIVO" ou "ACESSO ANTECIPADO" no topo
 • Dados sem revelar o nome — localização, padrão, faixa de preço
-• Paleta: preto + dourado + branco (tom VIP)
+• ${tom.paletaVIP}
 • Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
       feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
 Post de acesso exclusivo. Visual premium que recompensa quem te acompanha.
@@ -1734,20 +1839,20 @@ TEXTO NA ARTE
 Linha destaque: "Ainda não divulguei. Mas você me acompanha."
 Subtítulo: "${tipoM} em ${localizacao} · Padrão ${padrao}"
 Dados: "A partir de ${preco}${areaInfo}${entregaInfo ? ' · ' + entregaInfo : ''}"
-CTA: "Me chama antes que saia da lista 📲"
+CTA: "${tom.ctaUrgencia}"
 
-PALETA: preto + dourado + branco (tom VIP/premium)
-TIPOGRAFIA: ultra-bold — hierarquia clara
+${tom.paletaVIP}
+${tom.tipo}
 Formato: 1080×1350 px${idBloco}`,
-      legenda: `Antes de divulgar pra todo mundo — você vê primeiro.
+      legenda: `${tom.aberturExcl}
 
-Meus seguidores têm acesso antecipado ao que eu seleciono com critério.
+${isLuxo ? 'Minha curadoria é criteriosa. O que chega a você passou por um filtro que a maioria nunca terá acesso.' : 'Meus seguidores têm acesso antecipado ao que eu seleciono com critério.'}
 
 📍 ${localizacao}
 🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
 ${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Não vou revelar o nome aqui. Quem me chama recebe as informações completas antes de qualquer um.
 
-👇 Manda mensagem — acesso antecipado é só pra quem pergunta.
+${isLuxo ? 'Detalhes sob solicitação — discreta e diretamente.' : '👇 Manda mensagem — acesso antecipado é só pra quem pergunta.'}
 
 ${baseHash} #exclusividade #acessoantecipado #viplist`,
     },
@@ -1766,7 +1871,7 @@ CTA: "Me pergunta o que eu vi nesse produto 📊"
 DIREÇÃO VISUAL
 • Layout clean, sóbrio — fundo branco ou cinza claro
 • Silhueta de prédio desfocada OU ícone de "aprovado/validado"
-• Paleta: azul marinho + cinza + dourado (autoridade financeira)
+• ${tom.paletaAutor}
 • Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
       feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
 Post tipo prova social indireta. O corretor como curador — não como vendedor.
@@ -1780,20 +1885,20 @@ TEXTO NA ARTE
 Linha destaque: "${pctStr ? pctStr + ' comprometido.' : 'Clientes meus já garantiram posição.'}"
 Subtítulo: "O que eles viram antes de decidir?"
 Dados: "${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
-CTA: "Me pergunta o que eu vi nesse produto 📊"
+CTA: "${tom.ctaExplica}"
 
-PALETA: azul marinho + cinza grafite + dourado (confiança, autoridade)
-TIPOGRAFIA: clean, semibold — tom de analista, não de vendedor
+${tom.paletaAutor}
+${tom.tipo}
 Formato: 1080×1350 px${idBloco}`,
-      legenda: `Clientes meus já garantiram posição nesse produto.
+      legenda: `${tom.aberturAutorid}
 
-${pctStr ? pctStr + ' já comprometido em poucas semanas.' : 'A movimentação está acima do esperado.'} E eu não precisei forçar nada — quem entendeu o produto, decidiu rápido.
+${pctStr ? pctStr + ' já comprometido em poucas semanas.' : 'A movimentação está acima do esperado.'} ${isLuxo ? 'Quem compreende o produto, decide com elegância — e rapidez.' : 'E eu não precisei forçar nada — quem entendeu o produto, decidiu rápido.'}
 
 📍 ${localizacao}
 🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
 ${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Não vou revelar o nome aqui. Se você quer entender o que eles viram, me chama no direct.
 
-📊 Vou te explicar o potencial sem enrolação.
+${isLuxo ? 'Compartilho os detalhes com quem demonstrar interesse genuíno.' : '📊 Vou te explicar o potencial sem enrolação.'}
 
 ${baseHash} #resultados #investimentoimobiliario #corretordeconfianca`,
     },
@@ -1811,7 +1916,7 @@ CTA: "Me chama antes que feche 📲"
 
 DIREÇÃO VISUAL
 • Elemento central: barra de progresso OU número de unidades em tipografia pesada
-• Paleta: fundo escuro + acento vermelho/laranja (urgência real)
+• ${tom.paletaUrg}
 • Sem revelar o empreendimento — o dado é o protagonista
 • Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
       feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
@@ -1826,21 +1931,21 @@ TEXTO NA ARTE
 Linha destaque: "${pctStr ? pctStr + ' já vendido.' : estoqueStr + '.'}"
 Subtítulo: "${entregaInfo ? entregaInfo + ' · ' : ''}${localizacao}"
 Dados: "Padrão ${padrao}${areaInfo} · A partir de ${preco}"
-CTA: "Não espera acabar — me chama 📲"
+CTA: "${tom.ctaUrgencia}"
 
-PALETA: fundo escuro (preto/grafite) + vermelho/laranja + branco
-TIPOGRAFIA: bold pesado no número principal
+${tom.paletaUrg}
+${tom.tipo}
 Formato: 1080×1350 px${idBloco}`,
       legenda: `${pctStr ? pctStr + ' já comprometido.' : estoqueStr + ' disponíveis.'}
 
-Não é discurso de vendedor. É dado.
+${isLuxo ? 'Não se anuncia escassez. Ela simplesmente existe.' : 'Não é discurso de vendedor. É dado.'}
 
 📍 ${localizacao}
 🏠 Padrão ${padrao}${areaInfo}
 💰 A partir de ${preco}
-${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Quem estava me acompanhando e ainda não me chamou — a janela está fechando.
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}${isLuxo ? 'Se este perfil conversa com o seu momento, entre em contato.' : 'Quem estava me acompanhando e ainda não me chamou — a janela está fechando.'}
 
-📲 Me manda mensagem antes que feche.
+${tom.ctaUrgencia}
 
 ${baseHash} #escassez #estoqeulimitado #oportunidade`,
     },
@@ -1859,7 +1964,7 @@ CTA: "Quer entender o potencial? Me chama 📊"
 DIREÇÃO VISUAL
 • Elemento visual: seta ascendente, linha do tempo ou gráfico de valorização
 • Tom executivo — fala com quem pensa em investimento, não só moradia
-• Paleta: azul marinho + cinza grafite + dourado (financeiro, estratégico)
+• ${tom.paletaTiming}
 • Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
       feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
 Post estilo editorial/infográfico. Para feed, funciona como conteúdo de valor que o lead salva para mostrar ao cônjuge ou sócio.
@@ -1873,20 +1978,20 @@ TEXTO NA ARTE
 Linha destaque: "${prontoParaMorar ? 'Pronto. Sem risco. Sem espera.' : 'Janela de mercado — por quanto tempo mais?'}"
 Subtítulo: "${localizacao} · Padrão ${padrao}${areaInfo}"
 Dados: "A partir de ${preco} · ${pctStr ? pctStr : entregaInfo || 'Em lançamento'}"
-CTA: "Quer entender o potencial? Me chama 📊"
+CTA: "${tom.ctaExplica}"
 
-PALETA: azul marinho + cinza grafite + dourado (análise de mercado)
-TIPOGRAFIA: clean, moderna — hierarquia clara
+${tom.paletaTiming}
+${tom.tipo}
 Formato: 1080×1350 px${idBloco}`,
-      legenda: `Tem produtos que você entra no começo e sai na frente. Tem produtos que você entra depois e paga o preço de quem chegou tarde.
+      legenda: `${tom.aberturTiming}
 
-Esse é o primeiro tipo.
+${isLuxo ? 'Há uma diferença entre o momento certo e o momento que ficou para trás.' : 'Tem produtos que você entra depois e paga o preço de quem chegou tarde. Esse não é esse caso — ainda.'}
 
 📍 ${localizacao}
 🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
 ${pctStr ? '📊 ' + pctStr + ' já comprometido\n' : ''}${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Não vou revelar o nome aqui. Mas se você está avaliando imóvel nos próximos meses, essa conversa pode valer muito.
 
-📊 Me chama e eu te explico o timing.
+${tom.ctaExplica}
 
 ${baseHash} #timing #investimento #valorizacao #mercadoimobiliario`,
     },
@@ -1905,7 +2010,7 @@ CTA: "Me conta o que você busca. Vejo se encaixa. 💬"
 DIREÇÃO VISUAL
 • Visual minimalista — tipografia forte em fundo limpo
 • Nenhum elemento que identifique o empreendimento
-• Paleta neutra: branco + cinza + 1 acento (verde-água ou violeta)
+• ${tom.paletaCurio}
 • Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
       feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
 Post minimalista de pergunta. No feed, funciona como "isca de curiosidade" — o lead salva e pensa "parece pra mim". Menos imagem, mais texto.
@@ -1916,30 +2021,282 @@ COMPOSIÇÃO VISUAL
 • Pode usar reticências ou interrogação como elemento gráfico
 
 TEXTO NA ARTE
-Linha destaque: "Tenho algo pra um perfil específico."
+Linha destaque: "${isLuxo ? 'Uma curadoria para um perfil muito específico.' : 'Tenho algo pra um perfil específico.'}"
 Subtítulo: "${tipoM} · Padrão ${padrao} · ${localizacao}"
 Dados: "A partir de ${preco}${areaInfo}${entregaInfo ? ' · ' + entregaInfo : ''}"
-CTA: "Me conta o que você busca. Eu vejo se encaixa. 💬"
+CTA: "${isLuxo ? 'Se este perfil é o seu — entre em contato.' : tom.ctaPergunta}"
 
-PALETA: branco + cinza + acento em verde-água ou violeta
-TIPOGRAFIA: regular a semibold — tom de conversa direta, não de anúncio
+${tom.paletaCurio}
+${tom.tipo}
 Formato: 1080×1350 px${idBloco}`,
-      legenda: `Tenho um produto específico pra um perfil específico.
+      legenda: `${isLuxo ? 'Uma curadoria para um perfil muito específico.' : 'Tenho um produto específico pra um perfil específico.'}
 
-Não vou revelar o nome aqui. Mas o perfil é esse:
+${isLuxo ? 'Não divulgo detalhes publicamente. O produto foi selecionado com critério e o perfil do comprador também.' : 'Não vou revelar o nome aqui. Mas o perfil é esse:'}
 
 🏠 ${tipoM} · Padrão ${padrao}${areaInfo}
 📍 ${localizacao}
 💰 A partir de ${preco}
-${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}Se isso soa como o que você está buscando — me manda uma mensagem.
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}${isLuxo ? 'Se este contexto conversa com o seu — entre em contato. Discrição garantida.' : 'Se isso soa como o que você está buscando — me manda uma mensagem.'}
 
-Não tem enrolação. Me conta o que você quer e eu te digo se encaixa.
-
-💬 Direct aberto.
+${isLuxo ? 'Detalhes sob solicitação.' : 'Não tem enrolação. Me conta o que você quer e eu te digo se encaixa.\n\n💬 Direct aberto.'}
 
 ${baseHash} #perfilcerto #imovelcerto #corretordireto`,
     },
   ];
+}
+
+function abrirCopyBriefMixCompleto_() {
+  if (!_mixAtualPapeis_ || !_mixAtualPapeis_.ALVO_1) return;
+  document.getElementById('copyBriefContent').innerHTML = renderCopyBriefMixCompleto_();
+  document.getElementById('copyBriefOverlay').classList.add('aberto');
+  document.getElementById('copyBriefDrawer').classList.add('aberto');
+}
+
+function gerarEixosCampanha_(papeis, loc, padrao) {
+  const getPr = it => it ? fmtR$_(it.menorPreco) : null;
+  const getNm = it => it ? (it.e.nomeEmpreendimento || '—') : null;
+  const alvo1 = papeis.ALVO_1, alvo2 = papeis.ALVO_2, alvo3 = papeis.ALVO_3;
+  const sup = papeis.ANCORA_SUP, isca = papeis.ISCA, inf = papeis.ANCORA_INF, comp = papeis.COMPLEMENTAR;
+  const isLuxo  = padrao === 'Luxo';
+  const isAlto  = isLuxo || padrao === 'Alto Padrão';
+  const isMedio = !isAlto && (padrao === 'Médio' || padrao === 'Medio');
+
+  const pr1 = getPr(alvo1), prSup = getPr(sup), prIsca = getPr(isca), prInf = getPr(inf);
+  const faixaBaixa  = prInf  || prIsca || pr1;
+  const faixaAlta   = prSup  || pr1;
+  const trioDisp    = [alvo1, alvo2, alvo3].filter(Boolean);
+  const trioNomes   = trioDisp.map(it => `• ${getNm(it)} — ${getPr(it)}`).join('\n');
+  const trioTexto   = trioDisp.map(it => `${getPr(it)}`).join(' · ');
+
+  const ctaPergunta = isLuxo ? 'Detalhes sob solicitação.' : isAlto ? 'Me chama no direct 📲' : isMedio ? 'Me manda mensagem 💬' : 'Me chama agora 📲';
+  const ctaExplica  = isLuxo ? 'Entre em contato — apresento as opções com discrição.' : isAlto ? 'Me chama — explico a estratégia do mix 📊' : isMedio ? 'Me chama e eu te mostro o conjunto 📊' : 'Me chama pra entender a seleção completa 📊';
+
+  return [
+    {
+      linha: 'Vitrine Curada',
+      titulo: 'De R$ a R$ — uma seleção com critério, não com sortimento',
+      vertical: `ABORDAGEM
+Não é catálogo — é curadoria. O corretor mostra que seleciona por critério, não por volume. O lead quente percebe a diferença e quer entender o critério.
+
+TEXTO PARA A ARTE
+Linha principal: "${isLuxo ? 'Uma curadoria. Não um catálogo.' : `Tenho de ${faixaBaixa} a ${faixaAlta} na mesma região — todos selecionados por critério.`}"
+Subtítulo: "${loc} · Padrão ${padrao}"
+Complemento: "${trioDisp.length} opções principais · ${isca || inf ? 'do acesso ao premium' : 'seleção exclusiva'}"
+CTA: "${ctaExplica}"
+
+DIREÇÃO VISUAL
+• Layout tipo coleção: 3 cards lado a lado com faixas de preço (sem nome do produto)
+• Cada card: ícone/símbolo, faixa de preço, padrão
+• ${isLuxo ? 'Fundo preto, cards em cinza escuro, tipografia branca elegante (Playfair/Garamond)' : isAlto ? 'Fundo escuro, cards com borda dourada, tipografia premium' : isMedio ? 'Fundo claro, cards coloridos em azul/cinza, tipografia bold' : 'Fundo vibrante, cards coloridos, tipografia bold e acessível'}
+• Nenhum nome de empreendimento visível — apenas perfis e faixas`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post de curadoria — o corretor como sommelier. O valor não é o produto, é o critério de seleção.
+
+COMPOSIÇÃO VISUAL
+• Topo: título de curadoria (ex: "Minha seleção ativa — ${loc}")
+• Meio: grade de 3 cards com faixa de preço e padrão (sem nomes)
+• Rodapé: CTA
+
+TEXTO NA ARTE
+Linha destaque: "${isLuxo ? 'Uma curadoria. Não um catálogo.' : 'Selecionei. Filtrei. Restaram os melhores.'}"
+Cards: "${trioTexto}"
+Subtítulo: "Todos em ${loc} · Padrão ${padrao}"
+CTA: "${ctaExplica}"
+
+${isLuxo ? 'PALETA: preto + champagne + off-white. Minimalismo de alto luxo.' : isAlto ? 'PALETA: fundo escuro + borda dourada + branco.' : isMedio ? 'PALETA: branco + azul marinho + detalhe dourado.' : 'PALETA: verde + amarelo + branco.'}
+${isLuxo ? 'TIPOGRAFIA: serifada leve (Garamond). Peso regular — elegância sem esforço.' : isAlto ? 'TIPOGRAFIA: sans-serif semibold, hierarquia clara.' : 'TIPOGRAFIA: bold, direta, legível.'}
+Formato: 1080×1350 px`,
+      legenda: `${isLuxo ? 'Uma curadoria — não um catálogo.' : 'Não trabalho com sortimento. Trabalho com curadoria.'}
+
+${isLuxo ? 'Cada produto que apresento passou por um processo de seleção que a maioria dos corretores não aplica. Localização, construtora, absorção de mercado, perfil de comprador.' : 'Seleciono por critério: localização, construtora, velocidade de venda, perfil do comprador. Não apresento o que está na minha carteira — apresento o que faz sentido para o seu perfil.'}
+
+📍 ${loc} · Padrão ${padrao}
+${prIsca ? `💰 Faixa de entrada: ${prIsca}\n` : ''}${pr1 ? `⭐ Principal: ${pr1}\n` : ''}${prSup ? `✨ Premium: ${prSup}` : ''}
+
+${isLuxo ? 'Detalhes e apresentação sob solicitação.' : `Me chama e te apresento a seleção completa — sem enrolação.\n\n${ctaExplica}`}`,
+    },
+    {
+      linha: 'O Trio Central',
+      titulo: 'Três produtos. Três momentos. Um critério.',
+      vertical: `ABORDAGEM
+O trio ALVO_1 + ALVO_2 + ALVO_3 é a espinha dorsal da sua seleção. Mostrar os três juntos comunica consistência e profundidade de carteira.
+
+TEXTO PARA A ARTE
+Linha principal: "${isLuxo ? 'Três seleções. Um único critério de curadoria.' : 'Três produtos. Três momentos de compra. Uma seleção.'}"
+Opção A: "${getPr(alvo1) || '—'} · ${getPr(alvo2) || '—'} · ${getPr(alvo3) || '—'}"
+Subtítulo: "${loc} · Todos padrão ${padrao}"
+CTA: "${ctaPergunta}"
+
+DIREÇÃO VISUAL
+• Layout três colunas — uma por produto (sem nome, só faixa de preço + ícone de tipo)
+• Coluna central levemente destacada (é o ALVO_1 — sua escolha principal)
+• ${isLuxo ? 'Tipografia serifada, paleta monocromática (grafite/off-white/champagne)' : isAlto ? 'Paleta azul marinho + dourado, tipografia clean' : 'Paleta equilibrada, tipografia bold'}
+• Nenhum nome revelado`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post tipo comparativo estratégico. Funciona como conteúdo educativo — o lead salva para consultar depois.
+
+COMPOSIÇÃO VISUAL
+• Três colunas de igual largura, cada uma representando um produto
+• Coluna do meio com leve destaque (ex: borda ou fundo diferente)
+• Cada coluna: faixa de preço + situação + tipo
+
+TEXTO NA ARTE
+${trioNomes}
+Todos em ${loc} · Padrão ${padrao}
+CTA: "${ctaPergunta}"
+
+${isLuxo ? 'PALETA: três tons de cinza (claro/médio/escuro) + tipografia champagne. Sobriedade curada.' : isAlto ? 'PALETA: azul marinho + cinza grafite + acento dourado.' : isMedio ? 'PALETA: azul + branco + prata, tom de conquista.' : 'PALETA: cores distintas por coluna (verde/amarelo/azul), alto contraste.'}
+${isLuxo ? 'TIPOGRAFIA: serifada leve. Peso regular nos dados, itálico no destaque.' : 'TIPOGRAFIA: sans-serif bold nos valores, regular nos labels.'}
+Formato: 1080×1350 px`,
+      legenda: `${isLuxo ? 'Tenho três seleções ativas no momento. Cada uma com critério, cada uma para um perfil.' : 'Tenho três produtos ativos agora — e eles não são aleatórios.'}
+
+${isLuxo ? 'O que une as três escolhas não é o preço — é o critério de curadoria.' : 'Cada um foi selecionado por localização, absorção de mercado e construtora. São três opções para três momentos de compra diferentes.'}
+
+${trioNomes}
+
+📍 ${loc} · Padrão ${padrao}
+
+${isLuxo ? 'Se algum destes perfis conversa com o seu momento, entre em contato.' : `Me conta o que você busca — te digo qual dos três faz mais sentido para você.\n\n${ctaPergunta}`}`,
+    },
+    {
+      linha: 'Ancoragem Aspiracional',
+      titulo: `${sup ? 'O premium torna o alvo acessível' : 'A referência cria perspectiva'}`,
+      vertical: `ABORDAGEM
+${sup ? `A ÂNCORA SUPERIOR (${getPr(sup)}) existe para fazer o ALVO PRINCIPAL (${pr1}) parecer uma oportunidade de acesso. Isso não é manipulação — é ancoragem de percepção de valor.` : 'Posicionar o produto principal em relação a um benchmark superior cria perspectiva de valor sem comparação direta.'}
+
+TEXTO PARA A ARTE
+Linha principal: "${sup ? `O topo está em ${getPr(sup)}. Mas tenho uma oportunidade em ${pr1} que os analistas estão de olho.` : `A partir de ${pr1}. Com padrão e localização que justificam cada real.`}"
+Subtítulo: "${loc} · Padrão ${padrao}"
+CTA: "${ctaExplica}"
+
+DIREÇÃO VISUAL
+• Estrutura visual de dois níveis (premium acima / alvo abaixo) com seta ou hierarquia clara
+• Premium: visual mais escuro/sutil | Alvo: destaque com badge "oportunidade" ou "posição estratégica"
+• ${isLuxo ? 'Paleta grafite + champagne + detalhe ouro fino. Hierarquia visual elegante.' : isAlto ? 'Paleta escura para o premium, paleta clara para o alvo. Dourado como conector.' : 'Paleta de contraste: escuro no premium, cores vibrantes no alvo.'}
+• Nenhum nome revelado — só faixas de preço`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post de ancoragem de valor. Estratégia de "depois que você vê o topo, o meio parece acessível". Funciona especialmente para leads que pesquisam sem critério de preço definido.
+
+COMPOSIÇÃO VISUAL
+• Topo do card: referência premium (faixa maior, visual diferenciado)
+• Meio: produto alvo com badge de oportunidade
+• Rodapé: CTA + localização
+
+TEXTO NA ARTE
+${sup ? `Referência: ${getPr(sup)} (padrão ${getPd(sup)})\nPosição: ${pr1} · Padrão ${padrao}` : `A partir de: ${pr1} · Padrão ${padrao}`}
+Subtítulo: "${loc}"
+CTA: "${ctaExplica}"
+
+${isLuxo ? 'PALETA: preto + grafite + champagne. Dois níveis de sofisticação.' : isAlto ? 'PALETA: escuro para referência premium, claro para alvo. Borda dourada.' : 'PALETA: cinza escuro para referência, cor principal para alvo.'}
+${isLuxo ? 'TIPOGRAFIA: serifada para a referência, sans-serif para o alvo.' : 'TIPOGRAFIA: hierarquia bold — maior no alvo, menor na referência.'}
+Formato: 1080×1350 px`,
+      legenda: `${sup ? `O topo desse mercado está em ${getPr(sup)}.` : `Quando você entende o topo do mercado, o meio passa a fazer sentido.`}
+
+${sup ? `Tenho um produto em ${pr1} com localização e construtora que justificam a posição. Para quem está pesquisando sem ainda ter definido a faixa, essa perspectiva muda tudo.` : `Meu produto principal em ${pr1} tem características que competem com produtos de faixas maiores. Não é o mais barato — é o mais estratégico.`}
+
+📍 ${loc} · Padrão ${padrao}
+${sup ? `✨ Referência: ${getPr(sup)}\n⭐ Posição estratégica: ${pr1}` : `⭐ A partir de: ${pr1}`}
+
+${isLuxo ? 'Entre em contato para entender o posicionamento desta seleção.' : `${ctaExplica}`}`,
+    },
+    {
+      linha: 'Porta de Entrada',
+      titulo: `${isca || inf ? 'ISCA e âncora inferior como gancho de decisão' : 'Gancho acessível para leads em decisão'}`,
+      vertical: `ABORDAGEM
+${isca ? `A ISCA (${getPr(isca)}) é o produto que vence a barreira de preço percebida. Combinada com a ÂNCORA INFERIOR (${prInf || '—'}), cria um "escadão de entrada" que converte leads que achavam que não tinham acesso.` : 'Mostrar a porta de entrada da seleção converte leads que ainda não se viram como compradores.'}
+
+TEXTO PARA A ARTE
+Linha principal: "${isLuxo ? `Tenho uma posição de entrada para esta seleção — e ela não é o que você imagina.` : `A partir de ${faixaBaixa} nessa região. Sim, é possível.`}"
+Subtítulo: "${loc} · ${padrao} · Acesso estratégico"
+CTA: "${ctaPergunta}"
+
+DIREÇÃO VISUAL
+• Visual de "abertura" — porta, seta de entrada, portal
+• ${isLuxo ? 'Fundo preto, detalhe champagne/ouro na "porta". Tom exclusivo mesmo na entrada.' : isAlto ? 'Visual clean, azul marinho + dourado, seta ascendente.' : 'Visual confiante e acessível, cor vibrante, seta ou ícone de chave.'}
+• Valor de entrada em destaque grande
+• Nenhum nome revelado`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px)
+Post de acesso acessível. Para leads quentes que se eliminaram por achar que o preço estava fora do alcance — esse post os re-qualifica.
+
+COMPOSIÇÃO VISUAL
+• Topo: "Porta de entrada" — visual impactante com o valor de acesso em destaque
+• Meio: escadão de preços (entrada → alvo → premium) em formato visual simples
+• Rodapé: CTA + localização
+
+TEXTO NA ARTE
+Linha destaque: "A partir de ${faixaBaixa}"
+Escadão: "${prInf ? prInf + ' → ' : ''}${prIsca ? prIsca + ' → ' : ''}${pr1}"
+Subtítulo: "${loc} · Padrão ${padrao}"
+CTA: "${ctaPergunta}"
+
+${isLuxo ? 'PALETA: preto + champagne + ouro. A entrada nesta seleção já é um luxo.' : isAlto ? 'PALETA: azul marinho + acento dourado + branco.' : isMedio ? 'PALETA: verde-musgo + branco + prata.' : 'PALETA: verde + amarelo + branco. Acessível e confiante.'}
+${isLuxo ? 'TIPOGRAFIA: serifada elegante — nem a entrada perde a sofisticação.' : 'TIPOGRAFIA: bold no valor de entrada, regular nos demais.'}
+Formato: 1080×1350 px`,
+      legenda: `${isLuxo ? 'Há uma posição de entrada nesta seleção. E ela já tem o mesmo nível de curadoria.' : `${faixaBaixa} nessa região. Muita gente não sabe que isso é possível.`}
+
+${isLuxo ? 'Curadoria não é só para os preços mais altos. A seleção começa já na porta de entrada.' : `Tenho produtos que abrem o acesso a esta localização e padrão por um valor que a maioria nem cogita buscar. O segredo é saber onde olhar — e eu sei.`}
+
+📍 ${loc} · Padrão ${padrao}
+${prInf ? `🚪 Entrada: ${prInf}\n` : ''}${prIsca ? `🎯 Posição estratégica: ${prIsca}\n` : ''}${pr1 ? `⭐ Alvo principal: ${pr1}` : ''}
+
+${isLuxo ? 'Se este perfil é o seu, entre em contato.' : `Me conta o que você busca — mostro o caminho certo dentro da seleção.\n\n${ctaPergunta}`}`,
+    },
+  ];
+}
+
+function renderCopyBriefMixCompleto_() {
+  const papeis = _mixAtualPapeis_;
+  const alvo1 = papeis.ALVO_1;
+  if (!alvo1) return '<div style="padding:24px;color:var(--text3)">Mix incompleto — selecione um Produto Alvo primeiro.</div>';
+
+  const bairro = alvo1.e.bairro || '';
+  const cidade = alvo1.e.cidade || '';
+  const loc = [bairro, cidade].filter(Boolean).join(', ') || 'localização privilegiada';
+  const padrao = PADRAO_LABEL_MIX_[alvo1.padrao] || alvo1.padrao || '';
+
+  _gatilhosAtual_ = gerarEixosCampanha_(papeis, loc, padrao);
+
+  const linhas = _gatilhosAtual_.map((g, i) => `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnV${i}" onclick="copiarEPreview_('v',${i})" title="Story / WhatsApp 9:16">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFI${i}" onclick="copiarEPreview_('fi',${i})" title="Feed 4:5 instrução">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Feed 4:5 legenda">📋</button></td>
+    </tr>`).join('');
+
+  return `
+    <div class="brief-drawer-header">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Briefing de Campanha — Mix Completo</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">Estratégia de 7 Ofertas · ${padrao}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">Alvo Principal: ${alvo1.e.nomeEmpreendimento || '—'} · ${fmtR$_(alvo1.menorPreco)} · ${loc}</div>
+      </div>
+      <button class="btn-mini" style="flex-shrink:0;margin-top:2px" onclick="fecharCopyBrief_()">✕ Fechar</button>
+    </div>
+    <div class="brief-drawer-body">
+      <div class="brief-regra">✏️ <strong>Campanha estratégica:</strong> estes eixos cobrem o mix completo — cada anúncio fala do conjunto, não de um produto isolado. Nenhuma arte revela o nome dos empreendimentos.</div>
+      <div class="brief-gt-section">
+        <table class="brief-gt-table">
+          <thead>
+            <tr>
+              <th class="th-gatilho" colspan="2">Eixo de Campanha</th>
+              <th class="th-v">Vertical<br><span style="font-weight:400;font-size:9px;opacity:.8">9:16</span></th>
+              <th class="th-fi">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">instrução</span></th>
+              <th class="th-fl">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">legenda</span></th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <div class="brief-preview">
+        <div class="brief-preview-label">Prévia — clique em 📋 para visualizar e copiar</div>
+        <div class="brief-preview-body" id="briefPreviewBody" style="color:var(--text3);font-style:italic">— selecione um eixo acima —</div>
+      </div>
+    </div>`;
 }
 
 function abrirCopyBrief_(papel) {
