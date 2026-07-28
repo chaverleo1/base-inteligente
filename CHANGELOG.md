@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 126) — App Lançamentos: capa enxuta + caixa única na etapa de sliders
+
+A partir de agora o trabalho é só em `app-lancamentos.html` (usuário pediu explicitamente pra
+parar de espelhar mudanças em `simulador-lancamentos.html`, que fica congelado como está — só
+editar esse arquivo se o usuário citar o nome dele de novo).
+
+1. **Capa (step-0):** título reduzido a "Vamos achar o APARTAMENTO ideal pra você" (tirou "— e
+   mostrar em quantos empreendimentos ele existe"); removido o parágrafo "São só 3 perguntas
+   rápidas..." (`#aberturaSub`, sem uso em JS, removido junto); removida a bullet "Você no controle!
+   Só vai receber atendimento humano se confirmar no final." — a bullet "Dados reais..." continua.
+2. **Etapa 1 de 3 (step-2, sliders):** as 3 caixas separadas (contador + slider de preço + slider de
+   metragem) viraram uma caixa única, reaproveitando a classe `.conf-card`/`.conf-item`/`.conf-obs`
+   já usada na etapa "Confirme seus dados" (mesmo padrão visual e espaçamento). A contagem de
+   resultados, que antes tinha 3 linhas próprias (label de situação + número grande + texto), virou
+   1 linha só no rodapé da caixa: "20 opções reais com apartamento no seu perfil". A linha
+   "Todos os empreendimentos" (`#cntSituacaoLabel`) foi retirada — o `if(lbl)` que a atualizava em
+   `selecionarSituacao_()` já era null-safe, então a função só perdeu esse bloco morto; a constante
+   `SITUACAO_LABEL_`, que só alimentava essa linha, foi removida também por não ter mais uso.
+
+Testado ao vivo: capa mostra só título+box de contagem+bullet única+chips de situação; etapa de
+sliders renderiza como uma caixa `.conf-card` só (confirmado border 2px accent igual "confirme seus
+dados"), com preço, metragem e a linha "N opções reais..." dentro dela, sem a linha de situação solta.
+
 ## 2026-07-28 (parte 125) — Simulador/App: retira cabeçalho e etapa "Resultado parcial"
 
 Duas simplificações de UX pedidas pelo usuário, aplicadas nos DOIS funis (`simulador-lancamentos.html`

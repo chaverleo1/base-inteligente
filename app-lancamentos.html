@@ -358,23 +358,16 @@ input[type=range]::-moz-range-track {
   <div class="step ativo" id="step-0">
     <div style="margin-bottom:32px">
       <div class="step-tag">Simulador de Lançamentos</div>
-      <div class="step-title">Vamos achar o <span style="color:var(--accent)">APARTAMENTO</span> ideal pra você — e mostrar em quantos empreendimentos ele existe</div>
-      <div class="step-sub" id="aberturaSub">São só 3 perguntas rápidas sobre o apartamento que você quer (tamanho e preço). As opções são reais e atualizadas agora mesmo. Sem spam — só entramos em contato se você confirmar.</div>
+      <div class="step-title">Vamos achar o <span style="color:var(--accent)">APARTAMENTO</span> ideal pra você</div>
 
       <div style="text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin:20px 0">
         <div id="statsTotalEmp" style="font-size:clamp(56px,18vw,88px);font-weight:800;color:var(--orange);letter-spacing:-2px;line-height:1">—</div>
         <div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-top:6px">Lançamentos cadastrados</div>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
-          <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
-          <span style="font-size:13px;color:var(--text)">Dados reais — com o que temos disponível na grande Goiânia e região</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(79,124,255,.10);border-radius:var(--r-sm);border:1.5px solid var(--accent)">
-          <svg width="16" height="16" style="color:var(--accent);flex-shrink:0"><use href="#ico-check"/></svg>
-          <span style="font-size:13px;font-weight:700;color:var(--text)">Você no controle! Só vai receber atendimento humano se confirmar no final.</span>
-        </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
+        <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
+        <span style="font-size:13px;color:var(--text)">Dados reais — com o que temos disponível na grande Goiânia e região</span>
       </div>
 
       <div style="margin-top:20px;padding:16px 18px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r)">
@@ -408,33 +401,35 @@ input[type=range]::-moz-range-track {
     <div class="step-tag">Pergunta 1 de 3</div>
     <div class="step-title" style="margin-bottom:16px">Arraste as barras e selecione o <span style="color:var(--accent)">orçamento</span> e <span style="color:var(--accent)">área útil</span> do apartamento ideal pra você!</div>
 
-    <div style="background:rgba(79,124,255,.10);border:2px solid var(--accent);border-radius:var(--r);padding:20px 18px;text-align:center;margin-bottom:16px">
-      <div id="cntSituacaoLabel" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Todos os empreendimentos</div>
-      <div style="display:flex;align-items:baseline;justify-content:center;gap:10px">
-        <span id="cntCombo" style="font-size:clamp(52px,18vw,72px);font-weight:800;color:var(--orange);letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums">—</span>
-        <span style="font-size:16px;font-weight:700;color:var(--text)">opções reais</span>
+    <!-- Caixa única (mesmo padrão visual/espaçamento de .conf-card, usado na
+         etapa "Confirme seus dados") -- as 2 barras + o contador de
+         resultados ficam juntos num só box, mais baixo que os 3 boxes
+         separados de antes. -->
+    <div class="conf-card">
+      <div class="conf-item">
+        <div class="slider-card-label">Qual o valor total do apartamento que você busca?</div>
+        <div class="slider-val-atual" style="margin-bottom:6px"><strong id="sliderPrecoTxt">—</strong></div>
+        <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
+        <div class="slider-label-row">
+          <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
+        </div>
+        <div class="slider-card-hint" id="precoFaixaSub" style="margin-top:6px">—</div>
       </div>
-      <div style="font-size:13px;color:var(--text);margin-top:6px">com apartamento no seu perfil</div>
-    </div>
 
-    <div class="slider-card" style="margin-bottom:10px">
-      <div class="slider-card-label">Qual o valor total do apartamento que você busca?</div>
-      <div class="slider-val-atual"><strong id="sliderPrecoTxt">—</strong></div>
-      <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
-      <div class="slider-label-row">
-        <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
+      <div class="conf-item conf-item-last">
+        <div class="slider-card-label">Qual a metragem ideal do apartamento?</div>
+        <div class="slider-val-atual" style="margin-bottom:6px"><strong id="sliderMetragemTxt">—</strong></div>
+        <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
+        <div class="slider-label-row">
+          <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+        </div>
+        <div class="slider-card-hint" id="metragemFaixaSub" style="margin-top:6px">—</div>
       </div>
-      <div class="slider-card-hint" id="precoFaixaSub">—</div>
-    </div>
 
-    <div class="slider-card">
-      <div class="slider-card-label">Qual a metragem ideal do apartamento?</div>
-      <div class="slider-val-atual"><strong id="sliderMetragemTxt">—</strong></div>
-      <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
-      <div class="slider-label-row">
-        <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+      <div class="conf-obs" style="text-align:center">
+        <span id="cntCombo" style="font-size:20px;font-weight:800;color:var(--orange)">—</span>
+        <strong>opções reais com apartamento no seu perfil</strong>
       </div>
-      <div class="slider-card-hint" id="metragemFaixaSub">—</div>
     </div>
   </div>
 
@@ -846,14 +841,10 @@ function validar() {
 }
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
-const SITUACAO_LABEL_ = { todos: 'Todos os empreendimentos', pronto_novo: 'Somente Prontos Novos', em_obras: 'Somente Em Obras' };
-
 function selecionarSituacao_(el, val) {
   document.querySelectorAll('#tagsSituacao .tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.filtroSituacao = val;
-  const lbl = document.getElementById('cntSituacaoLabel');
-  if (lbl) lbl.textContent = SITUACAO_LABEL_[val] || 'Todos os empreendimentos';
   montarStatsAbertura_();
   if (D.precoAlvo && D.metragemAlvo) atualizarComboUI_();
 }
