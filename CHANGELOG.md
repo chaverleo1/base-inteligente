@@ -1,5 +1,44 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 121) — Estratégias: substitui todas as abordagens por uma única linha editorial "Guia de Decisão"
+
+Usuário decidiu mudar de estratégia: em vez de várias abordagens de copy concorrentes na tabela,
+seguir UMA linha editorial só e testar. Removidas TODAS as abordagens anteriores em ambas as
+funções geradoras de copy brief — as 5 originais orientadas a gatilho (Exclusividade & Acesso,
+Autoridade Silenciosa, Escassez Específica, Timing & Janela de Mercado, Curiosidade Segmentada) e
+as 3 consultivas/educativas adicionadas nas partes 119/120 (Educação de Mercado, Guia de Decisão,
+Radiografia da Seleção) — e substituídas por uma sequência única de 4 posts:
+
+- **Guia de Decisão — Post 1, 2 e 3 de 3** (Feed 3×4): cada post cobre 1 critério de decisão só
+  (`gerarGatilhos_`: ritmo de vendas → prazo de entrega → preço x região; `gerarEixosCampanha_`:
+  momento da obra → faixa de preço → localização x objetivo, usando o trio de opções da seleção).
+  Usa o campo `feedInstrucoes` pro design brief e `legenda` pra copy; o campo `vertical` vira uma
+  nota-ponteiro avisando que esse post não tem versão de Stories isolada.
+- **Storie de Conexão — Guia de Decisão** (Stories 9:16): amarra os 3 posts publicados, cria
+  curiosidade pra quem perdeu algum e chama pra visitar o perfil / seguir. Usa `vertical` pro brief
+  real; `feedInstrucoes`/`legenda` viram notas-ponteiro de volta pros 3 posts de Feed.
+
+Em `gerarGatilhos_`, o objeto `tom` compartilhado foi enxugado de ~15 chaves pra só as 4 ainda
+usadas (`ctaConsultivo`, `aberturEducativa`, `paletaEducativa`, `tipo`) — todas as chaves só
+consumidas pelas abordagens removidas (`ctaPergunta`, `ctaUrgencia`, `aberturExcl`, `paletaVIP`,
+etc.) foram apagadas.
+
+Dois problemas pegos durante a implementação:
+1. Ao tentar preservar as abordagens antigas comentadas como referência, deixei um bloco de
+   comentário `/* ... */` sem fechar — isso silenciosamente engoliria o resto do arquivo (incluindo
+   `gerarEixosCampanha_`) como comentário JS. Pego por inspeção antes de rodar qualquer teste;
+   corrigido apagando o bloco de vez via `sed` (que é literalmente o que o usuário pediu — "retirar",
+   não "comentar pra referência").
+2. As legendas novas de `gerarEixosCampanha_` referenciavam `baseHash`, uma constante que só existe
+   em `gerarGatilhos_` — bug real de copiar-e-colar. Corrigido adicionando o equivalente
+   (`cidadeTagMix`/`padraoTagMix`/`baseHash`) derivado dos parâmetros desta função (`loc`/`padrao`).
+
+Também removido o helper `getPd` de `gerarEixosCampanha_` (ficou sem nenhum uso depois da troca do
+array de eixos).
+
+Testado via console em ambas as funções (`gerarGatilhos_` e `gerarEixosCampanha_`), com dados
+completos e esparsos: sempre 4/4 entradas, nenhum campo vazio/`undefined` em nenhum cenário.
+
 ## 2026-07-25 (parte 120) — Estratégias: as 3 abordagens consultivas/educativas também no botão "Campanha"
 
 Usuário reportou que as 3 novas abordagens da parte 119 não apareciam no botão "✏️ Campanha" do
