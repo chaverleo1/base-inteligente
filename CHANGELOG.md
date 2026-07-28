@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 130) — App Lançamentos: alerta visual em tempo real na confirmação de WhatsApp
+
+Antes, os 2 campos de WhatsApp (etapa de captura) só avisavam de números diferentes com um toast
+que aparecia ao clicar em "Confirmar" — fácil de perder. Agora (`checarWhatsMatch_`, chamada no
+`oninput` dos 2 campos): borda vermelha nos 2 inputs + caixa de aviso ("Os números não coincidem —
+confira os dois campos", com ícone de alerta novo `#ico-alert`) aparecem em tempo real assim que os
+números divergem de verdade.
+
+Comparação é por PREFIXO (`d1.startsWith(d2) || d2.startsWith(d1)`), não só igualdade — pega o erro
+no exato dígito onde a pessoa errou, sem esperar ela terminar de digitar o número inteiro nem
+mostrar erro falso enquanto ela ainda está no meio de digitar um valor correto. `validar()` (chamada
+ao clicar "Confirmar") também aciona esse alerta visual em vez do toast antigo, cobrindo o caso de
+paste/preenchimento que não passa pelo `oninput`.
+
+Testado ao vivo: sem erro enquanto o prefixo ainda bate (digitação em andamento); erro aparece assim
+que diverge de verdade; erro some ao corrigir; e o clique direto em "Confirmar" com números
+diferentes também aciona o alerta visual.
+
 ## 2026-07-28 (parte 129) — App Lançamentos: headline genérica, destaque no "+X ofertas" e remoção do nome "Leonardo"
 
 Ajustes finos na tela de match e limpeza de identidade em `app-lancamentos.html`:

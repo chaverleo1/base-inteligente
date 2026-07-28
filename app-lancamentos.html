@@ -119,6 +119,14 @@ input[type=range]::-moz-range-track {
 }
 .whats-box .form-field label { color: var(--text); }
 
+/* ── ALERTA DE NÚMEROS DIFERENTES (confirmação de WhatsApp) ───────────── */
+.form-field input.input-erro { border-color: var(--danger); }
+.whats-mismatch-msg {
+  display: flex; align-items: center; gap: 8px; margin: -6px 0 14px;
+  padding: 10px 12px; background: rgba(255,82,82,.1); border: 1px solid rgba(255,82,82,.35);
+  border-radius: var(--r-sm); font-size: 13px; font-weight: 700; color: var(--danger);
+}
+
 /* ── MIX DE OFERTAS ──────────────────────────────────────────────────── */
 .match-header { margin-bottom: 20px; }
 
@@ -297,6 +305,11 @@ input[type=range]::-moz-range-track {
   <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
     <polyline points="20 6 9 17 4 12"/>
   </symbol>
+  <symbol id="ico-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </symbol>
   <symbol id="ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
   </symbol>
@@ -472,12 +485,17 @@ input[type=range]::-moz-range-track {
     <div class="whats-box">
       <div class="form-field">
         <label>Seu WhatsApp com DDD</label>
-        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
       </div>
       <div class="form-field" style="margin-bottom:0">
         <label>Confirme o WhatsApp</label>
-        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
       </div>
+    </div>
+
+    <div class="whats-mismatch-msg" id="whatsMismatchMsg" style="display:none">
+      <svg width="16" height="16" style="flex-shrink:0"><use href="#ico-alert"/></svg>
+      <span>Os números não coincidem — confira os dois campos</span>
     </div>
 
     <div class="privacy-note">
@@ -770,7 +788,7 @@ function validar() {
     const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
     const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
     if (whats.length < 10)  { toast('Informe um WhatsApp válido com DDD'); return false; }
-    if (whats !== whats2)   { toast('Os números não coincidem — confira a confirmação'); return false; }
+    if (whats !== whats2)   { checarWhatsMatch_(); return false; } // alerta visual já cobre o toast
     D.whatsapp = whats;
   }
   return true;
@@ -1213,6 +1231,32 @@ function mascaraTel(el) {
   else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
   else if (v.length) v = '(' + v;
   el.value = v;
+}
+
+// Alerta visual em tempo real (borda vermelha + aviso) se os dois campos de
+// WhatsApp divergirem -- pedido explícito do usuário: o toast que só
+// aparecia ao clicar em "Confirmar" era fácil de perder. Compara por
+// PREFIXO (não só igualdade) pra pegar o erro assim que a pessoa digita um
+// dígito errado, sem esperar ela terminar de digitar o número inteiro.
+function checarWhatsMatch_() {
+  const el1 = document.getElementById('fWhats');
+  const el2 = document.getElementById('fWhats2');
+  const msg = document.getElementById('whatsMismatchMsg');
+  const d1  = el1.value.replace(/\D/g, '');
+  const d2  = el2.value.replace(/\D/g, '');
+
+  el1.classList.remove('input-erro');
+  el2.classList.remove('input-erro');
+  msg.style.display = 'none';
+
+  if (!d2) return; // campo de confirmação ainda vazio -- nada a comparar ainda
+
+  const umEhPrefixoDoOutro = d1.startsWith(d2) || d2.startsWith(d1);
+  if (!umEhPrefixoDoOutro) {
+    el1.classList.add('input-erro');
+    el2.classList.add('input-erro');
+    msg.style.display = 'flex';
+  }
 }
 
 let _tt;
