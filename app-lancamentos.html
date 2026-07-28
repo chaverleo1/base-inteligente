@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Lançamentos — Leonardo Viana</title>
+<style>
+:root {
+  --bg:      #09090f;
+  --s1:      #0f1018;
+  --s2:      #13151f;
+  --s3:      #181b28;
+  --border:  #1e2232;
+  --border2: #252840;
+  --accent:  #4f7cff;
+  --green:   #00d4aa;
+  --danger:  #ff5252;
+  --orange:  #ff8a00;
+  --text:    #eef0f6;
+  --r:       12px;
+  --r-sm:    8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; font-size: 15px; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100%; display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── TOPO ─────────────────────────────────────────────────────────────── */
+.topo {
+  background: var(--s1); border-bottom: 1px solid var(--border);
+  padding: 14px 20px; position: sticky; top: 0; z-index: 20;
+}
+.topo-inner { max-width: 520px; margin: 0 auto; }
+.topo-logo {
+  font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: 1.2px;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.progress-row { display: flex; align-items: center; gap: 10px; }
+.progress-track { flex: 1; height: 3px; background: var(--s3); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s cubic-bezier(.4,0,.2,1); }
+.progress-step { font-size: 11px; color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ── CONTEÚDO ─────────────────────────────────────────────────────────── */
+.main { flex: 1; padding: 18px 20px 110px; }
+.step-wrap { max-width: 520px; margin: 0 auto; }
+
+.step { display: none; }
+.step.ativo { display: block; animation: fadeSlide .28s cubic-bezier(.4,0,.2,1); }
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── TIPOGRAFIA ──────────────────────────────────────────────────────── */
+.step-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 10px;
+}
+.step-title {
+  font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: -.4px;
+  color: var(--text); margin-bottom: 8px;
+}
+.step-sub {
+  font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: 16px;
+}
+
+/* ── PULSO (feedback visual quando um contador muda de valor) ─────────── */
+.pulso {
+  animation: contadorPulso .35s cubic-bezier(.4,0,.2,1);
+}
+@keyframes contadorPulso {
+  0%   { transform: scale(1);    color: var(--text); }
+  35%  { transform: scale(1.08); color: var(--accent); }
+  100% { transform: scale(1);    color: var(--text); }
+}
+
+.slider-label-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.slider-label-row span { font-size: 14px; color: var(--text); font-weight: 600; }
+.slider-val-atual {
+  text-align: center; font-size: 24px; font-weight: 600; color: var(--text);
+  margin-bottom: 10px;
+}
+.slider-val-atual strong { color: var(--accent); font-weight: 700; }
+
+/* ── CAIXAS DAS BARRAS DE ARRASTAR (preço total, metragem) — baixas, com
+   letra maior e mais brilhante por dentro, pra caber mais tela sem perder
+   legibilidade. ────────────────────────────────────────────────────────── */
+.slider-card {
+  background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r);
+  padding: 12px 18px;
+}
+.slider-card-label { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 8px; }
+.slider-card-hint { font-size: 14px; color: var(--text); font-weight: 600; margin-top: 8px; text-align: center; }
+
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 4px;
+  background: var(--orange); border-radius: 99px; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 26px; height: 26px; border-radius: 50%; background: var(--orange);
+  cursor: pointer; box-shadow: 0 0 0 0 rgba(255,138,0,0);
+  transition: box-shadow .2s, transform .1s;
+}
+input[type=range]:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 8px rgba(255,138,0,.25); transform: scale(1.1);
+}
+input[type=range]::-moz-range-thumb {
+  width: 26px; height: 26px; border-radius: 50%; background: var(--orange);
+  cursor: pointer; border: none;
+}
+input[type=range]::-moz-range-track {
+  width: 100%; height: 4px; background: var(--orange); border-radius: 99px;
+}
+
+/* ── RESULTADO PARCIAL (TEASER) ──────────────────────────────────────── */
+.teaser-num {
+  font-size: 64px; font-weight: 800; color: var(--text);
+  letter-spacing: -4px; line-height: 1; margin: 24px 0 4px;
+  display: block;
+}
+.teaser-stats {
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 1px;
+  background: var(--border); border-radius: var(--r); overflow: hidden; margin-top: 20px;
+}
+.teaser-stat { background: var(--s2); padding: 16px; min-width: 0; }
+.teaser-stat-label { font-size: 10px; font-weight: 700; color: var(--text); letter-spacing: .8px; text-transform: uppercase; margin-bottom: 4px; }
+.teaser-stat-val { font-size: 15px; font-weight: 700; color: var(--text); overflow-wrap: break-word; }
+
+.score-bar-wrap { margin: 20px 0; }
+.score-bar-label { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.score-bar-label span { font-size: 12px; color: var(--text); }
+.score-bar-label strong { font-size: 14px; color: var(--text); }
+.score-bar-track { height: 6px; background: var(--s3); border-radius: 99px; overflow: hidden; }
+.score-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .8s cubic-bezier(.4,0,.2,1); }
+
+/* ── CAPTURA ─────────────────────────────────────────────────────────── */
+.form-field { margin-bottom: 14px; }
+.form-field label {
+  display: block; font-size: 10px; font-weight: 700; color: var(--text);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px;
+}
+.form-field input {
+  width: 100%; background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text); font-size: 16px;
+  font-family: inherit; padding: 14px 16px; outline: none; transition: border .2s;
+  -webkit-appearance: none;
+}
+.form-field input:focus { border-color: var(--accent); }
+.form-field input::placeholder { color: #6a7290; }
+.privacy-note { font-size: 12px; color: var(--text); margin-top: 14px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; }
+
+/* ── CAIXA DE CONFIRMAÇÃO DE WHATSAPP (2 campos, fundo destacado) ─────── */
+.whats-box {
+  background: rgba(79,124,255,.08); border: 1.5px solid var(--accent);
+  border-radius: var(--r); padding: 18px 18px 4px;
+}
+.whats-box .form-field label { color: var(--text); }
+
+/* ── MELHOR MATCH ────────────────────────────────────────────────────── */
+.match-header { margin-bottom: 20px; }
+.match-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(0,212,170,.1); border: 1px solid rgba(0,212,170,.25);
+  border-radius: 99px; padding: 4px 12px;
+  font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: .5px;
+  margin-bottom: 12px;
+}
+.match-score-num { font-size: 80px; font-weight: 800; color: var(--text); letter-spacing: -4px; line-height: 1; }
+.match-score-pct { font-size: 32px; font-weight: 700; color: var(--text); letter-spacing: -1px; }
+.match-score-desc { font-size: 14px; color: var(--text); margin-top: 6px; line-height: 1.5; }
+
+.match-divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+.urgencia-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,166,35,.1); border: 1px solid rgba(245,166,35,.25);
+  border-radius: 99px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #f5a623;
+  margin-bottom: 20px;
+}
+
+/* ── SITUAÇÃO (destaca pra quem já está pronto / na planta / em obras) ── */
+.situacao-pill {
+  display: inline-flex; align-items: center; border-radius: 99px;
+  padding: 4px 12px; font-size: 12px; font-weight: 800; letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+/* ── TABELA DE OPÇÕES — top 7 por compatibilidade, só a 1ª detalhada ──── */
+.opcoes-tabela {
+  background: var(--s2); border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 16px;
+}
+.opcao-top {
+  padding: 16px 14px; border-bottom: 2px solid var(--accent);
+  background: linear-gradient(135deg, rgba(79,124,255,.10), rgba(79,124,255,.02));
+}
+.opcao-top-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.opcao-codigo { font-size: 13px; font-weight: 800; color: var(--accent); letter-spacing: .3px; }
+.opcao-top-grid {
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 16px;
+}
+.opcao-top-cell-label { font-size: 9px; font-weight: 700; color: var(--text); opacity: .6; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
+.opcao-top-cell-val { font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: break-word; }
+.opcao-row {
+  display: grid; grid-template-columns: 22px minmax(0,1fr); align-items: center;
+  gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border);
+}
+.opcao-row:last-child { border-bottom: none; }
+.opcao-rank { font-size: 12px; font-weight: 700; color: var(--text); opacity: .5; text-align: center; }
+.opcao-row .opcao-codigo { font-size: 12px; }
+.opcao-row-info { font-size: 11px; color: var(--text); opacity: .7; margin-top: 2px; overflow-wrap: break-word; }
+
+/* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
+.btn-final-wrap {
+  margin-top: 24px;
+  border: 1.5px solid var(--border2); border-radius: var(--r);
+  padding: 20px; background: var(--s2);
+}
+.btn-final-wrap p { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 16px; text-align: center; }
+.btn-final {
+  width: 100%; padding: 18px 20px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r-sm);
+  font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-final:hover { background: #3d6aee; }
+.btn-final:active { transform: scale(.98); }
+.btn-final.confirmado { background: var(--green); cursor: default; }
+.btn-final-sub { font-size: 12px; color: var(--text); text-align: center; margin-top: 10px; }
+
+/* ── BOTÃO QUENTE (confirmar atendimento humano — pedido: cores quentes,
+   vermelho/amarelo/laranja, pra chamar mais atenção que o resto da tela) ── */
+.btn-final.btn-quente { background: linear-gradient(135deg, #ff9d2e, #ff5252); color: #1a0a00; }
+.btn-final.btn-quente:hover { filter: brightness(1.08); }
+
+/* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
+.check-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(0,212,170,.12); border: 1.5px solid rgba(0,212,170,.3);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.perfil-resumo {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px; margin: 20px 0;
+}
+.perfil-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.perfil-item:last-child { border-bottom: none; }
+.perfil-item-k { color: var(--text); min-width: 0; overflow-wrap: break-word; }
+.perfil-item-v { color: var(--text); font-weight: 600; text-align: right; min-width: 0; overflow-wrap: break-word; }
+
+.whats-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #25D366; color: #fff; border: none; border-radius: var(--r-sm);
+  padding: 16px 20px; width: 100%; font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; text-decoration: none; transition: opacity .2s;
+}
+.whats-btn:hover { opacity: .9; }
+
+/* ── RODAPÉ NAV ──────────────────────────────────────────────────────── */
+.nav-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--s1); border-top: 1px solid var(--border);
+  padding: 14px 20px;
+}
+.nav-inner { max-width: 520px; margin: 0 auto; display: flex; gap: 8px; }
+.btn-nav {
+  flex: 1; padding: 14px; border-radius: var(--r-sm); border: none;
+  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .18s;
+}
+.btn-prim { background: var(--accent); color: #fff; }
+.btn-prim:hover { background: #3d6aee; }
+.btn-prim:disabled { opacity: .35; cursor: default; }
+.btn-sec { background: var(--s3); color: var(--text); }
+.btn-sec:hover { color: var(--text); }
+.btn-hide { display: none; }
+
+/* ── TOAST ────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-8px);
+  background: var(--s3); border: 1px solid var(--border2); color: var(--text);
+  padding: 10px 18px; border-radius: 99px; font-size: 13px; font-weight: 600;
+  opacity: 0; transition: all .22s; z-index: 999; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── UTILITÁRIOS ─────────────────────────────────────────────────────── */
+.label-section {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--text); margin: 18px 0 10px;
+}
+
+/* ── TELA DE CONFIRMAÇÃO DOS DADOS (entre sliders e motivação) ────────── */
+.conf-card {
+  background: var(--s2); border: 2px solid var(--accent);
+  border-radius: var(--r); overflow: hidden; margin: 20px 0;
+}
+.conf-item {
+  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+}
+.conf-item-last { border-bottom: none; padding-bottom: 20px; }
+.conf-item-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text); opacity: .55; margin-bottom: 8px;
+}
+.conf-item-val {
+  font-size: 38px; font-weight: 800; color: var(--orange);
+  letter-spacing: -1.5px; line-height: 1.05; overflow-wrap: break-word;
+}
+.conf-obs {
+  padding: 14px 20px; background: rgba(79,124,255,.07);
+  font-size: 13px; color: var(--text); line-height: 1.7;
+  border-top: 1px solid var(--border);
+}
+.conf-obs strong { color: var(--accent); font-weight: 700; }
+.conf-btns { display: flex; gap: 8px; margin-top: 16px; }
+.conf-btn-ref { flex: 1; }
+.conf-btn-sim { flex: 2; }
+
+/* ── TAG BUTTONS (filtros de seleção rápida) ─────────────────────────── */
+.tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-btn {
+  display: inline-flex; align-items: center; padding: 10px 18px;
+  border: 1.5px solid var(--border2); border-radius: 99px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.tag-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tag-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
+.ajustar-btn {
+  display: inline-flex; align-items: center; gap: 6px; background: none;
+  border: 1px solid var(--border2); border-radius: 99px; padding: 7px 14px;
+  font-size: 12px; font-weight: 600; color: var(--text);
+  cursor: pointer; font-family: inherit; margin-bottom: 16px; transition: all .15s;
+}
+.ajustar-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ÍCONES SVG inline (reutilizados via JS) -->
+<svg style="display:none" id="svgDefs">
+  <symbol id="ico-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z"/>
+    <path d="M9 22V12h6v10"/>
+  </symbol>
+  <symbol id="ico-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+  </symbol>
+  <symbol id="ico-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+  </symbol>
+  <symbol id="ico-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </symbol>
+  <symbol id="ico-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </symbol>
+  <symbol id="ico-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-4 4h16l-4-4z"/><circle cx="17" cy="14" r="1" fill="currentColor"/>
+  </symbol>
+  <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </symbol>
+  <symbol id="ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </symbol>
+  <symbol id="ico-whats" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </symbol>
+</svg>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- TOPO -->
+<div class="topo">
+  <div class="topo-inner">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div class="topo-logo" style="margin-bottom:0">Leonardo Viana &middot; Corretor em Goiânia</div>
+      <div style="flex-shrink:0;display:inline-flex;align-items:center;background:rgba(79,124,255,.14);border:1px solid rgba(79,124,255,.35);border-radius:99px;padding:4px 11px;font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);white-space:nowrap">
+        Busca por Apartamento
+      </div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-step" id="progressStep">0 / 3</div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTEÚDO -->
+<div class="main">
+<div class="step-wrap">
+
+  <!-- STEP 0 — ABERTURA -->
+  <div class="step ativo" id="step-0">
+    <div style="margin-bottom:32px">
+      <div class="step-tag">Simulador de Lançamentos</div>
+      <div class="step-title">Vamos achar o <span style="color:var(--accent)">APARTAMENTO</span> ideal pra você — e mostrar em quantos empreendimentos ele existe</div>
+      <div class="step-sub" id="aberturaSub">São só 3 perguntas rápidas sobre o apartamento que você quer (tamanho e preço). As opções são reais e atualizadas agora mesmo. Sem spam — só entramos em contato se você confirmar.</div>
+
+      <div style="text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin:20px 0">
+        <div id="statsTotalEmp" style="font-size:clamp(56px,18vw,88px);font-weight:800;color:var(--orange);letter-spacing:-2px;line-height:1">—</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-top:6px">Lançamentos cadastrados</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
+          <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
+          <span style="font-size:13px;color:var(--text)">Dados reais — com o que temos disponível na grande Goiânia e região</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(79,124,255,.10);border-radius:var(--r-sm);border:1.5px solid var(--accent)">
+          <svg width="16" height="16" style="color:var(--accent);flex-shrink:0"><use href="#ico-check"/></svg>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">Você no controle! Só vai receber atendimento humano se confirmar no final.</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding:16px 18px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r)">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Qual situação ideal do imóvel pra você?</div>
+        <div class="tag-group" id="tagsSituacao">
+          <button class="tag-btn on" onclick="selecionarSituacao_(this,'todos')">Todos</button>
+          <button class="tag-btn" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto Novo</button>
+          <button class="tag-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1 — NOME -->
+  <div class="step" id="step-1">
+    <div class="step-tag">Pergunta 2 de 3</div>
+    <div class="step-title">Como podemos te chamar?</div>
+    <div class="step-sub">Só o primeiro nome já basta.</div>
+    <div class="form-field">
+      <label>Seu nome</label>
+      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
+    </div>
+  </div>
+
+  <!-- STEP 2 — PREÇO TOTAL + METRAGEM + CONTADOR, tudo na mesma tela
+       (mesma estrutura de baseimob-funil.html/"tela-config": contador de
+       opções em destaque no topo, sliders de preço total e metragem logo
+       abaixo, tudo atualizando em tempo real junto). Vem ANTES do nome
+       agora -- pega o dado técnico primeiro, personalização vem depois. -->
+  <div class="step" id="step-2">
+    <div class="step-tag">Pergunta 1 de 3</div>
+    <div class="step-title" style="margin-bottom:16px">Arraste as barras e selecione o <span style="color:var(--accent)">orçamento</span> e <span style="color:var(--accent)">área útil</span> do apartamento ideal pra você!</div>
+
+    <div style="background:rgba(79,124,255,.10);border:2px solid var(--accent);border-radius:var(--r);padding:20px 18px;text-align:center;margin-bottom:16px">
+      <div id="cntSituacaoLabel" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px">Todos os empreendimentos</div>
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:10px">
+        <span id="cntCombo" style="font-size:clamp(52px,18vw,72px);font-weight:800;color:var(--orange);letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums">—</span>
+        <span style="font-size:16px;font-weight:700;color:var(--text)">opções reais</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);margin-top:6px">com apartamento no seu perfil</div>
+    </div>
+
+    <div class="slider-card" style="margin-bottom:10px">
+      <div class="slider-card-label">Qual o valor total do apartamento que você busca?</div>
+      <div class="slider-val-atual"><strong id="sliderPrecoTxt">—</strong></div>
+      <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
+      <div class="slider-label-row">
+        <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
+      </div>
+      <div class="slider-card-hint" id="precoFaixaSub">—</div>
+    </div>
+
+    <div class="slider-card">
+      <div class="slider-card-label">Qual a metragem ideal do apartamento?</div>
+      <div class="slider-val-atual"><strong id="sliderMetragemTxt">—</strong></div>
+      <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
+      <div class="slider-label-row">
+        <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+      </div>
+      <div class="slider-card-hint" id="metragemFaixaSub">—</div>
+    </div>
+  </div>
+
+  <!-- STEP 3 — CONFIRMAÇÃO DOS DADOS -->
+  <div class="step" id="step-3">
+    <div class="step-tag">Confirme seus dados</div>
+    <div class="step-title">Antes de seguirmos, <span style="color:var(--accent)">confirme</span> o que você configurou!</div>
+    <div class="step-sub">Se quiser ajustar, é só clicar em Refazer.</div>
+
+    <div class="conf-card">
+      <div class="conf-item">
+        <div class="conf-item-label">Seu orçamento estimado</div>
+        <div class="conf-item-val" id="confOrcamento">—</div>
+      </div>
+      <div class="conf-item conf-item-last">
+        <div class="conf-item-label">Área útil ideal do apartamento</div>
+        <div class="conf-item-val" id="confArea">—</div>
+      </div>
+      <div class="conf-obs">
+        Faixa de investimento (±20%): <strong id="confPrecoFaixa">—</strong><br>
+        Intervalo de área compatível: <strong id="confFaixa">—</strong>
+      </div>
+    </div>
+
+    <div class="conf-btns">
+      <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Refazer</button>
+      <button class="btn-nav btn-prim conf-btn-sim" onclick="avancarStep()">Confirmar</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 — MOTIVAÇÃO (personalizada com o nome, colhido no step 1) -->
+  <div class="step" id="step-4">
+    <div class="step-tag">Pergunta 3 de 3</div>
+    <div class="step-title" id="motivacaoTitulo">O que melhor descreve você hoje?</div>
+    <div class="step-sub" style="margin-bottom:14px">Pode marcar mais de uma opção.</div>
+    <div class="tag-group" id="tagsMoradia">
+      <button class="tag-btn" onclick="toggleMoradia_(this,'aluguel')">Quero sair do aluguel</button>
+      <button class="tag-btn" onclick="toggleMoradia_(this,'proprio')">Tenho imóvel próprio</button>
+      <button class="tag-btn" onclick="toggleMoradia_(this,'familia')">Moro com família ou amigos</button>
+      <button class="tag-btn" onclick="toggleMoradia_(this,'investidor')">Quero investir</button>
+    </div>
+    <div style="margin-top:28px">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
+      <div class="tag-group" id="tagsAltura">
+        <button class="tag-btn" onclick="selecionarAltura_(this,'baixo')">Até o 5º andar</button>
+        <button class="tag-btn" onclick="selecionarAltura_(this,'medio')">Do 5º ao 10º andar</button>
+        <button class="tag-btn" onclick="selecionarAltura_(this,'alto')">Acima do 10º andar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 — RESULTADO PARCIAL (TEASER) -->
+  <div class="step" id="step-5">
+    <button class="ajustar-btn" onclick="refinarBusca_()">← Ajustar filtros</button>
+    <div class="step-tag">Resultado parcial</div>
+    <div class="step-title" id="teaserTitulo">—</div>
+    <div class="step-sub">Já escolhemos a opção que mais combina com você.</div>
+
+    <div class="label-section">Empreendimentos com esse apartamento disponível</div>
+    <span class="teaser-num" id="teaserTotal">—</span>
+    <div style="font-size:13px;color:var(--text);margin-bottom:4px" id="teaserTotalDesc">—</div>
+
+    <div class="score-bar-wrap">
+      <div class="score-bar-label">
+        <span>Quanto isso combina com você</span>
+        <strong id="scoreBarPct">—%</strong>
+      </div>
+      <div class="score-bar-track"><div class="score-bar-fill" id="scoreBarFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="teaser-stats" id="teaserStats"></div>
+
+    <button class="btn-final btn-quente" id="btnVerOpcoes" style="margin-top:20px" onclick="avancarStep()">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+      <span id="btnVerOpcoesTxt">QUERO VER MINHAS OPÇÕES</span>
+    </button>
+  </div>
+
+  <!-- STEP 6 — MELHOR MATCH / TABELA DE OPÇÕES -->
+  <div class="step" id="step-6">
+    <button class="ajustar-btn" onclick="refinarBusca_()">← Ajustar filtros</button>
+    <div class="match-header">
+      <div class="match-tag">
+        <svg width="12" height="12"><use href="#ico-star"/></svg>
+        Melhor match para o seu perfil
+      </div>
+      <div class="step-title" style="margin-bottom:4px" id="matchTitulo">Empreendimento com o apartamento ideal</div>
+      <div class="step-sub" style="margin-bottom:0">Este empreendimento tem o apartamento (tamanho e preço) que mais combina com o que você busca. O nome e endereço o Leonardo te conta no atendimento.</div>
+    </div>
+
+    <div class="match-divider"></div>
+
+    <div style="margin-bottom:20px">
+      <div class="label-section" style="margin-top:0">Quanto isso combina com você</div>
+      <div style="display:flex;align-items:baseline;gap:4px">
+        <span class="match-score-num" id="matchScoreNum">—</span>
+        <span class="match-score-pct">%</span>
+      </div>
+      <div class="match-score-desc" id="matchScoreDesc">—</div>
+    </div>
+
+    <div id="urgenciaPill" style="display:none" class="urgencia-pill">
+      <svg width="12" height="12"><use href="#ico-zap"/></svg>
+      <span id="urgenciaMsg"></span>
+    </div>
+
+    <div class="label-section" style="margin-top:0">Opções encontradas pra você</div>
+    <div class="opcoes-tabela" id="opcoesTabela"><!-- populado por JS --></div>
+
+    <div class="btn-final-wrap">
+      <p>Pra confirmar esse atendimento e receber todos os detalhes, informe seu WhatsApp na próxima etapa.</p>
+      <button class="btn-final btn-quente" onclick="avancarStep()">
+        <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+        CONFIRMAR ATENDIMENTO HUMANO
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 7 — CAPTURA -->
+  <div class="step" id="step-7">
+    <div class="step-tag">Quase lá</div>
+    <div class="step-title" id="capturaTitulo">Essa é a penúltima etapa antes de encerrar</div>
+    <div class="step-sub">Confirme seu WhatsApp abaixo pra finalizar o seu atendimento.</div>
+
+    <div class="whats-box">
+      <div class="form-field">
+        <label>Seu WhatsApp com DDD</label>
+        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+      </div>
+      <div class="form-field" style="margin-bottom:0">
+        <label>Confirme o WhatsApp</label>
+        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this)">
+      </div>
+    </div>
+
+    <div class="privacy-note">
+      <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text)"><use href="#ico-check"/></svg>
+      <span>Seus dados ficam somente com Leonardo. Nenhuma lista de e-mail ou retorno de terceiros.</span>
+    </div>
+
+    <button class="btn-final btn-quente" id="btnConfirmarFinal" style="margin-top:20px" onclick="avancarStep()">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+      CONFIRMAR ATENDIMENTO
+    </button>
+    <div class="btn-final-sub">Leonardo entra em contato em até 2 horas pelo WhatsApp</div>
+  </div>
+
+  <!-- STEP 8 — AGRADECIMENTO -->
+  <div class="step" id="step-8">
+    <div class="check-circle">
+      <svg width="28" height="28" style="color:var(--green)"><use href="#ico-check"/></svg>
+    </div>
+    <div class="step-title" style="text-align:center;margin-bottom:6px">Confirmado, <span id="obrigadoNome"></span></div>
+    <div class="step-sub" style="text-align:center">O Leonardo já recebeu suas informações e vai te chamar em até 2 horas com as melhores opções pra você.</div>
+
+    <div id="baseProjecoes" style="margin-bottom:20px"><!-- populado por JS --></div>
+
+    <div class="perfil-resumo" id="perfilResumo"><!-- populado por JS --></div>
+
+    <div style="font-size:13px;color:var(--text);text-align:center;margin-bottom:12px">Prefere falar agora?</div>
+    <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
+      <svg width="20" height="20"><use href="#ico-whats"/></svg>
+      Falar agora com Leonardo
+    </a>
+    <div style="font-size:12px;color:var(--text);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
+  </div>
+
+</div><!-- /step-wrap -->
+</div><!-- /main -->
+
+<!-- NAV BAR -->
+<div class="nav-bar">
+  <div class="nav-inner">
+    <button class="btn-nav btn-sec btn-hide" id="btnVoltar" onclick="voltarStep()">Voltar</button>
+    <button class="btn-nav btn-prim" id="btnAvancar" onclick="avancarStep()">Começar</button>
+  </div>
+</div>
+
+<script src="config.js" onerror="void(0)"></script>
+<script>
+// ── DADOS REAIS (parte 97, 2026-07) ────────────────────────────────────────
+// Substituiu o MOCK_BASE anterior: busca listar_lancamentos (rota pública,
+// ver ACOES_PUBLICAS_GET em code.txt -- não precisa de token/sessão) e
+// agrupa por empreendimento, igual ao resto do projeto
+// (agruparPorEmpreendimento_ em lancamentos.html/estrategias.html). Só
+// "Condomínio Vertical" entra aqui -- lotes/Condomínio Horizontal já têm o
+// funil próprio em baseimob-funil.html.
+let TODOS_LANC = [];
+let PRECO_BOUNDS = [200000, 2000000];
+let AREA_BOUNDS = [40, 140];
+
+function tipoImovelDominanteSimulador_(unidades) {
+  const cont = {};
+  (unidades || []).forEach(u => { const t = String(u.tipo || '').trim(); if (t) cont[t] = (cont[t] || 0) + 1; });
+  let melhor = '', max = 0;
+  Object.keys(cont).forEach(t => { if (cont[t] > max) { max = cont[t]; melhor = t; } });
+  return melhor;
+}
+
+// previsaoEntrega às vezes vem como Date ISO em vez de "Mês/Ano" -- mesmo
+// problema já visto em lancamentos.html (célula formatada como Data no
+// Sheets vira objeto Date ao passar por getValues()/JSON). Formata pra
+// exibição em vez de vazar a string ISO crua pro lead.
+const MESES_ABREV_SIM_ = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function formatarDataEntrega_(v) {
+  const s = String(v || '').trim();
+  if (!s) return '—';
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return MESES_ABREV_SIM_[parseInt(iso[2], 10) - 1] + '/' + iso[1];
+  return s;
+}
+
+async function carregarBaseReal() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    const linhas = data.lancamentos || [];
+
+    const grupos = {};
+    linhas.forEach(l => {
+      if (l.tipoEmpreendimento !== 'Condomínio Vertical') return;
+      if (l.statusAtivo === 'Excluído') return;
+      const key = l.idLancamento || l.nomeEmpreendimento;
+      if (!grupos[key]) grupos[key] = { ...l, unidades: [] };
+      grupos[key].unidades.push(l);
+    });
+
+    TODOS_LANC = Object.values(grupos).map(g => {
+      const areas  = g.unidades.map(u => Number(u.areaUtil) || 0).filter(v => v > 0);
+      const precos = g.unidades.map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+      const total    = parseInt(g.totalUnidades, 10) || 0;
+      const estoque  = parseInt(g.estoque, 10) || 0;
+      // Unidades (tipologias) individuais, cada uma com sua própria área/preço-m² --
+      // preservado à parte pra poder checar, por tipologia, se o EMPREENDIMENTO tem
+      // de fato um apartamento com a metragem e o preço que a pessoa está buscando
+      // (não basta "estar dentro da média/faixa geral do prédio" -- ver
+      // temApartamentoCompativel_ abaixo).
+      const unidades = g.unidades
+        .map(u => {
+          const a = Number(u.areaUtil) || 0;
+          const p = Number(u.precoMedio) || 0;
+          return { areaUtil: a, precoTotal: p, precoM2: (a > 0 && p > 0) ? p / a : 0 };
+        })
+        .filter(u => u.areaUtil > 0 && u.precoTotal > 0);
+      return {
+        id: g.idEmpreendimento || g.idLancamento, nome: g.nomeEmpreendimento || '—',
+        regiao: [g.bairro, g.cidade].filter(Boolean).join(' · ') || 'Goiânia',
+        tipoImovel: tipoImovelDominanteSimulador_(g.unidades),
+        estagio: g.status || '—', entregaPrev: g.previsaoEntrega || '—',
+        prazoPag: parseInt(g.prazoMaximo, 10) || 0,
+        areaMin: areas.length ? Math.min(...areas) : 0,
+        areaMax: areas.length ? Math.max(...areas) : 0,
+        precoAPartir: precos.length ? Math.min(...precos) : 0,
+        precoM2: calcularM2Medio(g.unidades),
+        unidades,
+        total, estoque,
+        pctVendido: calcularPercentualVendido(estoque, total),
+        temLazer: !!String(g.lazer || '').trim(),
+      };
+    }).filter(c => c.areaMin > 0 && c.precoAPartir > 0);
+
+    if (TODOS_LANC.length) {
+      const totais  = TODOS_LANC.map(c => c.precoAPartir).filter(v => v > 0);
+      const areasMin  = TODOS_LANC.map(c => c.areaMin);
+      const areasMax  = TODOS_LANC.map(c => c.areaMax);
+      PRECO_BOUNDS = [Math.floor(Math.min(...totais) / 25000) * 25000, Math.ceil(Math.max(...totais) / 25000) * 25000];
+      AREA_BOUNDS  = [Math.floor(Math.min(...areasMin) / 5) * 5, Math.ceil(Math.max(...areasMax) / 5) * 5];
+    }
+  } catch (e) {
+    console.error('[simulador] erro ao carregar base real:', e);
+    TODOS_LANC = [];
+  }
+  inicializarSliders();
+  montarStatsAbertura_();
+}
+
+// Estatísticas reais da base na tela de abertura -- pedido do usuário pra
+// a primeira tela não ficar "fria": mostrar de cara que é uma consultoria
+// com dados de mercado reais e atuais, não só mais uma landing page comum.
+function montarStatsAbertura_() {
+  const elTotal = document.getElementById('statsTotalEmp');
+  if (!elTotal) return;
+  const count = D.filtroSituacao === 'todos'
+    ? TODOS_LANC.length
+    : TODOS_LANC.filter(c => matchSituacao_(c.estagio, D.filtroSituacao)).length;
+  elTotal.textContent = count || '—';
+}
+
+// ── SCORE DE TRAÇÃO (versão pública e parcial) ─────────────────────────────
+// Reaproveita a MESMA fórmula/pesos relativos de calcularScoreTracao
+// (lancamentos.html/estrategias.html, parte 84: Prazo 1 / Disponibilidade 3
+// / Atratividade 4), mas só com os eixos calculáveis a partir de dado
+// público (listar_lancamentos). Os eixos Vendedor e Similaridade exigem
+// listarPerfisVendedor/listar_padroes_vendedores/listar_modelos_vendedores,
+// que NÃO estão em ACOES_PUBLICAS_GET (exigem sessão) -- por isso ficam de
+// fora aqui, não porque a fórmula mudou.
+const TETO_PRAZO_VERTICAL   = 36;
+const TETO_ESTOQUE_VERTICAL = 150;
+const PESO_PRAZO_PUB = 1, PESO_DISP_PUB = 3, PESO_ATRAT_PUB = 4;
+
+function scoreTracaoPublico_(c) {
+  const precos = TODOS_LANC.map(x => x.precoAPartir).filter(v => v > 0);
+  const minP = precos.length ? Math.min(...precos) : c.precoAPartir;
+  const maxP = precos.length ? Math.max(...precos) : c.precoAPartir;
+  const atrat   = (maxP === minP) ? 5 : 10 * (1 - (c.precoAPartir - minP) / (maxP - minP));
+  const disp    = Math.min(10, 10 * (c.estoque / TETO_ESTOQUE_VERTICAL));
+  const prazoSc = c.prazoPag > 0 ? Math.min(10, 10 * (c.prazoPag / TETO_PRAZO_VERTICAL)) : 0;
+  return (prazoSc * PESO_PRAZO_PUB + disp * PESO_DISP_PUB + atrat * PESO_ATRAT_PUB) / (PESO_PRAZO_PUB + PESO_DISP_PUB + PESO_ATRAT_PUB);
+}
+
+const WHATSAPP_NUM = '5562999999999';
+
+// ── ESTADO ──────────────────────────────────────────────────────────────
+let stepAtual = 0;
+const TOTAL = 9; // steps 0..8
+
+const D = {
+  filtroSituacao: 'todos', moradias: new Set(), alturaPref: null,
+  precoAlvo: null, metragemAlvo: null, areaRange: null,
+  nome: '', whatsapp: '',
+  tsInicio: Date.now(), precoInicial: null, precoFinal: null,
+  areaInicial: null, areaFinal: null, stepAbandono: null,
+  ajustesSlider: 0,
+  origemAcesso: new URLSearchParams(location.search).get('utm_source') || 'direto',
+  // idEmpreendimento da isca escolhida pelo motor (selecionarIsca_, code.txt) --
+  // null se o motor não devolveu nada (nenhum mix publicado pro segmento
+  // desse perfil ainda) e o "melhor match" caiu no cálculo local de sempre.
+  iscaId: null,
+};
+
+// ── PROGRESSO ────────────────────────────────────────────────────────────
+function atualizarProgresso() {
+  // Fluxo: 0(capa) → 2(sliders/P1) → 3(conf) → 1(nome/P2) → 4(motiv/P3) → 5+
+  const PROG = { 0:0, 2:0, 3:1, 1:1, 4:2, 5:3, 6:3, 7:3, 8:3 };
+  const n = PROG[stepAtual] ?? 0;
+  document.getElementById('progressFill').style.width = (n / 3 * 100) + '%';
+  document.getElementById('progressStep').textContent = n + ' / 3';
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────
+function irParaStep(n) {
+  document.getElementById('step-' + stepAtual).classList.remove('ativo');
+  stepAtual = n;
+  document.getElementById('step-' + stepAtual).classList.add('ativo');
+  atualizarProgresso();
+  atualizarBotoes();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function avancarStep() {
+  if (!validar()) return;
+
+  if (stepAtual === 0) { irParaStep(2); return; }                           // capa → sliders
+  if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
+  if (stepAtual === 3) { irParaStep(1); return; }                           // confirmação → nome
+  if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
+  if (stepAtual === 4) { montarTeaser(); irParaStep(5); return; }
+  if (stepAtual === 5) { avancarParaMatch_(); return; }
+  if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
+  if (stepAtual === 7) { submeter(); return; }
+  if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
+}
+
+// montarMatch() agora depende de uma resposta do servidor (buscarIsca_) --
+// trava o botão nesse meio-tempo pra evitar duplo clique/avanço antes da
+// tela de match estar montada de verdade.
+async function avancarParaMatch_() {
+  const btn = document.getElementById('btnVerOpcoes');
+  const txt = document.getElementById('btnVerOpcoesTxt');
+  btn.disabled = true; btn.style.opacity = '.6';
+  txt.textContent = 'Buscando sua melhor opção...';
+  await montarMatch();
+  btn.disabled = false; btn.style.opacity = '';
+  txt.textContent = 'QUERO VER MINHAS OPÇÕES';
+  irParaStep(6);
+}
+
+function montarCapturaTitulo_() {
+  const primeiroNome = D.nome.split(' ')[0];
+  document.getElementById('capturaTitulo').textContent =
+    `${primeiroNome}, essa é a penúltima etapa antes de encerrar`;
+}
+
+function montarConfirmacao_() {
+  document.getElementById('confOrcamento').textContent = formatBRL_(D.precoAlvo);
+  document.getElementById('confArea').textContent = D.metragemAlvo + ' m²';
+  const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
+  const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
+  document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
+  document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
+}
+
+function montarMotivacaoTitulo_() {
+  const primeiroNome = D.nome.split(' ')[0];
+  document.getElementById('motivacaoTitulo').textContent =
+    primeiroNome + ', o que melhor descreve você hoje?';
+}
+
+function refazerSliders() {
+  irParaStep(2);
+}
+
+function voltarStep() {
+  if (stepAtual === 2) { irParaStep(0); return; } // sliders → capa
+  if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
+  if (stepAtual === 4) { irParaStep(1); return; } // motivação → nome
+  if (stepAtual > 2) irParaStep(stepAtual - 1);
+}
+
+function atualizarBotoes() {
+  const bV = document.getElementById('btnVoltar');
+  const bA = document.getElementById('btnAvancar');
+  // step 3 (confirmação) tem Sim/Refazer inline; steps 5..8 têm botões próprios
+  const comBotaoInline = stepAtual === 3 || stepAtual >= 5;
+  bA.classList.toggle('btn-hide', comBotaoInline);
+  // Voltar visível em: step 1 (nome→confirmação) e step 4 (motivação→nome)
+  bV.classList.toggle('btn-hide', comBotaoInline || stepAtual === 0 || stepAtual === 8);
+
+  bA.textContent = stepAtual === 0 ? 'Começar' : 'Próximo';
+}
+
+// ── VALIDAÇÃO ───────────────────────────────────────────────────────────
+function validar() {
+  if (stepAtual === 1) {
+    const nome = document.getElementById('fNome').value.trim();
+    if (!nome) { toast('Informe seu nome para continuar'); return false; }
+    D.nome = nome;
+  }
+  if (stepAtual === 4 && D.moradias.size === 0) { toast('Selecione pelo menos uma opção para continuar'); return false; }
+  if (stepAtual === 7) {
+    const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
+    const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
+    if (whats.length < 10)  { toast('Informe um WhatsApp válido com DDD'); return false; }
+    if (whats !== whats2)   { toast('Os números não coincidem — confira a confirmação'); return false; }
+    D.whatsapp = whats;
+  }
+  return true;
+}
+
+// ── SELEÇÃO ──────────────────────────────────────────────────────────────
+const SITUACAO_LABEL_ = { todos: 'Todos os empreendimentos', pronto_novo: 'Somente Prontos Novos', em_obras: 'Somente Em Obras' };
+
+function selecionarSituacao_(el, val) {
+  document.querySelectorAll('#tagsSituacao .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.filtroSituacao = val;
+  const lbl = document.getElementById('cntSituacaoLabel');
+  if (lbl) lbl.textContent = SITUACAO_LABEL_[val] || 'Todos os empreendimentos';
+  montarStatsAbertura_();
+  if (D.precoAlvo && D.metragemAlvo) atualizarComboUI_();
+}
+
+function toggleMoradia_(el, val) {
+  el.classList.toggle('on');
+  if (el.classList.contains('on')) D.moradias.add(val);
+  else D.moradias.delete(val);
+}
+
+function selecionarAltura_(el, val) {
+  document.querySelectorAll('#tagsAltura .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.alturaPref = val;
+}
+
+function refinarBusca_() { irParaStep(2); }
+
+// ── FILTRO / MATCH ──────────────────────────────────────────────────────
+// scoreMatchPreferencia_ (distância relativa ao alvo do slider, mesma
+// metodologia de baseimob-funil.html) só ordena -- decide QUEM aparece
+// primeiro. Quem CONTA como "encontrado" é temApartamentoCompativel_: o
+// empreendimento só entra se tiver, de verdade, uma tipologia de apartamento
+// com a metragem (dentro da faixa escolhida) E o preço total (dentro da
+// tolerância) que a pessoa pediu -- não basta a MÉDIA/faixa geral do prédio
+// bater por acaso enquanto nenhum apartamento específico atende aos dois
+// critérios ao mesmo tempo.
+const TOLERANCIA_PRECO_ = 0.20;
+
+function matchSituacao_(estagio, filtro) {
+  if (filtro === 'pronto_novo') return ['Pronto', 'Pronto novo', 'Entregue'].includes(estagio);
+  if (filtro === 'em_obras')   return ['Em obras', 'Em planta'].includes(estagio);
+  return true;
+}
+
+function scoreMatchPreferencia_(c, aRange, precoAlvo) {
+  const userMid  = (aRange[0] + aRange[1]) / 2;
+  const cMid     = (c.areaMin + c.areaMax) / 2;
+  const aDist    = Math.abs(cMid - userMid) / userMid;
+  const pDist    = Math.abs(c.precoAPartir - precoAlvo) / precoAlvo;
+  const overlap  = c.areaMax >= aRange[0] && c.areaMin <= aRange[1];
+  let s = 100 - aDist * 45 - pDist * 45;
+  s += overlap ? 12 : -22;
+  return Math.max(0, Math.min(100, Math.round(s)));
+}
+
+function temApartamentoCompativel_(c, aRange, precoAlvo) {
+  return (c.unidades || []).some(u =>
+    u.areaUtil >= aRange[0] && u.areaUtil <= aRange[1] &&
+    Math.abs(u.precoTotal - precoAlvo) / precoAlvo <= TOLERANCIA_PRECO_
+  );
+}
+
+function rankeados() {
+  if (!D.areaRange || !D.precoAlvo) return [];
+  return TODOS_LANC
+    .map(c => ({
+      ...c,
+      matchPref: scoreMatchPreferencia_(c, D.areaRange, D.precoAlvo),
+      tracao: scoreTracaoPublico_(c),
+      compativel: temApartamentoCompativel_(c, D.areaRange, D.precoAlvo),
+    }))
+    .sort((a, b) => b.matchPref !== a.matchPref ? b.matchPref - a.matchPref : b.tracao - a.tracao);
+}
+
+function filtrados() {
+  return rankeados().filter(c => c.compativel && matchSituacao_(c.estagio, D.filtroSituacao));
+}
+
+// ── SLIDERS ──────────────────────────────────────────────────────────────
+function animar(id, novoVal) {
+  const el = document.getElementById(id);
+  const txt = String(novoVal);
+  if (el.textContent === txt) return;
+  el.textContent = txt;
+  el.classList.remove('pulso');
+  void el.offsetWidth;
+  el.classList.add('pulso');
+  // Remove a classe depois da animação -- sem isso, o keyframe final
+  // (color: var(--text)) fica sobrepondo a cor própria do elemento pra
+  // sempre (ex.: o "5" de #cntCombo, que devia ficar var(--accent)).
+  clearTimeout(el._pulsoTimer);
+  el._pulsoTimer = setTimeout(() => el.classList.remove('pulso'), 350);
+}
+
+function formatBRL_(v) {
+  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+}
+
+// Só conta como "ajuste" (ajustesSlider, dado comportamental pro BaseImob) o
+// que o cliente de fato mexeu -- as chamadas de inicializarSliders() setando
+// o valor padrão dos sliders não entram nessa conta.
+let slidersProntos_ = false;
+
+function inicializarSliders() {
+  const sP = document.getElementById('sliderPreco');
+  sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
+  sP.value = Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
+  document.getElementById('lblPrecoMin').textContent = formatBRL_(PRECO_BOUNDS[0]);
+  document.getElementById('lblPrecoMax').textContent = formatBRL_(PRECO_BOUNDS[1]);
+  atualizarPreco(sP.value);
+
+  const sM = document.getElementById('sliderMetragem');
+  sM.min = AREA_BOUNDS[0]; sM.max = AREA_BOUNDS[1]; sM.step = 5;
+  sM.value = Math.round((AREA_BOUNDS[0] + AREA_BOUNDS[1]) / 2);
+  document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
+  document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
+  atualizarMetragem(sM.value);
+
+  slidersProntos_ = true;
+}
+
+function atualizarPreco(val) {
+  const v = parseInt(val);
+  if (D.precoInicial === null) D.precoInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
+  D.precoAlvo = v; D.precoFinal = v;
+  document.getElementById('sliderPrecoTxt').textContent = formatBRL_(v);
+  atualizarComboUI_();
+}
+
+// Metragem é um valor único (mesma metodologia do preço total, uma alça só) --
+// o cliente escolhe o tamanho que quer, e o motor de match já embute uma
+// tolerância de ±20% pra cima/baixo (ex.: escolheu 50m² -> entra no cálculo
+// de 40m² a 60m²), sem precisar de uma segunda alça pra isso.
+const TOLERANCIA_METRAGEM_ = 0.20;
+function atualizarMetragem(val) {
+  const v = parseInt(val);
+  if (D.areaInicial === null) D.areaInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
+  D.metragemAlvo = v; D.areaFinal = v;
+  const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
+  const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
+  D.areaRange = [lo, hi];
+  document.getElementById('sliderMetragemTxt').textContent = `${v} m²`;
+  document.getElementById('metragemFaixaSub').textContent = `A gente também considera apartamentos um pouco menores ou maiores: de ${lo}m² a ${hi}m²`;
+  atualizarComboUI_();
+}
+
+// Investimento + contador combinados (mesma estrutura de baseimob-funil.html:
+// um único "total de empreendimentos com o apartamento buscado" no topo,
+// calculado com AMBOS os sliders — não dois contadores parciais separados)
+// -- usa a mesma filtrados()/temApartamentoCompativel_ que já alimenta o
+// teaser e o match final.
+function atualizarComboUI_() {
+  if (!D.precoAlvo || !D.metragemAlvo) return;
+  const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
+  const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
+  document.getElementById('precoFaixaSub').textContent =
+    `A gente também considera apartamentos com investimento um pouco menor ou maior: de ${min} a ${max}`;
+
+  const n = filtrados().length;
+  animar('cntCombo', n);
+}
+
+// ── SCORE DE COMPATIBILIDADE (perfil geral, pro teaser) ────────────────────
+function scoreCompatibilidade() {
+  let s = 60;
+  if (D.moradias.has('aluguel')) s += 14;
+  const cnt = filtrados().length;
+  s += cnt >= 6 ? 10 : cnt >= 3 ? 5 : 0;
+  const top = rankeados()[0];
+  if (top) s += Math.round(top.tracao / 2); // até +5, empurrado pela nota real de tração do melhor achado
+  return Math.min(s, 98);
+}
+
+// ── TEASER ────────────────────────────────────────────────────────────────
+function montarTeaser() {
+  const emps = filtrados();
+  const total = emps.length;
+  const score = scoreCompatibilidade();
+  const primeiroNome = D.nome.split(' ')[0];
+
+  document.getElementById('teaserTitulo').innerHTML = total > 0
+    ? `Deu match ${primeiroNome}! <br>Temos <span style="color:var(--accent)">${total}</span> empreendimento${total>1?'s':''} que ${total>1?'têm':'tem'} o apartamento que você busca.`
+    : `Quase lá, ${primeiroNome}! Não achamos um empreendimento com esse perfil exato, mas o Leonardo deve ter opções bem próximas.`;
+
+  document.getElementById('teaserTotal').textContent = total || '0';
+  document.getElementById('teaserTotalDesc').textContent =
+    total === 0 ? 'Nenhum empreendimento com esse apartamento exato — Leonardo pode ter opções próximas'
+    : total === 1 ? 'empreendimento tem o apartamento que você busca'
+    : 'empreendimentos têm o apartamento que você busca';
+
+  document.getElementById('scoreBarPct').textContent = score + '%';
+  setTimeout(() => { document.getElementById('scoreBarFill').style.width = score + '%'; }, 120);
+
+  const stats = document.getElementById('teaserStats');
+  if (emps.length) {
+    const areas  = emps.map(e => e.areaMin);
+    const precos = emps.map(e => e.precoAPartir).filter(v => v > 0);
+    const prontos = emps.filter(e => ['Pronto','Pronto novo','Entregue'].includes(e.estagio)).length;
+    const naPlanta = emps.filter(e => ['Em planta','Em obras'].includes(e.estagio)).length;
+    stats.innerHTML = `
+      <div class="teaser-stat"><div class="teaser-stat-label">Faixa de área</div><div class="teaser-stat-val">${Math.min(...areas)}m² a ${Math.max(...areas)}m²</div></div>
+      <div class="teaser-stat"><div class="teaser-stat-label">A partir de</div><div class="teaser-stat-val">${precos.length ? formatBRL_(Math.min(...precos)) : '—'}</div></div>
+      <div class="teaser-stat"><div class="teaser-stat-label">Prontos pra morar</div><div class="teaser-stat-val">${prontos} disponíve${prontos===1?'l':'is'}</div></div>
+      <div class="teaser-stat"><div class="teaser-stat-label">Em obras / na planta</div><div class="teaser-stat-val">${naPlanta} em aberto</div></div>`;
+  } else {
+    stats.innerHTML = '';
+  }
+}
+
+// ── SUBMISSÃO — chega no sistema BaseImob (parte 97) ───────────────────────
+// Mesmo padrão de baseimob-funil.html: GET com ?dados=<json> (a acao fica
+// DENTRO do JSON) -- é o "truque no-cors" que o projeto já usa pra páginas
+// públicas sem sessão, porque o Apps Script não trata bem o preflight de
+// CORS de um POST com Content-Type: application/json. `interesse_lancamento`
+// já existe no backend (salvarInteresse_, code.txt) e é a MESMA rota que
+// alimenta a aba "BaseImob" do dashboard (listarLeadsBaseimob_).
+function submeter() {
+  const btn = document.getElementById('btnConfirmarFinal');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  // Encerra com a tela de "Confirmado" só depois do WhatsApp confirmado --
+  // pedido explícito do usuário (a captura agora é a penúltima etapa, e o
+  // fluxo só termina depois que os telefones são cadastrados).
+  const continuar = () => {
+    btn.textContent = 'Confirmado';
+    btn.classList.add('confirmado');
+    setTimeout(() => { montarAgradecimento(); irParaStep(8); }, 700);
+  };
+
+  if (typeof WEBHOOK_URL === 'undefined') {
+    console.log('[simulador] WEBHOOK_URL indisponível — pulando envio.', D);
+    setTimeout(continuar, 400);
+    return;
+  }
+
+  // Top 7 compatíveis -- mesma lista mostrada na tabela de opções do cliente
+  // (opcoesTabela), pra quem olhar o lead no BaseImob ver exatamente os
+  // mesmos códigos de empreendimento que o cliente viu na tela.
+  const top7 = filtrados().slice(0, 7);
+  const payload = {
+    acao: 'interesse_lancamento',
+    nome: D.nome,
+    telefone: D.whatsapp,
+    qtdInteresse: filtrados().length,
+    idsInteresse: top7.map(c => c.id).filter(Boolean).join(', '),
+    rankingDetalhado: JSON.stringify(top7.map((c, i) => ({
+      rank: i + 1, id: c.id, nome: c.nome, regiao: c.regiao,
+      area: `${c.areaMin}-${c.areaMax}m²`, precoM2: Math.round(c.precoM2),
+      precoAPartir: c.precoAPartir, estagio: c.estagio,
+      pctVendido: c.pctVendido, matchPref: c.matchPref, tracao: Math.round(c.tracao * 10) / 10,
+    }))),
+    tags: JSON.stringify({
+      moradias: [...D.moradias], alturaPref: D.alturaPref, filtroSituacao: D.filtroSituacao,
+      precoAlvo: D.precoAlvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
+      precoInicial: D.precoInicial, precoFinal: D.precoFinal,
+      areaInicial: D.areaInicial, areaFinal: D.areaFinal,
+      tempoSegundos: Math.round((Date.now() - D.tsInicio) / 1000),
+      ajustesSlider: D.ajustesSlider, origemAcesso: D.origemAcesso,
+      // idEmpreendimento mostrado como "melhor match" -- se veio do motor
+      // (selecionarIsca_) ou do cálculo local de sempre (fallback sem mix
+      // publicado). Guardado pra Fase 4 (ficha de atendimento no dashboard,
+      // ainda não construída) conseguir mostrar "isca apresentada" sem
+      // precisar recalcular nada.
+      idEmpreendimentoIsca: D.iscaId,
+    }),
+    canal: 'App Lançamentos',
+    tipo_contato: 'LEAD QUENTE',
+    score: scoreCompatibilidade(),
+  };
+
+  fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)))
+    .then(continuar)
+    .catch(e => { console.error('[simulador] erro ao enviar lead:', e); continuar(); });
+}
+
+// ── SITUAÇÃO — destaca pro cliente se está Pronto pra morar, Na planta ou
+// Em obras (pedido explícito: essa informação precisa chamar mais atenção
+// que o resto, não ficar escondida num rótulo pequeno de grid). ───────────
+function situacaoInfo_(estagio) {
+  if (['Pronto', 'Pronto novo', 'Entregue'].includes(estagio)) {
+    return { texto: 'Pronto pra morar', bg: 'rgba(0,212,170,.15)', border: 'rgba(0,212,170,.4)', cor: 'var(--green)' };
+  }
+  if (estagio === 'Em planta') {
+    return { texto: 'Na planta', bg: 'rgba(79,124,255,.15)', border: 'rgba(79,124,255,.4)', cor: 'var(--accent)' };
+  }
+  return { texto: 'Em obras', bg: 'rgba(245,166,35,.15)', border: 'rgba(245,166,35,.4)', cor: '#f5a623' };
+}
+function situacaoBadgeHTML_(estagio) {
+  const s = situacaoInfo_(estagio);
+  return `<span class="situacao-pill" style="background:${s.bg};border:1px solid ${s.border};color:${s.cor}">${s.texto}</span>`;
+}
+
+// ── MELHOR MATCH ──────────────────────────────────────────────────────────
+// Tabela única com os 7 primeiros por compatibilidade (matchPref) -- só o
+// primeiro vem com mais informação/destaque, os outros 6 em linha compacta
+// (mesma lógica de "rank-top" de baseimob-funil.html). Todas as linhas
+// mostram o código do empreendimento e a situação (Pronto pra morar / Na
+// planta / Em obras) em destaque -- pedidos explícitos do usuário.
+// Score colorido -- pedido do usuário: verde pra combinação muito alta,
+// amarelo pra alta, cor padrão pro resto. Mesmos cortes de matchScoreDesc.
+function corMatch_(score) {
+  if (score >= 88) return 'var(--green)';
+  if (score >= 72) return '#f5c518';
+  return 'var(--text)';
+}
+
+// ── MOTOR DE ISCA (selecionarIsca_, code.txt) ──────────────────────────────
+// Em vez de sempre revelar o item estatisticamente mais compatível (como o
+// simulador original faz), este app pergunta pro GAS qual das 7 ofertas do
+// mix publicado (estrategias.html → "Publicar mix") deve ser mostrada como
+// "melhor match" pra esse perfil -- a decisão de negócio (ISCA vs ALVO real)
+// fica só no servidor, nunca chega no navegador do cliente (ver
+// selecionarIscaPublico_). Se nenhum mix foi publicado ainda pro segmento
+// dessa faixa de preço, o motor devolve ok:false e este app cai de volta
+// pro cálculo local de sempre -- garante que a tela nunca fica vazia
+// enquanto o corretor não publicou o mix daquele segmento.
+async function buscarIsca_() {
+  if (typeof WEBHOOK_URL === 'undefined') return null;
+  try {
+    const motivacoes = [...D.moradias].join(',');
+    const url = `${WEBHOOK_URL}?acao=selecionar_isca&motivacoes=${encodeURIComponent(motivacoes)}&precoAlvo=${D.precoAlvo}&situacao=${D.filtroSituacao}`;
+    const resp = await fetch(url);
+    const json = await resp.json();
+    return (json && json.ok) ? json.isca : null;
+  } catch (e) {
+    console.error('[app-lancamentos] erro ao buscar isca:', e);
+    return null;
+  }
+}
+
+// Adapta o resumo público da isca (resumoEmpreendimento_, code.txt) pro
+// mesmo formato "c" que o resto desta tela já usa (vindo de TODOS_LANC) --
+// assim o card e a tabela de opções não precisam de nenhum caminho de
+// renderização separado.
+function iscaParaCard_(isca) {
+  return {
+    id: isca.idEmpreendimento, tipoImovel: isca.tipoImovel || 'Apartamento',
+    entregaPrev: isca.previsaoEntrega || '—',
+    regiao: [isca.bairro, isca.cidade].filter(Boolean).join(' · ') || 'Goiânia',
+    areaMin: isca.areaUtilMin || 0, areaMax: isca.areaUtilMax || 0,
+    precoAPartir: isca.menorPreco || 0, temLazer: !!isca.temLazer,
+    pctVendido: isca.percentualVendido || 0, estagio: isca.situacao || '',
+  };
+}
+
+async function montarMatch() {
+  const localCompativeis = filtrados();
+  const isca = await buscarIsca_();
+
+  let best, top7;
+  if (isca) {
+    best = iscaParaCard_(isca);
+    // matchPref calculado de verdade contra o perfil declarado (não é um
+    // número inventado) -- só o PRODUTO mostrado é escolha estratégica do
+    // motor, o grau de compatibilidade exibido continua honesto.
+    best.matchPref = scoreMatchPreferencia_(
+      { areaMin: best.areaMin, areaMax: best.areaMax, precoAPartir: best.precoAPartir },
+      D.areaRange, D.precoAlvo
+    );
+    top7 = [best, ...localCompativeis.filter(c => c.id !== best.id)].slice(0, 7);
+  } else {
+    top7 = localCompativeis.slice(0, 7);
+    best = top7[0];
+  }
+  D.iscaId = best ? best.id : null;
+
+  const sc   = best ? best.matchPref : 0;
+  const primeiroNome = D.nome.split(' ')[0];
+
+  document.getElementById('matchTitulo').textContent = `${primeiroNome}, este é o empreendimento com o apartamento ideal`;
+  document.getElementById('matchScoreNum').textContent = sc || '—';
+  document.getElementById('matchScoreNum').style.color = best ? corMatch_(sc) : '';
+  document.getElementById('matchScoreDesc').textContent = !best
+    ? 'Nenhum empreendimento com esse apartamento exato. O Leonardo vai buscar opções próximas.'
+    : sc >= 88 ? 'Combina muito bem com o que você está buscando.'
+    : sc >= 72 ? 'Combina bastante com o que você procura.'
+    : 'Tem coisas que combinam, mas dá pra ver outras opções também.';
+
+  if (best && best.pctVendido >= 80) {
+    document.getElementById('urgenciaPill').style.display = 'inline-flex';
+    document.getElementById('urgenciaMsg').textContent = best.pctVendido + '% vendido — unidades limitadas';
+  }
+
+  if (!best) {
+    document.getElementById('opcoesTabela').innerHTML =
+      '<div style="padding:18px;font-size:13px;color:var(--text);text-align:center">Nenhum empreendimento com esse apartamento exato agora — o Leonardo vai buscar opções próximas pra você.</div>';
+    return;
+  }
+
+  document.getElementById('opcoesTabela').innerHTML = top7.map((c, i) => {
+    if (i === 0) {
+      return `
+      <div class="opcao-top">
+        <div class="opcao-top-header">
+          <span class="opcao-codigo">Código: ${c.id || '—'}</span>
+          ${situacaoBadgeHTML_(c.estagio)}
+        </div>
+        <div class="opcao-top-grid">
+          <div><div class="opcao-top-cell-label">Tipo</div><div class="opcao-top-cell-val">${c.tipoImovel || 'Apartamento'}</div></div>
+          <div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>
+          <div><div class="opcao-top-cell-label">Região</div><div class="opcao-top-cell-val">${c.regiao}</div></div>
+          <div><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
+          <div><div class="opcao-top-cell-label">A partir de</div><div class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</div></div>
+          <div><div class="opcao-top-cell-label">Área de lazer</div><div class="opcao-top-cell-val" style="${c.temLazer?'color:var(--green)':''}">${c.temLazer?'Completa':'Não incluso'}</div></div>
+          <div style="grid-column:1/-1">
+            <div class="opcao-top-cell-label">Unidades vendidas</div>
+            <div class="opcao-top-cell-val" style="color:var(--orange)">${c.pctVendido}% das unidades já foram vendidas</div>
+            <div style="height:10px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:6px">
+              <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+    return `
+      <div class="opcao-row">
+        <div class="opcao-rank">${i+1}</div>
+        <div style="flex:1;min-width:0">
+          <div class="opcao-codigo">${c.id || '—'}</div>
+          <div class="opcao-row-info">${situacaoBadgeHTML_(c.estagio)} · ${c.areaMin}-${c.areaMax}m² · ${c.regiao} - A partir de <span style="color:var(--orange);font-weight:800">${formatBRL_(c.precoAPartir)}</span></div>
+          <div style="margin-top:6px">
+            <div style="font-size:11px;color:var(--text);margin-bottom:3px">${c.pctVendido}% vendido</div>
+            <div style="height:6px;background:var(--s3);border-radius:99px;overflow:hidden">
+              <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── AGRADECIMENTO ─────────────────────────────────────────────────────────
+function montarAgradecimento() {
+  document.getElementById('obrigadoNome').textContent = D.nome.split(' ')[0] + '!';
+
+  const emps    = filtrados();
+  const total   = emps.length;
+  const prontos = emps.filter(e => ['Pronto','Pronto novo','Entregue'].includes(e.estagio)).length;
+  const comLaz  = emps.filter(e => e.temLazer).length;
+  const areas   = emps.map(e => e.areaMin);
+  const precos  = emps.map(e => e.precoAPartir).filter(v => v > 0);
+  const menorPreco = precos.length ? Math.min(...precos) : null;
+  const maiorArea  = areas.length  ? Math.max(...areas)  : null;
+
+  const linhasProjecao = [];
+  if (total > 0) {
+    linhasProjecao.push(['Empreendimentos com o apartamento que você busca', `<span style="color:var(--accent);font-weight:700">${total} empreendimento${total>1?'s':''}</span>`]);
+  }
+  if (menorPreco) {
+    linhasProjecao.push([`Investimento estimado: ${formatBRL_(D.precoAlvo)}`, `Encontrado a partir de ${formatBRL_(menorPreco)}`]);
+  }
+  if (maiorArea) {
+    linhasProjecao.push([`Apartamento de ${D.metragemAlvo} m² (±20%: ${D.areaRange[0]}–${D.areaRange[1]} m²)`, `Disponível até ${maiorArea} m² dentro do perfil`]);
+  }
+  if (prontos > 0) {
+    linhasProjecao.push(['Prontos para morar agora', `<span style="color:var(--green);font-weight:700">${prontos} disponíve${prontos>1?'is':'l'}</span>`]);
+  }
+  if (comLaz > 0) {
+    linhasProjecao.push(['Com área de lazer completa', `${comLaz} dos ${total} encontrados`]);
+  }
+
+  const projecaoEl = document.getElementById('baseProjecoes');
+  if (linhasProjecao.length) {
+    projecaoEl.innerHTML = `
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text);margin-bottom:10px">O que encontramos pra você</div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px">
+        ${linhasProjecao.map(([k,v]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--text);min-width:0;overflow-wrap:break-word">${k}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--text);text-align:right;max-width:55%;min-width:0;overflow-wrap:break-word">${v}</span>
+          </div>`).join('')}
+      </div>`;
+    const linhas = projecaoEl.querySelectorAll('div[style*="border-bottom"]');
+    if (linhas.length) linhas[linhas.length-1].style.borderBottom = 'none';
+  } else {
+    projecaoEl.innerHTML = '';
+  }
+
+  const moradiaMap = { aluguel:'Quero sair do aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família', investidor:'Quero investir' };
+  const alturaMap  = { baixo:'Até o 5º andar', medio:'Do 5º ao 10º andar', alto:'Acima do 10º andar' };
+  const moradiasStr = D.moradias.size ? [...D.moradias].map(k => moradiaMap[k] || k).join(', ') : '—';
+
+  document.getElementById('perfilResumo').innerHTML = [
+    ['Situação atual', moradiasStr],
+    ['Investimento estimado', formatBRL_(D.precoAlvo)],
+    ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
+    ['Andar preferido', alturaMap[D.alturaPref] || '—'],
+  ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
+
+  const msg = encodeURIComponent(
+    'Olá Leonardo! Acabei de confirmar no simulador. ' +
+    `Estou buscando um apartamento com investimento estimado de ${formatBRL_(D.precoAlvo)}, metragem de ${D.metragemAlvo}m² (considerando ${D.areaRange[0]} a ${D.areaRange[1]}m²)` +
+    (total ? `. O simulador encontrou ${total} empreendimento${total>1?'s':''} com esse apartamento — pode me enviar os detalhes?` : '. Pode me enviar os detalhes?')
+  );
+  document.getElementById('whatsLink').href = 'https://wa.me/' + WHATSAPP_NUM + '?text=' + msg;
+}
+
+// ── UTILITÁRIOS ────────────────────────────────────────────────────────────
+function mascaraTel(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if (v.length > 6) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+  else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+  else if (v.length) v = '(' + v;
+  el.value = v;
+}
+
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+window.addEventListener('beforeunload', () => {
+  if (stepAtual > 0 && stepAtual < 8) D.stepAbandono = stepAtual;
+});
+
+// INIT
+atualizarProgresso();
+carregarBaseReal();
+</script>
+</body>
+</html>

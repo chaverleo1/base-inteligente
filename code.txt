@@ -4959,6 +4959,16 @@ function resumoEmpreendimento_(idEmpreendimento, todasLinhas) {
   var quartosVals = linhas.map(function(l) { return Number(l.quartos) || 0; }).filter(function(v) { return v > 0; });
   var areaVals    = linhas.map(function(l) { return Number(l.areaUtil) || 0; }).filter(function(v) { return v > 0; });
 
+  // Tipo de imóvel dominante (mesma ideia de tipoImovelDominante_ em
+  // estrategias.html) -- o mais frequente entre as tipologias/unidades.
+  var contTipo = {};
+  linhas.forEach(function(l) {
+    var t = String(l.tipo || '').trim();
+    if (t) contTipo[t] = (contTipo[t] || 0) + 1;
+  });
+  var tipoDominante = '', maxCont = 0;
+  Object.keys(contTipo).forEach(function(t) { if (contTipo[t] > maxCont) { maxCont = contTipo[t]; tipoDominante = t; } });
+
   return {
     idEmpreendimento:  idEmpreendimento,
     menorPreco:        precos.length ? Math.min.apply(null, precos) : 0,
@@ -4972,6 +4982,8 @@ function resumoEmpreendimento_(idEmpreendimento, todasLinhas) {
     quartosMax:        quartosVals.length ? Math.max.apply(null, quartosVals) : null,
     areaUtilMin:       areaVals.length ? Math.min.apply(null, areaVals) : null,
     areaUtilMax:       areaVals.length ? Math.max.apply(null, areaVals) : null,
+    tipoImovel:        tipoDominante,
+    temLazer:          linhas.some(function(l) { return !!String(l.lazer || '').trim(); }),
   };
 }
 

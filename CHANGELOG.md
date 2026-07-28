@@ -1,5 +1,37 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 123) — Fase 2: cria app-lancamentos.html, consumindo o motor de ISCA
+
+Segunda fase do projeto "Ilusão de Controle Estratégico" (parte 122 = motor no GAS). O simulador
+atual (`simulador-lancamentos.html`) não foi tocado — `app-lancamentos.html` é um arquivo novo,
+copiado dele como base (mesmo fluxo/UX já validado: capa → sliders → confirmação → nome →
+motivação → teaser → match → captura → agradecimento) com UMA mudança de fundo: a tela de "melhor
+match" busca o produto a mostrar em `selecionar_isca` (o motor server-side da parte 122) em vez de
+sempre revelar o item estatisticamente mais compatível calculado no navegador.
+
+- `avancarStep()`/`montarMatch()` (agora assíncrona): ao entrar na etapa de match, o botão mostra
+  "Buscando sua melhor opção..." enquanto `buscarIsca_()` consulta o servidor.
+- Se o motor devolver uma isca (`ok:true` — precisa que o corretor já tenha publicado o mix do
+  segmento em `estrategias.html`), ela vira o card "melhor match" (`iscaParaCard_`) e o score de
+  compatibilidade exibido é calculado de verdade contra o perfil declarado (`scoreMatchPreferencia_`)
+  — só o PRODUTO é escolha estratégica, o grau de match mostrado continua honesto.
+- Se não houver mix publicado pro segmento daquele perfil (`ok:false`) ou a chamada falhar, cai de
+  volta no cálculo local de sempre (idêntico ao simulador atual) — a tela nunca fica vazia esperando
+  o corretor publicar mixes.
+- `resumoEmpreendimento_` (code.txt) ganhou `tipoImovel` (dominante, via contagem de tipologias) e
+  `temLazer`, que faltavam pro card do app novo mostrar os mesmos campos de sempre.
+- `idEmpreendimentoIsca` (isca mostrada, venha do motor ou do fallback) agora vai junto no payload
+  de captura do lead — ainda sem consumidor (Fase 4, dashboard, não construída), mas evita ter que
+  voltar nesse arquivo depois.
+- Nova linha no catálogo "Landing Pages" do dashboard (`dashboard.html?secao=adm`) apontando pro
+  arquivo novo.
+
+Testado: build/syntax check + teste ao vivo cobrindo os 3 caminhos (isca mockada do motor, motor
+respondendo "nenhum mix publicado", erro de rede) via console, e o fluxo completo clicado na UI
+real (capa→sliders→confirmação→nome→motivação→teaser→match) contra o backend de produção — como
+nenhum mix está publicado ainda, confirmado que caiu no fallback e retornou exatamente o mesmo
+resultado que o simulador original daria.
+
 ## 2026-07-28 (parte 122) — Fase 1 do "app-lancamentos.html": motor de seleção de ISCA (GAS) + publicação de mix
 
 Primeira fase de um projeto maior (conceito "Ilusão de Controle Estratégico", trazido pelo usuário
