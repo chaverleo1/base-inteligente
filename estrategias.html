@@ -1306,6 +1306,53 @@ function limparProdutoAlvo_() {
   renderAlvoMix_();
 }
 
+// Publica sozinho o mix de TODOS os segmentos completos, nas duas situações
+// (NOVOS/NA_PLANTA) -- roda em background toda vez que a página carrega os
+// dados, sem depender do corretor lembrar de clicar em "Publicar mix"
+// (pedido explícito do usuário: app-lancamentos.html não pode ficar sem
+// dado só porque ninguém publicou manualmente). Recalcula do zero a cada
+// carregamento -- upsert por segmento+situação, então isso também mantém os
+// snapshots sempre atualizados com o estoque/preço mais recente, de graça.
+// O botão "Publicar mix" continua existindo (força uma republicação
+// imediata depois de uma mudança pontual), mas deixou de ser a ÚNICA forma
+// do snapshot existir. Fire-and-forget: erro aqui não pode travar a tela
+// principal -- na pior hipótese, o app novo cai no fallback local dele.
+async function autoPublicarTodosMixes_() {
+  for (const situacao of ['NOVOS', 'NA_PLANTA']) {
+    const statusPermitidos = new Set(SITUACAO_ABA_STATUS_[situacao]);
+    const itens = (_itensScoredCache || []).filter(it => statusPermitidos.has(it.e.status));
+    const { porSegmento, ordemSegmentos } = organizarPorSegmento_(itens);
+    const publicacoes = ordemSegmentos.map((seg, idx) => {
+      const candidatos = porSegmento[seg] || [];
+      const segAcima = ordemSegmentos[idx + 1];
+      const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
+      const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
+      if (resultado.aviso) return null;
+
+      const papeis = {};
+      ORDEM_PAPEIS_.forEach(papel => {
+        const item = resultado.papeis[papel];
+        if (item) papeis[papel] = item.e.idEmpreendimento;
+      });
+      const precos = candidatos.map(c => c.menorPreco).filter(v => v > 0);
+
+      return fetch(WEBHOOK_URL, {
+        method: 'POST',
+        body: new URLSearchParams({
+          dados: JSON.stringify({
+            acao: 'publicar_mix_segmento', token: tokenSessao(),
+            segmentoId: seg, padrao: padraoInternoDoSegmento_(seg), situacao,
+            faixaPrecoMin: precos.length ? Math.min(...precos) : 0,
+            faixaPrecoMax: precos.length ? Math.max(...precos) : 0,
+            papeis,
+          }),
+        }),
+      }).catch(() => {}); // silencioso -- ver comentário da função
+    }).filter(Boolean);
+    await Promise.allSettled(publicacoes);
+  }
+}
+
 async function carregarEstrategias() {
   try {
     const itens = await carregarItensScored_();
@@ -1317,6 +1364,7 @@ async function carregarEstrategias() {
     recalcularSegmentos_();
     renderFiltroPadrao_();
     renderBlocosSegmentos_();
+    autoPublicarTodosMixes_(); // background -- não bloqueia a tela
   } catch (e) {
     document.getElementById('blocosSegmentos').innerHTML =
       '<div class="vazio-segmento">Erro ao carregar. Verifique a conexão com o Apps Script.</div>';

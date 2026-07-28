@@ -1,5 +1,28 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 124) — Publicação do mix deixa de depender de clique manual
+
+Usuário apontou um problema real na Fase 1/2: `app-lancamentos.html` só funciona (mostra a isca do
+motor em vez do fallback) pro segmento que o corretor clicou "Publicar mix" manualmente em
+`estrategias.html` — "o sistema não pode ficar dependente dessa ação manual".
+
+Adicionado `autoPublicarTodosMixes_()`: toda vez que `estrategias.html` carrega os dados (dentro de
+`carregarEstrategias()`), publica sozinho, em background, o mix de TODOS os segmentos completos —
+nas duas situações (NOVOS e NA_PLANTA), não só a aba que o corretor está olhando no momento.
+Segmentos com aviso (menos de 5 produtos com Score de Tração) continuam sendo pulados, igual o
+botão manual já fazia. Como é upsert por segmento+situação, isso também tem o efeito colateral bom
+de manter os snapshots sempre atualizados com o estoque/preço mais recente — de graça, a cada vez
+que qualquer corretor abre a tela.
+
+O botão "📤 Publicar mix" (parte 122) continua existindo — não é mais a única forma do snapshot
+existir, mas ainda serve pra forçar uma republicação imediata de UM segmento específico sem
+esperar o próximo carregamento da página.
+
+Testado via console: mix com 6 produtos válidos (só 1 segmento por padrão dado o volume) publica
+exatamente 1 vez, com payload correto (segmentoId/situacao/padrao/faixaPreço/papéis mapeados por
+`idEmpreendimento`); mix com só 3 produtos (abaixo do mínimo de 5) gera aviso e zero chamadas de
+publicação, confirmando que o filtro de segmento incompleto continua valendo no caminho automático.
+
 ## 2026-07-28 (parte 123) — Fase 2: cria app-lancamentos.html, consumindo o motor de ISCA
 
 Segunda fase do projeto "Ilusão de Controle Estratégico" (parte 122 = motor no GAS). O simulador
