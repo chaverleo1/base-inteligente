@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-25 (parte 119) — Estratégias: 3 novas abordagens de copy consultivas/educativas no brief de IA Designer
+
+A pedido do usuário, `gerarGatilhos_()` em `estrategias.html` (o gerador de instruções de copy/design por
+empreendimento, usado no drawer que abre ao clicar numa linha da tabela de mix de 7 ofertas) ganhou 3
+novas "abordagens", além das 5 já existentes (Exclusividade & Acesso, Autoridade Silenciosa, Escassez
+Específica, Timing & Janela de Mercado, Curiosidade Segmentada) — todas as 5 antigas são orientadas a
+gatilho de urgência/exclusividade/escassez. As novas são o oposto de propósito: comunicação
+consultiva e educativa, sem apelo de venda, pensada pra ficar relevante no perfil por muito tempo
+(evergreen) em vez de especulativa/datada.
+
+**Educação de Mercado** — usa o empreendimento como exemplo real pra ensinar um conceito do mercado
+(como avaliar prazo, ritmo de vendas, preço). **Guia de Decisão** — checklist de 3 perguntas
+genéricas (útil pra qualquer lançamento), respondidas com dados reais deste aqui — formato
+"salvável", bom pra alcance orgânico e permanência no perfil. **Radiografia do Empreendimento** —
+ficha técnica pura, sem CTA de venda, tipo conteúdo de referência/arquivo.
+
+Cada uma segue exatamente o mesmo formato de 4 campos das abordagens existentes (`linha`, `titulo`,
+`vertical` pro Stories 9:16, `feedInstrucoes` pro Feed 4:5, `legenda` pronta pra colar) e reaproveita
+os mesmos locais já computados (`localizacao`, `preco`, `padrao`, `areaInfo`, `entregaInfo`, `pctStr`,
+`tipoM`, `baseHash`, `idBloco`). Adicionadas também 3 chaves novas no objeto `tom` (o sistema de "tom
+por padrão" da parte anterior), seguindo o mesmo padrão de ramificação `isLuxo`/`isAlto`/`isMedio`:
+`ctaConsultivo`, `aberturEducativa`, `paletaEducativa`.
+
+**Harmonia Stories → Feed**: nas 3 novas, o CTA do Stories aponta pro feed ("Arrasta pra ver a
+análise completa no feed ⬆️", "Guia completo no feed — vem ver ⬆️", "Ficha completa no feed ⬆️") em
+vez de "me chama no direct" — a novidade do dado no Stories é o gancho pra visitar o perfil e seguir,
+não pra vender na hora.
+
+Testado via console (sem precisar login, já que `gerarGatilhos_` é uma função pura): array retorna 8
+itens (era 5); as 3 novas não vazam `undefined` em nenhum dos 3 campos de texto, inclusive em cenário
+com `pctVendido`/`entrega`/`estoque` nulos (usa os fallbacks corretos: "estoque limitado", "Prazo a
+confirmar com a construtora"); tom Alto Padrão testado e confirmado ("Hoje eu quero te mostrar como
+analisar isso — não vender isso."). A tabela do drawer (`_gatilhosAtual_.map(...)`) e o CSS do drawer
+(`overflow-y:auto`) já são genéricos/sem limite de linhas — nenhuma mudança de HTML/CSS necessária.
+
 ## 2026-07-25 (parte 118) — Simulador de Lançamentos: limpeza de código morto após merge com a máquina server
 
 A máquina server (sessão paralela, commits `a8338a6`..`2233505`) reconstruiu boa parte de
