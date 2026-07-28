@@ -1,5 +1,32 @@
 # Changelog — Base Inteligente
 
+## 2026-07-25 (parte 118) — Simulador de Lançamentos: limpeza de código morto após merge com a máquina server
+
+A máquina server (sessão paralela, commits `a8338a6`..`2233505`) reconstruiu boa parte de
+`simulador-lancamentos.html` — tela de confirmação de dados, fluxo não-sequencial (capa → sliders →
+confirmação → nome → motivação), slider de preço total (era por m²), motivação virou tags
+multi-seleção + nova pergunta de andar, filtro de situação na capa, botão "Ajustar filtros",
+barra de % vendido em todas as linhas da tabela, código exibido como `idEmpreendimento`. Estudei e
+testei tudo ao vivo (desktop + mobile 375px, fluxo completo do início ao fim, incluindo Refazer e
+Ajustar filtros preservando os dados) antes de mexer em qualquer coisa — meu trabalho local anterior
+(uma tela de confirmação parecida, construída em cima da ordem antiga) foi descartado por ficar
+obsoleto/conflitante com essa versão.
+
+3 pontos pequenos encontrados durante o estudo, limpos agora:
+
+1. **`selecionarOpt()` e todo o CSS de `.opt`/`.options`** (cards de seleção única com ícone) —
+   órfãos desde que a motivação virou tags multi-seleção (`toggleMoradia_`); nenhum HTML usava mais.
+2. **`.ajustar-btn` usava `color: var(--text2)`**, variável removida do `:root` numa limpeza minha
+   anterior (parte 104) — funcionava por acidente (caía por herança no `var(--text)` do `body`), mas
+   era uma referência frágil. Trocado por `var(--text)` direto.
+3. **Comentários desatualizados** mencionando "preço/m²" em 4 lugares (CSS, HTML, `temApartamentoCompativel_`,
+   `atualizarMetragem`) — o mecanismo mudou pra preço total nos commits do server; comentários
+   atualizados pra refletir isso.
+
+Testado ao vivo depois da limpeza: fluxo completo (capa→sliders→confirmação→nome→motivação→teaser→
+match→captura→confirmado) continua funcionando normalmente, `.ajustar-btn` renderiza
+`rgb(238,240,246)` (var(--text)) diretamente.
+
 ## 2026-07-24 (parte 117) — Simulador de Lançamentos: abertura vira 1 número gigante + bullets reescritos
 
 A pedido do usuário, a tela de abertura (step-0) de `simulador-lancamentos.html`:
