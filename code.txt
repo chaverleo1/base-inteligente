@@ -5107,13 +5107,19 @@ function selecionarIscaInterno_(perfil) {
 }
 
 // Wrapper PÚBLICO — chamado pelo webhook sem sessão (app-lancamentos.html é
-// uma landing page de captura, igual o simulador, sem login). Devolve SÓ os
-// dados da isca; o roteiro completo (que revela que existe uma alternativa
-// "melhor" sendo propositalmente escondida) nunca sai daqui.
+// uma landing page de captura, igual o simulador, sem login). Devolve o mix
+// inteiro (até 7 ofertas, dados públicos de cada uma) SEM o campo "papel" —
+// o cliente vê o conjunto de ofertas, mas nunca sabe qual delas o motor
+// escolheu como isca nem que existe um alvo "melhor" sendo escondido. Ordena
+// por preço (cresente) só pra dar uma ordem previsível de exibição -- não é
+// a ordem de prioridade do motor (evita vazar posição=papel por padrão).
 function selecionarIscaPublico_(perfil) {
   var res = selecionarIscaInterno_(perfil);
   if (!res.ok) return res;
-  return { ok: true, isca: res.isca };
+  var ofertas = res.roteiro
+    .map(function(r) { return r.resumo; })
+    .sort(function(a, b) { return (a.menorPreco || 0) - (b.menorPreco || 0); });
+  return { ok: true, ofertas: ofertas };
 }
 
 // ID permanente do lead BaseImob (LL-NNNNN) — mesmo mecanismo de
@@ -5263,6 +5269,48 @@ function salvarInteresse_(d) {
   return { ok: true, idCliente: idCliente };
 }
 
+var PAPEL_LABEL_EMAIL_ = {
+  ISCA: 'Isca (mostrada ao cliente)', ALVO_1: 'Alvo Primário', ALVO_2: 'Alvo Secundário 1',
+  ALVO_3: 'Alvo Secundário 2', ANCORA_SUP: 'Âncora Superior', ANCORA_INF: 'Âncora Inferior',
+  COMPLEMENTAR: 'Complementar',
+};
+function formatarMoedaEmail_(v) {
+  return 'R$ ' + Math.round(Number(v) || 0).toLocaleString('pt-BR');
+}
+
+// Recalcula o roteiro completo (produto alvo real + mix com papéis) a
+// partir do MESMO perfil que o cliente declarou (motivações/preço/situação,
+// dentro de d.tags) -- o cliente NUNCA viu essa informação com papel/rótulo
+// (ver selecionarIscaPublico_); só o corretor recebe isso aqui, por e-mail,
+// no momento em que o lead chega. Falha silenciosa: se não der pra
+// recalcular (tags mal formado, nenhum mix publicado pro segmento), o
+// e-mail ainda sai — só sem esse bloco extra.
+function montarBlocoRoteiroEmail_(d) {
+  try {
+    var tags = JSON.parse(d.tags || '{}');
+    var perfil = { motivacoes: tags.moradias || [], precoAlvo: tags.precoAlvo, situacao: tags.filtroSituacao };
+    var res = selecionarIscaInterno_(perfil);
+    if (!res.ok) return '\n\n(Mix estratégico indisponível: ' + res.erro + ')';
+
+    var alvo1 = res.roteiro.filter(function(r) { return r.papel === 'ALVO_1'; })[0];
+    var linhas = ['', '', '═══ MIX ESTRATÉGICO (segmento ' + res.segmentoUsado + ') ═══'];
+    if (alvo1) {
+      linhas.push('PRODUTO ALVO: ' + alvo1.resumo.idEmpreendimento + ' — ' +
+        formatarMoedaEmail_(alvo1.resumo.menorPreco) + ' · ' + (alvo1.resumo.percentualVendido || 0) + '% vendido' +
+        (alvo1.escolhidoComoIsca ? ' (é o MESMO produto mostrado ao cliente como isca)' : ''));
+    }
+    linhas.push('MIX MONTADO:');
+    res.roteiro.forEach(function(r) {
+      linhas.push('  ' + PAPEL_LABEL_EMAIL_[r.papel] + (r.escolhidoComoIsca ? ' [ISCA]' : '') + ': ' +
+        r.resumo.idEmpreendimento + ' — ' + formatarMoedaEmail_(r.resumo.menorPreco));
+    });
+    linhas.push('Demais opções calculadas pelo simulador: ver "IDs selecionados" acima.');
+    return linhas.join('\n');
+  } catch (e) {
+    return '';
+  }
+}
+
 // E-mail pro corretor sempre que um lead pede atendimento — é o momento
 // mais quente do funil BaseImob, não pode passar batido.
 function enviarNotificacaoAtendente_(d) {
@@ -5277,6 +5325,7 @@ function enviarNotificacaoAtendente_(d) {
                 'Tags: ' + (d.tags || '-') + '\n' +
                 'Canal: ' + (d.canal || '-') + '\n' +
                 'Data: ' + Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    corpo += montarBlocoRoteiroEmail_(d);
     MailApp.sendEmail({
       to: ADM_EMAIL,
       subject: '🔥 LEAD QUENTE — ' + nome + ' solicitou informações',

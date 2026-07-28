@@ -1,5 +1,50 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 128) — App Lançamentos: mix de 7 ofertas sem destaque + roteiro completo no e-mail do corretor
+
+Redesign grande da tela "Melhor match" (step-6), pedido pelo usuário: parar de destacar UMA oferta
+como "a escolhida" e, em vez disso, gerar interesse pelo CONJUNTO das melhores opções.
+
+**Lado do cliente (`app-lancamentos.html`):**
+- Removida toda a UI de destaque de uma única oferta: selo "Melhor match para o seu perfil", score
+  de compatibilidade (número gigante + %), descrição do score e o pill de urgência. CSS morto
+  (`.match-tag`, `.match-score-*`, `.match-divider`, `.urgencia-pill`) e JS morto (`corMatch_`,
+  ícones `ico-star`/`ico-zap`) removidos junto.
+- No lugar, uma **headline de impacto** (`headlineImpacto_`) que muda conforme a motivação
+  declarada (aluguel/investidor/próprio/default), gerando interesse pelo conjunto: "Maria, as 7
+  melhores opções que separamos com potencial real de valorização", por exemplo.
+- **Todas** as até-7 ofertas agora usam o MESMO card rico (antes só a "melhor" ganhava esse
+  tratamento, as outras 6 vinham compactas em linha). `.opcoes-tabela` virou um container flex com
+  gap (cards soltos, cada um com sua própria borda/radius) em vez de uma caixa única com a 1ª
+  destacada.
+- Nova linha "+ X outras ofertas encontradas pelo simulador, além dessas" quando o total
+  compatível (`filtrados()`) passa de 7.
+- `buscarIsca_` virou `buscarOfertasMix_` — consome o novo formato do motor (`ofertas`, array,
+  ver abaixo) em vez de uma isca só; se o mix publicado tiver menos de 7 papéis preenchidos,
+  completa com opções reais do cálculo local sem repetir nenhuma.
+
+**Motor (`code.txt`):**
+- `selecionarIscaPublico_` agora devolve `{ok, ofertas: [...]}` (todas as até-7 ofertas do mix,
+  ordenadas por preço crescente) em vez de `{ok, isca}` — cada resumo continua sem nenhum campo de
+  papel/rótulo (a distinção ISCA/ALVO/ÂNCORA continua só no servidor).
+- **Novo**: quando o lead chega (`salvarInteresse_` → `enviarNotificacaoAtendente_`), o e-mail pro
+  corretor agora recalcula o roteiro completo a partir do mesmo perfil que o cliente declarou
+  (`montarBlocoRoteiroEmail_`, lendo `moradias`/`precoAlvo`/`filtroSituacao` de dentro de
+  `d.tags`) e inclui: **PRODUTO ALVO** (o ALVO_1 real, com preço/%vendido, e uma nota se ele for o
+  mesmo produto mostrado ao cliente como isca), e **MIX MONTADO** (os 7 papéis, com rótulo e
+  destaque `[ISCA]` na que foi mostrada). As "demais opções calculadas" já estavam no e-mail (campo
+  "IDs selecionados", vindo do `idsInteresse`/`rankingDetalhado` que o cliente já enviava) — só
+  ganhou uma linha apontando pra esse campo. Falha silenciosa: se o perfil não bater com nenhum mix
+  publicado, o e-mail sai igual, só sem esse bloco extra.
+
+Testado: 8 casos via Node pro bloco de e-mail (produto alvo, mix completo, marcação `[ISCA]`, nota
+de "mesmo produto", motor sem mix publicado, tags inválido sem lançar exceção) + 7 casos pro novo
+formato de `selecionarIscaPublico_` (array em vez de objeto único, ordenação por preço, sem vazar
+`escolhidoComoIsca`). No front, testado ao vivo: mix mockado com 3 ofertas completado com 4 do
+cálculo local (7 cards uniformes), fallback sem mix publicado (7 cards do cálculo local), as 4
+headlines por motivação, cenário de zero resultados, e o fluxo completo contra o backend real de
+produção.
+
 ## 2026-07-28 (parte 127) — App Lançamentos: retira textos de tolerância, destaca a contagem
 
 Continuação da limpeza da "Pergunta 1 de 3" (step-2):
