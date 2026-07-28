@@ -1,5 +1,26 @@
 # Changelog — Base Inteligente
 
+## 2026-07-25 (parte 120) — Estratégias: as 3 abordagens consultivas/educativas também no botão "Campanha"
+
+Usuário reportou que as 3 novas abordagens da parte 119 não apareciam no botão "✏️ Campanha" do
+título das tabelas — motivo: esse botão abre um drawer PARALELO (`abrirCopyBriefMixCompleto_()` →
+`gerarEixosCampanha_()`), com seu próprio array de "eixos de campanha", separado do array de
+`gerarGatilhos_()` que eu tinha editado (que só alimenta o drawer aberto ao clicar numa linha
+individual da tabela de mix). Adicionei as 3 equivalentes lá também: **Educação de Mercado**, **Guia
+de Decisão** e **Radiografia da Seleção** — mesma lógica de tom consultivo/educativo/evergreen,
+adaptada pro escopo do mix completo (usa a faixa de preço da seleção inteira — `faixaBaixa`/
+`faixaAlta`/o trio `ALVO_1-3` — como exemplo, em vez de dados de 1 empreendimento só).
+
+Como esta função (`gerarEixosCampanha_`) não tem o objeto `tom` compartilhado (usa ternárias
+`isLuxo`/`isAlto`/`isMedio` inline, com `ctaPergunta`/`ctaExplica` pré-computados), adicionei 3
+constantes locais equivalentes (`ctaConsultivo`, `aberturEducativa`, `paletaEducativa`) logo após
+`ctaExplica`, seguindo o mesmo padrão de ramificação.
+
+Testado via console (função pura, sem login): array vai de 4 pra 7 eixos; testado com mix completo
+(7 papéis preenchidos) e com mix esparso (só 1 papel preenchido) — nenhum `undefined` vazando em
+nenhum dos 3 novos em nenhum cenário. De quebra, corrigido um erro de plural encontrado durante o
+teste ("1 opções ativas" → "1 opção ativa"; "7 opções ativas" continua correto no plural).
+
 ## 2026-07-25 (parte 119) — Estratégias: 3 novas abordagens de copy consultivas/educativas no brief de IA Designer
 
 A pedido do usuário, `gerarGatilhos_()` em `estrategias.html` (o gerador de instruções de copy/design por
