@@ -5041,7 +5041,19 @@ var ORDEM_PAPEIS_MIX_ = ['ISCA', 'ALVO_1', 'ALVO_2', 'ALVO_3', 'ANCORA_SUP', 'AN
 // Escolhe, entre os snapshots de mix já publicados, o que melhor casa com o
 // preço declarado pelo cliente. Prioriza um snapshot cuja faixa [min,max]
 // CONTENHA o preço; se nenhum contém (preço fora de qualquer faixa
-// publicada), cai pro snapshot com a borda mais próxima.
+// publicada), cai pro snapshot com a borda mais próxima -- MAS só até um
+// limite. Bug real encontrado em produção: cliente com orçamento de R$3M
+// (Alto Padrão/Luxo) sempre recebia o mesmo mix de ~R$400-700k, porque só
+// existiam segmentos publicados nessa faixa baixa (poucos lançamentos de
+// alto padrão pra formar um mix válido ainda) -- "o mais próximo
+// disponível" virava sempre esse segmento errado, por mais longe que
+// estivesse do pedido real. Acima de LIMIAR_DISTANCIA_RELATIVA_SEGMENTO_
+// (a distância até a borda mais próxima, como fração do preço pedido), é
+// melhor não achar segmento nenhum (ok:false) do que forçar um mix sem
+// nada a ver com o orçamento -- o app cai pro cálculo local, que pelo
+// menos respeita o preço/metragem reais declarados.
+var LIMIAR_DISTANCIA_RELATIVA_SEGMENTO_ = 0.5;
+
 function encontrarSegmentoMaisProximo_(snapshots, precoAlvo) {
   if (!snapshots.length) return null;
   var contendo = snapshots.filter(function(s) {
@@ -5049,12 +5061,17 @@ function encontrarSegmentoMaisProximo_(snapshots, precoAlvo) {
   });
   if (contendo.length) return contendo[0];
 
-  return snapshots.reduce(function(maisProximo, s) {
+  var maisProximo = snapshots.reduce(function(atual, s) {
     var dist = precoAlvo < Number(s.faixaPrecoMin) ? Number(s.faixaPrecoMin) - precoAlvo
              : precoAlvo > Number(s.faixaPrecoMax) ? precoAlvo - Number(s.faixaPrecoMax) : 0;
-    if (!maisProximo || dist < maisProximo._dist) { s._dist = dist; return s; }
-    return maisProximo;
+    if (!atual || dist < atual._dist) { s._dist = dist; return s; }
+    return atual;
   }, null);
+
+  if (!maisProximo) return null;
+  var distanciaRelativa = precoAlvo > 0 ? maisProximo._dist / precoAlvo : 0;
+  if (distanciaRelativa > LIMIAR_DISTANCIA_RELATIVA_SEGMENTO_) return null;
+  return maisProximo;
 }
 
 // Motor completo (impuro — lê 2 abas): dado o perfil declarado no app novo
@@ -5077,7 +5094,7 @@ function selecionarIscaInterno_(perfil) {
   if (!candidatosSnapshot.length) candidatosSnapshot = todosSnapshots; // fallback: nenhum snapshot na situação pedida
 
   var snapshot = encontrarSegmentoMaisProximo_(candidatosSnapshot, precoAlvo);
-  if (!snapshot) return { ok: false, erro: 'nenhum mix publicado ainda' };
+  if (!snapshot) return { ok: false, erro: 'nenhum mix publicado compatível com esse orçamento' };
 
   var todasLinhas = listarLancamentos_().lancamentos;
   var IDS_POR_PAPEL_ = {

@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 131) — Fix: motor de isca forçava segmento errado pra orçamentos sem mix publicado
+
+Usuário reportou: configurando um perfil de R$3.000.000 / 295m² (Alto Padrão/Luxo), o app sempre
+devolvia o mesmo mix de ~R$400-700k. Reproduzido direto contra o backend de produção
+(`?acao=selecionar_isca&precoAlvo=3000000...`) — confirmado: `ok:true` com ofertas de R$402k a
+R$701k, nada a ver com o orçamento pedido.
+
+**Causa**: só existem segmentos publicados nas faixas Popular/Médio (poucos lançamentos de Alto
+Padrão/Luxo cadastrados ainda pra formar um mix válido — mínimo de 5 produtos com Score de Tração,
+ver parte 122). `encontrarSegmentoMaisProximo_` sempre "cai pro segmento mais próximo disponível"
+quando nenhum contém o preço exato — sem limite, isso forçava o único segmento existente mesmo
+estando 70-80% de distância relativa do orçamento real.
+
+**Fix**: novo `LIMIAR_DISTANCIA_RELATIVA_SEGMENTO_ = 0.5` — se a distância até a borda do segmento
+mais próximo passar de 50% do preço declarado, a função retorna `null` em vez de forçar esse
+segmento. `selecionarIscaInterno_` então responde `ok:false` (mensagem de erro também mais clara:
+"nenhum mix publicado compatível com esse orçamento") e o app cai pro cálculo local — que
+respeita o preço/metragem reais e mostra "Nenhum empreendimento com esse apartamento exato" em vez
+de empurrar opções de outra faixa completamente.
+
+Testado: 8 casos novos via Node reproduzindo exatamente o cenário relatado (3M contra segmento até
+900k → agora null) e confirmando que distâncias moderadas (≤50%) continuam aceitando o segmento
+mais próximo normalmente — não regride o comportamento correto pra orçamentos dentro de uma faixa
+razoável.
+
+**Ainda pendente do lado do usuário**: a causa raiz de fundo (poucos lançamentos de Alto
+Padrão/Luxo cadastrados) continua existindo — esse fix evita mostrar o mix ERRADO, mas pra Alto
+Padrão/Luxo terem mix de verdade, precisa cadastrar mais lançamentos dessa faixa até formar os 5
+mínimos por segmento.
+
 ## 2026-07-28 (parte 130) — App Lançamentos: alerta visual em tempo real na confirmação de WhatsApp
 
 Antes, os 2 campos de WhatsApp (etapa de captura) só avisavam de números diferentes com um toast
