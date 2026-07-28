@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 125) — Simulador/App: retira cabeçalho e etapa "Resultado parcial"
+
+Duas simplificações de UX pedidas pelo usuário, aplicadas nos DOIS funis (`simulador-lancamentos.html`
+e `app-lancamentos.html`, que compartilham a mesma estrutura de tela):
+
+1. **Retirado o cabeçalho fixo do topo** ("Leonardo Viana · Corretor em Goiânia" / badge "Busca por
+   Apartamento" / barra de progresso "X / 3"). Removido `.topo`/`.topo-inner`/`.topo-logo`/
+   `.progress-*` do HTML e CSS, e a função `atualizarProgresso()` (só existia pra alimentar essa
+   barra) junto com as duas chamadas dela.
+2. **Retirada a etapa "Resultado parcial"** (o teaser entre motivação e match). O botão "QUERO VER
+   MINHAS OPÇÕES" que ficava lá agora aparece direto no final da etapa "Pergunta 3 de 3"
+   (motivação) — clicar nele vai direto pro match, sem tela intermediária. `montarTeaser()` (e o CSS
+   `.teaser-*`/`.score-bar-*`, que só ela usava) foi removida. `atualizarBotoes()` foi ajustada pra
+   step 4 ganhar um botão de avançar embutido (escondendo o "Próximo" do rodapé) sem perder o
+   "Voltar" (que step 4 já tinha antes, pra nome).
+
+Testado ao vivo nos dois arquivos: header realmente sumiu da tela inicial; fluxo completo
+(motivação → clique único → match) navega direto pro step-6 sem passar pelo step-5 removido, com
+"Voltar" ainda funcionando em "Pergunta 3 de 3". Em `app-lancamentos.html`, confirmado contra o
+backend de produção (sem mock) que o clique único dispara a chamada real de `selecionar_isca` e
+renderiza o resultado corretamente.
+
 ## 2026-07-28 (parte 124) — Publicação do mix deixa de depender de clique manual
 
 Usuário apontou um problema real na Fase 1/2: `app-lancamentos.html` só funciona (mostra a isca do
