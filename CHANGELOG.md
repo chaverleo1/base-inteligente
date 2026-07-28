@@ -1,5 +1,22 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 127) — App Lançamentos: retira textos de tolerância, destaca a contagem
+
+Continuação da limpeza da "Pergunta 1 de 3" (step-2):
+
+- Removidos os textos de tolerância abaixo de cada slider ("A gente também considera apartamentos
+  com investimento um pouco menor ou maior..." e a versão de metragem). Os elementos
+  `#precoFaixaSub`/`#metragemFaixaSub` e o código que os preenchia (`atualizarComboUI_`/
+  `atualizarMetragem`) foram removidos — o CÁLCULO da tolerância (`D.areaRange`, faixa ±20% de
+  preço) continua intacto, só o TEXTO explicando isso pro cliente que saiu.
+- `.slider-card`/`.slider-card-hint` (CSS que só esses elementos usavam) removidos por ficarem
+  mortos.
+- Número da contagem (`#cntCombo`, "N opções reais...") dobrado de 20px pra 40px.
+
+Testado ao vivo: sliders continuam atualizando `D.precoAlvo`/`D.areaRange` normalmente (sem erro no
+console após remover os elementos), textos de tolerância não aparecem mais, número da contagem
+confirmado em 40px via `getComputedStyle`.
+
 ## 2026-07-28 (parte 126) — App Lançamentos: capa enxuta + caixa única na etapa de sliders
 
 A partir de agora o trabalho é só em `app-lancamentos.html` (usuário pediu explicitamente pra

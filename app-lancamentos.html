@@ -72,15 +72,7 @@ body {
 }
 .slider-val-atual strong { color: var(--accent); font-weight: 700; }
 
-/* ── CAIXAS DAS BARRAS DE ARRASTAR (preço total, metragem) — baixas, com
-   letra maior e mais brilhante por dentro, pra caber mais tela sem perder
-   legibilidade. ────────────────────────────────────────────────────────── */
-.slider-card {
-  background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r);
-  padding: 12px 18px;
-}
 .slider-card-label { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 8px; }
-.slider-card-hint { font-size: 14px; color: var(--text); font-weight: 600; margin-top: 8px; text-align: center; }
 
 input[type=range] {
   -webkit-appearance: none; appearance: none;
@@ -413,7 +405,6 @@ input[type=range]::-moz-range-track {
         <div class="slider-label-row">
           <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
         </div>
-        <div class="slider-card-hint" id="precoFaixaSub" style="margin-top:6px">—</div>
       </div>
 
       <div class="conf-item conf-item-last">
@@ -423,11 +414,10 @@ input[type=range]::-moz-range-track {
         <div class="slider-label-row">
           <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
         </div>
-        <div class="slider-card-hint" id="metragemFaixaSub" style="margin-top:6px">—</div>
       </div>
 
       <div class="conf-obs" style="text-align:center">
-        <span id="cntCombo" style="font-size:20px;font-weight:800;color:var(--orange)">—</span>
+        <span id="cntCombo" style="font-size:40px;font-weight:800;color:var(--orange)">—</span>
         <strong>opções reais com apartamento no seu perfil</strong>
       </div>
     </div>
@@ -980,7 +970,6 @@ function atualizarMetragem(val) {
   const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
   D.areaRange = [lo, hi];
   document.getElementById('sliderMetragemTxt').textContent = `${v} m²`;
-  document.getElementById('metragemFaixaSub').textContent = `A gente também considera apartamentos um pouco menores ou maiores: de ${lo}m² a ${hi}m²`;
   atualizarComboUI_();
 }
 
@@ -991,11 +980,6 @@ function atualizarMetragem(val) {
 // match final.
 function atualizarComboUI_() {
   if (!D.precoAlvo || !D.metragemAlvo) return;
-  const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
-  const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
-  document.getElementById('precoFaixaSub').textContent =
-    `A gente também considera apartamentos com investimento um pouco menor ou maior: de ${min} a ${max}`;
-
   const n = filtrados().length;
   animar('cntCombo', n);
 }
