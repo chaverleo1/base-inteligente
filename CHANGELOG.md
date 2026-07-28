@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 129) — App Lançamentos: headline genérica, destaque no "+X ofertas" e remoção do nome "Leonardo"
+
+Ajustes finos na tela de match e limpeza de identidade em `app-lancamentos.html`:
+
+1. `headlineImpacto_` parou de variar por motivação declarada ("...pra você finalmente sair do
+   aluguel", etc.) — vira sempre genérica: "{Nome}, as N melhores opções que separamos pra você!".
+   `ORDEM_PRIORIDADE_MOTIVACAO_HEADLINE_` (só existia pra essa variação) removida junto.
+2. O número em "+ X outras ofertas encontradas..." agora vem destacado (laranja, 16px,
+   `<strong>`) em vez de texto plano — `maisEl.textContent` virou `maisEl.innerHTML`.
+3. Texto abaixo do título da etapa de match trocado: "Os nomes e endereços completos o Leonardo
+   te conta no atendimento." → "Para informações mais detalhadas confirme seu atendimento ao
+   final da página."
+4. **Removida toda referência ao nome "Leonardo"** do app (pedido explícito, vale pra todo o
+   arquivo): `<title>`, nota de privacidade, texto abaixo do botão de confirmar WhatsApp, tela de
+   agradecimento, texto do botão de WhatsApp, mensagem de fallback quando não há match, estado
+   vazio da tabela de ofertas, e a mensagem pré-preenchida do link do WhatsApp — todas reescritas
+   em 1ª pessoa do plural ("a nossa equipe", "vamos te chamar") em vez de citar um nome específico.
+
+Testado ao vivo: título/subtítulo/número destacado conferidos na tela de match; nota de
+privacidade, texto pós-captura, tela de agradecimento e texto do botão de WhatsApp conferidos nas
+etapas seguintes — nenhuma menção a "Leonardo" restante (`grep -i leonardo` limpo).
+
 ## 2026-07-28 (parte 128) — App Lançamentos: mix de 7 ofertas sem destaque + roteiro completo no e-mail do corretor
 
 Redesign grande da tela "Melhor match" (step-6), pedido pelo usuário: parar de destacar UMA oferta
