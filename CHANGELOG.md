@@ -1,5 +1,14 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 143) — App Lançamentos: número real de WhatsApp no botão final
+
+`WHATSAPP_NUM` (constante usada pra montar o link `https://wa.me/...` do botão "Falar agora no
+WhatsApp" da tela final, step 8) estava com um placeholder (`5562999999999`). Atualizado pro número
+real informado pelo usuário: `5562981049078`.
+
+Testado ao vivo: `montarAgradecimento()` executado com dados sintéticos confirma
+`href="https://wa.me/5562981049078?text=..."` no botão final.
+
 ## 2026-07-29 (parte 142) — Estratégias (Produto Alvo): relatório da IA Editora em 3 blocos bem demarcados
 
 Usuário reportou que a IA Editora (externa, que recebe o relatório colado) não estava interpretando
