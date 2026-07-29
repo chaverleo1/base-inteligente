@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 138) — App Lançamentos: retira contorno azul da caixa de Preço/Área útil
+
+Pedido do usuário: tirar a linha de contorno azul da caixa maior que envolve os campos de "Preço
+limite"/"Área útil" (`.conf-card`, etapa "Pergunta 1 de 3"). Como essa mesma classe CSS também é
+usada na etapa "Confirme seus dados" (que deve continuar com o destaque azul), o `border:none` foi
+aplicado só nessa instância específica (`style="border:none"` inline), sem mexer na classe
+compartilhada.
+
+Testado ao vivo: caixa da "Pergunta 1 de 3" sem borda (`0px none`), caixa de "Confirme seus dados"
+mantendo a borda azul original (`2px solid`) intacta.
+
 ## 2026-07-29 (parte 137) — App Lançamentos: 4 ajustes visuais em Preço/Área útil
 
 Usuário repetiu o pedido de "Preço limite" (já implementado nas partes 134-136 — caixa digitável +
