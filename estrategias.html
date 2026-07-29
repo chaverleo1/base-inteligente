@@ -2231,12 +2231,14 @@ function condicoesPagamentoTexto_(item) {
   return partes.join(' · ');
 }
 
-// Monta o relatório completo -- reaproveita os posts do Guia de Decisão
-// (postsGuiaDecisao, já calculados por gerarGatilhos_) e o roteiro de
-// WhatsApp (roteiroWhatsapp, já calculado por gerarRoteiroPreAtendimento_)
-// em vez de recriar esse conteúdo do zero, garantindo que o relatório
-// nunca diverge do que as outras linhas da tabela já mostram.
-function gerarRelatorioCampanhaCompleto_(item, ctx, postsGuiaDecisao, roteiroWhatsapp) {
+// IMPORTANTE (correção pedida pelo usuário): este relatório NUNCA entrega
+// as 4 tarefas ele mesmo (nada de copy pronta, script de WhatsApp pronto ou
+// paleta específica aqui) — ele só INSTRUI a IA Editora sobre quais são as
+// 4 tarefas dela, e entrega os dados reais que ela precisa pra executar.
+// Quem produz a estratégia/design/copys/scripts é a IA Editora, não esta
+// função. `iconeUnico: true` sinaliza pro render que esta linha usa 1 botão
+// de copiar só (não o trio Vertical/Feed instrução/Feed legenda).
+function gerarRelatorioCampanhaCompleto_(item, ctx) {
   const e = item.e;
   const nome = e.nomeEmpreendimento || 'Empreendimento';
   const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(ctx.situacao);
@@ -2246,28 +2248,18 @@ function gerarRelatorioCampanhaCompleto_(item, ctx, postsGuiaDecisao, roteiroWha
   const conceito = String(e.conceito || '').trim();
   const condicoes = condicoesPagamentoTexto_(item);
 
-  const isLuxo = ctx.padrao === 'Luxo';
-  const isAltoP = isLuxo || ctx.padrao === 'Alto Padrão';
-  const isMedioP = !isAltoP && (ctx.padrao === 'Médio' || ctx.padrao === 'Medio');
-  const designResumo = isLuxo
-    ? 'Paleta: branco + grafite + linhas finas (editorial, alto padrão). Tipografia serifada elegante, peso leve/regular.'
-    : isAltoP ? 'Paleta: branco + azul petróleo + grafite (editorial, informativo). Tipografia sans-serif clean, semibold.'
-    : isMedioP ? 'Paleta: branco + azul + cinza claro (didático, limpo). Tipografia sans-serif moderna, bold.'
-    : 'Paleta: branco + verde-água + cinza (didático, acessível). Tipografia ultra-bold, grande, legível à distância.';
-
-  const copysTexto = postsGuiaDecisao.map((p, i) => {
-    const ehStories = p.linha.toLowerCase().includes('storie');
-    return `${i + 1}) ${p.linha}\n${ehStories ? p.vertical : p.legenda}`;
-  }).join('\n\n———\n\n');
-
-  const whatsappTexto = roteiroWhatsapp.map((r, i) => `${i + 1}) ${r.momento}\n${r.script}`).join('\n\n———\n\n');
-
-  const scriptCompleto = `═══════════════════════════════════════════════════════
-RELATÓRIO DE CAMPANHA — BRIEFING COMPLETO PARA IA EDITORA
+  const instrucoes = `═══════════════════════════════════════════════════════
+INSTRUÇÕES PARA IA EDITORA — CAMPANHA DE COMUNICAÇÃO
 ═══════════════════════════════════════════════════════
-Você é uma IA Editora de conteúdo imobiliário. Use os dados reais abaixo pra criar (ou expandir) uma campanha de comunicação completa pro Instagram (Feed + Stories) e um roteiro de atendimento por WhatsApp pra este empreendimento. Foco EDUCACIONAL/consultivo — nunca vendedor ou de urgência.
+Você é uma IA Editora de conteúdo imobiliário. A partir dos dados reais abaixo, execute as 4 tarefas a seguir pra este empreendimento. Foco EDUCACIONAL/consultivo em toda a campanha — nunca vendedor ou de urgência (linha editorial já validada nesse projeto: tipo "Guia de Decisão" — conteúdo que ensina a comparar/decidir, usando este empreendimento como exemplo real).
 
-── 1. DADOS DO EMPREENDIMENTO ──────────────────────────
+SUAS TAREFAS:
+1. Criar a estratégia das postagens de Feed e Stories (linha de comunicação, sequência de peças, objetivo de cada uma).
+2. Criar as instruções EXATAS de geração de imagem pra uma IA Designer (composição, paleta, tipografia, formato) — nenhuma arte pode revelar o nome do empreendimento.
+3. Criar a copy (legenda) de cada postagem planejada.
+4. Criar os scripts de uma sequência de oferta por WhatsApp, pra usar depois que alguém entrar em contato através das postagens da campanha — conduzindo pra um convite de agendamento no apartamento decorado.
+
+── DADOS DO EMPREENDIMENTO ──────────────────────────────
 Nome: ${nome}${ctx.empId ? ` (Código: ${ctx.empId})` : ''}
 Localização: ${ctx.localizacao}
 Padrão: ${ctx.padrao}
@@ -2279,31 +2271,13 @@ ${listaTipologiasTexto_(item)}
 
 Lazer: ${lazerList.join(', ') || 'não informado na base'}
 Conceito: ${conceito || 'não informado na base'}
-Condições de pagamento: ${condicoes || 'não informadas na base'}
-
-── 2. ESTRATÉGIA EDITORIAL (Feed + Stories) ────────────
-A linha editorial recomendada é "Guia de Decisão" — conteúdo educacional/consultivo. Sequência:
-1-3) Três posts de FEED, um critério de decisão por post, usando ESTE empreendimento como exemplo real, publicados em dias seguidos com aviso de continuação.
-4) Um STORIES de conexão, publicado depois dos 3 posts, dando tráfego de volta pro feed e convidando a seguir o perfil.
-Objetivo: gerar autoridade consultiva (não oferta), fazer a pessoa salvar/voltar no perfil, e só então abrir espaço pra conversa direta — é aí que entra o roteiro de WhatsApp da seção 5.
-
-── 3. INSTRUÇÕES DE DESIGN (IA Designer) ───────────────
-${designResumo}
-Formato Feed: 1080×1350 px (3:4). Formato Stories: 9:16.
-Nenhuma arte revela o nome do empreendimento — gera curiosidade, provoca o contato.
-
-── 4. COPYS (uma por postagem) ─────────────────────────
-${copysTexto}
-
-── 5. SCRIPTS DE WHATSAPP (pós-contato → agendamento no decorado) ──
-${whatsappTexto}`;
+Condições de pagamento: ${condicoes || 'não informadas na base'}`;
 
   return {
-    linha: 'Relatório de Campanha — Briefing p/ IA Editora',
-    titulo: 'Documento único: dados + estratégia + design + copys + WhatsApp',
-    vertical: 'Este relatório é um documento único, sem versão separada de Vertical. Use o botão da coluna "Feed legenda" (📋) pra copiar o texto completo.',
-    feedInstrucoes: 'Este relatório é um documento único, sem instrução de arte separada. Use o botão da coluna "Feed legenda" (📋) pra copiar o texto completo.',
-    legenda: scriptCompleto,
+    linha: 'Instruções para IA Editora',
+    titulo: 'As 4 tarefas da campanha + dados do empreendimento (sem entregar conteúdo pronto)',
+    iconeUnico: true,
+    legenda: instrucoes,
   };
 }
 
@@ -2554,17 +2528,22 @@ function renderCopyBriefContent_(item, papel) {
 
   const empId = e.idEmpreendimento || '';
   const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId };
-  // Script de Oferta (WhatsApp) e o Relatório de Campanha (última linha)
-  // entram como linhas extras na MESMA tabela de gatilhos -- pedido
-  // explícito do usuário ("criar linhas na tabela"). O relatório reaproveita
-  // os posts do Guia de Decisão e o roteiro de WhatsApp já calculados, em
-  // vez de recriar esse conteúdo do zero.
-  const gatilhosGuiaDecisao = gerarGatilhos_(item, papel, ctx);
+  // Script de Oferta (WhatsApp) e as Instruções pra IA Editora (última
+  // linha) entram como linhas extras na MESMA tabela de gatilhos -- pedido
+  // explícito do usuário ("criar linhas na tabela").
   _roteiroPreAtendimentoAtual_ = gerarRoteiroPreAtendimento_(item, ctx);
-  const relatorioCampanha = gerarRelatorioCampanhaCompleto_(item, ctx, gatilhosGuiaDecisao, _roteiroPreAtendimentoAtual_);
-  _gatilhosAtual_ = [...gatilhosGuiaDecisao, ...gerarScriptsWhatsapp_(item, ctx), relatorioCampanha];
+  const relatorioCampanha = gerarRelatorioCampanhaCompleto_(item, ctx);
+  _gatilhosAtual_ = [...gerarGatilhos_(item, papel, ctx), ...gerarScriptsWhatsapp_(item, ctx), relatorioCampanha];
 
-  const linhas = _gatilhosAtual_.map((g, i) => `
+  const linhas = _gatilhosAtual_.map((g, i) => g.iconeUnico ? `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy" colspan="3"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Copiar instruções">📋</button></td>
+    </tr>` : `
     <tr>
       <td class="td-num">${i + 1}</td>
       <td class="td-gatilho">

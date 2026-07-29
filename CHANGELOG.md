@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 141) — Estratégias (Produto Alvo): Relatório de Campanha vira só instruções + 1 ícone
+
+Correção do usuário sobre a parte 140: o relatório pra IA Editora não deve entregar nenhuma das 4
+tarefas já pronta (nada de copy pronta, script de WhatsApp pronto ou paleta de design específica) —
+ele deve só **instruir** a IA Editora sobre as 4 tarefas dela (estratégia de Feed/Stories, instruções
+de imagem pra IA Designer, copys de cada postagem, scripts de oferta no WhatsApp pós-contato) e
+entregar os dados reais do empreendimento pra ela executar.
+
+`gerarRelatorioCampanhaCompleto_(item, ctx)` reescrita: não recebe mais `postsGuiaDecisao`/
+`roteiroWhatsapp` (não reaproveita mais conteúdo de outras linhas), retorna só a lista numerada das
+4 tarefas + fact-sheet do empreendimento (dados, tipologias, lazer, conceito, condições de
+pagamento). Nenhum exemplo de copy/script/paleta é gerado por essa função.
+
+UI: como essa linha não tem mais os 3 tipos de conteúdo (vertical/feed instrução/feed legenda), só
+um dado (as instruções completas), a linha agora renderiza **1 ícone só** de copiar (`colspan="3"`)
+em vez dos 3 de sempre — novo flag `iconeUnico: true` no objeto retornado, lido pelo template de
+`renderCopyBriefContent_` (`_gatilhosAtual_.map`). As demais linhas da tabela (Guia de Decisão,
+Script de Oferta, Roteiro de Pré-Atendimento) continuam com o layout de sempre.
+
+Testado ao vivo: item sintético renderizado por `renderCopyBriefContent_`, última linha ("Instruções
+para IA Editora") confirmada com exatamente 1 `<td class="td-copy" colspan="3">` e 1 botão; conteúdo
+copiado conferido linha a linha — só task-list + dados reais, sem nenhum exemplo de deliverable;
+`renderCopyBriefMixCompleto_` (aba "Campanha") confirmado intocado.
+
 ## 2026-07-29 (parte 140) — Estratégias (Produto Alvo): última linha = Relatório de Campanha p/ IA Editora
 
 Pedido do usuário: uma última linha na tabela de gatilhos com um "relatório de detalhes e
