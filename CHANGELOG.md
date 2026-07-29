@@ -1,5 +1,40 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 139) — Estratégias (Produto Alvo): script de oferta WhatsApp + roteiro de 3 momentos
+
+Pedido do usuário: na janela de copys da aba "Produto Alvo" (`abrirCopyBrief_`/`renderCopyBriefContent_`
+— a aba "Campanha"/mix-completo não foi tocada), dois novos conteúdos pra complementar o interesse
+que o "Guia de Decisão" (posts/stories) já desperta quando vira contato direto no WhatsApp:
+
+**1. Script de Oferta — WhatsApp** (nova linha na MESMA tabela de gatilhos): flyer de oferta pronto
+pra colar, no formato do exemplo que o usuário mandou (emoji + título + dados). Ao contrário dos
+gatilhos de Instagram acima, aqui o nome do empreendimento PODE aparecer — é mensagem 1:1 pra quem
+já demonstrou interesse, não anúncio público (a "regra de ouro" de nunca revelar o nome vale só pro
+conteúdo de rede social). `montarScriptOfertaWhatsapp_` usa o máximo de dado real cadastrado:
+- Tipologia de referência = a mais barata (mesma que já vira "a partir de" no resto do mix) — puxa
+  quartos/suítes/vagas/área útil/área de terreno dela.
+- Lazer do empreendimento (`e.lazer`, string separada por vírgula) — cada item ganha um emoji por
+  palavra-chave (`emojiParaAmenidade_`: piscina🏊, churrasqueira🍖, playground🎠, portaria🛡️, etc.,
+  com fallback ✅ genérico).
+- `e.conceito` (texto livre), previsão de entrega (só se NÃO estiver pronto), e condição de
+  pagamento (FGTS/`fgts==='Sim'`, financiamento/`avaliacaoBanco`|`planoLongo`|`parcelasEntrega`).
+- Nenhuma linha é fabricada — cada uma só aparece se o campo correspondente estiver preenchido na
+  base (ao contrário do exemplo genérico do usuário, que tinha "salas amplas"/"área de serviço" sem
+  dado real por trás).
+
+**2. Roteiro de Pré-Atendimento — WhatsApp** (tabela NOVA, abaixo da primeira, 3 linhas):
+`gerarRoteiroPreAtendimento_` monta uma sequência de 3 mensagens (Momento 1: reconhece o interesse +
+pergunta qualificadora; Momento 2: compartilha alguns dados reais, sem entregar tudo; Momento 3:
+convite direto pro decorado, sugerindo agendamento) — cada uma com botão de copiar próprio
+(`copiarRoteiroPreAtendimento_`, novo global `_roteiroPreAtendimentoAtual_`, já que cada momento é
+UM script só, não o trio Vertical/Feed/Legenda dos gatilhos).
+
+Testado ao vivo: script de oferta reproduzido fiel ao formato do exemplo com dado real completo;
+mesmo teste com dado esparso (sem lazer/terreno/FGTS) confirmando que nenhuma linha vazia ou
+fabricada aparece; drawer renderizado com as 2 tabelas (5 linhas na de gatilhos, 3 na de roteiro);
+botão de copiar do Momento 3 testado; e confirmado que `renderCopyBriefMixCompleto_` (aba
+"Campanha") não foi alterada.
+
 ## 2026-07-29 (parte 138) — App Lançamentos: retira contorno azul da caixa de Preço/Área útil
 
 Pedido do usuário: tirar a linha de contorno azul da caixa maior que envolve os campos de "Preço

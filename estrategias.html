@@ -1698,6 +1698,7 @@ window.onload = () => { verificarAuth(); if (sessionStorage.getItem(SESS_KEY) ==
 // ── COPY BRIEF DRAWER ──────────────────────────────────────────────────────
 let _mixAtualPapeis_ = {};
 let _gatilhosAtual_ = [];
+let _roteiroPreAtendimentoAtual_ = [];
 
 function copiarEPreview_(tipo, i) {
   const g = _gatilhosAtual_[i];
@@ -1710,6 +1711,23 @@ function copiarEPreview_(tipo, i) {
   if (prev) prev.textContent = texto;
   navigator.clipboard.writeText(texto).then(() => {
     const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.innerHTML = '✓';
+    btn.classList.add('copiado');
+    setTimeout(() => { btn.innerHTML = '📋'; btn.classList.remove('copiado'); }, 1800);
+  });
+}
+
+// Cada momento do roteiro de pré-atendimento é UM script só (não um trio
+// Vertical/Feed/Legenda como os gatilhos acima) -- por isso um botão de
+// copiar só, em vez de reaproveitar copiarEPreview_.
+function copiarRoteiroPreAtendimento_(i) {
+  const r = _roteiroPreAtendimentoAtual_[i];
+  if (!r) return;
+  const prev = document.getElementById('briefPreviewBody');
+  if (prev) prev.textContent = r.script;
+  navigator.clipboard.writeText(r.script).then(() => {
+    const btn = document.getElementById(`btnRoteiro${i}`);
     if (!btn) return;
     btn.innerHTML = '✓';
     btn.classList.add('copiado');
@@ -2013,6 +2031,162 @@ DIREÇÃO VISUAL
   ];
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// SCRIPTS DE WHATSAPP — pedido do usuário: complementar o interesse gerado
+// pelo "Guia de Decisão" (acima) quando ele já virou procura de clientes
+// curiosos no direct/WhatsApp. Ao contrário dos gatilhos de Instagram, aqui
+// o nome/endereço do empreendimento PODEM aparecer -- é mensagem direta 1:1
+// pra quem já demonstrou interesse, não anúncio público (a "regra de ouro"
+// de nunca revelar o nome vale pro conteúdo de rede social, não pra
+// conversa privada com quem já entrou em contato).
+// ═══════════════════════════════════════════════════════════════════════
+
+// A tipologia mais barata é a mais natural pra puxar um flyer de oferta --
+// é a mesma que já vira "a partir de" no resto do mix, então os dados
+// batem com o que o resto da estratégia já mostra pro corretor.
+function unidadeReferencia_(item) {
+  const precoDe = u => Number(u.precoMin) || Number(u.precoMedio) || Number(u.preco) || 0;
+  const unidades = (item.e.unidades || []).filter(u => precoDe(u) > 0);
+  if (!unidades.length) return null;
+  return [...unidades].sort((a, b) => precoDe(a) - precoDe(b))[0];
+}
+
+function emojiParaTipo_(tipo) {
+  const t = (tipo || '').toLowerCase();
+  if (t.includes('casa')) return '🏡';
+  if (t.includes('terreno') || t.includes('lote')) return '🏞️';
+  if (t.includes('apartamento')) return '🏢';
+  return '🏠';
+}
+
+// Dicionário simples de emoji por palavra-chave de amenidade (lazer do
+// empreendimento) -- "usar os dados de forma inteligente" em vez de um
+// bullet genérico igual pra tudo. Cai num check ✅ neutro se não reconhecer
+// a palavra.
+function emojiParaAmenidade_(nome) {
+  const n = (nome || '').toLowerCase();
+  if (n.includes('piscina')) return '🏊';
+  if (n.includes('academia') || n.includes('fitness')) return '💪';
+  if (n.includes('churrasqueira') || n.includes('gourmet')) return '🍖';
+  if (n.includes('playground') || n.includes('brinquedoteca')) return '🎠';
+  if (n.includes('festa')) return '🎉';
+  if (n.includes('quadra') || n.includes('esport')) return '⚽';
+  if (n.includes('pet')) return '🐾';
+  if (n.includes('coworking') || n.includes('escritório')) return '💻';
+  if (n.includes('sauna') || n.includes('spa')) return '🧖';
+  if (n.includes('portaria') || n.includes('segurança')) return '🛡️';
+  if (n.includes('elevador')) return '🛗';
+  return '✅';
+}
+
+// Monta o texto completo do flyer de oferta (formato "anúncio de WhatsApp",
+// igual ao exemplo que o usuário mandou) usando o máximo de dado real
+// cadastrado: unidade de referência (quartos/suítes/vagas/área), lazer do
+// empreendimento, condições de pagamento (FGTS/financiamento). Nunca
+// inventa um dado que não existe na base -- cada linha só aparece se o
+// campo correspondente estiver preenchido.
+function montarScriptOfertaWhatsapp_(item, ctx) {
+  const e = item.e;
+  const u = unidadeReferencia_(item) || {};
+  const tipo = u.tipo || ctx.tipoImovel || 'Imóvel';
+  const emojiTipo = emojiParaTipo_(tipo);
+  const cidade = e.cidade || ctx.localizacao;
+  const nome = e.nomeEmpreendimento || 'Empreendimento';
+
+  const quartos   = Number(u.quartos) || 0;
+  const suites    = Number(u.suites) || 0;
+  const vagas     = Number(u.vagas) || 0;
+  const areaUtil  = Number(u.areaUtil) || 0;
+  const areaTerr  = Number(u.areaTerr) || 0;
+
+  const lazerList = String(e.lazer || '').split(',').map(s => s.trim()).filter(Boolean);
+  const conceito  = String(e.conceito || '').trim();
+
+  const fgtsOk          = String(u.fgts || '').trim() === 'Sim';
+  const financiamentoOk = !!(u.avaliacaoBanco || u.planoLongo || u.parcelasEntrega);
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(ctx.situacao);
+
+  const linhas = [];
+  linhas.push(`${emojiTipo} ${tipo} à Venda – ${nome} | ${cidade}`);
+  linhas.push('');
+  linhas.push(`💰 A partir de ${ctx.preco}`);
+  linhas.push('');
+  if (areaUtil > 0) linhas.push(`📐 ${areaUtil} m² de área útil`);
+  if (areaTerr > 0) linhas.push(`🌳 Terreno com ${areaTerr} m²`);
+  if (quartos > 0)  linhas.push(`🛏️ ${quartos} quarto${quartos > 1 ? 's' : ''}${suites > 0 ? ` (${suites} suíte${suites > 1 ? 's' : ''})` : ''}`);
+  if (vagas > 0)    linhas.push(`🚗 Garagem para ${vagas} carro${vagas > 1 ? 's' : ''}`);
+  lazerList.forEach(l => linhas.push(`${emojiParaAmenidade_(l)} ${l}`));
+  if (conceito) linhas.push(`✨ ${conceito}`);
+  if (!prontoParaMorar && ctx.entrega) linhas.push(`🗓️ Previsão de entrega: ${ctx.entrega}`);
+  if (fgtsOk || financiamentoOk) {
+    linhas.push('');
+    const partes = [financiamentoOk && 'financiamento', fgtsOk && 'utilização do FGTS'].filter(Boolean);
+    linhas.push(`💳 Aceita ${partes.join(' e ')}.`);
+  }
+  return linhas.join('\n');
+}
+
+// Vira 1 linha na MESMA tabela de gatilhos (pedido explícito do usuário:
+// "criar linhas na tabela") -- reaproveita o formato linha/titulo/vertical/
+// feedInstrucoes/legenda só pra caber no render existente sem precisar de
+// UI nova; vertical/feedInstrucoes viram notas-ponteiro (mesmo padrão já
+// usado no eixo de Stories do Guia de Decisão), o script de verdade fica
+// em "legenda" (o botão que já copia texto pronto pra colar).
+function gerarScriptsWhatsapp_(item, ctx) {
+  return [{
+    linha: 'Script de Oferta — WhatsApp',
+    titulo: 'Mensagem pronta pra enviar a quem já demonstrou interesse',
+    vertical: 'Este script é só pra WhatsApp — não tem versão de Stories. Use o botão da coluna "Feed legenda" (📋) pra copiar o texto completo.',
+    feedInstrucoes: 'Este script é só pra WhatsApp — não tem instrução de arte de Feed. Use o botão da coluna "Feed legenda" (📋) pra copiar o texto completo.',
+    legenda: montarScriptOfertaWhatsapp_(item, ctx),
+  }];
+}
+
+// Roteiro de 3 mensagens SEQUENCIAIS de pré-atendimento via WhatsApp --
+// pedido explícito do usuário: complementa o interesse que o "Guia de
+// Decisão" (posts/stories) já despertou, quando esse interesse vira
+// contato direto. Cada momento entrega um pouco mais de informação real,
+// mas o objetivo dos 3 juntos é sempre o mesmo: conduzir pra um convite de
+// visita presencial ao decorado -- a experiência que só se sente ao vivo,
+// não numa foto ou num texto.
+function gerarRoteiroPreAtendimento_(item, ctx) {
+  const e = item.e;
+  const u = unidadeReferencia_(item) || {};
+  const nome = e.nomeEmpreendimento || 'esse empreendimento';
+  const cidade = e.cidade || ctx.localizacao;
+  const areaUtil = Number(u.areaUtil) || 0;
+  const quartos = Number(u.quartos) || 0;
+
+  return [
+    {
+      momento: 'Momento 1 — Primeiro contato',
+      objetivo: 'Reconhece o interesse, confirma disponibilidade, faz 1 pergunta qualificadora',
+      script: `Oi! Tudo bem? 😊
+
+Vi que você se interessou pelo conteúdo que postei sobre lançamentos aqui em ${cidade} — que bom que chegou até você!
+
+Tenho algumas opções disponíveis agora que podem fazer sentido pro seu momento. Só pra eu te indicar certo: você tá procurando mais pra morar ou pra investir?`,
+    },
+    {
+      momento: 'Momento 2 — Aquecendo o interesse',
+      objetivo: 'Compartilha alguns dados reais (sem entregar tudo), gera vontade de ver ao vivo',
+      script: `Boa! Baseado nisso, separei uma opção que acho que combina bastante com você.
+
+📍 Região: ${cidade}
+💰 A partir de ${ctx.preco}
+${areaUtil ? `📐 ${areaUtil} m² de área útil\n` : ''}${quartos ? `🛏️ ${quartos} quarto${quartos > 1 ? 's' : ''}\n` : ''}
+Só que, sendo bem sincero, foto e vídeo não fazem jus — esse tipo de imóvel a gente sente de verdade é entrando no decorado. Tem coisas (pé direito, acabamento, vista) que só se entende quando pisa lá dentro.`,
+    },
+    {
+      momento: 'Momento 3 — Convite pro decorado',
+      objetivo: 'Convite direto, sugere agendamento, fecha a visita presencial',
+      script: `Que tal a gente marcar uma visita rapidinha no decorado do ${nome}? Sem compromisso nenhum — é só pra você ver de perto e sentir o espaço.
+
+Consigo te encaixar essa semana. Prefere um horário mais no começo ou no final do dia? Aí já reservo certinho pra você. 🗝️`,
+    },
+  ];
+}
+
 function abrirCopyBriefMixCompleto_() {
   if (!_mixAtualPapeis_ || !_mixAtualPapeis_.ALVO_1) return;
   document.getElementById('copyBriefContent').innerHTML = renderCopyBriefMixCompleto_();
@@ -2260,7 +2434,10 @@ function renderCopyBriefContent_(item, papel) {
 
   const empId = e.idEmpreendimento || '';
   const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId };
-  _gatilhosAtual_ = gerarGatilhos_(item, papel, ctx);
+  // Script de Oferta (WhatsApp) entra como linha extra na MESMA tabela de
+  // gatilhos -- pedido explícito do usuário ("criar linhas na tabela").
+  _gatilhosAtual_ = [...gerarGatilhos_(item, papel, ctx), ...gerarScriptsWhatsapp_(item, ctx)];
+  _roteiroPreAtendimentoAtual_ = gerarRoteiroPreAtendimento_(item, ctx);
 
   const linhas = _gatilhosAtual_.map((g, i) => `
     <tr>
@@ -2272,6 +2449,16 @@ function renderCopyBriefContent_(item, papel) {
       <td class="td-copy"><button class="btn-copy-cell" id="btnV${i}" onclick="copiarEPreview_('v',${i})" title="Story / WhatsApp 9:16">📋</button></td>
       <td class="td-copy"><button class="btn-copy-cell" id="btnFI${i}" onclick="copiarEPreview_('fi',${i})" title="Feed 4:5 instrução">📋</button></td>
       <td class="td-copy"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Feed 4:5 legenda">📋</button></td>
+    </tr>`).join('');
+
+  const linhasRoteiro = _roteiroPreAtendimentoAtual_.map((r, i) => `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${r.momento}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${r.objetivo}</div>
+      </td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnRoteiro${i}" onclick="copiarRoteiroPreAtendimento_(${i})" title="Copiar script">📋</button></td>
     </tr>`).join('');
 
   return `
@@ -2296,6 +2483,18 @@ function renderCopyBriefContent_(item, papel) {
             </tr>
           </thead>
           <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <div class="brief-gt-section" style="margin-top:20px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Roteiro de Pré-Atendimento — WhatsApp (3 momentos até o convite pro decorado)</div>
+        <table class="brief-gt-table">
+          <thead>
+            <tr>
+              <th class="th-gatilho" colspan="2">Momento</th>
+              <th class="th-fl">Script</th>
+            </tr>
+          </thead>
+          <tbody>${linhasRoteiro}</tbody>
         </table>
       </div>
       <div class="brief-preview">
