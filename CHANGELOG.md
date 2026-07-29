@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 136) — App Lançamentos: destaca a situação escolhida na capa
+
+Pedido do usuário: se o cliente marcou "Pronto Novo" ou "Em Obras" na capa (step-0), essa escolha
+precisa ficar visível depois, na etapa "Pergunta 1 de 3" — antes ela só aparecia na capa e
+"desaparecia" da tela dali em diante.
+
+- Novo badge laranja ("Você escolheu: Em Obras") logo abaixo do título da etapa de sliders —
+  escondido quando a escolha é "Todos" (não é uma opção que precise de destaque).
+- Texto da contagem no rodapé da caixa ganhou sufixo dinâmico: "N opções reais com apartamento
+  no seu perfil" (Todos) vira "N opções reais com apartamento 'Em Obras'" (ou "'Pronto Novo'"),
+  exatamente como pedido.
+- `situacaoEscolhidaLabel_()` centraliza o mapeamento (usado tanto no badge quanto no sufixo, pra
+  nunca ficarem inconsistentes); atualizado dentro de `atualizarComboUI_()`, que já roda toda vez
+  que a situação ou os sliders mudam.
+
+Testado ao vivo: badge e sufixo corretos pra "Em Obras" (com contagem real de 10 opções num
+perfil de teste), escondidos/neutros pra "Todos", e corretos pra "Pronto Novo".
+
 ## 2026-07-29 (parte 135) — Fix: caixa de Preço/Área não deixava apagar dígitos
 
 Usuário reportou que a caixa de texto da parte 134 "não estava aceitando apagar o texto

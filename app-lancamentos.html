@@ -387,6 +387,15 @@ input[type=range]::-moz-range-track {
     <div class="step-tag">Pergunta 1 de 3</div>
     <div class="step-title" style="margin-bottom:16px">Arraste as barras e selecione o <span style="color:var(--accent)">orçamento</span> e <span style="color:var(--accent)">área útil</span> do apartamento ideal pra você!</div>
 
+    <!-- Destaca a situação escolhida na capa (Pronto Novo/Em Obras) --
+         pedido explícito do usuário, escondida quando é "Todos" (não é
+         uma escolha que precise de destaque). -->
+    <div id="situacaoEscolhidaBadge" style="display:none;margin-bottom:16px">
+      <span style="display:inline-flex;align-items:center;padding:6px 14px;border-radius:99px;border:1.5px solid var(--orange);color:var(--orange);font-size:13px;font-weight:700;background:rgba(255,138,0,.12)">
+        Você escolheu: <span id="situacaoEscolhidaTexto" style="margin-left:4px"></span>
+      </span>
+    </div>
+
     <!-- Caixa única (mesmo padrão visual/espaçamento de .conf-card, usado na
          etapa "Confirme seus dados") -- as 2 barras + o contador de
          resultados ficam juntos num só box, mais baixo que os 3 boxes
@@ -418,7 +427,7 @@ input[type=range]::-moz-range-track {
 
       <div class="conf-obs" style="text-align:center">
         <span id="cntCombo" style="font-size:40px;font-weight:800;color:var(--orange)">—</span>
-        <strong>opções reais com apartamento no seu perfil</strong>
+        <strong>opções reais com apartamento <span id="cntComboSufixo">no seu perfil</span></strong>
       </div>
     </div>
   </div>
@@ -1014,12 +1023,29 @@ function validarLimitesMetragem_() {
   atualizarMetragem(v);
 }
 
+// "Pronto Novo"/"Em Obras" -- null quando é "Todos" (não precisa de
+// destaque, é a opção neutra). Usado tanto no badge quanto no texto da
+// contagem, pra manter os dois sempre consistentes.
+function situacaoEscolhidaLabel_() {
+  if (D.filtroSituacao === 'pronto_novo') return 'Pronto Novo';
+  if (D.filtroSituacao === 'em_obras') return 'Em Obras';
+  return null;
+}
+
 // Investimento + contador combinados (mesma estrutura de baseimob-funil.html:
 // um único "total de empreendimentos com o apartamento buscado" no topo,
 // calculado com AMBOS os sliders — não dois contadores parciais separados)
 // -- usa a mesma filtrados()/temApartamentoCompativel_ que já alimenta o
-// match final.
+// match final. Pedido explícito do usuário: destacar a situação escolhida
+// na capa (badge + sufixo do texto de contagem, ex: "4 opções reais com
+// apartamento 'Em Obras'"), pra não se perder de vista depois da capa.
 function atualizarComboUI_() {
+  const situacaoLabel = situacaoEscolhidaLabel_();
+  const badge = document.getElementById('situacaoEscolhidaBadge');
+  document.getElementById('situacaoEscolhidaTexto').textContent = situacaoLabel || '';
+  badge.style.display = situacaoLabel ? '' : 'none';
+  document.getElementById('cntComboSufixo').textContent = situacaoLabel ? `"${situacaoLabel}"` : 'no seu perfil';
+
   if (!D.precoAlvo || !D.metragemAlvo) return;
   const n = filtrados().length;
   animar('cntCombo', n);
