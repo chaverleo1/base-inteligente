@@ -1,5 +1,32 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 140) — Estratégias (Produto Alvo): última linha = Relatório de Campanha p/ IA Editora
+
+Pedido do usuário: uma última linha na tabela de gatilhos com um "relatório de detalhes e
+instruções para outra IA EDITORA" criar uma campanha de comunicação completa pro empreendimento —
+com foco educacional (linha "Guia de Decisão" já validada), estratégia de Feed+Stories, instruções
+de design pra IA Designer, copys de cada postagem, e scripts de oferta no WhatsApp orientados pra
+agendamento no decorado.
+
+`gerarRelatorioCampanhaCompleto_` monta um documento único e standalone (não depende de abrir as
+outras linhas da tabela) com 5 seções:
+1. **Dados do empreendimento** — fact-sheet completo: nome/código, localização, padrão, situação,
+   %vendido/estoque, tipologias reais distintas (`listaTipologiasTexto_`, dedup por
+   quartos/suítes/vagas/área), lazer, conceito, condições de pagamento
+   (`condicoesPagamentoTexto_` — FGTS/financiamento/entrada/parcelas, só o que existir na base).
+2. **Estratégia editorial** — racional da linha "Guia de Decisão" (3 posts + 1 Stories).
+3. **Instruções de design** — paleta/tipografia por padrão (mesma lógica de `gerarGatilhos_`,
+   recalculada aqui pra o documento ficar autocontido).
+4. **Copys** — reaproveita os 4 posts do Guia de Decisão já calculados por `gerarGatilhos_` (não
+   recria conteúdo — evita divergência entre esta linha e as 4 de cima).
+5. **Scripts de WhatsApp** — reaproveita os 3 momentos de `gerarRoteiroPreAtendimento_` (parte 139).
+
+Testado ao vivo: tabela de gatilhos com 6 linhas (4 Guia de Decisão + Script de Oferta + Relatório,
+nessa ordem — o relatório fica por último como pedido); conteúdo copiado do relatório conferido
+seção por seção com dado real (tipologias, lazer, condições de pagamento, copys e scripts
+idênticos aos das linhas de origem); `renderCopyBriefMixCompleto_` (aba "Campanha") confirmado
+intocado.
+
 ## 2026-07-29 (parte 139) — Estratégias (Produto Alvo): script de oferta WhatsApp + roteiro de 3 momentos
 
 Pedido do usuário: na janela de copys da aba "Produto Alvo" (`abrirCopyBrief_`/`renderCopyBriefContent_`
