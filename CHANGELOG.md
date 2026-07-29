@@ -1,5 +1,53 @@
 # Changelog — Base Inteligente
 
+## 2026-07-28 (parte 132) — App Lançamentos: mix ancorado no Produto Alvo + 8 ajustes de UX
+
+Usuário reportou que o fix da parte 131 não era suficiente: "a lógica de programação não está boa
+ainda. está montando mix incoerente" — pediu pra estudar a lógica reformulada em `estrategias.html`
+(aba "Produto Alvo") e aplicar no app.
+
+**1. Motor de mix trocado por completo.** O motor anterior (`selecionar_isca`, GAS) casava o preço
+do cliente contra SEGMENTOS de percentil de preço calculados sobre todo o mercado — um segmento
+assim mistura metragens completamente diferentes que só coincidem em cair na mesma faixa de preço.
+Portado `selecionarMixPorAlvo_` (estrategias.html, aba Produto Alvo) pro app, 100% client-side como
+`montarMixPorAlvo_`: em vez de um segmento de mercado, o mix inteiro é ANCORADO no preço de um
+produto REAL — o melhor match do que o cliente configurou (`filtrados()[0]`) — e as outras 6 ofertas
+(ISCA 62-84%, ANCORA_INF 40-62%, ALVO_2/3 65-155%, ANCORA_SUP >105%, COMPLEMENTAR) são faixas
+proporcionais ao preço DESSE produto específico, exatamente como a aba Produto Alvo já faz. Não dá
+pra rodar isso no GAS sem duplicar Score de Tração (só existe no navegador, `scoreTracaoPublico_`) —
+por isso ficou 100% client-side, sem chamada ao motor do servidor
+(`buscarOfertasMix_`/`selecionar_isca` removidos do app; o endpoint continua existindo no GAS só
+pra alimentar o e-mail do corretor). Testado com o cenário exato relatado (R$3.000.000/295m²):
+preços agora saem entre R$1,38M e R$3,30M (antes: sempre R$402k-701k, incoerente).
+
+**2.** Quando há menos de 7 opções compatíveis no total, o app não tenta mais montar um mix de 7
+papéis com pouco material — lista tudo que existe, direto por ordem de score.
+
+**3.** Card de oferta some com "Previsão de entrega" quando o cliente filtrou "Pronto Novo" (fica
+só o selo "Pronto novo").
+
+**4.** Título da capa ganhou "!": "Vamos achar o APARTAMENTO ideal pra você!".
+
+**5.** Botões "Pronto Novo"/"Em Obras" (capa) destacados em laranja.
+
+**6.** Bullet "Dados reais..." virou subheadline sem caixa: "Temos disponível na grande Goiânia e
+região em nossa base de dados hoje...".
+
+**7.** Tag da capa: "Simulador de Lançamentos" → "App Lançamentos".
+
+**8.** Sliders de preço/metragem ("Pergunta 1 de 3") ganharam trilho e alça bem maiores (estilo
+"arrastar pra desligar o celular" — trilho 4px→14px, alça 26px→44px) e mais distância entre o valor
+exibido e a barra (6px→26px — um `style` inline esquecido de uma parte anterior estava anulando
+esse espaçamento, corrigido).
+
+**9.** "Pergunta 3 de 3": pergunta de altura ganhou mais espaço acima (28px→44px) e cor de destaque
+(accent) pra não se misturar visualmente com a seção de motivação.
+
+Testado ao vivo: cenário exato do bug relatado, cenário com <7 compatíveis (ordem por score
+confirmada), toggle "Pronto Novo" escondendo a previsão de entrega, cores dos botões via
+`getComputedStyle`, e o espaçamento/trilho dos sliders confirmados após corrigir o `style` inline
+conflitante.
+
 ## 2026-07-28 (parte 131) — Fix: motor de isca forçava segmento errado pra orçamentos sem mix publicado
 
 Usuário reportou: configurando um perfil de R$3.000.000 / 295m² (Alto Padrão/Luxo), o app sempre

@@ -64,36 +64,41 @@ body {
   100% { transform: scale(1);    color: var(--text); }
 }
 
-.slider-label-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.slider-label-row { display: flex; justify-content: space-between; margin-top: 10px; }
 .slider-label-row span { font-size: 14px; color: var(--text); font-weight: 600; }
 .slider-val-atual {
   text-align: center; font-size: 24px; font-weight: 600; color: var(--text);
-  margin-bottom: 10px;
+  margin-bottom: 26px; /* bem mais distante da barra -- pedido explícito, o
+  número "flutuando" perto do trilho atrapalhava a visualização do arrasto */
 }
 .slider-val-atual strong { color: var(--accent); font-weight: 700; }
 
 .slider-card-label { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 8px; }
 
+/* Trilho/alça bem maiores -- "estilo arrastar pra desligar o celular"
+   (pedido explícito): trilho grosso + alça grande e clara, fácil de
+   agarrar no dedo, em vez do slider fininho padrão do navegador. */
 input[type=range] {
   -webkit-appearance: none; appearance: none;
-  width: 100%; height: 4px;
+  width: 100%; height: 14px;
   background: var(--orange); border-radius: 99px; outline: none; cursor: pointer;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: 26px; height: 26px; border-radius: 50%; background: var(--orange);
-  cursor: pointer; box-shadow: 0 0 0 0 rgba(255,138,0,0);
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--text); border: 3px solid var(--orange);
+  cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.4);
   transition: box-shadow .2s, transform .1s;
 }
 input[type=range]:active::-webkit-slider-thumb {
-  box-shadow: 0 0 0 8px rgba(255,138,0,.25); transform: scale(1.1);
+  box-shadow: 0 0 0 10px rgba(255,138,0,.25); transform: scale(1.08);
 }
 input[type=range]::-moz-range-thumb {
-  width: 26px; height: 26px; border-radius: 50%; background: var(--orange);
-  cursor: pointer; border: none;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--text); border: 3px solid var(--orange); cursor: pointer;
 }
 input[type=range]::-moz-range-track {
-  width: 100%; height: 4px; background: var(--orange); border-radius: 99px;
+  width: 100%; height: 14px; background: var(--orange); border-radius: 99px;
 }
 
 /* ── CAPTURA ─────────────────────────────────────────────────────────── */
@@ -276,6 +281,10 @@ input[type=range]::-moz-range-track {
 }
 .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
 .tag-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
+/* Destaque em laranja pra "Pronto Novo"/"Em Obras" (pedido explícito) --
+   sobrescreve a cor accent padrão dos tag-btn, em qualquer estado. */
+.tag-btn-laranja, .tag-btn-laranja:hover { border-color: var(--orange); color: var(--orange); }
+.tag-btn-laranja.on { border-color: var(--orange); background: rgba(255,138,0,.15); color: var(--orange); }
 .ajustar-btn {
   display: inline-flex; align-items: center; gap: 6px; background: none;
   border: 1px solid var(--border2); border-radius: 99px; padding: 7px 14px;
@@ -328,25 +337,21 @@ input[type=range]::-moz-range-track {
   <!-- STEP 0 — ABERTURA -->
   <div class="step ativo" id="step-0">
     <div style="margin-bottom:32px">
-      <div class="step-tag">Simulador de Lançamentos</div>
-      <div class="step-title">Vamos achar o <span style="color:var(--accent)">APARTAMENTO</span> ideal pra você</div>
+      <div class="step-tag">App Lançamentos</div>
+      <div class="step-title">Vamos achar o <span style="color:var(--accent)">APARTAMENTO</span> ideal pra você!</div>
+      <div class="step-sub">Temos disponível na grande Goiânia e região em nossa base de dados hoje...</div>
 
       <div style="text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin:20px 0">
         <div id="statsTotalEmp" style="font-size:clamp(56px,18vw,88px);font-weight:800;color:var(--orange);letter-spacing:-2px;line-height:1">—</div>
         <div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-top:6px">Lançamentos cadastrados</div>
       </div>
 
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s2);border-radius:var(--r-sm);border:1px solid var(--border)">
-        <svg width="16" height="16" style="color:var(--green);flex-shrink:0"><use href="#ico-check"/></svg>
-        <span style="font-size:13px;color:var(--text)">Dados reais — com o que temos disponível na grande Goiânia e região</span>
-      </div>
-
       <div style="margin-top:20px;padding:16px 18px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r)">
         <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Qual situação ideal do imóvel pra você?</div>
         <div class="tag-group" id="tagsSituacao">
           <button class="tag-btn on" onclick="selecionarSituacao_(this,'todos')">Todos</button>
-          <button class="tag-btn" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto Novo</button>
-          <button class="tag-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
+          <button class="tag-btn tag-btn-laranja" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto Novo</button>
+          <button class="tag-btn tag-btn-laranja" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
         </div>
       </div>
     </div>
@@ -379,7 +384,7 @@ input[type=range]::-moz-range-track {
     <div class="conf-card">
       <div class="conf-item">
         <div class="slider-card-label">Qual o valor total do apartamento que você busca?</div>
-        <div class="slider-val-atual" style="margin-bottom:6px"><strong id="sliderPrecoTxt">—</strong></div>
+        <div class="slider-val-atual"><strong id="sliderPrecoTxt">—</strong></div>
         <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
         <div class="slider-label-row">
           <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
@@ -388,7 +393,7 @@ input[type=range]::-moz-range-track {
 
       <div class="conf-item conf-item-last">
         <div class="slider-card-label">Qual a metragem ideal do apartamento?</div>
-        <div class="slider-val-atual" style="margin-bottom:6px"><strong id="sliderMetragemTxt">—</strong></div>
+        <div class="slider-val-atual"><strong id="sliderMetragemTxt">—</strong></div>
         <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
         <div class="slider-label-row">
           <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
@@ -442,8 +447,8 @@ input[type=range]::-moz-range-track {
       <button class="tag-btn" onclick="toggleMoradia_(this,'familia')">Moro com família ou amigos</button>
       <button class="tag-btn" onclick="toggleMoradia_(this,'investidor')">Quero investir</button>
     </div>
-    <div style="margin-top:28px">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
+    <div style="margin-top:44px">
+      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
       <div class="tag-group" id="tagsAltura">
         <button class="tag-btn" onclick="selecionarAltura_(this,'baixo')">Até o 5º andar</button>
         <button class="tag-btn" onclick="selecionarAltura_(this,'medio')">Do 5º ao 10º andar</button>
@@ -610,7 +615,7 @@ async function carregarBaseReal() {
       return {
         id: g.idEmpreendimento || g.idLancamento, nome: g.nomeEmpreendimento || '—',
         regiao: [g.bairro, g.cidade].filter(Boolean).join(' · ') || 'Goiânia',
-        tipoImovel: tipoImovelDominanteSimulador_(g.unidades),
+        tipoImovel: tipoImovelDominanteSimulador_(g.unidades), padrao: g.padrao || '',
         estagio: g.status || '—', entregaPrev: g.previsaoEntrega || '—',
         prazoPag: parseInt(g.prazoMaximo, 10) || 0,
         areaMin: areas.length ? Math.min(...areas) : 0,
@@ -709,24 +714,10 @@ function avancarStep() {
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
   if (stepAtual === 3) { irParaStep(1); return; }                           // confirmação → nome
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
-  if (stepAtual === 4) { avancarParaMatch_(); return; }                    // motivação → match (teaser retirado)
+  if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
   if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
   if (stepAtual === 7) { submeter(); return; }
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
-}
-
-// montarMatch() agora depende de uma resposta do servidor (buscarOfertasMix_) --
-// trava o botão nesse meio-tempo pra evitar duplo clique/avanço antes da
-// tela de match estar montada de verdade.
-async function avancarParaMatch_() {
-  const btn = document.getElementById('btnVerOpcoes');
-  const txt = document.getElementById('btnVerOpcoesTxt');
-  btn.disabled = true; btn.style.opacity = '.6';
-  txt.textContent = 'Buscando sua melhor opção...';
-  await montarMatch();
-  btn.disabled = false; btn.style.opacity = '';
-  txt.textContent = 'QUERO VER MINHAS OPÇÕES';
-  irParaStep(6);
 }
 
 function montarCapturaTitulo_() {
@@ -1056,60 +1047,111 @@ function headlineImpacto_(qtd, primeiroNome) {
   return `${primeiroNome}, ${plural} pra você!`;
 }
 
-// ── MOTOR DE ISCA (selecionarIsca_, code.txt) ──────────────────────────────
-// Em vez de revelar só o item estatisticamente mais compatível, este app
-// pergunta pro GAS o mix inteiro (até 7 ofertas) já calculado em
-// estrategias.html → "Publicar mix" pra esse segmento. As ofertas voltam
-// SEM rótulo de papel (ISCA/ALVO/ÂNCORA) -- essa distinção fica só no
-// servidor (ver selecionarIscaPublico_), o cliente nunca sabe que existe
-// um "alvo real" diferente do que ele está vendo. Se nenhum mix foi
-// publicado ainda pro segmento dessa faixa de preço, o motor devolve
-// ok:false e este app cai de volta pro cálculo local de sempre.
-async function buscarOfertasMix_() {
-  if (typeof WEBHOOK_URL === 'undefined') return null;
-  try {
-    const motivacoes = [...D.moradias].join(',');
-    const url = `${WEBHOOK_URL}?acao=selecionar_isca&motivacoes=${encodeURIComponent(motivacoes)}&precoAlvo=${D.precoAlvo}&situacao=${D.filtroSituacao}`;
-    const resp = await fetch(url);
-    const json = await resp.json();
-    return (json && json.ok && json.ofertas && json.ofertas.length) ? json.ofertas : null;
-  } catch (e) {
-    console.error('[app-lancamentos] erro ao buscar ofertas do mix:', e);
-    return null;
+// ── MIX ANCORADO NO PRODUTO ALVO (portado de estrategias.html, aba
+// "Produto Alvo" -- selecionarMixPorAlvo_) ──────────────────────────────────
+// Usuário reportou mix incoerente: o motor anterior (selecionar_isca, GAS)
+// casava o preço do cliente contra SEGMENTOS de percentil de preço (ex:
+// "Alto B") calculados sobre TODO o mercado -- um segmento assim mistura
+// apartamentos de metragens totalmente diferentes que só coincidem de
+// cair na mesma faixa de preço, e quando não existia segmento publicado
+// perto do orçamento, o app caía num fallback simples sem a mesma lógica
+// de coerência de preço.
+//
+// A aba "Produto Alvo" de estrategias.html resolve isso de outro jeito:
+// em vez de um segmento de mercado, ANCORA o mix inteiro no preço de UM
+// produto real (o alvo) -- ISCA/ANCORA_INF/ALVO_2-3/ANCORA_SUP são faixas
+// PROPORCIONAIS ao preço desse produto específico, não do mercado como um
+// todo. Isso é replicado aqui 100% client-side (não dá pra rodar no GAS
+// sem duplicar Score de Tração/scoreTracaoPublico_, que só existe no
+// navegador) -- o "alvo" é o melhor match REAL do que o cliente configurou
+// (rankeados()[0] entre os compatíveis), e o resto do mix é construído em
+// torno do preço DESSE produto, garantindo que as 7 ofertas fazem sentido
+// entre si mesmo quando não há nada "publicado" pra esse perfil específico.
+const ORDEM_PAPEIS_MIX_APP_ = ['ISCA', 'ALVO_1', 'ALVO_2', 'ALVO_3', 'ANCORA_SUP', 'ANCORA_INF', 'COMPLEMENTAR'];
+
+function montarMixPorAlvo_(alvoItem, todosItens) {
+  const statusAlvo = ['Pronto', 'Pronto novo', 'Entregue'].includes(alvoItem.estagio)
+    ? ['Pronto', 'Pronto novo', 'Entregue'] : ['Em planta', 'Em obras'];
+  const alvoPreco  = alvoItem.precoAPartir || 0;
+  const alvoPadrao = alvoItem.padrao || '';
+
+  const pool = todosItens.filter(it =>
+    statusAlvo.includes(it.estagio) && it.tracao > 0 && it.id !== alvoItem.id
+  );
+  if (!pool.length) return { papeis: { ALVO_1: alvoItem } };
+
+  const usados = new Set([alvoItem.id]);
+  const usar = item => { usados.add(item.id); return item; };
+  const disp = () => pool.filter(c => !usados.has(c.id));
+  const faixaP = (minR, maxR) => disp().filter(it => it.precoAPartir > 0 && it.precoAPartir >= alvoPreco * minR && it.precoAPartir <= alvoPreco * maxR);
+  const porPadraoTracao = arr => [...arr].sort((a, b) => (b.padrao === alvoPadrao ? 1 : 0) - (a.padrao === alvoPadrao ? 1 : 0) || b.tracao - a.tracao);
+
+  const papeis = { ALVO_1: alvoItem };
+
+  // ÂNCORA SUPERIOR — produto >5% acima → faz o alvo parecer mais acessível
+  const acima = disp().filter(it => it.precoAPartir > alvoPreco * 1.05).sort((a, b) => a.precoAPartir - b.precoAPartir);
+  papeis.ANCORA_SUP = acima.length ? usar(acima[0]) : null;
+
+  // ALVO_2 & ALVO_3 — mesmo bracket (65-155%), mesmo padrão preferido, maior tração
+  const c2 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_2 = c2.length ? usar(c2[0]) : null;
+  const c3 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_3 = c3.length ? usar(c3[0]) : null;
+
+  // ISCA — faixa 62-84% do alvo (ponto de entrada atrativo do mesmo perfil)
+  const ci = [...faixaP(0.62, 0.84)].sort((a, b) => b.tracao - a.tracao);
+  if (ci.length) {
+    papeis.ISCA = usar(ci[0]);
+  } else {
+    const fb = disp().filter(it => it.precoAPartir > 0 && it.precoAPartir < alvoPreco).sort((a, b) => b.precoAPartir - a.precoAPartir);
+    papeis.ISCA = fb.length ? usar(fb[0]) : null;
   }
+
+  // ÂNCORA INFERIOR — faixa 40-62% do alvo (contraste de preço relevante)
+  const cai = [...faixaP(0.40, 0.62)].sort((a, b) => a.precoAPartir - b.precoAPartir);
+  if (cai.length) {
+    papeis.ANCORA_INF = usar(cai[0]);
+  } else {
+    const fb = disp().filter(it => it.precoAPartir > 0 && it.precoAPartir < alvoPreco).sort((a, b) => b.precoAPartir - a.precoAPartir);
+    papeis.ANCORA_INF = fb.length ? usar(fb[0]) : null;
+  }
+
+  // ALVO_3 fallback — se o bracket 65-155% não deu 2 produtos, usa maior tração restante
+  if (!papeis.ALVO_3) {
+    const fb = [...disp()].sort((a, b) => b.tracao - a.tracao);
+    papeis.ALVO_3 = fb.length ? usar(fb[0]) : null;
+  }
+
+  // COMPLEMENTAR — tipo de imóvel diferente do alvo, ou melhor tração restante
+  const rest = disp();
+  papeis.COMPLEMENTAR = rest.find(c => c.tipoImovel !== alvoItem.tipoImovel) || rest[0] || null;
+  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
+
+  return { papeis };
 }
 
-// Adapta o resumo público de uma oferta (resumoEmpreendimento_, code.txt)
-// pro mesmo formato "c" que o resto desta tela já usa (vindo de
-// TODOS_LANC) -- assim os cards não precisam de nenhum caminho de
-// renderização separado.
-function iscaParaCard_(oferta) {
-  return {
-    id: oferta.idEmpreendimento, tipoImovel: oferta.tipoImovel || 'Apartamento',
-    entregaPrev: oferta.previsaoEntrega || '—',
-    regiao: [oferta.bairro, oferta.cidade].filter(Boolean).join(' · ') || 'Goiânia',
-    areaMin: oferta.areaUtilMin || 0, areaMax: oferta.areaUtilMax || 0,
-    precoAPartir: oferta.menorPreco || 0, temLazer: !!oferta.temLazer,
-    pctVendido: oferta.percentualVendido || 0, estagio: oferta.situacao || '',
-  };
-}
-
-async function montarMatch() {
+function montarMatch() {
   const localCompativeis = filtrados();
-  const ofertasMix = await buscarOfertasMix_();
 
-  let ofertas;
-  if (ofertasMix) {
-    ofertas = ofertasMix.map(iscaParaCard_);
-    // Se o mix publicado tiver menos de 7 papéis preenchidos, completa com
-    // opções reais do cálculo local (sem repetir nenhuma já presente).
+  let ofertas = [];
+  if (localCompativeis.length >= 7) {
+    const alvo = localCompativeis[0]; // melhor match real -- âncora do mix
+    const mix = montarMixPorAlvo_(alvo, rankeados());
+    ofertas = ORDEM_PAPEIS_MIX_APP_.map(p => mix.papeis[p]).filter(Boolean);
+    // Se o mix (ancorado no alvo) não preencheu os 7 papéis, completa com
+    // as demais opções que o cliente configurou, na mesma ordem de score
+    // (localCompativeis já vem ordenado por matchPref/tração).
     if (ofertas.length < 7) {
       const idsJaNoMix = new Set(ofertas.map(o => o.id));
       const extras = localCompativeis.filter(c => !idsJaNoMix.has(c.id)).slice(0, 7 - ofertas.length);
       ofertas = ofertas.concat(extras);
     }
-  } else {
-    ofertas = localCompativeis.slice(0, 7);
+  } else if (localCompativeis.length) {
+    // Menos de 7 opções compatíveis no total -- não faz sentido tentar
+    // ancorar um mix de 7 papéis com tão pouco material disponível. Pedido
+    // explícito do usuário: nesse caso, listar TUDO que o cliente configurou,
+    // direto por ordem de score (localCompativeis já vem ordenado assim).
+    ofertas = localCompativeis;
   }
   D.iscaId = ofertas[0] ? ofertas[0].id : null;
 
@@ -1142,7 +1184,7 @@ async function montarMatch() {
         </div>
         <div class="opcao-top-grid">
           <div><div class="opcao-top-cell-label">Tipo</div><div class="opcao-top-cell-val">${c.tipoImovel || 'Apartamento'}</div></div>
-          <div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>
+          ${D.filtroSituacao === 'pronto_novo' ? '' : `<div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>`}
           <div><div class="opcao-top-cell-label">Região</div><div class="opcao-top-cell-val">${c.regiao}</div></div>
           <div><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
           <div><div class="opcao-top-cell-label">A partir de</div><div class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</div></div>
