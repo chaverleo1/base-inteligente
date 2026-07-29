@@ -66,14 +66,24 @@ body {
 
 .slider-label-row { display: flex; justify-content: space-between; margin-top: 10px; }
 .slider-label-row span { font-size: 14px; color: var(--text); font-weight: 600; }
-.slider-val-atual {
-  text-align: center; font-size: 24px; font-weight: 600; color: var(--text);
-  margin-bottom: 26px; /* bem mais distante da barra -- pedido explícito, o
-  número "flutuando" perto do trilho atrapalhava a visualização do arrasto */
-}
-.slider-val-atual strong { color: var(--accent); font-weight: 700; }
 
 .slider-card-label { font-size: 15px; color: var(--text); font-weight: 600; margin-bottom: 8px; }
+
+/* ── CAIXA DE PREÇO/ÁREA DIGITÁVEL (mesmo padrão de busca.html) --
+   substitui o texto só-leitura por um campo editável, sincronizado com a
+   barra de arrastar logo abaixo. */
+.preco-input-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+  padding: 10px 14px; margin-bottom: 14px; transition: border .2s;
+}
+.preco-input-row:focus-within { border-color: var(--accent); }
+.preco-prefixo { font-weight: 700; color: var(--accent); font-size: 16px; }
+.preco-input {
+  flex: 1; width: 100%; background: none; border: none; outline: none; color: var(--text);
+  font-family: inherit; font-size: 18px; font-weight: 700; text-align: center;
+}
+.preco-input::placeholder { color: #6a7290; font-weight: 400; }
 
 /* Trilho/alça bem maiores -- "estilo arrastar pra desligar o celular"
    (pedido explícito): trilho grosso + alça grande e clara, fácil de
@@ -383,8 +393,11 @@ input[type=range]::-moz-range-track {
          separados de antes. -->
     <div class="conf-card">
       <div class="conf-item">
-        <div class="slider-card-label">Qual o valor total do apartamento que você busca?</div>
-        <div class="slider-val-atual"><strong id="sliderPrecoTxt">—</strong></div>
+        <div class="slider-card-label">Preço limite</div>
+        <div class="preco-input-row">
+          <span class="preco-prefixo">R$</span>
+          <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)">
+        </div>
         <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
         <div class="slider-label-row">
           <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
@@ -392,8 +405,11 @@ input[type=range]::-moz-range-track {
       </div>
 
       <div class="conf-item conf-item-last">
-        <div class="slider-card-label">Qual a metragem ideal do apartamento?</div>
-        <div class="slider-val-atual"><strong id="sliderMetragemTxt">—</strong></div>
+        <div class="slider-card-label">Área útil</div>
+        <div class="preco-input-row">
+          <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)">
+          <span class="preco-prefixo">m²</span>
+        </div>
         <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
         <div class="slider-label-row">
           <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
@@ -887,14 +903,14 @@ let slidersProntos_ = false;
 function inicializarSliders() {
   const sP = document.getElementById('sliderPreco');
   sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
-  sP.value = Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
+  sP.value = PRECO_BOUNDS[0]; // caixa mostra o mínimo disponível na base, por padrão
   document.getElementById('lblPrecoMin').textContent = formatBRL_(PRECO_BOUNDS[0]);
   document.getElementById('lblPrecoMax').textContent = formatBRL_(PRECO_BOUNDS[1]);
   atualizarPreco(sP.value);
 
   const sM = document.getElementById('sliderMetragem');
   sM.min = AREA_BOUNDS[0]; sM.max = AREA_BOUNDS[1]; sM.step = 5;
-  sM.value = Math.round((AREA_BOUNDS[0] + AREA_BOUNDS[1]) / 2);
+  sM.value = AREA_BOUNDS[0]; // idem: mínimo disponível na base, por padrão
   document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
   document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
   atualizarMetragem(sM.value);
@@ -907,8 +923,30 @@ function atualizarPreco(val) {
   if (D.precoInicial === null) D.precoInicial = v;
   if (slidersProntos_) D.ajustesSlider++;
   D.precoAlvo = v; D.precoFinal = v;
-  document.getElementById('sliderPrecoTxt').textContent = formatBRL_(v);
+  document.getElementById('precoDigitado').value = v.toLocaleString('pt-BR');
   atualizarComboUI_();
+}
+
+// Caixa de texto (mesmo padrão de busca.html: preco-input-row + slider
+// sincronizados) -- se a pessoa digitar um valor fora do que a base
+// realmente tem (PRECO_BOUNDS), avisa com a faixa disponível e ajusta pro
+// limite mais próximo, em vez de deixar o cliente buscar um preço que não
+// existe em nenhum lançamento cadastrado.
+function atualizarPrecoDigitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  if (!digitos) return; // campo vazio -- mantém o último valor válido até digitar de novo
+  let v = parseInt(digitos);
+  const input = document.getElementById('precoDigitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+
+  if (v < PRECO_BOUNDS[0] || v > PRECO_BOUNDS[1]) {
+    toast(`Preço fora da faixa disponível: de ${formatBRL_(PRECO_BOUNDS[0])} a ${formatBRL_(PRECO_BOUNDS[1])}`);
+    v = Math.min(Math.max(v, PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
+  }
+
+  document.getElementById('sliderPreco').value = v;
+  atualizarPreco(v);
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
 }
 
 // Metragem é um valor único (mesma metodologia do preço total, uma alça só) --
@@ -924,8 +962,26 @@ function atualizarMetragem(val) {
   const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
   const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
   D.areaRange = [lo, hi];
-  document.getElementById('sliderMetragemTxt').textContent = `${v} m²`;
+  document.getElementById('metragemDigitado').value = v.toLocaleString('pt-BR');
   atualizarComboUI_();
+}
+
+// Idem atualizarPrecoDigitado_, pra área útil.
+function atualizarMetragemDigitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  if (!digitos) return;
+  let v = parseInt(digitos);
+  const input = document.getElementById('metragemDigitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+
+  if (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1]) {
+    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
+    v = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  }
+
+  document.getElementById('sliderMetragem').value = v;
+  atualizarMetragem(v);
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
 }
 
 // Investimento + contador combinados (mesma estrutura de baseimob-funil.html:

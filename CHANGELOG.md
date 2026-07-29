@@ -1,5 +1,29 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 134) — App Lançamentos: caixa de texto + validação de faixa em Preço/Área útil
+
+Pedido do usuário: os campos de preço e área útil (etapa "Pergunta 1 de 3") ganharam o mesmo padrão
+já usado em `busca.html` — uma caixa de texto digitável sincronizada com a barra de arrastar, em vez
+de só um texto só-leitura acima do slider.
+
+- **Preço** renomeado pra "Preço limite" (rótulo curto, igual busca.html, no lugar da pergunta longa
+  "Qual o valor total..."); **Área útil** também virou rótulo curto.
+- Caixa mostra, por padrão, o **mínimo disponível na base** (`PRECO_BOUNDS[0]`/`AREA_BOUNDS[0]`) —
+  antes o padrão era o ponto médio da faixa. O máximo digitável/arrastável continua sendo o máximo
+  disponível na base.
+- Se a pessoa digitar um valor fora da faixa real da base, aparece um toast avisando o intervalo
+  disponível ("Preço fora da faixa disponível: de R$ X a R$ Y") e o valor é ajustado pro limite mais
+  próximo — não deixa buscar um preço/metragem que não existe em nenhum lançamento cadastrado.
+- `atualizarPreco`/`atualizarMetragem` agora escrevem na caixa de texto (`precoDigitado`/
+  `metragemDigitado`) em vez do texto só-leitura antigo (`sliderPrecoTxt`/`sliderMetragemTxt`,
+  removidos junto com o CSS `.slider-val-atual` que só eles usavam); novas
+  `atualizarPrecoDigitado_`/`atualizarMetragemDigitado_` tratam a digitação (preservando posição do
+  cursor, mesmo padrão de busca.html) e sincronizam de volta pro slider.
+
+Testado ao vivo: valor padrão confere com o mínimo da base; digitação dentro da faixa aceita normal;
+valor acima do máximo e abaixo do mínimo disparam o toast de aviso com a faixa certa e ajustam pro
+limite; sincronização slider→caixa confirmada nos dois sentidos.
+
 ## 2026-07-29 (parte 133) — Fix: produtos secundários do mix agora exigem semelhança de área, não só preço
 
 Usuário reportou (com exemplo real: orçamento R$2.000.000/145m²) que o mix ainda saía incoerente
