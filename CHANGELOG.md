@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 137) — App Lançamentos: 4 ajustes visuais em Preço/Área útil
+
+Usuário repetiu o pedido de "Preço limite" (já implementado nas partes 134-136 — caixa digitável +
+slider, valor padrão no mínimo da base, aviso de faixa) e pediu 4 refinamentos visuais em cima:
+
+1. Contorno da caixa (`.preco-input-row`) mais fino (1.5px→1px) e cinza claro (`#6b7280`) em vez do
+   `--border2` escuro/azulado de antes.
+2. Letra do valor digitado (preço/área) maior e mais grossa: 18px/700 → 24px/800.
+3. Linha da barra de arrastar mais fina: 8px→5px (a alça/bola não mudou, só o pedido de agora era a
+   linha).
+4. Número da contagem total (`#cntCombo`) mais destacado: 40px fixo → `clamp(48px,14vw,64px)`
+   responsivo, com leve `letter-spacing` negativo (mesmo tratamento de "número grande" já usado em
+   `#statsTotalEmp` na capa).
+
+Testado ao vivo via `getComputedStyle`: borda 1px `rgb(107,114,128)`, input 24px/800, trilho 5px,
+contagem 64px em viewport desktop — e confirmado que o resto da funcionalidade de Preço limite
+(valor padrão = mínimo da base) continua intacto depois dos ajustes de CSS.
+
 ## 2026-07-29 (parte 136) — App Lançamentos: destaca a situação escolhida na capa
 
 Pedido do usuário: se o cliente marcou "Pronto Novo" ou "Em Obras" na capa (step-0), essa escolha
