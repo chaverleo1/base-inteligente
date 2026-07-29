@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 135) — Fix: caixa de Preço/Área não deixava apagar dígitos
+
+Usuário reportou que a caixa de texto da parte 134 "não estava aceitando apagar o texto
+predefinido" ao clicar dentro e usar backspace.
+
+**Causa**: `atualizarPrecoDigitado_`/`atualizarMetragemDigitado_` validavam contra
+PRECO_BOUNDS/AREA_BOUNDS a CADA TECLA digitada. Apagar um dígito do valor faz o número cair abaixo
+do mínimo momentaneamente (ex: apagar "0" de "275.000" gera "27.500", menor que o mínimo real de
+275.000) — a validação então reescrevia o campo de volta pro mínimo a cada tentativa de apagar,
+dando a impressão de que o campo estava travado.
+
+**Fix**: separado em duas responsabilidades. `oninput` (a cada tecla) só reformata o número com
+separador de milhar e sincroniza o slider, sem validar limite nenhum — deixa a pessoa digitar/apagar
+livremente, inclusive deixar o campo vazio no meio da edição. `onblur` (novo: `validarLimitesPreco_`/
+`validarLimitesMetragem_`, ao sair do campo) é o único momento em que a faixa da base é checada de
+verdade — aí sim mostra o aviso e ajusta pro limite mais próximo (ou pro mínimo, se ficou vazio).
+
+Também, pedido junto: trilho do slider mais fino (14px→8px) e alça menor (44px→32px) — ficou grande
+demais na primeira versão; e as letras dos rótulos "Preço limite"/"Área útil" aumentadas (15px→19px,
+peso 700).
+
+Testado ao vivo: simulação de 7 backspades seguidos no valor "275.000" confirmando que o campo
+esvazia progressivamente sem ser reescrito; blur com campo vazio volta pro mínimo sem aviso; blur
+com valor abaixo do mínimo mostra aviso e ajusta; blur com valor válido não dispara aviso nenhum;
+trilho/rótulo conferidos via `getComputedStyle`.
+
 ## 2026-07-29 (parte 134) — App Lançamentos: caixa de texto + validação de faixa em Preço/Área útil
 
 Pedido do usuário: os campos de preço e área útil (etapa "Pergunta 1 de 3") ganharam o mesmo padrão
