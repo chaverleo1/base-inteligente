@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 133) — Fix: produtos secundários do mix agora exigem semelhança de área, não só preço
+
+Usuário reportou (com exemplo real: orçamento R$2.000.000/145m²) que o mix ainda saía incoerente
+mesmo depois da parte 132: pedido explícito — "um produto isca, outro com ancoragem pra menos,
+outro pra mais, o produto alvo, e produtos secundários semelhantes ao produto alvo".
+
+**Causa**: `montarMixPorAlvo_` escolhia ALVO_2/ALVO_3/COMPLEMENTAR só por faixa de preço + maior
+tração — um apartamento de 40-55m² com tração alta podia vencer um de 130-150m² (perfil muito mais
+parecido com o alvo) só por ter tração maior, mesmo sendo um substituto ruim. COMPLEMENTAR era pior
+ainda: não tinha NENHUM limite de preço, podendo vir de qualquer faixa (no exemplo relatado, achou
+um item a 31,7% do preço do alvo — abaixo até da âncora inferior).
+
+**Fix**: nova função `proximidadeArea_`/`porPerfilSemelhante_` — ALVO_2, ALVO_3 e COMPLEMENTAR agora
+são escolhidos por um score combinado (proximidade de área tem peso 5x, padrão igual ao alvo +2,
+tração só como desempate) dentro da faixa de preço 65-155%. COMPLEMENTAR ganhou limite de preço
+(40-155%, a mesma faixa "razoável" do resto do mix) antes de cair pro fallback sem limite nenhum.
+ISCA e as duas ÂNCORAS continuam só por preço, propositalmente — são pontos de CONTRASTE
+estratégico, não substitutos, e exigir área parecida ali destruiria a estratégia original.
+
+Testado: 8 casos via Node reproduzindo o cenário relatado — um candidato com tração 10 (a mais alta
+do pool) mas área de 40-55m² (bem diferente do alvo de 137-157m²) confirmado que NÃO vence os
+secundários de perfil parecido; candidato "muito barato" (31,7% do alvo) confirmado que não aparece
+em nenhum papel quando existe alternativa dentro da faixa razoável. Testado ao vivo também: no
+mesmo cenário de R$2.000.000/145m² relatado, COMPLEMENTAR saiu de R$544.482 (31% do alvo, fora de
+qualquer faixa) para R$943.792 (55%, dentro do razoável).
+
 ## 2026-07-28 (parte 132) — App Lançamentos: mix ancorado no Produto Alvo + 8 ajustes de UX
 
 Usuário reportou que o fix da parte 131 não era suficiente: "a lógica de programação não está boa

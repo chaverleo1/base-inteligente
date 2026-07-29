@@ -1074,6 +1074,7 @@ function montarMixPorAlvo_(alvoItem, todosItens) {
     ? ['Pronto', 'Pronto novo', 'Entregue'] : ['Em planta', 'Em obras'];
   const alvoPreco  = alvoItem.precoAPartir || 0;
   const alvoPadrao = alvoItem.padrao || '';
+  const alvoAreaMedia = ((alvoItem.areaMin || 0) + (alvoItem.areaMax || 0)) / 2;
 
   const pool = todosItens.filter(it =>
     statusAlvo.includes(it.estagio) && it.tracao > 0 && it.id !== alvoItem.id
@@ -1084,21 +1085,41 @@ function montarMixPorAlvo_(alvoItem, todosItens) {
   const usar = item => { usados.add(item.id); return item; };
   const disp = () => pool.filter(c => !usados.has(c.id));
   const faixaP = (minR, maxR) => disp().filter(it => it.precoAPartir > 0 && it.precoAPartir >= alvoPreco * minR && it.precoAPartir <= alvoPreco * maxR);
-  const porPadraoTracao = arr => [...arr].sort((a, b) => (b.padrao === alvoPadrao ? 1 : 0) - (a.padrao === alvoPadrao ? 1 : 0) || b.tracao - a.tracao);
+
+  // Proximidade de área (0 a 1, 1 = mesma metragem do alvo) -- usada SÓ pros
+  // "produtos secundários" (ALVO_2/3/COMPLEMENTAR), que precisam ser um
+  // substituto plausível do alvo (usuário: "produtos secundários semelhantes
+  // ao produto alvo"), não qualquer coisa que caia na mesma faixa de preço.
+  // ISCA/ÂNCORAS continuam só por preço -- são pontos de CONTRASTE de
+  // propósito (ex: ÂNCORA_INF menor e mais barata pra dar perspectiva), não
+  // substitutos, e forçar semelhança de área ali destruiria a estratégia.
+  const proximidadeArea_ = it => {
+    const areaIt = ((it.areaMin || 0) + (it.areaMax || 0)) / 2;
+    if (!alvoAreaMedia || !areaIt) return 0;
+    return Math.max(0, 1 - Math.abs(areaIt - alvoAreaMedia) / alvoAreaMedia);
+  };
+  const porPerfilSemelhante_ = arr => [...arr].sort((a, b) => {
+    const scoreA = (a.padrao === alvoPadrao ? 2 : 0) + proximidadeArea_(a) * 5 + Math.min(a.tracao, 10) / 10;
+    const scoreB = (b.padrao === alvoPadrao ? 2 : 0) + proximidadeArea_(b) * 5 + Math.min(b.tracao, 10) / 10;
+    return scoreB - scoreA;
+  });
 
   const papeis = { ALVO_1: alvoItem };
 
   // ÂNCORA SUPERIOR — produto >5% acima → faz o alvo parecer mais acessível
+  // (só por preço, propositalmente sem exigir área parecida)
   const acima = disp().filter(it => it.precoAPartir > alvoPreco * 1.05).sort((a, b) => a.precoAPartir - b.precoAPartir);
   papeis.ANCORA_SUP = acima.length ? usar(acima[0]) : null;
 
-  // ALVO_2 & ALVO_3 — mesmo bracket (65-155%), mesmo padrão preferido, maior tração
-  const c2 = porPadraoTracao(faixaP(0.65, 1.55));
+  // ALVO_2 & ALVO_3 — "produtos secundários semelhantes ao alvo": mesmo
+  // bracket de preço (65-155%) E perfil de área parecido, não só maior tração
+  const c2 = porPerfilSemelhante_(faixaP(0.65, 1.55));
   papeis.ALVO_2 = c2.length ? usar(c2[0]) : null;
-  const c3 = porPadraoTracao(faixaP(0.65, 1.55));
+  const c3 = porPerfilSemelhante_(faixaP(0.65, 1.55));
   papeis.ALVO_3 = c3.length ? usar(c3[0]) : null;
 
-  // ISCA — faixa 62-84% do alvo (ponto de entrada atrativo do mesmo perfil)
+  // ISCA — faixa 62-84% do alvo, ponto de entrada mais acessível (só por
+  // preço/tração, sem exigir área parecida -- é isca, não substituto)
   const ci = [...faixaP(0.62, 0.84)].sort((a, b) => b.tracao - a.tracao);
   if (ci.length) {
     papeis.ISCA = usar(ci[0]);
@@ -1107,7 +1128,8 @@ function montarMixPorAlvo_(alvoItem, todosItens) {
     papeis.ISCA = fb.length ? usar(fb[0]) : null;
   }
 
-  // ÂNCORA INFERIOR — faixa 40-62% do alvo (contraste de preço relevante)
+  // ÂNCORA INFERIOR — faixa 40-62% do alvo, contraste de preço pra baixo
+  // (idem ISCA: só preço, propositalmente)
   const cai = [...faixaP(0.40, 0.62)].sort((a, b) => a.precoAPartir - b.precoAPartir);
   if (cai.length) {
     papeis.ANCORA_INF = usar(cai[0]);
@@ -1116,15 +1138,25 @@ function montarMixPorAlvo_(alvoItem, todosItens) {
     papeis.ANCORA_INF = fb.length ? usar(fb[0]) : null;
   }
 
-  // ALVO_3 fallback — se o bracket 65-155% não deu 2 produtos, usa maior tração restante
+  // ALVO_3 fallback — se o bracket 65-155% não deu 2 produtos, usa o de
+  // perfil mais parecido entre o que sobrou (não qualquer coisa por tração)
   if (!papeis.ALVO_3) {
-    const fb = [...disp()].sort((a, b) => b.tracao - a.tracao);
+    const fb = porPerfilSemelhante_(disp());
     papeis.ALVO_3 = fb.length ? usar(fb[0]) : null;
   }
 
-  // COMPLEMENTAR — tipo de imóvel diferente do alvo, ou melhor tração restante
-  const rest = disp();
-  papeis.COMPLEMENTAR = rest.find(c => c.tipoImovel !== alvoItem.tipoImovel) || rest[0] || null;
+  // COMPLEMENTAR — prefere tipo de imóvel diferente do alvo (diversifica o
+  // mix), mas dentro de uma faixa de preço ainda razoável (40-155% do alvo,
+  // a união das faixas já usadas acima) -- sem esse limite, o complementar
+  // podia vir de QUALQUER preço (ex: 30% do alvo, abaixo até da âncora
+  // inferior), quebrando a coerência que o resto do mix já garante. Só cai
+  // pra qualquer coisa disponível (sem limite de preço) como último
+  // recurso, se não sobrar nada dentro da faixa razoável.
+  const poolRazoavel = faixaP(0.40, 1.55);
+  papeis.COMPLEMENTAR = poolRazoavel.find(c => c.tipoImovel !== alvoItem.tipoImovel)
+    || porPerfilSemelhante_(poolRazoavel)[0]
+    || porPerfilSemelhante_(disp())[0]
+    || null;
   if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
 
   return { papeis };
