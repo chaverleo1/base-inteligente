@@ -2249,17 +2249,19 @@ function gerarRelatorioCampanhaCompleto_(item, ctx) {
   const condicoes = condicoesPagamentoTexto_(item);
 
   const instrucoes = `═══════════════════════════════════════════════════════
-INSTRUÇÕES PARA IA EDITORA — CAMPANHA DE COMUNICAÇÃO
+BLOCO 1 DE 3 — PAPEL E REGRAS FIXAS (não são dados, são o seu contrato)
 ═══════════════════════════════════════════════════════
-Você é uma IA Editora de conteúdo imobiliário. A partir dos dados reais abaixo, execute as 4 tarefas a seguir pra este empreendimento. Foco EDUCACIONAL/consultivo em toda a campanha — nunca vendedor ou de urgência (linha editorial já validada nesse projeto: tipo "Guia de Decisão" — conteúdo que ensina a comparar/decidir, usando este empreendimento como exemplo real).
+Você é a IA Editora de uma campanha de comunicação imobiliária. Você recebe só dois insumos: este bloco de regras e o BLOCO 2 (dados reais). Você não recebe nenhum exemplo pronto de copy, script ou arte — quem produz isso é você, seguindo o BLOCO 3.
 
-SUAS TAREFAS:
-1. Criar a estratégia das postagens de Feed e Stories (linha de comunicação, sequência de peças, objetivo de cada uma).
-2. Criar as instruções EXATAS de geração de imagem pra uma IA Designer (composição, paleta, tipografia, formato) — nenhuma arte pode revelar o nome do empreendimento.
-3. Criar a copy (legenda) de cada postagem planejada.
-4. Criar os scripts de uma sequência de oferta por WhatsApp, pra usar depois que alguém entrar em contato através das postagens da campanha — conduzindo pra um convite de agendamento no apartamento decorado.
+Regras que não podem ser quebradas:
+- Tom sempre EDUCACIONAL/consultivo, nunca vendedor ou de urgência. Linha editorial "Guia de Decisão": conteúdo que ensina a comparar/decidir, usando este empreendimento como exemplo real — nunca "compre agora", "últimas unidades" etc.
+- Nenhuma arte (Tarefa 2) pode revelar o nome do empreendimento nem seu endereço exato.
+- Use exclusivamente os dados do BLOCO 2. Se um dado não estiver lá, não invente — trate como "não informado".
+- Todo conteúdo gerado (Tarefas 1 a 4) deve seguir exatamente o formato de entrega pedido no BLOCO 3, sem pular campos e sem adicionar tarefas além das 4 listadas.
 
-── DADOS DO EMPREENDIMENTO ──────────────────────────────
+═══════════════════════════════════════════════════════
+BLOCO 2 DE 3 — DADOS REAIS DO EMPREENDIMENTO (fonte única de verdade)
+═══════════════════════════════════════════════════════
 Nome: ${nome}${ctx.empId ? ` (Código: ${ctx.empId})` : ''}
 Localização: ${ctx.localizacao}
 Padrão: ${ctx.padrao}
@@ -2271,7 +2273,24 @@ ${listaTipologiasTexto_(item)}
 
 Lazer: ${lazerList.join(', ') || 'não informado na base'}
 Conceito: ${conceito || 'não informado na base'}
-Condições de pagamento: ${condicoes || 'não informadas na base'}`;
+Condições de pagamento: ${condicoes || 'não informadas na base'}
+
+═══════════════════════════════════════════════════════
+BLOCO 3 DE 3 — TAREFAS A DESENVOLVER (formato de entrega obrigatório)
+═══════════════════════════════════════════════════════
+As 4 tarefas são sequenciais e amarradas: a Tarefa 1 define a lista de postagens; as Tarefas 2 e 3 entregam, PRA CADA postagem dessa lista, a arte e a copy correspondentes (mesma numeração, mesma ordem).
+
+TAREFA 1 — Estratégia de Feed e Stories
+Entregue uma lista numerada de peças (defina você a quantidade que faz sentido pro empreendimento, sugestão: 3 a 5 posts de Feed + 1 a 2 Stories). Pra cada peça, informe: número, formato (Feed 4:5 ou Story 9:16), tema/ângulo do Guia de Decisão abordado, e objetivo (o que o público deve entender ou sentir depois de ver essa peça).
+
+TAREFA 2 — Instruções de geração de imagem pra IA Designer
+Pra CADA peça numerada na Tarefa 1, entregue: composição (o que aparece em cena), paleta de cores (nomes ou hex), tipografia (estilo, não fonte específica), formato/proporção exato, e elementos visuais permitidos (ex: foto de área de lazer, ícone, texto overlay) — reforçando que nenhuma arte pode citar o nome do empreendimento.
+
+TAREFA 3 — Copy de cada postagem
+Pra CADA peça numerada na Tarefa 1, entregue a legenda pronta pra publicar (texto final, não instrução), no tom educacional definido no BLOCO 1, sem menção a preço, prazo ou urgência.
+
+TAREFA 4 — Scripts de oferta no WhatsApp
+Entregue uma sequência numerada de mensagens (defina você quantas fazem sentido) pra usar depois que um lead entrar em contato através das postagens da campanha. Pra cada mensagem: objetivo e texto final pronto pra enviar, conduzindo progressivamente pra um convite de agendamento no apartamento decorado.`;
 
   return {
     linha: 'Instruções para IA Editora',

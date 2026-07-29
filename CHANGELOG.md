@@ -1,5 +1,27 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 142) — Estratégias (Produto Alvo): relatório da IA Editora em 3 blocos bem demarcados
+
+Usuário reportou que a IA Editora (externa, que recebe o relatório colado) não estava interpretando
+bem o texto — as regras, os dados e as tarefas estavam misturados num bloco só, sem contrato de
+formato de saída, então cada IA improvisava uma estrutura diferente.
+
+`gerarRelatorioCampanhaCompleto_` reescrita pra separar o texto em 3 blocos numerados e demarcados
+com cabeçalho próprio:
+1. **BLOCO 1 — Papel e regras fixas**: quem a IA Editora é, e as regras não-negociáveis (tom
+   educacional/consultivo, nunca revelar nome do empreendimento na arte, usar só os dados do
+   BLOCO 2, seguir exatamente o formato do BLOCO 3).
+2. **BLOCO 2 — Dados reais**: o fact-sheet do empreendimento (igual à parte 141), agora marcado
+   explicitamente como "fonte única de verdade".
+3. **BLOCO 3 — Tarefas a desenvolver**: as 4 tarefas ganharam contrato de formato de entrega
+   explícito (quantidade sugerida de peças, campos obrigatórios por peça, e a amarração pela mesma
+   numeração entre Tarefa 1 → Tarefa 2 → Tarefa 3), resolvendo a ambiguidade que fazia a IA externa
+   variar a estrutura da resposta a cada geração.
+
+Testado ao vivo: `renderCopyBriefContent_` com item sintético confirma os 3 cabeçalhos de bloco
+presentes na ordem certa, `iconeUnico: true` mantido (1 ícone só na linha), e
+`renderCopyBriefMixCompleto_` (aba "Campanha") confirmado intocado.
+
 ## 2026-07-29 (parte 141) — Estratégias (Produto Alvo): Relatório de Campanha vira só instruções + 1 ícone
 
 Correção do usuário sobre a parte 140: o relatório pra IA Editora não deve entregar nenhuma das 4
