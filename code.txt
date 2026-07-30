@@ -4971,6 +4971,7 @@ function resumoEmpreendimento_(idEmpreendimento, todasLinhas) {
 
   return {
     idEmpreendimento:  idEmpreendimento,
+    nomeEmpreendimento: linhas[0].nomeEmpreendimento || '',
     menorPreco:        precos.length ? Math.min.apply(null, precos) : 0,
     percentualVendido: pctVendido,
     situacao:          linhas[0].status || '',
@@ -5302,6 +5303,17 @@ function formatarMoedaEmail_(v) {
 // no momento em que o lead chega. Falha silenciosa: se não der pra
 // recalcular (tags mal formado, nenhum mix publicado pro segmento), o
 // e-mail ainda sai — só sem esse bloco extra.
+// "COD (Nome do empreendimento)" a partir de um objeto `resumo`
+// (resumoEmpreendimento_, que já carrega nomeEmpreendimento) -- mesmo
+// padrão de idComNomeEmail_, mas sem precisar de lookup num ranking (o
+// resumo já vem com o nome embutido).
+function idComNomeResumoEmail_(resumo) {
+  if (!resumo || !resumo.idEmpreendimento) return '-';
+  return resumo.nomeEmpreendimento
+    ? (resumo.idEmpreendimento + ' (' + resumo.nomeEmpreendimento + ')')
+    : resumo.idEmpreendimento;
+}
+
 function montarBlocoRoteiroEmail_(d) {
   try {
     var tags = JSON.parse(d.tags || '{}');
@@ -5312,14 +5324,14 @@ function montarBlocoRoteiroEmail_(d) {
     var alvo1 = res.roteiro.filter(function(r) { return r.papel === 'ALVO_1'; })[0];
     var linhas = ['', '', '═══ MIX ESTRATÉGICO (segmento ' + res.segmentoUsado + ') ═══'];
     if (alvo1) {
-      linhas.push('PRODUTO ALVO: ' + alvo1.resumo.idEmpreendimento + ' — ' +
+      linhas.push('PRODUTO ALVO: ' + idComNomeResumoEmail_(alvo1.resumo) + ' — ' +
         formatarMoedaEmail_(alvo1.resumo.menorPreco) + ' · ' + (alvo1.resumo.percentualVendido || 0) + '% vendido' +
         (alvo1.escolhidoComoIsca ? ' (é o MESMO produto mostrado ao cliente como isca)' : ''));
     }
     linhas.push('MIX MONTADO:');
     res.roteiro.forEach(function(r) {
       linhas.push('  ' + PAPEL_LABEL_EMAIL_[r.papel] + (r.escolhidoComoIsca ? ' [ISCA]' : '') + ': ' +
-        r.resumo.idEmpreendimento + ' — ' + formatarMoedaEmail_(r.resumo.menorPreco));
+        idComNomeResumoEmail_(r.resumo) + ' — ' + formatarMoedaEmail_(r.resumo.menorPreco));
     });
     linhas.push('Demais opções calculadas pelo simulador: ver "IDs selecionados" acima.');
     return linhas.join('\n');

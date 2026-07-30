@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 151) — E-mail do lead: nomes de empreendimento no bloco "MIX ESTRATÉGICO"
+
+Correção sobre a parte 150: o bloco "MIX ESTRATÉGICO" (`montarBlocoRoteiroEmail_`, recalculado
+internamente via `selecionarIscaInterno_`) ainda mostrava só o código cru (`PRODUTO ALVO: EMP-009 —
+...`, `Alvo Secundário 1: EMP-003 — ...`) — faltava aplicar o mesmo padrão "COD (Nome)" já usado no
+resto do e-mail.
+
+`resumoEmpreendimento_` (usada internamente por `selecionarIscaInterno_` pra montar cada papel do
+mix) passou a incluir `nomeEmpreendimento` no objeto retornado — antes só tinha o id, preço, status
+etc., sem o nome. Novo helper `idComNomeResumoEmail_(resumo)` formata `"EMP-009 (Max Buriti)"` (cai
+pro id puro se o nome vier vazio) e é usado tanto na linha "PRODUTO ALVO" quanto em cada linha do
+"MIX MONTADO".
+
+Testado: harness Node confirma `resumoEmpreendimento_` retornando `nomeEmpreendimento` corretamente;
+`montarBlocoRoteiroEmail_` com `selecionarIscaInterno_` mockado (6 papéis, um deles sem nome
+cadastrado) gera o bloco inteiro com "COD (Nome)" em cada linha, caindo pro código puro só no papel
+sem nome — sem quebrar.
+
 ## 2026-07-29 (parte 150) — E-mail do lead: resumo em tabela, sem JSON cru, IDs com nome
 
 Pedido explícito do usuário sobre o e-mail de notificação: (1) organizar Nome/Email/WhatsApp/Score/
