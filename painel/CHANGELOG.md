@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 161) — App Lançamentos: rodapé com identificação da empresa
+
+Pedido explícito do usuário: rodapé com letras pequenas em todas as telas do App Lançamentos —
+"CJ 27357- Líder Empreendimentos Imobiliários LTDA". Adicionado como último filho de `.step-wrap`,
+fora de qualquer `.step` (que usa `display:none` pra trocar de tela) — fica sempre visível,
+independente da etapa ativa do funil, sem precisar duplicar em cada uma das 9 etapas. Classe nova
+`.app-footer`: 10px, opacidade .5, centralizado.
+
+Testado ao vivo: texto confirmado presente e visível tanto na Etapa 1 (capa) quanto na Etapa 5
+(troca de step via `irParaStep`), sem erros no console.
+
 ## 2026-07-30 (parte 160) — Reestruturação de domínio: app-lancamentos.html na raiz, resto em /painel
 
 Pedido explícito do usuário: preparar o repositório pro domínio próprio `lidderimoveis.com` —
