@@ -1,5 +1,57 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 160) — Reestruturação de domínio: app-lancamentos.html na raiz, resto em /painel
+
+Pedido explícito do usuário: preparar o repositório pro domínio próprio `lidderimoveis.com` —
+`lidderimoveis.com` acessando o App Lançamentos direto, `lidderimoveis.com/painel` levando ao login
+do sistema administrativo. Modelo escolhido (dele): um repositório só, `app-lancamentos.html` na
+raiz, resto do "Base Inteligente" numa subpasta — GitHub Pages entende `/painel/` como caminho, sem
+precisar de subdomínio/segundo repositório/DNS extra.
+
+**22 arquivos movidos pra `/painel/`** (via `git mv`, preservando histórico): `index.html` (login),
+`reset.html`, `formulario.html`, `estrategias.html` (redirect), `lancamentos.html`, `dashboard.html`,
+`contatos.html`, `busca.html`, `revendas-lista.html`, `revendas-construtoras.html`,
+`leads-imobzi.html`, `favoritos.html`, `dados.html`, `insight-detail.html`,
+`lancamentos-editar.html`, `config.js`, `perfil-vendedor.js`, `code.txt`, `CHANGELOG.md`,
+`MODELO_VENDEDOR_PROMPT.md`, `ORGANIZADOR_PROMPT.md`, `lancamentos_code_gs.txt`.
+
+**Ficam na raiz** (não fazem parte do "painel"): `app-lancamentos.html`, e os outros funis/landings
+públicos que já existiam soltos ali (`baseimob-funil.html`, `baseimob-landing.html`,
+`baseimob-total.html`) — nenhum tem a `.nav-tabs` compartilhada do painel, são ferramentas
+independentes; `simulador-lancamentos.html` também ficou intocado (fora do escopo, regra já
+conhecida de não mexer nesse arquivo sem pedido explícito).
+
+**Antes de mover, chequei sistematicamente** (evitar link quebrado numa migração de domínio ao
+vivo): nenhum path absoluto (`href="/..."`) em nenhum arquivo; nenhum asset de imagem/ícone local
+referenciado; todo `fetch()` local usa `WEBHOOK_URL`, nenhum busca arquivo estático por path. Achei
+exatamente **2 links reais cruzando a nova fronteira raiz↔painel** (`dashboard.html` → botão "Ver"
+do ADM, `lancamentos.html` → botão "Abrir App Lançamentos") e **1 script cruzando o sentido
+contrário** (`app-lancamentos.html` carrega `config.js`) — os 3 corrigidos pra `../`/`painel/`. Todo
+o resto são referências entre arquivos que se mudaram JUNTOS pra dentro de `/painel/`, então os
+caminhos relativos entre eles continuam válidos sem tocar em nada.
+
+**Novo `index.html` na raiz**: redireciona pra `app-lancamentos.html` (mesmo padrão de redirect já
+usado por `estrategias.html`/`formulario.html`) — o antigo `index.html` (login) virou
+`painel/index.html`.
+
+**Novo `robots.txt`** na raiz: `Disallow: /painel/` — pedido explícito do usuário de não misturar
+os acessos do painel com o monitoramento que ele vai configurar (Google Analytics/Microsoft Clarity)
+no App Lançamentos. Importante deixar registrado: isso é só a camada de **indexação/rastreamento**
+(evita que buscadores listem/rastreiem o painel) — a proteção de ACESSO de verdade continua sendo o
+login por senha já existente; `robots.txt` não bloqueia ninguém que tenha o link direto. A separação
+física em pastas também deixa trivial nunca colar o snippet do GA/Clarity em nenhum arquivo dentro
+de `/painel/` quando ele for configurar isso.
+
+**Domínio/DNS**: fora do escopo deste commit — fica pro usuário configurar via GitHub → Settings →
+Pages → Custom domain (`lidderimoveis.com`), que gera o `CNAME` automaticamente.
+
+Testado ao vivo (servidor estático local simulando o comportamento do GitHub Pages): `/` redireciona
+pro App Lançamentos; `/painel` e `/painel/` (com e sem barra) servem o login; `WEBHOOK_URL` definido
+tanto em `app-lancamentos.html` (via `painel/config.js`) quanto dentro de `/painel/*`; os 2 links
+corrigidos apontando certo; redirects internos (`estrategias.html`→`lancamentos.html?tab=...`,
+`formulario.html`→`contatos.html?...`) continuam funcionando; zero erros no console em nenhuma
+página testada.
+
 ## 2026-07-30 (parte 159) — Lançamentos: encurta 2 labels de aba
 
 Pedido explícito do usuário: "Modelos e Padrões Vendedores" → **"Modelos e Padrôes"** e
