@@ -1,5 +1,39 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 155) — Central de Inteligência Comportamental: Fase 3 (painel no dashboard)
+
+Nova aba **"Inteligência"** em `dashboard.html`, entre "BaseImob" e "Leads Imobzi" — consome as duas
+ações da Fase 2 (`listar_estatisticas_funil`/`listar_segmentos_comportamentais`) e renderiza o layout
+já apresentado no protótipo, mas usando os componentes visuais REAIS do dashboard (não recriando um
+design paralelo): `.vg-panel`/`.vg-stat` pros KPIs, `.score-hot/warm/cold` (já usado pra temperatura de
+lead noutras telas) pros badges de prioridade dos segmentos, `.adm-table` pras tabelas, `.card` pros
+contêineres — só o funil (barras) e os cards de segmento ganharam CSS novo, porque não existia
+equivalente.
+
+**Estrutura da aba** (`mostrarInteligencia()`, `carregarInteligencia_()`):
+- Seletor de período (7/30/90 dias ou histórico completo) — refaz a chamada de estatísticas ao trocar.
+- KPIs: sessões, taxa de conclusão, score médio, tempo médio no funil.
+- Funil de conversão por etapa (barra + % + queda), com a MAIOR queda entre etapas consecutivas
+  destacada em vermelho (`--hot`) — sinaliza o ponto de fricção mais crítico sem precisar ler a tabela
+  inteira.
+- Segmentação comportamental: 6 cards (descrição + abordagem sugerida — copy que vive só na UI, a API
+  devolve apenas chave/contagem/amostra). Segmentos NÃO são filtrados por período (a API de segmentos
+  ainda não aceita `dias`) — isso fica explícito no cabeçalho da seção.
+- Tempo médio por etapa e Performance por origem/UTM, em tabela.
+
+**Integração com o BaseImob já existente**: a amostra de `idClientesAmostra` de cada segmento vira
+chips clicáveis — clicar abre o MESMO drawer de detalhe do lead (`abrirDetalheLeadBI`) já usado na aba
+BaseImob, sem duplicar UI de detalhe de lead. `mostrarInteligencia()` garante `_biLeadsMap` populado
+(chama `carregarLeadsBaseimob()` se ainda vazio) pra esses chips funcionarem mesmo se o usuário abrir
+"Inteligência" antes de "BaseImob". Chips de sessões sem lead correspondente (ex: "Abandono precoce",
+que é sempre anônimo) ficam desabilitados.
+
+Testado ao vivo no navegador: login contornado + `fetch` mockado com dados sintéticos (214 sessões,
+funil completo, 6 segmentos, tabelas de tempo/origem) — 8 linhas de funil renderizadas, 6 cards de
+segmento, sem overflow horizontal, troca de período reexecuta a busca, chip de segmento sem lead
+carregado fica desabilitado e o MESMO chip fica clicável e abre o drawer correto assim que o lead é
+populado em `_biLeadsMap` (testado nos dois estados).
+
 ## 2026-07-30 (parte 154) — Central de Inteligência Comportamental: Fase 2 (API de agregação)
 
 Início da construção da "Central de Inteligência Comportamental" proposta ao usuário (painel de
