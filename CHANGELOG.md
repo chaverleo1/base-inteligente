@@ -1,5 +1,12 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 159) — Lançamentos: encurta 2 labels de aba
+
+Pedido explícito do usuário: "Modelos e Padrões Vendedores" → **"Modelos e Padrôes"** e
+"App Lançamentos" → **"App"** nos botões da barra de abas. Só o rótulo do botão mudou — o título
+dentro do painel (`sec-title`) continua com o nome completo, como cabeçalho descritivo da própria
+aba.
+
 ## 2026-07-30 (parte 158) — Inteligência migra pra Lançamentos + nova aba "App Lançamentos" + abas escuras
 
 Pedido explícito do usuário, 3 partes:
