@@ -1,5 +1,30 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 157) — Cabeçalho: remove "Estratégias" + padroniza links em todas as páginas
+
+Pedido explícito do usuário: como o conteúdo de Estratégias virou aba interna de Lançamentos (parte
+156), o link "Estratégias" no cabeçalho de todo o sistema ficou redundante — removido dos 10 arquivos
+que tinham: `lancamentos.html`, `dashboard.html`, `insight-detail.html`, `contatos.html`,
+`revendas-lista.html`, `revendas-construtoras.html`, `leads-imobzi.html`, `favoritos.html`,
+`dados.html`, `busca.html` (`lancamentos-editar.html` já não tinha esse link).
+
+Aproveitei pra revisar se os links do cabeçalho batem em todas as páginas — encontrei
+`revendas-lista.html` desalinhado: label "Busca" (as outras usam "Busca Aberta"), label abreviada
+"Rev.-Construtoras" (as outras usam "Revendas-Construtoras" por extenso), ORDEM diferente
+(Revendas-Construtoras antes de Revendas, as outras fazem o contrário), e **faltavam os links
+BaseImob e ADM inteiramente**. Corrigido pra bater com o padrão comum (mesma ordem, mesmos labels,
+mesmos 9 links) usado pelas outras 9 páginas.
+
+Conjunto final do cabeçalho, igual em todas: Contatos / Dashboard / Busca Aberta / Lançamentos /
+Revendas / Revendas-Construtoras / BaseImob / Leads Imobzi / ADM (`dashboard.html` troca os links
+por botões internos pras seções que já vivem nele — Dashboard/BaseImob/Leads Imobzi/ADM, mais
+"Inteligência" que só existe ali; `dados.html` tem um link extra próprio "Dados" — ambos os casos
+são esperados, não inconsistência).
+
+Verificado: `grep` confirma zero ocorrências de "Estratégias" em qualquer `<div class="nav-tabs">`
+do projeto; HTML de `revendas-lista.html` com tags balanceadas; comparação linha a linha dos 11
+arquivos com cabeçalho confirma conjunto/ordem/labels idênticos.
+
 ## 2026-07-30 (parte 156) — Lançamentos: nova aba Busca + fusão de Estratégias
 
 Pedido explícito do usuário: reorganizar as abas de `lancamentos.html` pra
