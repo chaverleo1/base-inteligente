@@ -1,5 +1,63 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 156) — Lançamentos: nova aba Busca + fusão de Estratégias
+
+Pedido explícito do usuário: reorganizar as abas de `lancamentos.html` pra
+`Mapa Geral / Busca / Estratégias / Cadastrados / Extrair Modelo 1 / Extrair Modelo 2 / Modelos e
+Padrões Vendedores`, criando uma aba de busca por nome/código e movendo todo o conteúdo de
+`estrategias.html` pra dentro de Lançamentos.
+
+### 1. Nova aba "Busca"
+Busca por nome ou código, instantânea (filtra `_emps`, já carregado por `carregarLancamentos()`, sem
+fetch novo). Resultado clicado troca pra "Cadastrados" e rola/destaca o card correspondente
+(`abrirResultadoBusca_`) em vez de duplicar o card rico (score de tração, alertas, padrão vendedor)
+só pra essa aba.
+
+### 2. Fusão de Estratégias pra dentro de Lançamentos
+Antes de mexer, mandei um agente investigar colisões entre os dois arquivos (2730 + 3722 linhas).
+Achados principais:
+- ~24 funções do "motor" (Score de Tração/Similaridade/Padrão Vendedor) já eram cópias
+  byte-idênticas entre os dois arquivos (documentado como duplicação intencional em
+  estrategias.html) — mantidas duplicadas na fusão (redeclaração de `function` é inofensiva em JS,
+  e evita o risco de podar cirurgicamente ~24 funções de um bloco de milhares de linhas).
+- **8 colisões fatais reais**: `SESS_KEY`, `SESS_TOKEN_KEY`, `USER_EMAIL`, `_tt`, `MESES_ABREV_NUM_`,
+  `NOTA_BORDA_FAIXA_`, `TRACAO_TETO_PRAZO_MESES`, `TRACAO_TETO_DISP_ESTOQUE` — todas `const`/`let`
+  duplicadas nos dois arquivos com o mesmo valor. Diferente de `function` (redeclaração tolerada),
+  `const`/`let` duplicado é `SyntaxError` fatal — removidas do bloco fundido, mantendo só a cópia que
+  `lancamentos.html` já tinha.
+- `entrar()` colidia de verdade (última definição no arquivo "ganha", e sobrescreveria o login da
+  página principal) — removida a versão de estrategias.html; Estratégias passou a carregar sob
+  demanda (`carregarEstrategiasLazy_`, na 1ª vez que a aba abre), não mais automaticamente no login.
+- **Achado bônus**: o botão "Sair" de `lancamentos.html` chamava `sair()`, função que nunca existiu
+  nesse arquivo (bug pré-existente, botão morto). A fusão trouxe `sair()` de estrategias.html e
+  corrigiu isso de graça.
+- 2 chamadas `document.querySelector('.sec-title'/'.sec-sub')` (que pegariam o elemento errado agora
+  que várias abas coexistem no mesmo documento) viraram `getElementById('estrategiasSecTitle'/'estrategiasSecSub')`.
+- 6 seletores CSS colidiam com regra diferente (`.filtro-chip`, `.filtro-bar`, `.mapa-tabela`,
+  `.tabela-badge` etc.) — todas as diferenças eram cosméticas (padding/font-size); o painel fundido
+  reaproveita as regras que `lancamentos.html` já tinha, mantendo a mesma linguagem visual em todo o
+  documento. Só as classes exclusivas de Estratégias (`.situacao-tabs`, `.segmento-*`, `.papel-*`,
+  `.alvo-*`, `.modal-*`, `.brief-*`, `.mapa-tabela tr.papel-clickable`) foram copiadas.
+
+**`estrategias.html` virou um redirecionamento** (`location.replace('lancamentos.html?tab=estrategias...')`,
+preservando `?cliente=CTT-XXX`) em vez de ser apagado — `contatos.html` e o nav-tab "Estratégias" de
+toda página do sistema ainda apontam pra esse link (inclusive o botão "🎯 Estratégias" de um cliente
+específico em Contatos), e trocar ~10 arquivos era desnecessário e mais arriscado do que manter um
+redirect fino. `lancamentos.html` lê `?tab=estrategias` (abre a aba direto) e `_clienteIdParam` (já
+existia no código de estrategias.html) continua lendo `?cliente=` sozinho.
+
+**Bug pego durante o teste ao vivo**: a checagem de `?tab=estrategias` tinha ficado ANTES do bloco de
+código fundido no arquivo — como `_clienteIdParam` é `const` declarada mais abaixo, rodar
+`mudarAbaLancamentos('estrategias')` antes disso caía em "temporal dead zone" (ReferenceError,
+execução do script para ali). Corrigido movendo a checagem pro literal final do arquivo.
+
+Testado ao vivo no navegador (backend mockado): sintaxe do arquivo fundido (6386 linhas) validada;
+aba Busca (busca por nome/código, clique leva pro card certo); aba Estratégias carregando sob
+demanda (segmentos, filtro por padrão, sub-abas NOVOS/NA PLANTA/PRODUTO ALVO); abas antigas (Mapa
+Geral, Cadastrados, Modelos) intactas; `sair()` definida; roteamento `?tab=estrategias` e
+`?cliente=` funcionando tanto direto quanto via redirect de `estrategias.html`; zero erros no
+console em todos os cenários.
+
 ## 2026-07-30 (parte 155) — Central de Inteligência Comportamental: Fase 3 (painel no dashboard)
 
 Nova aba **"Inteligência"** em `dashboard.html`, entre "BaseImob" e "Leads Imobzi" — consome as duas

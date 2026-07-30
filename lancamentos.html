@@ -444,6 +444,29 @@ select.form-input option { background: var(--surface2); }
 .vazio h3 { font-family: 'Space Grotesk', sans-serif; font-size: 18px; color: var(--text2); margin-bottom: 8px; }
 .vazio p { font-size: 13px; color: var(--text3); line-height: 1.6; }
 
+/* ── BUSCA (nome ou código) ── */
+.busca-input {
+  width: 100%; max-width: 480px; margin-top: 14px; padding: 12px 16px;
+  background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-size: 14px; font-family: inherit;
+}
+.busca-input:focus { outline: none; border-color: var(--accent); }
+.busca-resultados { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.busca-item {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 16px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.busca-item:hover { border-color: var(--accent); background: rgba(79,124,255,.05); }
+.busca-item-nome { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.busca-item-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.busca-item-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.busca-destaque { animation: buscaFlash 1.1s ease-in-out 2; }
+@keyframes buscaFlash {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 0 3px var(--accent); }
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed; bottom: 24px; right: 24px; z-index: 9999;
@@ -474,6 +497,145 @@ select.form-input option { background: var(--surface2); }
 .btn-login { width: 100%; padding: 12px; border-radius: var(--radius-xs); background: var(--accent); color: #fff; border: none; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
 .btn-login:disabled { opacity: .6; cursor: default; }
 .login-erro { font-size: 12px; color: var(--coral); margin-top: 8px; text-align: center; }
+
+/* ── ESTRATÉGIAS (fundida de estrategias.html pra dentro da aba
+   "Estratégias" de Lançamentos) -- só as regras que NÃO existem aqui.
+   Onde o nome colidia (.sec-header/.filtro-bar/.filtro-chip/.tp-*/
+   .tabela-badge/.btn-extrair/.btn-sec/etc.), o painel reaproveita as
+   regras que este documento já define pras outras abas, pra manter a
+   mesma linguagem visual em todo o arquivo (as diferenças eram só
+   cosméticas -- padding/font-size um pouco menor aqui, mesma paleta). ──── */
+.situacao-tabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 10px; padding: 4px; }
+.situacao-tab { padding: 7px 18px; border-radius: 8px; border: none; background: transparent; color: var(--text2);
+  font-size: 12px; font-weight: 700; letter-spacing: .5px; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
+.situacao-tab.active { background: var(--accent); color: #fff; }
+.situacao-tab:hover:not(.active) { color: var(--text); }
+.situacao-tab-count { opacity: .65; font-weight: 600; margin-left: 3px; }
+
+.segmento-block { margin-bottom: 24px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.segmento-header {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.segmento-titulo { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.segmento-sub { font-size: 11px; color: var(--text3); }
+.segmento-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn-mini {
+  padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-mini:hover { border-color: var(--accent); color: var(--text); }
+.cobertura-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; white-space: nowrap; }
+.cobertura-forte    { background: rgba(0,212,170,.15); color: var(--accent2); }
+.cobertura-adequado { background: rgba(245,158,11,.15); color: var(--amber); }
+.cobertura-fraco     { background: rgba(255,107,107,.15); color: var(--coral); }
+
+.papel-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+.papel-ISCA         { background: rgba(79,124,255,.15); color: var(--accent); }
+.papel-ANCORA_INF   { background: rgba(136,146,170,.15); color: var(--text2); }
+.papel-ALVO_1       { background: rgba(0,212,170,.18); color: var(--accent2); }
+.papel-ALVO_2, .papel-ALVO_3 { background: rgba(0,212,170,.1); color: var(--accent2); }
+.papel-ANCORA_SUP   { background: rgba(245,158,11,.15); color: var(--amber); }
+.papel-COMPLEMENTAR { background: rgba(167,139,250,.15); color: #a78bfa; }
+.vazio-segmento { padding: 30px 18px; text-align: center; color: var(--text3); font-size: 13px; }
+
+/* Linhas clicáveis dentro de .mapa-tabela -- só usado na aba Estratégias
+   (Mapa Geral/Cadastrados não têm esse estado, mas reaproveitam a mesma
+   classe base .mapa-tabela já definida acima). */
+.mapa-tabela tr.papel-clickable { cursor: pointer; }
+.mapa-tabela tr.papel-clickable:hover td { background: var(--surface2) !important; }
+.mapa-tabela tr.papel-clickable td:last-child::after { content: ' ✏️'; opacity: .5; font-size: 11px; }
+
+.tracao-badge { display:inline-flex; align-items:center; font-size:13px; font-weight:800;
+  padding:3px 11px; border-radius:6px; border:1px solid transparent; white-space:nowrap; }
+
+.situacao-badge { display:inline-flex; align-items:center; font-size:11px; font-weight:700;
+  padding:3px 9px; border-radius:4px; letter-spacing:.3px; white-space:nowrap; }
+.situacao-badge.novo      { background:rgba(0,212,170,.15); color:var(--accent2); border:1px solid rgba(0,212,170,.3); }
+.situacao-badge.na-planta { background:rgba(79,124,255,.15); color:var(--accent);  border:1px solid rgba(79,124,255,.3); }
+
+.alvo-search-wrap { position: relative; margin-bottom: 20px; }
+.alvo-search-input { width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); font-size: 14px; font-family: 'Inter', sans-serif; outline: none; box-sizing: border-box; }
+.alvo-search-input:focus { border-color: var(--accent); }
+.alvo-search-input::placeholder { color: var(--text3); }
+.alvo-results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); max-height: 260px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.alvo-result-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.alvo-result-item:hover { background: var(--surface2); }
+.alvo-result-item:last-child { border-bottom: none; }
+.alvo-result-nome { font-size: 13px; font-weight: 600; color: var(--text); }
+.alvo-result-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.alvo-selecionado { background: rgba(0,212,170,.07); border: 1.5px solid var(--accent2); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.alvo-selecionado-nome { font-weight: 700; font-size: 14px; color: var(--text); }
+.alvo-selecionado-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(15,17,23,.85); z-index: 9500;
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; width: 100%; max-width: 720px; max-height: 85vh; display: flex; flex-direction: column;
+}
+.modal-title { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+.modal-textarea {
+  flex: 1; min-height: 320px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 11px; font-family: monospace;
+  padding: 12px; outline: none; resize: vertical; white-space: pre-wrap;
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 14px; justify-content: flex-end; }
+
+/* ── Copy Brief Drawer ─────────────────────────────────────────────────── */
+.brief-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.48); z-index: 9200;
+  opacity: 0; transition: opacity .28s ease; pointer-events: none;
+}
+.brief-overlay.aberto { opacity: 1; pointer-events: all; }
+.brief-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(480px, 96vw);
+  background: var(--surface); border-left: 1px solid var(--border2);
+  z-index: 9201; overflow-y: auto; overflow-x: hidden;
+  transform: translateX(100%); transition: transform .28s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column;
+}
+.brief-drawer.aberto { transform: translateX(0); }
+.brief-drawer-header {
+  position: sticky; top: 0; background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 18px 20px 14px; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.brief-drawer-body { padding: 18px 20px 40px; display: flex; flex-direction: column; gap: 16px; }
+.brief-box { border-radius: 12px; padding: 16px; }
+.brief-box-linha { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+.brief-box-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+.brief-box-titulo { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.brief-box-body { font-size: 12px; color: var(--text2); line-height: 1.8; white-space: pre-line; }
+.btn-copy-brief { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 13px; cursor: pointer; color: var(--text3); transition: all .15s; flex-shrink: 0; }
+.btn-copy-brief:hover { border-color: var(--accent); color: var(--accent); }
+.btn-copy-brief.copiado { border-color: var(--accent2); color: var(--accent2); }
+.brief-gt-section { margin-bottom: 6px; }
+.brief-gt-section-label { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+.brief-gt-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.brief-gt-table th { font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; padding: 7px 4px; text-align: center; }
+.brief-gt-table th.th-gatilho { text-align: left; padding-left: 0; }
+.brief-gt-table th.th-v { color: var(--accent); border-bottom: 2px solid var(--accent); background: rgba(79,124,255,.05); }
+.brief-gt-table th.th-fi { color: var(--accent2); border-bottom: 2px solid var(--accent2); background: rgba(0,212,170,.05); }
+.brief-gt-table th.th-fl { color: var(--accent2); border-bottom: 2px solid var(--accent2); background: rgba(0,212,170,.05); opacity: .8; }
+.brief-gt-table td { padding: 9px 4px; vertical-align: middle; border-bottom: 1px solid var(--border); }
+.brief-gt-table td.td-gatilho { font-size: 12px; font-weight: 600; color: var(--text2); padding-left: 0; line-height: 1.4; }
+.brief-gt-table td.td-num { font-size: 10px; font-weight: 700; color: var(--text3); text-align: center; width: 24px; padding-left: 0; }
+.brief-gt-table td.td-copy { text-align: center; width: 44px; }
+.brief-gt-table tr:last-child td { border-bottom: none; }
+.brief-gt-table tbody tr:hover td { background: var(--surface2); }
+.btn-copy-cell { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border2); background: none; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; color: var(--text3); font-family: 'Inter', sans-serif; }
+.btn-copy-cell:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,124,255,.07); }
+.btn-copy-cell.copiado { border-color: var(--accent2) !important; color: var(--accent2) !important; background: rgba(0,212,170,.1) !important; }
+.brief-preview { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.brief-preview-label { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 8px 14px 6px; border-bottom: 1px solid var(--border); }
+.brief-preview-body { font-size: 11px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; padding: 12px 14px; max-height: 200px; overflow-y: auto; font-family: monospace; }
+.brief-regra { font-size: 12px; color: var(--text3); line-height: 1.6; background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 10px 14px; }
 </style>
 </head>
 <body>
@@ -519,8 +681,10 @@ select.form-input option { background: var(--surface2); }
   <!-- ABAS -->
   <div class="lanc-tabs">
     <button class="lanc-tab active" id="tabBtnMapa" onclick="mudarAbaLancamentos('mapa')">Mapa Geral</button>
-    <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Extrair Modelo 1</button>
+    <button class="lanc-tab" id="tabBtnBusca" onclick="mudarAbaLancamentos('busca')">Busca</button>
+    <button class="lanc-tab" id="tabBtnEstrategias" onclick="mudarAbaLancamentos('estrategias')">Estratégias</button>
     <button class="lanc-tab" id="tabBtnLista" onclick="mudarAbaLancamentos('lista')">Cadastrados</button>
+    <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Extrair Modelo 1</button>
     <button class="lanc-tab" id="tabBtnOutros" onclick="mudarAbaLancamentos('outros')">Extrair Modelo 2</button>
     <button class="lanc-tab" id="tabBtnModelos" onclick="mudarAbaLancamentos('modelos')">Modelos e Padrões Vendedores</button>
   </div>
@@ -811,6 +975,44 @@ select.form-input option { background: var(--surface2); }
   </div>
   </div>
 
+  <!-- BUSCA (nome ou código) -- reaproveita _emps (mesmo array global que
+       alimenta Mapa Geral/Cadastrados, populado por renderLista) em vez de
+       duplicar o card rico (score de tração, alertas etc.) -- resultado
+       clicado só troca pra Cadastrados e rola até o card correspondente. -->
+  <div id="tabPainelBusca" class="tab-panel" style="display:none">
+  <div class="sec-header">
+    <div class="sec-title">Busca</div>
+    <div class="sec-sub">Buscar um empreendimento cadastrado por nome ou código — clique num resultado pra abrir direto em Cadastrados.</div>
+    <input type="text" id="busca-input" class="busca-input" placeholder="Digite o nome ou o código (ex: Max Buriti ou EMP-009)..." oninput="filtrarBusca_(this.value)" autocomplete="off">
+  </div>
+  <div id="busca-resultados" class="busca-resultados">
+    <div class="vazio"><h3>Digite pra buscar</h3><p>Busque por nome do empreendimento ou código (ex: EMP-009).</p></div>
+  </div>
+  </div>
+
+  <!-- ESTRATÉGIAS (fundida de estrategias.html) -- carregada sob demanda
+       na primeira vez que a aba abre (ver carregarEstrategiasLazy_). -->
+  <div id="tabPainelEstrategias" class="tab-panel" style="display:none">
+  <div class="sec-header">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div class="sec-title" id="estrategiasSecTitle">🎯 Estratégias de Tráfego Pago</div>
+      <div class="situacao-tabs" id="situacaoTabs" style="display:none">
+        <button class="situacao-tab active" id="tabAbaNovos" onclick="setSituacaoAba_('NOVOS')">NOVOS <span class="situacao-tab-count" id="countAbaNovos"></span></button>
+        <button class="situacao-tab" id="tabAbaNaPlanta" onclick="setSituacaoAba_('NA_PLANTA')">NA PLANTA <span class="situacao-tab-count" id="countAbaNaPlanta"></span></button>
+        <button class="situacao-tab" id="tabAbaProdutoAlvo" onclick="setSituacaoAba_('PRODUTO_ALVO')">PRODUTO ALVO <span class="situacao-tab-count" id="countAbaProdutoAlvo"></span></button>
+      </div>
+    </div>
+    <div class="sec-sub" id="estrategiasSecSub">Mix estratégico de 7 ofertas por Padrão/Faixa de preço — calculado ao vivo a partir do Score de Tração e Similaridade já usados em Lançamentos. NOVOS (prontos/entregues) e NA PLANTA (em obras/lançamentos) nunca se misturam no mesmo mix.</div>
+  </div>
+
+  <div class="filtro-bar" id="filtroPadrao"></div>
+
+  <div id="blocosSegmentos">
+    <div class="vazio-segmento">Carregando...</div>
+  </div>
+  <div id="blocoProdutoAlvo" style="display:none"></div>
+  </div>
+
   <!-- MODELOS E PADRÕES VENDEDORES (consolida Modelos Vendedores + Padrão
        Vendedor, que antes ficavam dentro da aba Mapa Geral -- a sessão de
        Importar Modelos Vendedores foi retirada, modelos só nascem
@@ -897,6 +1099,25 @@ select.form-input option { background: var(--surface2); }
   </div>
   </div>
 
+</div>
+
+<!-- MODAL EXPORTAÇÃO (Estratégias) -->
+<div class="modal-overlay" id="modalExport">
+  <div class="modal-box">
+    <div class="modal-title" id="modalExportTitulo">Exportar Estratégia</div>
+    <div class="modal-sub">Copie o conteúdo abaixo (prompt + CSV) e cole numa conversa com a IA de sua escolha (Claude, ChatGPT, etc.) pra gerar o briefing de campanha.</div>
+    <textarea class="modal-textarea" id="modalExportTexto" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn-sec" onclick="fecharModalExport_()">Fechar</button>
+      <button class="btn-extrair" onclick="copiarModalExport_()">📋 Copiar tudo</button>
+    </div>
+  </div>
+</div>
+
+<!-- COPY BRIEF DRAWER (Estratégias) -->
+<div id="copyBriefOverlay" class="brief-overlay" onclick="fecharCopyBrief_()"></div>
+<div id="copyBriefDrawer" class="brief-drawer">
+  <div id="copyBriefContent"></div>
 </div>
 
 <!-- TOAST -->
@@ -1463,16 +1684,35 @@ function atualizarUrlLink(val) {
 // de sempre, só o rótulo visível e a ordem mudaram; "importar" virou
 // "modelos" (a aba de import se fundiu com Modelos e Padrão Vendedor). ──────
 function mudarAbaLancamentos(nome) {
-  document.getElementById('tabPainelMapa').style.display    = nome === 'mapa'    ? '' : 'none';
-  document.getElementById('tabPainelNovo').style.display    = nome === 'novo'    ? '' : 'none';
-  document.getElementById('tabPainelLista').style.display   = nome === 'lista'   ? '' : 'none';
-  document.getElementById('tabPainelOutros').style.display  = nome === 'outros'  ? '' : 'none';
-  document.getElementById('tabPainelModelos').style.display = nome === 'modelos' ? '' : 'none';
+  document.getElementById('tabPainelMapa').style.display        = nome === 'mapa'        ? '' : 'none';
+  document.getElementById('tabPainelBusca').style.display       = nome === 'busca'       ? '' : 'none';
+  document.getElementById('tabPainelEstrategias').style.display = nome === 'estrategias' ? '' : 'none';
+  document.getElementById('tabPainelNovo').style.display        = nome === 'novo'        ? '' : 'none';
+  document.getElementById('tabPainelLista').style.display       = nome === 'lista'       ? '' : 'none';
+  document.getElementById('tabPainelOutros').style.display      = nome === 'outros'      ? '' : 'none';
+  document.getElementById('tabPainelModelos').style.display     = nome === 'modelos'     ? '' : 'none';
   document.getElementById('tabBtnMapa').classList.toggle('active', nome === 'mapa');
+  document.getElementById('tabBtnBusca').classList.toggle('active', nome === 'busca');
+  document.getElementById('tabBtnEstrategias').classList.toggle('active', nome === 'estrategias');
   document.getElementById('tabBtnNovo').classList.toggle('active', nome === 'novo');
   document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
   document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
   document.getElementById('tabBtnModelos').classList.toggle('active', nome === 'modelos');
+  if (nome === 'busca') document.getElementById('busca-input').focus();
+  if (nome === 'estrategias') carregarEstrategiasLazy_();
+}
+
+// Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
+// estrategias.html -- antes rodava sozinha no login daquela página,
+// window.onload; agora é sob demanda, pra não pesar o login de
+// Lançamentos com quem nunca abre essa aba). carregarPagina_() decide
+// sozinha entre o mix por segmento de sempre ou o mix personalizado de um
+// cliente (?cliente=CTT-XXX na URL, ver _clienteIdParam).
+let _estrategiasCarregada_ = false;
+function carregarEstrategiasLazy_() {
+  if (_estrategiasCarregada_) return;
+  _estrategiasCarregada_ = true;
+  carregarPagina_();
 }
 
 // Imprime/gera PDF só da aba de LISTA que estiver ativa no momento
@@ -3000,6 +3240,60 @@ function agruparPorEmpreendimento_(lista) {
   return Object.values(mapa);
 }
 
+// ── ABA BUSCA (nome ou código) ───────────────────────────────────────────
+// Filtra _emps (mesmo array global já enriquecido por renderLista, com
+// score/alerta/etc.) em vez de refazer um fetch -- busca é instantânea.
+function filtrarBusca_(query) {
+  const cont = document.getElementById('busca-resultados');
+  const q = normalizarTexto_(query);
+  if (!q) {
+    cont.innerHTML = '<div class="vazio"><h3>Digite pra buscar</h3><p>Busque por nome do empreendimento ou código (ex: EMP-009).</p></div>';
+    return;
+  }
+  const emps = _emps || [];
+  const resultados = emps
+    .map((e, idx) => ({ e, idx }))
+    .filter(({ e }) => {
+      const nome  = normalizarTexto_(e.nomeEmpreendimento || '');
+      const idEmp = normalizarTexto_(e.idEmpreendimento || '');
+      const idLan = normalizarTexto_(e.idLancamento || '');
+      return nome.includes(q) || idEmp.includes(q) || idLan.includes(q);
+    });
+
+  if (!resultados.length) {
+    cont.innerHTML = `<div class="vazio"><h3>Nenhum resultado</h3><p>Nada encontrado para "${query.replace(/</g, '&lt;')}".</p></div>`;
+    return;
+  }
+
+  const stClsMap = { 'Em obras': 'st-obras', 'Em planta': 'st-planta', 'Pronto': 'st-pronto', 'Entregue': 'st-entregue' };
+  cont.innerHTML = resultados.map(({ e, idx }) => {
+    const stCls = stClsMap[e.status] || 'st-planta';
+    return `
+    <div class="busca-item" onclick="abrirResultadoBusca_(${idx})">
+      <div>
+        <div class="busca-item-nome">${e.nomeEmpreendimento || '—'}</div>
+        <div class="busca-item-sub">${[e.construtora, e.bairro].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div class="busca-item-badges">
+        ${e.status ? `<span class="st-badge ${stCls}">${e.status}</span>` : ''}
+        ${e.idEmpreendimento ? `<span class="st-badge st-id" title="Código do empreendimento">#${e.idEmpreendimento}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Abre o resultado direto em Cadastrados, no card correspondente -- evita
+// duplicar o card rico (score de tração, alertas, padrão vendedor etc.)
+// só pra Busca.
+function abrirResultadoBusca_(idx) {
+  mudarAbaLancamentos('lista');
+  const card = document.getElementById('ec-' + idx);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.add('busca-destaque');
+  setTimeout(() => card.classList.remove('busca-destaque'), 2200);
+}
+
 async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam, listaModelosParam) {
   const grid = document.getElementById('lista-grid');
   const cnt  = document.getElementById('lista-count');
@@ -3717,6 +4011,2385 @@ async function excluirEmp(id, nome) {
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 verificarAuth();
 if (sessionStorage.getItem(SESS_KEY) === 'ok') carregarLancamentos();
+
+// ═══════════════════════════════════════════════════════════════
+// ESTRATÉGIAS (fundida de estrategias.html pra dentro da aba
+// "Estratégias" -- pedido explícito do usuário). Funções do "motor"
+// (Score de Tração/Similaridade/Padrão Vendedor) aparecem duplicadas de
+// propósito aqui embaixo -- são cópias byte-idênticas às já definidas
+// acima (mesmo padrão que já existia entre lancamentos.html e
+// estrategias.html antes da fusão, documentado lá como cópia
+// intencional). JS permite redeclaração de function (a última declaração
+// "ganha", sem erro) -- como são idênticas, não muda nada em runtime, só
+// evita o risco de remover cirurgicamente ~24 funções de um bloco de
+// milhares de linhas. entrar()/fecharLogin()/sha256()/verificarAuth()/
+// trataNaoAutenticado()/tokenSessao()/mostrarToast() e as 8 constantes
+// globais (SESS_KEY etc.) FORAM removidas daqui -- essas sim colidiam de
+// verdade (const/let duplicado é SyntaxError fatal, não redeclaração
+// inofensiva), e o documento já tem uma cópia de cada, usada por todas
+// as abas. sair() foi mantida -- não existia em lancamentos.html antes
+// (o botão "Sair" chamava uma função inexistente; a fusão corrige isso
+// de graça). carregarPagina_()/carregarEstrategias()/
+// carregarEstrategiaCliente_() NÃO rodam mais automaticamente no login
+// (era o antigo window.onload de estrategias.html, removido) -- agora
+// são carregadas sob demanda na primeira vez que a aba "Estratégias" é
+// aberta (ver carregarEstrategiasLazy_ e mudarAbaLancamentos()).
+// ═══════════════════════════════════════════════════════════════
+
+function sair() {
+  sessionStorage.removeItem(SESS_KEY);
+  sessionStorage.removeItem(SESS_TOKEN_KEY);
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+// ═══════════════════════════════════════════════════════════════════════
+// MOTOR DE TRAÇÃO/SIMILARIDADE/PADRÃO VENDEDOR — cópia funcional de
+// lancamentos.html (mesmas funções, mesmo comportamento). Duplicado de
+// propósito em vez de extraído pra um arquivo compartilhado: lancamentos.html
+// já está em produção sendo validado com dado real, e um refactor grande
+// ali agora tinha risco alto sem necessidade imediata. Ver
+// test_paridade_motor_estrategias.js (scratchpad da sessão que criou este
+// arquivo) pro teste que comparava as duas cópias linha a linha na hora da
+// criação -- se qualquer critério de Score de Tração/Similaridade/Padrão
+// Vendedor mudar num arquivo, precisa espelhar aqui também.
+// ═══════════════════════════════════════════════════════════════════════
+
+function agruparPorEmpreendimento_(lista) {
+  const mapa = {};
+  for (const l of lista) {
+    const key = l.idLancamento || l.nomeEmpreendimento;
+    if (!mapa[key]) mapa[key] = { ...l, unidades: [] };
+    mapa[key].unidades.push(l);
+  }
+  return Object.values(mapa);
+}
+
+function mediaCampoUnidades_(unidades, campo) {
+  const vals = (unidades || []).map(u => Number(u[campo]) || 0).filter(v => v > 0);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
+
+function tipoImovelDominante_(unidades) {
+  const cont = {};
+  (unidades || []).forEach(u => {
+    const t = String(u.tipo || '').trim();
+    if (t) cont[t] = (cont[t] || 0) + 1;
+  });
+  let melhor = '', max = 0;
+  Object.keys(cont).forEach(t => { if (cont[t] > max) { max = cont[t]; melhor = t; } });
+  return melhor;
+}
+
+// Nota parcial (0-100) de um valor numérico contra uma faixa [min,max] --
+// tem PICO no centro típico (mediana do modelo, quando calculada; midpoint
+// min/max nos modelos sem mediana) e decai conforme o valor se afasta desse
+// centro, mesmo ainda dentro do min-max. Espelha lancamentos.html (motor
+// duplicado -- ver test_paridade_motor_estrategias.js).
+function scoreFaixa_(valor, min, max, centro) {
+  min = Number(min); max = Number(max);
+  if (!valor || !(min > 0) || !(max > 0)) return null;
+  const meiaLargura = (max - min) / 2;
+  if (!(meiaLargura > 0)) {
+    if (valor === min) return 100;
+    const fora = Math.abs((valor - min) / min);
+    return Math.max(0, Math.round(100 - (100 - NOTA_BORDA_FAIXA_) * fora));
+  }
+  const c = (centro !== undefined && centro !== null && centro !== '' && Number(centro) > 0) ? Number(centro) : (min + max) / 2;
+  const relDist = Math.abs(valor - c) / meiaLargura;
+  return Math.max(0, Math.round(100 - (100 - NOTA_BORDA_FAIXA_) * relDist));
+}
+
+function scoreLazer_(lazerEmp, lazerComumModelo) {
+  const itens = String(lazerComumModelo || '').split(/[;,]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  if (!itens.length) return null;
+  const texto = String(lazerEmp || '').toLowerCase();
+  const bateu = itens.filter(it => texto.includes(it)).length;
+  return Math.round((bateu / itens.length) * 100);
+}
+
+function parseDataFlexivelParaDate_(v) {
+  v = String(v || '').trim();
+  const m1 = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m1) return new Date(+m1[3], +m1[2] - 1, +m1[1]);
+  const m3 = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m3) return new Date(+m3[1], +m3[2] - 1, +m3[3]);
+  const m2 = v.match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zçã]*\.?\s*(?:\/|de\s*)?\s*(\d{4})$/i);
+  if (m2) return new Date(+m2[2], MESES_ABREV_NUM_[m2[1].toLowerCase()] - 1, 1);
+  return null;
+}
+
+function parseDataHistoricoLinha_(str) {
+  const partes = String(str || '').split(/[\s\/]+/);
+  const dia = parseInt(partes[0], 10), mes = parseInt(partes[1], 10) - 1, ano = parseInt(partes[2], 10);
+  if (isNaN(dia) || isNaN(mes) || isNaN(ano)) return null;
+  return new Date(ano, mes, dia);
+}
+
+function acharDataCruzamentoEstoque_(historicoEstoqueJson, totalUnidades, limiarPct) {
+  let hist;
+  try { hist = JSON.parse(historicoEstoqueJson || '[]'); } catch (_) { return null; }
+  if (!Array.isArray(hist) || !hist.length || !totalUnidades) return null;
+  for (const ponto of hist) {
+    const valor = Number(ponto.valor);
+    if (isNaN(valor)) continue;
+    const pctNessePonto = Math.round(((totalUnidades - valor) / totalUnidades) * 100);
+    if (pctNessePonto < limiarPct) continue;
+    const data = parseDataHistoricoLinha_(ponto.data);
+    if (data) return data;
+  }
+  return null;
+}
+
+function calcularTempoObraEntreDatas_(dataLancamentoStr, previsaoEntregaStr) {
+  if (!dataLancamentoStr || !previsaoEntregaStr) return null;
+  const inicio = parseDataFlexivelParaDate_(dataLancamentoStr);
+  const fim    = parseDataFlexivelParaDate_(previsaoEntregaStr);
+  if (!inicio || !fim) return null;
+  return (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
+}
+
+function calcularSobraSuspeita_(e, total, pctVendido) {
+  if (pctVendido < 80) return false;
+  const dataEntrega = parseDataFlexivelParaDate_(e.previsaoEntrega);
+  if (!dataEntrega) return false;
+  const dataCruzou80 = acharDataCruzamentoEstoque_(e.historicoEstoque, total, 80);
+  if (!dataCruzou80) return false;
+  const diasApos = Math.floor((dataCruzou80 - dataEntrega) / 86400000);
+  return diasApos > 730;
+}
+
+function avaliarPadraoVendedorAoVivo_(e) {
+  const totalUnidades = Number(e.totalUnidades) || 0;
+  const estoque       = Number(e.estoque) || 0;
+  if (!totalUnidades) return null;
+  const pctVendido = Math.round(((totalUnidades - estoque) / totalUnidades) * 100);
+  if (pctVendido < 70) return null;
+  const dataEntrega    = parseDataFlexivelParaDate_(e.previsaoEntrega);
+  const dataLancamento = parseDataFlexivelParaDate_(e.dataLancamento);
+  if (!dataEntrega) return null;
+  let hist;
+  try { hist = JSON.parse(e.historicoEstoque || '[]'); } catch (_) { hist = []; }
+  if (!Array.isArray(hist) || !hist.length) return null;
+  const hoje = new Date();
+  const dataCruzou70  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 70)  || (pctVendido >= 70  ? hoje : null);
+  const dataCruzou80  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 80)  || (pctVendido >= 80  ? hoje : null);
+  const dataCruzou90  = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 90)  || (pctVendido >= 90  ? hoje : null);
+  const dataCruzou100 = acharDataCruzamentoEstoque_(e.historicoEstoque, totalUnidades, 100) || (pctVendido >= 100 ? hoje : null);
+  const primeiraData  = hist[0].data || '';
+  if (dataCruzou100 && dataCruzou100 <= dataEntrega && dataLancamento) {
+    const umAnoAposLancamento = new Date(dataLancamento.getTime());
+    umAnoAposLancamento.setFullYear(umAnoAposLancamento.getFullYear() + 1);
+    if (dataCruzou100 <= umAnoAposLancamento) return { classificacao: 'EXTREMO', pctVendido, dataPrimeiroEstoque: primeiraData };
+  }
+  if (dataCruzou90 && dataCruzou90 <= dataEntrega) return { classificacao: 'FORTE', pctVendido, dataPrimeiroEstoque: primeiraData };
+  if (dataCruzou70 && dataCruzou70 <= dataEntrega) return { classificacao: 'POTENCIAL', pctVendido, dataPrimeiroEstoque: primeiraData };
+  if (dataCruzou80 && dataCruzou80 > dataEntrega) {
+    const diasApos80 = Math.floor((dataCruzou80 - dataEntrega) / 86400000);
+    if (diasApos80 <= 365) return { classificacao: 'MODERADO', pctVendido, dataPrimeiroEstoque: primeiraData };
+    if (diasApos80 > 730) return { classificacao: 'SOBRA SUSPEITA', pctVendido, dataPrimeiroEstoque: primeiraData, apenasAlerta: true };
+  }
+  return null;
+}
+
+// Mediana de uma lista de números -- "centro típico" da faixa (scoreFaixa_
+// dá o pico da nota aí, não em qualquer ponto do min-max).
+function mediana_(arr) {
+  if (!arr || !arr.length) return null;
+  const ordenado = [...arr].sort((a, b) => a - b);
+  const meio = Math.floor(ordenado.length / 2);
+  return ordenado.length % 2 ? ordenado[meio] : (ordenado[meio - 1] + ordenado[meio]) / 2;
+}
+
+function construirModelosVendedoresDinamicos_(empsBrutos) {
+  const qualificados = [];
+  (empsBrutos || []).forEach(e => {
+    const resultado = avaliarPadraoVendedorAoVivo_(e);
+    if (!resultado || resultado.apenasAlerta) return;
+    const tipoImovel = tipoImovelDominante_(e.unidades);
+    if (!e.tipoEmpreendimento || !tipoImovel || !e.padrao) return;
+    qualificados.push({ e, tipoImovel });
+  });
+  const grupos = {};
+  qualificados.forEach(({ e, tipoImovel }) => {
+    const key = `${e.tipoEmpreendimento}||${tipoImovel}||${e.padrao}`;
+    (grupos[key] = grupos[key] || []).push({ e, tipoImovel });
+  });
+  const modelos = [];
+  Object.keys(grupos).forEach(key => {
+    const membros = grupos[key];
+    if (membros.length < 3) return;
+    const [tipoEmpreendimento, tipoImovel, tipoPadrao] = key.split('||');
+    const unidadesDoTipo = [];
+    membros.forEach(({ e }) => { (e.unidades || []).forEach(u => { if (String(u.tipo || '') === tipoImovel) unidadesDoTipo.push(u); }); });
+    const areaUteis  = unidadesDoTipo.map(u => Number(u.areaUtil)   || 0).filter(v => v > 0);
+    const quartosArr = unidadesDoTipo.map(u => Number(u.quartos)    || 0).filter(v => v > 0);
+    const precos     = unidadesDoTipo.map(u => Number(u.precoMedio) || 0).filter(v => v > 0);
+    const temposObra = membros.map(({ e }) => calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega)).filter(v => v !== null);
+    const contagemLazer = {};
+    membros.forEach(({ e }) => { String(e.lazer || '').split(',').map(s => s.trim()).filter(Boolean).forEach(item => { contagemLazer[item] = (contagemLazer[item] || 0) + 1; }); });
+    const lazerComum = Object.keys(contagemLazer).filter(item => contagemLazer[item] / membros.length > 0.5).join(';');
+    const slug = key.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+    modelos.push({
+      idModelo: 'AUTO-' + slug,
+      nomeModelo: `${tipoEmpreendimento} ${tipoPadrao} — ${tipoImovel} (auto)`,
+      dataCriacao: '', criadoPor: 'AUTO_CLUSTER',
+      tipoEmpreendimento, tipoPadrao, tipoImovel,
+      qtdEmpreendimentosBase: membros.length,
+      idsEmpreendimentosBase: membros.map(({ e }) => e.idEmpreendimento).filter(Boolean).join(';'),
+      faixaAreaUtilMin: areaUteis.length ? Math.min(...areaUteis) : '',
+      faixaAreaUtilMax: areaUteis.length ? Math.max(...areaUteis) : '',
+      faixaAreaUtilMediana: mediana_(areaUteis),
+      faixaQuartosMin: quartosArr.length ? Math.min(...quartosArr) : '',
+      faixaQuartosMax: quartosArr.length ? Math.max(...quartosArr) : '',
+      faixaQuartosMediana: mediana_(quartosArr),
+      faixaPrecoMedioMin: precos.length ? Math.min(...precos) : '',
+      faixaPrecoMedioMax: precos.length ? Math.max(...precos) : '',
+      faixaPrecoMedioMediana: mediana_(precos),
+      faixaTempoObraMin: temposObra.length ? Math.min(...temposObra) : '',
+      faixaTempoObraMax: temposObra.length ? Math.max(...temposObra) : '',
+      faixaTempoObraMediana: mediana_(temposObra),
+      lazerComum, criteriosComparacao: '{}',
+      observacao: `Gerado automaticamente a partir de ${membros.length} empreendimentos com Padrão Vendedor (EXTREMO/FORTE/POTENCIAL/MODERADO).`,
+    });
+  });
+  return modelos;
+}
+
+function mesclarModelosVendedores_(importados, dinamicos) {
+  const chaves = new Set((importados || []).map(m => `${m.tipoEmpreendimento}||${m.tipoImovel}||${m.tipoPadrao}`));
+  const dinamicosSemSobreposicao = (dinamicos || []).filter(m => !chaves.has(`${m.tipoEmpreendimento}||${m.tipoImovel}||${m.tipoPadrao}`));
+  return [...(importados || []), ...dinamicosSemSobreposicao];
+}
+
+function calcularSimilaridadeModelo_(e, modelos) {
+  const tipoEmp = String(e.tipoEmpreendimento || '').toLowerCase();
+  if (!tipoEmp) return null;
+  let cand = (modelos || []).filter(m => String(m.tipoEmpreendimento || '').toLowerCase() === tipoEmp);
+  if (!cand.length) return null;
+  const tipoImovel = tipoImovelDominante_(e.unidades).toLowerCase();
+  if (tipoImovel) {
+    const porTipoImovel = cand.filter(m => String(m.tipoImovel || '').toLowerCase() === tipoImovel);
+    if (porTipoImovel.length) cand = porTipoImovel;
+  }
+  const padrao = String(e.padrao || '').toLowerCase();
+  if (padrao) {
+    const porPadrao = cand.filter(m => String(m.tipoPadrao || '').toLowerCase() === padrao);
+    if (porPadrao.length) cand = porPadrao;
+  }
+  const areaUtilMedia   = mediaCampoUnidades_(e.unidades, 'areaUtil');
+  const quartosMedia    = mediaCampoUnidades_(e.unidades, 'quartos');
+  const precoMedioMedia = mediaCampoUnidades_(e.unidades, 'precoMedio');
+  const tempoObra       = calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega);
+  let melhor = null;
+  cand.forEach(m => {
+    let pesos;
+    try { pesos = JSON.parse(m.criteriosComparacao || '{}'); } catch (_) { pesos = {}; }
+    const dims = [
+      { peso: pesos.pesoAreaUtil   ?? 0.3,  score: scoreFaixa_(areaUtilMedia, m.faixaAreaUtilMin, m.faixaAreaUtilMax, m.faixaAreaUtilMediana) },
+      { peso: pesos.pesoQuartos    ?? 0.15, score: scoreFaixa_(quartosMedia, m.faixaQuartosMin, m.faixaQuartosMax, m.faixaQuartosMediana) },
+      { peso: pesos.pesoPrecoMedio ?? 0.3,  score: scoreFaixa_(precoMedioMedia, m.faixaPrecoMedioMin, m.faixaPrecoMedioMax, m.faixaPrecoMedioMediana) },
+      { peso: pesos.pesoTempoObra  ?? 0.15, score: tempoObra !== null ? scoreFaixa_(tempoObra, m.faixaTempoObraMin, m.faixaTempoObraMax, m.faixaTempoObraMediana) : null },
+      { peso: pesos.pesoLazer      ?? 0.1,  score: scoreLazer_(e.lazer, m.lazerComum) },
+    ].filter(d => d.score !== null);
+    if (!dims.length) return;
+    const pesoTotal = dims.reduce((s, d) => s + d.peso, 0) || 1;
+    const nota = Math.round(dims.reduce((s, d) => s + d.score * d.peso, 0) / pesoTotal);
+    if (!melhor || nota > melhor.nota) melhor = { nota, modelo: m };
+  });
+  if (!melhor) return null;
+  return { simil: melhor.nota, modeloRef: melhor.modelo };
+}
+
+function calcularSimilaridadePadrao_(e, padroes, modelos) {
+  const total   = Number(e.totalUnidades) || 0;
+  const estoque = Number(e.estoque) || 0;
+  if (total === 0) return { simil: 0, isSobraSuspeita: false, modeloRef: null };
+  const pctVendido  = ((total - estoque) / total) * 100;
+  const isSobraSuspeita = calcularSobraSuspeita_(e, total, pctVendido);
+  if (modelos && modelos.length) {
+    const resultado = calcularSimilaridadeModelo_(e, modelos);
+    if (resultado) return { simil: resultado.simil, isSobraSuspeita, modeloRef: resultado.modeloRef };
+    return { simil: 0, isSobraSuspeita, modeloRef: null };
+  }
+  const tipoPadrao = String(e.padrao || '').toLowerCase();
+  const candidatos = (padroes || []).filter(p => String(p.tipoPadrao || '').toLowerCase() === tipoPadrao && p.classificacao !== 'SOBRA SUSPEITA');
+  let refPct = 80;
+  if (candidatos.length) refPct = Math.max(...candidatos.map(p => Number(p.pctVendido) || 80));
+  const pctDim = Math.min(pctVendido / Math.max(refPct, 1), 1);
+  let timeDim = 0.5;
+  try {
+    const hist = JSON.parse(e.historicoEstoque || '[]');
+    if (Array.isArray(hist) && hist.length > 0) {
+      const partes = (hist[0].data || '').split(/[\s\/]+/);
+      const d = parseInt(partes[0], 10), m = parseInt(partes[1], 10) - 1, y = parseInt(partes[2], 10);
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        const dias = Math.max(1, Math.floor((Date.now() - new Date(y, m, d)) / 86400000));
+        timeDim = Math.min((pctVendido / dias) * 365 / Math.max(refPct, 1), 1);
+      }
+    }
+  } catch(_) {}
+  const simil = Math.round((pctDim * 0.6 + timeDim * 0.4) * 100);
+  return { simil, isSobraSuspeita, modeloRef: null };
+}
+
+function calcularPrazoScoreTracao_(prazo, tipoEmpreendimento) {
+  if (prazo <= 0) return 0;
+  const teto = TRACAO_TETO_PRAZO_MESES[tipoEmpreendimento] || TRACAO_TETO_PRAZO_MESES['Condomínio Vertical'];
+  return Math.min(10, 10 * (prazo / teto));
+}
+function calcularDispScoreTracao_(estoque, tipoEmpreendimento) {
+  if (estoque <= 0) return 0;
+  const teto = TRACAO_TETO_DISP_ESTOQUE[tipoEmpreendimento] || TRACAO_TETO_DISP_ESTOQUE['Condomínio Vertical'];
+  return Math.min(10, 10 * (estoque / teto));
+}
+
+function calcularScoreTracao(emps, mapaScoreVendedor, listaPadroes, listaModelos) {
+  mapaScoreVendedor = mapaScoreVendedor || {};
+  listaPadroes      = listaPadroes      || [];
+  listaModelos      = listaModelos      || [];
+  const m2s    = emps.map(e => calcularM2Medio(e.unidades)).filter(v => v > 0);
+  const minM2  = m2s.length ? Math.min(...m2s) : 0;
+  const maxM2  = m2s.length ? Math.max(...m2s) : 1;
+  // Pesos (2026-07, parte 84): Similaridade 5 / Atratividade 4 / Estoque 3 /
+  // Vendedor 2 / Prazo 1 — soma 15. Espelha lancamentos.html (Força de Venda
+  // saiu do composto; trac continua calculado/retornado, só não pesa mais).
+  const PESO_PRAZO = 1, PESO_DISP = 3, PESO_ATRAT = 4, PESO_VENDEDOR = 2, PESO_SIMIL = 5;
+  const PESO_TOTAL = PESO_PRAZO + PESO_DISP + PESO_ATRAT + PESO_VENDEDOR + PESO_SIMIL;
+  return emps.map(e => {
+    const total   = Number(e.totalUnidades) || 0;
+    const estoque = Number(e.estoque) || 0;
+    const m2      = calcularM2Medio(e.unidades) || 0;
+    const prazo   = Number(e.prazoMaximo) || 0;
+    const semDados = (total === 0 || m2 === 0);
+    const atrat   = semDados ? 0 : (maxM2 === minM2 ? 5 : 10 * (1 - (m2 - minM2) / (maxM2 - minM2)));
+    const disp    = calcularDispScoreTracao_(estoque, e.tipoEmpreendimento);
+    const trac    = total > 0 ? ((total - estoque) / total) * 10 : 0;
+    const prazoSc = calcularPrazoScoreTracao_(prazo, e.tipoEmpreendimento);
+    const scoreVendedor = parseInt(mapaScoreVendedor[e.idLancamento]) || 0;
+    const vendedorSc    = scoreVendedor / 10;
+    const { simil, isSobraSuspeita, modeloRef } = calcularSimilaridadePadrao_(e, listaPadroes, listaModelos);
+    const similSc = simil / 10;
+    const comp    = semDados ? 0 : (
+      (prazoSc * PESO_PRAZO + disp * PESO_DISP + atrat * PESO_ATRAT +
+       vendedorSc * PESO_VENDEDOR + similSc * PESO_SIMIL) / PESO_TOTAL
+    );
+    return { e, atrat, disp, trac, prazoSc, prazo, vendedorSc, scoreVendedor, simil, similSc, isSobraSuspeita, modeloRef, comp };
+  }).sort((a, b) => b.comp - a.comp);
+}
+
+async function buscarScoreVendedorPorLancamento_() {
+  const mapa = {};
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listarPerfisVendedor&token=${encodeURIComponent(tokenSessao())}`);
+    const lista = await resp.json();
+    if (Array.isArray(lista)) lista.forEach(p => { if (p.origemImovel === 'LANCAMENTOS' && p.codigo) mapa[p.codigo] = parseInt(p.scoreVendedor) || 0; });
+  } catch(e) {}
+  return mapa;
+}
+async function buscarPadroesVendedores_() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_padroes_vendedores&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (!json || json.ok === false) return [];
+    return Array.isArray(json) ? json : (json.dados || []);
+  } catch(_) { return []; }
+}
+async function buscarModelosVendedores_() {
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_modelos_vendedores&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (json && json.status === 'acao desconhecida') return [];
+    if (!json || json.ok === false) return [];
+    return Array.isArray(json) ? json : (json.dados || []);
+  } catch(_) { return []; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MIX ESTRATÉGICO DE 7 PAPÉIS (novo, 2026-07) — a partir daqui é lógica
+// exclusiva desta página, não existe em lancamentos.html.
+// ═══════════════════════════════════════════════════════════════════════
+
+// Faixas A/B/C dentro de CADA padrão (Popular, Médio, Alto Padrão, Luxo),
+// divididas em TERÇOS pelo menor preço observado na carteira atual (não são
+// valores fixos em R$) -- se ajusta sozinho conforme a base muda, sem
+// precisar de tela de configuração pra manter atualizada. A = terço mais
+// caro, C = terço mais barato.
+//
+// ADAPTATIVO por volume (2026-07, corrige caso real: aba NA PLANTA com 37
+// itens válidos espalhados em até 12 buckets -- padrão x faixa -- ficava com
+// ~3 por bucket, abaixo do mínimo de 5, e NENHUM mix se formava). Sem
+// volume suficiente pra sustentar 3 faixas, cai pra 2 (A/B por mediana,
+// igual ao design anterior a essa parte) ou 1 ("Única") -- os buckets ficam
+// maiores e o mix tem chance real de se formar. LIMIAR_3_FAIXAS/2_FAIXAS são
+// contados sobre TODOS os itens do padrão nessa aba (não só os com Score de
+// Tração > 0), porque a divisão de preço precisa existir antes de saber
+// quantos vão ter Tração válida.
+// IMPORTANTE: o valor de padrão gravado no lançamento é "Alto" (ver
+// classificarPadraoPorM2Medio_ em config.js e o <select> de padrão em
+// lancamentos.html), NUNCA "Alto Padrão" -- "Alto Padrão" é só o RÓTULO
+// visível pro usuário (filtro/título de segmento). Bug real encontrado
+// 2026-07: ORDEM_PADROES_MIX_ usava "Alto Padrão" como se fosse o valor
+// interno, então NENHUM lançamento com padrão "Alto" jamais caía em
+// nenhum segmento -- 1/4 da base ficava invisível em Estratégias, em
+// qualquer aba/situação, desde a criação desta página.
+const ORDEM_PADROES_MIX_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
+const PADRAO_LABEL_MIX_ = { 'Popular': 'Popular', 'Médio': 'Médio', 'Alto': 'Alto Padrão', 'Luxo': 'Luxo' };
+const LIMIAR_3_FAIXAS_ = 15; // ~5 por faixa no pior caso
+const LIMIAR_2_FAIXAS_ = 8;  // ~4 por faixa -- abaixo disso, faixa única
+
+function calcularFaixaPreco_(padrao, menorPreco, cortesPorPadrao) {
+  const cortes = cortesPorPadrao[padrao];
+  if (!cortes || cortes.faixas === 1) return 'Única';
+  if (cortes.faixas === 2) return menorPreco >= cortes.p1 ? 'A' : 'B';
+  if (menorPreco >= cortes.p2) return 'A';
+  if (menorPreco >= cortes.p1) return 'B';
+  return 'C';
+}
+// seg = valor INTERNO ("Alto B", "Alto", "Médio C"...) -- usado como chave
+// de agrupamento/filtro. segmentoLabelDisplay_ (abaixo) traduz isso pro
+// rótulo visível ("Alto Padrão B") só na hora de mostrar pro usuário.
+function segmentoDe_(padrao, faixa) {
+  return faixa === 'Única' ? padrao : `${padrao} ${faixa}`;
+}
+// Extrai o padrão interno de uma chave de segmento ("Alto B" -> "Alto",
+// "Alto" sozinho -> "Alto") -- checar se a última palavra é exatamente
+// A/B/C evita confundir a última palavra de um padrão com espaço no nome
+// com uma faixa. Compartilhado por segmentoLabelDisplay_, o CSV/prompt de
+// exportação, e o filtro por padrão (que agrupa Alto Padrão + Luxo num chip
+// só "Alto" -- ver PADRAO_GRUPO_FILTRO_).
+function padraoInternoDoSegmento_(seg) {
+  const partes = seg.split(' ');
+  const ultima = partes[partes.length - 1];
+  return /^[ABC]$/.test(ultima) ? partes.slice(0, -1).join(' ') : seg;
+}
+function segmentoLabelDisplay_(seg) {
+  const padraoInterno = padraoInternoDoSegmento_(seg);
+  const faixa = seg.length > padraoInterno.length ? seg.slice(padraoInterno.length) : '';
+  return (PADRAO_LABEL_MIX_[padraoInterno] || padraoInterno) + faixa;
+}
+// Grupo de filtro (pedido do usuário, 2026-07): "Alto Padrão" e "Luxo"
+// mostram um chip único "Alto" -- clicar nele mostra os segmentos dos dois
+// padrões juntos. A segmentação/mix interno continua com os 2 padrões
+// separados (faixas de preço próprias, títulos de segmento "Alto Padrão
+// .../Luxo ..." continuam distintos) -- só o CHIP de filtro mescla.
+const PADRAO_GRUPO_FILTRO_ = { 'Popular': 'Popular', 'Médio': 'Médio', 'Alto': 'Alto', 'Luxo': 'Luxo' };
+const ORDEM_GRUPOS_FILTRO_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
+// Letras na ordem barato->caro pro número de faixas decidido pro padrão --
+// usada tanto aqui quanto na hora de montar a ordem de segmentos pro render
+// (ANCORA_SUP depende dessa ordem refletir a granularidade real).
+function faixasOrdemPadrao_(numFaixas) {
+  if (numFaixas === 1) return ['Única'];
+  if (numFaixas === 2) return ['B', 'A'];
+  return ['C', 'B', 'A'];
+}
+function organizarPorSegmento_(itens) {
+  const porPadrao = {};
+  itens.forEach(it => { (porPadrao[it.padrao] = porPadrao[it.padrao] || []).push(it.menorPreco); });
+  const cortesPorPadrao = {};
+  Object.keys(porPadrao).forEach(p => {
+    const vals = (porPadrao[p] || []).filter(v => v > 0).sort((a, b) => a - b);
+    if (!vals.length) return;
+    if (vals.length >= LIMIAR_3_FAIXAS_) {
+      cortesPorPadrao[p] = { faixas: 3, p1: vals[Math.floor(vals.length / 3)], p2: vals[Math.floor(2 * vals.length / 3)] };
+    } else if (vals.length >= LIMIAR_2_FAIXAS_) {
+      cortesPorPadrao[p] = { faixas: 2, p1: vals[Math.floor(vals.length / 2)] };
+    } else {
+      cortesPorPadrao[p] = { faixas: 1 };
+    }
+  });
+  const porSegmento = {};
+  itens.forEach(it => {
+    const faixa = calcularFaixaPreco_(it.padrao, it.menorPreco, cortesPorPadrao);
+    const seg = segmentoDe_(it.padrao, faixa);
+    (porSegmento[seg] = porSegmento[seg] || []).push(it);
+  });
+  // Ordem de segmentos pra ESSA chamada (barato->caro dentro de cada padrão,
+  // padrões em ordem crescente) -- reflete a granularidade real decidida
+  // acima, não um layout fixo de 3 faixas por padrão.
+  const ordemSegmentos = [];
+  ORDEM_PADROES_MIX_.forEach(padrao => {
+    const numFaixas = cortesPorPadrao[padrao] ? cortesPorPadrao[padrao].faixas : 3;
+    faixasOrdemPadrao_(numFaixas).forEach(faixa => ordemSegmentos.push(segmentoDe_(padrao, faixa)));
+  });
+  return { porSegmento, ordemSegmentos };
+}
+
+// Seleciona os 7 papéis dentro de um segmento (Padrão+Faixa). ISCA/ÂNCORA
+// INFERIOR = preço; ALVO 1-2-3 = Score de Tração; COMPLEMENTAR = melhor
+// Tração de Tipo de Imóvel diferente do Alvo Primário (ou o melhor restante,
+// se não houver); ÂNCORA SUPERIOR = menor preço do segmento imediatamente
+// ACIMA (não consome produto do segmento atual). `minimo` (default 5) é o
+// piso de produtos com Score de Tração > 0 pro mix valer -- 5 no modo
+// campanha (mix incompleto não sustenta a estratégia de tráfego), 1 no modo
+// cliente (se só existe 1 lançamento compatível com o perfil, é ele que o
+// corretor precisa ver -- caso real 2026-07: perfil com preço limite justo
+// caía pra 1 compatível e a tela não mostrava imóvel nenhum).
+function selecionarMixEstrategico_(candidatos, candidatosAcima, minimo) {
+  minimo = minimo || 5;
+  const validos = (candidatos || []).filter(c => c.comp > 0);
+  if (validos.length < minimo) {
+    return { papeis: {}, aviso: `Só ${validos.length} produto(s) com Score de Tração neste segmento (mínimo ${minimo} pro mix funcionar).` };
+  }
+  const usados = new Set();
+  const usar = item => { usados.add(item.e.idLancamento); return item; };
+  const disponiveis = () => validos.filter(c => !usados.has(c.e.idLancamento));
+  const porTracao = () => [...disponiveis()].sort((a, b) => b.comp - a.comp);
+  const papeis = {};
+
+  // 1. ALVO_1 — maior tração; define a referência de preço para as demais faixas
+  papeis.ALVO_1 = usar(porTracao()[0]);
+  const alvo1Preco  = papeis.ALVO_1.menorPreco || 0;
+  const alvo1Padrao = papeis.ALVO_1.padrao || '';
+
+  // Faixas proporcionais ao preço do ALVO_1 (mesma lógica do Produto Alvo)
+  const faixaP = (minR, maxR) => disponiveis().filter(c =>
+    c.menorPreco > 0 && c.menorPreco >= alvo1Preco * minR && c.menorPreco <= alvo1Preco * maxR
+  );
+  const porPadraoTracao = arr => [...arr].sort((a, b) =>
+    (b.padrao === alvo1Padrao ? 1 : 0) - (a.padrao === alvo1Padrao ? 1 : 0) || b.comp - a.comp
+  );
+
+  // 2. ÂNCORA SUPERIOR — menor preço do segmento acima (não consome candidato atual)
+  const acimaValidos = candidatosAcima || [];
+  papeis.ANCORA_SUP = acimaValidos.length
+    ? [...acimaValidos].sort((a, b) => a.menorPreco - b.menorPreco)[0]
+    : null;
+
+  // 3. ALVO_2 & ALVO_3 — faixa 65–155% do alvo, mesmo padrão preferido, maior tração
+  const c2 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_2 = c2.length ? usar(c2[0]) : null;
+  const c3 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_3 = c3.length ? usar(c3[0]) : null;
+
+  // 4. ISCA — faixa 62–84% do alvo, maior tração (não compete com ÂNCORA_INF)
+  const ci = [...faixaP(0.62, 0.84)].sort((a, b) => b.comp - a.comp);
+  if (ci.length) {
+    papeis.ISCA = usar(ci[0]);
+  } else {
+    const fb = disponiveis().filter(it => it.menorPreco > 0 && it.menorPreco < alvo1Preco)
+      .sort((a, b) => b.menorPreco - a.menorPreco);
+    papeis.ISCA = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 5. ÂNCORA INFERIOR — faixa 40–62%, mais barato na faixa
+  const cai = [...faixaP(0.40, 0.62)].sort((a, b) => a.menorPreco - b.menorPreco);
+  if (cai.length) {
+    papeis.ANCORA_INF = usar(cai[0]);
+  } else {
+    const fb = disponiveis().filter(it => it.menorPreco > 0 && it.menorPreco < alvo1Preco)
+      .sort((a, b) => b.menorPreco - a.menorPreco);
+    papeis.ANCORA_INF = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 6. ALVO_3 fallback — se step 3 não preencheu
+  if (!papeis.ALVO_3) {
+    const fb = [...disponiveis()].sort((a, b) => b.comp - a.comp);
+    papeis.ALVO_3 = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 7. COMPLEMENTAR — tipo diferente do ALVO_1, ou melhor tração restante
+  const tipoAlvo1 = tipoImovelDominante_(papeis.ALVO_1.e.unidades);
+  const rest = disponiveis();
+  papeis.COMPLEMENTAR = rest.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo1) || rest[0] || null;
+  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
+
+  return { papeis, aviso: null };
+}
+
+// Score de Cobertura (semáforo) — quão bem o mix ficou preenchido: papéis
+// com nota alta de Tração, presença das duas âncoras (preço comparável pra
+// cima e pra baixo) e diversidade de construtoras (concentração é risco).
+function calcularCoberturaMix_(papeis) {
+  const preenchidos = Object.values(papeis).filter(Boolean);
+  const comTracaoAlta = preenchidos.filter(p => p.comp >= 6).length;
+  const temAncoras = !!(papeis.ANCORA_INF && papeis.ANCORA_SUP);
+  const construtoras = new Set(preenchidos.map(p => p.e.construtora));
+  const diversidade = preenchidos.length ? construtoras.size / preenchidos.length : 0;
+  let nivel = 'fraco';
+  if (preenchidos.length >= 6 && comTracaoAlta >= 3 && temAncoras) nivel = 'forte';
+  else if (preenchidos.length >= 5) nivel = 'adequado';
+  return { nivel, preenchidos: preenchidos.length, comTracaoAlta, temAncoras, diversidadeConstrutoras: Math.round(diversidade * 100) };
+}
+
+const PAPEL_LABEL_ = {
+  ISCA: '🎣 Isca', ANCORA_INF: '⬇ Âncora Inf.', ALVO_1: '⭐ Alvo Primário',
+  ALVO_2: '🔄 Alvo Secundário', ALVO_3: '🔄 Alvo Secundário', ANCORA_SUP: '⬆ Âncora Sup.', COMPLEMENTAR: '🔀 Complementar',
+};
+const ORDEM_PAPEIS_ = ['ISCA', 'ANCORA_INF', 'ALVO_1', 'ALVO_2', 'ALVO_3', 'ANCORA_SUP', 'COMPLEMENTAR'];
+
+function fmtR$_(v) {
+  if (!v) return '—';
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+// Mesma faixa/limiares de classeScoreTracao_ em lancamentos.html.
+function classeScoreTracao_(comp) {
+  return comp >= 7 ? 'tp-hot' : comp >= 5 ? 'tp-warm' : comp >= 3 ? 'tp-esgot' : 'tp-cold';
+}
+
+function tabelaBadgeHtml_(statusTabela) {
+  if (statusTabela === 'Desatualizada') return `<span class="tabela-badge desatualizada">⚠ Desatualizada</span>`;
+  if (statusTabela === 'Atualizada')    return `<span class="tabela-badge atualizada">✓ Atualizada</span>`;
+  return '—';
+}
+
+// Situação do empreendimento pro mix -- mesma terminologia do campo
+// "Situação do imóvel" de Contatos (Novo/Na planta; "Usado" não se aplica a
+// lançamento). Deriva do estágio já cadastrado: Em planta/Em obras = ainda
+// não entregue = "Na planta"; Pronto/Pronto novo/Entregue = "Novo". "Em
+// obras" e "Em planta" são estágios internos do cadastro (útil em
+// lancamentos.html), mas em Estratégias os dois SEMPRE contam como a mesma
+// situação -- inclusive na exportação (CSV/prompt de IA), que antes vazava o
+// status bruto e mostrava os dois como valores diferentes.
+function situacaoTexto_(status) {
+  if (status === 'Em planta' || status === 'Em obras') return 'Na planta';
+  if (status === 'Pronto' || status === 'Pronto novo' || status === 'Entregue') return 'Novo';
+  return status || '—';
+}
+function situacaoBadgeHtml_(status) {
+  if (status === 'Em planta' || status === 'Em obras') return `<span class="situacao-badge na-planta">Na planta</span>`;
+  if (status === 'Pronto' || status === 'Pronto novo' || status === 'Entregue') return `<span class="situacao-badge novo">Novo</span>`;
+  return '—';
+}
+
+let _resultadosPorSegmento = {};
+let _padraoAtivo = 'Todos';
+
+// Busca lançamentos + scores + padrões + modelos e devolve os itens já
+// pontuados no formato que o Mix consome -- compartilhado entre o modo
+// normal (blocos por segmento) e o modo cliente (?cliente=CTT-NNN).
+// Retorna null se a sessão expirou (trataNaoAutenticado já redirecionou).
+async function carregarItensScored_() {
+  const resp = await fetch(`${WEBHOOK_URL}?acao=listar_lancamentos&token=${encodeURIComponent(tokenSessao())}`);
+  const json = await resp.json();
+  if (trataNaoAutenticado(json)) return null;
+  const todos = json.lancamentos || [];
+  const empsBrutos = agruparPorEmpreendimento_(todos);
+
+  const [mapaScoreVendedor, listaPadroes, listaModelosImportados] = await Promise.all([
+    buscarScoreVendedorPorLancamento_(), buscarPadroesVendedores_(), buscarModelosVendedores_(),
+  ]);
+  const listaModelos = mesclarModelosVendedores_(listaModelosImportados, construirModelosVendedoresDinamicos_(empsBrutos));
+  const scored = calcularScoreTracao(empsBrutos, mapaScoreVendedor, listaPadroes, listaModelos);
+
+  return scored.map(s => {
+    const e = s.e;
+    const precos = (e.unidades || []).map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+    return { e, comp: s.comp, simil: s.simil, scoreVendedor: s.scoreVendedor,
+              menorPreco: precos.length ? Math.min(...precos) : 0, padrao: e.padrao || '' };
+  }).filter(it => it.padrao && it.e.statusAtivo !== 'Excluído');
+}
+
+// Abas NOVOS | NA PLANTA (regra do usuário, 2026-07): imóvel pronto e
+// imóvel em obras NUNCA entram no mesmo mix -- cada aba monta os 7 papéis
+// só com a sua situação. Mesma divisão de estágios da coluna Situação
+// (situacaoBadgeHtml_) e do modo cliente (SITUACAO_STATUS_CLIENTE_).
+let _situacaoAtiva = 'NOVOS';
+let _itensScoredCache = null;
+const SITUACAO_ABA_STATUS_ = {
+  'NOVOS':     ['Pronto', 'Pronto novo', 'Entregue'],
+  'NA_PLANTA': ['Em planta', 'Em obras'],
+};
+function situacaoAtivaLabel_() { return _situacaoAtiva === 'NOVOS' ? 'NOVOS' : 'NA PLANTA'; }
+
+// Total de lançamentos que a base tem em cada situação -- conta sobre o
+// cache já pontuado (mesmo pool que as abas filtram), não muda ao trocar de
+// aba, só é recalculado quando os dados são recarregados do zero.
+function atualizarContadoresAba_() {
+  const itens = _itensScoredCache || [];
+  const countNovos    = itens.filter(it => SITUACAO_ABA_STATUS_['NOVOS'].includes(it.e.status)).length;
+  const countNaPlanta = itens.filter(it => SITUACAO_ABA_STATUS_['NA_PLANTA'].includes(it.e.status)).length;
+  document.getElementById('countAbaNovos').textContent = `(${countNovos})`;
+  document.getElementById('countAbaNaPlanta').textContent = `(${countNaPlanta})`;
+  document.getElementById('countAbaProdutoAlvo').textContent = `(${itens.length})`;
+}
+
+// Reconstrói os mixes por segmento a partir do cache de itens já pontuados,
+// filtrando pela aba de situação ativa -- trocar de aba não refaz nenhum
+// fetch, só refiltra e reseleciona os papéis. A ÂNCORA SUPERIOR também vem
+// do conjunto filtrado (segmento acima DENTRO da mesma situação), então a
+// separação Novo/Na planta vale pros 7 papéis, sem exceção.
+let _ordemSegmentosAtual = [];
+
+function recalcularSegmentos_() {
+  const statusPermitidos = new Set(SITUACAO_ABA_STATUS_[_situacaoAtiva]);
+  const itens = (_itensScoredCache || []).filter(it => statusPermitidos.has(it.e.status));
+  const { porSegmento, ordemSegmentos } = organizarPorSegmento_(itens);
+  _ordemSegmentosAtual = ordemSegmentos;
+  _resultadosPorSegmento = {};
+  ordemSegmentos.forEach((seg, idx) => {
+    const candidatos = porSegmento[seg] || [];
+    const segAcima = ordemSegmentos[idx + 1];
+    const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
+    const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
+    // faixaPrecoMin/Max guarda o intervalo de preço REAL do segmento no
+    // momento do cálculo -- usado só por publicarMixDoSegmento_ (o app novo
+    // pro cliente casa o preço declarado contra esse intervalo já congelado,
+    // em vez de recalcular os cortes de percentil no servidor).
+    const precos = candidatos.map(c => c.menorPreco).filter(v => v > 0);
+    _resultadosPorSegmento[seg] = {
+      ...resultado, total: candidatos.length,
+      cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis),
+      faixaPrecoMin: precos.length ? Math.min(...precos) : 0,
+      faixaPrecoMax: precos.length ? Math.max(...precos) : 0,
+    };
+  });
+}
+
+function setSituacaoAba_(aba) {
+  _situacaoAtiva = aba;
+  document.getElementById('tabAbaNovos').classList.toggle('active', aba === 'NOVOS');
+  document.getElementById('tabAbaNaPlanta').classList.toggle('active', aba === 'NA_PLANTA');
+  document.getElementById('tabAbaProdutoAlvo').classList.toggle('active', aba === 'PRODUTO_ALVO');
+  const isProdAlvo = aba === 'PRODUTO_ALVO';
+  document.getElementById('blocosSegmentos').style.display = isProdAlvo ? 'none' : '';
+  document.getElementById('blocoProdutoAlvo').style.display = isProdAlvo ? '' : 'none';
+  document.getElementById('filtroPadrao').style.display = isProdAlvo ? 'none' : '';
+  if (isProdAlvo) {
+    renderProdutoAlvoUI_();
+  } else {
+    recalcularSegmentos_();
+    renderBlocosSegmentos_();
+  }
+}
+
+// ── PRODUTO ALVO ────────────────────────────────────────────────────────────
+let _alvoBuscaQuery = '';
+let _alvoSelecionado = null;
+let _alvoResultadosBusca_ = [];
+
+// Monta o mix de 7 ofertas a partir do produto alvo selecionado.
+// Toda seleção é relativa ao preço do alvo (alvoPreco): ALVO_2/3 buscam
+// produtos no mesmo bracket de preço; ISCA é a melhor tração na faixa
+// imediatamente abaixo; ANCORA_INF cria contraste de preço.
+// Isso evita que um Alvo de R$ 1M ganhe uma Isca de R$ 280k — produtos
+// de padrões totalmente diferentes não se reforçam na apresentação.
+function selecionarMixPorAlvo_(alvoItem, todosItens) {
+  const situacaoAlvo = SITUACAO_ABA_STATUS_['NOVOS'].includes(alvoItem.e.status) ? 'NOVOS' : 'NA_PLANTA';
+  const statusAlvo = new Set(SITUACAO_ABA_STATUS_[situacaoAlvo]);
+  const alvoPreco  = alvoItem.menorPreco || 0;
+  const alvoPadrao = alvoItem.padrao || '';
+
+  // Pool: mesma situação (novo/planta), tração positiva, excluindo o alvo
+  const pool = todosItens.filter(it =>
+    statusAlvo.has(it.e.status) && it.comp > 0 && it.e.idLancamento !== alvoItem.e.idLancamento
+  );
+  if (!pool.length) return { papeis: { ALVO_1: alvoItem }, aviso: 'Base insuficiente para montar o mix completo.' };
+
+  const usados = new Set([alvoItem.e.idLancamento]);
+  const usar = item => { usados.add(item.e.idLancamento); return item; };
+  const disp = () => pool.filter(c => !usados.has(c.e.idLancamento));
+
+  // Filtra disponíveis por faixa proporcional ao preço do alvo
+  const faixaP = (minR, maxR) =>
+    disp().filter(it => it.menorPreco > 0 && it.menorPreco >= alvoPreco * minR && it.menorPreco <= alvoPreco * maxR);
+
+  // Ordenação: mesmo padrão do alvo primeiro → maior tração
+  const porPadraoTracao = arr =>
+    [...arr].sort((a, b) =>
+      (b.padrao === alvoPadrao ? 1 : 0) - (a.padrao === alvoPadrao ? 1 : 0) || b.comp - a.comp
+    );
+
+  const papeis = {};
+  papeis.ALVO_1 = alvoItem;
+
+  // ── Faixas de preço NÃO sobrepostas (proporcionais ao preço do alvo) ──────
+  //
+  //   ANCORA_SUP  >105 %          ex: alvo R$ 1M → >R$ 1.050k
+  //   ALVO 2/3    65 – 155 %      ex: R$ 670k – R$ 1.595k
+  //   ISCA        62 –  84 %      ex: R$ 638k – R$ 865k   ← NÃO compete com ANCORA_INF
+  //   ANCORA_INF  40 –  62 %      ex: R$ 412k – R$ 638k   ← floor garante mínimo relevante
+  //
+  // Floor de 40% do alvo = R$ 412k para alvo de R$ 1M:
+  //   produtos abaixo desse piso (ex: R$ 283k) ficam FORA de ISCA e ANCORA_INF.
+  //   Só aparecem como COMPLEMENTAR se restar espaço.
+  //   Isso garante coerência de perfil: um cliente de R$ 1M não precisa ver R$ 283k na estratégia.
+
+  // 1. ÂNCORA SUPERIOR — produto >5% acima → faz o alvo parecer mais acessível
+  const acima = disp()
+    .filter(it => it.menorPreco > alvoPreco * 1.05)
+    .sort((a, b) => a.menorPreco - b.menorPreco);
+  papeis.ANCORA_SUP = acima.length ? usar(acima[0]) : null;
+
+  // 2. ALVO_2 & ALVO_3 — mesmo bracket (65–155%), mesmo padrão preferido, maior tração
+  const c2 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_2 = c2.length ? usar(c2[0]) : null;
+  const c3 = porPadraoTracao(faixaP(0.65, 1.55));
+  papeis.ALVO_3 = c3.length ? usar(c3[0]) : null;  // fallback após ISCA/ANCORA
+
+  // 3. ISCA — faixa 62–84% do alvo: ponto de entrada atrativo do mesmo perfil
+  //    Faixa começa em 62% (onde ANCORA_INF termina) → sem competição entre os dois
+  const ci = [...faixaP(0.62, 0.84)].sort((a, b) => b.comp - a.comp);
+  if (ci.length) {
+    papeis.ISCA = usar(ci[0]);
+  } else {
+    // Fallback: produto mais caro disponível abaixo do alvo (mais próximo do perfil)
+    const fb = disp().filter(it => it.menorPreco > 0 && it.menorPreco < alvoPreco).sort((a, b) => b.menorPreco - a.menorPreco);
+    papeis.ISCA = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 4. ÂNCORA INFERIOR — faixa 40–62% do alvo: contraste de preço relevante
+  //    Floor em 40%: para alvo R$ 1M → mínimo R$ 400k (mesmo universo de cliente)
+  //    Teto em 62%: encontra com o floor da ISCA, sem sobreposição
+  const cai = [...faixaP(0.40, 0.62)].sort((a, b) => a.menorPreco - b.menorPreco);
+  if (cai.length) {
+    papeis.ANCORA_INF = usar(cai[0]);
+  } else {
+    // Fallback: produto mais próximo DO alvo disponível abaixo (mais relevante ao perfil)
+    const fb = disp().filter(it => it.menorPreco > 0 && it.menorPreco < alvoPreco).sort((a, b) => b.menorPreco - a.menorPreco);
+    papeis.ANCORA_INF = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 5. ALVO_3 fallback — se step 2 deixou vazio, usa maior tração restante
+  if (!papeis.ALVO_3) {
+    const fb = [...disp()].sort((a, b) => b.comp - a.comp);
+    papeis.ALVO_3 = fb.length ? usar(fb[0]) : null;
+  }
+
+  // 6. COMPLEMENTAR — tipo diferente do alvo, ou melhor tração restante
+  const tipoAlvo = tipoImovelDominante_(alvoItem.e.unidades);
+  const rest = disp();
+  papeis.COMPLEMENTAR = rest.find(c => tipoImovelDominante_(c.e.unidades) !== tipoAlvo)
+    || rest[0] || null;
+  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
+
+  // Aviso de mix incompleto
+  const vazios = ['ALVO_2','ALVO_3','ISCA','ANCORA_INF','ANCORA_SUP','COMPLEMENTAR'].filter(r => !papeis[r]);
+  const aviso = vazios.length >= 2
+    ? `Mix parcial: poucos empreendimentos no segmento de preço do alvo. ${vazios.length} papel(éis) sem produto correspondente.`
+    : null;
+
+  return { papeis, aviso };
+}
+
+function renderMixProdutoAlvo_() {
+  if (!_alvoSelecionado) return '';
+  const mix = selecionarMixPorAlvo_(_alvoSelecionado, _itensScoredCache || []);
+  _mixAtualPapeis_ = mix.papeis || {};
+  const cobertura = mix.aviso ? null : calcularCoberturaMix_(mix.papeis);
+  const covHtml = cobertura ? `<span class="cobertura-badge cobertura-${cobertura.nivel}">${cobertura.nivel === 'forte' ? '🟢' : cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${cobertura.nivel}</span>` : '';
+  return `
+    <div class="alvo-selecionado">
+      <div>
+        <div class="alvo-selecionado-nome">⭐ ${_alvoSelecionado.e.nomeEmpreendimento || '—'}</div>
+        <div class="alvo-selecionado-sub">${_alvoSelecionado.e.construtora || '—'} · ${PADRAO_LABEL_MIX_[_alvoSelecionado.padrao] || _alvoSelecionado.padrao || ''} · ${fmtR$_(_alvoSelecionado.menorPreco)} · ${situacaoTexto_(_alvoSelecionado.e.status)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">${covHtml}<button class="btn-mini" onclick="limparProdutoAlvo_()">✕ Limpar</button></div>
+    </div>
+    <div class="segmento-block">
+      <div class="segmento-header">
+        <div>
+          <div class="segmento-titulo">Estratégia de 7 Ofertas</div>
+          <div class="segmento-sub">Mix montado a partir de <strong>${_alvoSelecionado.e.nomeEmpreendimento || '—'}</strong> como Alvo Primário · <span style="color:var(--text3)">clique numa linha para gerar briefing de post</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${covHtml}
+          <button class="btn-mini" onclick="abrirCopyBriefMixCompleto_()" title="Briefing de campanha estratégica para o mix completo" style="display:flex;align-items:center;gap:5px">✏️ Campanha</button>
+        </div>
+      </div>
+      ${mix.aviso ? `<div class="vazio-segmento">${mix.aviso}</div>` : tabelaMixHtml_(mix, true)}
+    </div>`;
+}
+
+// Monta a estrutura fixa uma vez (chamada ao trocar para a aba).
+// O <input> NUNCA é recriado — só o dropdown e o mix são atualizados,
+// evitando que o campo perca o foco e embaralhe os caracteres digitados.
+function renderProdutoAlvoUI_() {
+  const cont = document.getElementById('blocoProdutoAlvo');
+  if (!cont) return;
+  cont.innerHTML = `
+    <div class="alvo-search-wrap">
+      <input class="alvo-search-input" id="alvoSearchInput" type="text"
+        placeholder="Digite o nome do empreendimento alvo..."
+        autocomplete="off">
+      <div id="alvoDropdown"></div>
+    </div>
+    <div id="alvoMixResult"></div>`;
+  const inp = document.getElementById('alvoSearchInput');
+  inp.value = _alvoBuscaQuery;
+  inp.addEventListener('input', () => onAlvoSearch_(inp.value));
+  renderAlvoDropdown_();
+  renderAlvoMix_();
+  if (!_alvoSelecionado) inp.focus();
+}
+
+function renderAlvoDropdown_() {
+  const bar = document.getElementById('alvoDropdown');
+  if (!bar) return;
+  const resultados = _alvoBuscaQuery.length >= 2
+    ? (_itensScoredCache || []).filter(it => (it.e.nomeEmpreendimento || '').toLowerCase().includes(_alvoBuscaQuery.toLowerCase())).slice(0, 12)
+    : [];
+  _alvoResultadosBusca_ = resultados;
+  if (!resultados.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `<div class="alvo-results">${resultados.map((it, i) => `
+    <div class="alvo-result-item" data-aidx="${i}">
+      <div class="alvo-result-nome">${it.e.nomeEmpreendimento || '—'}</div>
+      <div class="alvo-result-sub">${it.e.construtora || ''} · ${PADRAO_LABEL_MIX_[it.padrao] || it.padrao || ''} · ${fmtR$_(it.menorPreco)}</div>
+    </div>`).join('')}</div>`;
+  bar.querySelectorAll('[data-aidx]').forEach(el => {
+    el.onclick = () => selecionarProdutoAlvo_(+el.dataset.aidx);
+  });
+}
+
+function renderAlvoMix_() {
+  const el = document.getElementById('alvoMixResult');
+  if (!el) return;
+  el.innerHTML = _alvoSelecionado
+    ? renderMixProdutoAlvo_()
+    : '<div class="vazio-segmento">Busque e selecione um empreendimento para montar a estratégia de 7 ofertas.</div>';
+}
+
+function onAlvoSearch_(val) {
+  _alvoBuscaQuery = val;
+  _alvoSelecionado = null;
+  renderAlvoDropdown_();
+  renderAlvoMix_();
+}
+
+function selecionarProdutoAlvo_(idx) {
+  _alvoSelecionado = _alvoResultadosBusca_[idx] || null;
+  if (_alvoSelecionado) _alvoBuscaQuery = _alvoSelecionado.e.nomeEmpreendimento || '';
+  const inp = document.getElementById('alvoSearchInput');
+  if (inp) inp.value = _alvoBuscaQuery;
+  const bar = document.getElementById('alvoDropdown');
+  if (bar) bar.innerHTML = '';
+  renderAlvoMix_();
+}
+
+function limparProdutoAlvo_() {
+  _alvoSelecionado = null;
+  _alvoBuscaQuery = '';
+  const inp = document.getElementById('alvoSearchInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const bar = document.getElementById('alvoDropdown');
+  if (bar) bar.innerHTML = '';
+  renderAlvoMix_();
+}
+
+// Publica sozinho o mix de TODOS os segmentos completos, nas duas situações
+// (NOVOS/NA_PLANTA) -- roda em background toda vez que a página carrega os
+// dados, sem depender do corretor lembrar de clicar em "Publicar mix"
+// (pedido explícito do usuário: app-lancamentos.html não pode ficar sem
+// dado só porque ninguém publicou manualmente). Recalcula do zero a cada
+// carregamento -- upsert por segmento+situação, então isso também mantém os
+// snapshots sempre atualizados com o estoque/preço mais recente, de graça.
+// O botão "Publicar mix" continua existindo (força uma republicação
+// imediata depois de uma mudança pontual), mas deixou de ser a ÚNICA forma
+// do snapshot existir. Fire-and-forget: erro aqui não pode travar a tela
+// principal -- na pior hipótese, o app novo cai no fallback local dele.
+async function autoPublicarTodosMixes_() {
+  for (const situacao of ['NOVOS', 'NA_PLANTA']) {
+    const statusPermitidos = new Set(SITUACAO_ABA_STATUS_[situacao]);
+    const itens = (_itensScoredCache || []).filter(it => statusPermitidos.has(it.e.status));
+    const { porSegmento, ordemSegmentos } = organizarPorSegmento_(itens);
+    const publicacoes = ordemSegmentos.map((seg, idx) => {
+      const candidatos = porSegmento[seg] || [];
+      const segAcima = ordemSegmentos[idx + 1];
+      const candidatosAcima = segAcima ? (porSegmento[segAcima] || []) : [];
+      const resultado = selecionarMixEstrategico_(candidatos, candidatosAcima);
+      if (resultado.aviso) return null;
+
+      const papeis = {};
+      ORDEM_PAPEIS_.forEach(papel => {
+        const item = resultado.papeis[papel];
+        if (item) papeis[papel] = item.e.idEmpreendimento;
+      });
+      const precos = candidatos.map(c => c.menorPreco).filter(v => v > 0);
+
+      return fetch(WEBHOOK_URL, {
+        method: 'POST',
+        body: new URLSearchParams({
+          dados: JSON.stringify({
+            acao: 'publicar_mix_segmento', token: tokenSessao(),
+            segmentoId: seg, padrao: padraoInternoDoSegmento_(seg), situacao,
+            faixaPrecoMin: precos.length ? Math.min(...precos) : 0,
+            faixaPrecoMax: precos.length ? Math.max(...precos) : 0,
+            papeis,
+          }),
+        }),
+      }).catch(() => {}); // silencioso -- ver comentário da função
+    }).filter(Boolean);
+    await Promise.allSettled(publicacoes);
+  }
+}
+
+async function carregarEstrategias() {
+  try {
+    const itens = await carregarItensScored_();
+    if (itens === null) return;
+    _itensScoredCache = itens;
+    document.getElementById('situacaoTabs').style.display = '';
+    atualizarContadoresAba_();
+
+    recalcularSegmentos_();
+    renderFiltroPadrao_();
+    renderBlocosSegmentos_();
+    autoPublicarTodosMixes_(); // background -- não bloqueia a tela
+  } catch (e) {
+    document.getElementById('blocosSegmentos').innerHTML =
+      '<div class="vazio-segmento">Erro ao carregar. Verifique a conexão com o Apps Script.</div>';
+  }
+}
+
+function renderFiltroPadrao_() {
+  const bar = document.getElementById('filtroPadrao');
+  // Chip usa o GRUPO de filtro ("Alto" representa Alto Padrão + Luxo juntos),
+  // não o padrão interno puro -- ver PADRAO_GRUPO_FILTRO_/ORDEM_GRUPOS_FILTRO_.
+  // Rótulo do botão é o nome curto do grupo ("Alto"), diferente do título do
+  // segmento (que continua "Alto Padrão" -- ver PADRAO_LABEL_MIX_).
+  const grupos = ['Todos', ...ORDEM_GRUPOS_FILTRO_];
+  bar.innerHTML = grupos.map(g => `<button class="filtro-chip ${g === _padraoAtivo ? 'on' : ''}" onclick="setFiltroPadrao_('${g}')">${g}</button>`).join('');
+}
+function setFiltroPadrao_(p) { _padraoAtivo = p; renderFiltroPadrao_(); renderBlocosSegmentos_(); }
+
+function renderBlocosSegmentos_() {
+  const cont = document.getElementById('blocosSegmentos');
+  const segmentosParaMostrar = _ordemSegmentosAtual.filter(seg => {
+    if (_padraoAtivo === 'Todos') return true;
+    const padraoInterno = padraoInternoDoSegmento_(seg);
+    return (PADRAO_GRUPO_FILTRO_[padraoInterno] || padraoInterno) === _padraoAtivo;
+  });
+  cont.innerHTML = segmentosParaMostrar.map(seg => {
+    const r = _resultadosPorSegmento[seg];
+    if (!r || !r.total) return '';
+    const covHtml = r.cobertura ? `<span class="cobertura-badge cobertura-${r.cobertura.nivel}">${r.cobertura.nivel === 'forte' ? '🟢' : r.cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${r.cobertura.nivel}</span>` : '';
+    const corpo = r.aviso
+      ? `<div class="vazio-segmento">${r.aviso}</div>`
+      : tabelaMixHtml_(r, true, seg);
+    return `<div class="segmento-block">
+      <div class="segmento-header">
+        <div>
+          <div class="segmento-titulo">${segmentoLabelDisplay_(seg)}</div>
+          <div class="segmento-sub">${r.total} empreendimento${r.total !== 1 ? 's' : ''} no segmento</div>
+        </div>
+        ${covHtml}
+        <div class="segmento-actions">
+          <button class="btn-mini" onclick="exportarCSV_('${seg.replace(/'/g,"\\'")}')">📥 Exportar CSV</button>
+          <button class="btn-mini" onclick="abrirModalExport_('${seg.replace(/'/g,"\\'")}')">🤖 Enviar para IA de Campanhas</button>
+          ${r.aviso ? '' : `<button class="btn-mini" onclick="publicarMixDoSegmento_('${seg.replace(/'/g,"\\'")}')">📤 Publicar mix</button>`}
+        </div>
+      </div>
+      ${corpo}
+    </div>`;
+  }).join('') || `<div class="vazio-segmento">Nenhum segmento com dados suficientes em ${situacaoAtivaLabel_()} ainda.</div>`;
+}
+
+// Tabela dos 7 papéis -- mesmo formato pros blocos por segmento e pro modo
+// cliente (?cliente=CTT-NNN), pra manter as duas visões idênticas.
+// clickable=true ativa linhas clicáveis que abrem o drawer de copy brief.
+function tabelaMixHtml_(r, clickable, seg) {
+  return `<div class="mapa-wrap"><table class="mapa-tabela"><thead><tr>
+      <th>Papel</th><th>Empreendimento</th><th>Construtora</th><th>Tração</th><th>Preço</th><th>Estoque</th><th>Situação</th><th>Tabela</th><th style="width:36px"></th>
+    </tr></thead><tbody>${ORDEM_PAPEIS_.map(papel => {
+      const item = r.papeis[papel];
+      if (!item) return `<tr><td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td><td colspan="8" style="color:var(--text3)">— não preenchido —</td></tr>`;
+      const onclk = seg
+        ? `abrirCopyBriefSeg_('${papel}','${seg.replace(/'/g,"\\'")}')`
+        : `abrirCopyBrief_('${papel}')`;
+      return `<tr class="papel-clickable" onclick="${onclk}" title="Gerar briefing de post para este produto">
+        <td><span class="papel-badge papel-${papel}">${PAPEL_LABEL_[papel]}</span></td>
+        <td><strong>${item.e.nomeEmpreendimento || '—'}</strong></td>
+        <td>${item.e.construtora || '—'}</td>
+        <td><span class="tracao-badge ${classeScoreTracao_(item.comp)}">${item.comp.toFixed(1)}</span></td>
+        <td>${fmtR$_(item.menorPreco)}</td>
+        <td>${item.e.estoque !== undefined && item.e.estoque !== null && item.e.estoque !== '' ? item.e.estoque : '—'}</td>
+        <td>${situacaoBadgeHtml_(item.e.status)}</td>
+        <td>${tabelaBadgeHtml_(item.e.statusTabela)}</td>
+        <td style="text-align:center;color:var(--text3);font-size:13px" title="Gerar briefing">✏️</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+function abrirCopyBriefSeg_(papel, seg) {
+  const r = _resultadosPorSegmento[seg];
+  if (!r || !r.papeis) return;
+  _mixAtualPapeis_ = r.papeis;
+  abrirCopyBrief_(papel);
+}
+
+// Publica o mix de 7 papéis deste segmento pro GAS ler depois em
+// selecionarIsca_ (motor do app-lancamentos.html, em construção). O GAS não
+// recalcula Score de Tração/Similaridade -- só lê este snapshot (7 IDs +
+// faixa de preço do segmento no momento da publicação) e aplica a regra de
+// motivação por cima. Cada publicação SUBSTITUI a anterior do mesmo
+// segmento -- não há histórico, é sempre "o mix vigente agora".
+async function publicarMixDoSegmento_(seg) {
+  const r = _resultadosPorSegmento[seg];
+  if (!r || !r.papeis) return;
+  const papeis = {};
+  ORDEM_PAPEIS_.forEach(papel => {
+    const item = r.papeis[papel];
+    if (item) papeis[papel] = item.e.idEmpreendimento;
+  });
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: new URLSearchParams({
+        dados: JSON.stringify({
+          acao: 'publicar_mix_segmento',
+          token: tokenSessao(),
+          segmentoId: seg,
+          padrao: padraoInternoDoSegmento_(seg),
+          situacao: _situacaoAtiva,
+          faixaPrecoMin: r.faixaPrecoMin,
+          faixaPrecoMax: r.faixaPrecoMax,
+          papeis,
+        }),
+      }),
+    });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json.ok) mostrarToast(`Mix de "${segmentoLabelDisplay_(seg)}" publicado.`);
+    else mostrarToast(json.erro || 'Erro ao publicar mix.', 'erro');
+  } catch (e) {
+    mostrarToast('Erro de conexão ao publicar mix.', 'erro');
+  }
+}
+
+// ── MODO CLIENTE (?cliente=CTT-NNN, aberto pelo botão "🎯 Estratégias" em
+// contatos.html) -- monta UM mix de 7 ofertas a partir do perfil do cliente
+// em vez dos blocos por segmento ─────────────────────────────────────────
+const _clienteIdParam = new URLSearchParams(window.location.search).get('cliente') || '';
+
+// "Situação do imóvel" do perfil (Contatos) → estágios de lançamento
+// compatíveis. "Usado" não tem equivalente em lançamentos (é ignorado aqui
+// -- revenda é outro fluxo).
+const SITUACAO_STATUS_CLIENTE_ = {
+  'Novo':      ['Pronto', 'Pronto novo', 'Entregue'],
+  'Na planta': ['Em planta', 'Em obras'],
+};
+
+// Padrão do perfil do cliente (chips de Contatos) → padrão de lançamento
+// (classificarPadraoPorM2Medio_). Chave normalizada sem acento/minúscula.
+const PADRAO_CLIENTE_LANC_ = {
+  'economico': 'Popular', 'medio padrao': 'Médio', 'alto padrao': 'Alto', 'luxo': 'Luxo',
+};
+function normClienteTxt_(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+async function carregarEstrategiaCliente_() {
+  const cont = document.getElementById('blocosSegmentos');
+  document.getElementById('filtroPadrao').style.display = 'none';
+  try {
+    const respC = await fetch(`${WEBHOOK_URL}?acao=buscar&q=${encodeURIComponent(_clienteIdParam)}&token=${encodeURIComponent(tokenSessao())}`);
+    const listaC = await respC.json();
+    if (trataNaoAutenticado(listaC)) return;
+    const cliente = Array.isArray(listaC)
+      ? (listaC.find(c => String(c.idCliente) === _clienteIdParam) || listaC[0])
+      : null;
+    if (!cliente) {
+      cont.innerHTML = `<div class="vazio-segmento">Cliente "${_clienteIdParam}" não encontrado. <a href="contatos.html" style="color:var(--accent)">← Voltar pra Contatos</a></div>`;
+      return;
+    }
+
+    document.getElementById('estrategiasSecTitle').textContent = `🎯 Estratégias para ${cliente.nome || _clienteIdParam}`;
+    document.getElementById('estrategiasSecSub').textContent =
+      'Mix de 7 ofertas de lançamento montado a partir do perfil deste cliente (situação do imóvel, padrão e preço limite do cadastro).';
+
+    const itens = await carregarItensScored_();
+    if (itens === null) return;
+
+    // 1º filtro: Situação do imóvel do perfil (Novo/Na planta). Sem opção
+    // marcada no cadastro, considera as duas (todo lançamento é uma ou
+    // outra) -- com aviso visível de que o perfil não especificou.
+    const situacoes = String(cliente.situacaoImovel || '').split(',').map(s => s.trim()).filter(s => SITUACAO_STATUS_CLIENTE_[s]);
+    const semOpcaoSituacao = situacoes.length === 0;
+    const statusPermitidos = new Set((semOpcaoSituacao ? Object.keys(SITUACAO_STATUS_CLIENTE_) : situacoes).flatMap(s => SITUACAO_STATUS_CLIENTE_[s]));
+
+    // 2º filtro: padrão do perfil (multi-select), mapeado pro padrão de
+    // lançamento. Sem padrão no cadastro, não filtra.
+    const padroesCliente = String(cliente.padrao || '').split(',').map(s => PADRAO_CLIENTE_LANC_[normClienteTxt_(s)]).filter(Boolean);
+
+    const compat = itens.filter(it =>
+      statusPermitidos.has(it.e.status) &&
+      (!padroesCliente.length || padroesCliente.includes(it.padrao))
+    );
+
+    // 3º filtro: preço limite do cadastro. Quem passa do limite não entra no
+    // mix principal, mas vira candidato natural de ÂNCORA SUPERIOR (produto
+    // acima da faixa, só pra ancoragem de preço).
+    const limite = parseInt(String(cliente.precoLimite || '').replace(/\D/g, '')) || 0;
+    const pool      = limite > 0 ? compat.filter(it => it.menorPreco > 0 && it.menorPreco <= limite) : compat;
+    const poolAcima = limite > 0 ? compat.filter(it => it.menorPreco > limite) : [];
+
+    // minimo = 1: no modo cliente, mesmo 1 único lançamento compatível deve
+    // aparecer (vira o Alvo Primário) -- a regra dos 5 é só do modo campanha.
+    const resultado = selecionarMixEstrategico_(pool, poolAcima, 1);
+    const r = { ...resultado, total: pool.length, cobertura: resultado.aviso ? null : calcularCoberturaMix_(resultado.papeis) };
+
+    const filtrosDesc = [
+      semOpcaoSituacao ? '⚠ perfil sem "Situação do imóvel" marcada — considerando Novo e Na planta' : `Situação: ${situacoes.join(' + ')}`,
+      padroesCliente.length ? `Padrão: ${padroesCliente.join(', ')}` : 'sem filtro de padrão',
+      limite > 0 ? `Preço até ${fmtR$_(limite)}` : 'sem preço limite',
+    ].join(' · ');
+
+    const covHtml = r.cobertura ? `<span class="cobertura-badge cobertura-${r.cobertura.nivel}">${r.cobertura.nivel === 'forte' ? '🟢' : r.cobertura.nivel === 'adequado' ? '🟡' : '🔴'} mix ${r.cobertura.nivel}</span>` : '';
+    const avisoParcial = (!r.aviso && r.total < 5)
+      ? `<div style="padding:8px 18px;font-size:12px;color:var(--amber);background:rgba(245,158,11,.08);border-bottom:1px solid var(--border)">⚠ Menos de 5 lançamentos compatíveis com o perfil — mix parcial (papéis sem produto ficam vazios).</div>`
+      : '';
+    const corpo = r.aviso
+      ? `<div class="vazio-segmento">Nenhum lançamento compatível com o perfil deste cliente no momento.</div>`
+      : avisoParcial + tabelaMixHtml_(r);
+
+    cont.innerHTML = `<div class="segmento-block">
+      <div class="segmento-header">
+        <div>
+          <div class="segmento-titulo">🎯 Ofertas para ${cliente.nome || '—'}</div>
+          <div class="segmento-sub">${filtrosDesc} · ${r.total} ${r.total !== 1 ? 'lançamentos compatíveis' : 'lançamento compatível'}</div>
+        </div>
+        ${covHtml}
+        <div class="segmento-actions">
+          <a class="btn-mini" href="contatos.html">← Voltar pra Contatos</a>
+        </div>
+      </div>
+      ${corpo}
+    </div>`;
+  } catch (e) {
+    cont.innerHTML = '<div class="vazio-segmento">Erro ao carregar. Verifique a conexão com o Apps Script.</div>';
+  }
+}
+
+// ── EXPORTAÇÃO CSV + PROMPT PRA IA DE CAMPANHAS ────────────────────────────
+const CSV_CAMPOS_ESTRATEGIA_ = [
+  'papel_no_mix', 'padrao_campanha', 'faixa_campanha', 'nome_empreendimento', 'construtora',
+  'tipo_imovel', 'tipo_empreendimento', 'bairro', 'cidade',
+  'metragem_min', 'metragem_max', 'preco_entrada', 'preco_m2_medio',
+  'situacao', 'prazo_entrega', 'total_unidades', 'unidades_vendidas', 'unidades_disponiveis', 'pct_vendido',
+  'nota_tracao', 'nota_similaridade', 'nota_vendedor', 'lazer', 'conceito',
+];
+function csvEscapar_(v) {
+  const s = (v === null || v === undefined) ? '' : String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function montarLinhasCsvSegmento_(seg) {
+  const r = _resultadosPorSegmento[seg];
+  if (!r || r.aviso) return [];
+  // padraoNome traduz o padrão interno pro rótulo bonito via PADRAO_LABEL_MIX_.
+  const padraoInterno = padraoInternoDoSegmento_(seg);
+  const faixaNome = seg.length > padraoInterno.length ? seg.slice(padraoInterno.length + 1) : 'Única';
+  const padraoNome = PADRAO_LABEL_MIX_[padraoInterno] || padraoInterno;
+  return ORDEM_PAPEIS_.filter(p => r.papeis[p]).map(papel => {
+    const item = r.papeis[papel];
+    const e = item.e;
+    const areas = (e.unidades || []).map(u => Number(u.areaUtil) || 0).filter(v => v > 0);
+    const precos = (e.unidades || []).map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+    const linha = {
+      papel_no_mix: papel, padrao_campanha: padraoNome, faixa_campanha: faixaNome,
+      nome_empreendimento: e.nomeEmpreendimento, construtora: e.construtora,
+      tipo_imovel: tipoImovelDominante_(e.unidades), tipo_empreendimento: e.tipoEmpreendimento,
+      bairro: e.bairro, cidade: e.cidade,
+      metragem_min: areas.length ? Math.min(...areas) : '', metragem_max: areas.length ? Math.max(...areas) : '',
+      preco_entrada: item.menorPreco, preco_m2_medio: precos.length && areas.length ? Math.round(precos[0] / (areas[0] || 1)) : '',
+      situacao: situacaoTexto_(e.status), prazo_entrega: e.previsaoEntrega,
+      total_unidades: e.totalUnidades, unidades_vendidas: (Number(e.totalUnidades) || 0) - (Number(e.estoque) || 0),
+      unidades_disponiveis: e.estoque, pct_vendido: calcularPercentualVendido(e.estoque, e.totalUnidades),
+      nota_tracao: item.comp.toFixed(1), nota_similaridade: item.simil, nota_vendedor: item.scoreVendedor,
+      lazer: e.lazer, conceito: e.conceito,
+    };
+    return CSV_CAMPOS_ESTRATEGIA_.map(c => csvEscapar_(linha[c])).join(',');
+  });
+}
+function montarCsvSegmento_(seg) {
+  const linhas = [CSV_CAMPOS_ESTRATEGIA_.join(','), ...montarLinhasCsvSegmento_(seg)];
+  return linhas.join('\r\n');
+}
+function exportarCSV_(seg) {
+  const linhas = montarLinhasCsvSegmento_(seg);
+  if (!linhas.length) { mostrarToast('Nenhum produto pra exportar neste segmento ainda.', 'erro'); return; }
+  const csv = String.fromCharCode(0xFEFF) + montarCsvSegmento_(seg);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `estrategia_${situacaoAtivaLabel_().replace(/\s+/g,'_')}_${segmentoLabelDisplay_(seg).replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast(`CSV do segmento "${segmentoLabelDisplay_(seg)}" baixado.`, 'ok');
+}
+
+function montarPromptEstrategia_(seg) {
+  const linhas = montarLinhasCsvSegmento_(seg);
+  return `Você é uma IA especialista em campanhas Google Ads para o mercado imobiliário brasileiro.
+
+Recebi um CSV com ${linhas.length} empreendimento(s) selecionados para uma campanha de tráfego pago no segmento "${segmentoLabelDisplay_(seg)}" (${situacaoAtivaLabel_()}).
+
+Cada linha representa um produto com seu PAPEL NO MIX estratégico:
+- ISCA: produto de entrada pra atrair clique (não precisa vender sozinho)
+- ANCORA_INF: produto básico pra criar contraste positivo com o Alvo
+- ALVO_1/2/3: produtos principais onde concentrar o esforço de conversão
+- ANCORA_SUP: produto acima da faixa, pra ancoragem de preço (faz o Alvo parecer acessível)
+- COMPLEMENTAR: alternativa de tipo de imóvel ou padrão diferente
+
+Com base nos dados do CSV, crie:
+1. Estratégia geral da campanha (objetivo, orçamento sugerido por produto conforme nota_tracao, CPL meta)
+2. Estrutura do Google Ads (campanhas, grupos de anúncio por produto)
+3. Anúncios por produto (mínimo 3 variações cada, headlines até 30 caracteres, descrições até 90 caracteres)
+4. Palavras-chave por grupo de anúncio (foco em intenção de compra, com negativas sugeridas)
+5. Especificação da landing page (ordem de apresentação dos produtos pelo papel no mix, CTAs por produto)
+6. Abordagem de conversão (como conduzir o lead do produto ISCA pro ALVO correspondente)
+
+Dados do CSV:
+${montarCsvSegmento_(seg)}`;
+}
+
+function abrirModalExport_(seg) {
+  const linhas = montarLinhasCsvSegmento_(seg);
+  if (!linhas.length) { mostrarToast('Nenhum produto pra exportar neste segmento ainda.', 'erro'); return; }
+  document.getElementById('modalExportTitulo').textContent = `Exportar Estratégia — ${segmentoLabelDisplay_(seg)} (${situacaoAtivaLabel_()})`;
+  document.getElementById('modalExportTexto').value = montarPromptEstrategia_(seg);
+  document.getElementById('modalExport').classList.add('show');
+}
+function fecharModalExport_() { document.getElementById('modalExport').classList.remove('show'); }
+function copiarModalExport_() {
+  const ta = document.getElementById('modalExportTexto');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(() => mostrarToast('Copiado! Cole numa conversa com a IA de campanhas.', 'ok'))
+    .catch(() => mostrarToast('Não consegui copiar automaticamente — selecione e copie manualmente.', 'erro'));
+}
+
+// Despacho por modo: com ?cliente=CTT-NNN na URL, a página vira o mix
+// personalizado de um cliente; sem, os blocos por segmento de sempre.
+function carregarPagina_() {
+  if (_clienteIdParam) carregarEstrategiaCliente_();
+  else carregarEstrategias();
+}
+
+// ── COPY BRIEF DRAWER ──────────────────────────────────────────────────────
+let _mixAtualPapeis_ = {};
+let _gatilhosAtual_ = [];
+let _roteiroPreAtendimentoAtual_ = [];
+
+function copiarEPreview_(tipo, i) {
+  const g = _gatilhosAtual_[i];
+  if (!g) return;
+  let texto, btnId;
+  if (tipo === 'v')        { texto = `${g.linha.toUpperCase()}\n${g.titulo}\n\n${g.vertical}`;      btnId = `btnV${i}`; }
+  else if (tipo === 'fi')  { texto = `${g.linha.toUpperCase()}\n${g.titulo}\n\n${g.feedInstrucoes}`; btnId = `btnFI${i}`; }
+  else                     { texto = g.legenda;                                                       btnId = `btnFL${i}`; }
+  const prev = document.getElementById('briefPreviewBody');
+  if (prev) prev.textContent = texto;
+  navigator.clipboard.writeText(texto).then(() => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.innerHTML = '✓';
+    btn.classList.add('copiado');
+    setTimeout(() => { btn.innerHTML = '📋'; btn.classList.remove('copiado'); }, 1800);
+  });
+}
+
+// Cada momento do roteiro de pré-atendimento é UM script só (não um trio
+// Vertical/Feed/Legenda como os gatilhos acima) -- por isso um botão de
+// copiar só, em vez de reaproveitar copiarEPreview_.
+function copiarRoteiroPreAtendimento_(i) {
+  const r = _roteiroPreAtendimentoAtual_[i];
+  if (!r) return;
+  const prev = document.getElementById('briefPreviewBody');
+  if (prev) prev.textContent = r.script;
+  navigator.clipboard.writeText(r.script).then(() => {
+    const btn = document.getElementById(`btnRoteiro${i}`);
+    if (!btn) return;
+    btn.innerHTML = '✓';
+    btn.classList.add('copiado');
+    setTimeout(() => { btn.innerHTML = '📋'; btn.classList.remove('copiado'); }, 1800);
+  });
+}
+
+function gerarFeedBriefs_(item, papel, ctx) {
+  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId } = ctx;
+  const estoqueStr = estoque !== null ? `${estoque} unidade${estoque !== 1 ? 's' : ''} disponíve${estoque !== 1 ? 'is' : 'l'}` : 'estoque limitado';
+  const pctStr = pctVendido !== null ? `${pctVendido}% já vendido` : '';
+  const areaInfo = areaStr ? ` · ${areaStr}` : '';
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(situacao);
+  const entregaInfo = prontoParaMorar ? 'Pronto para Morar' : (entrega ? `Entrega: ${entrega}` : '');
+  const isAlto = padrao === 'Alto Padrão' || padrao === 'Luxo';
+
+  // Hashtags contextuais
+  const cidadeTag = '#' + (localizacao || '').split(',')[0].trim()
+    .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const padraoTag = '#' + (padrao || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const baseHash = `${cidadeTag} ${padraoTag} #lancamentoimobiliario #imoveis #corretorimóveis #imoveisparainvestir`;
+
+  const idBloco = empId
+    ? `\n\nID DO EMPREENDIMENTO — obrigatório na arte\nCódigo: ${empId}\n• Canto inferior direito, fonte pequena, cor neutra`
+    : '';
+
+  return [
+    {
+      linha: 'Dados & Urgência',
+      titulo: 'Escassez real — quem hesita perde',
+      instrucoes: `ABORDAGEM — FEED 3×4 (1080 × 1350 px)
+Versão Feed: mais espaço que Stories, use uma hierarquia visual clara em 3 blocos (topo / meio / rodapé). Precisa funcionar como thumbnail no grid — a leitura rápida do número grande deve impactar já na miniatura.
+
+COMPOSIÇÃO VISUAL
+• Topo: número destaque grande — "${pctStr ? pctStr : estoqueStr}"
+• Meio: foto de ambiente interno OU fachada desfocada (sem identificar)
+• Rodapé: dados do produto em linha compacta + CTA
+
+TEXTO NA ARTE
+Linha destaque: "${pctStr ? pctStr + ' já vendido.' : 'Estoque se esgotando.'}"
+Subtítulo: "${estoqueStr}${entregaInfo ? ' · ' + entregaInfo : ''}"
+Dados: "${localizacao} · ${padrao} · A partir de ${preco}${areaInfo}"
+CTA: "Chama agora antes que acabe 📲"
+
+PALETA: fundo escuro (preto/cinza grafite) + texto branco + acento vermelho ou laranja
+TIPOGRAFIA: bold pesado no número, regular nos dados
+Formato: 1080×1350 px (4:5 feed portrait)${idBloco}`,
+      legenda: `⏳ ${pctStr ? pctStr + ' em poucas semanas.' : 'O estoque está diminuindo.'}
+
+${estoqueStr}${entregaInfo ? ' · ' + entregaInfo + '.' : '.'}
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo}
+💰 A partir de ${preco}
+
+Quem hesita fica de fora. Se você já está no timing certo de comprar, me chama antes que acabe.
+
+👇 Me manda uma mensagem agora.
+
+${baseHash} #urgencia #oportunidade #investimento`,
+    },
+    {
+      linha: 'Perfil & Identificação',
+      titulo: 'Faz o lead certo se reconhecer sozinho',
+      instrucoes: `ABORDAGEM — FEED 3×4 (1080 × 1350 px)
+Versão Feed: o copy é o protagonista. Menos imagem, mais texto — post estilo "carta aberta" ou "post de texto com fundo". Ideal para salvar e compartilhar.
+
+COMPOSIÇÃO VISUAL
+• Fundo: cor sólida ou gradiente suave (sem foto de prédio)
+• Texto centralizado em tipografia média, confiante
+• Foto de apoio (opcional): pessoa/casal em momento de conquista — sem identificar o empreendimento
+
+TEXTO NA ARTE
+Linha destaque: "${isAlto ? 'Você já sabe o que quer. Falta o endereço certo.' : 'Tá na hora de parar de pagar aluguel.'}"
+Subtítulo: "${tipoImovel.charAt(0).toUpperCase() + tipoImovel.slice(1)} em ${localizacao}${entregaInfo ? ' · ' + entregaInfo : ''}"
+Dados: "Padrão ${padrao}${areaInfo} · A partir de ${preco}"
+CTA: "Esse pode ser o seu. Me chama 💬"
+
+PALETA: neutros elegantes — cinza chumbo, branco, dourado ou verde-água
+TIPOGRAFIA: médio, peso regular/semibold — tom de conversa direta
+Formato: 1080×1350 px (4:5 feed portrait)${idBloco}`,
+      legenda: `Esse post é pra você que já sabe o que quer, mas ainda não encontrou o empreendimento certo.
+
+${isAlto ? 'Um imóvel que combina com quem você é. No endereço que você merece.' : 'O lugar certo pra dar esse passo importante.'}
+
+📍 ${localizacao}
+🏠 Padrão ${padrao}${areaInfo} · A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}
+Não vou revelar o nome aqui — mas se o perfil faz sentido pra você, me chama no direct e eu te conto tudo 😏
+
+👇 Manda uma mensagem.
+
+${baseHash} #imovelcerto #sonhoproprio #momentodacompra`,
+    },
+    {
+      linha: 'Dados & Oportunidade',
+      titulo: 'Timing de mercado — a janela está aberta',
+      instrucoes: `ABORDAGEM — FEED 3×4 (1080 × 1350 px)
+Versão Feed: estilo editorial / infográfico. Dados bem organizados em blocos visuais. Tom executivo — fala com investidor ou comprador estratégico. Ótimo para salvar e compartilhar.
+
+COMPOSIÇÃO VISUAL
+• Topo: headline de oportunidade
+• Meio: bloco de dados organizados (pode usar ícones, tabela simples ou lista)
+• Rodapé: CTA direto
+
+TEXTO NA ARTE
+Linha destaque: "${prontoParaMorar ? 'Pronto. Sem risco de obra. Sem espera.' : 'Quem entrou antes já saiu na frente.'}"
+Subtítulo: "${localizacao} · ${padrao}${areaInfo} · A partir de ${preco}"
+Dado complementar: "${pctStr ? pctStr + ' já comprometido.' : 'Valorização em andamento.'}"
+${entregaInfo ? 'Situação: "' + entregaInfo + '"' : ''}
+CTA: "Quer entender o potencial? Me chama 📊"
+
+PALETA: azul marinho + branco + dourado (tom financeiro/executivo)
+TIPOGRAFIA: clean, moderna — hierarquia clara entre título e dados
+Formato: 1080×1350 px (4:5 feed portrait)${idBloco}`,
+      legenda: `Sabe qual é o custo real de esperar no mercado imobiliário?
+
+${pctStr ? pctStr + ' já comprometido. O que resta é a oportunidade que ainda sobrou.' : 'Cada mês que passa é valorização que sai do seu bolso.'}
+
+📍 ${localizacao}
+🏠 ${padrao}${areaInfo} · A partir de ${preco}
+${entregaInfo ? '🗓 ' + entregaInfo + '\n' : ''}
+Quem entrou cedo saiu na frente. Ainda dá tempo — mas o timing é agora.
+
+📊 Quer entender o potencial? Me chama.
+
+${baseHash} #investimento #valorizacao #mercadoimobiliario #timing`,
+    },
+  ];
+}
+
+function gerarGatilhos_(item, papel, ctx) {
+  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId } = ctx;
+  const estoqueStr = estoque !== null ? `${estoque} unidade${estoque !== 1 ? 's' : ''} disponíve${estoque !== 1 ? 'is' : 'l'}` : 'estoque limitado';
+  const pctStr = pctVendido !== null ? `${pctVendido}% já vendido` : '';
+  const areaInfo = areaStr ? ` · ${areaStr}` : '';
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(situacao);
+  const entregaInfo = prontoParaMorar ? 'Pronto para Morar' : (entrega ? `Entrega: ${entrega}` : '');
+  const isAlto = padrao === 'Alto Padrão' || padrao === 'Luxo';
+  const tipoM = tipoImovel.charAt(0).toUpperCase() + tipoImovel.slice(1);
+  const cidadeTag = '#' + (localizacao || '').split(',')[0].trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const padraoTag = '#' + (padrao || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const baseHash = `${cidadeTag} ${padraoTag} #lancamentoimobiliario #imoveis #corretorimoveis #imoveisparainvestir`;
+  const idBloco = empId ? `\n\nID NA ARTE — obrigatório\nCódigo: ${empId}\n• Canto inferior direito, fonte pequena, cor neutra` : '';
+
+  const isLuxo   = padrao === 'Luxo';
+  const isMedio  = !isAlto && (padrao === 'Médio' || padrao === 'Medio' || padrao === 'médio');
+  // isPopular = tudo que não é Alto Padrão, Luxo ou Médio
+
+  const tom = {
+    ctaConsultivo: isLuxo ? 'Se quiser aprofundar, meu direct está aberto — sem compromisso.' : isAlto ? 'Quer entender melhor? Me chama, sem compromisso 📩' : isMedio ? 'Quer saber mais sobre esse tipo de decisão? Me chama 📩' : 'Quer entender melhor antes de decidir? Me chama 📩',
+    aberturEducativa: isLuxo ? 'Uma leitura de mercado, não uma oferta.'
+                    : isAlto ? 'Hoje eu quero te mostrar como analisar isso — não vender isso.'
+                    : isMedio ? 'Hoje é sobre te ajudar a entender, não sobre vender.'
+                    : 'Hoje é aula, não venda.',
+    paletaEducativa: isLuxo ? 'PALETA: branco + grafite + linhas finas — estética editorial, revista de arquitetura.'
+                    : isAlto ? 'PALETA: branco + azul petróleo + grafite (editorial, informativo).'
+                    : isMedio ? 'PALETA: branco + azul + cinza claro (didático, limpo).'
+                    : 'PALETA: branco + verde-água + cinza (didático, acessível).',
+    tipo:           isLuxo ? 'TIPOGRAFIA: serifada elegante (Garamond, Playfair), peso leve/regular. O Luxo não grita — seduz.'
+                  : isAlto ? 'TIPOGRAFIA: sans-serif clean, peso semibold — hierarquia clara, tom premium.'
+                  : isMedio ? 'TIPOGRAFIA: sans-serif moderna, bold — confiante, direta, sem enfeites.'
+                  : 'TIPOGRAFIA: ultra-bold, grande, legível à distância — impacto visual imediato.',
+  };
+
+  // Uma única linha editorial, testada como sequência: "Guia de Decisão" em 3
+  // posts de Feed (um critério por post, cada um usando este empreendimento
+  // como exemplo real) + 1 Storie de conexão publicado depois dos 3, pra
+  // levar quem viu o Stories a conferir a série completa no feed (e seguir
+  // o perfil). Pedido explícito do usuário: testar uma linha só, tirar as
+  // demais abordagens que existiam antes (gatilhos de urgência/exclusividade
+  // e as 3 variações educativas soltas).
+  return [
+    {
+      linha: 'Guia de Decisão — Post 1 de 3',
+      titulo: 'Critério 1: qual o ritmo de vendas',
+      vertical: `Este post é só de Feed — não tem versão isolada de Stories. A conexão com Stories acontece depois que os 3 posts estiverem publicados: veja o eixo "Storie de Conexão — Guia de Decisão" abaixo.`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px) · POST 1 DE 3
+Primeiro post de uma sequência educativa de 3 partes ("Guia de Decisão: 3 perguntas antes de comprar na planta"). Este post aborda só o CRITÉRIO 1 — ritmo de vendas — usando este empreendimento como exemplo real. Tom consultivo, sem venda direta. Publicar como o primeiro de 3, com aviso de continuação.
+
+COMPOSIÇÃO VISUAL
+• Topo: numeração "1 de 3" bem visível (elemento de série)
+• Meio: a pergunta-guia + o dado real deste empreendimento
+• Rodapé: aviso de continuação ("Parte 2 amanhã")
+
+TEXTO NA ARTE
+Linha destaque: "3 perguntas antes de comprar na planta — Parte 1 de 3"
+Pergunta: "Qual o ritmo de vendas até agora?"
+Dado real: "${pctStr || 'Estoque: ' + estoqueStr}"
+Contexto: "${tipoM} em ${localizacao}"
+Rodapé: "Parte 2: quando entrega? →"
+
+${tom.paletaEducativa}
+${tom.tipo}
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `${tom.aberturEducativa}
+
+Toda vez que um cliente me pergunta se vale a pena comprar na planta, eu volto pras mesmas 3 perguntas. Essa semana vou responder cada uma, usando este lançamento de exemplo real. Hoje: ritmo de vendas.
+
+📍 ${localizacao}
+🏠 ${tipoM} · Padrão ${padrao}${areaInfo}
+📊 ${pctStr || 'Estoque disponível: ' + estoqueStr}
+
+Ritmo de vendas alto costuma indicar que o mercado já validou o produto — preço, localização e construtora. Ritmo baixo não é necessariamente ruim, mas merece mais atenção nos outros dois critérios.
+
+Amanhã: critério 2 — o prazo de entrega. Segue aqui pra não perder.
+
+${baseHash} #guiadocomprador #compraraplanta #consultoriaimobiliaria`,
+    },
+    {
+      linha: 'Guia de Decisão — Post 2 de 3',
+      titulo: 'Critério 2: o prazo de entrega faz sentido',
+      vertical: `Este post é só de Feed — não tem versão isolada de Stories. A conexão com Stories acontece depois que os 3 posts estiverem publicados: veja o eixo "Storie de Conexão — Guia de Decisão" abaixo.`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px) · POST 2 DE 3
+Segundo post da sequência. Aborda só o CRITÉRIO 2 — prazo de entrega — usando este empreendimento como exemplo real. Mantém a identidade visual do Post 1 pra reforçar que é uma série (mesma paleta, mesmo layout — muda só o número e o conteúdo).
+
+COMPOSIÇÃO VISUAL
+• Topo: numeração "2 de 3"
+• Meio: a pergunta-guia + o dado real deste empreendimento
+• Rodapé: aviso de continuação
+
+TEXTO NA ARTE
+Linha destaque: "3 perguntas antes de comprar na planta — Parte 2 de 3"
+Pergunta: "O prazo de entrega faz sentido pro seu momento?"
+Dado real: "${entregaInfo || 'Prazo a confirmar com a construtora'}"
+Contexto: "${tipoM} em ${localizacao}"
+Rodapé: "Parte 3: o preço bate com a região? →"
+
+${tom.paletaEducativa}
+${tom.tipo}
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `Segunda pergunta da nossa série de 3 (se perdeu a primeira, tá salva aqui no feed): o prazo de entrega faz sentido pro seu momento?
+
+📍 ${localizacao}
+🏠 ${tipoM} · Padrão ${padrao}${areaInfo}
+🗓 ${entregaInfo || 'Prazo a confirmar com a construtora'}
+
+Prazo curto demais pode significar pressão de obra; prazo longo demais exige mais planejamento financeiro seu. O prazo certo é o que combina com o SEU momento — não o do mercado.
+
+Amanhã: última pergunta — o preço bate com a região?
+
+${tom.ctaConsultivo}
+
+${baseHash} #guiadocomprador #compraraplanta #consultoriaimobiliaria`,
+    },
+    {
+      linha: 'Guia de Decisão — Post 3 de 3',
+      titulo: 'Critério 3: o preço bate com a região',
+      vertical: `Este post é só de Feed — não tem versão isolada de Stories. A conexão com Stories acontece depois que os 3 posts estiverem publicados: veja o eixo "Storie de Conexão — Guia de Decisão" abaixo.`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px) · POST 3 DE 3
+Terceiro e último post da sequência. Fecha o guia com o CRITÉRIO 3 — preço x região — e uma conclusão que amarra os 3 critérios. Mantém a mesma identidade visual dos posts 1 e 2.
+
+COMPOSIÇÃO VISUAL
+• Topo: numeração "3 de 3" + selo de "guia completo"
+• Meio: a pergunta-guia + o dado real deste empreendimento
+• Rodapé: CTA consultivo (fecha a série com um convite a conversar)
+
+TEXTO NA ARTE
+Linha destaque: "3 perguntas antes de comprar na planta — Parte 3 de 3"
+Pergunta: "O preço bate com a região?"
+Dado real: "A partir de ${preco}${areaInfo} em ${localizacao}"
+CTA: "${tom.ctaConsultivo}"
+
+${tom.paletaEducativa}
+${tom.tipo}
+Formato: 1080×1350 px${idBloco}`,
+      legenda: `Terceira e última pergunta da nossa série: o preço bate com a região?
+
+📍 ${localizacao}
+🏠 ${tipoM} · Padrão ${padrao}${areaInfo}
+💰 A partir de ${preco}
+
+Comparar preço sem contexto de região é o erro mais comum que eu vejo. O número sozinho não diz nada — o que importa é o preço dentro do contexto certo (localização, padrão, estágio da obra).
+
+Guia completo: ritmo de vendas, prazo de entrega e preço x região. Essas 3 perguntas valem pra qualquer lançamento que você for avaliar — não só este.
+
+${tom.ctaConsultivo}
+
+${baseHash} #guiadocomprador #compraraplanta #consultoriaimobiliaria`,
+    },
+    {
+      linha: 'Storie de Conexão — Guia de Decisão',
+      titulo: 'Leva quem vê o Stories pra conferir a série no feed',
+      vertical: `ABORDAGEM — STORIES (conecta com a sequência de 3 posts do Feed)
+Este Stories não é standalone — existe pra dar tráfego pro conjunto de 3 posts educativos já publicados no feed ("Guia de Decisão"). A novidade aqui é anunciar que o guia está completo, convidando a pessoa a visitar o perfil — e seguir, se ainda não segue — pra ver a série. Tom consultivo, sem urgência de venda.
+
+TEXTO PARA A ARTE
+Linha principal: "Publiquei um guia de 3 perguntas antes de comprar na planta"
+Subtítulo: "Usando um lançamento real de exemplo: ${tipoM} em ${localizacao}"
+Complemento: "Ritmo de vendas, prazo de entrega e preço x região"
+CTA: "Arrasta pra ver os 3 posts completos no feed ⬆️"
+
+DIREÇÃO VISUAL
+• Aponta visualmente pro feed — seta ou ícone de "arrastar pra cima"
+• Menciona que os 3 posts já estão salvos no feed
+• ${tom.paletaEducativa}
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`,
+      feedInstrucoes: `Este eixo é só de Stories — não gera post de Feed próprio. Ele existe pra dar tráfego pra sequência "Guia de Decisão" (Post 1, 2 e 3 de 3) já publicada no feed. Use o botão "Vertical" acima pra copiar o brief de Stories.`,
+      legenda: `Este eixo é só de Stories — não tem legenda de Feed própria. A legenda de cada post da série está nos 3 eixos "Guia de Decisão — Post X de 3" acima.`,
+    },
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SCRIPTS DE WHATSAPP — pedido do usuário: complementar o interesse gerado
+// pelo "Guia de Decisão" (acima) quando ele já virou procura de clientes
+// curiosos no direct/WhatsApp. Ao contrário dos gatilhos de Instagram, aqui
+// o nome/endereço do empreendimento PODEM aparecer -- é mensagem direta 1:1
+// pra quem já demonstrou interesse, não anúncio público (a "regra de ouro"
+// de nunca revelar o nome vale pro conteúdo de rede social, não pra
+// conversa privada com quem já entrou em contato).
+// ═══════════════════════════════════════════════════════════════════════
+
+// A tipologia mais barata é a mais natural pra puxar um flyer de oferta --
+// é a mesma que já vira "a partir de" no resto do mix, então os dados
+// batem com o que o resto da estratégia já mostra pro corretor.
+function unidadeReferencia_(item) {
+  const precoDe = u => Number(u.precoMin) || Number(u.precoMedio) || Number(u.preco) || 0;
+  const unidades = (item.e.unidades || []).filter(u => precoDe(u) > 0);
+  if (!unidades.length) return null;
+  return [...unidades].sort((a, b) => precoDe(a) - precoDe(b))[0];
+}
+
+function emojiParaTipo_(tipo) {
+  const t = (tipo || '').toLowerCase();
+  if (t.includes('casa')) return '🏡';
+  if (t.includes('terreno') || t.includes('lote')) return '🏞️';
+  if (t.includes('apartamento')) return '🏢';
+  return '🏠';
+}
+
+// Dicionário simples de emoji por palavra-chave de amenidade (lazer do
+// empreendimento) -- "usar os dados de forma inteligente" em vez de um
+// bullet genérico igual pra tudo. Cai num check ✅ neutro se não reconhecer
+// a palavra.
+function emojiParaAmenidade_(nome) {
+  const n = (nome || '').toLowerCase();
+  if (n.includes('piscina')) return '🏊';
+  if (n.includes('academia') || n.includes('fitness')) return '💪';
+  if (n.includes('churrasqueira') || n.includes('gourmet')) return '🍖';
+  if (n.includes('playground') || n.includes('brinquedoteca')) return '🎠';
+  if (n.includes('festa')) return '🎉';
+  if (n.includes('quadra') || n.includes('esport')) return '⚽';
+  if (n.includes('pet')) return '🐾';
+  if (n.includes('coworking') || n.includes('escritório')) return '💻';
+  if (n.includes('sauna') || n.includes('spa')) return '🧖';
+  if (n.includes('portaria') || n.includes('segurança')) return '🛡️';
+  if (n.includes('elevador')) return '🛗';
+  return '✅';
+}
+
+// Monta o texto completo do flyer de oferta (formato "anúncio de WhatsApp",
+// igual ao exemplo que o usuário mandou) usando o máximo de dado real
+// cadastrado: unidade de referência (quartos/suítes/vagas/área), lazer do
+// empreendimento, condições de pagamento (FGTS/financiamento). Nunca
+// inventa um dado que não existe na base -- cada linha só aparece se o
+// campo correspondente estiver preenchido.
+function montarScriptOfertaWhatsapp_(item, ctx) {
+  const e = item.e;
+  const u = unidadeReferencia_(item) || {};
+  const tipo = u.tipo || ctx.tipoImovel || 'Imóvel';
+  const emojiTipo = emojiParaTipo_(tipo);
+  const cidade = e.cidade || ctx.localizacao;
+  const nome = e.nomeEmpreendimento || 'Empreendimento';
+
+  const quartos   = Number(u.quartos) || 0;
+  const suites    = Number(u.suites) || 0;
+  const vagas     = Number(u.vagas) || 0;
+  const areaUtil  = Number(u.areaUtil) || 0;
+  const areaTerr  = Number(u.areaTerr) || 0;
+
+  const lazerList = String(e.lazer || '').split(',').map(s => s.trim()).filter(Boolean);
+  const conceito  = String(e.conceito || '').trim();
+
+  const fgtsOk          = String(u.fgts || '').trim() === 'Sim';
+  const financiamentoOk = !!(u.avaliacaoBanco || u.planoLongo || u.parcelasEntrega);
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(ctx.situacao);
+
+  const linhas = [];
+  linhas.push(`${emojiTipo} ${tipo} à Venda – ${nome} | ${cidade}`);
+  linhas.push('');
+  linhas.push(`💰 A partir de ${ctx.preco}`);
+  linhas.push('');
+  if (areaUtil > 0) linhas.push(`📐 ${areaUtil} m² de área útil`);
+  if (areaTerr > 0) linhas.push(`🌳 Terreno com ${areaTerr} m²`);
+  if (quartos > 0)  linhas.push(`🛏️ ${quartos} quarto${quartos > 1 ? 's' : ''}${suites > 0 ? ` (${suites} suíte${suites > 1 ? 's' : ''})` : ''}`);
+  if (vagas > 0)    linhas.push(`🚗 Garagem para ${vagas} carro${vagas > 1 ? 's' : ''}`);
+  lazerList.forEach(l => linhas.push(`${emojiParaAmenidade_(l)} ${l}`));
+  if (conceito) linhas.push(`✨ ${conceito}`);
+  if (!prontoParaMorar && ctx.entrega) linhas.push(`🗓️ Previsão de entrega: ${ctx.entrega}`);
+  if (fgtsOk || financiamentoOk) {
+    linhas.push('');
+    const partes = [financiamentoOk && 'financiamento', fgtsOk && 'utilização do FGTS'].filter(Boolean);
+    linhas.push(`💳 Aceita ${partes.join(' e ')}.`);
+  }
+  return linhas.join('\n');
+}
+
+// Vira 1 linha na MESMA tabela de gatilhos (pedido explícito do usuário:
+// "criar linhas na tabela") -- reaproveita o formato linha/titulo/vertical/
+// feedInstrucoes/legenda só pra caber no render existente sem precisar de
+// UI nova; vertical/feedInstrucoes viram notas-ponteiro (mesmo padrão já
+// usado no eixo de Stories do Guia de Decisão), o script de verdade fica
+// em "legenda" (o botão que já copia texto pronto pra colar).
+function gerarScriptsWhatsapp_(item, ctx) {
+  return [{
+    linha: 'Script de Oferta — WhatsApp',
+    titulo: 'Mensagem pronta pra enviar a quem já demonstrou interesse',
+    vertical: 'Este script é só pra WhatsApp — não tem versão de Stories. Use o botão da coluna "Feed legenda" (📋) pra copiar o texto completo.',
+    feedInstrucoes: 'Este script é só pra WhatsApp — não tem instrução de arte de Feed. Use o botão da coluna "Feed legenda" (📋) pra copiar o texto completo.',
+    legenda: montarScriptOfertaWhatsapp_(item, ctx),
+  }];
+}
+
+// Roteiro de 3 mensagens SEQUENCIAIS de pré-atendimento via WhatsApp --
+// pedido explícito do usuário: complementa o interesse que o "Guia de
+// Decisão" (posts/stories) já despertou, quando esse interesse vira
+// contato direto. Cada momento entrega um pouco mais de informação real,
+// mas o objetivo dos 3 juntos é sempre o mesmo: conduzir pra um convite de
+// visita presencial ao decorado -- a experiência que só se sente ao vivo,
+// não numa foto ou num texto.
+function gerarRoteiroPreAtendimento_(item, ctx) {
+  const e = item.e;
+  const u = unidadeReferencia_(item) || {};
+  const nome = e.nomeEmpreendimento || 'esse empreendimento';
+  const cidade = e.cidade || ctx.localizacao;
+  const areaUtil = Number(u.areaUtil) || 0;
+  const quartos = Number(u.quartos) || 0;
+
+  return [
+    {
+      momento: 'Momento 1 — Primeiro contato',
+      objetivo: 'Reconhece o interesse, confirma disponibilidade, faz 1 pergunta qualificadora',
+      script: `Oi! Tudo bem? 😊
+
+Vi que você se interessou pelo conteúdo que postei sobre lançamentos aqui em ${cidade} — que bom que chegou até você!
+
+Tenho algumas opções disponíveis agora que podem fazer sentido pro seu momento. Só pra eu te indicar certo: você tá procurando mais pra morar ou pra investir?`,
+    },
+    {
+      momento: 'Momento 2 — Aquecendo o interesse',
+      objetivo: 'Compartilha alguns dados reais (sem entregar tudo), gera vontade de ver ao vivo',
+      script: `Boa! Baseado nisso, separei uma opção que acho que combina bastante com você.
+
+📍 Região: ${cidade}
+💰 A partir de ${ctx.preco}
+${areaUtil ? `📐 ${areaUtil} m² de área útil\n` : ''}${quartos ? `🛏️ ${quartos} quarto${quartos > 1 ? 's' : ''}\n` : ''}
+Só que, sendo bem sincero, foto e vídeo não fazem jus — esse tipo de imóvel a gente sente de verdade é entrando no decorado. Tem coisas (pé direito, acabamento, vista) que só se entende quando pisa lá dentro.`,
+    },
+    {
+      momento: 'Momento 3 — Convite pro decorado',
+      objetivo: 'Convite direto, sugere agendamento, fecha a visita presencial',
+      script: `Que tal a gente marcar uma visita rapidinha no decorado do ${nome}? Sem compromisso nenhum — é só pra você ver de perto e sentir o espaço.
+
+Consigo te encaixar essa semana. Prefere um horário mais no começo ou no final do dia? Aí já reservo certinho pra você. 🗝️`,
+    },
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RELATÓRIO DE CAMPANHA — última linha da tabela, pedido explícito do
+// usuário: um documento único (briefing) pra entregar a OUTRA IA (a "IA
+// Editora"), consolidando tudo que esse projeto já sabe fazer sobre este
+// empreendimento -- dados reais + estratégia editorial + instruções de
+// design + copys + scripts de WhatsApp -- num texto só, standalone (não
+// depende de abrir as outras linhas da tabela pra fazer sentido).
+// ═══════════════════════════════════════════════════════════════════════
+
+// Lista cada tipologia REAL distinta (dedup por quartos/suítes/vagas/área)
+// com preço -- pro fact-sheet do relatório de campanha.
+function listaTipologiasTexto_(item) {
+  const vistos = new Set();
+  const linhas = [];
+  (item.e.unidades || []).forEach(u => {
+    const preco = Number(u.precoMin) || Number(u.precoMedio) || Number(u.preco) || 0;
+    if (preco <= 0) return;
+    const chave = `${u.tipo}|${u.quartos}|${u.suites}|${u.vagas}|${u.areaUtil}`;
+    if (vistos.has(chave)) return;
+    vistos.add(chave);
+    const partes = [];
+    if (u.tipo) partes.push(u.tipo);
+    if (Number(u.areaUtil) > 0) partes.push(`${u.areaUtil}m²`);
+    if (Number(u.quartos) > 0) partes.push(`${u.quartos}q${Number(u.suites) > 0 ? ` (${u.suites} suíte${u.suites > 1 ? 's' : ''})` : ''}`);
+    if (Number(u.vagas) > 0) partes.push(`${u.vagas} vaga${u.vagas > 1 ? 's' : ''}`);
+    linhas.push(`• ${partes.join(' · ')} — ${fmtR$_(preco)}`);
+  });
+  return linhas.join('\n') || '• (tipologias não detalhadas na base)';
+}
+
+// Resume as condições de pagamento cadastradas (campos livres preenchidos
+// pelo corretor no cadastro do lançamento) -- só entra o que existe.
+function condicoesPagamentoTexto_(item) {
+  const u = unidadeReferencia_(item) || {};
+  const partes = [];
+  if (String(u.fgts || '').trim() === 'Sim') partes.push('Aceita FGTS');
+  if (u.avaliacaoBanco) partes.push(`Financiamento: ${u.avaliacaoBanco}`);
+  if (u.entrada) partes.push(`Entrada: ${u.entrada}`);
+  if (u.parcelasObra) partes.push(`Parcelas na obra: ${u.parcelasObra}`);
+  if (u.parcelasEntrega) partes.push(`Parcelas na entrega: ${u.parcelasEntrega}`);
+  if (u.planoLongo) partes.push(u.planoLongo);
+  return partes.join(' · ');
+}
+
+// IMPORTANTE (correção pedida pelo usuário): este relatório NUNCA entrega
+// as 4 tarefas ele mesmo (nada de copy pronta, script de WhatsApp pronto ou
+// paleta específica aqui) — ele só INSTRUI a IA Editora sobre quais são as
+// 4 tarefas dela, e entrega os dados reais que ela precisa pra executar.
+// Quem produz a estratégia/design/copys/scripts é a IA Editora, não esta
+// função. `iconeUnico: true` sinaliza pro render que esta linha usa 1 botão
+// de copiar só (não o trio Vertical/Feed instrução/Feed legenda).
+function gerarRelatorioCampanhaCompleto_(item, ctx) {
+  const e = item.e;
+  const nome = e.nomeEmpreendimento || 'Empreendimento';
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(ctx.situacao);
+  const pctStr = (ctx.pctVendido !== null && ctx.pctVendido !== undefined) ? `${ctx.pctVendido}% já vendido` : '';
+  const estoqueStr = (ctx.estoque !== null && ctx.estoque !== undefined) ? `${ctx.estoque} unidade${ctx.estoque !== 1 ? 's' : ''} disponíve${ctx.estoque !== 1 ? 'is' : 'l'}` : 'não informado na base';
+  const lazerList = String(e.lazer || '').split(',').map(s => s.trim()).filter(Boolean);
+  const conceito = String(e.conceito || '').trim();
+  const condicoes = condicoesPagamentoTexto_(item);
+
+  const instrucoes = `═══════════════════════════════════════════════════════
+BLOCO 1 DE 3 — PAPEL E REGRAS FIXAS (não são dados, são o seu contrato)
+═══════════════════════════════════════════════════════
+Você é a IA Editora de uma campanha de comunicação imobiliária. Você recebe só dois insumos: este bloco de regras e o BLOCO 2 (dados reais). Você não recebe nenhum exemplo pronto de copy, script ou arte — quem produz isso é você, seguindo o BLOCO 3.
+
+Regras que não podem ser quebradas:
+- Tom sempre EDUCACIONAL/consultivo, nunca vendedor ou de urgência. Linha editorial "Guia de Decisão": conteúdo que ensina a comparar/decidir, usando este empreendimento como exemplo real — nunca "compre agora", "últimas unidades" etc.
+- Nenhuma arte (Tarefa 2) pode revelar o nome do empreendimento nem seu endereço exato.
+- Use exclusivamente os dados do BLOCO 2. Se um dado não estiver lá, não invente — trate como "não informado".
+- Todo conteúdo gerado (Tarefas 1 a 4) deve seguir exatamente o formato de entrega pedido no BLOCO 3, sem pular campos e sem adicionar tarefas além das 4 listadas.
+
+═══════════════════════════════════════════════════════
+BLOCO 2 DE 3 — DADOS REAIS DO EMPREENDIMENTO (fonte única de verdade)
+═══════════════════════════════════════════════════════
+Nome: ${nome}${ctx.empId ? ` (Código: ${ctx.empId})` : ''}
+Localização: ${ctx.localizacao}
+Padrão: ${ctx.padrao}
+Situação: ${ctx.situacao}${!prontoParaMorar && ctx.entrega ? ` · Previsão de entrega: ${ctx.entrega}` : ''}
+${pctStr || `Estoque: ${estoqueStr}`}
+
+Tipologias disponíveis:
+${listaTipologiasTexto_(item)}
+
+Lazer: ${lazerList.join(', ') || 'não informado na base'}
+Conceito: ${conceito || 'não informado na base'}
+Condições de pagamento: ${condicoes || 'não informadas na base'}
+
+═══════════════════════════════════════════════════════
+BLOCO 3 DE 3 — TAREFAS A DESENVOLVER (formato de entrega obrigatório)
+═══════════════════════════════════════════════════════
+As 4 tarefas são sequenciais e amarradas: a Tarefa 1 define a lista de postagens; as Tarefas 2 e 3 entregam, PRA CADA postagem dessa lista, a arte e a copy correspondentes (mesma numeração, mesma ordem).
+
+TAREFA 1 — Estratégia de Feed e Stories
+Entregue uma lista numerada de peças (defina você a quantidade que faz sentido pro empreendimento, sugestão: 3 a 5 posts de Feed + 1 a 2 Stories). Pra cada peça, informe: número, formato (Feed 4:5 ou Story 9:16), tema/ângulo do Guia de Decisão abordado, e objetivo (o que o público deve entender ou sentir depois de ver essa peça).
+
+TAREFA 2 — Instruções de geração de imagem pra IA Designer
+Pra CADA peça numerada na Tarefa 1, entregue: composição (o que aparece em cena), paleta de cores (nomes ou hex), tipografia (estilo, não fonte específica), formato/proporção exato, e elementos visuais permitidos (ex: foto de área de lazer, ícone, texto overlay) — reforçando que nenhuma arte pode citar o nome do empreendimento.
+
+TAREFA 3 — Copy de cada postagem
+Pra CADA peça numerada na Tarefa 1, entregue a legenda pronta pra publicar (texto final, não instrução), no tom educacional definido no BLOCO 1, sem menção a preço, prazo ou urgência.
+
+TAREFA 4 — Scripts de oferta no WhatsApp
+Entregue uma sequência numerada de mensagens (defina você quantas fazem sentido) pra usar depois que um lead entrar em contato através das postagens da campanha. Pra cada mensagem: objetivo e texto final pronto pra enviar, conduzindo progressivamente pra um convite de agendamento no apartamento decorado.`;
+
+  return {
+    linha: 'Instruções para IA Editora',
+    titulo: 'As 4 tarefas da campanha + dados do empreendimento (sem entregar conteúdo pronto)',
+    iconeUnico: true,
+    legenda: instrucoes,
+  };
+}
+
+function abrirCopyBriefMixCompleto_() {
+  if (!_mixAtualPapeis_ || !_mixAtualPapeis_.ALVO_1) return;
+  document.getElementById('copyBriefContent').innerHTML = renderCopyBriefMixCompleto_();
+  document.getElementById('copyBriefOverlay').classList.add('aberto');
+  document.getElementById('copyBriefDrawer').classList.add('aberto');
+}
+
+function gerarEixosCampanha_(papeis, loc, padrao) {
+  const getPr = it => it ? fmtR$_(it.menorPreco) : null;
+  const getNm = it => it ? (it.e.nomeEmpreendimento || '—') : null;
+  const alvo1 = papeis.ALVO_1, alvo2 = papeis.ALVO_2, alvo3 = papeis.ALVO_3;
+  const sup = papeis.ANCORA_SUP, isca = papeis.ISCA, inf = papeis.ANCORA_INF, comp = papeis.COMPLEMENTAR;
+  const isLuxo  = padrao === 'Luxo';
+  const isAlto  = isLuxo || padrao === 'Alto Padrão';
+  const isMedio = !isAlto && (padrao === 'Médio' || padrao === 'Medio');
+
+  const pr1 = getPr(alvo1), prSup = getPr(sup), prIsca = getPr(isca), prInf = getPr(inf);
+  const faixaBaixa  = prInf  || prIsca || pr1;
+  const faixaAlta   = prSup  || pr1;
+  const trioDisp    = [alvo1, alvo2, alvo3].filter(Boolean);
+  const trioNomes   = trioDisp.map(it => `• ${getNm(it)} — ${getPr(it)}`).join('\n');
+  const trioTexto   = trioDisp.map(it => `${getPr(it)}`).join(' · ');
+
+  const ctaConsultivo = isLuxo ? 'Se quiser aprofundar, meu direct está aberto — sem compromisso.' : isAlto ? 'Quer entender melhor? Me chama, sem compromisso 📩' : isMedio ? 'Quer saber mais sobre esse tipo de decisão? Me chama 📩' : 'Quer entender melhor antes de decidir? Me chama 📩';
+  const aberturEducativa = isLuxo ? 'Uma leitura de mercado, não uma oferta.' : isAlto ? 'Hoje eu quero te mostrar como analisar isso — não vender isso.' : isMedio ? 'Hoje é sobre te ajudar a entender, não sobre vender.' : 'Hoje é aula, não venda.';
+  const paletaEducativa = isLuxo ? 'PALETA: branco + grafite + linhas finas — estética editorial, revista de arquitetura.' : isAlto ? 'PALETA: branco + azul petróleo + grafite (editorial, informativo).' : isMedio ? 'PALETA: branco + azul + cinza claro (didático, limpo).' : 'PALETA: branco + verde-água + cinza (didático, acessível).';
+  const cidadeTagMix = '#' + (loc || '').split(',')[0].trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const padraoTagMix = '#' + (padrao || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'');
+  const baseHash = `${cidadeTagMix} ${padraoTagMix} #lancamentoimobiliario #imoveis #corretorimoveis #imoveisparainvestir`;
+
+  // Mesma linha editorial única testada em gerarGatilhos_ ("Guia de Decisão"),
+  // adaptada pro escopo do mix completo -- usa a faixa de preço da seleção
+  // inteira (faixaBaixa/faixaAlta) e o trio ALVO_1-3 como exemplo, em vez de
+  // dados de 1 empreendimento só.
+  return [
+    {
+      linha: 'Guia de Decisão — Post 1 de 3',
+      titulo: 'Critério 1: momento da obra de cada opção',
+      vertical: `Este post é só de Feed — não tem versão isolada de Stories. A conexão com Stories acontece depois que os 3 posts estiverem publicados: veja o eixo "Storie de Conexão — Guia de Decisão" abaixo.`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px) · POST 1 DE 3
+Primeiro post de uma sequência educativa de 3 partes ("Guia de Decisão: 3 critérios pra escolher entre opções parecidas"). Este post aborda só o CRITÉRIO 1 — momento da obra — usando o trio de produtos da seleção atual como exemplo real. Tom consultivo, sem venda direta. Publicar como o primeiro de 3, com aviso de continuação.
+
+COMPOSIÇÃO VISUAL
+• Topo: numeração "1 de 3" bem visível (elemento de série)
+• Meio: o critério + o dado real desta seleção
+• Rodapé: aviso de continuação ("Parte 2 amanhã")
+
+TEXTO NA ARTE
+Linha destaque: "3 critérios pra escolher entre opções parecidas — Parte 1 de 3"
+Critério: "Qual o momento da obra de cada opção?"
+Dado real: "${isca || inf ? 'Da planta ao pronto pra morar, tenho opção nos dois' : 'Verifique o estágio de cada opção antes de comparar preço'}"
+Contexto: "${loc} · Padrão ${padrao}"
+Rodapé: "Parte 2: a faixa de preço que cabe no seu momento →"
+
+${paletaEducativa}
+Formato: 1080×1350 px`,
+      legenda: `${aberturEducativa}
+
+Toda vez que um cliente fica em dúvida entre opções parecidas, eu aplico os mesmos 3 critérios. Essa semana vou detalhar cada um, usando minha seleção atual de exemplo real. Hoje: momento da obra.
+
+📍 ${loc} · Padrão ${padrao}
+${isca || inf ? '🏗 Tenho opções da planta ao pronto pra morar dentro dessa seleção' : '🏗 Estágio de obra varia entre as opções — vale conferir cada uma'}
+
+Momento de obra diferente pede estratégia diferente: quem quer entrar mais barato geralmente aceita esperar mais; quem quer morar logo paga um pouco mais pelo "pronto".
+
+Amanhã: critério 2 — a faixa de preço que cabe no seu momento. Segue aqui pra não perder.
+
+${baseHash} #guiadocomprador #compraraplanta #consultoriaimobiliaria`,
+    },
+    {
+      linha: 'Guia de Decisão — Post 2 de 3',
+      titulo: 'Critério 2: a faixa de preço que cabe no seu momento',
+      vertical: `Este post é só de Feed — não tem versão isolada de Stories. A conexão com Stories acontece depois que os 3 posts estiverem publicados: veja o eixo "Storie de Conexão — Guia de Decisão" abaixo.`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px) · POST 2 DE 3
+Segundo post da sequência. Aborda só o CRITÉRIO 2 — faixa de preço — usando a faixa real desta seleção como exemplo. Mantém a identidade visual do Post 1 pra reforçar que é uma série.
+
+COMPOSIÇÃO VISUAL
+• Topo: numeração "2 de 3"
+• Meio: o critério + a escada de preço real da seleção
+• Rodapé: aviso de continuação
+
+TEXTO NA ARTE
+Linha destaque: "3 critérios pra escolher entre opções parecidas — Parte 2 de 3"
+Critério: "Qual faixa de preço cabe no seu momento?"
+Dado real: "De ${faixaBaixa} a ${faixaAlta}"
+Contexto: "${loc} · Padrão ${padrao}"
+Rodapé: "Parte 3: a localização certa pro seu objetivo →"
+
+${paletaEducativa}
+Formato: 1080×1350 px`,
+      legenda: `Segunda pergunta da nossa série de 3 (se perdeu a primeira, tá salva aqui no feed): qual faixa de preço cabe no seu momento?
+
+📍 ${loc} · Padrão ${padrao}
+${prIsca ? `💰 Faixa de entrada: ${prIsca}\n` : ''}${pr1 ? `⭐ Faixa intermediária: ${pr1}\n` : ''}${prSup ? `✨ Faixa premium: ${prSup}` : ''}
+
+Preço sozinho não diz nada — o que importa é caber no SEU planejamento, não no que "parece" mais vantajoso. Por isso trabalho com faixas, não com um produto só.
+
+Amanhã: última pergunta — a localização certa pro seu objetivo.
+
+${ctaConsultivo}
+
+${baseHash} #guiadocomprador #compraraplanta #consultoriaimobiliaria`,
+    },
+    {
+      linha: 'Guia de Decisão — Post 3 de 3',
+      titulo: 'Critério 3: a localização certa pro seu objetivo',
+      vertical: `Este post é só de Feed — não tem versão isolada de Stories. A conexão com Stories acontece depois que os 3 posts estiverem publicados: veja o eixo "Storie de Conexão — Guia de Decisão" abaixo.`,
+      feedInstrucoes: `ABORDAGEM — FEED 3×4 (1080×1350 px) · POST 3 DE 3
+Terceiro e último post da sequência. Fecha o guia com o CRITÉRIO 3 — localização x objetivo — e uma conclusão que amarra os 3 critérios. Mantém a mesma identidade visual dos posts 1 e 2.
+
+COMPOSIÇÃO VISUAL
+• Topo: numeração "3 de 3" + selo de "guia completo"
+• Meio: o critério + a localização real desta seleção
+• Rodapé: CTA consultivo (fecha a série com um convite a conversar)
+
+TEXTO NA ARTE
+Linha destaque: "3 critérios pra escolher entre opções parecidas — Parte 3 de 3"
+Critério: "A localização bate com o seu objetivo?"
+Dado real: "${loc} · de ${faixaBaixa} a ${faixaAlta}"
+CTA: "${ctaConsultivo}"
+
+${paletaEducativa}
+Formato: 1080×1350 px`,
+      legenda: `Terceira e última pergunta da nossa série: a localização bate com o seu objetivo?
+
+📍 ${loc} · Padrão ${padrao}
+${trioNomes ? trioNomes + '\n' : ''}
+Morar e investir pedem localizações diferentes — proximidade do trabalho pesa pra quem vai morar, potencial de valorização pesa pra quem vai investir. Meça a localização pelo SEU objetivo, não pelo que está em alta.
+
+Guia completo: momento da obra, faixa de preço e localização x objetivo. Esses 3 critérios valem pra qualquer comparação que você for fazer — não só nessa seleção.
+
+${ctaConsultivo}
+
+${baseHash} #guiadocomprador #compraraplanta #consultoriaimobiliaria`,
+    },
+    {
+      linha: 'Storie de Conexão — Guia de Decisão',
+      titulo: 'Leva quem vê o Stories pra conferir a série no feed',
+      vertical: `ABORDAGEM — STORIES (conecta com a sequência de 3 posts do Feed)
+Este Stories não é standalone — existe pra dar tráfego pro conjunto de 3 posts educativos já publicados no feed ("Guia de Decisão"). A novidade aqui é anunciar que o guia está completo, convidando a pessoa a visitar o perfil — e seguir, se ainda não segue — pra ver a série. Tom consultivo, sem urgência de venda.
+
+TEXTO PARA A ARTE
+Linha principal: "Publiquei um guia de 3 critérios pra escolher entre opções parecidas"
+Subtítulo: "Usando minha seleção atual de exemplo: ${loc}"
+Complemento: "Momento da obra, faixa de preço e localização x objetivo"
+CTA: "Arrasta pra ver os 3 posts completos no feed ⬆️"
+
+DIREÇÃO VISUAL
+• Aponta visualmente pro feed — seta ou ícone de "arrastar pra cima"
+• Menciona que os 3 posts já estão salvos no feed
+• ${paletaEducativa}
+• Formato: 9:16 Stories / WhatsApp Status`,
+      feedInstrucoes: `Este eixo é só de Stories — não gera post de Feed próprio. Ele existe pra dar tráfego pra sequência "Guia de Decisão" (Post 1, 2 e 3 de 3) já publicada no feed. Use o botão "Vertical" acima pra copiar o brief de Stories.`,
+      legenda: `Este eixo é só de Stories — não tem legenda de Feed própria. A legenda de cada post da série está nos 3 eixos "Guia de Decisão — Post X de 3" acima.`,
+    },
+  ];
+}
+
+function renderCopyBriefMixCompleto_() {
+  const papeis = _mixAtualPapeis_;
+  const alvo1 = papeis.ALVO_1;
+  if (!alvo1) return '<div style="padding:24px;color:var(--text3)">Mix incompleto — selecione um Produto Alvo primeiro.</div>';
+
+  const bairro = alvo1.e.bairro || '';
+  const cidade = alvo1.e.cidade || '';
+  const loc = [bairro, cidade].filter(Boolean).join(', ') || 'localização privilegiada';
+  const padrao = PADRAO_LABEL_MIX_[alvo1.padrao] || alvo1.padrao || '';
+
+  _gatilhosAtual_ = gerarEixosCampanha_(papeis, loc, padrao);
+
+  const linhas = _gatilhosAtual_.map((g, i) => `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnV${i}" onclick="copiarEPreview_('v',${i})" title="Story / WhatsApp 9:16">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFI${i}" onclick="copiarEPreview_('fi',${i})" title="Feed 4:5 instrução">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Feed 4:5 legenda">📋</button></td>
+    </tr>`).join('');
+
+  return `
+    <div class="brief-drawer-header">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Briefing de Campanha — Mix Completo</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">Estratégia de 7 Ofertas · ${padrao}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">Alvo Principal: ${alvo1.e.nomeEmpreendimento || '—'} · ${fmtR$_(alvo1.menorPreco)} · ${loc}</div>
+      </div>
+      <button class="btn-mini" style="flex-shrink:0;margin-top:2px" onclick="fecharCopyBrief_()">✕ Fechar</button>
+    </div>
+    <div class="brief-drawer-body">
+      <div class="brief-regra">✏️ <strong>Campanha estratégica:</strong> estes eixos cobrem o mix completo — cada anúncio fala do conjunto, não de um produto isolado. Nenhuma arte revela o nome dos empreendimentos.</div>
+      <div class="brief-gt-section">
+        <table class="brief-gt-table">
+          <thead>
+            <tr>
+              <th class="th-gatilho" colspan="2">Eixo de Campanha</th>
+              <th class="th-v">Vertical<br><span style="font-weight:400;font-size:9px;opacity:.8">9:16</span></th>
+              <th class="th-fi">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">instrução</span></th>
+              <th class="th-fl">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">legenda</span></th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <div class="brief-preview">
+        <div class="brief-preview-label">Prévia — clique em 📋 para visualizar e copiar</div>
+        <div class="brief-preview-body" id="briefPreviewBody" style="color:var(--text3);font-style:italic">— selecione um eixo acima —</div>
+      </div>
+    </div>`;
+}
+
+function abrirCopyBrief_(papel) {
+  const item = _mixAtualPapeis_[papel];
+  if (!item) return;
+  document.getElementById('copyBriefContent').innerHTML = renderCopyBriefContent_(item, papel);
+  document.getElementById('copyBriefOverlay').classList.add('aberto');
+  document.getElementById('copyBriefDrawer').classList.add('aberto');
+}
+
+function fecharCopyBrief_() {
+  document.getElementById('copyBriefOverlay').classList.remove('aberto');
+  document.getElementById('copyBriefDrawer').classList.remove('aberto');
+}
+
+function renderCopyBriefContent_(item, papel) {
+  const e = item.e;
+  const bairro = e.bairro || '';
+  const cidade = e.cidade || '';
+  const padrao = PADRAO_LABEL_MIX_[item.padrao] || item.padrao || '';
+  const preco = fmtR$_(item.menorPreco);
+  const situacao = situacaoTexto_(e.status);
+  const estoque = (e.estoque !== undefined && e.estoque !== null && e.estoque !== '') ? Number(e.estoque) : null;
+  const total = Number(e.totalUnidades) || 0;
+  const pctVendido = (total > 0 && estoque !== null) ? Math.round(((total - (estoque)) / total) * 100) : null;
+  const entrega = e.previsaoEntrega || '';
+  const areas = (e.unidades || []).map(u => Number(u.areaUtil) || Number(u.areaMin) || 0).filter(a => a > 0);
+  const areaMin = areas.length ? Math.min(...areas) : 0;
+  const areaMax = areas.length ? Math.max(...areas) : 0;
+  const tipoImovel = tipoImovelDominante_(e.unidades) || 'apartamento';
+  const localizacao = [bairro, cidade].filter(Boolean).join(', ') || 'localização privilegiada';
+  const areaStr = areaMax > areaMin && areaMin > 0 ? `${areaMin}–${areaMax} m²`
+                : areaMin > 0 ? `${areaMin} m²` : '';
+
+  const empId = e.idEmpreendimento || '';
+  const ctx = { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId };
+  // Script de Oferta (WhatsApp) e as Instruções pra IA Editora (última
+  // linha) entram como linhas extras na MESMA tabela de gatilhos -- pedido
+  // explícito do usuário ("criar linhas na tabela").
+  _roteiroPreAtendimentoAtual_ = gerarRoteiroPreAtendimento_(item, ctx);
+  const relatorioCampanha = gerarRelatorioCampanhaCompleto_(item, ctx);
+  _gatilhosAtual_ = [...gerarGatilhos_(item, papel, ctx), ...gerarScriptsWhatsapp_(item, ctx), relatorioCampanha];
+
+  const linhas = _gatilhosAtual_.map((g, i) => g.iconeUnico ? `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy" colspan="3"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Copiar instruções">📋</button></td>
+    </tr>` : `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnV${i}" onclick="copiarEPreview_('v',${i})" title="Story / WhatsApp 9:16">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFI${i}" onclick="copiarEPreview_('fi',${i})" title="Feed 4:5 instrução">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Feed 4:5 legenda">📋</button></td>
+    </tr>`).join('');
+
+  const linhasRoteiro = _roteiroPreAtendimentoAtual_.map((r, i) => `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${r.momento}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${r.objetivo}</div>
+      </td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnRoteiro${i}" onclick="copiarRoteiroPreAtendimento_(${i})" title="Copiar script">📋</button></td>
+    </tr>`).join('');
+
+  return `
+    <div class="brief-drawer-header">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">Briefing para Designer IA</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${e.nomeEmpreendimento || '—'}${empId ? `<span style="margin-left:8px;font-size:11px;font-weight:600;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;vertical-align:middle">${empId}</span>` : ''}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">${PAPEL_LABEL_[papel] || papel} · ${padrao} · ${localizacao} · ${situacao}</div>
+      </div>
+      <button class="btn-mini" style="flex-shrink:0;margin-top:2px" onclick="fecharCopyBrief_()">✕ Fechar</button>
+    </div>
+    <div class="brief-drawer-body">
+      <div class="brief-regra">⚠️ <strong>Regra de ouro:</strong> nenhuma arte pode revelar o nome do empreendimento — gere curiosidade e provoque o lead a entrar em contato.</div>
+      <div class="brief-gt-section">
+        <table class="brief-gt-table">
+          <thead>
+            <tr>
+              <th class="th-gatilho" colspan="2">Gatilho</th>
+              <th class="th-v">Vertical<br><span style="font-weight:400;font-size:9px;opacity:.8">9:16</span></th>
+              <th class="th-fi">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">instrução</span></th>
+              <th class="th-fl">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">legenda</span></th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <div class="brief-gt-section" style="margin-top:20px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Roteiro de Pré-Atendimento — WhatsApp (3 momentos até o convite pro decorado)</div>
+        <table class="brief-gt-table">
+          <thead>
+            <tr>
+              <th class="th-gatilho" colspan="2">Momento</th>
+              <th class="th-fl">Script</th>
+            </tr>
+          </thead>
+          <tbody>${linhasRoteiro}</tbody>
+        </table>
+      </div>
+      <div class="brief-preview">
+        <div class="brief-preview-label">Prévia — clique em 📋 para visualizar e copiar</div>
+        <div class="brief-preview-body" id="briefPreviewBody" style="color:var(--text3);font-style:italic">— selecione um gatilho acima —</div>
+      </div>
+    </div>`;
+}
+
+function gerarCopyBriefs_(item, papel, ctx) {
+  const { localizacao, preco, situacao, estoque, total, pctVendido, entrega, padrao, areaStr, tipoImovel, empId } = ctx;
+  const estoqueStr = estoque !== null ? `${estoque} unidade${estoque !== 1 ? 's' : ''} disponíve${estoque !== 1 ? 'is' : 'l'}` : 'estoque limitado';
+  const pctStr = pctVendido !== null ? `${pctVendido}% já vendido` : '';
+  const areaInfo = areaStr ? ` · ${areaStr}` : '';
+  const prontoParaMorar = ['Pronto', 'Pronto novo', 'Entregue'].includes(situacao);
+  const entregaInfo = prontoParaMorar ? 'Pronto para Morar' : (entrega ? `Entrega: ${entrega}` : '');
+  const isAlto = padrao === 'Alto Padrão' || padrao === 'Luxo';
+  const idBloco = empId
+    ? `\n\nID DO EMPREENDIMENTO — obrigatório na arte\nCódigo: ${empId}\n• Posicionar em canto discreto (ex: rodapé ou canto inferior direito)\n• Fonte pequena, cor neutra — visível mas sem chamar atenção\n• Permite rastrear qual criativo gerou retorno quando o lead entrar em contato`
+    : '';
+
+  return [
+    {
+      linha: 'Dados & Urgência',
+      titulo: 'Escassez real — quem hesita perde',
+      instrucoes: `ABORDAGEM
+Dados concretos criam urgência real. Ideal para leads mais racionais e investidores — sem romantismo, só fatos que pressionam a decisão.
+
+TEXTO SUGERIDO PARA A ARTE
+Linha principal (grande, impactante):
+"${pctStr ? pctStr + ' em poucos meses.' : 'Ritmo acelerado. Estoque não espera.'}"
+
+Subtítulo:
+"${estoqueStr}${entregaInfo ? ' · ' + entregaInfo : ''}"
+
+Complemento:
+"${localizacao} · Padrão ${padrao} · A partir de ${preco}${areaInfo}"
+
+CTA (rodapé):
+"Não espera acabar. Chama agora 📲"
+
+DIREÇÃO VISUAL PARA O DESIGNER
+• Layout de dados em destaque — números grandes em tipografia bold
+• ${pctStr ? 'Incluir barra de progresso visual representando o percentual vendido (barra preenchida)' : 'Incluir ícone de escassez: relógio, contador regressivo ou seta descendente'}
+• Estilo sóbrio, direto — menos foto, mais dado
+• Paleta: fundo escuro + texto branco + acento em vermelho ou laranja (urgência)
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`
+    },
+    {
+      linha: 'Perfil & Identificação',
+      titulo: 'Faz o lead certo se reconhecer sozinho',
+      instrucoes: `ABORDAGEM
+Descreve o perfil e o momento de vida do comprador ideal — sem mencionar o produto. Quem se identifica com o texto sente que a mensagem foi feita pra ele e entra em contato espontaneamente. Excelente para qualificar leads antes do primeiro contato.
+
+TEXTO SUGERIDO PARA A ARTE
+Linha principal (direta, pessoal):
+"${isAlto ? 'Você já sabe o que quer. Só falta o endereço certo.' : 'Tá na hora de parar de pagar aluguel e investir no seu.'}"
+
+Subtítulo:
+"${tipoImovel.charAt(0).toUpperCase() + tipoImovel.slice(1)} em ${localizacao}${entregaInfo ? ' · ' + entregaInfo : ''} · Padrão ${padrao}"
+
+Complemento:
+"A partir de ${preco}${areaInfo}"
+
+CTA (rodapé):
+"Esse pode ser o seu. Me chama e eu mostro 💬"
+
+DIREÇÃO VISUAL PARA O DESIGNER
+• Foto de pessoa / casal em momento de conquista (chave na mão, olhando pro horizonte)
+• Sem fachada do prédio — o foco é a pessoa, não o produto
+• Tipografia média, confiante — nem pesada nem leve
+• Paleta neutra: cinza chumbo, branco, toque de dourado ou verde
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`
+    },
+    {
+      linha: 'Dados & Oportunidade',
+      titulo: 'Timing de mercado — a janela está aberta',
+      instrucoes: `ABORDAGEM
+Enquanto "Urgência" pressiona pela escassez, "Oportunidade" vende o MOMENTO como vantagem estratégica. Ideal para leads investidores ou compradores que raciocinam em termos de valorização e custo de espera.
+
+TEXTO SUGERIDO PARA A ARTE
+Linha principal (estratégica, provocativa):
+"${prontoParaMorar ? 'Pronto pra morar. Sem risco de obra. Sem espera.' : `Quem entrou antes já saiu na frente.`}"
+
+Subtítulo:
+"${localizacao} · ${padrao} · A partir de ${preco}${areaInfo}${entregaInfo ? ' · ' + entregaInfo : ''}"
+
+Complemento:
+"${pctStr ? pctStr + ' já comprometido — o que resta é a oportunidade que sobrou.' : 'Cada mês que passa é valorização que sai do seu bolso.'}"
+
+CTA (rodapé):
+"Quer entender o potencial? Me chama 📊"
+
+DIREÇÃO VISUAL PARA O DESIGNER
+• Visual de gráfico ascendente ou linha do tempo (antes / depois)
+• Tom executivo: tipografia clean, paleta sobria (azul marinho, cinza grafite, dourado)
+• Pode usar ícone de seta para cima ou mapa com pin de localização
+• Sem revelar o empreendimento — o ativo é o TIMING, não o nome
+• Formato: 9:16 Stories / WhatsApp Status${idBloco}`
+    },
+  ];
+}
+
+// Abre direto na aba Estratégias se veio de um link com ?tab=estrategias
+// (ex: redirecionamento de estrategias.html, ou o botão "🎯 Estratégias" de
+// contatos.html com ?cliente=CTT-XXX -- _clienteIdParam já lê esse parâmetro
+// sozinho, aqui só precisa trocar a aba visível). PRECISA ficar no final do
+// arquivo, depois de tudo que foi fundido de estrategias.html -- se rodar
+// antes de "const _clienteIdParam" (ou qualquer outro const/let de lá) ser
+// declarado, é ReferenceError de temporal dead zone (execução do script
+// para ali, e nada depois roda).
+if (new URLSearchParams(location.search).get('tab') === 'estrategias') {
+  mudarAbaLancamentos('estrategias');
+}
 </script>
 </body>
 </html>
