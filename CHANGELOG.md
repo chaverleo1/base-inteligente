@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 152) — App Lançamentos: bairro em destaque nos cards de resultado (Etapa 6)
+
+Pedido explícito do usuário: destacar o nome do bairro (campo "Região") nos cards de resultado —
+letra um pouco maior e cor amarela. Nova variável `--yellow` (`#f5d000`) e classe
+`.opcao-cell-bairro` (mesmo padrão de `.opcao-cell-destaque`, já usada em "Área útil"): 13px → 15px,
+peso 800, cor amarela. Aplicada em `cardOpcaoHTML_`, então vale tanto pros cards principais quanto
+pras "opções extras" (mesmo template compartilhado).
+
+Testado ao vivo: célula "Região" do primeiro card confirmada com `font-size: 15px`,
+`font-weight: 800`, `color: rgb(245, 208, 0)`.
+
 ## 2026-07-29 (parte 151) — E-mail do lead: nomes de empreendimento no bloco "MIX ESTRATÉGICO"
 
 Correção sobre a parte 150: o bloco "MIX ESTRATÉGICO" (`montarBlocoRoteiroEmail_`, recalculado
