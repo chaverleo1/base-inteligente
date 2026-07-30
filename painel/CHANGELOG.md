@@ -1,5 +1,16 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 162) — App Lançamentos: rodapé restrito à etapa "Quase lá"
+
+Correção do usuário sobre a parte 161: o rodapé com "CJ 27357- Líder Empreendimentos Imobiliários
+LTDA" não deve aparecer em todas as etapas do funil — só na etapa `step-7` (step-tag "Quase lá",
+tela de captura do WhatsApp). Removido de fora de `.step-wrap` (onde ficava sempre visível) e
+movido para dentro de `<div class="step" id="step-7">`, logo após o `.btn-final-sub` — agora só
+renderiza quando essa etapa está `.ativo`.
+
+Testado ao vivo: `.app-footer` ausente/invisível na Etapa 0 (capa) e visível somente após
+`irParaStep(7)`, sem erros no console.
+
 ## 2026-07-30 (parte 161) — App Lançamentos: rodapé com identificação da empresa
 
 Pedido explícito do usuário: rodapé com letras pequenas em todas as telas do App Lançamentos —
