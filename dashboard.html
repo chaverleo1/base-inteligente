@@ -92,41 +92,6 @@
   .card-value.cold{color:var(--cold)}
   .card-value.green{color:var(--accent2)}
 
-  /* ── CENTRAL DE INTELIGÊNCIA COMPORTAMENTAL (App Lançamentos, Fase 3) ── */
-  .int-periodo-select{
-    background:var(--surface2); color:var(--text); border:1px solid var(--border);
-    border-radius:8px; padding:6px 10px; font-size:12px; font-family:inherit; cursor:pointer;
-  }
-  .int-funil-card{display:flex; flex-direction:column; gap:0}
-  .int-funil-row{
-    display:grid; grid-template-columns:150px 1fr 56px 78px; align-items:center;
-    gap:12px; padding:8px 0;
-  }
-  .int-funil-row+.int-funil-row{border-top:1px solid var(--border)}
-  .int-funil-nome{font-size:12.5px; font-weight:600; color:var(--text)}
-  .int-funil-track{height:18px; background:var(--surface2); border-radius:5px; overflow:hidden}
-  .int-funil-fill{height:100%; background:linear-gradient(90deg,var(--accent),#7a9bff); border-radius:5px}
-  .int-funil-fill.hot{background:linear-gradient(90deg,var(--hot),#ff9a9a)}
-  .int-funil-fill.done{background:linear-gradient(90deg,var(--accent2),#5eead4)}
-  .int-funil-pct{font-size:12.5px; font-weight:700; color:var(--text); text-align:right; font-family:'Space Grotesk',sans-serif}
-  .int-funil-drop{font-size:11px; color:var(--text3); text-align:right}
-  .int-funil-drop.flag{color:var(--hot); font-weight:700; background:rgba(255,90,90,.12); border-radius:6px; padding:2px 7px}
-
-  .int-seg-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:20px}
-  .int-seg-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; display:flex; flex-direction:column; gap:8px}
-  .int-seg-top{display:flex; align-items:flex-start; justify-content:space-between; gap:8px}
-  .int-seg-nome{font-size:13.5px; font-weight:700; color:var(--text)}
-  .int-seg-count{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; color:var(--accent); white-space:nowrap}
-  .int-seg-badge{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 8px; border-radius:99px; width:fit-content}
-  .int-seg-ids{display:flex; flex-wrap:wrap; gap:5px; margin-top:2px}
-  .int-seg-id-chip{
-    font-size:10.5px; font-weight:600; color:var(--accent); background:rgba(79,124,255,.1);
-    border:1px solid rgba(79,124,255,.25); border-radius:99px; padding:2px 8px; cursor:pointer;
-    font-family:inherit;
-  }
-  .int-seg-id-chip:hover{background:rgba(79,124,255,.2)}
-  .int-seg-id-chip[disabled]{cursor:default; opacity:.6}
-
   /* ── MATCHES ── */
   .matches-layout{display:grid;grid-template-columns:2fr 3fr;grid-template-rows:560px;margin-bottom:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
   @media(max-width:700px){.matches-layout{grid-template-columns:1fr;grid-template-rows:none}}
@@ -727,7 +692,6 @@
     <a href="revendas-lista.html" class="nav-tab">Revendas</a>
     <a href="revendas-construtoras.html" class="nav-tab">Revendas-Construtoras</a>
     <button class="nav-tab" id="btnTabBaseimob" onclick="mostrarBaseImob()">BaseImob <span id="badgeBaseimob" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
-    <button class="nav-tab" id="btnTabInteligencia" onclick="mostrarInteligencia()">Inteligência</button>
     <button class="nav-tab" id="btnTabImobzi" onclick="mostrarImobzi()">Leads Imobzi <span id="badgeImobzi" style="display:none;background:#ff5a5a;color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;margin-left:2px;font-weight:700;vertical-align:middle"></span></button>
     <button class="nav-tab" id="btnTabAdm" onclick="mostrarAdm()">ADM</button>
   </div>
@@ -983,43 +947,6 @@
 <div class="page" id="secao-baseimob" style="display:none">
   <div class="section-title">Leads BaseImob — pendentes de qualificação</div>
   <div id="bi-lista"><div class="loading dot-anim">Carregando leads</div></div>
-</div>
-
-<!-- CENTRAL DE INTELIGÊNCIA COMPORTAMENTAL (App Lançamentos, Fase 3) -->
-<div class="page" id="secao-inteligencia" style="display:none">
-  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>Central de Inteligência Comportamental <span style="font-size:12px;font-weight:400;color:var(--text3);margin-left:8px">padrões de comportamento do App Lançamentos</span></span>
-    <select id="intPeriodo" onchange="carregarInteligencia_()" class="int-periodo-select">
-      <option value="7">Últimos 7 dias</option>
-      <option value="30" selected>Últimos 30 dias</option>
-      <option value="90">Últimos 90 dias</option>
-      <option value="36500">Histórico completo</option>
-    </select>
-  </div>
-
-  <div class="vg-panel" id="intKpis">
-    <div class="loading dot-anim" style="grid-column:1/-1">Carregando estatísticas</div>
-  </div>
-
-  <div class="section-title">Funil de conversão por etapa</div>
-  <div class="card int-funil-card" id="intFunil">
-    <div class="loading dot-anim">Carregando funil</div>
-  </div>
-
-  <div class="section-title">Segmentação comportamental <span style="font-size:12px;font-weight:400;color:var(--text3);margin-left:8px">histórico completo — não filtra por período</span></div>
-  <div class="int-seg-grid" id="intSegmentos">
-    <div class="loading dot-anim">Carregando segmentos</div>
-  </div>
-
-  <div class="section-title">Tempo médio por etapa</div>
-  <div class="card" id="intTempoWrap" style="padding:0;overflow:auto">
-    <div class="loading dot-anim" style="padding:24px">Carregando</div>
-  </div>
-
-  <div class="section-title">Performance por origem (UTM)</div>
-  <div class="card" id="intOrigemWrap" style="padding:0;overflow:auto">
-    <div class="loading dot-anim" style="padding:24px">Carregando</div>
-  </div>
 </div>
 
 <!-- IMOBZI LEADS SECTION -->
@@ -3693,10 +3620,10 @@ async function rodarEAtualizar() {
 // ── BASEIMOB ──────────────────────────────────────────────────────────────────
 
 function _ocultarTodasSecoes() {
-  ['secao-dashboard','secao-baseimob','secao-inteligencia','secao-imobzi','secao-adm'].forEach(function(id) {
+  ['secao-dashboard','secao-baseimob','secao-imobzi','secao-adm'].forEach(function(id) {
     document.getElementById(id).style.display = 'none';
   });
-  ['btnTabDash','btnTabBaseimob','btnTabInteligencia','btnTabImobzi','btnTabAdm'].forEach(function(id) {
+  ['btnTabDash','btnTabBaseimob','btnTabImobzi','btnTabAdm'].forEach(function(id) {
     document.getElementById(id).classList.remove('active');
   });
 }
@@ -3712,16 +3639,6 @@ function mostrarBaseImob() {
   document.getElementById('secao-baseimob').style.display = '';
   document.getElementById('btnTabBaseimob').classList.add('active');
   carregarLeadsBaseimob();
-}
-
-function mostrarInteligencia() {
-  _ocultarTodasSecoes();
-  document.getElementById('secao-inteligencia').style.display = '';
-  document.getElementById('btnTabInteligencia').classList.add('active');
-  // Garante _biLeadsMap populado -- os chips de "amostra de leads" dos
-  // segmentos reaproveitam o drawer de detalhe do BaseImob (abrirDetalheLeadBI).
-  if (!Object.keys(_biLeadsMap).length) carregarLeadsBaseimob();
-  carregarInteligencia_();
 }
 
 function mostrarImobzi() {
@@ -4293,145 +4210,6 @@ async function admInicializarSistema() {
     fecharLogin();
     carregarDados();
   }, 2000);
-}
-
-// ── CENTRAL DE INTELIGÊNCIA COMPORTAMENTAL (App Lançamentos, Fase 3) ──────
-// Consome listarEstatisticasFunil_/listarSegmentosComportamentais_ (Fase 2,
-// code.txt). Descrição/ação sugerida por segmento é copy de UI -- a API
-// só devolve chave/nome/count/amostra de idCliente, o texto vive aqui.
-const INT_SEG_META_ = {
-  comparador_preco: { badge: 'warm', desc: 'Abriu "Ver Preço" em 5+ cards mas favoritou no máximo 1 — está comparando ativamente.', acao: 'Comparativo direto de custo-benefício entre as opções que mais olhou.' },
-  decisao_rapida: { badge: 'hot', desc: 'Completou o funil inteiro em menos de 90 segundos.', acao: 'Ligar rápido — já sabia o que queria antes de abrir o app.' },
-  alto_engajamento_sem_favorito: { badge: 'warm', desc: 'Ficou 3+ minutos na tela de resultados mas não favoritou nada.', acao: 'Reabordar perguntando diretamente o que faltou pra fechar.' },
-  fora_da_regiao: { badge: 'cold', desc: 'Geolocalização aproximada (IP) fora de Goiânia.', acao: 'Investigar se é mudança de cidade ou investimento à distância.' },
-  investidor_provavel: { badge: 'hot', desc: 'Marcou "quero investir" e acessou via desktop.', acao: 'Discurso de retorno/valorização, não de moradia.' },
-  abandono_precoce: { badge: 'cold', desc: 'Saiu ainda na Capa ou no Orçamento/Área, sem se identificar.', acao: 'Sessão anônima — baixa prioridade de ligação, considerar remarketing.' },
-};
-const INT_SEG_BADGE_LABEL_ = { hot: 'Prioridade alta', warm: 'Acompanhar', cold: 'Baixa prioridade' };
-
-function _intFmtSegundos_(s) {
-  if (s === null || s === undefined) return '—';
-  s = Math.round(s);
-  return s < 60 ? s + 's' : Math.floor(s / 60) + 'min ' + (s % 60) + 's';
-}
-function _intFmtMs_(ms) { return _intFmtSegundos_(Math.round((Number(ms) || 0) / 1000)); }
-
-function renderIntKpis_(json) {
-  const k = json.kpis || {};
-  document.getElementById('intKpis').innerHTML = `
-    <div class="vg-stat">
-      <div class="vg-stat-top"><span class="vg-stat-icon">👥</span><span class="vg-stat-label">Sessões</span></div>
-      <div class="vg-stat-value">${k.totalSessoes ?? '—'}</div>
-      <div class="vg-stat-sub">no período selecionado</div>
-    </div>
-    <div class="vg-stat">
-      <div class="vg-stat-top"><span class="vg-stat-icon">✅</span><span class="vg-stat-label">Taxa de conclusão</span></div>
-      <div class="vg-stat-value" style="color:var(--accent2)">${k.taxaConclusao ?? '—'}%</div>
-      <div class="vg-stat-sub">chegaram na Etapa 8</div>
-    </div>
-    <div class="vg-stat">
-      <div class="vg-stat-top"><span class="vg-stat-icon">🎯</span><span class="vg-stat-label">Score médio</span></div>
-      <div class="vg-stat-value">${k.scoreMedio ?? '—'}</div>
-      <div class="vg-stat-sub">dos leads completos</div>
-    </div>
-    <div class="vg-stat">
-      <div class="vg-stat-top"><span class="vg-stat-icon">⏱️</span><span class="vg-stat-label">Tempo médio no funil</span></div>
-      <div class="vg-stat-value">${_intFmtSegundos_(k.tempoMedioFunilSegundos)}</div>
-      <div class="vg-stat-sub">até confirmar WhatsApp</div>
-    </div>`;
-}
-
-function renderIntFunil_(json) {
-  const el = document.getElementById('intFunil');
-  const funil = json.funil || [];
-  if (!funil.length || !(json.kpis && json.kpis.totalSessoes)) {
-    el.innerHTML = '<div class="empty-state">Sem sessões registradas nesse período.</div>';
-    return;
-  }
-  // Maior queda entre etapas consecutivas -- destacada em vermelho, é o
-  // ponto de fricção mais crítico do funil pra investigar primeiro.
-  let maiorQueda = { etapa: null, valor: 0 };
-  funil.forEach((f, i) => {
-    if (i === 0) return;
-    const queda = funil[i - 1].pctTotal - f.pctTotal;
-    if (queda > maiorQueda.valor) maiorQueda = { etapa: f.etapa, valor: queda };
-  });
-  el.innerHTML = funil.map((f, i) => {
-    const quedaAqui = i === 0 ? null : funil[i - 1].pctTotal - f.pctTotal;
-    const flag = f.etapa === maiorQueda.etapa && maiorQueda.valor > 0;
-    const fillClass = f.etapa === 8 ? 'done' : (flag ? 'hot' : '');
-    return `<div class="int-funil-row">
-      <div class="int-funil-nome">Etapa ${f.etapa} — ${f.nome}</div>
-      <div class="int-funil-track"><div class="int-funil-fill ${fillClass}" style="width:${f.pctTotal}%"></div></div>
-      <div class="int-funil-pct">${f.pctTotal}%</div>
-      <div class="int-funil-drop ${flag ? 'flag' : ''}">${quedaAqui === null ? '—' : '-' + quedaAqui + '%'}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderIntTempoTabela_(json) {
-  const el = document.getElementById('intTempoWrap');
-  const linhas = json.tempoPorEtapa || [];
-  if (!linhas.length) { el.innerHTML = '<div class="empty-state">Sem dados de tempo nesse período.</div>'; return; }
-  el.innerHTML = `<table class="adm-table"><thead><tr><th>Etapa</th><th style="text-align:right">Tempo médio</th></tr></thead><tbody>
-    ${linhas.map(l => `<tr><td>Etapa ${l.etapa} — ${l.nome}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${_intFmtMs_(l.tempoMedioMs)}</td></tr>`).join('')}
-  </tbody></table>`;
-}
-
-function renderIntOrigemTabela_(json) {
-  const el = document.getElementById('intOrigemWrap');
-  const linhas = json.origem || [];
-  if (!linhas.length) { el.innerHTML = '<div class="empty-state">Sem sessões nesse período.</div>'; return; }
-  el.innerHTML = `<table class="adm-table"><thead><tr><th>Origem</th><th style="text-align:right">Sessões</th><th style="text-align:right">Conclusão</th><th>Dispositivo predominante</th></tr></thead><tbody>
-    ${linhas.map(l => `<tr><td>${l.origem}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${l.sessoes}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${l.taxaConclusao}%</td><td>${l.dispositivoPredominante}</td></tr>`).join('')}
-  </tbody></table>`;
-}
-
-function renderIntSegmentos_(json) {
-  const el = document.getElementById('intSegmentos');
-  const segmentos = json.segmentos || [];
-  if (!segmentos.length) { el.innerHTML = '<div class="empty-state">Sem dados suficientes ainda.</div>'; return; }
-  el.innerHTML = segmentos.map(s => {
-    const meta = INT_SEG_META_[s.chave] || { badge: 'cold', desc: '', acao: '' };
-    const chips = (s.idClientesAmostra || []).slice(0, 8).map(id => {
-      const temLead = _biLeadsMap && _biLeadsMap[id];
-      return `<button class="int-seg-id-chip" ${temLead ? `onclick="abrirDetalheLeadBI('${id}')"` : 'disabled'} title="${temLead ? 'Ver detalhe do lead' : 'Detalhe indisponível (lead ainda não carregado ou sem migração pro BaseImob)'}">${id}</button>`;
-    }).join('');
-    return `<div class="int-seg-card">
-      <div class="int-seg-top"><span class="int-seg-nome">${s.nome}</span><span class="int-seg-count">${s.count}</span></div>
-      <span class="int-seg-badge score-${meta.badge}">${INT_SEG_BADGE_LABEL_[meta.badge]}</span>
-      ${meta.desc ? `<div style="font-size:12px;color:var(--text2);line-height:1.5">${meta.desc}</div>` : ''}
-      ${meta.acao ? `<div style="font-size:11.5px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px"><b style="color:var(--text2)">Abordagem:</b> ${meta.acao}</div>` : ''}
-      ${chips ? `<div class="int-seg-ids">${chips}</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-async function carregarInteligencia_() {
-  const dias = document.getElementById('intPeriodo').value;
-  document.getElementById('intKpis').innerHTML = '<div class="loading dot-anim" style="grid-column:1/-1">Carregando estatísticas</div>';
-  document.getElementById('intFunil').innerHTML = '<div class="loading dot-anim">Carregando funil</div>';
-  document.getElementById('intTempoWrap').innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
-  document.getElementById('intOrigemWrap').innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
-  document.getElementById('intSegmentos').innerHTML = '<div class="loading dot-anim">Carregando segmentos</div>';
-
-  try {
-    const [respStats, respSeg] = await Promise.all([
-      fetch(WEBHOOK_URL + '?acao=listar_estatisticas_funil&dias=' + encodeURIComponent(dias) + '&token=' + encodeURIComponent(tokenSessao())),
-      fetch(WEBHOOK_URL + '?acao=listar_segmentos_comportamentais&token=' + encodeURIComponent(tokenSessao())),
-    ]);
-    const stats = await respStats.json();
-    const segs  = await respSeg.json();
-    if (trataNaoAutenticado(stats) || trataNaoAutenticado(segs)) return;
-
-    renderIntKpis_(stats);
-    renderIntFunil_(stats);
-    renderIntTempoTabela_(stats);
-    renderIntOrigemTabela_(stats);
-    renderIntSegmentos_(segs);
-  } catch (e) {
-    document.getElementById('intFunil').innerHTML = `<div class="empty-state">Erro ao carregar: ${e.message}</div>`;
-  }
 }
 
 async function carregarLeadsBaseimob() {

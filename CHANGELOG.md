@@ -1,5 +1,43 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 158) — Inteligência migra pra Lançamentos + nova aba "App Lançamentos" + abas escuras
+
+Pedido explícito do usuário, 3 partes:
+
+**1. "Inteligência" saiu de `dashboard.html` e virou aba de `lancamentos.html`** (depois de
+"Estratégias"). Ao começar, encontrei o `dashboard.html` já com uma remoção PARCIAL não commitada
+(botão/painel/CSS já tinham sumido, mas as funções `renderIntKpis_`/`renderIntSegmentos_`/etc.
+tinham ficado órfãs, sem nada mais chamando -- provavelmente sobra de outra sessão/máquina
+trabalhando no mesmo repo em paralelo. Terminei a limpeza (removi o
+bloco JS órfão) e portei a feature completa pra dentro de `lancamentos.html`: KPIs (`.vg-panel`),
+funil de conversão, segmentação comportamental, tabelas de tempo por etapa e origem/UTM — reaproveita
+`listarEstatisticasFunil_`/`listarSegmentosComportamentais_` (Fase 2, code.txt, inalteradas).
+Carrega sob demanda (`carregarInteligenciaLazy_`), igual ao padrão já usado por Estratégias.
+**Adaptação necessária**: os chips de "amostra de lead" de cada segmento eram clicáveis (abriam o
+drawer de detalhe do BaseImob, `abrirDetalheLeadBI`/`_biLeadsMap`) — essa infra é de gestão de LEADS,
+que não existe em Lançamentos (que é sobre EMPREENDIMENTOS). Os chips viraram texto informativo, sem
+clique. Nenhuma colisão de CSS/JS com o que já existia em `lancamentos.html` (`.vg-panel`,
+`.adm-table`, `.score-hot/warm/cold` etc. não existiam lá).
+
+**2. Nova aba "App Lançamentos"**, depois de "Inteligência": painel simples com descrição do que é o
+funil público (`app-lancamentos.html`) e botão pra abrir em nova aba.
+
+**3. Fundo mais escuro nas abas "Extrair Modelo 1", "Extrair Modelo 2" e "Modelos e Padrões
+Vendedores"** (`#0a0b10`, mais escuro que o `--bg` padrão `#0f1117`) — separa visualmente as abas de
+cadastro/dados brutos das abas de análise (Mapa Geral, Busca, Estratégias, Inteligência, App
+Lançamentos, Cadastrados), que continuam no fundo padrão.
+
+Sequência final das abas de Lançamentos: Mapa Geral / Busca / Estratégias / **Inteligência** /
+**App Lançamentos** / Cadastrados / Extrair Modelo 1 / Extrair Modelo 2 / Modelos e Padrões
+Vendedores.
+
+Testado ao vivo no navegador (backend mockado): KPIs/funil/segmentos/tabelas de Inteligência
+renderizando corretos dentro de Lançamentos; chip de segmento confirmado como `<span>` sem `onclick`
+(não mais clicável); aba App Lançamentos com link certo pro `app-lancamentos.html`; fundo escuro
+confirmado via `getComputedStyle` nas 3 abas certas (`rgb(10,11,16)`) e ausente no Mapa Geral
+(transparente); nenhuma regressão nas abas Mapa Geral/Busca/Estratégias/Cadastrados; zero erros no
+console. `dashboard.html` sintaticamente válido após a limpeza do bloco órfão.
+
 ## 2026-07-30 (parte 157) — Cabeçalho: remove "Estratégias" + padroniza links em todas as páginas
 
 Pedido explícito do usuário: como o conteúdo de Estratégias virou aba interna de Lançamentos (parte

@@ -636,6 +636,73 @@ select.form-input option { background: var(--surface2); }
 .brief-preview-label { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text3); padding: 8px 14px 6px; border-bottom: 1px solid var(--border); }
 .brief-preview-body { font-size: 11px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; padding: 12px 14px; max-height: 200px; overflow-y: auto; font-family: monospace; }
 .brief-regra { font-size: 12px; color: var(--text3); line-height: 1.6; background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2); border-radius: 8px; padding: 10px 14px; }
+
+/* ── INTELIGÊNCIA (fundida de dashboard.html pra dentro da aba
+   "Inteligência" -- pedido explícito do usuário). Nenhuma dessas classes
+   existia em lancamentos.html, sem colisão. --hot/--warm/--cold (usadas
+   por .score-*) não existem nas :root daqui -- cor hardcoded direto na
+   regra em vez de criar variável nova só pra isso. ─────────────────────── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px; }
+.vg-panel {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+  gap: 1px; background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; margin-bottom: 16px;
+}
+.vg-stat { background: var(--surface); padding: 12px 14px; position: relative; transition: background .15s; }
+.vg-stat-top { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; padding-right: 34px; }
+.vg-stat-icon { font-size: 13px; line-height: 1; flex-shrink: 0; }
+.vg-stat-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vg-stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 21px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.vg-stat-sub { font-size: 10px; color: var(--text3); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) {
+  .vg-panel { grid-template-columns: repeat(2,1fr); }
+  .vg-stat-value { font-size: 19px; }
+}
+.adm-table { width: 100%; border-collapse: collapse; }
+.adm-table th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; }
+.adm-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.adm-table tr:last-child td { border-bottom: none; }
+.adm-table tr:hover td { background: rgba(255,255,255,.015); }
+.score-hot  { background: rgba(255,90,90,.15); color: #ff5a5a; }
+.score-warm { background: rgba(245,166,35,.15); color: #f5a623; }
+.score-cold { background: rgba(79,124,255,.15); color: #4f7cff; }
+.empty-state { padding: 32px 16px; text-align: center; color: var(--text3); font-size: 13px; }
+.loading { text-align: center; padding: 48px; color: var(--text3); font-size: 14px; }
+.dot-anim::after { content: '...'; animation: dots 1.2s steps(4,end) infinite; }
+@keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+
+.int-periodo-select {
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; font-size: 12px; font-family: inherit; cursor: pointer;
+}
+.int-funil-card { display: flex; flex-direction: column; gap: 0; }
+.int-funil-row { display: grid; grid-template-columns: 150px 1fr 56px 78px; align-items: center; gap: 12px; padding: 8px 0; }
+.int-funil-row+.int-funil-row { border-top: 1px solid var(--border); }
+.int-funil-nome { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.int-funil-track { height: 18px; background: var(--surface2); border-radius: 5px; overflow: hidden; }
+.int-funil-fill { height: 100%; background: linear-gradient(90deg,var(--accent),#7a9bff); border-radius: 5px; }
+.int-funil-fill.hot { background: linear-gradient(90deg,#ff5a5a,#ff9a9a); }
+.int-funil-fill.done { background: linear-gradient(90deg,var(--accent2),#5eead4); }
+.int-funil-pct { font-size: 12.5px; font-weight: 700; color: var(--text); text-align: right; font-family: 'Space Grotesk', sans-serif; }
+.int-funil-drop { font-size: 11px; color: var(--text3); text-align: right; }
+.int-funil-drop.flag { color: #ff5a5a; font-weight: 700; background: rgba(255,90,90,.12); border-radius: 6px; padding: 2px 7px; }
+
+.int-seg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 12px; margin-bottom: 20px; }
+.int-seg-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.int-seg-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.int-seg-nome { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.int-seg-count { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.int-seg-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; padding: 2px 8px; border-radius: 99px; width: fit-content; }
+.int-seg-ids { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.int-seg-id-chip { font-size: 10.5px; font-weight: 600; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; font-family: inherit; }
+
+/* ── ABAS ESCURAS (Extrair Modelo 1/2, Modelos e Padrões Vendedores) --
+   pedido explícito do usuário: distinguir visualmente as abas de
+   cadastro/dados brutos das abas de análise (Mapa Geral, Busca,
+   Estratégias, Inteligência, App Lançamentos, Cadastrados). ───────────── */
+#tabPainelNovo, #tabPainelOutros, #tabPainelModelos {
+  background: #0a0b10; border-radius: var(--radius); padding: 22px 20px;
+}
 </style>
 </head>
 <body>
@@ -682,6 +749,8 @@ select.form-input option { background: var(--surface2); }
     <button class="lanc-tab active" id="tabBtnMapa" onclick="mudarAbaLancamentos('mapa')">Mapa Geral</button>
     <button class="lanc-tab" id="tabBtnBusca" onclick="mudarAbaLancamentos('busca')">Busca</button>
     <button class="lanc-tab" id="tabBtnEstrategias" onclick="mudarAbaLancamentos('estrategias')">Estratégias</button>
+    <button class="lanc-tab" id="tabBtnInteligencia" onclick="mudarAbaLancamentos('inteligencia')">Inteligência</button>
+    <button class="lanc-tab" id="tabBtnAppLancamentos" onclick="mudarAbaLancamentos('applancamentos')">App Lançamentos</button>
     <button class="lanc-tab" id="tabBtnLista" onclick="mudarAbaLancamentos('lista')">Cadastrados</button>
     <button class="lanc-tab" id="tabBtnNovo" onclick="mudarAbaLancamentos('novo')">Extrair Modelo 1</button>
     <button class="lanc-tab" id="tabBtnOutros" onclick="mudarAbaLancamentos('outros')">Extrair Modelo 2</button>
@@ -1010,6 +1079,73 @@ select.form-input option { background: var(--surface2); }
     <div class="vazio-segmento">Carregando...</div>
   </div>
   <div id="blocoProdutoAlvo" style="display:none"></div>
+  </div>
+
+  <!-- INTELIGÊNCIA (fundida de dashboard.html) -- carregada sob demanda na
+       1ª vez que a aba abre. Os chips de "amostra de leads" dos segmentos
+       viraram só texto (sem clique) -- o drawer de detalhe de lead
+       (abrirDetalheLeadBI/_biLeadsMap) é infra do BaseImob, que não existe
+       aqui em Lançamentos (que é sobre empreendimentos, não leads). -->
+  <div id="tabPainelInteligencia" class="tab-panel" style="display:none">
+  <div class="sec-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <div class="sec-title">Central de Inteligência Comportamental</div>
+      <div class="sec-sub">Padrões de comportamento capturados no App Lançamentos.</div>
+    </div>
+    <select id="intPeriodo" onchange="carregarInteligencia_()" class="int-periodo-select">
+      <option value="7">Últimos 7 dias</option>
+      <option value="30" selected>Últimos 30 dias</option>
+      <option value="90">Últimos 90 dias</option>
+      <option value="36500">Histórico completo</option>
+    </select>
+  </div>
+
+  <div class="vg-panel" id="intKpis">
+    <div class="loading dot-anim" style="grid-column:1/-1">Carregando estatísticas</div>
+  </div>
+
+  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Funil de conversão por etapa</div></div>
+  <div class="card int-funil-card" id="intFunil">
+    <div class="loading dot-anim">Carregando funil</div>
+  </div>
+
+  <div class="sec-header" style="margin-top:8px">
+    <div class="sec-title" style="font-size:14px">Segmentação comportamental</div>
+    <div class="sec-sub">Histórico completo — não filtra por período.</div>
+  </div>
+  <div class="int-seg-grid" id="intSegmentos">
+    <div class="loading dot-anim">Carregando segmentos</div>
+  </div>
+
+  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Tempo médio por etapa</div></div>
+  <div class="card" id="intTempoWrap" style="padding:0;overflow:auto">
+    <div class="loading dot-anim" style="padding:24px">Carregando</div>
+  </div>
+
+  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Performance por origem (UTM)</div></div>
+  <div class="card" id="intOrigemWrap" style="padding:0;overflow:auto">
+    <div class="loading dot-anim" style="padding:24px">Carregando</div>
+  </div>
+  </div>
+
+  <!-- APP LANÇAMENTOS -->
+  <div id="tabPainelAppLancamentos" class="tab-panel" style="display:none">
+  <div class="sec-header">
+    <div class="sec-title">App Lançamentos</div>
+    <div class="sec-sub">O funil que o cliente usa pra configurar orçamento/área e receber um mix de opções — é a origem de todos os leads/dados que alimentam a aba "Inteligência".</div>
+  </div>
+  <div class="card" style="max-width:640px">
+    <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px">
+      Simulador público voltado pro cliente final: ele configura orçamento e metragem, escolhe entre
+      "Pronto para morar" ou "Em Obras", e recebe um mix de até 7 empreendimentos compatíveis,
+      ancorado no melhor match real (Score de Tração/Similaridade). Cada interação — card aberto,
+      favorito, tempo por etapa, origem de acesso — é capturada e alimenta a Central de Inteligência
+      Comportamental.
+    </p>
+    <a href="app-lancamentos.html" target="_blank" rel="noopener" class="btn-extrair" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none">
+      🚀 Abrir App Lançamentos
+    </a>
+  </div>
   </div>
 
   <!-- MODELOS E PADRÕES VENDEDORES (consolida Modelos Vendedores + Padrão
@@ -1683,22 +1819,27 @@ function atualizarUrlLink(val) {
 // de sempre, só o rótulo visível e a ordem mudaram; "importar" virou
 // "modelos" (a aba de import se fundiu com Modelos e Padrão Vendedor). ──────
 function mudarAbaLancamentos(nome) {
-  document.getElementById('tabPainelMapa').style.display        = nome === 'mapa'        ? '' : 'none';
-  document.getElementById('tabPainelBusca').style.display       = nome === 'busca'       ? '' : 'none';
-  document.getElementById('tabPainelEstrategias').style.display = nome === 'estrategias' ? '' : 'none';
-  document.getElementById('tabPainelNovo').style.display        = nome === 'novo'        ? '' : 'none';
-  document.getElementById('tabPainelLista').style.display       = nome === 'lista'       ? '' : 'none';
-  document.getElementById('tabPainelOutros').style.display      = nome === 'outros'      ? '' : 'none';
-  document.getElementById('tabPainelModelos').style.display     = nome === 'modelos'     ? '' : 'none';
+  document.getElementById('tabPainelMapa').style.display          = nome === 'mapa'          ? '' : 'none';
+  document.getElementById('tabPainelBusca').style.display         = nome === 'busca'         ? '' : 'none';
+  document.getElementById('tabPainelEstrategias').style.display   = nome === 'estrategias'   ? '' : 'none';
+  document.getElementById('tabPainelInteligencia').style.display  = nome === 'inteligencia'  ? '' : 'none';
+  document.getElementById('tabPainelAppLancamentos').style.display = nome === 'applancamentos' ? '' : 'none';
+  document.getElementById('tabPainelNovo').style.display          = nome === 'novo'          ? '' : 'none';
+  document.getElementById('tabPainelLista').style.display         = nome === 'lista'         ? '' : 'none';
+  document.getElementById('tabPainelOutros').style.display        = nome === 'outros'        ? '' : 'none';
+  document.getElementById('tabPainelModelos').style.display       = nome === 'modelos'       ? '' : 'none';
   document.getElementById('tabBtnMapa').classList.toggle('active', nome === 'mapa');
   document.getElementById('tabBtnBusca').classList.toggle('active', nome === 'busca');
   document.getElementById('tabBtnEstrategias').classList.toggle('active', nome === 'estrategias');
+  document.getElementById('tabBtnInteligencia').classList.toggle('active', nome === 'inteligencia');
+  document.getElementById('tabBtnAppLancamentos').classList.toggle('active', nome === 'applancamentos');
   document.getElementById('tabBtnNovo').classList.toggle('active', nome === 'novo');
   document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
   document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
   document.getElementById('tabBtnModelos').classList.toggle('active', nome === 'modelos');
   if (nome === 'busca') document.getElementById('busca-input').focus();
   if (nome === 'estrategias') carregarEstrategiasLazy_();
+  if (nome === 'inteligencia') carregarInteligenciaLazy_();
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
@@ -1712,6 +1853,154 @@ function carregarEstrategiasLazy_() {
   if (_estrategiasCarregada_) return;
   _estrategiasCarregada_ = true;
   carregarPagina_();
+}
+
+// ── INTELIGÊNCIA (fundida de dashboard.html) ────────────────────────────
+// Consome listarEstatisticasFunil_/listarSegmentosComportamentais_ (Fase 2,
+// code.txt). Descrição/ação sugerida por segmento é copy de UI -- a API só
+// devolve chave/nome/count/amostra de idCliente, o texto vive aqui.
+// Diferente da versão original (dashboard.html): os chips de amostra de
+// lead NÃO abrem drawer de detalhe -- essa infra (abrirDetalheLeadBI/
+// _biLeadsMap) é do BaseImob, que não existe em Lançamentos (aqui é sobre
+// empreendimentos, não leads); os chips ficam só como texto informativo.
+const INT_SEG_META_ = {
+  comparador_preco: { badge: 'warm', desc: 'Abriu "Ver Preço" em 5+ cards mas favoritou no máximo 1 — está comparando ativamente.', acao: 'Comparativo direto de custo-benefício entre as opções que mais olhou.' },
+  decisao_rapida: { badge: 'hot', desc: 'Completou o funil inteiro em menos de 90 segundos.', acao: 'Ligar rápido — já sabia o que queria antes de abrir o app.' },
+  alto_engajamento_sem_favorito: { badge: 'warm', desc: 'Ficou 3+ minutos na tela de resultados mas não favoritou nada.', acao: 'Reabordar perguntando diretamente o que faltou pra fechar.' },
+  fora_da_regiao: { badge: 'cold', desc: 'Geolocalização aproximada (IP) fora de Goiânia.', acao: 'Investigar se é mudança de cidade ou investimento à distância.' },
+  investidor_provavel: { badge: 'hot', desc: 'Marcou "quero investir" e acessou via desktop.', acao: 'Discurso de retorno/valorização, não de moradia.' },
+  abandono_precoce: { badge: 'cold', desc: 'Saiu ainda na Capa ou no Orçamento/Área, sem se identificar.', acao: 'Sessão anônima — baixa prioridade de ligação, considerar remarketing.' },
+};
+const INT_SEG_BADGE_LABEL_ = { hot: 'Prioridade alta', warm: 'Acompanhar', cold: 'Baixa prioridade' };
+
+function _intFmtSegundos_(s) {
+  if (s === null || s === undefined) return '—';
+  s = Math.round(s);
+  return s < 60 ? s + 's' : Math.floor(s / 60) + 'min ' + (s % 60) + 's';
+}
+function _intFmtMs_(ms) { return _intFmtSegundos_(Math.round((Number(ms) || 0) / 1000)); }
+
+function renderIntKpis_(json) {
+  const k = json.kpis || {};
+  document.getElementById('intKpis').innerHTML = `
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">👥</span><span class="vg-stat-label">Sessões</span></div>
+      <div class="vg-stat-value">${k.totalSessoes ?? '—'}</div>
+      <div class="vg-stat-sub">no período selecionado</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">✅</span><span class="vg-stat-label">Taxa de conclusão</span></div>
+      <div class="vg-stat-value" style="color:var(--accent2)">${k.taxaConclusao ?? '—'}%</div>
+      <div class="vg-stat-sub">chegaram na Etapa 8</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🎯</span><span class="vg-stat-label">Score médio</span></div>
+      <div class="vg-stat-value">${k.scoreMedio ?? '—'}</div>
+      <div class="vg-stat-sub">dos leads completos</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">⏱️</span><span class="vg-stat-label">Tempo médio no funil</span></div>
+      <div class="vg-stat-value">${_intFmtSegundos_(k.tempoMedioFunilSegundos)}</div>
+      <div class="vg-stat-sub">até confirmar WhatsApp</div>
+    </div>`;
+}
+
+function renderIntFunil_(json) {
+  const el = document.getElementById('intFunil');
+  const funil = json.funil || [];
+  if (!funil.length || !(json.kpis && json.kpis.totalSessoes)) {
+    el.innerHTML = '<div class="empty-state">Sem sessões registradas nesse período.</div>';
+    return;
+  }
+  // Maior queda entre etapas consecutivas -- destacada em vermelho, é o
+  // ponto de fricção mais crítico do funil pra investigar primeiro.
+  let maiorQueda = { etapa: null, valor: 0 };
+  funil.forEach((f, i) => {
+    if (i === 0) return;
+    const queda = funil[i - 1].pctTotal - f.pctTotal;
+    if (queda > maiorQueda.valor) maiorQueda = { etapa: f.etapa, valor: queda };
+  });
+  el.innerHTML = funil.map((f, i) => {
+    const quedaAqui = i === 0 ? null : funil[i - 1].pctTotal - f.pctTotal;
+    const flag = f.etapa === maiorQueda.etapa && maiorQueda.valor > 0;
+    const fillClass = f.etapa === 8 ? 'done' : (flag ? 'hot' : '');
+    return `<div class="int-funil-row">
+      <div class="int-funil-nome">Etapa ${f.etapa} — ${f.nome}</div>
+      <div class="int-funil-track"><div class="int-funil-fill ${fillClass}" style="width:${f.pctTotal}%"></div></div>
+      <div class="int-funil-pct">${f.pctTotal}%</div>
+      <div class="int-funil-drop ${flag ? 'flag' : ''}">${quedaAqui === null ? '—' : '-' + quedaAqui + '%'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderIntTempoTabela_(json) {
+  const el = document.getElementById('intTempoWrap');
+  const linhas = json.tempoPorEtapa || [];
+  if (!linhas.length) { el.innerHTML = '<div class="empty-state">Sem dados de tempo nesse período.</div>'; return; }
+  el.innerHTML = `<table class="adm-table"><thead><tr><th>Etapa</th><th style="text-align:right">Tempo médio</th></tr></thead><tbody>
+    ${linhas.map(l => `<tr><td>Etapa ${l.etapa} — ${l.nome}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${_intFmtMs_(l.tempoMedioMs)}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderIntOrigemTabela_(json) {
+  const el = document.getElementById('intOrigemWrap');
+  const linhas = json.origem || [];
+  if (!linhas.length) { el.innerHTML = '<div class="empty-state">Sem sessões nesse período.</div>'; return; }
+  el.innerHTML = `<table class="adm-table"><thead><tr><th>Origem</th><th style="text-align:right">Sessões</th><th style="text-align:right">Conclusão</th><th>Dispositivo predominante</th></tr></thead><tbody>
+    ${linhas.map(l => `<tr><td>${l.origem}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${l.sessoes}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${l.taxaConclusao}%</td><td>${l.dispositivoPredominante}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderIntSegmentos_(json) {
+  const el = document.getElementById('intSegmentos');
+  const segmentos = json.segmentos || [];
+  if (!segmentos.length) { el.innerHTML = '<div class="empty-state">Sem dados suficientes ainda.</div>'; return; }
+  el.innerHTML = segmentos.map(s => {
+    const meta = INT_SEG_META_[s.chave] || { badge: 'cold', desc: '', acao: '' };
+    const chips = (s.idClientesAmostra || []).slice(0, 8)
+      .map(id => `<span class="int-seg-id-chip" title="Lead deste segmento">${id}</span>`).join('');
+    return `<div class="int-seg-card">
+      <div class="int-seg-top"><span class="int-seg-nome">${s.nome}</span><span class="int-seg-count">${s.count}</span></div>
+      <span class="int-seg-badge score-${meta.badge}">${INT_SEG_BADGE_LABEL_[meta.badge]}</span>
+      ${meta.desc ? `<div style="font-size:12px;color:var(--text2);line-height:1.5">${meta.desc}</div>` : ''}
+      ${meta.acao ? `<div style="font-size:11.5px;color:var(--text3);border-top:1px solid var(--border);padding-top:8px"><b style="color:var(--text2)">Abordagem:</b> ${meta.acao}</div>` : ''}
+      ${chips ? `<div class="int-seg-ids">${chips}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function carregarInteligencia_() {
+  const dias = document.getElementById('intPeriodo').value;
+  document.getElementById('intKpis').innerHTML = '<div class="loading dot-anim" style="grid-column:1/-1">Carregando estatísticas</div>';
+  document.getElementById('intFunil').innerHTML = '<div class="loading dot-anim">Carregando funil</div>';
+  document.getElementById('intTempoWrap').innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
+  document.getElementById('intOrigemWrap').innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
+  document.getElementById('intSegmentos').innerHTML = '<div class="loading dot-anim">Carregando segmentos</div>';
+
+  try {
+    const [respStats, respSeg] = await Promise.all([
+      fetch(WEBHOOK_URL + '?acao=listar_estatisticas_funil&dias=' + encodeURIComponent(dias) + '&token=' + encodeURIComponent(tokenSessao())),
+      fetch(WEBHOOK_URL + '?acao=listar_segmentos_comportamentais&token=' + encodeURIComponent(tokenSessao())),
+    ]);
+    const stats = await respStats.json();
+    const segs  = await respSeg.json();
+    if (trataNaoAutenticado(stats) || trataNaoAutenticado(segs)) return;
+
+    renderIntKpis_(stats);
+    renderIntFunil_(stats);
+    renderIntTempoTabela_(stats);
+    renderIntOrigemTabela_(stats);
+    renderIntSegmentos_(segs);
+  } catch (e) {
+    document.getElementById('intFunil').innerHTML = `<div class="empty-state">Erro ao carregar: ${e.message}</div>`;
+  }
+}
+
+let _inteligenciaCarregada_ = false;
+function carregarInteligenciaLazy_() {
+  if (_inteligenciaCarregada_) return;
+  _inteligenciaCarregada_ = true;
+  carregarInteligencia_();
 }
 
 // Imprime/gera PDF só da aba de LISTA que estiver ativa no momento
