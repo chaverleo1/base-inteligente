@@ -713,6 +713,7 @@ async function carregarBaseReal() {
       return {
         id: g.idEmpreendimento || g.idLancamento, nome: g.nomeEmpreendimento || '—',
         regiao: [g.bairro, g.cidade].filter(Boolean).join(' · ') || 'Goiânia',
+        bairro: g.bairro || '',
         tipoImovel: tipoImovelDominanteSimulador_(g.unidades), padrao: g.padrao || '',
         estagio: g.status || '—', entregaPrev: g.previsaoEntrega || '—',
         prazoPag: parseInt(g.prazoMaximo, 10) || 0,
@@ -1186,7 +1187,7 @@ function submeter() {
     qtdInteresse: filtrados().length,
     idsInteresse: top7.map(c => c.id).filter(Boolean).join(', '),
     rankingDetalhado: JSON.stringify(top7.map((c, i) => ({
-      rank: i + 1, id: c.id, nome: c.nome, regiao: c.regiao,
+      rank: i + 1, id: c.id, nome: c.nome, regiao: c.regiao, bairro: c.bairro || '',
       area: `${c.areaMin}-${c.areaMax}m²`, precoM2: Math.round(c.precoM2),
       precoAPartir: c.precoAPartir, estagio: c.estagio,
       pctVendido: c.pctVendido, matchPref: c.matchPref, tracao: Math.round(c.tracao * 10) / 10,

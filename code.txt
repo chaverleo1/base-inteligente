@@ -5328,6 +5328,51 @@ function montarBlocoRoteiroEmail_(d) {
   }
 }
 
+function padEmail_(str, len) {
+  str = String(str === undefined || str === null ? '' : str);
+  return str.length >= len ? str.slice(0, len) : str + Array(len - str.length + 1).join(' ');
+}
+
+function montarTabelaEmail_(titulo, linhas, colunas) {
+  if (!linhas.length) return '';
+  var out = ['', titulo,
+    colunas.map(function(c) { return padEmail_(c.label, c.width); }).join(' | '),
+    colunas.map(function(c) { return Array(c.width + 1).join('-'); }).join('-+-')];
+  linhas.forEach(function(r) {
+    out.push(colunas.map(function(c) { return padEmail_(c.get(r), c.width); }).join(' | '));
+  });
+  return out.join('\n');
+}
+
+// Sinais comportamentais por card capturados no App Lançamentos (Etapa 6:
+// clique em "Ver Preço" e favoritar ♥) -- pedido explícito do usuário:
+// preferência REAL clicada é mais valiosa que a declarada, o corretor
+// precisa saber ANTES de ligar quais empreendimentos específicos geraram
+// interesse de verdade. Só entra aqui quem tem os campos precoVisto/
+// favoritado no rankingDetalhado (exclusivo do App Lançamentos -- outros
+// funis, como baseimob-funil.html, não têm esses campos e ficam de fora).
+function montarBlocoInteracaoCardsEmail_(d) {
+  try {
+    var ranking = JSON.parse(d.rankingDetalhado || '[]');
+    var comSinal = ranking.filter(function(r) { return r.precoVisto !== undefined; });
+    if (!comSinal.length) return '';
+
+    var favoritos = comSinal.filter(function(r) { return r.favoritado; });
+    var naoClicou = comSinal.filter(function(r) { return !r.precoVisto; });
+
+    return montarTabelaEmail_('★ FAVORITOS (o cliente curtiu ♥ no app)', favoritos, [
+      { label: 'COD',    width: 10, get: function(r) { return r.id || '-'; } },
+      { label: 'BAIRRO', width: 22, get: function(r) { return r.bairro || '-'; } },
+      { label: 'PREÇO',  width: 14, get: function(r) { return formatarMoedaEmail_(r.precoAPartir); } },
+    ]) + montarTabelaEmail_('CARDS QUE O CLIENTE NÃO CLICOU EM "VER PREÇO"', naoClicou, [
+      { label: 'COD',    width: 10, get: function(r) { return r.id || '-'; } },
+      { label: 'BAIRRO', width: 22, get: function(r) { return r.bairro || '-'; } },
+    ]);
+  } catch (e) {
+    return '';
+  }
+}
+
 // E-mail pro corretor sempre que um lead pede atendimento — é o momento
 // mais quente do funil BaseImob, não pode passar batido.
 function enviarNotificacaoAtendente_(d) {
@@ -5342,6 +5387,7 @@ function enviarNotificacaoAtendente_(d) {
                 'Tags: ' + (d.tags || '-') + '\n' +
                 'Canal: ' + (d.canal || '-') + '\n' +
                 'Data: ' + Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    corpo += montarBlocoInteracaoCardsEmail_(d);
     corpo += montarBlocoRoteiroEmail_(d);
     MailApp.sendEmail({
       to: ADM_EMAIL,

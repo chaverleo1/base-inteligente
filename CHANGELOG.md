@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 148) — E-mail do lead: tabelas de favoritos + cards não abertos
+
+Pedido explícito do usuário: os sinais de "Ver Preço"/favorito capturados por card (parte 147)
+precisavam aparecer nos resultados enviados via e-mail e ficar disponíveis no sistema, em formato de
+tabela — favoritos com COD | BAIRRO | PREÇO no topo, e os cards que o cliente NÃO clicou em
+"Ver Preço" com COD | BAIRRO logo abaixo.
+
+`app-lancamentos.html`: `TODOS_LANC` ganhou o campo `bairro` isolado (antes só existia `regiao`,
+"bairro · cidade" combinado) e `rankingDetalhado` (payload do lead) passou a incluir `bairro` por
+item, junto do `precoVisto`/`favoritado` já enviados na parte 147.
+
+`code.txt`: novas funções `montarBlocoInteracaoCardsEmail_`/`montarTabelaEmail_`/`padEmail_`, chamadas
+em `enviarNotificacaoAtendente_` (antes do bloco de mix estratégico já existente) — monta 2 tabelas
+de texto simples a partir do `rankingDetalhado` do lead:
+1. **★ FAVORITOS** (itens com `favoritado: true`) — COD | BAIRRO | PREÇO.
+2. **Cards que o cliente não clicou em "Ver Preço"** (itens com `precoVisto: false`) — COD | BAIRRO.
+
+Só entra no e-mail quem tem os campos `precoVisto`/`favoritado` no ranking (exclusivo do App
+Lançamentos) — leads de outros funis que usam o mesmo `rankingDetalhado`/e-mail (ex:
+`baseimob-funil.html`) não têm esses campos e o bloco simplesmente não aparece, sem quebrar nada.
+
+Testado: harness Node isolando as 3 funções novas de `code.txt` — tabela de favoritos e de não-clicados
+geradas corretamente a partir de um ranking sintético; ranking sem os campos novos (simulando lead de
+outro funil) retorna string vazia; `rankingDetalhado` ausente também retorna vazio sem erro. Testado
+também ao vivo no navegador que `bairro` chega corretamente no payload real (`rankingDetalhado[0].bairro`).
+
 ## 2026-07-29 (parte 147) — App Lançamentos: sinais comportamentais por card (Etapa 6)
 
 Pedido explícito do usuário: capturar preferência REAL clicada em cada card (não só a declarada nos
