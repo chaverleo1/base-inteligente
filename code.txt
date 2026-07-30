@@ -5344,6 +5344,22 @@ function montarTabelaEmail_(titulo, linhas, colunas) {
   return out.join('\n');
 }
 
+// Tabela chave/valor (CAMPO | VALOR) -- diferente de montarTabelaEmail_
+// (que é pra listas de itens do mesmo formato, ex: ranking de imóveis).
+// Aqui só a coluna CAMPO é alinhada com largura fixa; VALOR não é truncado
+// (pedido explícito do usuário: nada de texto cortado tipo lista de
+// "IDs selecionados" com nome de empreendimento, que pode ser longa).
+function montarTabelaChaveValorEmail_(titulo, linhas) {
+  if (!linhas.length) return '';
+  var maxCampo = linhas.reduce(function(m, r) { return Math.max(m, String(r.campo).length); }, 5);
+  var out = ['', titulo];
+  linhas.forEach(function(r) {
+    var valor = (r.valor === undefined || r.valor === null || r.valor === '') ? '-' : r.valor;
+    out.push(padEmail_(r.campo, maxCampo) + ' | ' + valor);
+  });
+  return out.join('\n');
+}
+
 // Sinais comportamentais por card capturados no App Lançamentos (Etapa 6:
 // clique em "Ver Preço" e favoritar ♥) -- pedido explícito do usuário:
 // preferência REAL clicada é mais valiosa que a declarada, o corretor
@@ -5404,20 +5420,71 @@ function montarBlocoExtraOpcoesEmail_(d) {
   }
 }
 
+var SITUACAO_LABEL_EMAIL_ = { pronto_novo: 'Pronto para morar', em_obras: 'Em Obras', todos: 'Sem preferência' };
+var MORADIA_LABEL_EMAIL_  = { aluguel: 'Quer sair do aluguel', proprio: 'Tem imóvel próprio', familia: 'Mora com família ou amigos', investidor: 'Quer investir' };
+var ALTURA_LABEL_EMAIL_   = { baixo: 'Até o 5º andar', medio: 'Do 5º ao 10º andar', alto: 'Acima do 10º andar' };
+
+// "COD (Nome do empreendimento)" -- pedido explícito do usuário: todo ID
+// de empreendimento no e-mail vem acompanhado do nome, nunca só o código
+// cru. `ranking` é o rankingDetalhado já parseado (tem o campo `nome`).
+function idComNomeEmail_(id, ranking) {
+  if (!id) return '-';
+  var item = ranking.filter(function(r) { return r.id === id; })[0];
+  return item && item.nome ? (id + ' (' + item.nome + ')') : id;
+}
+
+// Resumo do lead em tabela CAMPO | VALOR -- substitui o dump antigo de
+// "Tags: {json cru}" (pedido explícito do usuário: nada de texto de
+// formatação técnica) por campos traduzidos pro português, na mesma
+// tabela dos dados de contato. Os campos mais "técnicos"/analíticos do
+// payload (tempoSegundos, ajustesSlider, origemAcesso, etc.) continuam
+// gravados normalmente na planilha (coluna tags, sem alteração) -- só não
+// entram mais no e-mail, que é pro corretor ligar, não analisar funil.
+function montarBlocoResumoLeadEmail_(d) {
+  var ranking = [];
+  try { ranking = JSON.parse(d.rankingDetalhado || '[]'); } catch (e) {}
+  var tags = {};
+  try { tags = JSON.parse(d.tags || '{}'); } catch (e) {}
+
+  var idsComNome = ranking.length
+    ? ranking.map(function(r) { return idComNomeEmail_(r.id, ranking); }).join(', ')
+    : (d.idsInteresse || '-');
+
+  var objetivo = (Array.isArray(tags.moradias) && tags.moradias.length)
+    ? tags.moradias.map(function(m) { return MORADIA_LABEL_EMAIL_[m] || m; }).join(', ')
+    : '-';
+  var quartos = tags.quartosPref
+    ? tags.quartosPref + (tags.quartosPref >= 5 ? '+' : '') + ' quarto' + (tags.quartosPref > 1 ? 's' : '')
+    : '-';
+  var metragem = tags.metragemAlvo
+    ? tags.metragemAlvo + ' m²' + (Array.isArray(tags.areaRange) ? ' (considera ' + tags.areaRange[0] + '–' + tags.areaRange[1] + ' m²)' : '')
+    : '-';
+
+  return montarTabelaChaveValorEmail_('RESUMO DO LEAD', [
+    { campo: 'Nome',                      valor: d.nome || '(sem nome)' },
+    { campo: 'Email',                     valor: d.email },
+    { campo: 'WhatsApp',                  valor: d.telefone },
+    { campo: 'Score',                     valor: d.score },
+    { campo: 'Qtd. imóveis de interesse', valor: d.qtdInteresse },
+    { campo: 'IDs selecionados',          valor: idsComNome },
+    { campo: 'Situação buscada',          valor: SITUACAO_LABEL_EMAIL_[tags.filtroSituacao] || tags.filtroSituacao },
+    { campo: 'Objetivo',                  valor: objetivo },
+    { campo: 'Quartos',                   valor: quartos },
+    { campo: 'Andar preferido',           valor: ALTURA_LABEL_EMAIL_[tags.alturaPref] },
+    { campo: 'Orçamento',                 valor: tags.precoAlvo ? formatarMoedaEmail_(tags.precoAlvo) : '' },
+    { campo: 'Metragem',                  valor: metragem },
+    { campo: 'Produto mostrado (isca)',   valor: idComNomeEmail_(tags.idEmpreendimentoIsca, ranking) },
+    { campo: 'Canal',                     valor: d.canal },
+    { campo: 'Data',                      valor: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm') },
+  ]);
+}
+
 // E-mail pro corretor sempre que um lead pede atendimento — é o momento
 // mais quente do funil BaseImob, não pode passar batido.
 function enviarNotificacaoAtendente_(d) {
   try {
     var nome = d.nome || '(sem nome)';
-    var corpo = 'Nome: ' + nome + '\n' +
-                'Email: ' + (d.email || '-') + '\n' +
-                'WhatsApp: ' + (d.telefone || '-') + '\n' +
-                'Score: ' + (d.score || '-') + '\n' +
-                'Qtd. imóveis de interesse: ' + (d.qtdInteresse || '-') + '\n' +
-                'IDs selecionados: ' + (d.idsInteresse || '-') + '\n' +
-                'Tags: ' + (d.tags || '-') + '\n' +
-                'Canal: ' + (d.canal || '-') + '\n' +
-                'Data: ' + Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var corpo = montarBlocoResumoLeadEmail_(d);
     corpo += montarBlocoInteracaoCardsEmail_(d);
     corpo += montarBlocoExtraOpcoesEmail_(d);
     corpo += montarBlocoRoteiroEmail_(d);

@@ -1,5 +1,34 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 150) — E-mail do lead: resumo em tabela, sem JSON cru, IDs com nome
+
+Pedido explícito do usuário sobre o e-mail de notificação: (1) organizar Nome/Email/WhatsApp/Score/
+Qtd./IDs/Tags/Canal em formato de tabela; (2) parar de escrever texto de formatação técnica (o e-mail
+jogava o JSON cru do campo `tags` direto no corpo, ex: `{"moradias":["proprio"],...}`); (3) todo ID de
+empreendimento vir acompanhado do nome, ex: `EMP-009 (Max Buriti)`.
+
+`code.txt`:
+- `montarTabelaChaveValorEmail_(titulo, linhas)` — novo helper de tabela CAMPO | VALOR (só a coluna
+  CAMPO tem largura fixa; VALOR não trunca, porque a lista de "IDs selecionados" com nome pode ficar
+  longa — diferente de `montarTabelaEmail_`, feito pra listas de itens uniformes tipo ranking).
+- `idComNomeEmail_(id, ranking)` — resolve `EMP-XXX` pro nome real usando `rankingDetalhado` (que já
+  tem o campo `nome`); cai pro id puro se não achar.
+- `montarBlocoResumoLeadEmail_(d)` — substitui o dump antigo de texto solto por uma tabela única
+  "RESUMO DO LEAD": Nome, Email, WhatsApp, Score, Qtd. imóveis, IDs selecionados (com nome),
+  Situação buscada, Objetivo, Quartos, Andar preferido, Orçamento, Metragem, Produto mostrado (isca,
+  com nome), Canal, Data — todos os códigos de `tags` (moradias/alturaPref/filtroSituacao/etc.)
+  traduzidos pro português via `SITUACAO_LABEL_EMAIL_`/`MORADIA_LABEL_EMAIL_`/`ALTURA_LABEL_EMAIL_`.
+  Campos mais analíticos (tempoSegundos, ajustesSlider, origemAcesso, precoInicial/Final,
+  areaInicial/Final) saíram do e-mail — continuam gravados normalmente na planilha (coluna `tags`,
+  intocada), só não aparecem mais no texto que o corretor lê.
+- `enviarNotificacaoAtendente_` agora monta o corpo a partir de `montarBlocoResumoLeadEmail_(d)` em
+  vez da concatenação de string solta.
+
+Testado: harness Node no exemplo real citado pelo usuário (Viana, 8 imóveis, tags completo) — tabela
+sai limpa, IDs com nome, sem nenhum JSON cru; testado também com lead sem tags/ranking (campos viram
+"-", sem erro) e com o shape de `baseimob-funil.html` (tags/ranking com campos diferentes) — degrada
+graciosamente, sem quebrar outros funis que usam o mesmo e-mail.
+
 ## 2026-07-29 (parte 149) — App Lançamentos: "opções extras" viram cards interativos (Etapa 6)
 
 Pedido explícito do usuário: o texto estático "+10 outras ofertas encontradas" virou um **botão**
