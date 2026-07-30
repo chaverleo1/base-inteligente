@@ -1,5 +1,39 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 149) — App Lançamentos: "opções extras" viram cards interativos (Etapa 6)
+
+Pedido explícito do usuário: o texto estático "+10 outras ofertas encontradas" virou um **botão**
+("VER +10 OPÇÕES ENCONTRADAS", número destacado) que revela essas opções extras como cards de
+verdade — mesmo formato retraído dos cards principais (só até Região visível, "VER PREÇO"
+expande o resto, ♡ de favoritar), por ordem de score (a mesma ordem de `filtrados()`).
+
+`app-lancamentos.html`:
+- Card principal virou a função reutilizável `cardOpcaoHTML_(c, i, grupo)`, parametrizada por
+  `grupo` ('principal'/'extra') pra não colidir ids no DOM nem misturar os sinais dos dois grupos.
+- `montarMatch()` agora calcula `D.extrasMostrados` (tudo que ficou de fora dos 7 cards principais,
+  já em ordem de score) e monta o botão `#btnVerMaisOpcoes`; `toggleVerMaisOpcoes_()` registra o
+  clique (`D.verMaisOpcoesClicado = true`), renderiza os cards extras (uma vez só, na 1ª abertura) e
+  alterna mostrar/ocultar.
+- `toggleVerPreco_`/`favoritarCard_` ganharam o parâmetro `grupo`, gravando em
+  `D.cardsPrecoVisto`/`cardsFavoritos` (principais) ou `D.extraPrecoVisto`/`extraFavoritos` (extras)
+  — sinais mantidos SEPARADOS de propósito, pra bater com a tabela separada do e-mail (abaixo).
+- Payload do lead: `tags.verMaisOpcoesClicado` (bool) + `tags.rankingExtra` (array com
+  `id`/`bairro`/`precoAPartir`/`precoVisto`/`favoritado`, um item por opção extra).
+
+`code.txt`: nova função `montarBlocoExtraOpcoesEmail_`, chamada em `enviarNotificacaoAtendente_` logo
+depois do bloco de sinais dos cards principais (parte 148). Só aparece no e-mail se
+`tags.verMaisOpcoesClicado` for `true` (cliente realmente abriu a lista extra) — monta
+**"═══ TABELA EXTRA DE OPÇÕES ═══"** com as mesmas 2 sub-tabelas da tabela principal (★ Favoritos
+COD|BAIRRO|PREÇO, depois Não clicou em "Ver Preço" COD|BAIRRO), separada da tabela dos cards
+principais.
+
+Testado ao vivo: botão nasce com "+57" destacado (dataset real), clique revela 57 cards extras,
+retraídos por padrão; interação num card extra (Ver Preço + favoritar) grava em
+`D.extraPrecoVisto`/`extraFavoritos` sem tocar nos Sets dos cards principais; payload de `submeter()`
+confirmado com `verMaisOpcoesClicado: true` e `rankingExtra` completo. Harness Node em
+`montarBlocoExtraOpcoesEmail_`: tabela gerada certa quando clicou; string vazia quando não clicou, sem
+tags, ou lista extra vazia.
+
 ## 2026-07-29 (parte 148) — E-mail do lead: tabelas de favoritos + cards não abertos
 
 Pedido explícito do usuário: os sinais de "Ver Preço"/favorito capturados por card (parte 147)

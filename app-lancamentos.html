@@ -181,7 +181,14 @@ input[type=range]::-moz-range-track {
 }
 .opcao-top-cell-label { font-size: 9px; font-weight: 700; color: var(--text); opacity: .6; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
 .opcao-top-cell-val { font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: break-word; }
-.mais-opcoes-msg { text-align: center; font-size: 14px; color: var(--text); margin: 4px 0 16px; }
+.btn-ver-mais-opcoes {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin: 4px 0 16px; padding: 14px;
+  background: var(--s2); border: 1.5px solid var(--accent); border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .3px;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.btn-ver-mais-opcoes:hover { background: rgba(79,124,255,.08); }
 
 /* ── ÁREA ÚTIL EM DESTAQUE + RETRAIR/EXPANDIR PREÇO + FAVORITO (Etapa 6,
    pedido explícito do usuário) ─────────────────────────────────────────── */
@@ -568,7 +575,9 @@ input[type=range]::-moz-range-track {
     </div>
 
     <div class="opcoes-tabela" id="opcoesTabela"><!-- populado por JS --></div>
-    <div class="mais-opcoes-msg" id="maisOpcoesMsg" style="display:none"></div>
+
+    <button class="btn-ver-mais-opcoes" id="btnVerMaisOpcoes" style="display:none" onclick="toggleVerMaisOpcoes_()"></button>
+    <div class="opcoes-tabela" id="opcoesExtraTabela" style="display:none"><!-- populado por JS, ao clicar em "Ver +N opções" --></div>
 
     <div class="btn-final-wrap">
       <p>Pra confirmar esse atendimento e receber todos os detalhes, informe seu WhatsApp na próxima etapa.</p>
@@ -789,6 +798,12 @@ const D = {
   // cliente expandiu ("Ver Preço") ou favoritou (♥). Pedido explícito do
   // usuário: preferência REAL clicada vale mais que a declarada nos sliders.
   cardsPrecoVisto: new Set(), cardsFavoritos: new Set(), ofertasMostradas: [],
+  // Idem, mas pra "opções extras" (as que ficam atrás do botão "VER +N
+  // OPÇÕES ENCONTRADAS") -- sinais SEPARADOS dos cards principais, porque
+  // o e-mail do lead relata isso numa tabela à parte ("Tabela Extra de
+  // Opções").
+  extrasMostrados: [], extraPrecoVisto: new Set(), extraFavoritos: new Set(),
+  verMaisOpcoesClicado: false,
   precoAlvo: null, metragemAlvo: null, areaRange: null,
   nome: '', whatsapp: '',
   tsInicio: Date.now(), precoInicial: null, precoFinal: null,
@@ -1196,6 +1211,16 @@ function submeter() {
     tags: JSON.stringify({
       moradias: [...D.moradias], alturaPref: D.alturaPref, quartosPref: D.quartosPref, filtroSituacao: D.filtroSituacao,
       cardsPrecoVisto: [...D.cardsPrecoVisto], cardsFavoritos: [...D.cardsFavoritos],
+      // "Opções extras" (atrás do botão "VER +N OPÇÕES ENCONTRADAS") --
+      // pedido explícito do usuário: registrar o clique em "ver mais" e
+      // relatar favoritos/não-clicados dessa lista numa tabela SEPARADA no
+      // e-mail do lead ("Tabela Extra de Opções", ver montarBlocoExtraOpcoesEmail_
+      // em code.txt), sem misturar com os cards principais.
+      verMaisOpcoesClicado: D.verMaisOpcoesClicado,
+      rankingExtra: D.extrasMostrados.map(c => ({
+        id: c.id, bairro: c.bairro || '', precoAPartir: c.precoAPartir,
+        precoVisto: D.extraPrecoVisto.has(c.id), favoritado: D.extraFavoritos.has(c.id),
+      })),
       precoAlvo: D.precoAlvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
       precoInicial: D.precoInicial, precoFinal: D.precoFinal,
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
@@ -1394,19 +1419,33 @@ function montarMatch() {
   // ficariam órfãos, referenciando ids que nem aparecem no ranking enviado.
   D.ofertasMostradas = ofertas;
 
+  // "Opções extras" -- tudo que é compatível mas ficou de fora dos 7 cards
+  // principais, na mesma ordem de score (localCompativeis já vem assim).
+  // Ficam escondidas atrás do botão "VER +N OPÇÕES ENCONTRADAS" (pedido
+  // explícito do usuário) em vez de um texto estático sem interação.
+  const idsNosPrincipais = new Set(ofertas.map(o => o.id));
+  const extras = localCompativeis.filter(c => !idsNosPrincipais.has(c.id));
+  D.extrasMostrados = extras;
+  D.verMaisOpcoesClicado = false;
+  D.extraPrecoVisto = new Set();
+  D.extraFavoritos = new Set();
+
   const primeiroNome = D.nome.split(' ')[0];
-  const maisQueOMix = Math.max(0, localCompativeis.length - ofertas.length);
 
   document.getElementById('matchTitulo').textContent = ofertas.length
     ? headlineImpacto_(ofertas.length, primeiroNome)
     : `Quase lá, ${primeiroNome}! Não achamos um empreendimento com esse perfil exato, mas devemos ter opções bem próximas.`;
 
-  const maisEl = document.getElementById('maisOpcoesMsg');
-  if (maisQueOMix > 0) {
-    maisEl.style.display = '';
-    maisEl.innerHTML = `+ <strong style="color:var(--orange);font-size:26px">${maisQueOMix}</strong> outra${maisQueOMix > 1 ? 's' : ''} oferta${maisQueOMix > 1 ? 's' : ''} encontrada${maisQueOMix > 1 ? 's' : ''} pelo simulador, além dessas`;
+  const btnMais = document.getElementById('btnVerMaisOpcoes');
+  const extraContainer = document.getElementById('opcoesExtraTabela');
+  extraContainer.style.display = 'none';
+  extraContainer.innerHTML = '';
+  delete extraContainer.dataset.montado;
+  if (extras.length > 0) {
+    btnMais.style.display = '';
+    btnMais.innerHTML = `VER +<strong style="font-size:22px;color:var(--orange)">${extras.length}</strong> OPÇÕES ENCONTRADAS`;
   } else {
-    maisEl.style.display = 'none';
+    btnMais.style.display = 'none';
   }
 
   if (!ofertas.length) {
@@ -1415,7 +1454,17 @@ function montarMatch() {
     return;
   }
 
-  document.getElementById('opcoesTabela').innerHTML = ofertas.map((c, i) => `
+  document.getElementById('opcoesTabela').innerHTML = ofertas.map((c, i) => cardOpcaoHTML_(c, i, 'principal')).join('');
+}
+
+// Card de opção reutilizado tanto na lista principal (grupo 'principal')
+// quanto nas "opções extras" reveladas pelo botão "VER +N OPÇÕES
+// ENCONTRADAS" (grupo 'extra') -- mesmo formato retraído/"VER PREÇO"/
+// favorito dos dois, só o grupo muda pra não colidir ids no DOM nem
+// misturar os sinais (D.cardsPrecoVisto/Favoritos vs D.extraPrecoVisto/
+// Favoritos), que o e-mail do lead relata em tabelas separadas.
+function cardOpcaoHTML_(c, i, grupo) {
+  return `
       <div class="opcao-top" data-id="${c.id || ''}">
         <div class="opcao-top-header">
           <span class="opcao-codigo">Código: ${c.id || '—'}</span>
@@ -1427,14 +1476,14 @@ function montarMatch() {
           <div><div class="opcao-top-cell-label">Região</div><div class="opcao-top-cell-val">${c.regiao}</div></div>
         </div>
 
-        <div class="opcao-retraido" id="retraido-${i}" style="display:none">
+        <div class="opcao-retraido" id="retraido-${grupo}-${i}" style="display:none">
           <div class="opcao-top-grid" style="margin-top:12px">
             <div class="opcao-cell-destaque"><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
             <div>
               <div class="opcao-top-cell-label">A partir de</div>
               <div style="display:flex;align-items:center;gap:8px">
                 <span class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</span>
-                <button class="btn-favorito" id="fav-${i}" onclick="favoritarCard_('${c.id || ''}',${i})" title="Favoritar esse empreendimento">♡</button>
+                <button class="btn-favorito" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar esse empreendimento">♡</button>
               </div>
             </div>
             <div><div class="opcao-top-cell-label">Área de lazer</div><div class="opcao-top-cell-val" style="${c.temLazer?'color:var(--green)':''}">${c.temLazer?'Completa':'Não incluso'}</div></div>
@@ -1448,8 +1497,25 @@ function montarMatch() {
           </div>
         </div>
 
-        <button class="btn-ver-preco" id="verPreco-${i}" onclick="toggleVerPreco_('${c.id || ''}',${i})">VER PREÇO ▾</button>
-      </div>`).join('');
+        <button class="btn-ver-preco" id="verPreco-${grupo}-${i}" onclick="toggleVerPreco_('${c.id || ''}',${i},'${grupo}')">VER PREÇO ▾</button>
+      </div>`;
+}
+
+function toggleVerMaisOpcoes_() {
+  const container = document.getElementById('opcoesExtraTabela');
+  const btn = document.getElementById('btnVerMaisOpcoes');
+  const abrindo = container.style.display === 'none';
+  if (abrindo) {
+    D.verMaisOpcoesClicado = true;
+    if (!container.dataset.montado) {
+      container.innerHTML = D.extrasMostrados.map((c, i) => cardOpcaoHTML_(c, i, 'extra')).join('');
+      container.dataset.montado = '1';
+    }
+  }
+  container.style.display = abrindo ? '' : 'none';
+  btn.innerHTML = abrindo
+    ? 'OCULTAR OPÇÕES EXTRAS ▴'
+    : `VER +<strong style="font-size:22px;color:var(--orange)">${D.extrasMostrados.length}</strong> OPÇÕES ENCONTRADAS`;
 }
 
 // ── SINAIS COMPORTAMENTAIS POR CARD (Etapa 6) — pedido explícito do
@@ -1458,26 +1524,28 @@ function montarMatch() {
 // Guardado em D.cardsPrecoVisto/D.cardsFavoritos e enviado no payload do
 // lead (ver submeter()), pra o corretor já ligar sabendo em quais
 // empreendimentos específicos o cliente demonstrou interesse real.
-function toggleVerPreco_(id, i) {
-  const el = document.getElementById(`retraido-${i}`);
-  const btn = document.getElementById(`verPreco-${i}`);
+function toggleVerPreco_(id, i, grupo) {
+  const el = document.getElementById(`retraido-${grupo}-${i}`);
+  const btn = document.getElementById(`verPreco-${grupo}-${i}`);
   if (!el || !btn) return;
   const abrindo = el.style.display === 'none';
   el.style.display = abrindo ? '' : 'none';
   btn.textContent = abrindo ? 'OCULTAR ▴' : 'VER PREÇO ▾';
-  if (abrindo && id) D.cardsPrecoVisto.add(id);
+  if (!abrindo || !id) return;
+  (grupo === 'extra' ? D.extraPrecoVisto : D.cardsPrecoVisto).add(id);
 }
 
-function favoritarCard_(id, i) {
+function favoritarCard_(id, i, grupo) {
   if (!id) return;
-  const btn = document.getElementById(`fav-${i}`);
+  const btn = document.getElementById(`fav-${grupo}-${i}`);
   if (!btn) return;
-  if (D.cardsFavoritos.has(id)) {
-    D.cardsFavoritos.delete(id);
+  const set = grupo === 'extra' ? D.extraFavoritos : D.cardsFavoritos;
+  if (set.has(id)) {
+    set.delete(id);
     btn.textContent = '♡';
     btn.classList.remove('ativo');
   } else {
-    D.cardsFavoritos.add(id);
+    set.add(id);
     btn.textContent = '♥';
     btn.classList.add('ativo');
   }
