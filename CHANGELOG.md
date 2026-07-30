@@ -1,5 +1,54 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 154) — Central de Inteligência Comportamental: Fase 2 (API de agregação)
+
+Início da construção da "Central de Inteligência Comportamental" proposta ao usuário (painel de
+análise agregada dos padrões de comportamento capturados no App Lançamentos). Fase 1 (camada de
+dados) já existia desde as partes 147-153; esta é a Fase 2 — API de agregação, ainda sem UI (Fase 3
+fica pra depois).
+
+**Beacon do funil (`app-lancamentos.html`) ficou mais rico** — pré-requisito pra Fase 2 existir:
+o formato anterior (`{etapa, abandonou}`, parte 153) só permitia calcular reach/dropout; não dava
+pra calcular tempo médio por etapa nem cruzar com origem/dispositivo pra sessões que abandonaram
+(esses sinais só existiam no payload final, que nunca é enviado por quem desiste). Cada evento
+agora carrega `etapaSaida`+`tempoMsEtapaSaida` (de onde veio e quanto tempo ficou) e `etapaChegada`
+(pra onde foi, `null` no abandono), mais `utmSource`/`dispositivo` em toda chamada — tudo o que a
+Fase 2 precisa vem da MESMA fonte, sem esperar o lead completar.
+
+**`code.txt` — nova aba `FUNIL_EVENTOS_APP` com schema estendido**: `dataHora, sessionId,
+etapaChegada, etapaSaida, tempoMsEtapaSaida, abandonou, canal, utmSource, dispositivo` (era só
+`etapa, abandonou` antes). `registrarEventoFunil_` atualizado pra gravar as colunas novas.
+
+**Duas novas ações protegidas por sessão** (não são públicas do funil — consumo interno futuro do
+dashboard):
+- `listarEstatisticasFunil_({dias})` — funil de conversão (reach/dropout por etapa), tempo médio por
+  etapa, performance por origem (sessões/taxa de conclusão/dispositivo predominante) e KPIs (total de
+  sessões, taxa de conclusão, score médio, tempo médio no funil). Filtra por janela de dias
+  (`parseDataHoraBR_` reconstrói o Date a partir do formato `dd/MM/yyyy HH:mm:ss` já usado em todo o
+  projeto). `montarBlocoAbandonoEmail_` (e-mail do lead, parte 153) foi refeita pra CHAMAR essa
+  função em vez de duplicar a lógica de "maior etapa por sessão".
+- `listarSegmentosComportamentais_()` — os 6 segmentos propostos na conversa anterior, com 2 ajustes
+  importantes de honestidade dos dados: (1) sinais como favoritos/tempo por etapa só existem pra quem
+  COMPLETOU o funil (só aí o payload com `tags` é enviado) — os 5 segmentos comportamentais rodam
+  sobre INTERESSES, e "Abandono precoce" (quem nunca completou) vem de `FUNIL_EVENTOS_APP` à parte,
+  sem detalhe de lead (são sessões anônimas); (2) "Quer subir de padrão" virou "Fora da região" —
+  um comparativo de padrão de bairro de verdade exigiria uma tabela bairro→padrão que ainda não existe
+  no sistema, então documentei a limitação em vez de fingir precisão que não existe.
+
+Ambas registradas em `doGet` (protegidas por `sessaoValida_`, mesmo padrão de `listar_leads_baseimob`).
+
+Testado: harness Node com 4 sessões sintéticas (1 completa, 2 abandonos em etapas diferentes, 1
+bounce na capa) + 2 leads sintéticos em INTERESSES — `listarEstatisticasFunil_` bate exato (reach,
+dropout, tempo médio por etapa, taxa de conclusão por origem, score médio); `listarSegmentosComportamentais_`
+classifica corretamente cada lead sintético no segmento esperado; `montarBlocoAbandonoEmail_`
+confirmado ainda funcionando após o refactor (mesma saída de antes). Testado ao vivo no navegador:
+beacon de transição de etapa confirmado com o formato novo completo (`etapaSaida`, `tempoMsEtapaSaida`,
+`etapaChegada`, `utmSource`, `dispositivo`).
+
+**Próximo passo (Fase 3, não iniciada)**: nova aba "Inteligência" em `dashboard.html`, consumindo essas
+2 ações via `fetch(WEBHOOK_URL + '?acao=...&token=...')`, no mesmo padrão visual do protótipo já
+apresentado.
+
 ## 2026-07-29 (parte 153) — App Lançamentos: "Ver Preço" sem caixa + captura de dados técnicos/comportamentais
 
 ### 1. Visual — "VER PREÇO" deixa de parecer botão (Etapa 6)

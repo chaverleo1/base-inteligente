@@ -844,31 +844,41 @@ const D = {
 const ETAPA_POR_STEP_ = { 0: 1, 2: 2, 3: 3, 1: 4, 4: 5, 6: 6, 7: 7, 8: 8 };
 let _stepEntradaTs = Date.now();
 
-// Beacon fire-and-forget: registra que a sessão alcançou essa etapa, pra
-// depois calcular taxa de abandono agregada (quantas sessões pararam em
-// cada etapa) -- pedido explícito do usuário. Não bloqueia navegação nem
-// trata erro (se falhar, só não entra na estatística agregada).
-function registrarEventoFunil_(step, abandonou) {
+// Beacon fire-and-forget: registra a transição de etapa (Fase 2 da Central
+// de Inteligência Comportamental -- pedido explícito do usuário de
+// construir a API de agregação em cima disso). Cada evento carrega tanto a
+// etapa que a sessão está DEIXANDO (com o tempo gasto nela) quanto a etapa
+// que está CHEGANDO -- assim dá pra calcular reach/dropout E tempo médio
+// por etapa a partir da MESMA linha, cruzando com UTM/dispositivo, sem
+// precisar esperar o lead completar o funil (que é quando os outros sinais,
+// tipo favoritos, só existem hoje). Não bloqueia navegação nem trata erro
+// (se falhar, só não entra na estatística agregada).
+function registrarEventoFunil_(opts) {
   if (typeof WEBHOOK_URL === 'undefined') return;
   try {
-    const payload = {
-      acao: 'registrar_evento_funil', sessionId: D.sessionId,
-      etapa: ETAPA_POR_STEP_[step] || step, abandonou: !!abandonou, canal: 'App Lançamentos',
-    };
+    const payload = Object.assign({
+      acao: 'registrar_evento_funil', sessionId: D.sessionId, canal: 'App Lançamentos',
+      utmSource: D.utmSource || D.origemAcesso, dispositivo: D.dispositivo,
+    }, opts);
     fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
   } catch (e) {}
 }
 
 function irParaStep(n) {
   const agora = Date.now();
-  D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + (agora - _stepEntradaTs);
+  const etapaSaindo = ETAPA_POR_STEP_[stepAtual] || null;
+  const duracaoMs = agora - _stepEntradaTs;
+  D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + duracaoMs;
+  registrarEventoFunil_({
+    etapaSaida: etapaSaindo, tempoMsEtapaSaida: duracaoMs,
+    etapaChegada: ETAPA_POR_STEP_[n] || n, abandonou: false,
+  });
   document.getElementById('step-' + stepAtual).classList.remove('ativo');
   stepAtual = n;
   document.getElementById('step-' + stepAtual).classList.add('ativo');
   _stepEntradaTs = agora;
   atualizarBotoes();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  registrarEventoFunil_(n, false);
 }
 
 function avancarStep() {
@@ -1723,7 +1733,8 @@ function toast(msg) {
 window.addEventListener('beforeunload', () => {
   if (stepAtual > 0 && stepAtual < 8) {
     D.stepAbandono = stepAtual;
-    D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + (Date.now() - _stepEntradaTs);
+    const duracaoMs = Date.now() - _stepEntradaTs;
+    D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + duracaoMs;
     // sendBeacon (não fetch) -- sobrevive ao unload da página, diferente de
     // um fetch normal que o navegador pode cancelar ao fechar a aba. É o
     // ÚNICO jeito confiável de registrar abandono de verdade: sem isso, uma
@@ -1733,7 +1744,9 @@ window.addEventListener('beforeunload', () => {
       try {
         const payload = JSON.stringify({
           acao: 'registrar_evento_funil', sessionId: D.sessionId,
-          etapa: ETAPA_POR_STEP_[stepAtual] || stepAtual, abandonou: true, canal: 'App Lançamentos',
+          etapaSaida: ETAPA_POR_STEP_[stepAtual] || stepAtual, tempoMsEtapaSaida: duracaoMs,
+          etapaChegada: null, abandonou: true, canal: 'App Lançamentos',
+          utmSource: D.utmSource || D.origemAcesso, dispositivo: D.dispositivo,
         });
         navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
       } catch (e) {}
@@ -1753,7 +1766,10 @@ function geolocalizarPorIp_() {
 // INIT
 carregarBaseReal();
 geolocalizarPorIp_();
-registrarEventoFunil_(0, false); // Etapa 1 (capa) -- sem isso, quem some já na 1ª tela nunca entraria na taxa de abandono
+// Etapa 1 (capa) -- sem isso, quem some já na 1ª tela (bounce puro, nunca
+// chama irParaStep nem beforeunload de forma confiável) nunca entraria nem
+// no denominador de sessões, nem na taxa de abandono.
+registrarEventoFunil_({ etapaSaida: null, tempoMsEtapaSaida: 0, etapaChegada: 1, abandonou: false });
 </script>
 </body>
 </html>

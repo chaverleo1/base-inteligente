@@ -259,6 +259,10 @@ function doGet(e) {
   if (acao === 'buscar_revenda_construtora') return ok(buscarRevendaConstrutoraPorCodigo_(e.parameter));
   if (acao === 'listar_construtoras_parceiras') return ok(listarConstrutorasParceiras_());
   if (acao === 'listar_leads_baseimob') return ok(listarLeadsBaseimob_());
+  // Central de Inteligência Comportamental (Fase 2) -- protegidas por
+  // sessão (não são ações públicas do funil, são consumo interno do dashboard).
+  if (acao === 'listar_estatisticas_funil') return ok(listarEstatisticasFunil_({ dias: e.parameter.dias }));
+  if (acao === 'listar_segmentos_comportamentais') return ok(listarSegmentosComportamentais_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
   if (acao === 'listar_todos_leads_imobzi') return ok(listarLeadsImobzi_({todos:true}));
   if (acao === 'listar_revenda_lista')      return ok(listarRevendaLista_());
@@ -4517,14 +4521,21 @@ var CABECALHO_INTERESSES = [
   'canal', 'tipo_contato', 'score'
 ];
 
-// FUNIL_EVENTOS_APP — log de eventos "sessão X alcançou a etapa Y" do App
+// FUNIL_EVENTOS_APP — log de eventos de transição de etapa do App
 // Lançamentos, uma linha por evento (beacon disparado a cada troca de
 // step + no beforeunload se abandonar). Pedido explícito do usuário: sem
 // isso, uma sessão que desiste no meio do funil não deixava rastro nenhum
-// (o payload do lead só é enviado em submeter(), na confirmação final) --
-// esse log é o que permite calcular taxa de abandono por etapa depois
-// (ver montarBlocoAbandonoEmail_), agregando por sessionId.
-var CABECALHO_FUNIL_EVENTOS_ = ['dataHora', 'sessionId', 'etapa', 'abandonou', 'canal'];
+// (o payload do lead só é enviado em submeter(), na confirmação final).
+// Cada linha carrega etapaChegada (pra onde foi) E etapaSaida/tempoMsEtapaSaida
+// (de onde veio + quanto tempo ficou lá) -- dá pra calcular reach/dropout E
+// tempo médio por etapa da MESMA fonte, cruzando com utmSource/dispositivo,
+// sem depender de o lead ter completado o funil (ver listarEstatisticasFunil_,
+// listarSegmentosComportamentais_ e montarBlocoAbandonoEmail_, que agora
+// usam essa aba como fonte única de verdade pro comportamento agregado).
+var CABECALHO_FUNIL_EVENTOS_ = [
+  'dataHora', 'sessionId', 'etapaChegada', 'etapaSaida', 'tempoMsEtapaSaida',
+  'abandonou', 'canal', 'utmSource', 'dispositivo',
+];
 
 // MIX_SEGMENTOS_PUBLICADOS — snapshot do mix de 7 papéis (ISCA/ALVO_1-3/
 // ANCORA_SUP/ANCORA_INF/COMPLEMENTAR) que o corretor "publica" a partir de
@@ -4883,18 +4894,299 @@ function obterAbaFunilEventos_() {
 // Handler do beacon disparado pelo App Lançamentos a cada troca de step
 // (registrarEventoFunil_ no client) e no beforeunload (via sendBeacon).
 // Pública (sem sessão) -- é disparada por qualquer visitante do funil,
-// completando o cadastro ou não.
+// completando o cadastro ou não. etapaChegada/etapaSaida ficam em branco
+// (não 0) quando ausentes, pra não confundir com "etapa 0" numa contagem.
 function registrarEventoFunil_(d) {
   try {
     var aba = obterAbaFunilEventos_();
     aba.appendRow([
       Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss'),
-      String(d.sessionId || ''), Number(d.etapa) || 0, !!d.abandonou, String(d.canal || ''),
+      String(d.sessionId || ''),
+      (d.etapaChegada !== undefined && d.etapaChegada !== null) ? Number(d.etapaChegada) : '',
+      (d.etapaSaida   !== undefined && d.etapaSaida   !== null) ? Number(d.etapaSaida)   : '',
+      Number(d.tempoMsEtapaSaida) || 0,
+      !!d.abandonou, String(d.canal || ''), String(d.utmSource || ''), String(d.dispositivo || ''),
     ]);
     return { ok: true };
   } catch (e) {
     return { ok: false, erro: e.message };
   }
+}
+
+// "Etapa N — Nome" na ordem real de navegação do cliente (ver
+// ETAPA_POR_STEP_ em app-lancamentos.html). Usado por listarEstatisticasFunil_
+// e por montarBlocoAbandonoEmail_/montarBlocoDadosTecnicosEmail_.
+var NOME_ETAPA_FUNIL_ = {
+  1: 'Capa', 2: 'Orçamento/Área', 3: 'Confirmação', 4: 'Nome/Objetivo',
+  5: 'Quartos/Altura', 6: 'Resultados', 7: 'WhatsApp', 8: 'Concluiu',
+};
+
+// Reconstrói um Date a partir do formato 'dd/MM/yyyy HH:mm:ss' usado em
+// TODA gravação de data neste projeto (Utilities.formatDate) -- não dá pra
+// comparar strings formatadas direto por período, precisa virar Date.
+function parseDataHoraBR_(str) {
+  var partes = String(str || '').split(' ');
+  var d = (partes[0] || '').split('/');
+  var t = (partes[1] || '00:00:00').split(':');
+  if (d.length < 3) return null;
+  return new Date(Number(d[2]), Number(d[1]) - 1, Number(d[0]), Number(t[0]) || 0, Number(t[1]) || 0, Number(t[2]) || 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CENTRAL DE INTELIGÊNCIA COMPORTAMENTAL — FASE 2 (API DE AGREGAÇÃO)
+// ═══════════════════════════════════════════════════════════════
+// Pedido explícito do usuário: transformar os sinais já capturados (Fases
+// 145-153) numa camada agregada consultável, base pro painel da Fase 3
+// (nova aba "Inteligência" no dashboard.html). As duas funções abaixo são
+// as únicas fontes de verdade dessa agregação -- tanto o futuro painel
+// quanto os blocos de e-mail (montarBlocoAbandonoEmail_) chamam ELAS, em
+// vez de duplicar a lógica de "maior etapa alcançada por sessão".
+
+// Funil de conversão + tempo médio por etapa + performance por origem,
+// tudo a partir de FUNIL_EVENTOS_APP (cobre TODA sessão, completa ou não)
+// -- e score/tempo médio no funil vindos de INTERESSES (só quem completou
+// tem score, já que o lead só existe depois do WhatsApp confirmado).
+// params.dias: janela do período (default 30; passe um valor bem alto,
+// tipo 36500, pra "histórico completo").
+function listarEstatisticasFunil_(params) {
+  params = params || {};
+  var dias = Number(params.dias) || 30;
+  var desde = new Date();
+  desde.setDate(desde.getDate() - dias);
+
+  var maxPorSessao = {}, utmPorSessao = {}, dispositivoPorSessao = {};
+  var tempoPorEtapaSoma = {}, tempoPorEtapaCont = {};
+
+  var abaFunil = obterAbaFunilEventos_();
+  var lrF = abaFunil.getLastRow();
+  if (lrF >= 2) {
+    var idxData    = CABECALHO_FUNIL_EVENTOS_.indexOf('dataHora');
+    var idxSession = CABECALHO_FUNIL_EVENTOS_.indexOf('sessionId');
+    var idxChegada = CABECALHO_FUNIL_EVENTOS_.indexOf('etapaChegada');
+    var idxSaida   = CABECALHO_FUNIL_EVENTOS_.indexOf('etapaSaida');
+    var idxTempo   = CABECALHO_FUNIL_EVENTOS_.indexOf('tempoMsEtapaSaida');
+    var idxUtm     = CABECALHO_FUNIL_EVENTOS_.indexOf('utmSource');
+    var idxDisp    = CABECALHO_FUNIL_EVENTOS_.indexOf('dispositivo');
+    var dadosF = abaFunil.getRange(2, 1, lrF - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
+
+    dadosF.forEach(function(r) {
+      var dh = parseDataHoraBR_(r[idxData]);
+      if (dh && dh < desde) return; // fora do período pedido
+
+      var sid = String(r[idxSession] || '');
+      if (!sid) return;
+
+      [r[idxChegada], r[idxSaida]].forEach(function(v) {
+        var etapa = Number(v) || 0;
+        if (!etapa) return;
+        if (!maxPorSessao[sid] || etapa > maxPorSessao[sid]) maxPorSessao[sid] = etapa;
+      });
+
+      var etapaSaida = Number(r[idxSaida]) || 0;
+      var tempoMs = Number(r[idxTempo]) || 0;
+      if (etapaSaida && tempoMs) {
+        tempoPorEtapaSoma[etapaSaida] = (tempoPorEtapaSoma[etapaSaida] || 0) + tempoMs;
+        tempoPorEtapaCont[etapaSaida] = (tempoPorEtapaCont[etapaSaida] || 0) + 1;
+      }
+
+      if (r[idxUtm])  utmPorSessao[sid] = String(r[idxUtm]);
+      if (r[idxDisp]) dispositivoPorSessao[sid] = String(r[idxDisp]);
+    });
+  }
+
+  var sessoes = Object.keys(maxPorSessao);
+  var totalSessoes = sessoes.length;
+
+  var funil = [1, 2, 3, 4, 5, 6, 7, 8].map(function(etapa) {
+    var alcancaram  = sessoes.filter(function(sid) { return maxPorSessao[sid] >= etapa; }).length;
+    var pararamAqui = sessoes.filter(function(sid) { return maxPorSessao[sid] === etapa; }).length;
+    return {
+      etapa: etapa, nome: NOME_ETAPA_FUNIL_[etapa],
+      alcancaram: alcancaram,
+      pctTotal: totalSessoes ? Math.round(alcancaram / totalSessoes * 100) : 0,
+      pararamAqui: etapa < 8 ? pararamAqui : 0,
+    };
+  });
+
+  var tempoPorEtapa = Object.keys(tempoPorEtapaSoma).map(function(etapa) {
+    return {
+      etapa: Number(etapa), nome: NOME_ETAPA_FUNIL_[etapa],
+      tempoMedioMs: Math.round(tempoPorEtapaSoma[etapa] / tempoPorEtapaCont[etapa]),
+    };
+  }).sort(function(a, b) { return a.etapa - b.etapa; });
+
+  // Origem/canal -- cruza o UTM da sessão (capturado no 1º beacon) com se
+  // ela concluiu (chegou na etapa 8) e o dispositivo predominante.
+  var origemAgg = {};
+  sessoes.forEach(function(sid) {
+    var origem = utmPorSessao[sid] || 'direto';
+    if (!origemAgg[origem]) origemAgg[origem] = { sessoes: 0, concluiram: 0, dispositivos: {} };
+    origemAgg[origem].sessoes++;
+    if (maxPorSessao[sid] >= 8) origemAgg[origem].concluiram++;
+    var disp = dispositivoPorSessao[sid] || '—';
+    origemAgg[origem].dispositivos[disp] = (origemAgg[origem].dispositivos[disp] || 0) + 1;
+  });
+  var origem = Object.keys(origemAgg).map(function(o) {
+    var a = origemAgg[o];
+    var dispPredominante = Object.keys(a.dispositivos).sort(function(x, y) {
+      return a.dispositivos[y] - a.dispositivos[x];
+    })[0] || '—';
+    return {
+      origem: o, sessoes: a.sessoes,
+      taxaConclusao: a.sessoes ? Math.round(a.concluiram / a.sessoes * 100) : 0,
+      dispositivoPredominante: dispPredominante,
+    };
+  }).sort(function(a, b) { return b.sessoes - a.sessoes; });
+
+  // KPIs de score/tempo total no funil -- só existem pra quem completou
+  // (INTERESSES só ganha linha depois do WhatsApp confirmado).
+  var scoreSoma = 0, scoreCont = 0, tempoFunilSoma = 0, tempoFunilCont = 0;
+  var abaInt = obterAbaInteresses_();
+  var lrI = abaInt.getLastRow();
+  if (lrI >= 2) {
+    var idxDataI = CABECALHO_INTERESSES.indexOf('dataCadastro');
+    var idxScore = CABECALHO_INTERESSES.indexOf('score');
+    var idxTagsI = CABECALHO_INTERESSES.indexOf('tags');
+    var dadosI = abaInt.getRange(2, 1, lrI - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosI.forEach(function(r) {
+      var dh = parseDataHoraBR_(r[idxDataI]);
+      if (dh && dh < desde) return;
+      if (r[idxScore]) { scoreSoma += Number(r[idxScore]) || 0; scoreCont++; }
+      try {
+        var t = JSON.parse(r[idxTagsI] || '{}');
+        if (t.tempoSegundos) { tempoFunilSoma += Number(t.tempoSegundos); tempoFunilCont++; }
+      } catch (e) {}
+    });
+  }
+
+  var totalConcluiram = sessoes.filter(function(sid) { return maxPorSessao[sid] >= 8; }).length;
+
+  return {
+    ok: true,
+    periodo: { dias: dias },
+    kpis: {
+      totalSessoes: totalSessoes,
+      taxaConclusao: totalSessoes ? Math.round(totalConcluiram / totalSessoes * 100) : 0,
+      scoreMedio: scoreCont ? Math.round(scoreSoma / scoreCont) : null,
+      tempoMedioFunilSegundos: tempoFunilCont ? Math.round(tempoFunilSoma / tempoFunilCont) : null,
+    },
+    funil: funil,
+    tempoPorEtapa: tempoPorEtapa,
+    origem: origem,
+  };
+}
+
+// Regras de segmentação comportamental -- pedido explícito do usuário
+// (proposta da Central de Inteligência Comportamental). IMPORTANTE: só dá
+// pra calcular essas regras (cardsFavoritos, tempoPorStep etc.) pra quem
+// COMPLETOU o funil, porque esses sinais só chegam no payload final
+// (submeter(), INTERESSES.tags) -- uma sessão abandonada nunca envia isso.
+// Por isso "Abandono precoce" é tratado à parte, direto de FUNIL_EVENTOS_APP
+// (única fonte que enxerga quem nunca completou). E "Fora da região" usa
+// geoAprox.cidade como proxy simples -- um comparativo de padrão de bairro
+// de verdade exigiria uma tabela bairro→padrão que ainda não existe no
+// sistema; documentando a limitação em vez de fingir precisão que não tem.
+var DEF_SEGMENTOS_COMPORTAMENTAIS_ = [
+  {
+    chave: 'comparador_preco', nome: 'Comparador de preço',
+    teste: function(p) { return p.cardsPrecoVisto.length >= 5 && p.cardsFavoritos.length <= 1; },
+  },
+  {
+    chave: 'decisao_rapida', nome: 'Decisão rápida',
+    teste: function(p) { return p.tempoSegundos > 0 && p.tempoSegundos < 90; },
+  },
+  {
+    chave: 'alto_engajamento_sem_favorito', nome: 'Alto engajamento sem favorito',
+    teste: function(p) { return p.tempoResultadosMs >= 180000 && p.cardsFavoritos.length === 0; },
+  },
+  {
+    chave: 'fora_da_regiao', nome: 'Fora da região (fora de Goiânia)',
+    teste: function(p) {
+      return !!p.geoCidade && ['goiânia', 'goiania'].indexOf(p.geoCidade.toLowerCase()) < 0;
+    },
+  },
+  {
+    chave: 'investidor_provavel', nome: 'Investidor provável',
+    teste: function(p) { return p.moradias.indexOf('investidor') >= 0 && p.dispositivo === 'Desktop'; },
+  },
+];
+
+function listarSegmentosComportamentais_() {
+  var contagem = {};
+  DEF_SEGMENTOS_COMPORTAMENTAIS_.forEach(function(s) {
+    contagem[s.chave] = { nome: s.nome, count: 0, idClientesAmostra: [] };
+  });
+
+  var totalLeadsCompletos = 0;
+  var abaInt = obterAbaInteresses_();
+  var lrI = abaInt.getLastRow();
+  if (lrI >= 2) {
+    var idxTags = CABECALHO_INTERESSES.indexOf('tags');
+    var idxId   = CABECALHO_INTERESSES.indexOf('idCliente');
+    var dadosI = abaInt.getRange(2, 1, lrI - 1, CABECALHO_INTERESSES.length).getValues();
+    dadosI.forEach(function(r) {
+      totalLeadsCompletos++;
+      var tags = {};
+      try { tags = JSON.parse(r[idxTags] || '{}'); } catch (e) { return; }
+      var p = {
+        cardsPrecoVisto:   Array.isArray(tags.cardsPrecoVisto) ? tags.cardsPrecoVisto : [],
+        cardsFavoritos:    Array.isArray(tags.cardsFavoritos)  ? tags.cardsFavoritos  : [],
+        tempoSegundos:     Number(tags.tempoSegundos) || 0,
+        tempoResultadosMs: (tags.tempoPorStep && Number(tags.tempoPorStep['6'])) || 0,
+        moradias:          Array.isArray(tags.moradias) ? tags.moradias : [],
+        dispositivo:       tags.dispositivo || '',
+        geoCidade:         (tags.geoAprox && tags.geoAprox.cidade) || '',
+      };
+      DEF_SEGMENTOS_COMPORTAMENTAIS_.forEach(function(s) {
+        if (!s.teste(p)) return;
+        contagem[s.chave].count++;
+        if (contagem[s.chave].idClientesAmostra.length < 20) {
+          contagem[s.chave].idClientesAmostra.push(String(r[idxId] || ''));
+        }
+      });
+    });
+  }
+
+  // Abandono precoce (etapa 1-2) -- só dá pra ver em FUNIL_EVENTOS_APP,
+  // essas sessões nunca se identificaram, não tem lead pra listar.
+  var totalSessoesFunil = 0, abandonoPrecoce = 0;
+  var abaFunil = obterAbaFunilEventos_();
+  var lrF = abaFunil.getLastRow();
+  if (lrF >= 2) {
+    var idxSession = CABECALHO_FUNIL_EVENTOS_.indexOf('sessionId');
+    var idxChegada = CABECALHO_FUNIL_EVENTOS_.indexOf('etapaChegada');
+    var idxSaida   = CABECALHO_FUNIL_EVENTOS_.indexOf('etapaSaida');
+    var dadosF = abaFunil.getRange(2, 1, lrF - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
+    var maxPorSessao = {};
+    dadosF.forEach(function(r) {
+      var sid = String(r[idxSession] || '');
+      if (!sid) return;
+      [r[idxChegada], r[idxSaida]].forEach(function(v) {
+        var etapa = Number(v) || 0;
+        if (!etapa) return;
+        if (!maxPorSessao[sid] || etapa > maxPorSessao[sid]) maxPorSessao[sid] = etapa;
+      });
+    });
+    var sessoes = Object.keys(maxPorSessao);
+    totalSessoesFunil = sessoes.length;
+    abandonoPrecoce = sessoes.filter(function(sid) { return maxPorSessao[sid] <= 2; }).length;
+  }
+
+  var segmentos = DEF_SEGMENTOS_COMPORTAMENTAIS_.map(function(s) {
+    return {
+      chave: s.chave, nome: s.nome, count: contagem[s.chave].count,
+      idClientesAmostra: contagem[s.chave].idClientesAmostra,
+    };
+  });
+  segmentos.push({
+    chave: 'abandono_precoce', nome: 'Abandono precoce (Capa/Orçamento)',
+    count: abandonoPrecoce, idClientesAmostra: [],
+  });
+
+  return {
+    ok: true, totalLeadsCompletos: totalLeadsCompletos,
+    totalSessoesFunil: totalSessoesFunil, segmentos: segmentos,
+  };
 }
 
 function obterAbaMixSegmentos_() {
@@ -5597,43 +5889,23 @@ function montarBlocoDadosTecnicosEmail_(d) {
 // pega a MAIOR etapa alcançada; a partir disso calcula, por etapa: quantas
 // sessões chegaram até ali (alcançaram) e quantas pararam exatamente ali
 // (não avançaram mais).
+// Reaproveita listarEstatisticasFunil_ (Fase 2) em vez de recalcular reach/
+// dropout aqui -- histórico completo (dias bem alto), não só os últimos 30.
 function montarBlocoAbandonoEmail_() {
   try {
-    var aba = obterAbaFunilEventos_();
-    var lr = aba.getLastRow();
-    if (lr < 2) return '';
-    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
-    var idxSession = CABECALHO_FUNIL_EVENTOS_.indexOf('sessionId');
-    var idxEtapa   = CABECALHO_FUNIL_EVENTOS_.indexOf('etapa');
+    var stats = listarEstatisticasFunil_({ dias: 36500 });
+    if (!stats.ok || !stats.kpis.totalSessoes) return '';
 
-    var maxEtapaPorSessao = {};
-    dados.forEach(function(r) {
-      var sid = String(r[idxSession] || '');
-      var etapa = Number(r[idxEtapa]) || 0;
-      if (!sid || !etapa) return;
-      if (!maxEtapaPorSessao[sid] || etapa > maxEtapaPorSessao[sid]) maxEtapaPorSessao[sid] = etapa;
-    });
-
-    var sessoes = Object.keys(maxEtapaPorSessao);
-    var total = sessoes.length;
-    if (!total) return '';
-
-    var NOME_ETAPA_ABANDONO_ = {
-      1: 'Capa', 2: 'Orçamento/Área', 3: 'Confirmação', 4: 'Nome/Objetivo',
-      5: 'Quartos/Altura', 6: 'Resultados', 7: 'WhatsApp', 8: 'Concluiu',
-    };
-    var linhas = [1, 2, 3, 4, 5, 6, 7, 8].map(function(etapa) {
-      var alcancaram = sessoes.filter(function(sid) { return maxEtapaPorSessao[sid] >= etapa; }).length;
-      var pararamAqui = sessoes.filter(function(sid) { return maxEtapaPorSessao[sid] === etapa; }).length;
+    var linhas = stats.funil.map(function(f) {
       return {
-        etapa: 'Etapa ' + etapa + ' — ' + NOME_ETAPA_ABANDONO_[etapa],
-        alcancaram: alcancaram,
-        pctTotal: Math.round(alcancaram / total * 100) + '%',
-        pararamAqui: etapa < 8 ? pararamAqui : 0,
+        etapa: 'Etapa ' + f.etapa + ' — ' + f.nome,
+        alcancaram: f.alcancaram,
+        pctTotal: f.pctTotal + '%',
+        pararamAqui: f.pararamAqui,
       };
     });
 
-    return montarTabelaEmail_('TAXA DE ABANDONO POR ETAPA (histórico agregado, ' + total + ' sessões)', linhas, [
+    return montarTabelaEmail_('TAXA DE ABANDONO POR ETAPA (histórico agregado, ' + stats.kpis.totalSessoes + ' sessões)', linhas, [
       { label: 'ETAPA',        width: 24, get: function(r) { return r.etapa; } },
       { label: 'ALCANÇARAM',   width: 11, get: function(r) { return String(r.alcancaram); } },
       { label: '% DO TOTAL',   width: 11, get: function(r) { return r.pctTotal; } },
