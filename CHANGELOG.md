@@ -1,5 +1,52 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 145) — App Lançamentos: lote de UX/copy (Etapas 2, 4, 5, 6, 7) + restruturação do fluxo
+
+Segundo lote de ajustes pedidos pelo usuário, cobrindo as etapas 2 a 7 do funil (a etapa 1/capa já
+tinha sido ajustada na parte 144).
+
+**Etapa 2** (step-2, sliders) — texto do contador quebrado ("1 opções reais com apartamento no seu
+perfil") virou **"X opções encontradas com esse perfil."** (`atualizarComboUI_`/`cntComboSufixo`
+adaptados, mantendo a variante "com apartamento "Em Obras"" quando o cliente já filtrou uma situação
+na capa).
+
+**Restruturação de fluxo (Etapas 4 e 5)** — pedido explícito do usuário pra reorganizar as perguntas:
+- **Etapa 4** (era só "Como podemos te chamar?", step-1) agora tem 2 perguntas na mesma tela: nome +
+  **"Qual é o seu objetivo?"** (motivação/moradia, que morava no step-4 antigo). Os botões de objetivo
+  deixaram de ser tags-pílula e viraram **botões estilo caixa** (`.box-btn`/`.box-group`, novo CSS) —
+  maiores, empilhados, um por linha.
+- **Etapa 5** (step-4, era "motivação") ficou só com o que sobrou: **quartos + altura**. Título
+  reaproveitado (`motivacaoTitulo`/`montarMotivacaoTitulo_`) virou **"{Nome}, o que define o tipo de
+  apartamento mais adequado para você?"**. Nova pergunta **"Quantos quartos você precisa?"**
+  (1/2/3/4/5+ quartos, `selecionarQuartos_`, novo `D.quartosPref`) adicionada ANTES da pergunta de
+  altura, que continua igual. Numeração trocada de "Pergunta X de 3" pra **"Passo X de 3"** em todas
+  as 3 telas (sliders/nome+objetivo/quartos+altura). Botão **"← Voltar"** próprio no topo desta etapa,
+  no mesmo estilo `.ajustar-btn` de "← Ajustar filtros" (rodapé fixo de Voltar escondido só aqui).
+- Validação de "selecione ao menos uma opção" migrada do step-4 pro step-1 (junto da validação de
+  nome), já que o objetivo mudou de tela. `D.quartosPref` incluído no payload do lead (`tags`) e no
+  resumo final da Etapa 8 (`perfilResumo`, nova linha "Quartos").
+
+**Etapa 6** (step-6, resultado/match):
+- Botão final **"CONFIRMAR ATENDIMENTO HUMANO"** → **"QUERO ATENDIMENTO EXCLUSIVO"** (linguagem já
+  validada no BASEIMOB, mais consistente entre os 2 produtos).
+- Número de "+N outras ofertas encontradas" bem mais destacado: `font-size` de 16px → 26px; container
+  `.mais-opcoes-msg` sem mais opacidade reduzida (.75 → removida) e fonte base 13px → 14px.
+
+**Etapa 7** (step-7, captura de WhatsApp):
+- Título "Essa é a penúltima etapa antes de encerrar" → **"{Nome}, prepare-se para muitas
+  novidades!"** (`montarCapturaTitulo_`).
+- Subtítulo "Confirme seu WhatsApp abaixo pra finalizar o seu atendimento." → **"Digite abaixo seu
+  melhor WhatsApp"**.
+- Nota de privacidade ganhou **ícone de cadeado** (novo símbolo `#ico-lock` no bloco de SVGs,
+  substituindo o `#ico-check` genérico que estava ali).
+
+Testado ao vivo, fluxo completo simulado via console (avançar por todas as etapas, validações de
+nome/objetivo bloqueando corretamente, seleção de quartos/altura, contador "X opções encontradas com
+esse perfil.", título personalizado da Etapa 5, botão "← Voltar" presente e rodapé escondido nessa
+etapa, "QUERO ATENDIMENTO EXCLUSIVO" no botão final, número de outras ofertas em 26px laranja,
+título/subtítulo da Etapa 7 e ícone `#ico-lock` renderizando, resumo final da Etapa 8 mostrando a
+linha "Quartos").
+
 ## 2026-07-29 (parte 144) — App Lançamentos: capa mais leve + termos alinhados (Etapa 1)
 
 Lote de ajustes de UX/copy pedidos pelo usuário na capa (step 0):

@@ -166,7 +166,7 @@ input[type=range]::-moz-range-track {
 }
 .opcao-top-cell-label { font-size: 9px; font-weight: 700; color: var(--text); opacity: .6; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
 .opcao-top-cell-val { font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: break-word; }
-.mais-opcoes-msg { text-align: center; font-size: 13px; color: var(--text); opacity: .75; margin: -4px 0 16px; }
+.mais-opcoes-msg { text-align: center; font-size: 14px; color: var(--text); margin: 4px 0 16px; }
 
 /* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
 .btn-final-wrap {
@@ -302,6 +302,20 @@ input[type=range]::-moz-range-track {
   cursor: pointer; font-family: inherit; margin-bottom: 16px; transition: all .15s;
 }
 .ajustar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── BOTÕES ESTILO CAIXA (maiores, empilhados) -- usado em "Qual é o seu
+   objetivo?", pedido explícito do usuário: nem sempre um grupo de opções
+   deve ter o estilo de tag/pílula, quando a pergunta pede mais destaque
+   individual por opção. ─────────────────────────────────────────────── */
+.box-group { display: flex; flex-direction: column; gap: 10px; }
+.box-btn {
+  display: flex; align-items: center; width: 100%; text-align: left;
+  padding: 16px 18px; border: 1.5px solid var(--border2); border-radius: var(--r);
+  font-size: 15px; font-weight: 600; color: var(--text);
+  background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.box-btn:hover { border-color: var(--accent); color: var(--accent); }
+.box-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -331,6 +345,9 @@ input[type=range]::-moz-range-track {
   </symbol>
   <symbol id="ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </symbol>
+  <symbol id="ico-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
   </symbol>
   <symbol id="ico-whats" viewBox="0 0 24 24" fill="currentColor">
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -362,14 +379,26 @@ input[type=range]::-moz-range-track {
     </div>
   </div>
 
-  <!-- STEP 1 — NOME -->
+  <!-- STEP 1 — NOME + OBJETIVO (2 perguntas na mesma tela, pedido explícito
+       do usuário -- "objetivo" (moradias) migrou pra cá, saiu do step-4,
+       que agora fica só com quartos+altura). -->
   <div class="step" id="step-1">
-    <div class="step-tag">Pergunta 2 de 3</div>
+    <div class="step-tag">Passo 2 de 3</div>
     <div class="step-title">Como podemos te chamar?</div>
     <div class="step-sub">Só o primeiro nome já basta.</div>
     <div class="form-field">
       <label>Seu nome</label>
       <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
+    </div>
+
+    <div style="margin-top:32px">
+      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual é o seu objetivo?</div>
+      <div class="box-group" id="tagsMoradia">
+        <button class="box-btn" onclick="toggleMoradia_(this,'aluguel')">Quero sair do aluguel</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'proprio')">Tenho imóvel próprio</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'familia')">Moro com família ou amigos</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'investidor')">Quero investir</button>
+      </div>
     </div>
   </div>
 
@@ -379,7 +408,7 @@ input[type=range]::-moz-range-track {
        abaixo, tudo atualizando em tempo real junto). Vem ANTES do nome
        agora -- pega o dado técnico primeiro, personalização vem depois. -->
   <div class="step" id="step-2">
-    <div class="step-tag">Pergunta 1 de 3</div>
+    <div class="step-tag">Passo 1 de 3</div>
     <div class="step-title" style="margin-bottom:16px">Arraste as barras e selecione o <span style="color:var(--accent)">orçamento</span> e <span style="color:var(--accent)">área útil</span> do apartamento ideal pra você!</div>
 
     <!-- Destaca a situação escolhida na capa (Pronto para morar/Em Obras) --
@@ -424,7 +453,7 @@ input[type=range]::-moz-range-track {
 
       <div class="conf-obs" style="text-align:center">
         <span id="cntCombo" style="font-size:clamp(48px,14vw,64px);font-weight:800;color:var(--orange);letter-spacing:-1px">—</span>
-        <strong>opções reais com apartamento <span id="cntComboSufixo">no seu perfil</span></strong>
+        <strong>opções encontradas <span id="cntComboSufixo">com esse perfil</span>.</strong>
       </div>
     </div>
   </div>
@@ -456,18 +485,25 @@ input[type=range]::-moz-range-track {
     </div>
   </div>
 
-  <!-- STEP 4 — MOTIVAÇÃO (personalizada com o nome, colhido no step 1) --
-       a etapa "Resultado parcial" (teaser) foi retirada -- o botão que
-       levava pro match já aparece aqui, no final desta etapa. -->
+  <!-- STEP 4 — TIPO DE APARTAMENTO: quartos + altura (personalizada com o
+       nome, colhido no step 1) -- "objetivo"/moradia migrou pro step 1,
+       aqui ficam só as 2 perguntas de perfil do imóvel em si. Botão
+       "Voltar" próprio (estilo .ajustar-btn, igual "Ajustar filtros" da
+       tela de resultado) -- pedido explícito, some o Voltar do rodapé
+       fixo só nesta etapa (ver atualizarBotoes). -->
   <div class="step" id="step-4">
-    <div class="step-tag">Pergunta 3 de 3</div>
-    <div class="step-title" id="motivacaoTitulo">O que melhor descreve você hoje?</div>
-    <div class="step-sub" style="margin-bottom:14px">Pode marcar mais de uma opção.</div>
-    <div class="tag-group" id="tagsMoradia">
-      <button class="tag-btn" onclick="toggleMoradia_(this,'aluguel')">Quero sair do aluguel</button>
-      <button class="tag-btn" onclick="toggleMoradia_(this,'proprio')">Tenho imóvel próprio</button>
-      <button class="tag-btn" onclick="toggleMoradia_(this,'familia')">Moro com família ou amigos</button>
-      <button class="tag-btn" onclick="toggleMoradia_(this,'investidor')">Quero investir</button>
+    <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
+    <div class="step-tag">Passo 3 de 3</div>
+    <div class="step-title" id="motivacaoTitulo">O que define o tipo de apartamento mais adequado para você?</div>
+    <div style="margin-top:14px">
+      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Quantos quartos você precisa?</div>
+      <div class="tag-group" id="tagsQuartos">
+        <button class="tag-btn" onclick="selecionarQuartos_(this,1)">1 quarto</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,2)">2 quartos</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,3)">3 quartos</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,4)">4 quartos</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,5)">5+ quartos</button>
+      </div>
     </div>
     <div style="margin-top:44px">
       <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
@@ -498,7 +534,7 @@ input[type=range]::-moz-range-track {
       <p>Pra confirmar esse atendimento e receber todos os detalhes, informe seu WhatsApp na próxima etapa.</p>
       <button class="btn-final btn-quente" onclick="avancarStep()">
         <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-        CONFIRMAR ATENDIMENTO HUMANO
+        QUERO ATENDIMENTO EXCLUSIVO
       </button>
     </div>
   </div>
@@ -506,8 +542,8 @@ input[type=range]::-moz-range-track {
   <!-- STEP 7 — CAPTURA -->
   <div class="step" id="step-7">
     <div class="step-tag">Quase lá</div>
-    <div class="step-title" id="capturaTitulo">Essa é a penúltima etapa antes de encerrar</div>
-    <div class="step-sub">Confirme seu WhatsApp abaixo pra finalizar o seu atendimento.</div>
+    <div class="step-title" id="capturaTitulo">Prepare-se para muitas novidades!</div>
+    <div class="step-sub">Digite abaixo seu melhor WhatsApp</div>
 
     <div class="whats-box">
       <div class="form-field">
@@ -526,7 +562,7 @@ input[type=range]::-moz-range-track {
     </div>
 
     <div class="privacy-note">
-      <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text)"><use href="#ico-check"/></svg>
+      <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text)"><use href="#ico-lock"/></svg>
       <span>Seus dados ficam só com a nossa equipe. Nenhuma lista de e-mail ou retorno de terceiros.</span>
     </div>
 
@@ -707,7 +743,7 @@ let stepAtual = 0;
 const TOTAL = 9; // steps 0..8
 
 const D = {
-  filtroSituacao: 'todos', moradias: new Set(), alturaPref: null,
+  filtroSituacao: 'todos', moradias: new Set(), alturaPref: null, quartosPref: null,
   precoAlvo: null, metragemAlvo: null, areaRange: null,
   nome: '', whatsapp: '',
   tsInicio: Date.now(), precoInicial: null, precoFinal: null,
@@ -745,7 +781,7 @@ function avancarStep() {
 function montarCapturaTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('capturaTitulo').textContent =
-    `${primeiroNome}, essa é a penúltima etapa antes de encerrar`;
+    `${primeiroNome}, prepare-se para muitas novidades!`;
 }
 
 function montarConfirmacao_() {
@@ -760,7 +796,7 @@ function montarConfirmacao_() {
 function montarMotivacaoTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('motivacaoTitulo').textContent =
-    primeiroNome + ', o que melhor descreve você hoje?';
+    primeiroNome + ', o que define o tipo de apartamento mais adequado para você?';
 }
 
 function refazerSliders() {
@@ -770,21 +806,22 @@ function refazerSliders() {
 function voltarStep() {
   if (stepAtual === 2) { irParaStep(0); return; } // sliders → capa
   if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
-  if (stepAtual === 4) { irParaStep(1); return; } // motivação → nome
+  if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
   if (stepAtual > 2) irParaStep(stepAtual - 1);
 }
 
 function atualizarBotoes() {
   const bV = document.getElementById('btnVoltar');
   const bA = document.getElementById('btnAvancar');
-  // step 3 (confirmação) e step 4 (motivação) têm botão de avançar embutido;
-  // steps 6..8 também têm botões próprios.
+  // step 3 (confirmação) e step 4 (quartos/altura) têm botão de avançar
+  // embutido; steps 6..8 também têm botões próprios.
   const semBotaoAvancarFooter = stepAtual === 3 || stepAtual === 4 || stepAtual >= 6;
   bA.classList.toggle('btn-hide', semBotaoAvancarFooter);
   // Voltar visível em: step 1 (nome→confirmação), step 2 (sliders→capa) e
-  // step 4 (motivação→nome) -- step 4 continua podendo voltar mesmo com o
-  // botão de avançar embutido (só o footer "Próximo" some).
-  bV.classList.toggle('btn-hide', stepAtual === 3 || stepAtual === 0 || stepAtual === 8 || stepAtual >= 6);
+  // step 4 (quartos+altura) tem seu próprio botão "← Voltar" (estilo
+  // .ajustar-btn, pedido explícito) -- o Voltar do rodapé fixo não aparece
+  // ali, só nos outros steps navegáveis.
+  bV.classList.toggle('btn-hide', stepAtual === 3 || stepAtual === 0 || stepAtual === 4 || stepAtual === 8 || stepAtual >= 6);
 
   bA.textContent = stepAtual === 0 ? 'Começar' : 'Próximo';
 }
@@ -795,8 +832,8 @@ function validar() {
     const nome = document.getElementById('fNome').value.trim();
     if (!nome) { toast('Informe seu nome para continuar'); return false; }
     D.nome = nome;
+    if (D.moradias.size === 0) { toast('Selecione pelo menos uma opção para continuar'); return false; }
   }
-  if (stepAtual === 4 && D.moradias.size === 0) { toast('Selecione pelo menos uma opção para continuar'); return false; }
   if (stepAtual === 7) {
     const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
     const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
@@ -826,6 +863,12 @@ function selecionarAltura_(el, val) {
   document.querySelectorAll('#tagsAltura .tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.alturaPref = val;
+}
+
+function selecionarQuartos_(el, val) {
+  document.querySelectorAll('#tagsQuartos .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.quartosPref = val;
 }
 
 function refinarBusca_() { irParaStep(2); }
@@ -1041,7 +1084,7 @@ function atualizarComboUI_() {
   const badge = document.getElementById('situacaoEscolhidaBadge');
   document.getElementById('situacaoEscolhidaTexto').textContent = situacaoLabel || '';
   badge.style.display = situacaoLabel ? '' : 'none';
-  document.getElementById('cntComboSufixo').textContent = situacaoLabel ? `"${situacaoLabel}"` : 'no seu perfil';
+  document.getElementById('cntComboSufixo').textContent = situacaoLabel ? `com apartamento "${situacaoLabel}"` : 'com esse perfil';
 
   if (!D.precoAlvo || !D.metragemAlvo) return;
   const n = filtrados().length;
@@ -1103,7 +1146,7 @@ function submeter() {
       pctVendido: c.pctVendido, matchPref: c.matchPref, tracao: Math.round(c.tracao * 10) / 10,
     }))),
     tags: JSON.stringify({
-      moradias: [...D.moradias], alturaPref: D.alturaPref, filtroSituacao: D.filtroSituacao,
+      moradias: [...D.moradias], alturaPref: D.alturaPref, quartosPref: D.quartosPref, filtroSituacao: D.filtroSituacao,
       precoAlvo: D.precoAlvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
       precoInicial: D.precoInicial, precoFinal: D.precoFinal,
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
@@ -1306,7 +1349,7 @@ function montarMatch() {
   const maisEl = document.getElementById('maisOpcoesMsg');
   if (maisQueOMix > 0) {
     maisEl.style.display = '';
-    maisEl.innerHTML = `+ <strong style="color:var(--orange);font-size:16px">${maisQueOMix}</strong> outra${maisQueOMix > 1 ? 's' : ''} oferta${maisQueOMix > 1 ? 's' : ''} encontrada${maisQueOMix > 1 ? 's' : ''} pelo simulador, além dessas`;
+    maisEl.innerHTML = `+ <strong style="color:var(--orange);font-size:26px">${maisQueOMix}</strong> outra${maisQueOMix > 1 ? 's' : ''} oferta${maisQueOMix > 1 ? 's' : ''} encontrada${maisQueOMix > 1 ? 's' : ''} pelo simulador, além dessas`;
   } else {
     maisEl.style.display = 'none';
   }
@@ -1396,6 +1439,7 @@ function montarAgradecimento() {
     ['Situação atual', moradiasStr],
     ['Investimento estimado', formatBRL_(D.precoAlvo)],
     ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
+    ['Quartos', D.quartosPref ? `${D.quartosPref}${D.quartosPref >= 5 ? '+' : ''} quarto${D.quartosPref > 1 ? 's' : ''}` : '—'],
     ['Andar preferido', alturaMap[D.alturaPref] || '—'],
   ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
 
