@@ -145,7 +145,7 @@ input[type=range]::-moz-range-track {
 /* ── MIX DE OFERTAS ──────────────────────────────────────────────────── */
 .match-header { margin-bottom: 20px; }
 
-/* ── SITUAÇÃO (destaca pra quem já está pronto / na planta / em obras) ── */
+/* ── SITUAÇÃO (destaca pra quem já está pronto pra morar / em obras) ──── */
 .situacao-pill {
   display: inline-flex; align-items: center; border-radius: 99px;
   padding: 4px 12px; font-size: 12px; font-weight: 800; letter-spacing: .2px;
@@ -291,7 +291,7 @@ input[type=range]::-moz-range-track {
 }
 .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
 .tag-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
-/* Destaque em laranja pra "Pronto Novo"/"Em Obras" (pedido explícito) --
+/* Destaque em laranja pra "Pronto para morar"/"Em Obras" (pedido explícito) --
    sobrescreve a cor accent padrão dos tag-btn, em qualquer estado. */
 .tag-btn-laranja, .tag-btn-laranja:hover { border-color: var(--orange); color: var(--orange); }
 .tag-btn-laranja.on { border-color: var(--orange); background: rgba(255,138,0,.15); color: var(--orange); }
@@ -348,19 +348,14 @@ input[type=range]::-moz-range-track {
   <div class="step ativo" id="step-0">
     <div style="margin-bottom:32px">
       <div class="step-tag">App Lançamentos</div>
-      <div class="step-title">Vamos achar o <span style="color:var(--accent)">APARTAMENTO</span> ideal pra você!</div>
-      <div class="step-sub">Temos disponível na grande Goiânia e região em nossa base de dados hoje...</div>
+      <div class="step-title">Vamos achar o <span style="color:var(--accent)">apartamento</span> ideal pra você!</div>
+      <div class="step-sub">Hoje você tem <span id="statsTotalEmp" style="font-weight:800;font-size:17px;color:var(--orange)">—</span> lançamentos disponíveis em Goiânia e região.</div>
 
-      <div style="text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin:20px 0">
-        <div id="statsTotalEmp" style="font-size:clamp(56px,18vw,88px);font-weight:800;color:var(--orange);letter-spacing:-2px;line-height:1">—</div>
-        <div style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.08em;margin-top:6px">Lançamentos cadastrados</div>
-      </div>
-
-      <div style="margin-top:20px;padding:16px 18px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r)">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Qual situação ideal do imóvel pra você?</div>
+      <div style="margin-top:24px">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Você prefere um imóvel:</div>
         <div class="tag-group" id="tagsSituacao">
           <button class="tag-btn on" onclick="selecionarSituacao_(this,'todos')">Todos</button>
-          <button class="tag-btn tag-btn-laranja" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto Novo</button>
+          <button class="tag-btn tag-btn-laranja" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para morar</button>
           <button class="tag-btn tag-btn-laranja" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
         </div>
       </div>
@@ -387,7 +382,7 @@ input[type=range]::-moz-range-track {
     <div class="step-tag">Pergunta 1 de 3</div>
     <div class="step-title" style="margin-bottom:16px">Arraste as barras e selecione o <span style="color:var(--accent)">orçamento</span> e <span style="color:var(--accent)">área útil</span> do apartamento ideal pra você!</div>
 
-    <!-- Destaca a situação escolhida na capa (Pronto Novo/Em Obras) --
+    <!-- Destaca a situação escolhida na capa (Pronto para morar/Em Obras) --
          pedido explícito do usuário, escondida quando é "Todos" (não é
          uma escolha que precise de destaque). -->
     <div id="situacaoEscolhidaBadge" style="display:none;margin-bottom:16px">
@@ -1025,11 +1020,11 @@ function validarLimitesMetragem_() {
   atualizarMetragem(v);
 }
 
-// "Pronto Novo"/"Em Obras" -- null quando é "Todos" (não precisa de
+// "Pronto para morar"/"Em Obras" -- null quando é "Todos" (não precisa de
 // destaque, é a opção neutra). Usado tanto no badge quanto no texto da
 // contagem, pra manter os dois sempre consistentes.
 function situacaoEscolhidaLabel_() {
-  if (D.filtroSituacao === 'pronto_novo') return 'Pronto Novo';
+  if (D.filtroSituacao === 'pronto_novo') return 'Pronto para morar';
   if (D.filtroSituacao === 'em_obras') return 'Em Obras';
   return null;
 }
@@ -1131,15 +1126,15 @@ function submeter() {
     .catch(e => { console.error('[simulador] erro ao enviar lead:', e); continuar(); });
 }
 
-// ── SITUAÇÃO — destaca pro cliente se está Pronto pra morar, Na planta ou
-// Em obras (pedido explícito: essa informação precisa chamar mais atenção
-// que o resto, não ficar escondida num rótulo pequeno de grid). ───────────
+// ── SITUAÇÃO — destaca pro cliente se está Pronto pra morar ou Em obras
+// (pedido explícito: essa informação precisa chamar mais atenção que o
+// resto, não ficar escondida num rótulo pequeno de grid). "Em planta" no
+// banco é sempre exibido como "Em obras" aqui -- alinhado com as únicas 2
+// opções de filtro que o cliente vê na capa (pedido explícito do usuário:
+// nunca mostrar "Na planta" como rótulo diferente de "Em Obras"). ────────
 function situacaoInfo_(estagio) {
   if (['Pronto', 'Pronto novo', 'Entregue'].includes(estagio)) {
-    return { texto: 'Pronto pra morar', bg: 'rgba(0,212,170,.15)', border: 'rgba(0,212,170,.4)', cor: 'var(--green)' };
-  }
-  if (estagio === 'Em planta') {
-    return { texto: 'Na planta', bg: 'rgba(79,124,255,.15)', border: 'rgba(79,124,255,.4)', cor: 'var(--accent)' };
+    return { texto: 'Pronto para morar', bg: 'rgba(0,212,170,.15)', border: 'rgba(0,212,170,.4)', cor: 'var(--green)' };
   }
   return { texto: 'Em obras', bg: 'rgba(245,166,35,.15)', border: 'rgba(245,166,35,.4)', cor: '#f5a623' };
 }

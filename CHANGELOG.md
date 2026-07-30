@@ -1,5 +1,31 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 144) — App Lançamentos: capa mais leve + termos alinhados (Etapa 1)
+
+Lote de ajustes de UX/copy pedidos pelo usuário na capa (step 0):
+
+1. **"Na Planta" alinhado com "Em Obras"**: o status aparecia nos resultados como "Na planta" (cor
+   azul, rótulo próprio) mesmo a capa só oferecendo os filtros "Pronto Novo"/"Em Obras" — inconsistência
+   entre o que o cliente filtra e o que vê no resultado. `situacaoInfo_` não trata mais "Em planta"
+   como caso à parte: cai no mesmo bucket visual de "Em obras" (mesma cor laranja, mesmo texto).
+   Regra geral: sempre que a base tiver "Em planta", o app escreve "Em Obras".
+2. Título da capa sem CAIXA ALTA: "APARTAMENTO" → "apartamento" (destaque continua só por
+   cor/negrito do `.step-title`, sem depender de caps).
+3. Subheadline reescrita e caixa do contador removida: "Temos disponível... base de dados hoje..."
+   + box separado com número gigante → texto único **"Hoje você tem `<N>` lançamentos disponíveis em
+   Goiânia e região."**, com o número em negrito/laranja embutido na frase (mesmo `#statsTotalEmp`,
+   agora inline). Caixa com borda ao redor do seletor de situação também removida — capa fica sem
+   nenhuma caixa recortada, só o texto e os botões-pílula.
+4. "Qual situação ideal do imóvel pra você?" → **"Você prefere um imóvel:"**.
+5. "Pronto Novo" → **"Pronto para morar"** em todos os textos e botões: label do botão-tag, badge de
+   situação escolhida (`situacaoEscolhidaLabel_`) e badge de status nos cards de resultado
+   (`situacaoInfo_`, que antes dizia "Pronto pra morar" — unificado pro mesmo termo).
+
+Testado ao vivo: capa renderiza "Hoje você tem 135 lançamentos disponíveis em Goiânia e região."
+com o número em destaque, botões "Todos/Pronto para morar/Em Obras" sem caixa ao redor;
+`situacaoInfo_('Em planta')` e `situacaoInfo_('Em obras')` confirmados retornando o mesmo texto/cor;
+`situacaoEscolhidaLabel_()` confirmado retornando "Pronto para morar".
+
 ## 2026-07-29 (parte 143) — App Lançamentos: número real de WhatsApp no botão final
 
 `WHATSAPP_NUM` (constante usada pra montar o link `https://wa.me/...` do botão "Falar agora no
