@@ -186,6 +186,7 @@ function doGet(e) {
     try { dadosGet = JSON.parse(e.parameter.dados); } catch(errGet) {}
     if (dadosGet.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(dadosGet));
     if (dadosGet.acao === 'interesse_lancamento') return ok(salvarInteresse_(dadosGet));
+    if (dadosGet.acao === 'registrar_evento_funil') return ok(registrarEventoFunil_(dadosGet));
   }
 
   if (ACOES_PUBLICAS_GET.indexOf(acao) < 0 && !sessaoValida_(e.parameter.token)) {
@@ -780,6 +781,9 @@ function doPost(e) {
   // além do GET com ?dados=, caso o front mande assim no futuro.
   if (d.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(d));
   if (d.acao === 'interesse_lancamento') return ok(salvarInteresse_(d));
+  // Beacon de abandono (navigator.sendBeacon, disparado no beforeunload) --
+  // chega aqui via POST, corpo é o JSON puro (parseBody já trata isso).
+  if (d.acao === 'registrar_evento_funil') return ok(registrarEventoFunil_(d));
   // Imobzi webhook — público (vem do sistema externo sem sessão).
   // Negócio (Deal): Imobzi envia {event:"deal_created", deal:{...}}
   if (d.event === 'deal_created' || d.event === 'deal_updated' || (d.deal && d.deal.db_id)) {
@@ -4513,6 +4517,15 @@ var CABECALHO_INTERESSES = [
   'canal', 'tipo_contato', 'score'
 ];
 
+// FUNIL_EVENTOS_APP — log de eventos "sessão X alcançou a etapa Y" do App
+// Lançamentos, uma linha por evento (beacon disparado a cada troca de
+// step + no beforeunload se abandonar). Pedido explícito do usuário: sem
+// isso, uma sessão que desiste no meio do funil não deixava rastro nenhum
+// (o payload do lead só é enviado em submeter(), na confirmação final) --
+// esse log é o que permite calcular taxa de abandono por etapa depois
+// (ver montarBlocoAbandonoEmail_), agregando por sessionId.
+var CABECALHO_FUNIL_EVENTOS_ = ['dataHora', 'sessionId', 'etapa', 'abandonou', 'canal'];
+
 // MIX_SEGMENTOS_PUBLICADOS — snapshot do mix de 7 papéis (ISCA/ALVO_1-3/
 // ANCORA_SUP/ANCORA_INF/COMPLEMENTAR) que o corretor "publica" a partir de
 // estrategias.html pra cada Segmento (Padrão+Faixa). O GAS NÃO reimplementa
@@ -4851,6 +4864,37 @@ function obterAbaInteresses_() {
        .setFontWeight('bold').setBackground('#C55A11').setFontColor('#ffffff');
   }
   return aba;
+}
+
+function obterAbaFunilEventos_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('FUNIL_EVENTOS_APP');
+  if (!aba) {
+    aba = ss.insertSheet('FUNIL_EVENTOS_APP');
+    aba.setTabColor('#3D5A80');
+    aba.appendRow(CABECALHO_FUNIL_EVENTOS_);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_FUNIL_EVENTOS_.length)
+       .setFontWeight('bold').setBackground('#3D5A80').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+// Handler do beacon disparado pelo App Lançamentos a cada troca de step
+// (registrarEventoFunil_ no client) e no beforeunload (via sendBeacon).
+// Pública (sem sessão) -- é disparada por qualquer visitante do funil,
+// completando o cadastro ou não.
+function registrarEventoFunil_(d) {
+  try {
+    var aba = obterAbaFunilEventos_();
+    aba.appendRow([
+      Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss'),
+      String(d.sessionId || ''), Number(d.etapa) || 0, !!d.abandonou, String(d.canal || ''),
+    ]);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
 }
 
 function obterAbaMixSegmentos_() {
@@ -5491,6 +5535,115 @@ function montarBlocoResumoLeadEmail_(d) {
   ]);
 }
 
+function segundosParaTextoEmail_(ms) {
+  var s = Math.round((Number(ms) || 0) / 1000);
+  if (s < 60) return s + 's';
+  return Math.floor(s / 60) + 'min ' + (s % 60) + 's';
+}
+
+// "Etapa N — Nome" na mesma ordem de navegação real do cliente (ver
+// ETAPA_POR_STEP_ em app-lancamentos.html) -- chave aqui é o step-id CRU
+// que chega em tags.tempoPorStep (objeto {stepId: ms}).
+var NOME_ETAPA_POR_STEP_EMAIL_ = {
+  0: 'Etapa 1 — Capa', 2: 'Etapa 2 — Orçamento/Área', 3: 'Etapa 3 — Confirmação',
+  1: 'Etapa 4 — Nome/Objetivo', 4: 'Etapa 5 — Quartos/Altura', 6: 'Etapa 6 — Resultados',
+  7: 'Etapa 7 — WhatsApp',
+};
+
+// Dados técnicos capturados sem perguntar nada ao cliente (pedido explícito
+// do usuário): tempo por etapa, tempo na tela de resultados, dispositivo,
+// horário de acesso, origem (UTM completo) e geolocalização aproximada por
+// IP. Tudo já vem pronto em d.tags (app-lancamentos.html) -- aqui só
+// traduz pra tabela legível.
+function montarBlocoDadosTecnicosEmail_(d) {
+  try {
+    var tags = JSON.parse(d.tags || '{}');
+    var tempoPorStep = tags.tempoPorStep || {};
+    var tempoTotalMs = Object.keys(tempoPorStep).reduce(function(acc, k) { return acc + (Number(tempoPorStep[k]) || 0); }, 0);
+    var geo = tags.geoAprox;
+    var geoTxt = geo && (geo.cidade || geo.regiao) ? [geo.cidade, geo.regiao, geo.pais].filter(Boolean).join(', ') : '';
+    var origemTxt = [tags.utmSource || tags.origemAcesso, tags.utmMedium, tags.utmCampaign].filter(Boolean).join(' / ');
+
+    var resumo = montarTabelaChaveValorEmail_('DADOS TÉCNICOS CAPTURADOS', [
+      { campo: 'Dispositivo',                 valor: tags.dispositivo },
+      { campo: 'Hora de acesso',              valor: (tags.horaAcesso !== undefined && tags.horaAcesso !== null && tags.horaAcesso !== '') ? tags.horaAcesso + 'h' : '' },
+      { campo: 'Origem de acesso (UTM)',      valor: origemTxt },
+      { campo: 'Geolocalização aproximada',   valor: geoTxt },
+      { campo: 'Tempo total no simulador',    valor: tempoTotalMs ? segundosParaTextoEmail_(tempoTotalMs) : '' },
+      { campo: 'Tempo na tela de resultados', valor: tempoPorStep['6'] ? segundosParaTextoEmail_(tempoPorStep['6']) : '' },
+    ]);
+
+    // Ordem de navegação real do cliente, não a ordem crescente dos
+    // step-ids crus (que pula: confirmação é step-3 mas vem antes de nome,
+    // que é step-1) -- mesma ordem de ETAPA_POR_STEP_ em app-lancamentos.html.
+    var ORDEM_STEP_IDS_ = [0, 2, 3, 1, 4, 6, 7];
+    var linhasTempo = ORDEM_STEP_IDS_
+      .filter(function(k) { return tempoPorStep[k] !== undefined; })
+      .map(function(k) { return { etapa: NOME_ETAPA_POR_STEP_EMAIL_[k], tempo: segundosParaTextoEmail_(tempoPorStep[k]) }; });
+    var tabelaTempo = montarTabelaEmail_('TEMPO POR ETAPA', linhasTempo, [
+      { label: 'ETAPA', width: 26, get: function(r) { return r.etapa; } },
+      { label: 'TEMPO',  width: 12, get: function(r) { return r.tempo; } },
+    ]);
+
+    return resumo + tabelaTempo;
+  } catch (e) {
+    return '';
+  }
+}
+
+// Taxa de abandono por etapa -- agregado histórico (TODAS as sessões já
+// registradas em FUNIL_EVENTOS_APP, não só a deste lead). Pedido explícito
+// do usuário: "essencial pra saber onde o funil vaza". Pra cada sessão,
+// pega a MAIOR etapa alcançada; a partir disso calcula, por etapa: quantas
+// sessões chegaram até ali (alcançaram) e quantas pararam exatamente ali
+// (não avançaram mais).
+function montarBlocoAbandonoEmail_() {
+  try {
+    var aba = obterAbaFunilEventos_();
+    var lr = aba.getLastRow();
+    if (lr < 2) return '';
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
+    var idxSession = CABECALHO_FUNIL_EVENTOS_.indexOf('sessionId');
+    var idxEtapa   = CABECALHO_FUNIL_EVENTOS_.indexOf('etapa');
+
+    var maxEtapaPorSessao = {};
+    dados.forEach(function(r) {
+      var sid = String(r[idxSession] || '');
+      var etapa = Number(r[idxEtapa]) || 0;
+      if (!sid || !etapa) return;
+      if (!maxEtapaPorSessao[sid] || etapa > maxEtapaPorSessao[sid]) maxEtapaPorSessao[sid] = etapa;
+    });
+
+    var sessoes = Object.keys(maxEtapaPorSessao);
+    var total = sessoes.length;
+    if (!total) return '';
+
+    var NOME_ETAPA_ABANDONO_ = {
+      1: 'Capa', 2: 'Orçamento/Área', 3: 'Confirmação', 4: 'Nome/Objetivo',
+      5: 'Quartos/Altura', 6: 'Resultados', 7: 'WhatsApp', 8: 'Concluiu',
+    };
+    var linhas = [1, 2, 3, 4, 5, 6, 7, 8].map(function(etapa) {
+      var alcancaram = sessoes.filter(function(sid) { return maxEtapaPorSessao[sid] >= etapa; }).length;
+      var pararamAqui = sessoes.filter(function(sid) { return maxEtapaPorSessao[sid] === etapa; }).length;
+      return {
+        etapa: 'Etapa ' + etapa + ' — ' + NOME_ETAPA_ABANDONO_[etapa],
+        alcancaram: alcancaram,
+        pctTotal: Math.round(alcancaram / total * 100) + '%',
+        pararamAqui: etapa < 8 ? pararamAqui : 0,
+      };
+    });
+
+    return montarTabelaEmail_('TAXA DE ABANDONO POR ETAPA (histórico agregado, ' + total + ' sessões)', linhas, [
+      { label: 'ETAPA',        width: 24, get: function(r) { return r.etapa; } },
+      { label: 'ALCANÇARAM',   width: 11, get: function(r) { return String(r.alcancaram); } },
+      { label: '% DO TOTAL',   width: 11, get: function(r) { return r.pctTotal; } },
+      { label: 'PARARAM AQUI', width: 13, get: function(r) { return String(r.pararamAqui); } },
+    ]);
+  } catch (e) {
+    return '';
+  }
+}
+
 // E-mail pro corretor sempre que um lead pede atendimento — é o momento
 // mais quente do funil BaseImob, não pode passar batido.
 function enviarNotificacaoAtendente_(d) {
@@ -5500,6 +5653,8 @@ function enviarNotificacaoAtendente_(d) {
     corpo += montarBlocoInteracaoCardsEmail_(d);
     corpo += montarBlocoExtraOpcoesEmail_(d);
     corpo += montarBlocoRoteiroEmail_(d);
+    corpo += montarBlocoDadosTecnicosEmail_(d);
+    corpo += montarBlocoAbandonoEmail_();
     MailApp.sendEmail({
       to: ADM_EMAIL,
       subject: '🔥 LEAD QUENTE — ' + nome + ' solicitou informações',

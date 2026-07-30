@@ -1,5 +1,57 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 153) — App Lançamentos: "Ver Preço" sem caixa + captura de dados técnicos/comportamentais
+
+### 1. Visual — "VER PREÇO" deixa de parecer botão (Etapa 6)
+`.btn-ver-preco` perdeu borda e fundo cinza (`background:none;border:none`); texto e seta (▾/▴) agora
+em laranja, seta maior (12px → 17px, span `.ver-preco-seta` dedicado). Vale pros cards principais e
+pras opções extras (mesmo template `cardOpcaoHTML_`).
+
+### 2. Dados técnicos/comportamentais capturados sem perguntar nada ao cliente
+Pedido explícito do usuário — 6 itens, cada um "Implementar esse recurso e mostrar em uma tabela
+final do e-mail":
+
+- **Tempo por etapa**: `irParaStep()` agora acumula `D.tempoPorStep[stepId]` (ms) toda vez que o
+  cliente sai de um step; `submeter()` faz flush do tempo da última etapa (captura/WhatsApp) antes de
+  montar o payload, já que o envio acontece antes de qualquer `irParaStep` seguinte.
+- **Tempo na tela de resultados**: é `tempoPorStep['6']` (step da tabela de opções), destacado à parte
+  na tabela de dados técnicos do e-mail.
+- **Origem do acesso (UTM)**: `D.utmSource/utmMedium/utmCampaign` capturados via `URLSearchParams`
+  (antes só existia `utm_source`, agora completo).
+- **Dispositivo**: `D.dispositivo` via regex no `navigator.userAgent` (Mobile/Desktop).
+- **Horário de acesso**: `D.horaAcesso` (`new Date().getHours()` no carregamento da página).
+- **Geolocalização aproximada**: `geolocalizarPorIp_()` chama `ipapi.co/json` (serviço público
+  gratuito) de forma assíncrona e silenciosa — **decisão de design**: usei IP em vez de GPS
+  (`navigator.geolocation`) porque GPS exige popup de permissão no meio do funil, o que atrapalha
+  conversão; IP não pede nada e falha graciosamente (`D.geoAprox` fica `null`) se bloqueado/offline.
+
+Todos os campos entram em `tags` no payload de `submeter()` e viram a tabela **"DADOS TÉCNICOS
+CAPTURADOS"** + **"TEMPO POR ETAPA"** no e-mail (`montarBlocoDadosTecnicosEmail_`, code.txt).
+
+### 3. Taxa de abandono por etapa (agregado histórico)
+Esse item é fundamentalmente diferente dos outros: abandono é uma métrica ENTRE sessões, não desta
+sessão específica — e hoje uma sessão que desiste no meio do funil não deixa NENHUM rastro no
+sistema (o payload só é enviado em `submeter()`, na confirmação final). Implementado:
+
+- `registrarEventoFunil_(step)` (client): fire-and-forget GET a cada `irParaStep()`, reportando
+  `sessionId` (gerado uma vez por sessão) + a "Etapa N" real (mapeada via `ETAPA_POR_STEP_`, já que os
+  step-ids do DOM não seguem ordem crescente — confirmação é step-3 mas vem antes de nome, step-1).
+- `beforeunload` passou a usar `navigator.sendBeacon` (em vez de só gravar `D.stepAbandono` localmente
+  e nunca enviar nada) — é o único jeito confiável de reportar algo quando a aba fecha no meio do funil.
+- `code.txt`: nova aba `FUNIL_EVENTOS_APP` (uma linha por evento), handler `registrarEventoFunil_(d)`
+  registrado em `doGet`/`doPost` como ação pública (sem sessão), e `montarBlocoAbandonoEmail_()` —
+  agrega TODAS as sessões já logadas (não só a deste lead), calcula a maior etapa alcançada por sessão,
+  e monta a tabela **"TAXA DE ABANDONO POR ETAPA"** (alcançaram / % do total / pararam aqui), enviada
+  junto com toda notificação de lead quente daqui pra frente.
+
+Testado: harness Node em `montarBlocoDadosTecnicosEmail_` (tabela + campos ausentes viram "-", sem
+erro) e `montarBlocoAbandonoEmail_` (4 sessões sintéticas — concluiu, abandonou na capa, na etapa 2 e
+na etapa 6 — números batem exatos) e `registrarEventoFunil_` (grava linha correta na aba mockada).
+Testado ao vivo no navegador: fluxo completo simulado por todas as 7 etapas, `tempoPorStep` com as 7
+chaves certas no payload final (inclusive a última etapa, via flush em `submeter()`); beacon de
+`irParaStep` capturado com `etapa` corretamente mapeada; botão "VER PREÇO" confirmado sem borda/fundo,
+cor laranja, seta em 17px.
+
 ## 2026-07-29 (parte 152) — App Lançamentos: bairro em destaque nos cards de resultado (Etapa 6)
 
 Pedido explícito do usuário: destacar o nome do bairro (campo "Região") nos cards de resultado —

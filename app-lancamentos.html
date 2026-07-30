@@ -197,12 +197,12 @@ input[type=range]::-moz-range-track {
 .opcao-cell-bairro .opcao-top-cell-val { font-size: 15px; font-weight: 800; color: var(--yellow); }
 .btn-ver-preco {
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; margin-top: 14px; padding: 10px; background: var(--s3);
-  border: 1px dashed var(--border2); border-radius: var(--r-sm);
-  font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .4px;
+  width: 100%; margin-top: 14px; padding: 10px 0; background: none; border: none;
+  font-size: 12px; font-weight: 700; color: var(--orange); letter-spacing: .4px;
   cursor: pointer; font-family: inherit; transition: all .15s;
 }
-.btn-ver-preco:hover { border-color: var(--accent); background: rgba(79,124,255,.08); }
+.btn-ver-preco:hover { text-decoration: underline; }
+.ver-preco-seta { font-size: 17px; color: var(--orange); line-height: 1; }
 .btn-favorito {
   display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
   width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--border2);
@@ -816,15 +816,59 @@ const D = {
   // null se o motor não devolveu nada (nenhum mix publicado pro segmento
   // desse perfil ainda) e o "melhor match" caiu no cálculo local de sempre.
   iscaId: null,
+
+  // ── DADOS TÉCNICOS CAPTURADOS SEM PERGUNTAR NADA AO CLIENTE (pedido
+  // explícito do usuário) -- tempo por etapa, dispositivo, horário, origem
+  // (UTM completo), geolocalização aproximada por IP. Tudo isso entra no
+  // payload do lead (submeter()) e vira tabela no e-mail (code.txt,
+  // montarBlocoDadosTecnicosEmail_). ──────────────────────────────────────
+  sessionId: Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
+  tempoPorStep: {}, // { stepId: ms acumulado }
+  dispositivo: /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+  horaAcesso: new Date().getHours(),
+  utmSource: new URLSearchParams(location.search).get('utm_source') || '',
+  utmMedium: new URLSearchParams(location.search).get('utm_medium') || '',
+  utmCampaign: new URLSearchParams(location.search).get('utm_campaign') || '',
+  // Preenchido de forma assíncrona por geolocalizarPorIp_() -- IP, não GPS
+  // (pedido tinha "IP/GPS com permissão"; GPS exige popup de permissão no
+  // meio do funil, o que atrapalha conversão -- IP é silencioso e sem
+  // fricção). Fica null se a chamada externa falhar/bloquear.
+  geoAprox: null,
 };
 
 // ── NAV ───────────────────────────────────────────────────────────────
+// Mapeia o step-id do DOM (não segue ordem crescente -- ex: confirmação é
+// step-3 mas vem ANTES de nome, que é step-1) pra "Etapa N" na ordem real
+// de navegação do cliente. Usado só pro rastreio comportamental (tempo por
+// etapa, taxa de abandono agregada) -- não afeta a navegação em si.
+const ETAPA_POR_STEP_ = { 0: 1, 2: 2, 3: 3, 1: 4, 4: 5, 6: 6, 7: 7, 8: 8 };
+let _stepEntradaTs = Date.now();
+
+// Beacon fire-and-forget: registra que a sessão alcançou essa etapa, pra
+// depois calcular taxa de abandono agregada (quantas sessões pararam em
+// cada etapa) -- pedido explícito do usuário. Não bloqueia navegação nem
+// trata erro (se falhar, só não entra na estatística agregada).
+function registrarEventoFunil_(step, abandonou) {
+  if (typeof WEBHOOK_URL === 'undefined') return;
+  try {
+    const payload = {
+      acao: 'registrar_evento_funil', sessionId: D.sessionId,
+      etapa: ETAPA_POR_STEP_[step] || step, abandonou: !!abandonou, canal: 'App Lançamentos',
+    };
+    fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
+  } catch (e) {}
+}
+
 function irParaStep(n) {
+  const agora = Date.now();
+  D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + (agora - _stepEntradaTs);
   document.getElementById('step-' + stepAtual).classList.remove('ativo');
   stepAtual = n;
   document.getElementById('step-' + stepAtual).classList.add('ativo');
+  _stepEntradaTs = agora;
   atualizarBotoes();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  registrarEventoFunil_(n, false);
 }
 
 function avancarStep() {
@@ -1172,6 +1216,13 @@ function scoreCompatibilidade() {
 // já existe no backend (salvarInteresse_, code.txt) e é a MESMA rota que
 // alimenta a aba "BaseImob" do dashboard (listarLeadsBaseimob_).
 function submeter() {
+  // Flush do tempo acumulado na etapa atual (captura/WhatsApp) -- sem isso
+  // o payload sairia sem contar o tempo gasto nesta última etapa, já que
+  // só é contabilizado normalmente quando o cliente SAI de um step
+  // (irParaStep), e aqui o envio acontece antes disso.
+  D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + (Date.now() - _stepEntradaTs);
+  _stepEntradaTs = Date.now();
+
   const btn = document.getElementById('btnConfirmarFinal');
   btn.disabled = true;
   btn.textContent = 'Enviando...';
@@ -1228,6 +1279,13 @@ function submeter() {
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
       tempoSegundos: Math.round((Date.now() - D.tsInicio) / 1000),
       ajustesSlider: D.ajustesSlider, origemAcesso: D.origemAcesso,
+      // Dados técnicos capturados sem perguntar nada ao cliente (pedido
+      // explícito do usuário) -- viram tabela no e-mail
+      // (montarBlocoDadosTecnicosEmail_, code.txt).
+      sessionId: D.sessionId, tempoPorStep: D.tempoPorStep,
+      dispositivo: D.dispositivo, horaAcesso: D.horaAcesso,
+      utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign,
+      geoAprox: D.geoAprox,
       // idEmpreendimento mostrado como "melhor match" -- se veio do motor
       // (selecionarIsca_) ou do cálculo local de sempre (fallback sem mix
       // publicado). Guardado pra Fase 4 (ficha de atendimento no dashboard,
@@ -1499,7 +1557,7 @@ function cardOpcaoHTML_(c, i, grupo) {
           </div>
         </div>
 
-        <button class="btn-ver-preco" id="verPreco-${grupo}-${i}" onclick="toggleVerPreco_('${c.id || ''}',${i},'${grupo}')">VER PREÇO ▾</button>
+        <button class="btn-ver-preco" id="verPreco-${grupo}-${i}" onclick="toggleVerPreco_('${c.id || ''}',${i},'${grupo}')">VER PREÇO <span class="ver-preco-seta">▾</span></button>
       </div>`;
 }
 
@@ -1532,7 +1590,7 @@ function toggleVerPreco_(id, i, grupo) {
   if (!el || !btn) return;
   const abrindo = el.style.display === 'none';
   el.style.display = abrindo ? '' : 'none';
-  btn.textContent = abrindo ? 'OCULTAR ▴' : 'VER PREÇO ▾';
+  btn.innerHTML = abrindo ? 'OCULTAR <span class="ver-preco-seta">▴</span>' : 'VER PREÇO <span class="ver-preco-seta">▾</span>';
   if (!abrindo || !id) return;
   (grupo === 'extra' ? D.extraPrecoVisto : D.cardsPrecoVisto).add(id);
 }
@@ -1663,11 +1721,39 @@ function toast(msg) {
 }
 
 window.addEventListener('beforeunload', () => {
-  if (stepAtual > 0 && stepAtual < 8) D.stepAbandono = stepAtual;
+  if (stepAtual > 0 && stepAtual < 8) {
+    D.stepAbandono = stepAtual;
+    D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + (Date.now() - _stepEntradaTs);
+    // sendBeacon (não fetch) -- sobrevive ao unload da página, diferente de
+    // um fetch normal que o navegador pode cancelar ao fechar a aba. É o
+    // ÚNICO jeito confiável de registrar abandono de verdade: sem isso, uma
+    // sessão que desiste no meio do funil não deixava rastro nenhum no
+    // sistema (só completava o payload em D, que nunca era enviado).
+    if (typeof WEBHOOK_URL !== 'undefined' && navigator.sendBeacon) {
+      try {
+        const payload = JSON.stringify({
+          acao: 'registrar_evento_funil', sessionId: D.sessionId,
+          etapa: ETAPA_POR_STEP_[stepAtual] || stepAtual, abandonou: true, canal: 'App Lançamentos',
+        });
+        navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+      } catch (e) {}
+    }
+  }
 });
+
+// Geolocalização aproximada por IP (silenciosa, sem popup de permissão) --
+// serviço público gratuito; falha/bloqueio (ad-blocker, rate limit) não
+// afeta o funil, só deixa D.geoAprox null.
+function geolocalizarPorIp_() {
+  fetch('https://ipapi.co/json/').then(r => r.json()).then(g => {
+    if (g && !g.error) D.geoAprox = { cidade: g.city || '', regiao: g.region || '', pais: g.country_name || '' };
+  }).catch(() => {});
+}
 
 // INIT
 carregarBaseReal();
+geolocalizarPorIp_();
+registrarEventoFunil_(0, false); // Etapa 1 (capa) -- sem isso, quem some já na 1ª tela nunca entraria na taxa de abandono
 </script>
 </body>
 </html>
