@@ -1,5 +1,23 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 146) — App Lançamentos: número gigante integrado na frase da capa (Etapa 1)
+
+Correção sobre a parte 144: o número de lançamentos ainda estava pequeno (17px) embutido no meio do
+parágrafo "Hoje você tem 135 lançamentos...". Pedido explícito do usuário: **"faça uma nova
+disposição tipográfica com número gigante e texto da frase integrados"**.
+
+Nova composição `.hero-stat` (3 linhas empilhadas, sem caixa/borda nenhuma):
+```
+Hoje você tem
+     135        <- clamp(64px, 20vw, 96px), peso 800, laranja
+lançamentos disponíveis em Goiânia e região.
+```
+O destaque agora vem só da escala tipográfica (número ~6x maior que o texto ao redor), não de peso
+de fonte pontual nem de caixa separada — a frase inteira continua lida como uma unidade só.
+
+Testado ao vivo: desktop (1280px) renderiza o número a 96px, mobile (375px) a 75px (responsivo via
+`clamp`+`vw`), sem overflow horizontal em nenhum dos dois (`scrollWidth === clientWidth`).
+
 ## 2026-07-29 (parte 145) — App Lançamentos: lote de UX/copy (Etapas 2, 4, 5, 6, 7) + restruturação do fluxo
 
 Segundo lote de ajustes pedidos pelo usuário, cobrindo as etapas 2 a 7 do funil (a etapa 1/capa já
