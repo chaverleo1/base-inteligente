@@ -1,5 +1,35 @@
 # Changelog — Base Inteligente
 
+## 2026-07-29 (parte 147) — App Lançamentos: sinais comportamentais por card (Etapa 6)
+
+Pedido explícito do usuário: capturar preferência REAL clicada em cada card (não só a declarada nos
+sliders) — "o corretor liga já sabendo 'ele voltou 3x pro EMP-048'".
+
+1. **Card retrátil** — cada card agora mostra só Código/situação, Tipo, Previsão de entrega e Região
+   por padrão; Área útil, Preço, Área de lazer e % vendido ficam ocultos atrás de um botão
+   **"VER PREÇO ▾"** (vira "OCULTAR ▴" ao expandir). Clicar registra o id do empreendimento em
+   `D.cardsPrecoVisto` (`toggleVerPreco_`).
+2. **Favoritar (♡/♥)** — ícone de coração ao lado do preço (dentro da parte expandida). Clicar
+   registra o id em `D.cardsFavoritos` (`favoritarCard_`, toggle — dá pra desfavoritar).
+3. **Área útil em destaque** — `.opcao-cell-destaque` deixa esse campo maior/negrito/cor de destaque
+   (`var(--accent)`) em vez do mesmo peso visual dos outros campos secundários.
+
+Os dois sinais entram no payload do lead (`submeter()`): `tags.cardsPrecoVisto`/`cardsFavoritos`
+(arrays de id) e, por item, `rankingDetalhado[i].precoVisto`/`.favoritado` (booleans).
+
+**Bug pré-existente corrigido no caminho**: `top7` (base do `rankingDetalhado` enviado) era recalculado
+do zero com `filtrados().slice(0,7)` — uma lista em ordem de score simples, DIFERENTE da lista
+realmente exibida nos cards (`ofertas`, que vem do mix ancorado no alvo, `montarMixPorAlvo_`). Isso
+fazia o id que o cliente via/clicava às vezes nem aparecer no ranking enviado — os sinais de
+"Ver Preço"/favorito ficariam órfãos. Corrigido guardando a lista exata renderizada em
+`D.ofertasMostradas` (dentro de `montarMatch()`) e usando ela em `submeter()` no lugar de recalcular.
+
+Testado ao vivo: card nasce retraído (`display:none` na parte de baixo); clique em "Ver Preço" expande
+e registra o id; clique no coração alterna ♡/♥ e registra/desfaz o favorito; `submeter()` mockado
+(fetch interceptado) confirma que o id clicado (EMP-123) aparece no `rankingDetalhado` com
+`precoVisto: true, favoritado: true` — antes da correção do bug, esse id nem aparecia na lista
+enviada.
+
 ## 2026-07-29 (parte 146) — App Lançamentos: número gigante integrado na frase da capa (Etapa 1)
 
 Correção sobre a parte 144: o número de lançamentos ainda estava pequeno (17px) embutido no meio do

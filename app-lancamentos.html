@@ -183,6 +183,26 @@ input[type=range]::-moz-range-track {
 .opcao-top-cell-val { font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: break-word; }
 .mais-opcoes-msg { text-align: center; font-size: 14px; color: var(--text); margin: 4px 0 16px; }
 
+/* ── ÁREA ÚTIL EM DESTAQUE + RETRAIR/EXPANDIR PREÇO + FAVORITO (Etapa 6,
+   pedido explícito do usuário) ─────────────────────────────────────────── */
+.opcao-cell-destaque .opcao-top-cell-val { font-size: 16px; font-weight: 800; color: var(--accent); }
+.btn-ver-preco {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 14px; padding: 10px; background: var(--s3);
+  border: 1px dashed var(--border2); border-radius: var(--r-sm);
+  font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .4px;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.btn-ver-preco:hover { border-color: var(--accent); background: rgba(79,124,255,.08); }
+.btn-favorito {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--border2);
+  background: var(--s2); color: var(--text); font-size: 16px; cursor: pointer;
+  transition: all .15s; font-family: inherit; padding: 0;
+}
+.btn-favorito:hover { border-color: #ff5252; color: #ff5252; }
+.btn-favorito.ativo { border-color: #ff5252; background: rgba(255,82,82,.12); color: #ff5252; }
+
 /* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
 .btn-final-wrap {
   margin-top: 24px;
@@ -764,6 +784,10 @@ const TOTAL = 9; // steps 0..8
 
 const D = {
   filtroSituacao: 'todos', moradias: new Set(), alturaPref: null, quartosPref: null,
+  // Sinais comportamentais por card (Etapa 6) -- id do empreendimento que o
+  // cliente expandiu ("Ver Preço") ou favoritou (♥). Pedido explícito do
+  // usuário: preferência REAL clicada vale mais que a declarada nos sliders.
+  cardsPrecoVisto: new Set(), cardsFavoritos: new Set(), ofertasMostradas: [],
   precoAlvo: null, metragemAlvo: null, areaRange: null,
   nome: '', whatsapp: '',
   tsInicio: Date.now(), precoInicial: null, precoFinal: null,
@@ -1149,10 +1173,12 @@ function submeter() {
     return;
   }
 
-  // Top 7 compatíveis -- mesma lista mostrada na tabela de opções do cliente
-  // (opcoesTabela), pra quem olhar o lead no BaseImob ver exatamente os
-  // mesmos códigos de empreendimento que o cliente viu na tela.
-  const top7 = filtrados().slice(0, 7);
+  // Mesma lista EXATA mostrada na tabela de opções do cliente (opcoesTabela,
+  // guardada em D.ofertasMostradas por montarMatch) -- pra quem olhar o lead
+  // no BaseImob ver exatamente os mesmos códigos de empreendimento que o
+  // cliente viu na tela, e os sinais de "Ver Preço"/favorito baterem certo
+  // com os ids reais do ranking enviado.
+  const top7 = D.ofertasMostradas.length ? D.ofertasMostradas : filtrados().slice(0, 7);
   const payload = {
     acao: 'interesse_lancamento',
     nome: D.nome,
@@ -1164,9 +1190,11 @@ function submeter() {
       area: `${c.areaMin}-${c.areaMax}m²`, precoM2: Math.round(c.precoM2),
       precoAPartir: c.precoAPartir, estagio: c.estagio,
       pctVendido: c.pctVendido, matchPref: c.matchPref, tracao: Math.round(c.tracao * 10) / 10,
+      precoVisto: D.cardsPrecoVisto.has(c.id), favoritado: D.cardsFavoritos.has(c.id),
     }))),
     tags: JSON.stringify({
       moradias: [...D.moradias], alturaPref: D.alturaPref, quartosPref: D.quartosPref, filtroSituacao: D.filtroSituacao,
+      cardsPrecoVisto: [...D.cardsPrecoVisto], cardsFavoritos: [...D.cardsFavoritos],
       precoAlvo: D.precoAlvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
       precoInicial: D.precoInicial, precoFinal: D.precoFinal,
       areaInicial: D.areaInicial, areaFinal: D.areaFinal,
@@ -1358,6 +1386,12 @@ function montarMatch() {
     ofertas = localCompativeis;
   }
   D.iscaId = ofertas[0] ? ofertas[0].id : null;
+  // Guarda a lista EXATA renderizada nos cards (pode divergir da simples
+  // filtrados().slice(0,7) por causa do mix ancorado no alvo) -- o payload
+  // do lead (submeter()) usa isso, não filtrados() de novo, senão os
+  // sinais de "Ver Preço"/favorito por card (D.cardsPrecoVisto/Favoritos)
+  // ficariam órfãos, referenciando ids que nem aparecem no ranking enviado.
+  D.ofertasMostradas = ofertas;
 
   const primeiroNome = D.nome.split(' ')[0];
   const maisQueOMix = Math.max(0, localCompativeis.length - ofertas.length);
@@ -1380,8 +1414,8 @@ function montarMatch() {
     return;
   }
 
-  document.getElementById('opcoesTabela').innerHTML = ofertas.map(c => `
-      <div class="opcao-top">
+  document.getElementById('opcoesTabela').innerHTML = ofertas.map((c, i) => `
+      <div class="opcao-top" data-id="${c.id || ''}">
         <div class="opcao-top-header">
           <span class="opcao-codigo">Código: ${c.id || '—'}</span>
           ${situacaoBadgeHTML_(c.estagio)}
@@ -1390,18 +1424,62 @@ function montarMatch() {
           <div><div class="opcao-top-cell-label">Tipo</div><div class="opcao-top-cell-val">${c.tipoImovel || 'Apartamento'}</div></div>
           ${D.filtroSituacao === 'pronto_novo' ? '' : `<div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>`}
           <div><div class="opcao-top-cell-label">Região</div><div class="opcao-top-cell-val">${c.regiao}</div></div>
-          <div><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
-          <div><div class="opcao-top-cell-label">A partir de</div><div class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</div></div>
-          <div><div class="opcao-top-cell-label">Área de lazer</div><div class="opcao-top-cell-val" style="${c.temLazer?'color:var(--green)':''}">${c.temLazer?'Completa':'Não incluso'}</div></div>
-          <div style="grid-column:1/-1">
-            <div class="opcao-top-cell-label">Unidades vendidas</div>
-            <div class="opcao-top-cell-val" style="color:var(--orange)">${c.pctVendido}% das unidades já foram vendidas</div>
-            <div style="height:10px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:6px">
-              <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
+        </div>
+
+        <div class="opcao-retraido" id="retraido-${i}" style="display:none">
+          <div class="opcao-top-grid" style="margin-top:12px">
+            <div class="opcao-cell-destaque"><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
+            <div>
+              <div class="opcao-top-cell-label">A partir de</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</span>
+                <button class="btn-favorito" id="fav-${i}" onclick="favoritarCard_('${c.id || ''}',${i})" title="Favoritar esse empreendimento">♡</button>
+              </div>
+            </div>
+            <div><div class="opcao-top-cell-label">Área de lazer</div><div class="opcao-top-cell-val" style="${c.temLazer?'color:var(--green)':''}">${c.temLazer?'Completa':'Não incluso'}</div></div>
+            <div style="grid-column:1/-1">
+              <div class="opcao-top-cell-label">Unidades vendidas</div>
+              <div class="opcao-top-cell-val" style="color:var(--orange)">${c.pctVendido}% das unidades já foram vendidas</div>
+              <div style="height:10px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:6px">
+                <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
+              </div>
             </div>
           </div>
         </div>
+
+        <button class="btn-ver-preco" id="verPreco-${i}" onclick="toggleVerPreco_('${c.id || ''}',${i})">VER PREÇO ▾</button>
       </div>`).join('');
+}
+
+// ── SINAIS COMPORTAMENTAIS POR CARD (Etapa 6) — pedido explícito do
+// usuário: preferência REAL clicada (quais cards o cliente abriu o preço,
+// quais favoritou) é mais valiosa que a preferência declarada nos sliders.
+// Guardado em D.cardsPrecoVisto/D.cardsFavoritos e enviado no payload do
+// lead (ver submeter()), pra o corretor já ligar sabendo em quais
+// empreendimentos específicos o cliente demonstrou interesse real.
+function toggleVerPreco_(id, i) {
+  const el = document.getElementById(`retraido-${i}`);
+  const btn = document.getElementById(`verPreco-${i}`);
+  if (!el || !btn) return;
+  const abrindo = el.style.display === 'none';
+  el.style.display = abrindo ? '' : 'none';
+  btn.textContent = abrindo ? 'OCULTAR ▴' : 'VER PREÇO ▾';
+  if (abrindo && id) D.cardsPrecoVisto.add(id);
+}
+
+function favoritarCard_(id, i) {
+  if (!id) return;
+  const btn = document.getElementById(`fav-${i}`);
+  if (!btn) return;
+  if (D.cardsFavoritos.has(id)) {
+    D.cardsFavoritos.delete(id);
+    btn.textContent = '♡';
+    btn.classList.remove('ativo');
+  } else {
+    D.cardsFavoritos.add(id);
+    btn.textContent = '♥';
+    btn.classList.add('ativo');
+  }
 }
 
 // ── AGRADECIMENTO ─────────────────────────────────────────────────────────
