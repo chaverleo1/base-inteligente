@@ -56,9 +56,7 @@ body {
   font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: 16px;
 }
 
-/* ── ESTATÍSTICA HERO (número gigante integrado à frase, sem caixa) ──────
-   Pedido explícito do usuário: nada de box/borda separando o número do
-   texto -- uma composição tipográfica só, o tamanho é que cria o destaque. */
+/* ── ESTATÍSTICA HERO ─────────────────────────────────────────────────── */
 .hero-stat { margin: 4px 0 20px; }
 .hero-stat-pre {
   display: block; font-size: 15px; font-weight: 600; color: var(--text);
@@ -70,6 +68,45 @@ body {
 .hero-stat-post {
   display: block; font-size: 15px; font-weight: 600; color: var(--text); max-width: 90%;
 }
+
+/* ── HERO TIPOGRÁFICO (step 0) ──────────────────────────────────────────── */
+.hero-phrase { margin: 16px 0 0; }
+.hero-phrase-pre {
+  font-size: 14px; font-weight: 500; color: var(--text); opacity: .55; margin-bottom: 2px;
+}
+.hero-phrase-main {
+  font-size: clamp(46px,14vw,68px); font-weight: 900;
+  color: var(--accent); letter-spacing: -2px; line-height: .9;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.hero-phrase-loc {
+  font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.35;
+}
+.hero-phrase-loc-dest { color: var(--orange); }
+
+/* Número gigante centralizado (versão hero step-0) */
+.hero-stat-block {
+  text-align: center;
+  border-top: 1px solid var(--border2); border-bottom: 1px solid var(--border2);
+  padding: 24px 0; margin: 24px 0 0;
+}
+.hero-stat-block .hero-stat-num {
+  display: block; text-align: center; font-size: clamp(72px,22vw,108px);
+  line-height: .88;
+}
+.hero-stat-block .hero-stat-post {
+  display: block; text-align: center; max-width: 100%;
+  font-size: 14px; font-weight: 600; color: var(--text); opacity: .7;
+  margin-top: 6px;
+}
+
+/* CTA area hero */
+.hero-cta-area { padding-top: 24px; }
+.hero-cta-count {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  text-align: center; margin-bottom: 16px; line-height: 1.4;
+}
+.hero-cta-count strong { color: var(--orange); font-size: 18px; }
 
 /* ── PULSO (feedback visual quando um contador muda de valor) ─────────── */
 .pulso {
@@ -408,25 +445,31 @@ input[type=range]::-moz-range-track {
 
   <!-- STEP 0 — ABERTURA -->
   <div class="step ativo" id="step-0">
-    <div style="margin-bottom:32px">
-      <div class="step-tag">App Lançamentos</div>
-      <div class="step-title">Vamos achar o <span style="color:var(--accent)">apartamento</span> ideal pra você!</div>
 
-      <div class="hero-stat">
-        <span class="hero-stat-pre">Hoje você tem</span>
-        <span class="hero-stat-num" id="statsTotalEmp">—</span>
-        <span class="hero-stat-post">lançamentos disponíveis em Goiânia e região.</span>
-      </div>
+    <div class="step-tag">App Lançamentos · Grande Goiânia</div>
 
-      <div style="margin-top:24px">
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Você prefere um imóvel:</div>
-        <div class="tag-group" id="tagsSituacao">
-          <button class="tag-btn on" onclick="selecionarSituacao_(this,'todos')">Todos</button>
-          <button class="tag-btn tag-btn-laranja" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para morar</button>
-          <button class="tag-btn tag-btn-laranja" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
-        </div>
-      </div>
+    <div class="hero-phrase">
+      <div class="hero-phrase-pre">Vamos achar o</div>
+      <div class="hero-phrase-main">apartamento<br>ideal</div>
+      <div class="hero-phrase-loc">pra você na <span class="hero-phrase-loc-dest">Grande Goiânia</span> e região!</div>
     </div>
+
+    <div class="hero-stat-block">
+      <span class="hero-stat-num stats-total-emp">—</span>
+      <span class="hero-stat-post">lançamentos disponíveis agora</span>
+    </div>
+
+    <div class="hero-cta-area">
+      <div class="hero-cta-count">
+        Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!
+      </div>
+      <button class="btn-final btn-quente" onclick="avancarStep()">
+        <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+        ENCONTRAR MEU APARTAMENTO
+      </button>
+      <div class="btn-final-sub" style="margin-top:10px">Sem compromisso · Atendimento personalizado</div>
+    </div>
+
   </div>
 
   <!-- STEP 1 — NOME + OBJETIVO (2 perguntas na mesma tela, pedido explícito
@@ -652,7 +695,7 @@ input[type=range]::-moz-range-track {
 </div><!-- /main -->
 
 <!-- NAV BAR -->
-<div class="nav-bar">
+<div class="nav-bar" id="navBar">
   <div class="nav-inner">
     <button class="btn-nav btn-sec btn-hide" id="btnVoltar" onclick="voltarStep()">Voltar</button>
     <button class="btn-nav btn-prim" id="btnAvancar" onclick="avancarStep()">Começar</button>
@@ -762,12 +805,9 @@ async function carregarBaseReal() {
 // a primeira tela não ficar "fria": mostrar de cara que é uma consultoria
 // com dados de mercado reais e atuais, não só mais uma landing page comum.
 function montarStatsAbertura_() {
-  const elTotal = document.getElementById('statsTotalEmp');
-  if (!elTotal) return;
-  const count = D.filtroSituacao === 'todos'
-    ? TODOS_LANC.length
-    : TODOS_LANC.filter(c => matchSituacao_(c.estagio, D.filtroSituacao)).length;
-  elTotal.textContent = count || '—';
+  const count = TODOS_LANC.length;
+  const val = count || '—';
+  document.querySelectorAll('.stats-total-emp').forEach(el => { el.textContent = val; });
 }
 
 // ── SCORE DE TRAÇÃO (versão pública e parcial) ─────────────────────────────
@@ -933,17 +973,20 @@ function voltarStep() {
 function atualizarBotoes() {
   const bV = document.getElementById('btnVoltar');
   const bA = document.getElementById('btnAvancar');
+  const navBar = document.getElementById('navBar');
+  const main = document.querySelector('.main');
+
+  // Step 0 tem CTA inline — nav bar some e o padding de fundo some junto
+  if (navBar) navBar.style.display = stepAtual === 0 ? 'none' : '';
+  if (main) main.style.paddingBottom = stepAtual === 0 ? '24px' : '';
+
   // step 3 (confirmação) e step 4 (quartos/altura) têm botão de avançar
   // embutido; steps 6..8 também têm botões próprios.
   const semBotaoAvancarFooter = stepAtual === 3 || stepAtual === 4 || stepAtual >= 6;
   bA.classList.toggle('btn-hide', semBotaoAvancarFooter);
-  // Voltar visível em: step 1 (nome→confirmação), step 2 (sliders→capa) e
-  // step 4 (quartos+altura) tem seu próprio botão "← Voltar" (estilo
-  // .ajustar-btn, pedido explícito) -- o Voltar do rodapé fixo não aparece
-  // ali, só nos outros steps navegáveis.
   bV.classList.toggle('btn-hide', stepAtual === 3 || stepAtual === 0 || stepAtual === 4 || stepAtual === 8 || stepAtual >= 6);
 
-  bA.textContent = stepAtual === 0 ? 'Começar' : 'Próximo';
+  bA.textContent = 'Próximo';
 }
 
 // ── VALIDAÇÃO ───────────────────────────────────────────────────────────
@@ -1768,6 +1811,7 @@ function geolocalizarPorIp_() {
 }
 
 // INIT
+atualizarBotoes();
 carregarBaseReal();
 geolocalizarPorIp_();
 // Etapa 1 (capa) -- sem isso, quem some já na 1ª tela (bounce puro, nunca
