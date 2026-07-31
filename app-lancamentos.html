@@ -201,6 +201,11 @@ input[type=range]::-moz-range-track {
   border-color: var(--danger); color: var(--danger);
   animation: sitPulse .35s ease;
 }
+/* Erro de validação — step-4 (quartos/altura não selecionados) */
+.tag-group-erro .tag-btn {
+  border-color: var(--danger); color: var(--danger);
+  animation: sitPulse .35s ease;
+}
 @keyframes sitPulse {
   0%,100% { transform: scale(1); }
   45%     { transform: scale(1.05); }
@@ -644,7 +649,8 @@ input[type=range]::-moz-range-track {
         <button class="tag-btn" onclick="selecionarAltura_(this,'alto')">Acima do 10º andar</button>
       </div>
     </div>
-    <button class="btn-final btn-quente" id="btnVerOpcoes" style="margin-top:28px" onclick="avancarStep()">
+    <div class="hero-cta-count" style="margin-top:40px;margin-bottom:12px">Encontramos <strong id="cntOpcoesStep4">—</strong> opções para você!</div>
+    <button class="btn-final btn-quente" id="btnVerOpcoes" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
       <span id="btnVerOpcoesTxt">QUERO VER MINHAS OPÇÕES</span>
     </button>
@@ -996,6 +1002,7 @@ function montarMotivacaoTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('motivacaoTitulo').textContent =
     primeiroNome + ', o que define o tipo de apartamento mais adequado para você?';
+  animar('cntOpcoesStep4', filtrados().length);
 }
 
 function refazerSliders() {
@@ -1043,6 +1050,12 @@ function validar() {
     D.nome = nome;
     if (D.moradias.size === 0) { toast('Selecione pelo menos uma opção para continuar'); return false; }
   }
+  if (stepAtual === 4) {
+    let ok = true;
+    if (!D.quartosPref) { document.getElementById('tagsQuartos').classList.add('tag-group-erro'); ok = false; }
+    if (!D.alturaPref)  { document.getElementById('tagsAltura').classList.add('tag-group-erro');  ok = false; }
+    if (!ok) { toast('Marque pelo menos 1 opção em cada grupo para continuar'); return false; }
+  }
   if (stepAtual === 7) {
     const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
     const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
@@ -1073,12 +1086,14 @@ function toggleMoradia_(el, val) {
 }
 
 function selecionarAltura_(el, val) {
+  document.getElementById('tagsAltura').classList.remove('tag-group-erro');
   document.querySelectorAll('#tagsAltura .tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.alturaPref = val;
 }
 
 function selecionarQuartos_(el, val) {
+  document.getElementById('tagsQuartos').classList.remove('tag-group-erro');
   document.querySelectorAll('#tagsQuartos .tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.quartosPref = val;
