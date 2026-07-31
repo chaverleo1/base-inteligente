@@ -196,6 +196,15 @@ input[type=range]::-moz-range-track {
 }
 .s2-sit-btn:hover { border-color: var(--orange); color: var(--orange); }
 .s2-sit-btn.on { border-color: var(--orange); background: rgba(255,138,0,.15); color: var(--orange); }
+/* Erro de validação — nenhum botão de situação selecionado */
+#tagsSituacao.sit-erro .s2-sit-btn {
+  border-color: var(--danger); color: var(--danger);
+  animation: sitPulse .35s ease;
+}
+@keyframes sitPulse {
+  0%,100% { transform: scale(1); }
+  45%     { transform: scale(1.05); }
+}
 .s2-label {
   font-size: 14px; font-weight: 700; color: var(--text);
   margin: 24px 0 10px; letter-spacing: -.1px;
@@ -861,7 +870,7 @@ let stepAtual = 0;
 const TOTAL = 9; // steps 0..8
 
 const D = {
-  filtroSituacao: 'todos', moradias: new Set(), alturaPref: null, quartosPref: null,
+  filtroSituacao: 'todos', situacoes: new Set(), moradias: new Set(), alturaPref: null, quartosPref: null,
   // Sinais comportamentais por card (Etapa 6) -- id do empreendimento que o
   // cliente expandiu ("Ver Preço") ou favoritou (♥). Pedido explícito do
   // usuário: preferência REAL clicada vale mais que a declarada nos sliders.
@@ -1013,6 +1022,13 @@ function atualizarBotoes() {
 
 // ── VALIDAÇÃO ───────────────────────────────────────────────────────────
 function validar() {
+  if (stepAtual === 2) {
+    if (D.situacoes.size === 0) {
+      document.getElementById('tagsSituacao').classList.add('sit-erro');
+      toast('Selecione Pronto para Morar ou Em Obras para continuar');
+      return false;
+    }
+  }
   if (stepAtual === 1) {
     const nome = document.getElementById('fNome').value.trim();
     if (!nome) { toast('Informe seu nome para continuar'); return false; }
@@ -1031,10 +1047,14 @@ function validar() {
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
 function selecionarSituacao_(el, val) {
-  const jaAtivo = el.classList.contains('on');
-  document.querySelectorAll('#tagsSituacao .s2-sit-btn').forEach(b => b.classList.remove('on'));
-  if (!jaAtivo) { el.classList.add('on'); D.filtroSituacao = val; }
-  else { D.filtroSituacao = 'todos'; }
+  document.getElementById('tagsSituacao').classList.remove('sit-erro');
+  if (el.classList.contains('on')) {
+    el.classList.remove('on');
+    D.situacoes.delete(val);
+  } else {
+    el.classList.add('on');
+    D.situacoes.add(val);
+  }
   atualizarComboUI_();
 }
 
@@ -1106,7 +1126,13 @@ function rankeados() {
 }
 
 function filtrados() {
-  return rankeados().filter(c => c.compativel && matchSituacao_(c.estagio, D.filtroSituacao));
+  return rankeados().filter(c => {
+    if (!c.compativel) return false;
+    const s = D.situacoes;
+    if (s.size === 0) return true;
+    return (s.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
+           (s.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras'));
+  });
 }
 
 // ── SLIDERS ──────────────────────────────────────────────────────────────
@@ -1252,8 +1278,10 @@ function validarLimitesMetragem_() {
 // destaque, é a opção neutra). Usado tanto no badge quanto no texto da
 // contagem, pra manter os dois sempre consistentes.
 function situacaoEscolhidaLabel_() {
-  if (D.filtroSituacao === 'pronto_novo') return 'Pronto para morar';
-  if (D.filtroSituacao === 'em_obras') return 'Em Obras';
+  const s = D.situacoes;
+  if (s.has('pronto_novo') && s.has('em_obras')) return 'Pronto para morar e Em Obras';
+  if (s.has('pronto_novo')) return 'Pronto para morar';
+  if (s.has('em_obras'))   return 'Em Obras';
   return null;
 }
 
@@ -1266,14 +1294,10 @@ function situacaoEscolhidaLabel_() {
 // apartamento 'Em Obras'"), pra não se perder de vista depois da capa.
 function atualizarComboUI_() {
   const situacaoLabel = situacaoEscolhidaLabel_();
-  const badge = document.getElementById('situacaoEscolhidaBadge');
-  document.getElementById('situacaoEscolhidaTexto').textContent = situacaoLabel || '';
-  badge.style.display = situacaoLabel ? '' : 'none';
-  document.getElementById('cntComboSufixo').textContent = situacaoLabel ? `com apartamento "${situacaoLabel}"` : 'com esse perfil';
-
+  const sufEl = document.getElementById('cntComboSufixo');
+  if (sufEl) sufEl.textContent = situacaoLabel ? `com "${situacaoLabel}"` : 'com esse perfil';
   if (!D.precoAlvo || !D.metragemAlvo) return;
-  const n = filtrados().length;
-  animar('cntCombo', n);
+  animar('cntCombo', filtrados().length);
 }
 
 // ── SCORE DE COMPATIBILIDADE (perfil geral, enviado no payload do lead) ────
