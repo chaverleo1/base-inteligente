@@ -657,7 +657,7 @@ input[type=range]::-moz-range-track {
         <button class="tag-btn" onclick="selecionarAltura_(this,'alto')">Acima do 10º andar</button>
       </div>
     </div>
-    <div class="hero-cta-count" style="margin-top:40px;margin-bottom:12px">Encontramos <strong id="cntOpcoesStep4">—</strong> opções para você!</div>
+    <div class="hero-cta-count" id="cntStep4Wrap" style="margin-top:40px;margin-bottom:12px">Encontramos <strong>—</strong> opções para você!</div>
     <button class="btn-final btn-quente" id="btnVerOpcoes" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
       <span id="btnVerOpcoesTxt">QUERO VER MINHAS OPÇÕES</span>
@@ -1012,7 +1012,15 @@ function montarMotivacaoTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('motivacaoTitulo').textContent =
     primeiroNome + ', o que define o tipo de apartamento mais adequado para você?';
-  animar('cntOpcoesStep4', filtrados().length);
+  const _t4 = filtrados().length;
+  const _w4 = document.getElementById('cntStep4Wrap');
+  if (_w4) {
+    if (_t4 <= 7) {
+      _w4.innerHTML = `Encontramos <strong>${_t4}</strong> opções para você!`;
+    } else {
+      _w4.innerHTML = `Encontramos <strong>7</strong> opções especiais para você! <span style="opacity:.65">(+${_t4 - 7} adicionais)</span>`;
+    }
+  }
 }
 
 function refazerSliders() {
