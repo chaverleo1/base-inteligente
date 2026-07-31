@@ -772,6 +772,13 @@ let TODOS_LANC = [];
 let PRECO_BOUNDS = [200000, 2000000];
 let AREA_BOUNDS = [40, 140];
 
+const CIDADES_NORM_ = {
+  'goiania': 'Goiânia', 'goiânia': 'Goiânia',
+  'aparecida de goiania': 'Aparecida de Goiânia', 'aparecida de goiânia': 'Aparecida de Goiânia',
+  'senador canedo': 'Senador Canedo',
+};
+function normCidade_(s) { if (!s) return s; return CIDADES_NORM_[s.toLowerCase()] || s; }
+
 function tipoImovelDominanteSimulador_(unidades) {
   const cont = {};
   (unidades || []).forEach(u => { const t = String(u.tipo || '').trim(); if (t) cont[t] = (cont[t] || 0) + 1; });
@@ -827,7 +834,7 @@ async function carregarBaseReal() {
         .filter(u => u.areaUtil > 0 && u.precoTotal > 0);
       return {
         id: g.idEmpreendimento || g.idLancamento, nome: g.nomeEmpreendimento || '—',
-        regiao: [g.bairro, g.cidade].filter(Boolean).join(' · ') || 'Goiânia',
+        regiao: [g.bairro, normCidade_(g.cidade)].filter(Boolean).join(' · ') || 'Goiânia',
         bairro: g.bairro || '',
         tipoImovel: tipoImovelDominanteSimulador_(g.unidades), padrao: g.padrao || '',
         estagio: g.status || '—', entregaPrev: g.previsaoEntrega || '—',
