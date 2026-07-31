@@ -292,14 +292,17 @@ input[type=range]::-moz-range-track {
 }
 .btn-ver-preco:hover { text-decoration: underline; }
 .ver-preco-seta { font-size: 17px; color: var(--orange); line-height: 1; }
+.fav-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+.fav-label { font-size: 9px; font-weight: 700; color: var(--text); opacity: .45; text-transform: uppercase; letter-spacing: .5px; line-height: 1; }
 .btn-favorito {
-  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
-  width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #f5c800;
-  background: var(--s2); color: #f5c800; font-size: 16px; cursor: pointer;
-  transition: all .15s; font-family: inherit; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%; border: 1px dashed #888;
+  background: var(--s2); color: #888; font-size: 18px; cursor: pointer;
+  transition: all .2s; font-family: inherit; padding: 0;
 }
-.btn-favorito:hover { border-color: #ff5252; color: #ff5252; }
-.btn-favorito.ativo { border-color: #ff5252; background: rgba(255,82,82,.12); color: #ff5252; }
+.btn-favorito:hover { border-color: #f5c800; color: #f5c800; }
+.btn-favorito.ativo { border: 2px dashed #f5c800; color: #f5c800; background: var(--s2); }
+.btn-favorito.ativo:hover { border-color: #f5c800; color: #f5c800; }
 
 /* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
 .btn-final-wrap {
@@ -1690,7 +1693,7 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
               <div class="opcao-top-cell-label">A partir de</div>
               <div style="display:flex;align-items:center;gap:8px">
                 <span class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</span>
-                <button class="btn-favorito" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar esse empreendimento">♥</button>
+                <div class="fav-wrap"><span class="fav-label">Favoritar</span><button class="btn-favorito" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar esse empreendimento">♥</button></div>
               </div>
             </div>
             <div style="grid-column:1/-1">
@@ -1748,7 +1751,7 @@ function favoritarCard_(id, i, grupo) {
   const set = grupo === 'extra' ? D.extraFavoritos : D.cardsFavoritos;
   if (set.has(id)) {
     set.delete(id);
-    btn.textContent = '♡';
+    btn.textContent = '♥';
     btn.classList.remove('ativo');
   } else {
     set.add(id);
