@@ -156,25 +156,49 @@ body {
    tamanho da bola). */
 input[type=range] {
   -webkit-appearance: none; appearance: none;
-  width: 100%; height: 5px;
+  width: 100%; height: 3px;
   background: var(--orange); border-radius: 99px; outline: none; cursor: pointer;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   background: var(--text); border: 2px solid var(--orange);
-  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4);
   transition: box-shadow .2s, transform .1s;
 }
 input[type=range]:active::-webkit-slider-thumb {
-  box-shadow: 0 0 0 7px rgba(255,138,0,.25); transform: scale(1.08);
+  box-shadow: 0 0 0 5px rgba(255,138,0,.25); transform: scale(1.08);
 }
 input[type=range]::-moz-range-thumb {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 22px; height: 22px; border-radius: 50%;
   background: var(--text); border: 2px solid var(--orange); cursor: pointer;
 }
 input[type=range]::-moz-range-track {
-  width: 100%; height: 5px; background: var(--orange); border-radius: 99px;
+  width: 100%; height: 3px; background: var(--orange); border-radius: 99px;
+}
+
+/* ── STEP-2 TIPOGRAFIA + SITUAÇÃO ────────────────────────────────────────── */
+.s2-phrase { margin: 20px 0 16px; }
+.s2-phrase-main {
+  display: block; font-size: clamp(28px, 8.5vw, 44px); font-weight: 900;
+  color: var(--accent); letter-spacing: -1px; line-height: .92;
+}
+.s2-phrase-sub {
+  display: block; font-size: clamp(18px, 5vw, 26px); font-weight: 700;
+  color: var(--text); letter-spacing: -.3px; line-height: 1.1; margin-top: 4px;
+}
+.s2-sit-group { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+.s2-sit-btn {
+  display: inline-flex; align-items: center; padding: 10px 18px;
+  border: 1.5px solid var(--border2); border-radius: 99px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.s2-sit-btn:hover { border-color: var(--orange); color: var(--orange); }
+.s2-sit-btn.on { border-color: var(--orange); background: rgba(255,138,0,.15); color: var(--orange); }
+.s2-label {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  margin: 24px 0 10px; letter-spacing: -.1px;
 }
 
 /* ── CAPTURA ─────────────────────────────────────────────────────────── */
@@ -512,52 +536,40 @@ input[type=range]::-moz-range-track {
        agora -- pega o dado técnico primeiro, personalização vem depois. -->
   <div class="step" id="step-2">
     <div class="step-tag">Passo 1 de 3</div>
-    <div class="step-title" style="margin-bottom:16px">Arraste as barras e selecione o <span style="color:var(--accent)">orçamento</span> e <span style="color:var(--accent)">área útil</span> do apartamento ideal pra você!</div>
 
-    <!-- Destaca a situação escolhida na capa (Pronto para morar/Em Obras) --
-         pedido explícito do usuário, escondida quando é "Todos" (não é
-         uma escolha que precise de destaque). -->
-    <div id="situacaoEscolhidaBadge" style="display:none;margin-bottom:16px">
-      <span style="display:inline-flex;align-items:center;padding:6px 14px;border-radius:99px;border:1.5px solid var(--orange);color:var(--orange);font-size:13px;font-weight:700;background:rgba(255,138,0,.12)">
-        Você escolheu: <span id="situacaoEscolhidaTexto" style="margin-left:4px"></span>
-      </span>
+    <div class="s2-phrase">
+      <span class="s2-phrase-main">O Apartamento</span>
+      <span class="s2-phrase-sub">ideal pra você é:</span>
     </div>
 
-    <!-- Caixa única (mesmo padrão visual/espaçamento de .conf-card, usado na
-         etapa "Confirme seus dados") -- as 2 barras + o contador de
-         resultados ficam juntos num só box, mais baixo que os 3 boxes
-         separados de antes. Sem o contorno azul do .conf-card padrão
-         (pedido explícito) -- só essa instância, a de "Confirme seus
-         dados" continua com o destaque azul de sempre. -->
-    <div class="conf-card" style="border:none">
-      <div class="conf-item">
-        <div class="slider-card-label">Preço limite</div>
-        <div class="preco-input-row">
-          <span class="preco-prefixo">R$</span>
-          <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
-        </div>
-        <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
-        <div class="slider-label-row">
-          <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
-        </div>
-      </div>
+    <div class="s2-sit-group" id="tagsSituacao">
+      <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para Morar</button>
+      <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
+    </div>
 
-      <div class="conf-item conf-item-last">
-        <div class="slider-card-label">Área útil</div>
-        <div class="preco-input-row">
-          <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-          <span class="preco-prefixo">m²</span>
-        </div>
-        <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
-        <div class="slider-label-row">
-          <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
-        </div>
-      </div>
+    <div class="s2-label">Seu preço limite é:</div>
+    <div class="preco-input-row">
+      <span class="preco-prefixo">R$</span>
+      <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
+    </div>
+    <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
+    <div class="slider-label-row">
+      <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
+    </div>
 
-      <div class="conf-obs" style="text-align:center">
-        <span id="cntCombo" style="font-size:clamp(48px,14vw,64px);font-weight:800;color:var(--orange);letter-spacing:-1px">—</span>
-        <strong>opções encontradas <span id="cntComboSufixo">com esse perfil</span>.</strong>
-      </div>
+    <div class="s2-label">Área Útil ideal pra você é:</div>
+    <div class="preco-input-row">
+      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+      <span class="preco-prefixo">m²</span>
+    </div>
+    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
+    <div class="slider-label-row">
+      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+    </div>
+
+    <div class="conf-obs" style="text-align:center;margin-top:24px">
+      <span id="cntCombo" style="font-size:clamp(48px,14vw,64px);font-weight:800;color:var(--orange);letter-spacing:-1px">—</span>
+      <strong>opções encontradas <span id="cntComboSufixo">com esse perfil</span>.</strong>
     </div>
   </div>
 
@@ -1019,11 +1031,11 @@ function validar() {
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
 function selecionarSituacao_(el, val) {
-  document.querySelectorAll('#tagsSituacao .tag-btn').forEach(b => b.classList.remove('on'));
-  el.classList.add('on');
-  D.filtroSituacao = val;
-  montarStatsAbertura_();
-  if (D.precoAlvo && D.metragemAlvo) atualizarComboUI_();
+  const jaAtivo = el.classList.contains('on');
+  document.querySelectorAll('#tagsSituacao .s2-sit-btn').forEach(b => b.classList.remove('on'));
+  if (!jaAtivo) { el.classList.add('on'); D.filtroSituacao = val; }
+  else { D.filtroSituacao = 'todos'; }
+  atualizarComboUI_();
 }
 
 function toggleMoradia_(el, val) {
@@ -1125,14 +1137,14 @@ let slidersProntos_ = false;
 function inicializarSliders() {
   const sP = document.getElementById('sliderPreco');
   sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
-  sP.value = PRECO_BOUNDS[0]; // caixa mostra o mínimo disponível na base, por padrão
+  sP.value = Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
   document.getElementById('lblPrecoMin').textContent = formatBRL_(PRECO_BOUNDS[0]);
   document.getElementById('lblPrecoMax').textContent = formatBRL_(PRECO_BOUNDS[1]);
   atualizarPreco(sP.value);
 
   const sM = document.getElementById('sliderMetragem');
   sM.min = AREA_BOUNDS[0]; sM.max = AREA_BOUNDS[1]; sM.step = 5;
-  sM.value = AREA_BOUNDS[0]; // idem: mínimo disponível na base, por padrão
+  sM.value = Math.round((AREA_BOUNDS[0] + AREA_BOUNDS[1]) / 2 / 5) * 5;
   document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
   document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
   atualizarMetragem(sM.value);
