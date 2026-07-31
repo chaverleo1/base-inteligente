@@ -360,6 +360,14 @@ input[type=range]::-moz-range-track {
   padding: 14px 20px;
 }
 .nav-inner { max-width: 520px; margin: 0 auto; display: flex; gap: 8px; }
+
+/* ── STICKY ATENDIMENTO (step-6: botão fixo enquanto o cliente lê os cards) */
+.sticky-atend {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--s1); border-top: 1px solid var(--border);
+  padding: 12px 20px 20px;
+}
+.sticky-atend-inner { max-width: 520px; margin: 0 auto; }
 .btn-nav {
   flex: 1; padding: 14px; border-radius: var(--r-sm); border: none;
   font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .18s;
@@ -594,7 +602,6 @@ input[type=range]::-moz-range-track {
   <div class="step" id="step-3">
     <div class="step-tag">Confirme seus dados</div>
     <div class="step-title">Antes de seguirmos, <span style="color:var(--accent)">confirme</span> o que você configurou!</div>
-    <div class="step-sub">Se quiser ajustar, é só clicar em Refazer.</div>
 
     <div class="conf-card">
       <div class="conf-item">
@@ -661,21 +668,12 @@ input[type=range]::-moz-range-track {
     <button class="ajustar-btn" onclick="refinarBusca_()">← Ajustar filtros</button>
     <div class="match-header">
       <div class="step-title" style="margin-bottom:4px" id="matchTitulo">—</div>
-      <div class="step-sub" style="margin-bottom:0">Para informações mais detalhadas confirme seu atendimento ao final da página.</div>
     </div>
 
     <div class="opcoes-tabela" id="opcoesTabela"><!-- populado por JS --></div>
 
     <button class="btn-ver-mais-opcoes" id="btnVerMaisOpcoes" style="display:none" onclick="toggleVerMaisOpcoes_()"></button>
     <div class="opcoes-tabela" id="opcoesExtraTabela" style="display:none"><!-- populado por JS, ao clicar em "Ver +N opções" --></div>
-
-    <div class="btn-final-wrap">
-      <p>Pra confirmar esse atendimento e receber todos os detalhes, informe seu WhatsApp na próxima etapa.</p>
-      <button class="btn-final btn-quente" onclick="avancarStep()">
-        <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-        QUERO ATENDIMENTO EXCLUSIVO
-      </button>
-    </div>
   </div>
 
   <!-- STEP 7 — CAPTURA -->
@@ -743,6 +741,17 @@ input[type=range]::-moz-range-track {
   <div class="nav-inner">
     <button class="btn-nav btn-sec btn-hide" id="btnVoltar" onclick="voltarStep()">Voltar</button>
     <button class="btn-nav btn-prim" id="btnAvancar" onclick="avancarStep()">Começar</button>
+  </div>
+</div>
+
+<!-- STICKY ATENDIMENTO — visível no step-6 enquanto o cliente lê os cards -->
+<div class="sticky-atend" id="stickyAtend" style="display:none">
+  <div class="sticky-atend-inner">
+    <button class="btn-final btn-quente" onclick="avancarStep()">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+      QUERO ATENDIMENTO EXCLUSIVO
+    </button>
+    <div class="btn-final-sub" style="opacity:.55;margin-top:6px">Sem compromisso · Atendimento personalizado</div>
   </div>
 </div>
 
@@ -1023,8 +1032,10 @@ function atualizarBotoes() {
   const main = document.querySelector('.main');
 
   // Step 0 tem CTA inline — nav bar some e o padding de fundo some junto
-  if (navBar) navBar.style.display = stepAtual === 0 ? 'none' : '';
+  if (navBar) navBar.style.display = (stepAtual === 0 || stepAtual === 6) ? 'none' : '';
   if (main) main.style.paddingBottom = stepAtual === 0 ? '24px' : '';
+  const stickyAtend = document.getElementById('stickyAtend');
+  if (stickyAtend) stickyAtend.style.display = stepAtual === 6 ? 'block' : 'none';
 
   // step 3 (confirmação) e step 4 (quartos/altura) têm botão de avançar
   // embutido; steps 6..8 também têm botões próprios.
