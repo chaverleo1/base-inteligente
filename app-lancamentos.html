@@ -398,6 +398,9 @@ input[type=range]::-moz-range-track {
   font-size: 38px; font-weight: 800; color: var(--orange);
   letter-spacing: -1.5px; line-height: 1.05; overflow-wrap: break-word;
 }
+.conf-item-val-sit {
+  font-size: clamp(20px, 5.5vw, 28px); letter-spacing: -.5px;
+}
 .conf-obs {
   padding: 14px 20px; background: rgba(79,124,255,.07);
   font-size: 13px; color: var(--text); line-height: 1.7;
@@ -593,9 +596,13 @@ input[type=range]::-moz-range-track {
         <div class="conf-item-label">Seu orçamento estimado</div>
         <div class="conf-item-val" id="confOrcamento">—</div>
       </div>
-      <div class="conf-item conf-item-last">
+      <div class="conf-item">
         <div class="conf-item-label">Área útil ideal do apartamento</div>
         <div class="conf-item-val" id="confArea">—</div>
+      </div>
+      <div class="conf-item conf-item-last">
+        <div class="conf-item-label">Ideal pra você é</div>
+        <div class="conf-item-val conf-item-val-sit" id="confSituacao">—</div>
       </div>
       <div class="conf-obs">
         Faixa de investimento (±20%): <strong id="confPrecoFaixa">—</strong><br>
@@ -982,6 +989,7 @@ function montarConfirmacao_() {
   const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
+  document.getElementById('confSituacao').textContent = situacaoEscolhidaLabel_() || '—';
 }
 
 function montarMotivacaoTitulo_() {
