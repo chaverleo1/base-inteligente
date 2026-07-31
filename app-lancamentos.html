@@ -1475,8 +1475,8 @@ function situacaoBadgeHTML_(estagio) {
 // motivação declarada) -- pedido explícito do usuário, evita soar
 // invasivo/robótico repetindo de volta o que a pessoa acabou de escolher.
 function headlineImpacto_(qtd, primeiroNome) {
-  const plural = qtd === 1 ? 'a opção que separamos' : `as ${qtd} melhores opções que separamos`;
-  return `${primeiroNome}, ${plural} pra você! <span style="display:block;font-size:13px;font-weight:400;color:#f5c800;margin-top:4px">(Marque seus favoritos ♡)</span>`;
+  const plural = qtd === 1 ? 'a melhor opção de empreendimento, com o apartamento ideal' : `as ${qtd} melhores opções de empreendimentos, com o apartamento ideal`;
+  return `${primeiroNome}, conheça ${plural} pra você! <span style="display:block;font-size:13px;font-weight:400;color:#f5c800;margin-top:4px">(Marque seus favoritos ♡)</span>`;
 }
 
 // ── MIX ANCORADO NO PRODUTO ALVO (portado de estrategias.html, aba
@@ -1624,6 +1624,7 @@ function montarMatch() {
   // sinais de "Ver Preço"/favorito por card (D.cardsPrecoVisto/Favoritos)
   // ficariam órfãos, referenciando ids que nem aparecem no ranking enviado.
   D.ofertasMostradas = ofertas;
+  D.qtdPrincipal = ofertas.length;
 
   // "Opções extras" -- tudo que é compatível mas ficou de fora dos 7 cards
   // principais, na mesma ordem de score (localCompativeis já vem assim).
@@ -1669,16 +1670,16 @@ function montarMatch() {
 // favorito dos dois, só o grupo muda pra não colidir ids no DOM nem
 // misturar os sinais (D.cardsPrecoVisto/Favoritos vs D.extraPrecoVisto/
 // Favoritos), que o e-mail do lead relata em tabelas separadas.
-function cardOpcaoHTML_(c, i, grupo) {
+function cardOpcaoHTML_(c, i, grupo, offset = 0) {
+  const codSeq = 'Cod. ' + String(offset + i + 1).padStart(3, '0');
   return `
-      <div class="opcao-top" data-id="${c.id || ''}">
+      <div class="opcao-top" data-id="${c.id || ''}" data-cod="${codSeq}">
         <div class="opcao-top-header">
-          <span class="opcao-codigo">Código: ${c.id || '—'}</span>
+          <span class="opcao-codigo">${codSeq}</span>
           ${situacaoBadgeHTML_(c.estagio)}
         </div>
         <div class="opcao-top-grid">
-          <div><div class="opcao-top-cell-label">Tipo</div><div class="opcao-top-cell-val">${c.tipoImovel || 'Apartamento'}</div></div>
-          ${D.filtroSituacao === 'pronto_novo' ? '' : `<div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>`}
+          ${D.situacoes.size === 0 || D.situacoes.has('em_obras') ? `<div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>` : ''}
           <div class="opcao-cell-bairro"><div class="opcao-top-cell-label">Região</div><div class="opcao-top-cell-val">${c.regiao}</div></div>
         </div>
 
@@ -1692,7 +1693,6 @@ function cardOpcaoHTML_(c, i, grupo) {
                 <button class="btn-favorito" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar esse empreendimento">♡</button>
               </div>
             </div>
-            <div><div class="opcao-top-cell-label">Área de lazer</div><div class="opcao-top-cell-val" style="${c.temLazer?'color:var(--green)':''}">${c.temLazer?'Completa':'Não incluso'}</div></div>
             <div style="grid-column:1/-1">
               <div class="opcao-top-cell-label">Unidades vendidas</div>
               <div class="opcao-top-cell-val" style="color:var(--orange)">${c.pctVendido}% das unidades já foram vendidas</div>
@@ -1714,7 +1714,7 @@ function toggleVerMaisOpcoes_() {
   if (abrindo) {
     D.verMaisOpcoesClicado = true;
     if (!container.dataset.montado) {
-      container.innerHTML = D.extrasMostrados.map((c, i) => cardOpcaoHTML_(c, i, 'extra')).join('');
+      container.innerHTML = D.extrasMostrados.map((c, i) => cardOpcaoHTML_(c, i, 'extra', D.qtdPrincipal || 7)).join('');
       container.dataset.montado = '1';
     }
   }
