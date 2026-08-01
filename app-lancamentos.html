@@ -1736,7 +1736,7 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
   const codSeq = 'Cod. ' + String(offset + i + 1).padStart(3, '0');
   return `
       <div class="opcao-top" data-id="${c.id || ''}" data-cod="${codSeq}">
-        ${c.pctVendido > 90 ? `<div class="card-alerta-estoque">⚠ Estoque de Unidades Esgotando — Aproveite!</div>` : ''}
+        ${c.pctVendido > 90 ? `<div class="card-alerta-estoque" id="alerta-${grupo}-${i}" style="display:none">⚠ Estoque de Unidades Esgotando — Aproveite!</div>` : ''}
         <div class="opcao-top-header">
           <span class="opcao-codigo">${codSeq}</span>
           ${situacaoBadgeHTML_(c.estagio)}
@@ -1813,12 +1813,14 @@ function toggleVerPreco_(id, i, grupo) {
     if (bv) bv.style.width = (bv.dataset.pct || '0') + '%';
     if (bd) bd.style.width = (bd.dataset.pct || '0') + '%';
   }, 50);
-  // revelar percentuais após a barra preencher
+  // revelar percentuais e alerta após a barra preencher
   setTimeout(function() {
     const pv = document.getElementById('pct-v-' + grupo + '-' + i);
     const pd = document.getElementById('pct-d-' + grupo + '-' + i);
+    const al = document.getElementById('alerta-' + grupo + '-' + i);
     if (pv && pv.dataset.val) pv.textContent = pv.dataset.val;
     if (pd && pd.dataset.val) pd.textContent = pd.dataset.val;
+    if (al) al.style.display = '';
   }, 800);
 }
 
