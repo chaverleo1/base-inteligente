@@ -1774,12 +1774,10 @@ function toggleVerMaisOpcoes_() {
 function toggleVerPreco_(id, i, grupo) {
   const el = document.getElementById(`retraido-${grupo}-${i}`);
   const btn = document.getElementById(`verPreco-${grupo}-${i}`);
-  if (!el || !btn) return;
-  const abrindo = el.style.display === 'none';
-  el.style.display = abrindo ? '' : 'none';
-  btn.innerHTML = abrindo ? 'OCULTAR <span class="ver-preco-seta">▴</span>' : 'VER PREÇO <span class="ver-preco-seta">▾</span>';
-  if (!abrindo || !id) return;
-  (grupo === 'extra' ? D.extraPrecoVisto : D.cardsPrecoVisto).add(id);
+  if (!el || !btn || el.style.display !== 'none') return;
+  el.style.display = '';
+  btn.style.display = 'none';
+  if (id) (grupo === 'extra' ? D.extraPrecoVisto : D.cardsPrecoVisto).add(id);
 }
 
 function favoritarCard_(id, i, grupo) {
