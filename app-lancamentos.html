@@ -304,6 +304,14 @@ input[type=range]::-moz-range-track {
 .btn-favorito.ativo { border: 2px solid #f5c800; color: #f5c800; background: var(--s2); }
 .btn-favorito.ativo:hover { border-color: #f5c800; color: #f5c800; }
 
+/* ── CARD: ALERTA ESTOQUE + BARRA DINÂMICA ─────────────────── */
+.card-alerta-estoque {
+  font-size: 11px; font-weight: 600; color: var(--danger);
+  background: rgba(255,59,48,.1); border: 1px solid rgba(255,59,48,.28);
+  border-radius: 6px; padding: 5px 10px; margin-bottom: 8px; text-align: center;
+}
+.bar-seg { transition: width .72s cubic-bezier(.4,0,.2,1); }
+
 /* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
 .btn-final-wrap {
   margin-top: 24px;
@@ -1507,6 +1515,12 @@ function situacaoInfo_(estagio) {
   }
   return { texto: 'Em obras', bg: 'rgba(245,166,35,.15)', border: 'rgba(245,166,35,.4)', cor: '#f5a623' };
 }
+function corVendido_(pct) {
+  if (pct <= 50) return 'var(--text)';
+  if (pct <= 79) return 'var(--orange)';
+  return 'var(--danger)';
+}
+
 function situacaoBadgeHTML_(estagio) {
   const s = situacaoInfo_(estagio);
   return `<span class="situacao-pill" style="background:${s.bg};border:1px solid ${s.border};color:${s.cor}">${s.texto}</span>`;
@@ -1722,6 +1736,7 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
   const codSeq = 'Cod. ' + String(offset + i + 1).padStart(3, '0');
   return `
       <div class="opcao-top" data-id="${c.id || ''}" data-cod="${codSeq}">
+        ${c.pctVendido > 90 ? `<div class="card-alerta-estoque">⚠ Estoque de Unidades Esgotando — Aproveite!</div>` : ''}
         <div class="opcao-top-header">
           <span class="opcao-codigo">${codSeq}</span>
           ${situacaoBadgeHTML_(c.estagio)}
@@ -1746,11 +1761,12 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
             </div>
             <div style="grid-column:1/-1">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                <span class="opcao-top-cell-label" style="color:var(--orange);font-size:12px;font-weight:500">${c.pctVendido}% vendido</span>
-                <span class="opcao-top-cell-label" style="color:var(--green);font-size:12px;font-weight:500">${100 - c.pctVendido}% disponível</span>
+                <span id="pct-v-${grupo}-${i}" data-val="${c.pctVendido}% vendido" style="color:${corVendido_(c.pctVendido)};font-size:12px;font-weight:500">–</span>
+                <span id="pct-d-${grupo}-${i}" data-val="${100-c.pctVendido}% disponível" style="color:var(--green);font-size:12px;font-weight:500">–</span>
               </div>
-              <div style="height:3px;background:var(--s3);border-radius:99px;overflow:hidden">
-                <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
+              <div style="height:3px;border-radius:99px;overflow:hidden;display:flex">
+                <div id="bar-v-${grupo}-${i}" class="bar-seg" data-pct="${c.pctVendido}" style="width:0%;height:100%;background:${corVendido_(c.pctVendido)}"></div>
+                <div id="bar-d-${grupo}-${i}" class="bar-seg" data-pct="${100-c.pctVendido}" style="width:0%;height:100%;background:var(--green)"></div>
               </div>
             </div>
           </div>
@@ -1790,6 +1806,20 @@ function toggleVerPreco_(id, i, grupo) {
   el.style.display = '';
   btn.style.display = 'none';
   if (id) (grupo === 'extra' ? D.extraPrecoVisto : D.cardsPrecoVisto).add(id);
+  // animar barra após render
+  setTimeout(function() {
+    const bv = document.getElementById('bar-v-' + grupo + '-' + i);
+    const bd = document.getElementById('bar-d-' + grupo + '-' + i);
+    if (bv) bv.style.width = (bv.dataset.pct || '0') + '%';
+    if (bd) bd.style.width = (bd.dataset.pct || '0') + '%';
+  }, 50);
+  // revelar percentuais após a barra preencher
+  setTimeout(function() {
+    const pv = document.getElementById('pct-v-' + grupo + '-' + i);
+    const pd = document.getElementById('pct-d-' + grupo + '-' + i);
+    if (pv && pv.dataset.val) pv.textContent = pv.dataset.val;
+    if (pd && pd.dataset.val) pd.textContent = pd.dataset.val;
+  }, 800);
 }
 
 function atualizarStickyFavCount_() {
