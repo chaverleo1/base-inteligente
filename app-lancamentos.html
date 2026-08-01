@@ -1519,9 +1519,9 @@ function situacaoInfo_(estagio) {
   return { texto: 'Em obras', bg: 'rgba(245,166,35,.15)', border: 'rgba(245,166,35,.4)', cor: '#f5a623' };
 }
 function corVendido_(pct) {
-  if (pct <= 50) return 'var(--text)';
-  if (pct <= 79) return 'var(--orange)';
-  return 'var(--danger)';
+  if (pct <= 50) return '#8a8f9e';
+  if (pct <= 69) return '#ffffff';
+  return '#f5c800';
 }
 
 function situacaoBadgeHTML_(estagio) {
@@ -1739,7 +1739,7 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
   const codSeq = 'Cod. ' + String(offset + i + 1).padStart(3, '0');
   return `
       <div class="opcao-top" data-id="${c.id || ''}" data-cod="${codSeq}">
-        ${c.pctVendido > 90 ? `<div class="card-alerta-estoque" id="alerta-${grupo}-${i}" style="display:none">⚠ Estoque de Unidades Esgotando — Aproveite!</div>` : ''}
+        ${c.pctVendido > 90 ? `<div class="card-alerta-estoque" id="alerta-${grupo}-${i}" style="display:none">🔴 Apenas ${100 - c.pctVendido}% das unidades ainda disponíveis</div>` : ''}
         <div class="opcao-top-header">
           <span class="opcao-codigo">${codSeq}</span>
           ${situacaoBadgeHTML_(c.estagio)}
