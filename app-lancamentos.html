@@ -494,6 +494,7 @@ input[type=range]::-moz-range-track {
 .cv2-entrega { font-size: 12px; color: var(--text); opacity: .42; }
 .cv2-entrega::before { content: '· '; }
 .cv2-preco-label { font-size: 11px; color: var(--text); opacity: .42; margin-bottom: 2px; }
+.cv2-preco-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .cv2-preco-val { font-size: 22px; font-weight: 600; color: var(--orange); letter-spacing: -.4px; line-height: 1; }
 .cv2-rodape { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
 .cv2-area { font-size: 11px; color: var(--text); opacity: .42; white-space: nowrap; flex-shrink: 0; }
@@ -1754,12 +1755,15 @@ function montarMatch() {
 // Favoritos), que o e-mail do lead relata em tabelas separadas.
 function cardV2HTML_(c, i, grupo, codSeq) {
   const mostrarEntrega = D.situacoes.size === 0 || D.situacoes.has('em_obras');
+  const fmtA = v => { const n = parseFloat(v); return Number.isInteger(n) ? String(n) : n.toFixed(1); };
+  const areaStr = parseFloat(c.areaMin) === parseFloat(c.areaMax)
+    ? `${fmtA(c.areaMin)} m²`
+    : `${fmtA(c.areaMin)}–${fmtA(c.areaMax)} m²`;
   return `
     <div class="card-v2" data-id="${c.id || ''}" data-cod="${codSeq}">
       <div class="cv2-top">
         <span class="cv2-cod">${codSeq}</span>
         ${situacaoBadgeHTML_(c.estagio)}
-        <button class="cv2-fav" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar">♥</button>
       </div>
       <div class="cv2-local">
         <span class="cv2-regiao">${c.regiao}</span>
@@ -1767,9 +1771,12 @@ function cardV2HTML_(c, i, grupo, codSeq) {
       </div>
       <div id="retraido-${grupo}-${i}" style="display:none">
         <div class="cv2-preco-label">a partir de</div>
-        <div class="cv2-preco-val">${formatBRL_(c.precoAPartir)}</div>
+        <div class="cv2-preco-row">
+          <div class="cv2-preco-val">${formatBRL_(c.precoAPartir)}</div>
+          <button class="cv2-fav" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar">♥</button>
+        </div>
         <div class="cv2-rodape">
-          <span class="cv2-area">${c.areaMin}–${c.areaMax} m²</span>
+          <span class="cv2-area">${areaStr}</span>
           <div class="cv2-barra"><div class="cv2-barra-fill" style="width:${c.pctVendido}%"></div></div>
           <span class="cv2-pct">${c.pctVendido}% vendido</span>
         </div>
