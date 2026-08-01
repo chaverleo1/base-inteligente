@@ -1863,7 +1863,7 @@ function montarAgradecimento() {
   const emps    = filtrados();
   const total   = emps.length;
   const prontos = emps.filter(e => ['Pronto','Pronto novo','Entregue'].includes(e.estagio)).length;
-  const comLaz  = emps.filter(e => e.temLazer).length;
+  const emObras = emps.filter(e => ['Em obras','Em planta'].includes(e.estagio)).length;
   const areas   = emps.map(e => e.areaMin);
   const precos  = emps.map(e => e.precoAPartir).filter(v => v > 0);
   const menorPreco = precos.length ? Math.min(...precos) : null;
@@ -1882,8 +1882,8 @@ function montarAgradecimento() {
   if (prontos > 0) {
     linhasProjecao.push(['Prontos para morar agora', `<span style="color:var(--green);font-weight:700">${prontos} disponíve${prontos>1?'is':'l'}</span>`]);
   }
-  if (comLaz > 0) {
-    linhasProjecao.push(['Com área de lazer completa', `${comLaz} dos ${total} encontrados`]);
+  if (emObras > 0) {
+    linhasProjecao.push(['Em obras', `<span style="color:#f5a623;font-weight:700">${emObras} disponíve${emObras>1?'is':'l'}</span>`]);
   }
 
   const projecaoEl = document.getElementById('baseProjecoes');
