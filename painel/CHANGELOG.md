@@ -1,5 +1,1270 @@
 # Changelog — Base Inteligente
 
+## 2026-07-30 (parte 162) — App Lançamentos: rodapé restrito à etapa "Quase lá"
+
+Correção do usuário sobre a parte 161: o rodapé com "CJ 27357- Líder Empreendimentos Imobiliários
+LTDA" não deve aparecer em todas as etapas do funil — só na etapa `step-7` (step-tag "Quase lá",
+tela de captura do WhatsApp). Removido de fora de `.step-wrap` (onde ficava sempre visível) e
+movido para dentro de `<div class="step" id="step-7">`, logo após o `.btn-final-sub` — agora só
+renderiza quando essa etapa está `.ativo`.
+
+Testado ao vivo: `.app-footer` ausente/invisível na Etapa 0 (capa) e visível somente após
+`irParaStep(7)`, sem erros no console.
+
+## 2026-07-30 (parte 161) — App Lançamentos: rodapé com identificação da empresa
+
+Pedido explícito do usuário: rodapé com letras pequenas em todas as telas do App Lançamentos —
+"CJ 27357- Líder Empreendimentos Imobiliários LTDA". Adicionado como último filho de `.step-wrap`,
+fora de qualquer `.step` (que usa `display:none` pra trocar de tela) — fica sempre visível,
+independente da etapa ativa do funil, sem precisar duplicar em cada uma das 9 etapas. Classe nova
+`.app-footer`: 10px, opacidade .5, centralizado.
+
+Testado ao vivo: texto confirmado presente e visível tanto na Etapa 1 (capa) quanto na Etapa 5
+(troca de step via `irParaStep`), sem erros no console.
+
+## 2026-07-30 (parte 160) — Reestruturação de domínio: app-lancamentos.html na raiz, resto em /painel
+
+Pedido explícito do usuário: preparar o repositório pro domínio próprio `lidderimoveis.com` —
+`lidderimoveis.com` acessando o App Lançamentos direto, `lidderimoveis.com/painel` levando ao login
+do sistema administrativo. Modelo escolhido (dele): um repositório só, `app-lancamentos.html` na
+raiz, resto do "Base Inteligente" numa subpasta — GitHub Pages entende `/painel/` como caminho, sem
+precisar de subdomínio/segundo repositório/DNS extra.
+
+**22 arquivos movidos pra `/painel/`** (via `git mv`, preservando histórico): `index.html` (login),
+`reset.html`, `formulario.html`, `estrategias.html` (redirect), `lancamentos.html`, `dashboard.html`,
+`contatos.html`, `busca.html`, `revendas-lista.html`, `revendas-construtoras.html`,
+`leads-imobzi.html`, `favoritos.html`, `dados.html`, `insight-detail.html`,
+`lancamentos-editar.html`, `config.js`, `perfil-vendedor.js`, `code.txt`, `CHANGELOG.md`,
+`MODELO_VENDEDOR_PROMPT.md`, `ORGANIZADOR_PROMPT.md`, `lancamentos_code_gs.txt`.
+
+**Ficam na raiz** (não fazem parte do "painel"): `app-lancamentos.html`, e os outros funis/landings
+públicos que já existiam soltos ali (`baseimob-funil.html`, `baseimob-landing.html`,
+`baseimob-total.html`) — nenhum tem a `.nav-tabs` compartilhada do painel, são ferramentas
+independentes; `simulador-lancamentos.html` também ficou intocado (fora do escopo, regra já
+conhecida de não mexer nesse arquivo sem pedido explícito).
+
+**Antes de mover, chequei sistematicamente** (evitar link quebrado numa migração de domínio ao
+vivo): nenhum path absoluto (`href="/..."`) em nenhum arquivo; nenhum asset de imagem/ícone local
+referenciado; todo `fetch()` local usa `WEBHOOK_URL`, nenhum busca arquivo estático por path. Achei
+exatamente **2 links reais cruzando a nova fronteira raiz↔painel** (`dashboard.html` → botão "Ver"
+do ADM, `lancamentos.html` → botão "Abrir App Lançamentos") e **1 script cruzando o sentido
+contrário** (`app-lancamentos.html` carrega `config.js`) — os 3 corrigidos pra `../`/`painel/`. Todo
+o resto são referências entre arquivos que se mudaram JUNTOS pra dentro de `/painel/`, então os
+caminhos relativos entre eles continuam válidos sem tocar em nada.
+
+**Novo `index.html` na raiz**: redireciona pra `app-lancamentos.html` (mesmo padrão de redirect já
+usado por `estrategias.html`/`formulario.html`) — o antigo `index.html` (login) virou
+`painel/index.html`.
+
+**Novo `robots.txt`** na raiz: `Disallow: /painel/` — pedido explícito do usuário de não misturar
+os acessos do painel com o monitoramento que ele vai configurar (Google Analytics/Microsoft Clarity)
+no App Lançamentos. Importante deixar registrado: isso é só a camada de **indexação/rastreamento**
+(evita que buscadores listem/rastreiem o painel) — a proteção de ACESSO de verdade continua sendo o
+login por senha já existente; `robots.txt` não bloqueia ninguém que tenha o link direto. A separação
+física em pastas também deixa trivial nunca colar o snippet do GA/Clarity em nenhum arquivo dentro
+de `/painel/` quando ele for configurar isso.
+
+**Domínio/DNS**: fora do escopo deste commit — fica pro usuário configurar via GitHub → Settings →
+Pages → Custom domain (`lidderimoveis.com`), que gera o `CNAME` automaticamente.
+
+Testado ao vivo (servidor estático local simulando o comportamento do GitHub Pages): `/` redireciona
+pro App Lançamentos; `/painel` e `/painel/` (com e sem barra) servem o login; `WEBHOOK_URL` definido
+tanto em `app-lancamentos.html` (via `painel/config.js`) quanto dentro de `/painel/*`; os 2 links
+corrigidos apontando certo; redirects internos (`estrategias.html`→`lancamentos.html?tab=...`,
+`formulario.html`→`contatos.html?...`) continuam funcionando; zero erros no console em nenhuma
+página testada.
+
+## 2026-07-30 (parte 159) — Lançamentos: encurta 2 labels de aba
+
+Pedido explícito do usuário: "Modelos e Padrões Vendedores" → **"Modelos e Padrôes"** e
+"App Lançamentos" → **"App"** nos botões da barra de abas. Só o rótulo do botão mudou — o título
+dentro do painel (`sec-title`) continua com o nome completo, como cabeçalho descritivo da própria
+aba.
+
+## 2026-07-30 (parte 158) — Inteligência migra pra Lançamentos + nova aba "App Lançamentos" + abas escuras
+
+Pedido explícito do usuário, 3 partes:
+
+**1. "Inteligência" saiu de `dashboard.html` e virou aba de `lancamentos.html`** (depois de
+"Estratégias"). Ao começar, encontrei o `dashboard.html` já com uma remoção PARCIAL não commitada
+(botão/painel/CSS já tinham sumido, mas as funções `renderIntKpis_`/`renderIntSegmentos_`/etc.
+tinham ficado órfãs, sem nada mais chamando -- provavelmente sobra de outra sessão/máquina
+trabalhando no mesmo repo em paralelo. Terminei a limpeza (removi o
+bloco JS órfão) e portei a feature completa pra dentro de `lancamentos.html`: KPIs (`.vg-panel`),
+funil de conversão, segmentação comportamental, tabelas de tempo por etapa e origem/UTM — reaproveita
+`listarEstatisticasFunil_`/`listarSegmentosComportamentais_` (Fase 2, code.txt, inalteradas).
+Carrega sob demanda (`carregarInteligenciaLazy_`), igual ao padrão já usado por Estratégias.
+**Adaptação necessária**: os chips de "amostra de lead" de cada segmento eram clicáveis (abriam o
+drawer de detalhe do BaseImob, `abrirDetalheLeadBI`/`_biLeadsMap`) — essa infra é de gestão de LEADS,
+que não existe em Lançamentos (que é sobre EMPREENDIMENTOS). Os chips viraram texto informativo, sem
+clique. Nenhuma colisão de CSS/JS com o que já existia em `lancamentos.html` (`.vg-panel`,
+`.adm-table`, `.score-hot/warm/cold` etc. não existiam lá).
+
+**2. Nova aba "App Lançamentos"**, depois de "Inteligência": painel simples com descrição do que é o
+funil público (`app-lancamentos.html`) e botão pra abrir em nova aba.
+
+**3. Fundo mais escuro nas abas "Extrair Modelo 1", "Extrair Modelo 2" e "Modelos e Padrões
+Vendedores"** (`#0a0b10`, mais escuro que o `--bg` padrão `#0f1117`) — separa visualmente as abas de
+cadastro/dados brutos das abas de análise (Mapa Geral, Busca, Estratégias, Inteligência, App
+Lançamentos, Cadastrados), que continuam no fundo padrão.
+
+Sequência final das abas de Lançamentos: Mapa Geral / Busca / Estratégias / **Inteligência** /
+**App Lançamentos** / Cadastrados / Extrair Modelo 1 / Extrair Modelo 2 / Modelos e Padrões
+Vendedores.
+
+Testado ao vivo no navegador (backend mockado): KPIs/funil/segmentos/tabelas de Inteligência
+renderizando corretos dentro de Lançamentos; chip de segmento confirmado como `<span>` sem `onclick`
+(não mais clicável); aba App Lançamentos com link certo pro `app-lancamentos.html`; fundo escuro
+confirmado via `getComputedStyle` nas 3 abas certas (`rgb(10,11,16)`) e ausente no Mapa Geral
+(transparente); nenhuma regressão nas abas Mapa Geral/Busca/Estratégias/Cadastrados; zero erros no
+console. `dashboard.html` sintaticamente válido após a limpeza do bloco órfão.
+
+## 2026-07-30 (parte 157) — Cabeçalho: remove "Estratégias" + padroniza links em todas as páginas
+
+Pedido explícito do usuário: como o conteúdo de Estratégias virou aba interna de Lançamentos (parte
+156), o link "Estratégias" no cabeçalho de todo o sistema ficou redundante — removido dos 10 arquivos
+que tinham: `lancamentos.html`, `dashboard.html`, `insight-detail.html`, `contatos.html`,
+`revendas-lista.html`, `revendas-construtoras.html`, `leads-imobzi.html`, `favoritos.html`,
+`dados.html`, `busca.html` (`lancamentos-editar.html` já não tinha esse link).
+
+Aproveitei pra revisar se os links do cabeçalho batem em todas as páginas — encontrei
+`revendas-lista.html` desalinhado: label "Busca" (as outras usam "Busca Aberta"), label abreviada
+"Rev.-Construtoras" (as outras usam "Revendas-Construtoras" por extenso), ORDEM diferente
+(Revendas-Construtoras antes de Revendas, as outras fazem o contrário), e **faltavam os links
+BaseImob e ADM inteiramente**. Corrigido pra bater com o padrão comum (mesma ordem, mesmos labels,
+mesmos 9 links) usado pelas outras 9 páginas.
+
+Conjunto final do cabeçalho, igual em todas: Contatos / Dashboard / Busca Aberta / Lançamentos /
+Revendas / Revendas-Construtoras / BaseImob / Leads Imobzi / ADM (`dashboard.html` troca os links
+por botões internos pras seções que já vivem nele — Dashboard/BaseImob/Leads Imobzi/ADM, mais
+"Inteligência" que só existe ali; `dados.html` tem um link extra próprio "Dados" — ambos os casos
+são esperados, não inconsistência).
+
+Verificado: `grep` confirma zero ocorrências de "Estratégias" em qualquer `<div class="nav-tabs">`
+do projeto; HTML de `revendas-lista.html` com tags balanceadas; comparação linha a linha dos 11
+arquivos com cabeçalho confirma conjunto/ordem/labels idênticos.
+
+## 2026-07-30 (parte 156) — Lançamentos: nova aba Busca + fusão de Estratégias
+
+Pedido explícito do usuário: reorganizar as abas de `lancamentos.html` pra
+`Mapa Geral / Busca / Estratégias / Cadastrados / Extrair Modelo 1 / Extrair Modelo 2 / Modelos e
+Padrões Vendedores`, criando uma aba de busca por nome/código e movendo todo o conteúdo de
+`estrategias.html` pra dentro de Lançamentos.
+
+### 1. Nova aba "Busca"
+Busca por nome ou código, instantânea (filtra `_emps`, já carregado por `carregarLancamentos()`, sem
+fetch novo). Resultado clicado troca pra "Cadastrados" e rola/destaca o card correspondente
+(`abrirResultadoBusca_`) em vez de duplicar o card rico (score de tração, alertas, padrão vendedor)
+só pra essa aba.
+
+### 2. Fusão de Estratégias pra dentro de Lançamentos
+Antes de mexer, mandei um agente investigar colisões entre os dois arquivos (2730 + 3722 linhas).
+Achados principais:
+- ~24 funções do "motor" (Score de Tração/Similaridade/Padrão Vendedor) já eram cópias
+  byte-idênticas entre os dois arquivos (documentado como duplicação intencional em
+  estrategias.html) — mantidas duplicadas na fusão (redeclaração de `function` é inofensiva em JS,
+  e evita o risco de podar cirurgicamente ~24 funções de um bloco de milhares de linhas).
+- **8 colisões fatais reais**: `SESS_KEY`, `SESS_TOKEN_KEY`, `USER_EMAIL`, `_tt`, `MESES_ABREV_NUM_`,
+  `NOTA_BORDA_FAIXA_`, `TRACAO_TETO_PRAZO_MESES`, `TRACAO_TETO_DISP_ESTOQUE` — todas `const`/`let`
+  duplicadas nos dois arquivos com o mesmo valor. Diferente de `function` (redeclaração tolerada),
+  `const`/`let` duplicado é `SyntaxError` fatal — removidas do bloco fundido, mantendo só a cópia que
+  `lancamentos.html` já tinha.
+- `entrar()` colidia de verdade (última definição no arquivo "ganha", e sobrescreveria o login da
+  página principal) — removida a versão de estrategias.html; Estratégias passou a carregar sob
+  demanda (`carregarEstrategiasLazy_`, na 1ª vez que a aba abre), não mais automaticamente no login.
+- **Achado bônus**: o botão "Sair" de `lancamentos.html` chamava `sair()`, função que nunca existiu
+  nesse arquivo (bug pré-existente, botão morto). A fusão trouxe `sair()` de estrategias.html e
+  corrigiu isso de graça.
+- 2 chamadas `document.querySelector('.sec-title'/'.sec-sub')` (que pegariam o elemento errado agora
+  que várias abas coexistem no mesmo documento) viraram `getElementById('estrategiasSecTitle'/'estrategiasSecSub')`.
+- 6 seletores CSS colidiam com regra diferente (`.filtro-chip`, `.filtro-bar`, `.mapa-tabela`,
+  `.tabela-badge` etc.) — todas as diferenças eram cosméticas (padding/font-size); o painel fundido
+  reaproveita as regras que `lancamentos.html` já tinha, mantendo a mesma linguagem visual em todo o
+  documento. Só as classes exclusivas de Estratégias (`.situacao-tabs`, `.segmento-*`, `.papel-*`,
+  `.alvo-*`, `.modal-*`, `.brief-*`, `.mapa-tabela tr.papel-clickable`) foram copiadas.
+
+**`estrategias.html` virou um redirecionamento** (`location.replace('lancamentos.html?tab=estrategias...')`,
+preservando `?cliente=CTT-XXX`) em vez de ser apagado — `contatos.html` e o nav-tab "Estratégias" de
+toda página do sistema ainda apontam pra esse link (inclusive o botão "🎯 Estratégias" de um cliente
+específico em Contatos), e trocar ~10 arquivos era desnecessário e mais arriscado do que manter um
+redirect fino. `lancamentos.html` lê `?tab=estrategias` (abre a aba direto) e `_clienteIdParam` (já
+existia no código de estrategias.html) continua lendo `?cliente=` sozinho.
+
+**Bug pego durante o teste ao vivo**: a checagem de `?tab=estrategias` tinha ficado ANTES do bloco de
+código fundido no arquivo — como `_clienteIdParam` é `const` declarada mais abaixo, rodar
+`mudarAbaLancamentos('estrategias')` antes disso caía em "temporal dead zone" (ReferenceError,
+execução do script para ali). Corrigido movendo a checagem pro literal final do arquivo.
+
+Testado ao vivo no navegador (backend mockado): sintaxe do arquivo fundido (6386 linhas) validada;
+aba Busca (busca por nome/código, clique leva pro card certo); aba Estratégias carregando sob
+demanda (segmentos, filtro por padrão, sub-abas NOVOS/NA PLANTA/PRODUTO ALVO); abas antigas (Mapa
+Geral, Cadastrados, Modelos) intactas; `sair()` definida; roteamento `?tab=estrategias` e
+`?cliente=` funcionando tanto direto quanto via redirect de `estrategias.html`; zero erros no
+console em todos os cenários.
+
+## 2026-07-30 (parte 155) — Central de Inteligência Comportamental: Fase 3 (painel no dashboard)
+
+Nova aba **"Inteligência"** em `dashboard.html`, entre "BaseImob" e "Leads Imobzi" — consome as duas
+ações da Fase 2 (`listar_estatisticas_funil`/`listar_segmentos_comportamentais`) e renderiza o layout
+já apresentado no protótipo, mas usando os componentes visuais REAIS do dashboard (não recriando um
+design paralelo): `.vg-panel`/`.vg-stat` pros KPIs, `.score-hot/warm/cold` (já usado pra temperatura de
+lead noutras telas) pros badges de prioridade dos segmentos, `.adm-table` pras tabelas, `.card` pros
+contêineres — só o funil (barras) e os cards de segmento ganharam CSS novo, porque não existia
+equivalente.
+
+**Estrutura da aba** (`mostrarInteligencia()`, `carregarInteligencia_()`):
+- Seletor de período (7/30/90 dias ou histórico completo) — refaz a chamada de estatísticas ao trocar.
+- KPIs: sessões, taxa de conclusão, score médio, tempo médio no funil.
+- Funil de conversão por etapa (barra + % + queda), com a MAIOR queda entre etapas consecutivas
+  destacada em vermelho (`--hot`) — sinaliza o ponto de fricção mais crítico sem precisar ler a tabela
+  inteira.
+- Segmentação comportamental: 6 cards (descrição + abordagem sugerida — copy que vive só na UI, a API
+  devolve apenas chave/contagem/amostra). Segmentos NÃO são filtrados por período (a API de segmentos
+  ainda não aceita `dias`) — isso fica explícito no cabeçalho da seção.
+- Tempo médio por etapa e Performance por origem/UTM, em tabela.
+
+**Integração com o BaseImob já existente**: a amostra de `idClientesAmostra` de cada segmento vira
+chips clicáveis — clicar abre o MESMO drawer de detalhe do lead (`abrirDetalheLeadBI`) já usado na aba
+BaseImob, sem duplicar UI de detalhe de lead. `mostrarInteligencia()` garante `_biLeadsMap` populado
+(chama `carregarLeadsBaseimob()` se ainda vazio) pra esses chips funcionarem mesmo se o usuário abrir
+"Inteligência" antes de "BaseImob". Chips de sessões sem lead correspondente (ex: "Abandono precoce",
+que é sempre anônimo) ficam desabilitados.
+
+Testado ao vivo no navegador: login contornado + `fetch` mockado com dados sintéticos (214 sessões,
+funil completo, 6 segmentos, tabelas de tempo/origem) — 8 linhas de funil renderizadas, 6 cards de
+segmento, sem overflow horizontal, troca de período reexecuta a busca, chip de segmento sem lead
+carregado fica desabilitado e o MESMO chip fica clicável e abre o drawer correto assim que o lead é
+populado em `_biLeadsMap` (testado nos dois estados).
+
+## 2026-07-30 (parte 154) — Central de Inteligência Comportamental: Fase 2 (API de agregação)
+
+Início da construção da "Central de Inteligência Comportamental" proposta ao usuário (painel de
+análise agregada dos padrões de comportamento capturados no App Lançamentos). Fase 1 (camada de
+dados) já existia desde as partes 147-153; esta é a Fase 2 — API de agregação, ainda sem UI (Fase 3
+fica pra depois).
+
+**Beacon do funil (`app-lancamentos.html`) ficou mais rico** — pré-requisito pra Fase 2 existir:
+o formato anterior (`{etapa, abandonou}`, parte 153) só permitia calcular reach/dropout; não dava
+pra calcular tempo médio por etapa nem cruzar com origem/dispositivo pra sessões que abandonaram
+(esses sinais só existiam no payload final, que nunca é enviado por quem desiste). Cada evento
+agora carrega `etapaSaida`+`tempoMsEtapaSaida` (de onde veio e quanto tempo ficou) e `etapaChegada`
+(pra onde foi, `null` no abandono), mais `utmSource`/`dispositivo` em toda chamada — tudo o que a
+Fase 2 precisa vem da MESMA fonte, sem esperar o lead completar.
+
+**`code.txt` — nova aba `FUNIL_EVENTOS_APP` com schema estendido**: `dataHora, sessionId,
+etapaChegada, etapaSaida, tempoMsEtapaSaida, abandonou, canal, utmSource, dispositivo` (era só
+`etapa, abandonou` antes). `registrarEventoFunil_` atualizado pra gravar as colunas novas.
+
+**Duas novas ações protegidas por sessão** (não são públicas do funil — consumo interno futuro do
+dashboard):
+- `listarEstatisticasFunil_({dias})` — funil de conversão (reach/dropout por etapa), tempo médio por
+  etapa, performance por origem (sessões/taxa de conclusão/dispositivo predominante) e KPIs (total de
+  sessões, taxa de conclusão, score médio, tempo médio no funil). Filtra por janela de dias
+  (`parseDataHoraBR_` reconstrói o Date a partir do formato `dd/MM/yyyy HH:mm:ss` já usado em todo o
+  projeto). `montarBlocoAbandonoEmail_` (e-mail do lead, parte 153) foi refeita pra CHAMAR essa
+  função em vez de duplicar a lógica de "maior etapa por sessão".
+- `listarSegmentosComportamentais_()` — os 6 segmentos propostos na conversa anterior, com 2 ajustes
+  importantes de honestidade dos dados: (1) sinais como favoritos/tempo por etapa só existem pra quem
+  COMPLETOU o funil (só aí o payload com `tags` é enviado) — os 5 segmentos comportamentais rodam
+  sobre INTERESSES, e "Abandono precoce" (quem nunca completou) vem de `FUNIL_EVENTOS_APP` à parte,
+  sem detalhe de lead (são sessões anônimas); (2) "Quer subir de padrão" virou "Fora da região" —
+  um comparativo de padrão de bairro de verdade exigiria uma tabela bairro→padrão que ainda não existe
+  no sistema, então documentei a limitação em vez de fingir precisão que não existe.
+
+Ambas registradas em `doGet` (protegidas por `sessaoValida_`, mesmo padrão de `listar_leads_baseimob`).
+
+Testado: harness Node com 4 sessões sintéticas (1 completa, 2 abandonos em etapas diferentes, 1
+bounce na capa) + 2 leads sintéticos em INTERESSES — `listarEstatisticasFunil_` bate exato (reach,
+dropout, tempo médio por etapa, taxa de conclusão por origem, score médio); `listarSegmentosComportamentais_`
+classifica corretamente cada lead sintético no segmento esperado; `montarBlocoAbandonoEmail_`
+confirmado ainda funcionando após o refactor (mesma saída de antes). Testado ao vivo no navegador:
+beacon de transição de etapa confirmado com o formato novo completo (`etapaSaida`, `tempoMsEtapaSaida`,
+`etapaChegada`, `utmSource`, `dispositivo`).
+
+**Próximo passo (Fase 3, não iniciada)**: nova aba "Inteligência" em `dashboard.html`, consumindo essas
+2 ações via `fetch(WEBHOOK_URL + '?acao=...&token=...')`, no mesmo padrão visual do protótipo já
+apresentado.
+
+## 2026-07-29 (parte 153) — App Lançamentos: "Ver Preço" sem caixa + captura de dados técnicos/comportamentais
+
+### 1. Visual — "VER PREÇO" deixa de parecer botão (Etapa 6)
+`.btn-ver-preco` perdeu borda e fundo cinza (`background:none;border:none`); texto e seta (▾/▴) agora
+em laranja, seta maior (12px → 17px, span `.ver-preco-seta` dedicado). Vale pros cards principais e
+pras opções extras (mesmo template `cardOpcaoHTML_`).
+
+### 2. Dados técnicos/comportamentais capturados sem perguntar nada ao cliente
+Pedido explícito do usuário — 6 itens, cada um "Implementar esse recurso e mostrar em uma tabela
+final do e-mail":
+
+- **Tempo por etapa**: `irParaStep()` agora acumula `D.tempoPorStep[stepId]` (ms) toda vez que o
+  cliente sai de um step; `submeter()` faz flush do tempo da última etapa (captura/WhatsApp) antes de
+  montar o payload, já que o envio acontece antes de qualquer `irParaStep` seguinte.
+- **Tempo na tela de resultados**: é `tempoPorStep['6']` (step da tabela de opções), destacado à parte
+  na tabela de dados técnicos do e-mail.
+- **Origem do acesso (UTM)**: `D.utmSource/utmMedium/utmCampaign` capturados via `URLSearchParams`
+  (antes só existia `utm_source`, agora completo).
+- **Dispositivo**: `D.dispositivo` via regex no `navigator.userAgent` (Mobile/Desktop).
+- **Horário de acesso**: `D.horaAcesso` (`new Date().getHours()` no carregamento da página).
+- **Geolocalização aproximada**: `geolocalizarPorIp_()` chama `ipapi.co/json` (serviço público
+  gratuito) de forma assíncrona e silenciosa — **decisão de design**: usei IP em vez de GPS
+  (`navigator.geolocation`) porque GPS exige popup de permissão no meio do funil, o que atrapalha
+  conversão; IP não pede nada e falha graciosamente (`D.geoAprox` fica `null`) se bloqueado/offline.
+
+Todos os campos entram em `tags` no payload de `submeter()` e viram a tabela **"DADOS TÉCNICOS
+CAPTURADOS"** + **"TEMPO POR ETAPA"** no e-mail (`montarBlocoDadosTecnicosEmail_`, code.txt).
+
+### 3. Taxa de abandono por etapa (agregado histórico)
+Esse item é fundamentalmente diferente dos outros: abandono é uma métrica ENTRE sessões, não desta
+sessão específica — e hoje uma sessão que desiste no meio do funil não deixa NENHUM rastro no
+sistema (o payload só é enviado em `submeter()`, na confirmação final). Implementado:
+
+- `registrarEventoFunil_(step)` (client): fire-and-forget GET a cada `irParaStep()`, reportando
+  `sessionId` (gerado uma vez por sessão) + a "Etapa N" real (mapeada via `ETAPA_POR_STEP_`, já que os
+  step-ids do DOM não seguem ordem crescente — confirmação é step-3 mas vem antes de nome, step-1).
+- `beforeunload` passou a usar `navigator.sendBeacon` (em vez de só gravar `D.stepAbandono` localmente
+  e nunca enviar nada) — é o único jeito confiável de reportar algo quando a aba fecha no meio do funil.
+- `code.txt`: nova aba `FUNIL_EVENTOS_APP` (uma linha por evento), handler `registrarEventoFunil_(d)`
+  registrado em `doGet`/`doPost` como ação pública (sem sessão), e `montarBlocoAbandonoEmail_()` —
+  agrega TODAS as sessões já logadas (não só a deste lead), calcula a maior etapa alcançada por sessão,
+  e monta a tabela **"TAXA DE ABANDONO POR ETAPA"** (alcançaram / % do total / pararam aqui), enviada
+  junto com toda notificação de lead quente daqui pra frente.
+
+Testado: harness Node em `montarBlocoDadosTecnicosEmail_` (tabela + campos ausentes viram "-", sem
+erro) e `montarBlocoAbandonoEmail_` (4 sessões sintéticas — concluiu, abandonou na capa, na etapa 2 e
+na etapa 6 — números batem exatos) e `registrarEventoFunil_` (grava linha correta na aba mockada).
+Testado ao vivo no navegador: fluxo completo simulado por todas as 7 etapas, `tempoPorStep` com as 7
+chaves certas no payload final (inclusive a última etapa, via flush em `submeter()`); beacon de
+`irParaStep` capturado com `etapa` corretamente mapeada; botão "VER PREÇO" confirmado sem borda/fundo,
+cor laranja, seta em 17px.
+
+## 2026-07-29 (parte 152) — App Lançamentos: bairro em destaque nos cards de resultado (Etapa 6)
+
+Pedido explícito do usuário: destacar o nome do bairro (campo "Região") nos cards de resultado —
+letra um pouco maior e cor amarela. Nova variável `--yellow` (`#f5d000`) e classe
+`.opcao-cell-bairro` (mesmo padrão de `.opcao-cell-destaque`, já usada em "Área útil"): 13px → 15px,
+peso 800, cor amarela. Aplicada em `cardOpcaoHTML_`, então vale tanto pros cards principais quanto
+pras "opções extras" (mesmo template compartilhado).
+
+Testado ao vivo: célula "Região" do primeiro card confirmada com `font-size: 15px`,
+`font-weight: 800`, `color: rgb(245, 208, 0)`.
+
+## 2026-07-29 (parte 151) — E-mail do lead: nomes de empreendimento no bloco "MIX ESTRATÉGICO"
+
+Correção sobre a parte 150: o bloco "MIX ESTRATÉGICO" (`montarBlocoRoteiroEmail_`, recalculado
+internamente via `selecionarIscaInterno_`) ainda mostrava só o código cru (`PRODUTO ALVO: EMP-009 —
+...`, `Alvo Secundário 1: EMP-003 — ...`) — faltava aplicar o mesmo padrão "COD (Nome)" já usado no
+resto do e-mail.
+
+`resumoEmpreendimento_` (usada internamente por `selecionarIscaInterno_` pra montar cada papel do
+mix) passou a incluir `nomeEmpreendimento` no objeto retornado — antes só tinha o id, preço, status
+etc., sem o nome. Novo helper `idComNomeResumoEmail_(resumo)` formata `"EMP-009 (Max Buriti)"` (cai
+pro id puro se o nome vier vazio) e é usado tanto na linha "PRODUTO ALVO" quanto em cada linha do
+"MIX MONTADO".
+
+Testado: harness Node confirma `resumoEmpreendimento_` retornando `nomeEmpreendimento` corretamente;
+`montarBlocoRoteiroEmail_` com `selecionarIscaInterno_` mockado (6 papéis, um deles sem nome
+cadastrado) gera o bloco inteiro com "COD (Nome)" em cada linha, caindo pro código puro só no papel
+sem nome — sem quebrar.
+
+## 2026-07-29 (parte 150) — E-mail do lead: resumo em tabela, sem JSON cru, IDs com nome
+
+Pedido explícito do usuário sobre o e-mail de notificação: (1) organizar Nome/Email/WhatsApp/Score/
+Qtd./IDs/Tags/Canal em formato de tabela; (2) parar de escrever texto de formatação técnica (o e-mail
+jogava o JSON cru do campo `tags` direto no corpo, ex: `{"moradias":["proprio"],...}`); (3) todo ID de
+empreendimento vir acompanhado do nome, ex: `EMP-009 (Max Buriti)`.
+
+`code.txt`:
+- `montarTabelaChaveValorEmail_(titulo, linhas)` — novo helper de tabela CAMPO | VALOR (só a coluna
+  CAMPO tem largura fixa; VALOR não trunca, porque a lista de "IDs selecionados" com nome pode ficar
+  longa — diferente de `montarTabelaEmail_`, feito pra listas de itens uniformes tipo ranking).
+- `idComNomeEmail_(id, ranking)` — resolve `EMP-XXX` pro nome real usando `rankingDetalhado` (que já
+  tem o campo `nome`); cai pro id puro se não achar.
+- `montarBlocoResumoLeadEmail_(d)` — substitui o dump antigo de texto solto por uma tabela única
+  "RESUMO DO LEAD": Nome, Email, WhatsApp, Score, Qtd. imóveis, IDs selecionados (com nome),
+  Situação buscada, Objetivo, Quartos, Andar preferido, Orçamento, Metragem, Produto mostrado (isca,
+  com nome), Canal, Data — todos os códigos de `tags` (moradias/alturaPref/filtroSituacao/etc.)
+  traduzidos pro português via `SITUACAO_LABEL_EMAIL_`/`MORADIA_LABEL_EMAIL_`/`ALTURA_LABEL_EMAIL_`.
+  Campos mais analíticos (tempoSegundos, ajustesSlider, origemAcesso, precoInicial/Final,
+  areaInicial/Final) saíram do e-mail — continuam gravados normalmente na planilha (coluna `tags`,
+  intocada), só não aparecem mais no texto que o corretor lê.
+- `enviarNotificacaoAtendente_` agora monta o corpo a partir de `montarBlocoResumoLeadEmail_(d)` em
+  vez da concatenação de string solta.
+
+Testado: harness Node no exemplo real citado pelo usuário (Viana, 8 imóveis, tags completo) — tabela
+sai limpa, IDs com nome, sem nenhum JSON cru; testado também com lead sem tags/ranking (campos viram
+"-", sem erro) e com o shape de `baseimob-funil.html` (tags/ranking com campos diferentes) — degrada
+graciosamente, sem quebrar outros funis que usam o mesmo e-mail.
+
+## 2026-07-29 (parte 149) — App Lançamentos: "opções extras" viram cards interativos (Etapa 6)
+
+Pedido explícito do usuário: o texto estático "+10 outras ofertas encontradas" virou um **botão**
+("VER +10 OPÇÕES ENCONTRADAS", número destacado) que revela essas opções extras como cards de
+verdade — mesmo formato retraído dos cards principais (só até Região visível, "VER PREÇO"
+expande o resto, ♡ de favoritar), por ordem de score (a mesma ordem de `filtrados()`).
+
+`app-lancamentos.html`:
+- Card principal virou a função reutilizável `cardOpcaoHTML_(c, i, grupo)`, parametrizada por
+  `grupo` ('principal'/'extra') pra não colidir ids no DOM nem misturar os sinais dos dois grupos.
+- `montarMatch()` agora calcula `D.extrasMostrados` (tudo que ficou de fora dos 7 cards principais,
+  já em ordem de score) e monta o botão `#btnVerMaisOpcoes`; `toggleVerMaisOpcoes_()` registra o
+  clique (`D.verMaisOpcoesClicado = true`), renderiza os cards extras (uma vez só, na 1ª abertura) e
+  alterna mostrar/ocultar.
+- `toggleVerPreco_`/`favoritarCard_` ganharam o parâmetro `grupo`, gravando em
+  `D.cardsPrecoVisto`/`cardsFavoritos` (principais) ou `D.extraPrecoVisto`/`extraFavoritos` (extras)
+  — sinais mantidos SEPARADOS de propósito, pra bater com a tabela separada do e-mail (abaixo).
+- Payload do lead: `tags.verMaisOpcoesClicado` (bool) + `tags.rankingExtra` (array com
+  `id`/`bairro`/`precoAPartir`/`precoVisto`/`favoritado`, um item por opção extra).
+
+`code.txt`: nova função `montarBlocoExtraOpcoesEmail_`, chamada em `enviarNotificacaoAtendente_` logo
+depois do bloco de sinais dos cards principais (parte 148). Só aparece no e-mail se
+`tags.verMaisOpcoesClicado` for `true` (cliente realmente abriu a lista extra) — monta
+**"═══ TABELA EXTRA DE OPÇÕES ═══"** com as mesmas 2 sub-tabelas da tabela principal (★ Favoritos
+COD|BAIRRO|PREÇO, depois Não clicou em "Ver Preço" COD|BAIRRO), separada da tabela dos cards
+principais.
+
+Testado ao vivo: botão nasce com "+57" destacado (dataset real), clique revela 57 cards extras,
+retraídos por padrão; interação num card extra (Ver Preço + favoritar) grava em
+`D.extraPrecoVisto`/`extraFavoritos` sem tocar nos Sets dos cards principais; payload de `submeter()`
+confirmado com `verMaisOpcoesClicado: true` e `rankingExtra` completo. Harness Node em
+`montarBlocoExtraOpcoesEmail_`: tabela gerada certa quando clicou; string vazia quando não clicou, sem
+tags, ou lista extra vazia.
+
+## 2026-07-29 (parte 148) — E-mail do lead: tabelas de favoritos + cards não abertos
+
+Pedido explícito do usuário: os sinais de "Ver Preço"/favorito capturados por card (parte 147)
+precisavam aparecer nos resultados enviados via e-mail e ficar disponíveis no sistema, em formato de
+tabela — favoritos com COD | BAIRRO | PREÇO no topo, e os cards que o cliente NÃO clicou em
+"Ver Preço" com COD | BAIRRO logo abaixo.
+
+`app-lancamentos.html`: `TODOS_LANC` ganhou o campo `bairro` isolado (antes só existia `regiao`,
+"bairro · cidade" combinado) e `rankingDetalhado` (payload do lead) passou a incluir `bairro` por
+item, junto do `precoVisto`/`favoritado` já enviados na parte 147.
+
+`code.txt`: novas funções `montarBlocoInteracaoCardsEmail_`/`montarTabelaEmail_`/`padEmail_`, chamadas
+em `enviarNotificacaoAtendente_` (antes do bloco de mix estratégico já existente) — monta 2 tabelas
+de texto simples a partir do `rankingDetalhado` do lead:
+1. **★ FAVORITOS** (itens com `favoritado: true`) — COD | BAIRRO | PREÇO.
+2. **Cards que o cliente não clicou em "Ver Preço"** (itens com `precoVisto: false`) — COD | BAIRRO.
+
+Só entra no e-mail quem tem os campos `precoVisto`/`favoritado` no ranking (exclusivo do App
+Lançamentos) — leads de outros funis que usam o mesmo `rankingDetalhado`/e-mail (ex:
+`baseimob-funil.html`) não têm esses campos e o bloco simplesmente não aparece, sem quebrar nada.
+
+Testado: harness Node isolando as 3 funções novas de `code.txt` — tabela de favoritos e de não-clicados
+geradas corretamente a partir de um ranking sintético; ranking sem os campos novos (simulando lead de
+outro funil) retorna string vazia; `rankingDetalhado` ausente também retorna vazio sem erro. Testado
+também ao vivo no navegador que `bairro` chega corretamente no payload real (`rankingDetalhado[0].bairro`).
+
+## 2026-07-29 (parte 147) — App Lançamentos: sinais comportamentais por card (Etapa 6)
+
+Pedido explícito do usuário: capturar preferência REAL clicada em cada card (não só a declarada nos
+sliders) — "o corretor liga já sabendo 'ele voltou 3x pro EMP-048'".
+
+1. **Card retrátil** — cada card agora mostra só Código/situação, Tipo, Previsão de entrega e Região
+   por padrão; Área útil, Preço, Área de lazer e % vendido ficam ocultos atrás de um botão
+   **"VER PREÇO ▾"** (vira "OCULTAR ▴" ao expandir). Clicar registra o id do empreendimento em
+   `D.cardsPrecoVisto` (`toggleVerPreco_`).
+2. **Favoritar (♡/♥)** — ícone de coração ao lado do preço (dentro da parte expandida). Clicar
+   registra o id em `D.cardsFavoritos` (`favoritarCard_`, toggle — dá pra desfavoritar).
+3. **Área útil em destaque** — `.opcao-cell-destaque` deixa esse campo maior/negrito/cor de destaque
+   (`var(--accent)`) em vez do mesmo peso visual dos outros campos secundários.
+
+Os dois sinais entram no payload do lead (`submeter()`): `tags.cardsPrecoVisto`/`cardsFavoritos`
+(arrays de id) e, por item, `rankingDetalhado[i].precoVisto`/`.favoritado` (booleans).
+
+**Bug pré-existente corrigido no caminho**: `top7` (base do `rankingDetalhado` enviado) era recalculado
+do zero com `filtrados().slice(0,7)` — uma lista em ordem de score simples, DIFERENTE da lista
+realmente exibida nos cards (`ofertas`, que vem do mix ancorado no alvo, `montarMixPorAlvo_`). Isso
+fazia o id que o cliente via/clicava às vezes nem aparecer no ranking enviado — os sinais de
+"Ver Preço"/favorito ficariam órfãos. Corrigido guardando a lista exata renderizada em
+`D.ofertasMostradas` (dentro de `montarMatch()`) e usando ela em `submeter()` no lugar de recalcular.
+
+Testado ao vivo: card nasce retraído (`display:none` na parte de baixo); clique em "Ver Preço" expande
+e registra o id; clique no coração alterna ♡/♥ e registra/desfaz o favorito; `submeter()` mockado
+(fetch interceptado) confirma que o id clicado (EMP-123) aparece no `rankingDetalhado` com
+`precoVisto: true, favoritado: true` — antes da correção do bug, esse id nem aparecia na lista
+enviada.
+
+## 2026-07-29 (parte 146) — App Lançamentos: número gigante integrado na frase da capa (Etapa 1)
+
+Correção sobre a parte 144: o número de lançamentos ainda estava pequeno (17px) embutido no meio do
+parágrafo "Hoje você tem 135 lançamentos...". Pedido explícito do usuário: **"faça uma nova
+disposição tipográfica com número gigante e texto da frase integrados"**.
+
+Nova composição `.hero-stat` (3 linhas empilhadas, sem caixa/borda nenhuma):
+```
+Hoje você tem
+     135        <- clamp(64px, 20vw, 96px), peso 800, laranja
+lançamentos disponíveis em Goiânia e região.
+```
+O destaque agora vem só da escala tipográfica (número ~6x maior que o texto ao redor), não de peso
+de fonte pontual nem de caixa separada — a frase inteira continua lida como uma unidade só.
+
+Testado ao vivo: desktop (1280px) renderiza o número a 96px, mobile (375px) a 75px (responsivo via
+`clamp`+`vw`), sem overflow horizontal em nenhum dos dois (`scrollWidth === clientWidth`).
+
+## 2026-07-29 (parte 145) — App Lançamentos: lote de UX/copy (Etapas 2, 4, 5, 6, 7) + restruturação do fluxo
+
+Segundo lote de ajustes pedidos pelo usuário, cobrindo as etapas 2 a 7 do funil (a etapa 1/capa já
+tinha sido ajustada na parte 144).
+
+**Etapa 2** (step-2, sliders) — texto do contador quebrado ("1 opções reais com apartamento no seu
+perfil") virou **"X opções encontradas com esse perfil."** (`atualizarComboUI_`/`cntComboSufixo`
+adaptados, mantendo a variante "com apartamento "Em Obras"" quando o cliente já filtrou uma situação
+na capa).
+
+**Restruturação de fluxo (Etapas 4 e 5)** — pedido explícito do usuário pra reorganizar as perguntas:
+- **Etapa 4** (era só "Como podemos te chamar?", step-1) agora tem 2 perguntas na mesma tela: nome +
+  **"Qual é o seu objetivo?"** (motivação/moradia, que morava no step-4 antigo). Os botões de objetivo
+  deixaram de ser tags-pílula e viraram **botões estilo caixa** (`.box-btn`/`.box-group`, novo CSS) —
+  maiores, empilhados, um por linha.
+- **Etapa 5** (step-4, era "motivação") ficou só com o que sobrou: **quartos + altura**. Título
+  reaproveitado (`motivacaoTitulo`/`montarMotivacaoTitulo_`) virou **"{Nome}, o que define o tipo de
+  apartamento mais adequado para você?"**. Nova pergunta **"Quantos quartos você precisa?"**
+  (1/2/3/4/5+ quartos, `selecionarQuartos_`, novo `D.quartosPref`) adicionada ANTES da pergunta de
+  altura, que continua igual. Numeração trocada de "Pergunta X de 3" pra **"Passo X de 3"** em todas
+  as 3 telas (sliders/nome+objetivo/quartos+altura). Botão **"← Voltar"** próprio no topo desta etapa,
+  no mesmo estilo `.ajustar-btn` de "← Ajustar filtros" (rodapé fixo de Voltar escondido só aqui).
+- Validação de "selecione ao menos uma opção" migrada do step-4 pro step-1 (junto da validação de
+  nome), já que o objetivo mudou de tela. `D.quartosPref` incluído no payload do lead (`tags`) e no
+  resumo final da Etapa 8 (`perfilResumo`, nova linha "Quartos").
+
+**Etapa 6** (step-6, resultado/match):
+- Botão final **"CONFIRMAR ATENDIMENTO HUMANO"** → **"QUERO ATENDIMENTO EXCLUSIVO"** (linguagem já
+  validada no BASEIMOB, mais consistente entre os 2 produtos).
+- Número de "+N outras ofertas encontradas" bem mais destacado: `font-size` de 16px → 26px; container
+  `.mais-opcoes-msg` sem mais opacidade reduzida (.75 → removida) e fonte base 13px → 14px.
+
+**Etapa 7** (step-7, captura de WhatsApp):
+- Título "Essa é a penúltima etapa antes de encerrar" → **"{Nome}, prepare-se para muitas
+  novidades!"** (`montarCapturaTitulo_`).
+- Subtítulo "Confirme seu WhatsApp abaixo pra finalizar o seu atendimento." → **"Digite abaixo seu
+  melhor WhatsApp"**.
+- Nota de privacidade ganhou **ícone de cadeado** (novo símbolo `#ico-lock` no bloco de SVGs,
+  substituindo o `#ico-check` genérico que estava ali).
+
+Testado ao vivo, fluxo completo simulado via console (avançar por todas as etapas, validações de
+nome/objetivo bloqueando corretamente, seleção de quartos/altura, contador "X opções encontradas com
+esse perfil.", título personalizado da Etapa 5, botão "← Voltar" presente e rodapé escondido nessa
+etapa, "QUERO ATENDIMENTO EXCLUSIVO" no botão final, número de outras ofertas em 26px laranja,
+título/subtítulo da Etapa 7 e ícone `#ico-lock` renderizando, resumo final da Etapa 8 mostrando a
+linha "Quartos").
+
+## 2026-07-29 (parte 144) — App Lançamentos: capa mais leve + termos alinhados (Etapa 1)
+
+Lote de ajustes de UX/copy pedidos pelo usuário na capa (step 0):
+
+1. **"Na Planta" alinhado com "Em Obras"**: o status aparecia nos resultados como "Na planta" (cor
+   azul, rótulo próprio) mesmo a capa só oferecendo os filtros "Pronto Novo"/"Em Obras" — inconsistência
+   entre o que o cliente filtra e o que vê no resultado. `situacaoInfo_` não trata mais "Em planta"
+   como caso à parte: cai no mesmo bucket visual de "Em obras" (mesma cor laranja, mesmo texto).
+   Regra geral: sempre que a base tiver "Em planta", o app escreve "Em Obras".
+2. Título da capa sem CAIXA ALTA: "APARTAMENTO" → "apartamento" (destaque continua só por
+   cor/negrito do `.step-title`, sem depender de caps).
+3. Subheadline reescrita e caixa do contador removida: "Temos disponível... base de dados hoje..."
+   + box separado com número gigante → texto único **"Hoje você tem `<N>` lançamentos disponíveis em
+   Goiânia e região."**, com o número em negrito/laranja embutido na frase (mesmo `#statsTotalEmp`,
+   agora inline). Caixa com borda ao redor do seletor de situação também removida — capa fica sem
+   nenhuma caixa recortada, só o texto e os botões-pílula.
+4. "Qual situação ideal do imóvel pra você?" → **"Você prefere um imóvel:"**.
+5. "Pronto Novo" → **"Pronto para morar"** em todos os textos e botões: label do botão-tag, badge de
+   situação escolhida (`situacaoEscolhidaLabel_`) e badge de status nos cards de resultado
+   (`situacaoInfo_`, que antes dizia "Pronto pra morar" — unificado pro mesmo termo).
+
+Testado ao vivo: capa renderiza "Hoje você tem 135 lançamentos disponíveis em Goiânia e região."
+com o número em destaque, botões "Todos/Pronto para morar/Em Obras" sem caixa ao redor;
+`situacaoInfo_('Em planta')` e `situacaoInfo_('Em obras')` confirmados retornando o mesmo texto/cor;
+`situacaoEscolhidaLabel_()` confirmado retornando "Pronto para morar".
+
+## 2026-07-29 (parte 143) — App Lançamentos: número real de WhatsApp no botão final
+
+`WHATSAPP_NUM` (constante usada pra montar o link `https://wa.me/...` do botão "Falar agora no
+WhatsApp" da tela final, step 8) estava com um placeholder (`5562999999999`). Atualizado pro número
+real informado pelo usuário: `5562981049078`.
+
+Testado ao vivo: `montarAgradecimento()` executado com dados sintéticos confirma
+`href="https://wa.me/5562981049078?text=..."` no botão final.
+
+## 2026-07-29 (parte 142) — Estratégias (Produto Alvo): relatório da IA Editora em 3 blocos bem demarcados
+
+Usuário reportou que a IA Editora (externa, que recebe o relatório colado) não estava interpretando
+bem o texto — as regras, os dados e as tarefas estavam misturados num bloco só, sem contrato de
+formato de saída, então cada IA improvisava uma estrutura diferente.
+
+`gerarRelatorioCampanhaCompleto_` reescrita pra separar o texto em 3 blocos numerados e demarcados
+com cabeçalho próprio:
+1. **BLOCO 1 — Papel e regras fixas**: quem a IA Editora é, e as regras não-negociáveis (tom
+   educacional/consultivo, nunca revelar nome do empreendimento na arte, usar só os dados do
+   BLOCO 2, seguir exatamente o formato do BLOCO 3).
+2. **BLOCO 2 — Dados reais**: o fact-sheet do empreendimento (igual à parte 141), agora marcado
+   explicitamente como "fonte única de verdade".
+3. **BLOCO 3 — Tarefas a desenvolver**: as 4 tarefas ganharam contrato de formato de entrega
+   explícito (quantidade sugerida de peças, campos obrigatórios por peça, e a amarração pela mesma
+   numeração entre Tarefa 1 → Tarefa 2 → Tarefa 3), resolvendo a ambiguidade que fazia a IA externa
+   variar a estrutura da resposta a cada geração.
+
+Testado ao vivo: `renderCopyBriefContent_` com item sintético confirma os 3 cabeçalhos de bloco
+presentes na ordem certa, `iconeUnico: true` mantido (1 ícone só na linha), e
+`renderCopyBriefMixCompleto_` (aba "Campanha") confirmado intocado.
+
+## 2026-07-29 (parte 141) — Estratégias (Produto Alvo): Relatório de Campanha vira só instruções + 1 ícone
+
+Correção do usuário sobre a parte 140: o relatório pra IA Editora não deve entregar nenhuma das 4
+tarefas já pronta (nada de copy pronta, script de WhatsApp pronto ou paleta de design específica) —
+ele deve só **instruir** a IA Editora sobre as 4 tarefas dela (estratégia de Feed/Stories, instruções
+de imagem pra IA Designer, copys de cada postagem, scripts de oferta no WhatsApp pós-contato) e
+entregar os dados reais do empreendimento pra ela executar.
+
+`gerarRelatorioCampanhaCompleto_(item, ctx)` reescrita: não recebe mais `postsGuiaDecisao`/
+`roteiroWhatsapp` (não reaproveita mais conteúdo de outras linhas), retorna só a lista numerada das
+4 tarefas + fact-sheet do empreendimento (dados, tipologias, lazer, conceito, condições de
+pagamento). Nenhum exemplo de copy/script/paleta é gerado por essa função.
+
+UI: como essa linha não tem mais os 3 tipos de conteúdo (vertical/feed instrução/feed legenda), só
+um dado (as instruções completas), a linha agora renderiza **1 ícone só** de copiar (`colspan="3"`)
+em vez dos 3 de sempre — novo flag `iconeUnico: true` no objeto retornado, lido pelo template de
+`renderCopyBriefContent_` (`_gatilhosAtual_.map`). As demais linhas da tabela (Guia de Decisão,
+Script de Oferta, Roteiro de Pré-Atendimento) continuam com o layout de sempre.
+
+Testado ao vivo: item sintético renderizado por `renderCopyBriefContent_`, última linha ("Instruções
+para IA Editora") confirmada com exatamente 1 `<td class="td-copy" colspan="3">` e 1 botão; conteúdo
+copiado conferido linha a linha — só task-list + dados reais, sem nenhum exemplo de deliverable;
+`renderCopyBriefMixCompleto_` (aba "Campanha") confirmado intocado.
+
+## 2026-07-29 (parte 140) — Estratégias (Produto Alvo): última linha = Relatório de Campanha p/ IA Editora
+
+Pedido do usuário: uma última linha na tabela de gatilhos com um "relatório de detalhes e
+instruções para outra IA EDITORA" criar uma campanha de comunicação completa pro empreendimento —
+com foco educacional (linha "Guia de Decisão" já validada), estratégia de Feed+Stories, instruções
+de design pra IA Designer, copys de cada postagem, e scripts de oferta no WhatsApp orientados pra
+agendamento no decorado.
+
+`gerarRelatorioCampanhaCompleto_` monta um documento único e standalone (não depende de abrir as
+outras linhas da tabela) com 5 seções:
+1. **Dados do empreendimento** — fact-sheet completo: nome/código, localização, padrão, situação,
+   %vendido/estoque, tipologias reais distintas (`listaTipologiasTexto_`, dedup por
+   quartos/suítes/vagas/área), lazer, conceito, condições de pagamento
+   (`condicoesPagamentoTexto_` — FGTS/financiamento/entrada/parcelas, só o que existir na base).
+2. **Estratégia editorial** — racional da linha "Guia de Decisão" (3 posts + 1 Stories).
+3. **Instruções de design** — paleta/tipografia por padrão (mesma lógica de `gerarGatilhos_`,
+   recalculada aqui pra o documento ficar autocontido).
+4. **Copys** — reaproveita os 4 posts do Guia de Decisão já calculados por `gerarGatilhos_` (não
+   recria conteúdo — evita divergência entre esta linha e as 4 de cima).
+5. **Scripts de WhatsApp** — reaproveita os 3 momentos de `gerarRoteiroPreAtendimento_` (parte 139).
+
+Testado ao vivo: tabela de gatilhos com 6 linhas (4 Guia de Decisão + Script de Oferta + Relatório,
+nessa ordem — o relatório fica por último como pedido); conteúdo copiado do relatório conferido
+seção por seção com dado real (tipologias, lazer, condições de pagamento, copys e scripts
+idênticos aos das linhas de origem); `renderCopyBriefMixCompleto_` (aba "Campanha") confirmado
+intocado.
+
+## 2026-07-29 (parte 139) — Estratégias (Produto Alvo): script de oferta WhatsApp + roteiro de 3 momentos
+
+Pedido do usuário: na janela de copys da aba "Produto Alvo" (`abrirCopyBrief_`/`renderCopyBriefContent_`
+— a aba "Campanha"/mix-completo não foi tocada), dois novos conteúdos pra complementar o interesse
+que o "Guia de Decisão" (posts/stories) já desperta quando vira contato direto no WhatsApp:
+
+**1. Script de Oferta — WhatsApp** (nova linha na MESMA tabela de gatilhos): flyer de oferta pronto
+pra colar, no formato do exemplo que o usuário mandou (emoji + título + dados). Ao contrário dos
+gatilhos de Instagram acima, aqui o nome do empreendimento PODE aparecer — é mensagem 1:1 pra quem
+já demonstrou interesse, não anúncio público (a "regra de ouro" de nunca revelar o nome vale só pro
+conteúdo de rede social). `montarScriptOfertaWhatsapp_` usa o máximo de dado real cadastrado:
+- Tipologia de referência = a mais barata (mesma que já vira "a partir de" no resto do mix) — puxa
+  quartos/suítes/vagas/área útil/área de terreno dela.
+- Lazer do empreendimento (`e.lazer`, string separada por vírgula) — cada item ganha um emoji por
+  palavra-chave (`emojiParaAmenidade_`: piscina🏊, churrasqueira🍖, playground🎠, portaria🛡️, etc.,
+  com fallback ✅ genérico).
+- `e.conceito` (texto livre), previsão de entrega (só se NÃO estiver pronto), e condição de
+  pagamento (FGTS/`fgts==='Sim'`, financiamento/`avaliacaoBanco`|`planoLongo`|`parcelasEntrega`).
+- Nenhuma linha é fabricada — cada uma só aparece se o campo correspondente estiver preenchido na
+  base (ao contrário do exemplo genérico do usuário, que tinha "salas amplas"/"área de serviço" sem
+  dado real por trás).
+
+**2. Roteiro de Pré-Atendimento — WhatsApp** (tabela NOVA, abaixo da primeira, 3 linhas):
+`gerarRoteiroPreAtendimento_` monta uma sequência de 3 mensagens (Momento 1: reconhece o interesse +
+pergunta qualificadora; Momento 2: compartilha alguns dados reais, sem entregar tudo; Momento 3:
+convite direto pro decorado, sugerindo agendamento) — cada uma com botão de copiar próprio
+(`copiarRoteiroPreAtendimento_`, novo global `_roteiroPreAtendimentoAtual_`, já que cada momento é
+UM script só, não o trio Vertical/Feed/Legenda dos gatilhos).
+
+Testado ao vivo: script de oferta reproduzido fiel ao formato do exemplo com dado real completo;
+mesmo teste com dado esparso (sem lazer/terreno/FGTS) confirmando que nenhuma linha vazia ou
+fabricada aparece; drawer renderizado com as 2 tabelas (5 linhas na de gatilhos, 3 na de roteiro);
+botão de copiar do Momento 3 testado; e confirmado que `renderCopyBriefMixCompleto_` (aba
+"Campanha") não foi alterada.
+
+## 2026-07-29 (parte 138) — App Lançamentos: retira contorno azul da caixa de Preço/Área útil
+
+Pedido do usuário: tirar a linha de contorno azul da caixa maior que envolve os campos de "Preço
+limite"/"Área útil" (`.conf-card`, etapa "Pergunta 1 de 3"). Como essa mesma classe CSS também é
+usada na etapa "Confirme seus dados" (que deve continuar com o destaque azul), o `border:none` foi
+aplicado só nessa instância específica (`style="border:none"` inline), sem mexer na classe
+compartilhada.
+
+Testado ao vivo: caixa da "Pergunta 1 de 3" sem borda (`0px none`), caixa de "Confirme seus dados"
+mantendo a borda azul original (`2px solid`) intacta.
+
+## 2026-07-29 (parte 137) — App Lançamentos: 4 ajustes visuais em Preço/Área útil
+
+Usuário repetiu o pedido de "Preço limite" (já implementado nas partes 134-136 — caixa digitável +
+slider, valor padrão no mínimo da base, aviso de faixa) e pediu 4 refinamentos visuais em cima:
+
+1. Contorno da caixa (`.preco-input-row`) mais fino (1.5px→1px) e cinza claro (`#6b7280`) em vez do
+   `--border2` escuro/azulado de antes.
+2. Letra do valor digitado (preço/área) maior e mais grossa: 18px/700 → 24px/800.
+3. Linha da barra de arrastar mais fina: 8px→5px (a alça/bola não mudou, só o pedido de agora era a
+   linha).
+4. Número da contagem total (`#cntCombo`) mais destacado: 40px fixo → `clamp(48px,14vw,64px)`
+   responsivo, com leve `letter-spacing` negativo (mesmo tratamento de "número grande" já usado em
+   `#statsTotalEmp` na capa).
+
+Testado ao vivo via `getComputedStyle`: borda 1px `rgb(107,114,128)`, input 24px/800, trilho 5px,
+contagem 64px em viewport desktop — e confirmado que o resto da funcionalidade de Preço limite
+(valor padrão = mínimo da base) continua intacto depois dos ajustes de CSS.
+
+## 2026-07-29 (parte 136) — App Lançamentos: destaca a situação escolhida na capa
+
+Pedido do usuário: se o cliente marcou "Pronto Novo" ou "Em Obras" na capa (step-0), essa escolha
+precisa ficar visível depois, na etapa "Pergunta 1 de 3" — antes ela só aparecia na capa e
+"desaparecia" da tela dali em diante.
+
+- Novo badge laranja ("Você escolheu: Em Obras") logo abaixo do título da etapa de sliders —
+  escondido quando a escolha é "Todos" (não é uma opção que precise de destaque).
+- Texto da contagem no rodapé da caixa ganhou sufixo dinâmico: "N opções reais com apartamento
+  no seu perfil" (Todos) vira "N opções reais com apartamento 'Em Obras'" (ou "'Pronto Novo'"),
+  exatamente como pedido.
+- `situacaoEscolhidaLabel_()` centraliza o mapeamento (usado tanto no badge quanto no sufixo, pra
+  nunca ficarem inconsistentes); atualizado dentro de `atualizarComboUI_()`, que já roda toda vez
+  que a situação ou os sliders mudam.
+
+Testado ao vivo: badge e sufixo corretos pra "Em Obras" (com contagem real de 10 opções num
+perfil de teste), escondidos/neutros pra "Todos", e corretos pra "Pronto Novo".
+
+## 2026-07-29 (parte 135) — Fix: caixa de Preço/Área não deixava apagar dígitos
+
+Usuário reportou que a caixa de texto da parte 134 "não estava aceitando apagar o texto
+predefinido" ao clicar dentro e usar backspace.
+
+**Causa**: `atualizarPrecoDigitado_`/`atualizarMetragemDigitado_` validavam contra
+PRECO_BOUNDS/AREA_BOUNDS a CADA TECLA digitada. Apagar um dígito do valor faz o número cair abaixo
+do mínimo momentaneamente (ex: apagar "0" de "275.000" gera "27.500", menor que o mínimo real de
+275.000) — a validação então reescrevia o campo de volta pro mínimo a cada tentativa de apagar,
+dando a impressão de que o campo estava travado.
+
+**Fix**: separado em duas responsabilidades. `oninput` (a cada tecla) só reformata o número com
+separador de milhar e sincroniza o slider, sem validar limite nenhum — deixa a pessoa digitar/apagar
+livremente, inclusive deixar o campo vazio no meio da edição. `onblur` (novo: `validarLimitesPreco_`/
+`validarLimitesMetragem_`, ao sair do campo) é o único momento em que a faixa da base é checada de
+verdade — aí sim mostra o aviso e ajusta pro limite mais próximo (ou pro mínimo, se ficou vazio).
+
+Também, pedido junto: trilho do slider mais fino (14px→8px) e alça menor (44px→32px) — ficou grande
+demais na primeira versão; e as letras dos rótulos "Preço limite"/"Área útil" aumentadas (15px→19px,
+peso 700).
+
+Testado ao vivo: simulação de 7 backspades seguidos no valor "275.000" confirmando que o campo
+esvazia progressivamente sem ser reescrito; blur com campo vazio volta pro mínimo sem aviso; blur
+com valor abaixo do mínimo mostra aviso e ajusta; blur com valor válido não dispara aviso nenhum;
+trilho/rótulo conferidos via `getComputedStyle`.
+
+## 2026-07-29 (parte 134) — App Lançamentos: caixa de texto + validação de faixa em Preço/Área útil
+
+Pedido do usuário: os campos de preço e área útil (etapa "Pergunta 1 de 3") ganharam o mesmo padrão
+já usado em `busca.html` — uma caixa de texto digitável sincronizada com a barra de arrastar, em vez
+de só um texto só-leitura acima do slider.
+
+- **Preço** renomeado pra "Preço limite" (rótulo curto, igual busca.html, no lugar da pergunta longa
+  "Qual o valor total..."); **Área útil** também virou rótulo curto.
+- Caixa mostra, por padrão, o **mínimo disponível na base** (`PRECO_BOUNDS[0]`/`AREA_BOUNDS[0]`) —
+  antes o padrão era o ponto médio da faixa. O máximo digitável/arrastável continua sendo o máximo
+  disponível na base.
+- Se a pessoa digitar um valor fora da faixa real da base, aparece um toast avisando o intervalo
+  disponível ("Preço fora da faixa disponível: de R$ X a R$ Y") e o valor é ajustado pro limite mais
+  próximo — não deixa buscar um preço/metragem que não existe em nenhum lançamento cadastrado.
+- `atualizarPreco`/`atualizarMetragem` agora escrevem na caixa de texto (`precoDigitado`/
+  `metragemDigitado`) em vez do texto só-leitura antigo (`sliderPrecoTxt`/`sliderMetragemTxt`,
+  removidos junto com o CSS `.slider-val-atual` que só eles usavam); novas
+  `atualizarPrecoDigitado_`/`atualizarMetragemDigitado_` tratam a digitação (preservando posição do
+  cursor, mesmo padrão de busca.html) e sincronizam de volta pro slider.
+
+Testado ao vivo: valor padrão confere com o mínimo da base; digitação dentro da faixa aceita normal;
+valor acima do máximo e abaixo do mínimo disparam o toast de aviso com a faixa certa e ajustam pro
+limite; sincronização slider→caixa confirmada nos dois sentidos.
+
+## 2026-07-29 (parte 133) — Fix: produtos secundários do mix agora exigem semelhança de área, não só preço
+
+Usuário reportou (com exemplo real: orçamento R$2.000.000/145m²) que o mix ainda saía incoerente
+mesmo depois da parte 132: pedido explícito — "um produto isca, outro com ancoragem pra menos,
+outro pra mais, o produto alvo, e produtos secundários semelhantes ao produto alvo".
+
+**Causa**: `montarMixPorAlvo_` escolhia ALVO_2/ALVO_3/COMPLEMENTAR só por faixa de preço + maior
+tração — um apartamento de 40-55m² com tração alta podia vencer um de 130-150m² (perfil muito mais
+parecido com o alvo) só por ter tração maior, mesmo sendo um substituto ruim. COMPLEMENTAR era pior
+ainda: não tinha NENHUM limite de preço, podendo vir de qualquer faixa (no exemplo relatado, achou
+um item a 31,7% do preço do alvo — abaixo até da âncora inferior).
+
+**Fix**: nova função `proximidadeArea_`/`porPerfilSemelhante_` — ALVO_2, ALVO_3 e COMPLEMENTAR agora
+são escolhidos por um score combinado (proximidade de área tem peso 5x, padrão igual ao alvo +2,
+tração só como desempate) dentro da faixa de preço 65-155%. COMPLEMENTAR ganhou limite de preço
+(40-155%, a mesma faixa "razoável" do resto do mix) antes de cair pro fallback sem limite nenhum.
+ISCA e as duas ÂNCORAS continuam só por preço, propositalmente — são pontos de CONTRASTE
+estratégico, não substitutos, e exigir área parecida ali destruiria a estratégia original.
+
+Testado: 8 casos via Node reproduzindo o cenário relatado — um candidato com tração 10 (a mais alta
+do pool) mas área de 40-55m² (bem diferente do alvo de 137-157m²) confirmado que NÃO vence os
+secundários de perfil parecido; candidato "muito barato" (31,7% do alvo) confirmado que não aparece
+em nenhum papel quando existe alternativa dentro da faixa razoável. Testado ao vivo também: no
+mesmo cenário de R$2.000.000/145m² relatado, COMPLEMENTAR saiu de R$544.482 (31% do alvo, fora de
+qualquer faixa) para R$943.792 (55%, dentro do razoável).
+
+## 2026-07-28 (parte 132) — App Lançamentos: mix ancorado no Produto Alvo + 8 ajustes de UX
+
+Usuário reportou que o fix da parte 131 não era suficiente: "a lógica de programação não está boa
+ainda. está montando mix incoerente" — pediu pra estudar a lógica reformulada em `estrategias.html`
+(aba "Produto Alvo") e aplicar no app.
+
+**1. Motor de mix trocado por completo.** O motor anterior (`selecionar_isca`, GAS) casava o preço
+do cliente contra SEGMENTOS de percentil de preço calculados sobre todo o mercado — um segmento
+assim mistura metragens completamente diferentes que só coincidem em cair na mesma faixa de preço.
+Portado `selecionarMixPorAlvo_` (estrategias.html, aba Produto Alvo) pro app, 100% client-side como
+`montarMixPorAlvo_`: em vez de um segmento de mercado, o mix inteiro é ANCORADO no preço de um
+produto REAL — o melhor match do que o cliente configurou (`filtrados()[0]`) — e as outras 6 ofertas
+(ISCA 62-84%, ANCORA_INF 40-62%, ALVO_2/3 65-155%, ANCORA_SUP >105%, COMPLEMENTAR) são faixas
+proporcionais ao preço DESSE produto específico, exatamente como a aba Produto Alvo já faz. Não dá
+pra rodar isso no GAS sem duplicar Score de Tração (só existe no navegador, `scoreTracaoPublico_`) —
+por isso ficou 100% client-side, sem chamada ao motor do servidor
+(`buscarOfertasMix_`/`selecionar_isca` removidos do app; o endpoint continua existindo no GAS só
+pra alimentar o e-mail do corretor). Testado com o cenário exato relatado (R$3.000.000/295m²):
+preços agora saem entre R$1,38M e R$3,30M (antes: sempre R$402k-701k, incoerente).
+
+**2.** Quando há menos de 7 opções compatíveis no total, o app não tenta mais montar um mix de 7
+papéis com pouco material — lista tudo que existe, direto por ordem de score.
+
+**3.** Card de oferta some com "Previsão de entrega" quando o cliente filtrou "Pronto Novo" (fica
+só o selo "Pronto novo").
+
+**4.** Título da capa ganhou "!": "Vamos achar o APARTAMENTO ideal pra você!".
+
+**5.** Botões "Pronto Novo"/"Em Obras" (capa) destacados em laranja.
+
+**6.** Bullet "Dados reais..." virou subheadline sem caixa: "Temos disponível na grande Goiânia e
+região em nossa base de dados hoje...".
+
+**7.** Tag da capa: "Simulador de Lançamentos" → "App Lançamentos".
+
+**8.** Sliders de preço/metragem ("Pergunta 1 de 3") ganharam trilho e alça bem maiores (estilo
+"arrastar pra desligar o celular" — trilho 4px→14px, alça 26px→44px) e mais distância entre o valor
+exibido e a barra (6px→26px — um `style` inline esquecido de uma parte anterior estava anulando
+esse espaçamento, corrigido).
+
+**9.** "Pergunta 3 de 3": pergunta de altura ganhou mais espaço acima (28px→44px) e cor de destaque
+(accent) pra não se misturar visualmente com a seção de motivação.
+
+Testado ao vivo: cenário exato do bug relatado, cenário com <7 compatíveis (ordem por score
+confirmada), toggle "Pronto Novo" escondendo a previsão de entrega, cores dos botões via
+`getComputedStyle`, e o espaçamento/trilho dos sliders confirmados após corrigir o `style` inline
+conflitante.
+
+## 2026-07-28 (parte 131) — Fix: motor de isca forçava segmento errado pra orçamentos sem mix publicado
+
+Usuário reportou: configurando um perfil de R$3.000.000 / 295m² (Alto Padrão/Luxo), o app sempre
+devolvia o mesmo mix de ~R$400-700k. Reproduzido direto contra o backend de produção
+(`?acao=selecionar_isca&precoAlvo=3000000...`) — confirmado: `ok:true` com ofertas de R$402k a
+R$701k, nada a ver com o orçamento pedido.
+
+**Causa**: só existem segmentos publicados nas faixas Popular/Médio (poucos lançamentos de Alto
+Padrão/Luxo cadastrados ainda pra formar um mix válido — mínimo de 5 produtos com Score de Tração,
+ver parte 122). `encontrarSegmentoMaisProximo_` sempre "cai pro segmento mais próximo disponível"
+quando nenhum contém o preço exato — sem limite, isso forçava o único segmento existente mesmo
+estando 70-80% de distância relativa do orçamento real.
+
+**Fix**: novo `LIMIAR_DISTANCIA_RELATIVA_SEGMENTO_ = 0.5` — se a distância até a borda do segmento
+mais próximo passar de 50% do preço declarado, a função retorna `null` em vez de forçar esse
+segmento. `selecionarIscaInterno_` então responde `ok:false` (mensagem de erro também mais clara:
+"nenhum mix publicado compatível com esse orçamento") e o app cai pro cálculo local — que
+respeita o preço/metragem reais e mostra "Nenhum empreendimento com esse apartamento exato" em vez
+de empurrar opções de outra faixa completamente.
+
+Testado: 8 casos novos via Node reproduzindo exatamente o cenário relatado (3M contra segmento até
+900k → agora null) e confirmando que distâncias moderadas (≤50%) continuam aceitando o segmento
+mais próximo normalmente — não regride o comportamento correto pra orçamentos dentro de uma faixa
+razoável.
+
+**Ainda pendente do lado do usuário**: a causa raiz de fundo (poucos lançamentos de Alto
+Padrão/Luxo cadastrados) continua existindo — esse fix evita mostrar o mix ERRADO, mas pra Alto
+Padrão/Luxo terem mix de verdade, precisa cadastrar mais lançamentos dessa faixa até formar os 5
+mínimos por segmento.
+
+## 2026-07-28 (parte 130) — App Lançamentos: alerta visual em tempo real na confirmação de WhatsApp
+
+Antes, os 2 campos de WhatsApp (etapa de captura) só avisavam de números diferentes com um toast
+que aparecia ao clicar em "Confirmar" — fácil de perder. Agora (`checarWhatsMatch_`, chamada no
+`oninput` dos 2 campos): borda vermelha nos 2 inputs + caixa de aviso ("Os números não coincidem —
+confira os dois campos", com ícone de alerta novo `#ico-alert`) aparecem em tempo real assim que os
+números divergem de verdade.
+
+Comparação é por PREFIXO (`d1.startsWith(d2) || d2.startsWith(d1)`), não só igualdade — pega o erro
+no exato dígito onde a pessoa errou, sem esperar ela terminar de digitar o número inteiro nem
+mostrar erro falso enquanto ela ainda está no meio de digitar um valor correto. `validar()` (chamada
+ao clicar "Confirmar") também aciona esse alerta visual em vez do toast antigo, cobrindo o caso de
+paste/preenchimento que não passa pelo `oninput`.
+
+Testado ao vivo: sem erro enquanto o prefixo ainda bate (digitação em andamento); erro aparece assim
+que diverge de verdade; erro some ao corrigir; e o clique direto em "Confirmar" com números
+diferentes também aciona o alerta visual.
+
+## 2026-07-28 (parte 129) — App Lançamentos: headline genérica, destaque no "+X ofertas" e remoção do nome "Leonardo"
+
+Ajustes finos na tela de match e limpeza de identidade em `app-lancamentos.html`:
+
+1. `headlineImpacto_` parou de variar por motivação declarada ("...pra você finalmente sair do
+   aluguel", etc.) — vira sempre genérica: "{Nome}, as N melhores opções que separamos pra você!".
+   `ORDEM_PRIORIDADE_MOTIVACAO_HEADLINE_` (só existia pra essa variação) removida junto.
+2. O número em "+ X outras ofertas encontradas..." agora vem destacado (laranja, 16px,
+   `<strong>`) em vez de texto plano — `maisEl.textContent` virou `maisEl.innerHTML`.
+3. Texto abaixo do título da etapa de match trocado: "Os nomes e endereços completos o Leonardo
+   te conta no atendimento." → "Para informações mais detalhadas confirme seu atendimento ao
+   final da página."
+4. **Removida toda referência ao nome "Leonardo"** do app (pedido explícito, vale pra todo o
+   arquivo): `<title>`, nota de privacidade, texto abaixo do botão de confirmar WhatsApp, tela de
+   agradecimento, texto do botão de WhatsApp, mensagem de fallback quando não há match, estado
+   vazio da tabela de ofertas, e a mensagem pré-preenchida do link do WhatsApp — todas reescritas
+   em 1ª pessoa do plural ("a nossa equipe", "vamos te chamar") em vez de citar um nome específico.
+
+Testado ao vivo: título/subtítulo/número destacado conferidos na tela de match; nota de
+privacidade, texto pós-captura, tela de agradecimento e texto do botão de WhatsApp conferidos nas
+etapas seguintes — nenhuma menção a "Leonardo" restante (`grep -i leonardo` limpo).
+
+## 2026-07-28 (parte 128) — App Lançamentos: mix de 7 ofertas sem destaque + roteiro completo no e-mail do corretor
+
+Redesign grande da tela "Melhor match" (step-6), pedido pelo usuário: parar de destacar UMA oferta
+como "a escolhida" e, em vez disso, gerar interesse pelo CONJUNTO das melhores opções.
+
+**Lado do cliente (`app-lancamentos.html`):**
+- Removida toda a UI de destaque de uma única oferta: selo "Melhor match para o seu perfil", score
+  de compatibilidade (número gigante + %), descrição do score e o pill de urgência. CSS morto
+  (`.match-tag`, `.match-score-*`, `.match-divider`, `.urgencia-pill`) e JS morto (`corMatch_`,
+  ícones `ico-star`/`ico-zap`) removidos junto.
+- No lugar, uma **headline de impacto** (`headlineImpacto_`) que muda conforme a motivação
+  declarada (aluguel/investidor/próprio/default), gerando interesse pelo conjunto: "Maria, as 7
+  melhores opções que separamos com potencial real de valorização", por exemplo.
+- **Todas** as até-7 ofertas agora usam o MESMO card rico (antes só a "melhor" ganhava esse
+  tratamento, as outras 6 vinham compactas em linha). `.opcoes-tabela` virou um container flex com
+  gap (cards soltos, cada um com sua própria borda/radius) em vez de uma caixa única com a 1ª
+  destacada.
+- Nova linha "+ X outras ofertas encontradas pelo simulador, além dessas" quando o total
+  compatível (`filtrados()`) passa de 7.
+- `buscarIsca_` virou `buscarOfertasMix_` — consome o novo formato do motor (`ofertas`, array,
+  ver abaixo) em vez de uma isca só; se o mix publicado tiver menos de 7 papéis preenchidos,
+  completa com opções reais do cálculo local sem repetir nenhuma.
+
+**Motor (`code.txt`):**
+- `selecionarIscaPublico_` agora devolve `{ok, ofertas: [...]}` (todas as até-7 ofertas do mix,
+  ordenadas por preço crescente) em vez de `{ok, isca}` — cada resumo continua sem nenhum campo de
+  papel/rótulo (a distinção ISCA/ALVO/ÂNCORA continua só no servidor).
+- **Novo**: quando o lead chega (`salvarInteresse_` → `enviarNotificacaoAtendente_`), o e-mail pro
+  corretor agora recalcula o roteiro completo a partir do mesmo perfil que o cliente declarou
+  (`montarBlocoRoteiroEmail_`, lendo `moradias`/`precoAlvo`/`filtroSituacao` de dentro de
+  `d.tags`) e inclui: **PRODUTO ALVO** (o ALVO_1 real, com preço/%vendido, e uma nota se ele for o
+  mesmo produto mostrado ao cliente como isca), e **MIX MONTADO** (os 7 papéis, com rótulo e
+  destaque `[ISCA]` na que foi mostrada). As "demais opções calculadas" já estavam no e-mail (campo
+  "IDs selecionados", vindo do `idsInteresse`/`rankingDetalhado` que o cliente já enviava) — só
+  ganhou uma linha apontando pra esse campo. Falha silenciosa: se o perfil não bater com nenhum mix
+  publicado, o e-mail sai igual, só sem esse bloco extra.
+
+Testado: 8 casos via Node pro bloco de e-mail (produto alvo, mix completo, marcação `[ISCA]`, nota
+de "mesmo produto", motor sem mix publicado, tags inválido sem lançar exceção) + 7 casos pro novo
+formato de `selecionarIscaPublico_` (array em vez de objeto único, ordenação por preço, sem vazar
+`escolhidoComoIsca`). No front, testado ao vivo: mix mockado com 3 ofertas completado com 4 do
+cálculo local (7 cards uniformes), fallback sem mix publicado (7 cards do cálculo local), as 4
+headlines por motivação, cenário de zero resultados, e o fluxo completo contra o backend real de
+produção.
+
+## 2026-07-28 (parte 127) — App Lançamentos: retira textos de tolerância, destaca a contagem
+
+Continuação da limpeza da "Pergunta 1 de 3" (step-2):
+
+- Removidos os textos de tolerância abaixo de cada slider ("A gente também considera apartamentos
+  com investimento um pouco menor ou maior..." e a versão de metragem). Os elementos
+  `#precoFaixaSub`/`#metragemFaixaSub` e o código que os preenchia (`atualizarComboUI_`/
+  `atualizarMetragem`) foram removidos — o CÁLCULO da tolerância (`D.areaRange`, faixa ±20% de
+  preço) continua intacto, só o TEXTO explicando isso pro cliente que saiu.
+- `.slider-card`/`.slider-card-hint` (CSS que só esses elementos usavam) removidos por ficarem
+  mortos.
+- Número da contagem (`#cntCombo`, "N opções reais...") dobrado de 20px pra 40px.
+
+Testado ao vivo: sliders continuam atualizando `D.precoAlvo`/`D.areaRange` normalmente (sem erro no
+console após remover os elementos), textos de tolerância não aparecem mais, número da contagem
+confirmado em 40px via `getComputedStyle`.
+
+## 2026-07-28 (parte 126) — App Lançamentos: capa enxuta + caixa única na etapa de sliders
+
+A partir de agora o trabalho é só em `app-lancamentos.html` (usuário pediu explicitamente pra
+parar de espelhar mudanças em `simulador-lancamentos.html`, que fica congelado como está — só
+editar esse arquivo se o usuário citar o nome dele de novo).
+
+1. **Capa (step-0):** título reduzido a "Vamos achar o APARTAMENTO ideal pra você" (tirou "— e
+   mostrar em quantos empreendimentos ele existe"); removido o parágrafo "São só 3 perguntas
+   rápidas..." (`#aberturaSub`, sem uso em JS, removido junto); removida a bullet "Você no controle!
+   Só vai receber atendimento humano se confirmar no final." — a bullet "Dados reais..." continua.
+2. **Etapa 1 de 3 (step-2, sliders):** as 3 caixas separadas (contador + slider de preço + slider de
+   metragem) viraram uma caixa única, reaproveitando a classe `.conf-card`/`.conf-item`/`.conf-obs`
+   já usada na etapa "Confirme seus dados" (mesmo padrão visual e espaçamento). A contagem de
+   resultados, que antes tinha 3 linhas próprias (label de situação + número grande + texto), virou
+   1 linha só no rodapé da caixa: "20 opções reais com apartamento no seu perfil". A linha
+   "Todos os empreendimentos" (`#cntSituacaoLabel`) foi retirada — o `if(lbl)` que a atualizava em
+   `selecionarSituacao_()` já era null-safe, então a função só perdeu esse bloco morto; a constante
+   `SITUACAO_LABEL_`, que só alimentava essa linha, foi removida também por não ter mais uso.
+
+Testado ao vivo: capa mostra só título+box de contagem+bullet única+chips de situação; etapa de
+sliders renderiza como uma caixa `.conf-card` só (confirmado border 2px accent igual "confirme seus
+dados"), com preço, metragem e a linha "N opções reais..." dentro dela, sem a linha de situação solta.
+
+## 2026-07-28 (parte 125) — Simulador/App: retira cabeçalho e etapa "Resultado parcial"
+
+Duas simplificações de UX pedidas pelo usuário, aplicadas nos DOIS funis (`simulador-lancamentos.html`
+e `app-lancamentos.html`, que compartilham a mesma estrutura de tela):
+
+1. **Retirado o cabeçalho fixo do topo** ("Leonardo Viana · Corretor em Goiânia" / badge "Busca por
+   Apartamento" / barra de progresso "X / 3"). Removido `.topo`/`.topo-inner`/`.topo-logo`/
+   `.progress-*` do HTML e CSS, e a função `atualizarProgresso()` (só existia pra alimentar essa
+   barra) junto com as duas chamadas dela.
+2. **Retirada a etapa "Resultado parcial"** (o teaser entre motivação e match). O botão "QUERO VER
+   MINHAS OPÇÕES" que ficava lá agora aparece direto no final da etapa "Pergunta 3 de 3"
+   (motivação) — clicar nele vai direto pro match, sem tela intermediária. `montarTeaser()` (e o CSS
+   `.teaser-*`/`.score-bar-*`, que só ela usava) foi removida. `atualizarBotoes()` foi ajustada pra
+   step 4 ganhar um botão de avançar embutido (escondendo o "Próximo" do rodapé) sem perder o
+   "Voltar" (que step 4 já tinha antes, pra nome).
+
+Testado ao vivo nos dois arquivos: header realmente sumiu da tela inicial; fluxo completo
+(motivação → clique único → match) navega direto pro step-6 sem passar pelo step-5 removido, com
+"Voltar" ainda funcionando em "Pergunta 3 de 3". Em `app-lancamentos.html`, confirmado contra o
+backend de produção (sem mock) que o clique único dispara a chamada real de `selecionar_isca` e
+renderiza o resultado corretamente.
+
+## 2026-07-28 (parte 124) — Publicação do mix deixa de depender de clique manual
+
+Usuário apontou um problema real na Fase 1/2: `app-lancamentos.html` só funciona (mostra a isca do
+motor em vez do fallback) pro segmento que o corretor clicou "Publicar mix" manualmente em
+`estrategias.html` — "o sistema não pode ficar dependente dessa ação manual".
+
+Adicionado `autoPublicarTodosMixes_()`: toda vez que `estrategias.html` carrega os dados (dentro de
+`carregarEstrategias()`), publica sozinho, em background, o mix de TODOS os segmentos completos —
+nas duas situações (NOVOS e NA_PLANTA), não só a aba que o corretor está olhando no momento.
+Segmentos com aviso (menos de 5 produtos com Score de Tração) continuam sendo pulados, igual o
+botão manual já fazia. Como é upsert por segmento+situação, isso também tem o efeito colateral bom
+de manter os snapshots sempre atualizados com o estoque/preço mais recente — de graça, a cada vez
+que qualquer corretor abre a tela.
+
+O botão "📤 Publicar mix" (parte 122) continua existindo — não é mais a única forma do snapshot
+existir, mas ainda serve pra forçar uma republicação imediata de UM segmento específico sem
+esperar o próximo carregamento da página.
+
+Testado via console: mix com 6 produtos válidos (só 1 segmento por padrão dado o volume) publica
+exatamente 1 vez, com payload correto (segmentoId/situacao/padrao/faixaPreço/papéis mapeados por
+`idEmpreendimento`); mix com só 3 produtos (abaixo do mínimo de 5) gera aviso e zero chamadas de
+publicação, confirmando que o filtro de segmento incompleto continua valendo no caminho automático.
+
+## 2026-07-28 (parte 123) — Fase 2: cria app-lancamentos.html, consumindo o motor de ISCA
+
+Segunda fase do projeto "Ilusão de Controle Estratégico" (parte 122 = motor no GAS). O simulador
+atual (`simulador-lancamentos.html`) não foi tocado — `app-lancamentos.html` é um arquivo novo,
+copiado dele como base (mesmo fluxo/UX já validado: capa → sliders → confirmação → nome →
+motivação → teaser → match → captura → agradecimento) com UMA mudança de fundo: a tela de "melhor
+match" busca o produto a mostrar em `selecionar_isca` (o motor server-side da parte 122) em vez de
+sempre revelar o item estatisticamente mais compatível calculado no navegador.
+
+- `avancarStep()`/`montarMatch()` (agora assíncrona): ao entrar na etapa de match, o botão mostra
+  "Buscando sua melhor opção..." enquanto `buscarIsca_()` consulta o servidor.
+- Se o motor devolver uma isca (`ok:true` — precisa que o corretor já tenha publicado o mix do
+  segmento em `estrategias.html`), ela vira o card "melhor match" (`iscaParaCard_`) e o score de
+  compatibilidade exibido é calculado de verdade contra o perfil declarado (`scoreMatchPreferencia_`)
+  — só o PRODUTO é escolha estratégica, o grau de match mostrado continua honesto.
+- Se não houver mix publicado pro segmento daquele perfil (`ok:false`) ou a chamada falhar, cai de
+  volta no cálculo local de sempre (idêntico ao simulador atual) — a tela nunca fica vazia esperando
+  o corretor publicar mixes.
+- `resumoEmpreendimento_` (code.txt) ganhou `tipoImovel` (dominante, via contagem de tipologias) e
+  `temLazer`, que faltavam pro card do app novo mostrar os mesmos campos de sempre.
+- `idEmpreendimentoIsca` (isca mostrada, venha do motor ou do fallback) agora vai junto no payload
+  de captura do lead — ainda sem consumidor (Fase 4, dashboard, não construída), mas evita ter que
+  voltar nesse arquivo depois.
+- Nova linha no catálogo "Landing Pages" do dashboard (`dashboard.html?secao=adm`) apontando pro
+  arquivo novo.
+
+Testado: build/syntax check + teste ao vivo cobrindo os 3 caminhos (isca mockada do motor, motor
+respondendo "nenhum mix publicado", erro de rede) via console, e o fluxo completo clicado na UI
+real (capa→sliders→confirmação→nome→motivação→teaser→match) contra o backend de produção — como
+nenhum mix está publicado ainda, confirmado que caiu no fallback e retornou exatamente o mesmo
+resultado que o simulador original daria.
+
+## 2026-07-28 (parte 122) — Fase 1 do "app-lancamentos.html": motor de seleção de ISCA (GAS) + publicação de mix
+
+Primeira fase de um projeto maior (conceito "Ilusão de Controle Estratégico", trazido pelo usuário
+via IA MENTORA): um app novo de simulação/captura onde o cliente configura filtros livremente,
+enquanto por baixo o sistema escolhe qual das 7 ofertas do mix (ISCA/ALVO_1-3/ANCORA_SUP/
+ANCORA_INF/COMPLEMENTAR) mostrar como "melhor match" — sem revelar que existe um alvo real
+diferente — e monta o roteiro de atendimento pro corretor. O simulador atual
+(`simulador-lancamentos.html`) continua intacto; nada nele foi tocado.
+
+Decisão de arquitetura (confirmada com o usuário): o GAS **não** reimplementa Score de
+Tração/Similaridade/Modelos Vendedores — isso continua vivendo só no front-end de
+`estrategias.html`, ainda em validação com dado real. Em vez disso:
+
+- **`estrategias.html`**: cada bloco de segmento com mix completo ganhou um botão "📤 Publicar
+  mix" (`publicarMixDoSegmento_`) que manda pro GAS só os 7 `idEmpreendimento` do mix já
+  calculado, mais a faixa de preço real do segmento naquele momento (min/max dos candidatos) — o
+  suficiente pra casar um cliente futuro com esse segmento sem o servidor precisar recalcular
+  percentil nenhum. Upsert por segmento+situação: publicar de novo substitui o snapshot anterior,
+  não acumula histórico.
+- **`code.txt`**: nova aba `MIX_SEGMENTOS_PUBLICADOS` + `publicarMixSegmento_`/
+  `listarMixSegmentosPublicados_`. O motor propriamente dito —
+  `escolherIscaEntrePapeis_` (função pura, testável isolada) — aplica a regra de isca por
+  motivação vinda da IA MENTORA, adaptada porque "parcela estimada" e "primeiro imóvel com FGTS"
+  dependem de dado que ainda não existe:
+  - sair do aluguel → produto mais barato do mix
+  - investir → maior % vendido do mix (prova de demanda)
+  - imóvel próprio (upgrade) → ANCORA_SUP (faixa acima) se existir, senão o mais caro do mix
+  - qualquer outro caso (ou nenhuma motivação reconhecida) → ISCA, com fallback pra ALVO_1
+  Quando o cliente marca mais de uma motivação, a prioridade é aluguel > investidor > próprio
+  (decisão arbitrária, documentada no código, fácil de reordenar depois).
+- `resumoEmpreendimento_` agrega as linhas por-unidade de um `idEmpreendimento` (preço a partir
+  de, %vendido, situação, bairro/cidade, aceita FGTS) direto do GAS, sem depender do navegador do
+  corretor estar aberto.
+- Nova ação pública `selecionar_isca` (GET, sem login — mesmo padrão de `listar_lancamentos`,
+  pensada pro app-lancamentos.html que ainda não existe). Ponto de atenção de segurança
+  deliberado: o wrapper público (`selecionarIscaPublico_`) devolve **só** os dados da isca — o
+  roteiro completo (que revelaria a existência de um alvo "melhor" escondido) nunca atravessa
+  pra esse endpoint, só fica disponível internamente pro motor.
+
+Testado: 20 casos via Node (regra de motivação com mix completo/incompleto/vazio, prioridade em
+motivação múltipla, agregação de %vendido/FGTS/faixas, casamento de preço com snapshot exato/fora
+da faixa) + teste ao vivo no console de `estrategias.html` (botão aparece só em segmento com mix
+completo, payload de publicação com os IDs e faixa de preço corretos).
+
+Próximas fases (não iniciadas): app-lancamentos.html em si (Fase 2), estrutura de dados/agendamento
+de visita (Fase 3), ficha de atendimento no dashboard (Fase 4).
+
+## 2026-07-28 (parte 121) — Estratégias: substitui todas as abordagens por uma única linha editorial "Guia de Decisão"
+
+Usuário decidiu mudar de estratégia: em vez de várias abordagens de copy concorrentes na tabela,
+seguir UMA linha editorial só e testar. Removidas TODAS as abordagens anteriores em ambas as
+funções geradoras de copy brief — as 5 originais orientadas a gatilho (Exclusividade & Acesso,
+Autoridade Silenciosa, Escassez Específica, Timing & Janela de Mercado, Curiosidade Segmentada) e
+as 3 consultivas/educativas adicionadas nas partes 119/120 (Educação de Mercado, Guia de Decisão,
+Radiografia da Seleção) — e substituídas por uma sequência única de 4 posts:
+
+- **Guia de Decisão — Post 1, 2 e 3 de 3** (Feed 3×4): cada post cobre 1 critério de decisão só
+  (`gerarGatilhos_`: ritmo de vendas → prazo de entrega → preço x região; `gerarEixosCampanha_`:
+  momento da obra → faixa de preço → localização x objetivo, usando o trio de opções da seleção).
+  Usa o campo `feedInstrucoes` pro design brief e `legenda` pra copy; o campo `vertical` vira uma
+  nota-ponteiro avisando que esse post não tem versão de Stories isolada.
+- **Storie de Conexão — Guia de Decisão** (Stories 9:16): amarra os 3 posts publicados, cria
+  curiosidade pra quem perdeu algum e chama pra visitar o perfil / seguir. Usa `vertical` pro brief
+  real; `feedInstrucoes`/`legenda` viram notas-ponteiro de volta pros 3 posts de Feed.
+
+Em `gerarGatilhos_`, o objeto `tom` compartilhado foi enxugado de ~15 chaves pra só as 4 ainda
+usadas (`ctaConsultivo`, `aberturEducativa`, `paletaEducativa`, `tipo`) — todas as chaves só
+consumidas pelas abordagens removidas (`ctaPergunta`, `ctaUrgencia`, `aberturExcl`, `paletaVIP`,
+etc.) foram apagadas.
+
+Dois problemas pegos durante a implementação:
+1. Ao tentar preservar as abordagens antigas comentadas como referência, deixei um bloco de
+   comentário `/* ... */` sem fechar — isso silenciosamente engoliria o resto do arquivo (incluindo
+   `gerarEixosCampanha_`) como comentário JS. Pego por inspeção antes de rodar qualquer teste;
+   corrigido apagando o bloco de vez via `sed` (que é literalmente o que o usuário pediu — "retirar",
+   não "comentar pra referência").
+2. As legendas novas de `gerarEixosCampanha_` referenciavam `baseHash`, uma constante que só existe
+   em `gerarGatilhos_` — bug real de copiar-e-colar. Corrigido adicionando o equivalente
+   (`cidadeTagMix`/`padraoTagMix`/`baseHash`) derivado dos parâmetros desta função (`loc`/`padrao`).
+
+Também removido o helper `getPd` de `gerarEixosCampanha_` (ficou sem nenhum uso depois da troca do
+array de eixos).
+
+Testado via console em ambas as funções (`gerarGatilhos_` e `gerarEixosCampanha_`), com dados
+completos e esparsos: sempre 4/4 entradas, nenhum campo vazio/`undefined` em nenhum cenário.
+
+## 2026-07-25 (parte 120) — Estratégias: as 3 abordagens consultivas/educativas também no botão "Campanha"
+
+Usuário reportou que as 3 novas abordagens da parte 119 não apareciam no botão "✏️ Campanha" do
+título das tabelas — motivo: esse botão abre um drawer PARALELO (`abrirCopyBriefMixCompleto_()` →
+`gerarEixosCampanha_()`), com seu próprio array de "eixos de campanha", separado do array de
+`gerarGatilhos_()` que eu tinha editado (que só alimenta o drawer aberto ao clicar numa linha
+individual da tabela de mix). Adicionei as 3 equivalentes lá também: **Educação de Mercado**, **Guia
+de Decisão** e **Radiografia da Seleção** — mesma lógica de tom consultivo/educativo/evergreen,
+adaptada pro escopo do mix completo (usa a faixa de preço da seleção inteira — `faixaBaixa`/
+`faixaAlta`/o trio `ALVO_1-3` — como exemplo, em vez de dados de 1 empreendimento só).
+
+Como esta função (`gerarEixosCampanha_`) não tem o objeto `tom` compartilhado (usa ternárias
+`isLuxo`/`isAlto`/`isMedio` inline, com `ctaPergunta`/`ctaExplica` pré-computados), adicionei 3
+constantes locais equivalentes (`ctaConsultivo`, `aberturEducativa`, `paletaEducativa`) logo após
+`ctaExplica`, seguindo o mesmo padrão de ramificação.
+
+Testado via console (função pura, sem login): array vai de 4 pra 7 eixos; testado com mix completo
+(7 papéis preenchidos) e com mix esparso (só 1 papel preenchido) — nenhum `undefined` vazando em
+nenhum dos 3 novos em nenhum cenário. De quebra, corrigido um erro de plural encontrado durante o
+teste ("1 opções ativas" → "1 opção ativa"; "7 opções ativas" continua correto no plural).
+
+## 2026-07-25 (parte 119) — Estratégias: 3 novas abordagens de copy consultivas/educativas no brief de IA Designer
+
+A pedido do usuário, `gerarGatilhos_()` em `estrategias.html` (o gerador de instruções de copy/design por
+empreendimento, usado no drawer que abre ao clicar numa linha da tabela de mix de 7 ofertas) ganhou 3
+novas "abordagens", além das 5 já existentes (Exclusividade & Acesso, Autoridade Silenciosa, Escassez
+Específica, Timing & Janela de Mercado, Curiosidade Segmentada) — todas as 5 antigas são orientadas a
+gatilho de urgência/exclusividade/escassez. As novas são o oposto de propósito: comunicação
+consultiva e educativa, sem apelo de venda, pensada pra ficar relevante no perfil por muito tempo
+(evergreen) em vez de especulativa/datada.
+
+**Educação de Mercado** — usa o empreendimento como exemplo real pra ensinar um conceito do mercado
+(como avaliar prazo, ritmo de vendas, preço). **Guia de Decisão** — checklist de 3 perguntas
+genéricas (útil pra qualquer lançamento), respondidas com dados reais deste aqui — formato
+"salvável", bom pra alcance orgânico e permanência no perfil. **Radiografia do Empreendimento** —
+ficha técnica pura, sem CTA de venda, tipo conteúdo de referência/arquivo.
+
+Cada uma segue exatamente o mesmo formato de 4 campos das abordagens existentes (`linha`, `titulo`,
+`vertical` pro Stories 9:16, `feedInstrucoes` pro Feed 4:5, `legenda` pronta pra colar) e reaproveita
+os mesmos locais já computados (`localizacao`, `preco`, `padrao`, `areaInfo`, `entregaInfo`, `pctStr`,
+`tipoM`, `baseHash`, `idBloco`). Adicionadas também 3 chaves novas no objeto `tom` (o sistema de "tom
+por padrão" da parte anterior), seguindo o mesmo padrão de ramificação `isLuxo`/`isAlto`/`isMedio`:
+`ctaConsultivo`, `aberturEducativa`, `paletaEducativa`.
+
+**Harmonia Stories → Feed**: nas 3 novas, o CTA do Stories aponta pro feed ("Arrasta pra ver a
+análise completa no feed ⬆️", "Guia completo no feed — vem ver ⬆️", "Ficha completa no feed ⬆️") em
+vez de "me chama no direct" — a novidade do dado no Stories é o gancho pra visitar o perfil e seguir,
+não pra vender na hora.
+
+Testado via console (sem precisar login, já que `gerarGatilhos_` é uma função pura): array retorna 8
+itens (era 5); as 3 novas não vazam `undefined` em nenhum dos 3 campos de texto, inclusive em cenário
+com `pctVendido`/`entrega`/`estoque` nulos (usa os fallbacks corretos: "estoque limitado", "Prazo a
+confirmar com a construtora"); tom Alto Padrão testado e confirmado ("Hoje eu quero te mostrar como
+analisar isso — não vender isso."). A tabela do drawer (`_gatilhosAtual_.map(...)`) e o CSS do drawer
+(`overflow-y:auto`) já são genéricos/sem limite de linhas — nenhuma mudança de HTML/CSS necessária.
+
+## 2026-07-25 (parte 118) — Simulador de Lançamentos: limpeza de código morto após merge com a máquina server
+
+A máquina server (sessão paralela, commits `a8338a6`..`2233505`) reconstruiu boa parte de
+`simulador-lancamentos.html` — tela de confirmação de dados, fluxo não-sequencial (capa → sliders →
+confirmação → nome → motivação), slider de preço total (era por m²), motivação virou tags
+multi-seleção + nova pergunta de andar, filtro de situação na capa, botão "Ajustar filtros",
+barra de % vendido em todas as linhas da tabela, código exibido como `idEmpreendimento`. Estudei e
+testei tudo ao vivo (desktop + mobile 375px, fluxo completo do início ao fim, incluindo Refazer e
+Ajustar filtros preservando os dados) antes de mexer em qualquer coisa — meu trabalho local anterior
+(uma tela de confirmação parecida, construída em cima da ordem antiga) foi descartado por ficar
+obsoleto/conflitante com essa versão.
+
+3 pontos pequenos encontrados durante o estudo, limpos agora:
+
+1. **`selecionarOpt()` e todo o CSS de `.opt`/`.options`** (cards de seleção única com ícone) —
+   órfãos desde que a motivação virou tags multi-seleção (`toggleMoradia_`); nenhum HTML usava mais.
+2. **`.ajustar-btn` usava `color: var(--text2)`**, variável removida do `:root` numa limpeza minha
+   anterior (parte 104) — funcionava por acidente (caía por herança no `var(--text)` do `body`), mas
+   era uma referência frágil. Trocado por `var(--text)` direto.
+3. **Comentários desatualizados** mencionando "preço/m²" em 4 lugares (CSS, HTML, `temApartamentoCompativel_`,
+   `atualizarMetragem`) — o mecanismo mudou pra preço total nos commits do server; comentários
+   atualizados pra refletir isso.
+
+Testado ao vivo depois da limpeza: fluxo completo (capa→sliders→confirmação→nome→motivação→teaser→
+match→captura→confirmado) continua funcionando normalmente, `.ajustar-btn` renderiza
+`rgb(238,240,246)` (var(--text)) diretamente.
+
 ## 2026-07-24 (parte 117) — Simulador de Lançamentos: abertura vira 1 número gigante + bullets reescritos
 
 A pedido do usuário, a tela de abertura (step-0) de `simulador-lancamentos.html`:
