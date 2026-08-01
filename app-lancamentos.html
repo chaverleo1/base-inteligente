@@ -310,7 +310,7 @@ input[type=range]::-moz-range-track {
 
 /* ── CARD: ALERTA ESTOQUE + BARRA DINÂMICA ─────────────────── */
 .card-alerta-estoque {
-  font-size: 11px; font-weight: 600; color: var(--danger);
+  font-size: 11px; font-weight: 600; color: #fff;
   background: rgba(255,59,48,.1); border: 1px solid rgba(255,59,48,.28);
   border-radius: 6px; padding: 5px 10px; margin-bottom: 8px; text-align: center;
 }
@@ -1521,7 +1521,8 @@ function situacaoInfo_(estagio) {
 function corVendido_(pct) {
   if (pct <= 50) return '#8a8f9e';
   if (pct <= 69) return '#ffffff';
-  return '#f5c800';
+  if (pct <= 89) return 'var(--orange)';
+  return '#ff6b6b';
 }
 
 function situacaoBadgeHTML_(estagio) {
@@ -1739,7 +1740,7 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
   const codSeq = 'Cod. ' + String(offset + i + 1).padStart(3, '0');
   return `
       <div class="opcao-top" data-id="${c.id || ''}" data-cod="${codSeq}">
-        ${c.pctVendido > 90 ? `<div class="card-alerta-estoque" id="alerta-${grupo}-${i}" style="display:none">🔴 Apenas ${100 - c.pctVendido}% das unidades ainda disponíveis</div>` : ''}
+        ${c.pctVendido > 90 ? `<div class="card-alerta-estoque" id="alerta-${grupo}-${i}" style="display:none">🔴 Apenas ${c.estoque} unidades disponíveis</div>` : ''}
         <div class="opcao-top-header">
           <span class="opcao-codigo">${codSeq}</span>
           ${situacaoBadgeHTML_(c.estagio)}
