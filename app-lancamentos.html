@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador de Lançamentos</title>
+<style>
+:root {
+  --bg:      #09090f;
+  --s1:      #0f1018;
+  --s2:      #13151f;
+  --s3:      #181b28;
+  --border:  #1e2232;
+  --border2: #252840;
+  --accent:  #4f7cff;
+  --green:   #00d4aa;
+  --danger:  #ff5252;
+  --orange:  #ff8a00;
+  --yellow:  #f5d000;
+  --text:    #eef0f6;
+  --r:       12px;
+  --r-sm:    8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; font-size: 15px; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100%; display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── CONTEÚDO ─────────────────────────────────────────────────────────── */
+.main { flex: 1; padding: 18px 20px 110px; }
+.step-wrap { max-width: 520px; margin: 0 auto; }
+.app-footer { font-size: 10px; color: var(--text); text-align: center; margin-top: 28px; opacity: .5; }
+
+.step { display: none; }
+.step.ativo { display: block; animation: fadeSlide .28s cubic-bezier(.4,0,.2,1); }
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── TIPOGRAFIA ──────────────────────────────────────────────────────── */
+.step-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 10px;
+}
+.step-title {
+  font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: -.4px;
+  color: var(--text); margin-bottom: 8px;
+}
+.step-sub {
+  font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: 16px;
+}
+
+/* ── ESTATÍSTICA HERO ─────────────────────────────────────────────────── */
+.hero-stat { margin: 4px 0 20px; }
+.hero-stat-pre {
+  display: block; font-size: 15px; font-weight: 600; color: var(--text);
+}
+.hero-stat-num {
+  display: block; font-size: clamp(64px,20vw,96px); font-weight: 800;
+  color: var(--orange); letter-spacing: -3px; line-height: .95; margin: 2px 0;
+}
+.hero-stat-post {
+  display: block; font-size: 15px; font-weight: 600; color: var(--text); max-width: 90%;
+}
+
+/* ── HERO TIPOGRÁFICO (step 0) ──────────────────────────────────────────── */
+/* Hierarquia de 3 níveis: conector (dimmed) → palavra-chave azul → palavra
+   de impacto branca muito maior → conector (dimmed) → cidade laranja → tail.
+   clamp() garante que funciona de 320px até 600px+ sem breakpoints. */
+.hero-phrase { margin: 28px 0 0; }
+
+/* "Vamos achar o" e "pra você na" — conectores legíveis, parte da frase */
+.hp-eyebrow, .hp-bridge {
+  display: block; font-size: 18px; font-weight: 600;
+  color: var(--text); opacity: .75; line-height: 1.3;
+}
+.hp-eyebrow { margin-bottom: 4px; }
+.hp-bridge  { margin: 18px 0 4px; }
+
+/* "apartamento" — destaque em azul accent, preenche bem a linha */
+.hp-word1 {
+  display: block;
+  font-size: clamp(42px, 13vw, 72px); font-weight: 900;
+  color: var(--accent); letter-spacing: -2.5px; line-height: .88;
+}
+
+/* "ideal" — palavra de impacto: MUITO maior que apartamento,
+   cria contraste dramático (5 chars vs 11 → pode ser 2× maior) */
+.hp-word2 {
+  display: block;
+  font-size: clamp(88px, 27.5vw, 152px); font-weight: 900;
+  color: var(--text); letter-spacing: -5px; line-height: .82;
+}
+
+/* "Grande Goiânia" — laranja, peso médio-alto */
+.hp-city {
+  display: block;
+  font-size: clamp(22px, 6.5vw, 36px); font-weight: 800;
+  color: var(--orange); letter-spacing: -.5px; line-height: 1.1;
+}
+
+/* "e região!" — tail discreto */
+.hp-tail {
+  display: block;
+  font-size: 18px; font-weight: 600; color: var(--text); opacity: .75;
+  margin-top: 4px;
+}
+
+/* CTA area hero */
+.hero-cta-area { padding-top: clamp(52px, 9vh, 88px); }
+.hero-cta-count {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  text-align: center; margin-bottom: 16px; line-height: 1.4;
+}
+.hero-cta-count strong { color: var(--orange); font-size: 2em; line-height: 1; vertical-align: middle; }
+
+/* ── PULSO (feedback visual quando um contador muda de valor) ─────────── */
+.pulso {
+  animation: contadorPulso .35s cubic-bezier(.4,0,.2,1);
+}
+@keyframes contadorPulso {
+  0%   { transform: scale(1);    color: var(--text); }
+  35%  { transform: scale(1.08); color: var(--accent); }
+  100% { transform: scale(1);    color: var(--text); }
+}
+
+.slider-label-row { display: flex; justify-content: space-between; margin-top: 10px; }
+.slider-label-row span { font-size: 14px; color: var(--text); font-weight: 600; }
+
+.slider-card-label { font-size: 19px; color: var(--text); font-weight: 700; margin-bottom: 10px; }
+
+/* ── CAIXA DE PREÇO/ÁREA DIGITÁVEL (mesmo padrão de busca.html) --
+   substitui o texto só-leitura por um campo editável, sincronizado com a
+   barra de arrastar logo abaixo. */
+.preco-input-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid #6b7280; border-radius: var(--r-sm);
+  padding: 10px 14px; margin-bottom: 14px; transition: border .2s;
+}
+.preco-input-row:focus-within { border-color: var(--accent); }
+.preco-prefixo { font-weight: 700; color: var(--accent); font-size: 16px; }
+.preco-input {
+  flex: 1; width: 100%; background: none; border: none; outline: none; color: var(--text);
+  font-family: inherit; font-size: 24px; font-weight: 800; text-align: center;
+}
+.preco-input::placeholder { color: #6a7290; font-weight: 400; }
+
+/* Trilho/alça maiores que o padrão do navegador, mas mais finos do que a
+   primeira versão (pedido explícito: diminuir espessura da linha e
+   tamanho da bola). */
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 3px;
+  background: var(--orange); border-radius: 99px; outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--text); border: 2px solid var(--orange);
+  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  transition: box-shadow .2s, transform .1s;
+}
+input[type=range]:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(255,138,0,.25); transform: scale(1.08);
+}
+input[type=range]::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--text); border: 2px solid var(--orange); cursor: pointer;
+}
+input[type=range]::-moz-range-track {
+  width: 100%; height: 3px; background: var(--orange); border-radius: 99px;
+}
+
+/* ── STEP-2 TIPOGRAFIA + SITUAÇÃO ────────────────────────────────────────── */
+.s2-phrase { margin: 20px 0 16px; }
+.s2-phrase-main {
+  display: block; font-size: clamp(28px, 8.5vw, 44px); font-weight: 900;
+  color: var(--accent); letter-spacing: -1px; line-height: .92;
+}
+.s2-phrase-sub {
+  display: block; font-size: clamp(18px, 5vw, 26px); font-weight: 700;
+  color: var(--text); letter-spacing: -.3px; line-height: 1.1; margin-top: 4px;
+}
+.s2-sit-group { display: flex; gap: 8px; margin-bottom: 40px; flex-wrap: wrap; }
+.s2-sit-btn {
+  display: inline-flex; align-items: center; padding: 10px 18px;
+  border: 1.5px solid var(--orange); border-radius: 99px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.s2-sit-btn:hover { background: rgba(255,138,0,.08); color: var(--orange); }
+.s2-sit-btn.on { background: rgba(255,138,0,.18); color: var(--orange); font-weight: 700; }
+/* Erro de validação — nenhum botão de situação selecionado */
+#tagsSituacao.sit-erro .s2-sit-btn {
+  border-color: var(--danger); color: var(--danger);
+  animation: sitPulse .35s ease;
+}
+/* Erro de validação — step-4 (quartos/altura não selecionados) */
+.tag-group-erro .tag-btn {
+  border-color: var(--danger); color: var(--danger);
+  animation: sitPulse .35s ease;
+}
+@keyframes sitPulse {
+  0%,100% { transform: scale(1); }
+  45%     { transform: scale(1.05); }
+}
+.s2-label {
+  font-size: 14px; font-weight: 700; color: var(--text);
+  margin: 40px 0 10px; letter-spacing: -.1px;
+}
+
+/* ── CAPTURA ─────────────────────────────────────────────────────────── */
+.form-field { margin-bottom: 14px; }
+.form-field label {
+  display: block; font-size: 10px; font-weight: 700; color: var(--text);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px;
+}
+.form-field input {
+  width: 100%; background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text); font-size: 16px;
+  font-family: inherit; padding: 14px 16px; outline: none; transition: border .2s;
+  -webkit-appearance: none;
+}
+.form-field input:focus { border-color: var(--accent); }
+#fNome, #fNome:focus { border-color: var(--orange); }
+.form-field input::placeholder { color: #6a7290; }
+.privacy-note { font-size: 12px; color: var(--text); margin-top: 14px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; }
+
+/* ── CAIXA DE CONFIRMAÇÃO DE WHATSAPP (2 campos, fundo destacado) ─────── */
+.whats-box {
+  background: rgba(79,124,255,.08); border: 1.5px solid var(--accent);
+  border-radius: var(--r); padding: 18px 18px 4px;
+}
+.whats-box .form-field label { color: var(--text); }
+
+/* ── ALERTA DE NÚMEROS DIFERENTES (confirmação de WhatsApp) ───────────── */
+.form-field input.input-erro { border-color: var(--danger); }
+.whats-mismatch-msg {
+  display: flex; align-items: center; gap: 8px; margin: -6px 0 14px;
+  padding: 10px 12px; background: rgba(255,82,82,.1); border: 1px solid rgba(255,82,82,.35);
+  border-radius: var(--r-sm); font-size: 13px; font-weight: 700; color: var(--danger);
+}
+
+/* ── MIX DE OFERTAS ──────────────────────────────────────────────────── */
+.match-header { margin-bottom: 20px; }
+
+/* ── SITUAÇÃO (destaca pra quem já está pronto pra morar / em obras) ──── */
+.situacao-pill {
+  display: inline-flex; align-items: center; border-radius: 99px;
+  padding: 4px 12px; font-size: 12px; font-weight: 800; letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+/* ── MIX DE OFERTAS — até 7 cards com peso visual IGUAL (pedido explícito:
+   nenhuma oferta pode parecer "a escolhida"/destacada sobre as outras). ── */
+.opcoes-tabela { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+.opcao-top {
+  padding: 16px 14px; border-radius: var(--r); border: 1.5px solid var(--border2);
+  background: linear-gradient(135deg, rgba(79,124,255,.10), rgba(79,124,255,.02));
+}
+.opcao-top-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.opcao-codigo { font-size: 13px; font-weight: 800; color: var(--accent); letter-spacing: .3px; }
+.opcao-top-grid {
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px 16px;
+}
+.opcao-top-cell-label { font-size: 9px; font-weight: 700; color: var(--text); opacity: .6; letter-spacing: .6px; text-transform: uppercase; margin-bottom: 2px; }
+.opcao-top-cell-val { font-size: 13px; font-weight: 700; color: var(--text); overflow-wrap: break-word; }
+.btn-ver-mais-opcoes {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin: 4px 0 16px; padding: 14px;
+  background: var(--s2); border: 1.5px solid var(--accent); border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .3px;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.btn-ver-mais-opcoes:hover { background: rgba(79,124,255,.08); }
+
+/* ── ÁREA ÚTIL EM DESTAQUE + RETRAIR/EXPANDIR PREÇO + FAVORITO (Etapa 6,
+   pedido explícito do usuário) ─────────────────────────────────────────── */
+.opcao-cell-destaque .opcao-top-cell-val { font-size: 16px; font-weight: 800; color: var(--accent); }
+.opcao-cell-bairro .opcao-top-cell-val { font-size: 15px; font-weight: 800; color: var(--yellow); }
+.btn-ver-preco {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 14px; padding: 10px 0; background: none; border: none;
+  font-size: 12px; font-weight: 700; color: var(--orange); letter-spacing: .4px;
+  cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.btn-ver-preco:hover { text-decoration: underline; }
+.ver-preco-seta { font-size: 17px; color: var(--orange); line-height: 1; }
+.fav-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+.fav-label { font-size: 9px; font-weight: 700; color: var(--text); opacity: .45; text-transform: uppercase; letter-spacing: .5px; line-height: 1; }
+.btn-favorito {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%; border: 1px dashed #888;
+  background: var(--s2); color: #888; font-size: 18px; cursor: pointer;
+  transition: all .2s; font-family: inherit; padding: 0;
+}
+.btn-favorito:hover { border-color: #f5c800; color: #f5c800; }
+.btn-favorito.ativo { border: 2px solid #f5c800; color: #f5c800; background: var(--s2); }
+.btn-favorito.ativo:hover { border-color: #f5c800; color: #f5c800; }
+
+/* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
+.btn-final-wrap {
+  margin-top: 24px;
+  border: 1.5px solid var(--border2); border-radius: var(--r);
+  padding: 20px; background: var(--s2);
+}
+.btn-final-wrap p { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 16px; text-align: center; }
+.btn-final {
+  width: 100%; padding: 18px 20px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: var(--r-sm);
+  font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-final:hover { background: #3d6aee; }
+.btn-final:active { transform: scale(.98); }
+.btn-final.confirmado { background: var(--green); cursor: default; }
+.btn-final-sub { font-size: 12px; color: var(--text); text-align: center; margin-top: 10px; }
+
+/* ── BOTÃO QUENTE (confirmar atendimento humano — pedido: cores quentes,
+   vermelho/amarelo/laranja, pra chamar mais atenção que o resto da tela) ── */
+.btn-final.btn-quente { background: linear-gradient(135deg, #ff9d2e, #ff5252); color: #1a0a00; }
+.btn-final.btn-quente:hover { filter: brightness(1.08); }
+.btn-final.btn-amarelo { background: #f5c800; color: #1a1200; }
+.btn-final.btn-amarelo:hover { filter: brightness(1.06); }
+
+/* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
+.check-circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(0,212,170,.12); border: 1.5px solid rgba(0,212,170,.3);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.perfil-resumo {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px; margin: 20px 0;
+}
+.perfil-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.perfil-item:last-child { border-bottom: none; }
+.perfil-item-k { color: var(--text); min-width: 0; overflow-wrap: break-word; }
+.perfil-item-v { color: var(--text); font-weight: 600; text-align: right; min-width: 0; overflow-wrap: break-word; }
+
+.whats-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #25D366; color: #fff; border: none; border-radius: var(--r-sm);
+  padding: 16px 20px; width: 100%; font-size: 15px; font-weight: 700; font-family: inherit;
+  cursor: pointer; text-decoration: none; transition: opacity .2s;
+}
+.whats-btn:hover { opacity: .9; }
+
+/* ── RODAPÉ NAV ──────────────────────────────────────────────────────── */
+.nav-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--s1); border-top: 1px solid var(--border);
+  padding: 14px 20px;
+}
+.nav-inner { max-width: 520px; margin: 0 auto; display: flex; gap: 8px; }
+
+/* ── STICKY ATENDIMENTO (step-6: botão fixo enquanto o cliente lê os cards) */
+.sticky-atend {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--s1); border-top: 1px solid var(--border);
+  padding: 12px 20px 20px;
+}
+.sticky-atend-inner { max-width: 520px; margin: 0 auto; }
+.btn-nav {
+  flex: 1; padding: 14px; border-radius: var(--r-sm); border: none;
+  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .18s;
+}
+.btn-prim { background: var(--accent); color: #fff; }
+.btn-prim:hover { background: #3d6aee; }
+.btn-prim:disabled { opacity: .35; cursor: default; }
+.btn-sec { background: var(--s3); color: var(--text); }
+.btn-sec:hover { color: var(--text); }
+.btn-hide { display: none; }
+
+/* ── TOAST ────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-8px);
+  background: var(--s3); border: 1px solid var(--border2); color: var(--text);
+  padding: 10px 18px; border-radius: 99px; font-size: 13px; font-weight: 600;
+  opacity: 0; transition: all .22s; z-index: 999; pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── UTILITÁRIOS ─────────────────────────────────────────────────────── */
+.label-section {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--text); margin: 18px 0 10px;
+}
+
+/* ── TELA DE CONFIRMAÇÃO DOS DADOS (entre sliders e motivação) ────────── */
+.conf-card {
+  background: var(--s2); border: 2px solid var(--accent);
+  border-radius: var(--r); overflow: hidden; margin: 20px 0;
+}
+.conf-item {
+  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+}
+.conf-item-last { border-bottom: none; padding-bottom: 20px; }
+.conf-item-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text); opacity: .55; margin-bottom: 8px;
+}
+.conf-item-val {
+  font-size: 38px; font-weight: 800; color: var(--orange);
+  letter-spacing: -1.5px; line-height: 1.05; overflow-wrap: break-word;
+}
+.conf-item-val-sit {
+  font-size: clamp(20px, 5.5vw, 28px); letter-spacing: -.5px;
+}
+.conf-obs {
+  padding: 14px 20px; background: rgba(79,124,255,.07);
+  font-size: 13px; color: var(--text); line-height: 1.7;
+  border-top: 1px solid var(--border);
+}
+.conf-obs strong { color: var(--accent); font-weight: 700; }
+.conf-btns { display: flex; gap: 8px; margin-top: 16px; }
+.conf-btn-ref { flex: 1; }
+.conf-btn-sim { flex: 2; }
+
+/* ── TAG BUTTONS (filtros de seleção rápida) ─────────────────────────── */
+.tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-btn {
+  display: inline-flex; align-items: center; padding: 10px 18px;
+  border: 1.5px solid var(--border2); border-radius: 99px;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.tag-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tag-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
+/* Destaque em laranja pra "Pronto para morar"/"Em Obras" (pedido explícito) --
+   sobrescreve a cor accent padrão dos tag-btn, em qualquer estado. */
+.tag-btn-laranja, .tag-btn-laranja:hover { border-color: var(--orange); color: var(--orange); }
+.tag-btn-laranja.on { border-color: var(--orange); background: rgba(255,138,0,.15); color: var(--orange); }
+.ajustar-btn {
+  display: inline-flex; align-items: center; gap: 6px; background: none;
+  border: 1px solid var(--border2); border-radius: 99px; padding: 7px 14px;
+  font-size: 12px; font-weight: 600; color: var(--text);
+  cursor: pointer; font-family: inherit; margin-bottom: 16px; transition: all .15s;
+}
+.ajustar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── BOTÕES ESTILO CAIXA (maiores, empilhados) -- usado em "Qual é o seu
+   objetivo?", pedido explícito do usuário: nem sempre um grupo de opções
+   deve ter o estilo de tag/pílula, quando a pergunta pede mais destaque
+   individual por opção. ─────────────────────────────────────────────── */
+.box-group { display: flex; flex-direction: column; gap: 10px; }
+.box-btn {
+  display: flex; align-items: center; width: 100%; text-align: left;
+  padding: 10px 18px; border: 1.5px solid var(--border2); border-radius: var(--r);
+  font-size: 15px; font-weight: 600; color: var(--text);
+  background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.box-btn:hover { border-color: var(--accent); color: var(--accent); }
+.box-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
+
+/* ── HERO BACKGROUND SLIDESHOW ──────────────────────────────── */
+#step-0 { position: relative; overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.hero-bg-img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  opacity: 0; transition: opacity 1.5s ease;
+}
+.hero-bg-img.ativo { opacity: .09; }
+.hero-bg-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(to bottom,
+    var(--bg) 0%, transparent 30%,
+    transparent 70%, var(--bg) 100%);
+}
+</style>
+</head>
+<body>
+
+<!-- ÍCONES SVG inline (reutilizados via JS) -->
+<svg style="display:none" id="svgDefs">
+  <symbol id="ico-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 10.5L12 3l9 7.5V21a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z"/>
+    <path d="M9 22V12h6v10"/>
+  </symbol>
+  <symbol id="ico-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+  </symbol>
+  <symbol id="ico-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+  </symbol>
+  <symbol id="ico-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8l-4 4h16l-4-4z"/><circle cx="17" cy="14" r="1" fill="currentColor"/>
+  </symbol>
+  <symbol id="ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </symbol>
+  <symbol id="ico-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </symbol>
+  <symbol id="ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </symbol>
+  <symbol id="ico-whatsapp" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </symbol>
+  <symbol id="ico-handshake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 10h4l2-3h6l2 3h4"/>
+    <path d="M2 10v5a2 2 0 002 2h1l2 2h6l2-2h1a2 2 0 002-2v-5"/>
+    <path d="M9 7L7 10M15 7l2 3"/>
+    <path d="M9 17l3-3 3 3"/>
+  </symbol>
+  <symbol id="ico-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+  </symbol>
+  <symbol id="ico-whats" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </symbol>
+</svg>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONTEÚDO -->
+<div class="main">
+<div class="step-wrap">
+
+  <!-- STEP 0 — ABERTURA -->
+  <div class="step ativo" id="step-0">
+
+    <div class="hero-bg" aria-hidden="true">
+      <img class="hero-bg-img ativo" src="https://images.unsplash.com/photo-1560448204-e02f11c3d0f2?auto=format&fit=crop&w=600&q=50" alt="">
+      <img class="hero-bg-img" src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=50" alt="">
+      <img class="hero-bg-img" src="https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=600&q=50" alt="">
+      <img class="hero-bg-img" src="https://images.unsplash.com/photo-1513584684-2517b9cc5bc9?auto=format&fit=crop&w=600&q=50" alt="">
+      <img class="hero-bg-img" src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=50" alt="">
+      <div class="hero-bg-overlay"></div>
+    </div>
+
+    <div class="step-tag">App Lançamentos · Grande Goiânia</div>
+
+    <div class="hero-phrase">
+      <span class="hp-eyebrow">Vamos achar o</span>
+      <span class="hp-word1">apartamento</span>
+      <span class="hp-word2">ideal</span>
+      <span class="hp-bridge">pra você na</span>
+      <span class="hp-city">Grande Goiânia</span>
+      <span class="hp-tail">e região!</span>
+    </div>
+
+    <div class="hero-cta-area">
+      <div class="hero-cta-count">
+        Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!
+      </div>
+      <button class="btn-final btn-quente" onclick="avancarStep()">
+        <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+        ENCONTRAR MEU APARTAMENTO
+      </button>
+      <div class="btn-final-sub" style="margin-top:10px">Resultado rápido · Dados reais e atualizados</div>
+    </div>
+
+  </div>
+
+  <!-- STEP 1 — NOME + OBJETIVO (2 perguntas na mesma tela, pedido explícito
+       do usuário -- "objetivo" (moradias) migrou pra cá, saiu do step-4,
+       que agora fica só com quartos+altura). -->
+  <div class="step" id="step-1">
+    <div class="step-tag">Passo 2 de 3</div>
+    <div class="step-title">Como podemos te chamar?</div>
+    <div class="step-sub">Só o primeiro nome já basta.</div>
+    <div class="form-field">
+      <label>Seu nome</label>
+      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="given-name">
+    </div>
+
+    <div style="margin-top:32px">
+      <div class="step-title">Qual é o seu objetivo?</div>
+      <div class="box-group" id="tagsMoradia">
+        <button class="box-btn" onclick="toggleMoradia_(this,'morar')">Adquirir meu primeiro apartamento</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'mudanca')">Preciso mudar de bairro ou cidade</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'investir')">Quero investir e gerar renda</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'familia')">Presente familiar (Filho/Filha/Cônjuge/Outros)</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'upgrade')">Melhorar minha realidade (Fazer um Upgrade)</button>
+        <button class="box-btn" onclick="toggleMoradiaOutro_(this)">Outro</button>
+        <div id="moradiaOutroWrap" style="display:none">
+          <input type="text" id="moradiaOutroTxt" class="preco-input" style="width:100%;margin-top:4px" placeholder="Descreva seu objetivo...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 — PREÇO TOTAL + METRAGEM + CONTADOR, tudo na mesma tela
+       (mesma estrutura de baseimob-funil.html/"tela-config": contador de
+       opções em destaque no topo, sliders de preço total e metragem logo
+       abaixo, tudo atualizando em tempo real junto). Vem ANTES do nome
+       agora -- pega o dado técnico primeiro, personalização vem depois. -->
+  <div class="step" id="step-2">
+    <div class="step-tag">Passo 1 de 3</div>
+
+    <div class="s2-phrase">
+      <span class="s2-phrase-main">O Apartamento</span>
+      <span class="s2-phrase-sub">ideal pra você é:</span>
+    </div>
+
+    <div class="s2-sit-group" id="tagsSituacao">
+      <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para Morar</button>
+      <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
+    </div>
+
+    <div class="step-title" style="margin:40px 0 10px">Até quanto você quer investir?</div>
+    <div class="preco-input-row">
+      <span class="preco-prefixo">R$</span>
+      <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
+    </div>
+    <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
+    <div class="slider-label-row">
+      <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
+    </div>
+
+    <div class="step-title" style="margin:40px 0 10px">Área Útil ideal pra você é:</div>
+    <div class="preco-input-row">
+      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+      <span class="preco-prefixo">m²</span>
+    </div>
+    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
+    <div class="slider-label-row">
+      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+    </div>
+
+    <div class="conf-obs" style="text-align:center;margin-top:24px">
+      <span id="cntCombo" style="font-size:clamp(48px,14vw,64px);font-weight:800;color:var(--orange);letter-spacing:-1px">—</span>
+      <strong>opções encontradas <span id="cntComboSufixo">com esse perfil</span>.</strong>
+    </div>
+  </div>
+
+  <!-- STEP 3 — CONFIRMAÇÃO DOS DADOS -->
+  <div class="step" id="step-3">
+    <div class="step-tag">Confirme seus dados</div>
+    <div class="step-title">Antes de seguirmos, <span style="color:var(--accent)">confirme</span> o que você configurou!</div>
+
+    <div class="conf-card">
+      <div class="conf-item">
+        <div class="conf-item-label">Seu orçamento estimado</div>
+        <div class="conf-item-val" id="confOrcamento">—</div>
+      </div>
+      <div class="conf-item">
+        <div class="conf-item-label">Área útil ideal do apartamento</div>
+        <div class="conf-item-val" id="confArea">—</div>
+      </div>
+      <div class="conf-item conf-item-last">
+        <div class="conf-item-label">Ideal pra você é</div>
+        <div class="conf-item-val conf-item-val-sit" id="confSituacao">—</div>
+      </div>
+      <div class="conf-obs">
+        Faixa de investimento (±20%): <strong id="confPrecoFaixa">—</strong><br>
+        Intervalo de área compatível: <strong id="confFaixa">—</strong>
+      </div>
+    </div>
+
+    <div class="conf-btns">
+      <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Ajustar</button>
+      <button class="btn-nav btn-prim conf-btn-sim" onclick="avancarStep()">Confirmar</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 — TIPO DE APARTAMENTO: quartos + altura (personalizada com o
+       nome, colhido no step 1) -- "objetivo"/moradia migrou pro step 1,
+       aqui ficam só as 2 perguntas de perfil do imóvel em si. Botão
+       "Voltar" próprio (estilo .ajustar-btn, igual "Ajustar filtros" da
+       tela de resultado) -- pedido explícito, some o Voltar do rodapé
+       fixo só nesta etapa (ver atualizarBotoes). -->
+  <div class="step" id="step-4">
+    <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
+    <div class="step-tag">Passo 3 de 3</div>
+    <div class="step-title" id="motivacaoTitulo">O que define o tipo de apartamento mais adequado para você?</div>
+    <div style="margin-top:14px">
+      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Quantos quartos você precisa?</div>
+      <div class="tag-group" id="tagsQuartos">
+        <button class="tag-btn" onclick="selecionarQuartos_(this,1)">1 quarto</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,2)">2 quartos</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,3)">3 quartos</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,4)">4 quartos</button>
+        <button class="tag-btn" onclick="selecionarQuartos_(this,5)">5+ quartos</button>
+      </div>
+    </div>
+    <div style="margin-top:44px">
+      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
+      <div class="tag-group" id="tagsAltura">
+        <button class="tag-btn" onclick="selecionarAltura_(this,'baixo')">Até o 5º andar</button>
+        <button class="tag-btn" onclick="selecionarAltura_(this,'medio')">Do 5º ao 10º andar</button>
+        <button class="tag-btn" onclick="selecionarAltura_(this,'alto')">Acima do 10º andar</button>
+      </div>
+    </div>
+    <div class="hero-cta-count" id="cntStep4Wrap" style="margin-top:40px;margin-bottom:12px">Encontramos <strong>—</strong> opções para você!</div>
+    <button class="btn-final btn-quente" id="btnVerOpcoes" onclick="avancarStep()">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+      <span id="btnVerOpcoesTxt">QUERO VER MINHAS OPÇÕES</span>
+    </button>
+  </div>
+
+  <!-- STEP 6 — MELHOR MATCH / TABELA DE OPÇÕES -->
+  <div class="step" id="step-6">
+    <button class="ajustar-btn" onclick="refinarBusca_()">← Ajustar filtros</button>
+    <div class="match-header">
+      <div class="step-title" style="margin-bottom:4px" id="matchTitulo">—</div>
+    </div>
+
+    <div class="opcoes-tabela" id="opcoesTabela"><!-- populado por JS --></div>
+
+    <button class="btn-ver-mais-opcoes" id="btnVerMaisOpcoes" style="display:none" onclick="toggleVerMaisOpcoes_()"></button>
+    <div class="opcoes-tabela" id="opcoesExtraTabela" style="display:none"><!-- populado por JS, ao clicar em "Ver +N opções" --></div>
+  </div>
+
+  <!-- STEP 7 — CAPTURA -->
+  <div class="step" id="step-7">
+    <div class="step-tag">Quase lá</div>
+    <div class="step-title" id="capturaTitulo">Prepare-se para muitas novidades!</div>
+    <div class="step-sub" style="color:#4caf7d;font-weight:700;display:flex;align-items:center;gap:6px;margin-top:20px">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-whatsapp"/></svg>
+      Digite abaixo seu melhor WhatsApp!
+    </div>
+
+    <div class="whats-box">
+      <div class="form-field">
+        <label>Seu WhatsApp com DDD</label>
+        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
+      </div>
+      <div class="form-field" style="margin-bottom:0">
+        <label>Confirme o WhatsApp</label>
+        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
+      </div>
+    </div>
+
+    <div class="whats-mismatch-msg" id="whatsMismatchMsg" style="display:none">
+      <svg width="16" height="16" style="flex-shrink:0"><use href="#ico-alert"/></svg>
+      <span>Os números não coincidem — confira os dois campos</span>
+    </div>
+
+    <div class="privacy-note">
+      <svg width="14" height="14" style="flex-shrink:0;margin-top:1px;color:var(--text)"><use href="#ico-lock"/></svg>
+      <span>Seus dados ficam só com a nossa equipe. Nenhuma lista de e-mail ou retorno de terceiros.</span>
+    </div>
+
+    <button class="btn-final btn-amarelo" id="btnConfirmarFinal" style="margin-top:20px" onclick="avancarStep()">
+      <svg width="20" height="20" style="flex-shrink:0"><use href="#ico-handshake"/></svg>
+      CONFIRMAR CONSULTORIA
+    </button>
+    <div class="btn-final-sub">Você recebe contato em até 2 horas pelo WhatsApp</div>
+
+    <!-- RODAPÉ -- dentro do step-7 (Quase lá), só aparece nesta etapa. -->
+    <div class="app-footer">CJ 27357- Líder Empreendimentos Imobiliários LTDA</div>
+  </div>
+
+  <!-- STEP 8 — AGRADECIMENTO -->
+  <div class="step" id="step-8">
+    <div class="check-circle">
+      <svg width="28" height="28" style="color:var(--green)"><use href="#ico-check"/></svg>
+    </div>
+    <div class="step-title" style="text-align:center;margin-bottom:6px">Confirmado, <span id="obrigadoNome"></span></div>
+    <div class="step-sub" style="text-align:center;font-weight:700;color:var(--green);margin-bottom:6px">Sua consultoria está agendada.</div>
+    <div class="step-sub" style="text-align:center">Você recebe nossa mensagem no WhatsApp em até 2 horas.</div>
+
+    <div id="baseProjecoes" style="margin-bottom:20px"><!-- populado por JS --></div>
+
+    <div class="perfil-resumo" id="perfilResumo"><!-- populado por JS --></div>
+
+    <div style="font-size:13px;color:var(--text);text-align:center;margin-bottom:12px">Prefere falar agora?</div>
+    <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
+      <svg width="20" height="20"><use href="#ico-whats"/></svg>
+      Falar agora no WhatsApp
+    </a>
+    <div style="font-size:12px;color:var(--text);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
+  </div>
+
+</div><!-- /step-wrap -->
+</div><!-- /main -->
+
+<!-- NAV BAR -->
+<div class="nav-bar" id="navBar">
+  <div class="nav-inner">
+    <button class="btn-nav btn-sec btn-hide" id="btnVoltar" onclick="voltarStep()">Voltar</button>
+    <button class="btn-nav btn-prim" id="btnAvancar" onclick="avancarStep()">Começar</button>
+  </div>
+</div>
+
+<!-- STICKY ATENDIMENTO — visível no step-6 enquanto o cliente lê os cards -->
+<div class="sticky-atend" id="stickyAtend" style="display:none">
+  <div class="sticky-atend-inner">
+    <div id="stickyFavCount" style="display:none;text-align:center;font-size:14px;font-weight:700;color:#f5c800;margin-bottom:8px"></div>
+    <button class="btn-final btn-quente" onclick="avancarStep()">
+      <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+      QUERO ATENDIMENTO EXCLUSIVO
+    </button>
+    <div class="btn-final-sub" style="opacity:.55;margin-top:6px">Resultado rápido · Dados reais e atualizados</div>
+  </div>
+</div>
+
+<script src="painel/config.js" onerror="void(0)"></script>
+<script>
+// ── DADOS REAIS (parte 97, 2026-07) ────────────────────────────────────────
+// Substituiu o MOCK_BASE anterior: busca listar_lancamentos (rota pública,
+// ver ACOES_PUBLICAS_GET em code.txt -- não precisa de token/sessão) e
+// agrupa por empreendimento, igual ao resto do projeto
+// (agruparPorEmpreendimento_ em lancamentos.html/estrategias.html). Só
+// "Condomínio Vertical" entra aqui -- lotes/Condomínio Horizontal já têm o
+// funil próprio em baseimob-funil.html.
+let TODOS_LANC = [];
+let PRECO_BOUNDS = [200000, 2000000];
+let AREA_BOUNDS = [40, 140];
+
+const CIDADES_NORM_ = {
+  'goiania': 'Goiânia', 'goiânia': 'Goiânia',
+  'aparecida de goiania': 'Aparecida de Goiânia', 'aparecida de goiânia': 'Aparecida de Goiânia',
+  'senador canedo': 'Senador Canedo',
+};
+function normCidade_(s) { if (!s) return s; return CIDADES_NORM_[s.toLowerCase()] || s; }
+
+function tipoImovelDominanteSimulador_(unidades) {
+  const cont = {};
+  (unidades || []).forEach(u => { const t = String(u.tipo || '').trim(); if (t) cont[t] = (cont[t] || 0) + 1; });
+  let melhor = '', max = 0;
+  Object.keys(cont).forEach(t => { if (cont[t] > max) { max = cont[t]; melhor = t; } });
+  return melhor;
+}
+
+// previsaoEntrega às vezes vem como Date ISO em vez de "Mês/Ano" -- mesmo
+// problema já visto em lancamentos.html (célula formatada como Data no
+// Sheets vira objeto Date ao passar por getValues()/JSON). Formata pra
+// exibição em vez de vazar a string ISO crua pro lead.
+const MESES_ABREV_SIM_ = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function formatarDataEntrega_(v) {
+  const s = String(v || '').trim();
+  if (!s) return '—';
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return MESES_ABREV_SIM_[parseInt(iso[2], 10) - 1] + '/' + iso[1];
+  return s;
+}
+
+async function carregarBaseReal() {
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const data = await resp.json();
+    const linhas = data.lancamentos || [];
+
+    const grupos = {};
+    linhas.forEach(l => {
+      if (l.tipoEmpreendimento !== 'Condomínio Vertical') return;
+      if (l.statusAtivo === 'Excluído') return;
+      const key = l.idLancamento || l.nomeEmpreendimento;
+      if (!grupos[key]) grupos[key] = { ...l, unidades: [] };
+      grupos[key].unidades.push(l);
+    });
+
+    TODOS_LANC = Object.values(grupos).map(g => {
+      const areas  = g.unidades.map(u => Number(u.areaUtil) || 0).filter(v => v > 0);
+      const precos = g.unidades.map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
+      const total    = parseInt(g.totalUnidades, 10) || 0;
+      const estoque  = parseInt(g.estoque, 10) || 0;
+      // Unidades (tipologias) individuais, cada uma com sua própria área/preço-m² --
+      // preservado à parte pra poder checar, por tipologia, se o EMPREENDIMENTO tem
+      // de fato um apartamento com a metragem e o preço que a pessoa está buscando
+      // (não basta "estar dentro da média/faixa geral do prédio" -- ver
+      // temApartamentoCompativel_ abaixo).
+      const unidades = g.unidades
+        .map(u => {
+          const a = Number(u.areaUtil) || 0;
+          const p = Number(u.precoMedio) || 0;
+          return { areaUtil: a, precoTotal: p, precoM2: (a > 0 && p > 0) ? p / a : 0 };
+        })
+        .filter(u => u.areaUtil > 0 && u.precoTotal > 0);
+      return {
+        id: g.idEmpreendimento || g.idLancamento, nome: g.nomeEmpreendimento || '—',
+        regiao: [g.bairro, normCidade_(g.cidade)].filter(Boolean).join(' · ') || 'Goiânia',
+        bairro: g.bairro || '',
+        tipoImovel: tipoImovelDominanteSimulador_(g.unidades), padrao: g.padrao || '',
+        estagio: g.status || '—', entregaPrev: g.previsaoEntrega || '—',
+        prazoPag: parseInt(g.prazoMaximo, 10) || 0,
+        areaMin: areas.length ? Math.min(...areas) : 0,
+        areaMax: areas.length ? Math.max(...areas) : 0,
+        precoAPartir: precos.length ? Math.min(...precos) : 0,
+        precoM2: calcularM2Medio(g.unidades),
+        unidades,
+        total, estoque,
+        pctVendido: calcularPercentualVendido(estoque, total),
+        temLazer: !!String(g.lazer || '').trim(),
+      };
+    }).filter(c => c.areaMin > 0 && c.precoAPartir > 0);
+
+    if (TODOS_LANC.length) {
+      const totais  = TODOS_LANC.map(c => c.precoAPartir).filter(v => v > 0);
+      const areasMin  = TODOS_LANC.map(c => c.areaMin);
+      const areasMax  = TODOS_LANC.map(c => c.areaMax);
+      PRECO_BOUNDS = [Math.floor(Math.min(...totais) / 25000) * 25000, Math.ceil(Math.max(...totais) / 25000) * 25000];
+      AREA_BOUNDS  = [Math.floor(Math.min(...areasMin) / 5) * 5, Math.ceil(Math.max(...areasMax) / 5) * 5];
+    }
+  } catch (e) {
+    console.error('[simulador] erro ao carregar base real:', e);
+    TODOS_LANC = [];
+  }
+  inicializarSliders();
+  montarStatsAbertura_();
+}
+
+// Estatísticas reais da base na tela de abertura -- pedido do usuário pra
+// a primeira tela não ficar "fria": mostrar de cara que é uma consultoria
+// com dados de mercado reais e atuais, não só mais uma landing page comum.
+function montarStatsAbertura_() {
+  const count = TODOS_LANC.length;
+  const val = count || '—';
+  document.querySelectorAll('.stats-total-emp').forEach(el => { el.textContent = val; });
+}
+
+// ── SCORE DE TRAÇÃO (versão pública e parcial) ─────────────────────────────
+// Reaproveita a MESMA fórmula/pesos relativos de calcularScoreTracao
+// (lancamentos.html/estrategias.html, parte 84: Prazo 1 / Disponibilidade 3
+// / Atratividade 4), mas só com os eixos calculáveis a partir de dado
+// público (listar_lancamentos). Os eixos Vendedor e Similaridade exigem
+// listarPerfisVendedor/listar_padroes_vendedores/listar_modelos_vendedores,
+// que NÃO estão em ACOES_PUBLICAS_GET (exigem sessão) -- por isso ficam de
+// fora aqui, não porque a fórmula mudou.
+const TETO_PRAZO_VERTICAL   = 36;
+const TETO_ESTOQUE_VERTICAL = 150;
+const PESO_PRAZO_PUB = 1, PESO_DISP_PUB = 3, PESO_ATRAT_PUB = 4;
+
+function scoreTracaoPublico_(c) {
+  const precos = TODOS_LANC.map(x => x.precoAPartir).filter(v => v > 0);
+  const minP = precos.length ? Math.min(...precos) : c.precoAPartir;
+  const maxP = precos.length ? Math.max(...precos) : c.precoAPartir;
+  const atrat   = (maxP === minP) ? 5 : 10 * (1 - (c.precoAPartir - minP) / (maxP - minP));
+  const disp    = Math.min(10, 10 * (c.estoque / TETO_ESTOQUE_VERTICAL));
+  const prazoSc = c.prazoPag > 0 ? Math.min(10, 10 * (c.prazoPag / TETO_PRAZO_VERTICAL)) : 0;
+  return (prazoSc * PESO_PRAZO_PUB + disp * PESO_DISP_PUB + atrat * PESO_ATRAT_PUB) / (PESO_PRAZO_PUB + PESO_DISP_PUB + PESO_ATRAT_PUB);
+}
+
+const WHATSAPP_NUM = '5562981049078';
+
+// ── ESTADO ──────────────────────────────────────────────────────────────
+let stepAtual = 0;
+const TOTAL = 9; // steps 0..8
+
+const D = {
+  filtroSituacao: 'todos', situacoes: new Set(), moradias: new Set(), alturaPref: null, quartosPref: null,
+  // Sinais comportamentais por card (Etapa 6) -- id do empreendimento que o
+  // cliente expandiu ("Ver Preço") ou favoritou (♥). Pedido explícito do
+  // usuário: preferência REAL clicada vale mais que a declarada nos sliders.
+  cardsPrecoVisto: new Set(), cardsFavoritos: new Set(), ofertasMostradas: [],
+  // Idem, mas pra "opções extras" (as que ficam atrás do botão "VER +N
+  // OPÇÕES ENCONTRADAS") -- sinais SEPARADOS dos cards principais, porque
+  // o e-mail do lead relata isso numa tabela à parte ("Tabela Extra de
+  // Opções").
+  extrasMostrados: [], extraPrecoVisto: new Set(), extraFavoritos: new Set(),
+  verMaisOpcoesClicado: false,
+  precoAlvo: null, metragemAlvo: null, areaRange: null,
+  nome: '', whatsapp: '',
+  tsInicio: Date.now(), precoInicial: null, precoFinal: null,
+  areaInicial: null, areaFinal: null, stepAbandono: null,
+  ajustesSlider: 0,
+  origemAcesso: new URLSearchParams(location.search).get('utm_source') || 'direto',
+  // idEmpreendimento da isca escolhida pelo motor (selecionarIsca_, code.txt) --
+  // null se o motor não devolveu nada (nenhum mix publicado pro segmento
+  // desse perfil ainda) e o "melhor match" caiu no cálculo local de sempre.
+  iscaId: null,
+
+  // ── DADOS TÉCNICOS CAPTURADOS SEM PERGUNTAR NADA AO CLIENTE (pedido
+  // explícito do usuário) -- tempo por etapa, dispositivo, horário, origem
+  // (UTM completo), geolocalização aproximada por IP. Tudo isso entra no
+  // payload do lead (submeter()) e vira tabela no e-mail (code.txt,
+  // montarBlocoDadosTecnicosEmail_). ──────────────────────────────────────
+  sessionId: Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
+  tempoPorStep: {}, // { stepId: ms acumulado }
+  dispositivo: /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+  horaAcesso: new Date().getHours(),
+  utmSource: new URLSearchParams(location.search).get('utm_source') || '',
+  utmMedium: new URLSearchParams(location.search).get('utm_medium') || '',
+  utmCampaign: new URLSearchParams(location.search).get('utm_campaign') || '',
+  // Preenchido de forma assíncrona por geolocalizarPorIp_() -- IP, não GPS
+  // (pedido tinha "IP/GPS com permissão"; GPS exige popup de permissão no
+  // meio do funil, o que atrapalha conversão -- IP é silencioso e sem
+  // fricção). Fica null se a chamada externa falhar/bloquear.
+  geoAprox: null,
+};
+
+// ── NAV ───────────────────────────────────────────────────────────────
+// Mapeia o step-id do DOM (não segue ordem crescente -- ex: confirmação é
+// step-3 mas vem ANTES de nome, que é step-1) pra "Etapa N" na ordem real
+// de navegação do cliente. Usado só pro rastreio comportamental (tempo por
+// etapa, taxa de abandono agregada) -- não afeta a navegação em si.
+const ETAPA_POR_STEP_ = { 0: 1, 2: 2, 3: 3, 1: 4, 4: 5, 6: 6, 7: 7, 8: 8 };
+let _stepEntradaTs = Date.now();
+
+// Beacon fire-and-forget: registra a transição de etapa (Fase 2 da Central
+// de Inteligência Comportamental -- pedido explícito do usuário de
+// construir a API de agregação em cima disso). Cada evento carrega tanto a
+// etapa que a sessão está DEIXANDO (com o tempo gasto nela) quanto a etapa
+// que está CHEGANDO -- assim dá pra calcular reach/dropout E tempo médio
+// por etapa a partir da MESMA linha, cruzando com UTM/dispositivo, sem
+// precisar esperar o lead completar o funil (que é quando os outros sinais,
+// tipo favoritos, só existem hoje). Não bloqueia navegação nem trata erro
+// (se falhar, só não entra na estatística agregada).
+function registrarEventoFunil_(opts) {
+  if (typeof WEBHOOK_URL === 'undefined') return;
+  try {
+    const payload = Object.assign({
+      acao: 'registrar_evento_funil', sessionId: D.sessionId, canal: 'App Lançamentos',
+      utmSource: D.utmSource || D.origemAcesso, dispositivo: D.dispositivo,
+    }, opts);
+    fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
+  } catch (e) {}
+}
+
+function irParaStep(n) {
+  const agora = Date.now();
+  const etapaSaindo = ETAPA_POR_STEP_[stepAtual] || null;
+  const duracaoMs = agora - _stepEntradaTs;
+  D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + duracaoMs;
+  registrarEventoFunil_({
+    etapaSaida: etapaSaindo, tempoMsEtapaSaida: duracaoMs,
+    etapaChegada: ETAPA_POR_STEP_[n] || n, abandonou: false,
+  });
+  document.getElementById('step-' + stepAtual).classList.remove('ativo');
+  stepAtual = n;
+  document.getElementById('step-' + stepAtual).classList.add('ativo');
+  _stepEntradaTs = agora;
+  atualizarBotoes();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function avancarStep() {
+  if (!validar()) return;
+
+  if (stepAtual === 0) { irParaStep(2); return; }                           // capa → sliders
+  if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
+  if (stepAtual === 3) { irParaStep(1); return; }                           // confirmação → nome
+  if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
+  if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
+  if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
+  if (stepAtual === 7) { submeter(); return; }
+  if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
+}
+
+function montarCapturaTitulo_() {
+  const primeiroNome = D.nome.split(' ')[0];
+  document.getElementById('capturaTitulo').textContent =
+    `${primeiroNome}, confirme seu pedido para entrarmos em contato com você.`;
+}
+
+function montarConfirmacao_() {
+  document.getElementById('confOrcamento').textContent = formatBRL_(D.precoAlvo);
+  document.getElementById('confArea').textContent = D.metragemAlvo + ' m²';
+  const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
+  const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
+  document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
+  document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
+  document.getElementById('confSituacao').textContent = situacaoEscolhidaLabel_() || '—';
+}
+
+function montarMotivacaoTitulo_() {
+  const primeiroNome = D.nome.split(' ')[0];
+  document.getElementById('motivacaoTitulo').innerHTML =
+    primeiroNome + ', o que define o <span style="color:var(--accent)">tipo de apartamento</span> mais adequado para você?';
+  const _t4 = filtrados().length;
+  const _w4 = document.getElementById('cntStep4Wrap');
+  if (_w4) {
+    if (_t4 <= 7) {
+      _w4.innerHTML = `Encontramos <strong>${_t4}</strong> opções para você!`;
+    } else {
+      _w4.innerHTML = `Encontramos <strong style="font-size:2em;line-height:1;vertical-align:middle">7</strong> opções especiais para você! <span style="color:var(--orange)">(+${_t4 - 7} adicionais)</span>`;
+    }
+  }
+}
+
+function refazerSliders() {
+  irParaStep(2);
+}
+
+function voltarStep() {
+  if (stepAtual === 2) { irParaStep(0); return; } // sliders → capa
+  if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
+  if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
+  if (stepAtual > 2) irParaStep(stepAtual - 1);
+}
+
+function atualizarBotoes() {
+  const bV = document.getElementById('btnVoltar');
+  const bA = document.getElementById('btnAvancar');
+  const navBar = document.getElementById('navBar');
+  const main = document.querySelector('.main');
+
+  // Step 0 tem CTA inline — nav bar some e o padding de fundo some junto
+  if (navBar) navBar.style.display = (stepAtual === 0 || stepAtual === 6) ? 'none' : '';
+  if (main) main.style.paddingBottom = stepAtual === 0 ? '24px' : '';
+  const stickyAtend = document.getElementById('stickyAtend');
+  if (stickyAtend) stickyAtend.style.display = stepAtual === 6 ? 'block' : 'none';
+
+  // step 3 (confirmação) e step 4 (quartos/altura) têm botão de avançar
+  // embutido; steps 6..8 também têm botões próprios.
+  const semBotaoAvancarFooter = stepAtual === 3 || stepAtual === 4 || stepAtual >= 6;
+  bA.classList.toggle('btn-hide', semBotaoAvancarFooter);
+  bV.classList.toggle('btn-hide', stepAtual === 3 || stepAtual === 0 || stepAtual === 4 || stepAtual === 8 || stepAtual >= 6);
+
+  bA.textContent = 'Próximo';
+}
+
+// ── VALIDAÇÃO ───────────────────────────────────────────────────────────
+function validar() {
+  if (stepAtual === 2) {
+    if (D.situacoes.size === 0) {
+      document.getElementById('tagsSituacao').classList.add('sit-erro');
+      toast('Selecione Pronto para Morar ou Em Obras para continuar');
+      return false;
+    }
+  }
+  if (stepAtual === 1) {
+    const nome = document.getElementById('fNome').value.trim();
+    if (!nome) { toast('Informe seu nome para continuar'); return false; }
+    D.nome = nome;
+    if (D.moradias.size === 0) { toast('Selecione pelo menos uma opção para continuar'); return false; }
+  }
+  if (stepAtual === 4) {
+    let ok = true;
+    if (!D.quartosPref) { document.getElementById('tagsQuartos').classList.add('tag-group-erro'); ok = false; }
+    if (!D.alturaPref)  { document.getElementById('tagsAltura').classList.add('tag-group-erro');  ok = false; }
+    if (!ok) { toast('Marque pelo menos 1 opção em cada grupo para continuar'); return false; }
+  }
+  if (stepAtual === 7) {
+    const whats  = document.getElementById('fWhats').value.replace(/\D/g,'');
+    const whats2 = document.getElementById('fWhats2').value.replace(/\D/g,'');
+    if (whats.length < 10)  { toast('Informe um WhatsApp válido com DDD'); return false; }
+    if (whats !== whats2)   { checarWhatsMatch_(); return false; } // alerta visual já cobre o toast
+    D.whatsapp = whats;
+  }
+  return true;
+}
+
+// ── SELEÇÃO ──────────────────────────────────────────────────────────────
+function selecionarSituacao_(el, val) {
+  document.getElementById('tagsSituacao').classList.remove('sit-erro');
+  if (el.classList.contains('on')) {
+    el.classList.remove('on');
+    D.situacoes.delete(val);
+  } else {
+    el.classList.add('on');
+    D.situacoes.add(val);
+  }
+  atualizarComboUI_();
+}
+
+function toggleMoradia_(el, val) {
+  el.classList.toggle('on');
+  if (el.classList.contains('on')) D.moradias.add(val);
+  else D.moradias.delete(val);
+}
+
+function toggleMoradiaOutro_(el) {
+  toggleMoradia_(el, 'outro');
+  const wrap = document.getElementById('moradiaOutroWrap');
+  if (wrap) wrap.style.display = el.classList.contains('on') ? 'block' : 'none';
+  if (el.classList.contains('on')) setTimeout(() => document.getElementById('moradiaOutroTxt')?.focus(), 50);
+}
+
+function selecionarAltura_(el, val) {
+  document.getElementById('tagsAltura').classList.remove('tag-group-erro');
+  document.querySelectorAll('#tagsAltura .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.alturaPref = val;
+}
+
+function selecionarQuartos_(el, val) {
+  document.getElementById('tagsQuartos').classList.remove('tag-group-erro');
+  document.querySelectorAll('#tagsQuartos .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.quartosPref = val;
+}
+
+function refinarBusca_() { irParaStep(2); }
+
+// ── FILTRO / MATCH ──────────────────────────────────────────────────────
+// scoreMatchPreferencia_ (distância relativa ao alvo do slider, mesma
+// metodologia de baseimob-funil.html) só ordena -- decide QUEM aparece
+// primeiro. Quem CONTA como "encontrado" é temApartamentoCompativel_: o
+// empreendimento só entra se tiver, de verdade, uma tipologia de apartamento
+// com a metragem (dentro da faixa escolhida) E o preço total (dentro da
+// tolerância) que a pessoa pediu -- não basta a MÉDIA/faixa geral do prédio
+// bater por acaso enquanto nenhum apartamento específico atende aos dois
+// critérios ao mesmo tempo.
+const TOLERANCIA_PRECO_ = 0.20;
+
+function matchSituacao_(estagio, filtro) {
+  if (filtro === 'pronto_novo') return ['Pronto', 'Pronto novo', 'Entregue'].includes(estagio);
+  if (filtro === 'em_obras')   return ['Em obras', 'Em planta'].includes(estagio);
+  return true;
+}
+
+function scoreMatchPreferencia_(c, aRange, precoAlvo) {
+  const userMid  = (aRange[0] + aRange[1]) / 2;
+  const cMid     = (c.areaMin + c.areaMax) / 2;
+  const aDist    = Math.abs(cMid - userMid) / userMid;
+  const pDist    = Math.abs(c.precoAPartir - precoAlvo) / precoAlvo;
+  const overlap  = c.areaMax >= aRange[0] && c.areaMin <= aRange[1];
+  let s = 100 - aDist * 45 - pDist * 45;
+  s += overlap ? 12 : -22;
+  return Math.max(0, Math.min(100, Math.round(s)));
+}
+
+function temApartamentoCompativel_(c, aRange, precoAlvo) {
+  return (c.unidades || []).some(u =>
+    u.areaUtil >= aRange[0] && u.areaUtil <= aRange[1] &&
+    Math.abs(u.precoTotal - precoAlvo) / precoAlvo <= TOLERANCIA_PRECO_
+  );
+}
+
+function rankeados() {
+  if (!D.areaRange || !D.precoAlvo) return [];
+  return TODOS_LANC
+    .map(c => ({
+      ...c,
+      matchPref: scoreMatchPreferencia_(c, D.areaRange, D.precoAlvo),
+      tracao: scoreTracaoPublico_(c),
+      compativel: temApartamentoCompativel_(c, D.areaRange, D.precoAlvo),
+    }))
+    .sort((a, b) => b.matchPref !== a.matchPref ? b.matchPref - a.matchPref : b.tracao - a.tracao);
+}
+
+function filtrados() {
+  return rankeados().filter(c => {
+    if (!c.compativel) return false;
+    const s = D.situacoes;
+    if (s.size === 0) return true;
+    return (s.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
+           (s.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras'));
+  });
+}
+
+// ── SLIDERS ──────────────────────────────────────────────────────────────
+function animar(id, novoVal) {
+  const el = document.getElementById(id);
+  const txt = String(novoVal);
+  if (el.textContent === txt) return;
+  el.textContent = txt;
+  el.classList.remove('pulso');
+  void el.offsetWidth;
+  el.classList.add('pulso');
+  // Remove a classe depois da animação -- sem isso, o keyframe final
+  // (color: var(--text)) fica sobrepondo a cor própria do elemento pra
+  // sempre (ex.: o "5" de #cntCombo, que devia ficar var(--accent)).
+  clearTimeout(el._pulsoTimer);
+  el._pulsoTimer = setTimeout(() => el.classList.remove('pulso'), 350);
+}
+
+function formatBRL_(v) {
+  return 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+}
+
+// Só conta como "ajuste" (ajustesSlider, dado comportamental pro BaseImob) o
+// que o cliente de fato mexeu -- as chamadas de inicializarSliders() setando
+// o valor padrão dos sliders não entram nessa conta.
+let slidersProntos_ = false;
+
+function inicializarSliders() {
+  const sP = document.getElementById('sliderPreco');
+  sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
+  sP.value = Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
+  document.getElementById('lblPrecoMin').textContent = formatBRL_(PRECO_BOUNDS[0]);
+  document.getElementById('lblPrecoMax').textContent = formatBRL_(PRECO_BOUNDS[1]);
+  atualizarPreco(sP.value);
+
+  const sM = document.getElementById('sliderMetragem');
+  sM.min = AREA_BOUNDS[0]; sM.max = AREA_BOUNDS[1]; sM.step = 5;
+  sM.value = Math.round((AREA_BOUNDS[0] + AREA_BOUNDS[1]) / 2 / 5) * 5;
+  document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
+  document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
+  atualizarMetragem(sM.value);
+
+  slidersProntos_ = true;
+}
+
+function atualizarPreco(val) {
+  const v = parseInt(val);
+  if (D.precoInicial === null) D.precoInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
+  D.precoAlvo = v; D.precoFinal = v;
+  document.getElementById('precoDigitado').value = v.toLocaleString('pt-BR');
+  atualizarComboUI_();
+}
+
+// Caixa de texto (mesmo padrão de busca.html: preco-input-row + slider
+// sincronizados). IMPORTANTE: só reformata/sincroniza o slider aqui -- NÃO
+// valida contra PRECO_BOUNDS a cada tecla. Validar em toda digitação
+// brigava com o próprio ato de apagar: apagar um dígito faz o número cair
+// abaixo do mínimo momentaneamente, e o ajuste automático reescrevia o
+// valor de volta, dando a impressão de que o campo não deixava apagar
+// nada. A validação de verdade (aviso + ajuste pro limite) só roda no
+// blur, ver validarLimitesPreco_.
+function atualizarPrecoDigitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  const input = document.getElementById('precoDigitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+  const v = parseInt(digitos) || 0;
+
+  input.value = digitos ? v.toLocaleString('pt-BR') : '';
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
+  if (!v) return; // campo vazio/incompleto -- não atualiza estado ainda
+
+  if (D.precoInicial === null) D.precoInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
+  D.precoAlvo = v; D.precoFinal = v;
+  document.getElementById('sliderPreco').value = Math.min(Math.max(v, PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
+  atualizarComboUI_();
+}
+
+// Só valida contra a faixa da base quando a pessoa termina de digitar
+// (sai do campo) -- ver comentário acima do porquê não faz isso a cada tecla.
+function validarLimitesPreco_() {
+  const input = document.getElementById('precoDigitado');
+  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
+  if (v && (v < PRECO_BOUNDS[0] || v > PRECO_BOUNDS[1])) {
+    toast(`Preço fora da faixa disponível: de ${formatBRL_(PRECO_BOUNDS[0])} a ${formatBRL_(PRECO_BOUNDS[1])}`);
+  }
+  v = Math.min(Math.max(v || PRECO_BOUNDS[0], PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
+  document.getElementById('sliderPreco').value = v;
+  atualizarPreco(v);
+}
+
+// Metragem é um valor único (mesma metodologia do preço total, uma alça só) --
+// o cliente escolhe o tamanho que quer, e o motor de match já embute uma
+// tolerância de ±20% pra cima/baixo (ex.: escolheu 50m² -> entra no cálculo
+// de 40m² a 60m²), sem precisar de uma segunda alça pra isso.
+const TOLERANCIA_METRAGEM_ = 0.20;
+function atualizarMetragem(val) {
+  const v = parseInt(val);
+  if (D.areaInicial === null) D.areaInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
+  D.metragemAlvo = v; D.areaFinal = v;
+  const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
+  const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
+  D.areaRange = [lo, hi];
+  document.getElementById('metragemDigitado').value = v.toLocaleString('pt-BR');
+  atualizarComboUI_();
+}
+
+// Idem atualizarPrecoDigitado_ -- só reformata/sincroniza, sem validar
+// contra AREA_BOUNDS a cada tecla (ver comentário lá do porquê).
+function atualizarMetragemDigitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  const input = document.getElementById('metragemDigitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+  const v = parseInt(digitos) || 0;
+
+  input.value = digitos ? v.toLocaleString('pt-BR') : '';
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
+  if (!v) return;
+
+  if (D.areaInicial === null) D.areaInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
+  D.metragemAlvo = v; D.areaFinal = v;
+  D.areaRange = [Math.round(v * (1 - TOLERANCIA_METRAGEM_)), Math.round(v * (1 + TOLERANCIA_METRAGEM_))];
+  document.getElementById('sliderMetragem').value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  atualizarComboUI_();
+}
+
+// Só valida contra a faixa da base no blur (ver validarLimitesPreco_).
+function validarLimitesMetragem_() {
+  const input = document.getElementById('metragemDigitado');
+  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
+  if (v && (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1])) {
+    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
+  }
+  v = Math.min(Math.max(v || AREA_BOUNDS[0], AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  document.getElementById('sliderMetragem').value = v;
+  atualizarMetragem(v);
+}
+
+// "Pronto para morar"/"Em Obras" -- null quando é "Todos" (não precisa de
+// destaque, é a opção neutra). Usado tanto no badge quanto no texto da
+// contagem, pra manter os dois sempre consistentes.
+function situacaoEscolhidaLabel_() {
+  const s = D.situacoes;
+  if (s.has('pronto_novo') && s.has('em_obras')) return 'Pronto para morar e Em Obras';
+  if (s.has('pronto_novo')) return 'Pronto para morar';
+  if (s.has('em_obras'))   return 'Em Obras';
+  return null;
+}
+
+// Investimento + contador combinados (mesma estrutura de baseimob-funil.html:
+// um único "total de empreendimentos com o apartamento buscado" no topo,
+// calculado com AMBOS os sliders — não dois contadores parciais separados)
+// -- usa a mesma filtrados()/temApartamentoCompativel_ que já alimenta o
+// match final. Pedido explícito do usuário: destacar a situação escolhida
+// na capa (badge + sufixo do texto de contagem, ex: "4 opções reais com
+// apartamento 'Em Obras'"), pra não se perder de vista depois da capa.
+function atualizarComboUI_() {
+  const situacaoLabel = situacaoEscolhidaLabel_();
+  const sufEl = document.getElementById('cntComboSufixo');
+  if (sufEl) sufEl.textContent = situacaoLabel ? `com "${situacaoLabel}"` : 'com esse perfil';
+  if (!D.precoAlvo || !D.metragemAlvo) return;
+  animar('cntCombo', filtrados().length);
+}
+
+// ── SCORE DE COMPATIBILIDADE (perfil geral, enviado no payload do lead) ────
+function scoreCompatibilidade() {
+  let s = 60;
+  if (D.moradias.has('aluguel')) s += 14;
+  const cnt = filtrados().length;
+  s += cnt >= 6 ? 10 : cnt >= 3 ? 5 : 0;
+  const top = rankeados()[0];
+  if (top) s += Math.round(top.tracao / 2); // até +5, empurrado pela nota real de tração do melhor achado
+  return Math.min(s, 98);
+}
+
+// ── SUBMISSÃO — chega no sistema BaseImob (parte 97) ───────────────────────
+// Mesmo padrão de baseimob-funil.html: GET com ?dados=<json> (a acao fica
+// DENTRO do JSON) -- é o "truque no-cors" que o projeto já usa pra páginas
+// públicas sem sessão, porque o Apps Script não trata bem o preflight de
+// CORS de um POST com Content-Type: application/json. `interesse_lancamento`
+// já existe no backend (salvarInteresse_, code.txt) e é a MESMA rota que
+// alimenta a aba "BaseImob" do dashboard (listarLeadsBaseimob_).
+function submeter() {
+  // Flush do tempo acumulado na etapa atual (captura/WhatsApp) -- sem isso
+  // o payload sairia sem contar o tempo gasto nesta última etapa, já que
+  // só é contabilizado normalmente quando o cliente SAI de um step
+  // (irParaStep), e aqui o envio acontece antes disso.
+  D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + (Date.now() - _stepEntradaTs);
+  _stepEntradaTs = Date.now();
+
+  const btn = document.getElementById('btnConfirmarFinal');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  // Encerra com a tela de "Confirmado" só depois do WhatsApp confirmado --
+  // pedido explícito do usuário (a captura agora é a penúltima etapa, e o
+  // fluxo só termina depois que os telefones são cadastrados).
+  const continuar = () => {
+    btn.textContent = 'Confirmado';
+    btn.classList.add('confirmado');
+    setTimeout(() => { montarAgradecimento(); irParaStep(8); }, 700);
+  };
+
+  if (typeof WEBHOOK_URL === 'undefined') {
+    console.log('[simulador] WEBHOOK_URL indisponível — pulando envio.', D);
+    setTimeout(continuar, 400);
+    return;
+  }
+
+  // Mesma lista EXATA mostrada na tabela de opções do cliente (opcoesTabela,
+  // guardada em D.ofertasMostradas por montarMatch) -- pra quem olhar o lead
+  // no BaseImob ver exatamente os mesmos códigos de empreendimento que o
+  // cliente viu na tela, e os sinais de "Ver Preço"/favorito baterem certo
+  // com os ids reais do ranking enviado.
+  const top7 = D.ofertasMostradas.length ? D.ofertasMostradas : filtrados().slice(0, 7);
+  const payload = {
+    acao: 'interesse_lancamento',
+    nome: D.nome,
+    telefone: D.whatsapp,
+    qtdInteresse: filtrados().length,
+    idsInteresse: top7.map(c => c.id).filter(Boolean).join(', '),
+    rankingDetalhado: JSON.stringify(top7.map((c, i) => ({
+      rank: i + 1, id: c.id, nome: c.nome, regiao: c.regiao, bairro: c.bairro || '',
+      area: `${c.areaMin}-${c.areaMax}m²`, precoM2: Math.round(c.precoM2),
+      precoAPartir: c.precoAPartir, estagio: c.estagio,
+      pctVendido: c.pctVendido, matchPref: c.matchPref, tracao: Math.round(c.tracao * 10) / 10,
+      precoVisto: D.cardsPrecoVisto.has(c.id), favoritado: D.cardsFavoritos.has(c.id),
+    }))),
+    tags: JSON.stringify({
+      moradias: [...D.moradias], alturaPref: D.alturaPref, quartosPref: D.quartosPref, filtroSituacao: D.filtroSituacao,
+      cardsPrecoVisto: [...D.cardsPrecoVisto], cardsFavoritos: [...D.cardsFavoritos],
+      // "Opções extras" (atrás do botão "VER +N OPÇÕES ENCONTRADAS") --
+      // pedido explícito do usuário: registrar o clique em "ver mais" e
+      // relatar favoritos/não-clicados dessa lista numa tabela SEPARADA no
+      // e-mail do lead ("Tabela Extra de Opções", ver montarBlocoExtraOpcoesEmail_
+      // em code.txt), sem misturar com os cards principais.
+      verMaisOpcoesClicado: D.verMaisOpcoesClicado,
+      rankingExtra: D.extrasMostrados.map(c => ({
+        id: c.id, bairro: c.bairro || '', precoAPartir: c.precoAPartir,
+        precoVisto: D.extraPrecoVisto.has(c.id), favoritado: D.extraFavoritos.has(c.id),
+      })),
+      precoAlvo: D.precoAlvo, metragemAlvo: D.metragemAlvo, areaRange: D.areaRange,
+      precoInicial: D.precoInicial, precoFinal: D.precoFinal,
+      areaInicial: D.areaInicial, areaFinal: D.areaFinal,
+      tempoSegundos: Math.round((Date.now() - D.tsInicio) / 1000),
+      ajustesSlider: D.ajustesSlider, origemAcesso: D.origemAcesso,
+      // Dados técnicos capturados sem perguntar nada ao cliente (pedido
+      // explícito do usuário) -- viram tabela no e-mail
+      // (montarBlocoDadosTecnicosEmail_, code.txt).
+      sessionId: D.sessionId, tempoPorStep: D.tempoPorStep,
+      dispositivo: D.dispositivo, horaAcesso: D.horaAcesso,
+      utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign,
+      geoAprox: D.geoAprox,
+      // idEmpreendimento mostrado como "melhor match" -- se veio do motor
+      // (selecionarIsca_) ou do cálculo local de sempre (fallback sem mix
+      // publicado). Guardado pra Fase 4 (ficha de atendimento no dashboard,
+      // ainda não construída) conseguir mostrar "isca apresentada" sem
+      // precisar recalcular nada.
+      idEmpreendimentoIsca: D.iscaId,
+    }),
+    canal: 'App Lançamentos',
+    tipo_contato: 'LEAD QUENTE',
+    score: scoreCompatibilidade(),
+  };
+
+  fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)))
+    .then(continuar)
+    .catch(e => { console.error('[simulador] erro ao enviar lead:', e); continuar(); });
+}
+
+// ── SITUAÇÃO — destaca pro cliente se está Pronto pra morar ou Em obras
+// (pedido explícito: essa informação precisa chamar mais atenção que o
+// resto, não ficar escondida num rótulo pequeno de grid). "Em planta" no
+// banco é sempre exibido como "Em obras" aqui -- alinhado com as únicas 2
+// opções de filtro que o cliente vê na capa (pedido explícito do usuário:
+// nunca mostrar "Na planta" como rótulo diferente de "Em Obras"). ────────
+function situacaoInfo_(estagio) {
+  if (['Pronto', 'Pronto novo', 'Entregue'].includes(estagio)) {
+    return { texto: 'Pronto para morar', bg: 'rgba(0,212,170,.15)', border: 'rgba(0,212,170,.4)', cor: 'var(--green)' };
+  }
+  return { texto: 'Em obras', bg: 'rgba(245,166,35,.15)', border: 'rgba(245,166,35,.4)', cor: '#f5a623' };
+}
+function situacaoBadgeHTML_(estagio) {
+  const s = situacaoInfo_(estagio);
+  return `<span class="situacao-pill" style="background:${s.bg};border:1px solid ${s.border};color:${s.cor}">${s.texto}</span>`;
+}
+
+// ── MIX DE OFERTAS ──────────────────────────────────────────────────────
+// Pedido explícito do usuário: parar de destacar UM "melhor match" -- em vez
+// disso, mostrar o mix de até 7 ofertas com peso visual igual, e uma
+// headline de impacto que gera interesse pelo CONJUNTO todo (não por uma
+// oferta específica). Cada card usa o mesmo layout rico que antes só a
+// "melhor" ganhava. Headline é genérica de propósito (sem menção à
+// motivação declarada) -- pedido explícito do usuário, evita soar
+// invasivo/robótico repetindo de volta o que a pessoa acabou de escolher.
+function headlineImpacto_(qtd, primeiroNome) {
+  const plural = qtd === 1
+    ? 'a <span style="color:var(--accent)">melhor opção</span> de empreendimento, com o apartamento ideal'
+    : `as <span style="color:var(--accent)">${qtd} melhores opções</span> de empreendimentos, com o apartamento ideal`;
+  return `${primeiroNome}, conheça ${plural} pra você! <span style="display:block;font-size:16px;font-weight:400;color:#f5c800;margin-top:6px">(Marque seus favoritos <span style="font-size:24px;line-height:1;vertical-align:middle">♥</span>)</span>`;
+}
+
+// ── MIX ANCORADO NO PRODUTO ALVO (portado de estrategias.html, aba
+// "Produto Alvo" -- selecionarMixPorAlvo_) ──────────────────────────────────
+// Usuário reportou mix incoerente: o motor anterior (selecionar_isca, GAS)
+// casava o preço do cliente contra SEGMENTOS de percentil de preço (ex:
+// "Alto B") calculados sobre TODO o mercado -- um segmento assim mistura
+// apartamentos de metragens totalmente diferentes que só coincidem de
+// cair na mesma faixa de preço, e quando não existia segmento publicado
+// perto do orçamento, o app caía num fallback simples sem a mesma lógica
+// de coerência de preço.
+//
+// A aba "Produto Alvo" de estrategias.html resolve isso de outro jeito:
+// em vez de um segmento de mercado, ANCORA o mix inteiro no preço de UM
+// produto real (o alvo) -- ISCA/ANCORA_INF/ALVO_2-3/ANCORA_SUP são faixas
+// PROPORCIONAIS ao preço desse produto específico, não do mercado como um
+// todo. Isso é replicado aqui 100% client-side (não dá pra rodar no GAS
+// sem duplicar Score de Tração/scoreTracaoPublico_, que só existe no
+// navegador) -- o "alvo" é o melhor match REAL do que o cliente configurou
+// (rankeados()[0] entre os compatíveis), e o resto do mix é construído em
+// torno do preço DESSE produto, garantindo que as 7 ofertas fazem sentido
+// entre si mesmo quando não há nada "publicado" pra esse perfil específico.
+const ORDEM_PAPEIS_MIX_APP_ = ['ISCA', 'ALVO_1', 'ALVO_2', 'ALVO_3', 'ANCORA_SUP', 'ANCORA_INF', 'COMPLEMENTAR'];
+
+function montarMixPorAlvo_(alvoItem, todosItens) {
+  const statusAlvo = ['Pronto', 'Pronto novo', 'Entregue'].includes(alvoItem.estagio)
+    ? ['Pronto', 'Pronto novo', 'Entregue'] : ['Em planta', 'Em obras'];
+  const alvoPreco  = alvoItem.precoAPartir || 0;
+  const alvoPadrao = alvoItem.padrao || '';
+  const alvoAreaMedia = ((alvoItem.areaMin || 0) + (alvoItem.areaMax || 0)) / 2;
+
+  const pool = todosItens.filter(it =>
+    statusAlvo.includes(it.estagio) && it.tracao > 0 && it.id !== alvoItem.id
+  );
+  if (!pool.length) return { papeis: { ALVO_1: alvoItem } };
+
+  const usados = new Set([alvoItem.id]);
+  const usar = item => { usados.add(item.id); return item; };
+  const disp = () => pool.filter(c => !usados.has(c.id));
+  const faixaP = (minR, maxR) => disp().filter(it => it.precoAPartir > 0 && it.precoAPartir >= alvoPreco * minR && it.precoAPartir <= alvoPreco * maxR);
+
+  // Proximidade de área (0 a 1, 1 = mesma metragem do alvo) -- usada SÓ pros
+  // "produtos secundários" (ALVO_2/3/COMPLEMENTAR), que precisam ser um
+  // substituto plausível do alvo (usuário: "produtos secundários semelhantes
+  // ao produto alvo"), não qualquer coisa que caia na mesma faixa de preço.
+  // ISCA/ÂNCORAS continuam só por preço -- são pontos de CONTRASTE de
+  // propósito (ex: ÂNCORA_INF menor e mais barata pra dar perspectiva), não
+  // substitutos, e forçar semelhança de área ali destruiria a estratégia.
+  const proximidadeArea_ = it => {
+    const areaIt = ((it.areaMin || 0) + (it.areaMax || 0)) / 2;
+    if (!alvoAreaMedia || !areaIt) return 0;
+    return Math.max(0, 1 - Math.abs(areaIt - alvoAreaMedia) / alvoAreaMedia);
+  };
+  const porPerfilSemelhante_ = arr => [...arr].sort((a, b) => {
+    const scoreA = (a.padrao === alvoPadrao ? 2 : 0) + proximidadeArea_(a) * 5 + Math.min(a.tracao, 10) / 10;
+    const scoreB = (b.padrao === alvoPadrao ? 2 : 0) + proximidadeArea_(b) * 5 + Math.min(b.tracao, 10) / 10;
+    return scoreB - scoreA;
+  });
+
+  const papeis = { ALVO_1: alvoItem };
+
+  // ÂNCORA SUPERIOR — produto >5% acima → faz o alvo parecer mais acessível
+  // (só por preço, propositalmente sem exigir área parecida)
+  const acima = disp().filter(it => it.precoAPartir > alvoPreco * 1.05).sort((a, b) => a.precoAPartir - b.precoAPartir);
+  papeis.ANCORA_SUP = acima.length ? usar(acima[0]) : null;
+
+  // ALVO_2 & ALVO_3 — "produtos secundários semelhantes ao alvo": mesmo
+  // bracket de preço (65-155%) E perfil de área parecido, não só maior tração
+  const c2 = porPerfilSemelhante_(faixaP(0.65, 1.55));
+  papeis.ALVO_2 = c2.length ? usar(c2[0]) : null;
+  const c3 = porPerfilSemelhante_(faixaP(0.65, 1.55));
+  papeis.ALVO_3 = c3.length ? usar(c3[0]) : null;
+
+  // ISCA — faixa 62-84% do alvo, ponto de entrada mais acessível (só por
+  // preço/tração, sem exigir área parecida -- é isca, não substituto)
+  const ci = [...faixaP(0.62, 0.84)].sort((a, b) => b.tracao - a.tracao);
+  if (ci.length) {
+    papeis.ISCA = usar(ci[0]);
+  } else {
+    const fb = disp().filter(it => it.precoAPartir > 0 && it.precoAPartir < alvoPreco).sort((a, b) => b.precoAPartir - a.precoAPartir);
+    papeis.ISCA = fb.length ? usar(fb[0]) : null;
+  }
+
+  // ÂNCORA INFERIOR — faixa 40-62% do alvo, contraste de preço pra baixo
+  // (idem ISCA: só preço, propositalmente)
+  const cai = [...faixaP(0.40, 0.62)].sort((a, b) => a.precoAPartir - b.precoAPartir);
+  if (cai.length) {
+    papeis.ANCORA_INF = usar(cai[0]);
+  } else {
+    const fb = disp().filter(it => it.precoAPartir > 0 && it.precoAPartir < alvoPreco).sort((a, b) => b.precoAPartir - a.precoAPartir);
+    papeis.ANCORA_INF = fb.length ? usar(fb[0]) : null;
+  }
+
+  // ALVO_3 fallback — se o bracket 65-155% não deu 2 produtos, usa o de
+  // perfil mais parecido entre o que sobrou (não qualquer coisa por tração)
+  if (!papeis.ALVO_3) {
+    const fb = porPerfilSemelhante_(disp());
+    papeis.ALVO_3 = fb.length ? usar(fb[0]) : null;
+  }
+
+  // COMPLEMENTAR — prefere tipo de imóvel diferente do alvo (diversifica o
+  // mix), mas dentro de uma faixa de preço ainda razoável (40-155% do alvo,
+  // a união das faixas já usadas acima) -- sem esse limite, o complementar
+  // podia vir de QUALQUER preço (ex: 30% do alvo, abaixo até da âncora
+  // inferior), quebrando a coerência que o resto do mix já garante. Só cai
+  // pra qualquer coisa disponível (sem limite de preço) como último
+  // recurso, se não sobrar nada dentro da faixa razoável.
+  const poolRazoavel = faixaP(0.40, 1.55);
+  papeis.COMPLEMENTAR = poolRazoavel.find(c => c.tipoImovel !== alvoItem.tipoImovel)
+    || porPerfilSemelhante_(poolRazoavel)[0]
+    || porPerfilSemelhante_(disp())[0]
+    || null;
+  if (papeis.COMPLEMENTAR) usar(papeis.COMPLEMENTAR);
+
+  return { papeis };
+}
+
+function montarMatch() {
+  const localCompativeis = filtrados();
+
+  let ofertas = [];
+  if (localCompativeis.length >= 7) {
+    const alvo = localCompativeis[0]; // melhor match real -- âncora do mix
+    const mix = montarMixPorAlvo_(alvo, rankeados());
+    ofertas = ORDEM_PAPEIS_MIX_APP_.map(p => mix.papeis[p]).filter(Boolean);
+    // Se o mix (ancorado no alvo) não preencheu os 7 papéis, completa com
+    // as demais opções que o cliente configurou, na mesma ordem de score
+    // (localCompativeis já vem ordenado por matchPref/tração).
+    if (ofertas.length < 7) {
+      const idsJaNoMix = new Set(ofertas.map(o => o.id));
+      const extras = localCompativeis.filter(c => !idsJaNoMix.has(c.id)).slice(0, 7 - ofertas.length);
+      ofertas = ofertas.concat(extras);
+    }
+  } else if (localCompativeis.length) {
+    // Menos de 7 opções compatíveis no total -- não faz sentido tentar
+    // ancorar um mix de 7 papéis com tão pouco material disponível. Pedido
+    // explícito do usuário: nesse caso, listar TUDO que o cliente configurou,
+    // direto por ordem de score (localCompativeis já vem ordenado assim).
+    ofertas = localCompativeis;
+  }
+  D.iscaId = ofertas[0] ? ofertas[0].id : null;
+  // Guarda a lista EXATA renderizada nos cards (pode divergir da simples
+  // filtrados().slice(0,7) por causa do mix ancorado no alvo) -- o payload
+  // do lead (submeter()) usa isso, não filtrados() de novo, senão os
+  // sinais de "Ver Preço"/favorito por card (D.cardsPrecoVisto/Favoritos)
+  // ficariam órfãos, referenciando ids que nem aparecem no ranking enviado.
+  D.ofertasMostradas = ofertas;
+  D.qtdPrincipal = ofertas.length;
+
+  // "Opções extras" -- tudo que é compatível mas ficou de fora dos 7 cards
+  // principais, na mesma ordem de score (localCompativeis já vem assim).
+  // Ficam escondidas atrás do botão "VER +N OPÇÕES ENCONTRADAS" (pedido
+  // explícito do usuário) em vez de um texto estático sem interação.
+  const idsNosPrincipais = new Set(ofertas.map(o => o.id));
+  const extras = localCompativeis.filter(c => !idsNosPrincipais.has(c.id));
+  D.extrasMostrados = extras;
+  D.verMaisOpcoesClicado = false;
+  D.extraPrecoVisto = new Set();
+  D.extraFavoritos = new Set();
+
+  const primeiroNome = D.nome.split(' ')[0];
+
+  document.getElementById('matchTitulo').innerHTML = ofertas.length
+    ? headlineImpacto_(ofertas.length, primeiroNome)
+    : `Quase lá, ${primeiroNome}! Não achamos um empreendimento com esse perfil exato, mas devemos ter opções bem próximas.`;
+
+  const btnMais = document.getElementById('btnVerMaisOpcoes');
+  const extraContainer = document.getElementById('opcoesExtraTabela');
+  extraContainer.style.display = 'none';
+  extraContainer.innerHTML = '';
+  delete extraContainer.dataset.montado;
+  if (extras.length > 0) {
+    btnMais.style.display = '';
+    btnMais.innerHTML = `VER +<strong style="font-size:22px;color:var(--orange)">${extras.length}</strong> OPÇÕES ENCONTRADAS`;
+  } else {
+    btnMais.style.display = 'none';
+  }
+
+  if (!ofertas.length) {
+    document.getElementById('opcoesTabela').innerHTML =
+      '<div style="padding:18px;font-size:13px;color:var(--text);text-align:center">Nenhum empreendimento com esse apartamento exato agora — vamos buscar opções próximas pra você.</div>';
+    return;
+  }
+
+  document.getElementById('opcoesTabela').innerHTML = ofertas.map((c, i) => cardOpcaoHTML_(c, i, 'principal')).join('');
+}
+
+// Card de opção reutilizado tanto na lista principal (grupo 'principal')
+// quanto nas "opções extras" reveladas pelo botão "VER +N OPÇÕES
+// ENCONTRADAS" (grupo 'extra') -- mesmo formato retraído/"VER PREÇO"/
+// favorito dos dois, só o grupo muda pra não colidir ids no DOM nem
+// misturar os sinais (D.cardsPrecoVisto/Favoritos vs D.extraPrecoVisto/
+// Favoritos), que o e-mail do lead relata em tabelas separadas.
+function cardOpcaoHTML_(c, i, grupo, offset = 0) {
+  const codSeq = 'Cod. ' + String(offset + i + 1).padStart(3, '0');
+  return `
+      <div class="opcao-top" data-id="${c.id || ''}" data-cod="${codSeq}">
+        <div class="opcao-top-header">
+          <span class="opcao-codigo">${codSeq}</span>
+          ${situacaoBadgeHTML_(c.estagio)}
+        </div>
+        <div class="opcao-top-grid">
+          ${D.situacoes.size === 0 || D.situacoes.has('em_obras') ? `<div><div class="opcao-top-cell-label">Previsão de entrega</div><div class="opcao-top-cell-val">${formatarDataEntrega_(c.entregaPrev)}</div></div>` : ''}
+          <div class="opcao-cell-bairro"><div class="opcao-top-cell-label">Região</div><div class="opcao-top-cell-val">${c.regiao}</div></div>
+        </div>
+
+        <div class="opcao-retraido" id="retraido-${grupo}-${i}" style="display:none">
+          <div class="opcao-top-grid" style="margin-top:12px">
+            <div class="opcao-cell-destaque"><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+              <div>
+                <div class="opcao-top-cell-label">A partir de</div>
+                <span class="opcao-top-cell-val" style="font-size:20px;color:var(--orange)">${formatBRL_(c.precoAPartir)}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                <span class="fav-label">Favoritar</span>
+                <button class="btn-favorito" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar esse empreendimento">♥</button>
+              </div>
+            </div>
+            <div style="grid-column:1/-1">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span class="opcao-top-cell-label" style="color:var(--orange);font-size:13px;font-weight:700">${c.pctVendido}% vendido</span>
+                <span class="opcao-top-cell-label" style="color:var(--green);font-size:13px;font-weight:700">${100 - c.pctVendido}% disponível</span>
+              </div>
+              <div style="height:10px;background:var(--s3);border-radius:99px;overflow:hidden">
+                <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-ver-preco" id="verPreco-${grupo}-${i}" onclick="toggleVerPreco_('${c.id || ''}',${i},'${grupo}')">VER PREÇO <span class="ver-preco-seta">▾</span></button>
+      </div>`;
+}
+
+function toggleVerMaisOpcoes_() {
+  const container = document.getElementById('opcoesExtraTabela');
+  const btn = document.getElementById('btnVerMaisOpcoes');
+  const abrindo = container.style.display === 'none';
+  if (abrindo) {
+    D.verMaisOpcoesClicado = true;
+    if (!container.dataset.montado) {
+      container.innerHTML = D.extrasMostrados.map((c, i) => cardOpcaoHTML_(c, i, 'extra', D.qtdPrincipal || 7)).join('');
+      container.dataset.montado = '1';
+    }
+  }
+  container.style.display = abrindo ? '' : 'none';
+  btn.innerHTML = abrindo
+    ? 'OCULTAR OPÇÕES EXTRAS ▴'
+    : `VER +<strong style="font-size:22px;color:var(--orange)">${D.extrasMostrados.length}</strong> OPÇÕES ENCONTRADAS`;
+}
+
+// ── SINAIS COMPORTAMENTAIS POR CARD (Etapa 6) — pedido explícito do
+// usuário: preferência REAL clicada (quais cards o cliente abriu o preço,
+// quais favoritou) é mais valiosa que a preferência declarada nos sliders.
+// Guardado em D.cardsPrecoVisto/D.cardsFavoritos e enviado no payload do
+// lead (ver submeter()), pra o corretor já ligar sabendo em quais
+// empreendimentos específicos o cliente demonstrou interesse real.
+function toggleVerPreco_(id, i, grupo) {
+  const el = document.getElementById(`retraido-${grupo}-${i}`);
+  const btn = document.getElementById(`verPreco-${grupo}-${i}`);
+  if (!el || !btn || el.style.display !== 'none') return;
+  el.style.display = '';
+  btn.style.display = 'none';
+  if (id) (grupo === 'extra' ? D.extraPrecoVisto : D.cardsPrecoVisto).add(id);
+}
+
+function atualizarStickyFavCount_() {
+  const total = D.cardsFavoritos.size + D.extraFavoritos.size;
+  const el = document.getElementById('stickyFavCount');
+  if (!el) return;
+  if (total === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = `♥ ${total} apartamento${total > 1 ? 's' : ''} favoritado${total > 1 ? 's' : ''}`;
+}
+
+function favoritarCard_(id, i, grupo) {
+  if (!id) return;
+  const btn = document.getElementById(`fav-${grupo}-${i}`);
+  if (!btn) return;
+  const set = grupo === 'extra' ? D.extraFavoritos : D.cardsFavoritos;
+  if (set.has(id)) {
+    set.delete(id);
+    btn.textContent = '♥';
+    btn.classList.remove('ativo');
+  } else {
+    set.add(id);
+    btn.textContent = '♥';
+    btn.classList.add('ativo');
+  }
+  atualizarStickyFavCount_();
+}
+
+// ── AGRADECIMENTO ─────────────────────────────────────────────────────────
+function montarAgradecimento() {
+  document.getElementById('obrigadoNome').textContent = D.nome.split(' ')[0] + '!';
+
+  const emps    = filtrados();
+  const total   = emps.length;
+  const prontos = emps.filter(e => ['Pronto','Pronto novo','Entregue'].includes(e.estagio)).length;
+  const comLaz  = emps.filter(e => e.temLazer).length;
+  const areas   = emps.map(e => e.areaMin);
+  const precos  = emps.map(e => e.precoAPartir).filter(v => v > 0);
+  const menorPreco = precos.length ? Math.min(...precos) : null;
+  const maiorArea  = areas.length  ? Math.max(...areas)  : null;
+
+  const linhasProjecao = [];
+  if (total > 0) {
+    linhasProjecao.push(['Empreendimentos com o apartamento que você busca', `<span style="color:var(--accent);font-weight:700">${total} empreendimento${total>1?'s':''}</span>`]);
+  }
+  if (menorPreco) {
+    linhasProjecao.push([`Investimento estimado: ${formatBRL_(D.precoAlvo)}`, `Encontrado a partir de ${formatBRL_(menorPreco)}`]);
+  }
+  if (maiorArea) {
+    linhasProjecao.push([`Apartamento de ${D.metragemAlvo} m² (±20%: ${D.areaRange[0]}–${D.areaRange[1]} m²)`, `Disponível até ${maiorArea} m² dentro do perfil`]);
+  }
+  if (prontos > 0) {
+    linhasProjecao.push(['Prontos para morar agora', `<span style="color:var(--green);font-weight:700">${prontos} disponíve${prontos>1?'is':'l'}</span>`]);
+  }
+  if (comLaz > 0) {
+    linhasProjecao.push(['Com área de lazer completa', `${comLaz} dos ${total} encontrados`]);
+  }
+
+  const projecaoEl = document.getElementById('baseProjecoes');
+  if (linhasProjecao.length) {
+    projecaoEl.innerHTML = `
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text);margin-bottom:10px">O que encontramos pra você</div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px">
+        ${linhasProjecao.map(([k,v]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-size:12px;color:var(--text);min-width:0;overflow-wrap:break-word">${k}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--text);text-align:right;max-width:55%;min-width:0;overflow-wrap:break-word">${v}</span>
+          </div>`).join('')}
+      </div>`;
+    const linhas = projecaoEl.querySelectorAll('div[style*="border-bottom"]');
+    if (linhas.length) linhas[linhas.length-1].style.borderBottom = 'none';
+  } else {
+    projecaoEl.innerHTML = '';
+  }
+
+  const moradiaMap = { aluguel:'Quero sair do aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família', investidor:'Quero investir' };
+  const alturaMap  = { baixo:'Até o 5º andar', medio:'Do 5º ao 10º andar', alto:'Acima do 10º andar' };
+  const moradiasStr = D.moradias.size ? [...D.moradias].map(k => moradiaMap[k] || k).join(', ') : '—';
+
+  document.getElementById('perfilResumo').innerHTML = [
+    ['Situação atual', moradiasStr],
+    ['Investimento estimado', formatBRL_(D.precoAlvo)],
+    ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
+    ['Quartos', D.quartosPref ? `${D.quartosPref}${D.quartosPref >= 5 ? '+' : ''} quarto${D.quartosPref > 1 ? 's' : ''}` : '—'],
+    ['Andar preferido', alturaMap[D.alturaPref] || '—'],
+  ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
+
+  const msg = encodeURIComponent(
+    'Olá! Acabei de confirmar no simulador. ' +
+    `Estou buscando um apartamento com investimento estimado de ${formatBRL_(D.precoAlvo)}, metragem de ${D.metragemAlvo}m² (considerando ${D.areaRange[0]} a ${D.areaRange[1]}m²)` +
+    (total ? `. O simulador encontrou ${total} empreendimento${total>1?'s':''} com esse apartamento — pode me enviar os detalhes?` : '. Pode me enviar os detalhes?')
+  );
+  document.getElementById('whatsLink').href = 'https://wa.me/' + WHATSAPP_NUM + '?text=' + msg;
+}
+
+// ── UTILITÁRIOS ────────────────────────────────────────────────────────────
+function mascaraTel(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if (v.length > 6) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+  else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+  else if (v.length) v = '(' + v;
+  el.value = v;
+}
+
+// Alerta visual em tempo real (borda vermelha + aviso) se os dois campos de
+// WhatsApp divergirem -- pedido explícito do usuário: o toast que só
+// aparecia ao clicar em "Confirmar" era fácil de perder. Compara por
+// PREFIXO (não só igualdade) pra pegar o erro assim que a pessoa digita um
+// dígito errado, sem esperar ela terminar de digitar o número inteiro.
+function checarWhatsMatch_() {
+  const el1 = document.getElementById('fWhats');
+  const el2 = document.getElementById('fWhats2');
+  const msg = document.getElementById('whatsMismatchMsg');
+  const d1  = el1.value.replace(/\D/g, '');
+  const d2  = el2.value.replace(/\D/g, '');
+
+  el1.classList.remove('input-erro');
+  el2.classList.remove('input-erro');
+  msg.style.display = 'none';
+
+  if (!d2) return; // campo de confirmação ainda vazio -- nada a comparar ainda
+
+  const umEhPrefixoDoOutro = d1.startsWith(d2) || d2.startsWith(d1);
+  if (!umEhPrefixoDoOutro) {
+    el1.classList.add('input-erro');
+    el2.classList.add('input-erro');
+    msg.style.display = 'flex';
+  }
+}
+
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+window.addEventListener('beforeunload', () => {
+  if (stepAtual > 0 && stepAtual < 8) {
+    D.stepAbandono = stepAtual;
+    const duracaoMs = Date.now() - _stepEntradaTs;
+    D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + duracaoMs;
+    // sendBeacon (não fetch) -- sobrevive ao unload da página, diferente de
+    // um fetch normal que o navegador pode cancelar ao fechar a aba. É o
+    // ÚNICO jeito confiável de registrar abandono de verdade: sem isso, uma
+    // sessão que desiste no meio do funil não deixava rastro nenhum no
+    // sistema (só completava o payload em D, que nunca era enviado).
+    if (typeof WEBHOOK_URL !== 'undefined' && navigator.sendBeacon) {
+      try {
+        const payload = JSON.stringify({
+          acao: 'registrar_evento_funil', sessionId: D.sessionId,
+          etapaSaida: ETAPA_POR_STEP_[stepAtual] || stepAtual, tempoMsEtapaSaida: duracaoMs,
+          etapaChegada: null, abandonou: true, canal: 'App Lançamentos',
+          utmSource: D.utmSource || D.origemAcesso, dispositivo: D.dispositivo,
+        });
+        navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+      } catch (e) {}
+    }
+  }
+});
+
+// Geolocalização aproximada por IP (silenciosa, sem popup de permissão) --
+// serviço público gratuito; falha/bloqueio (ad-blocker, rate limit) não
+// afeta o funil, só deixa D.geoAprox null.
+function geolocalizarPorIp_() {
+  fetch('https://ipapi.co/json/').then(r => r.json()).then(g => {
+    if (g && !g.error) D.geoAprox = { cidade: g.city || '', regiao: g.region || '', pais: g.country_name || '' };
+  }).catch(() => {});
+}
+
+// INIT
+atualizarBotoes();
+carregarBaseReal();
+geolocalizarPorIp_();
+// Etapa 1 (capa) -- sem isso, quem some já na 1ª tela (bounce puro, nunca
+// chama irParaStep nem beforeunload de forma confiável) nunca entraria nem
+// no denominador de sessões, nem na taxa de abandono.
+registrarEventoFunil_({ etapaSaida: null, tempoMsEtapaSaida: 0, etapaChegada: 1, abandonou: false });
+
+// ── HERO BACKGROUND SLIDESHOW ────────────────────────────────
+(function() {
+  var imgs = document.querySelectorAll('.hero-bg-img');
+  if (!imgs.length) return;
+  var cur = 0;
+  setInterval(function() {
+    imgs[cur].classList.remove('ativo');
+    cur = (cur + 1) % imgs.length;
+    imgs[cur].classList.add('ativo');
+  }, 5000);
+})();
+</script>
+</body>
+</html>
