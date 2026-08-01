@@ -466,6 +466,41 @@ input[type=range]::-moz-range-track {
 .box-btn:hover { border-color: var(--accent); color: var(--accent); }
 .box-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
 
+/* ── CARD V2 — MODELO COMPACTO (Cod. 001) ──────────────────── */
+.card-v2 {
+  padding: 14px 14px 13px;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--s1);
+}
+.cv2-top {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.cv2-cod {
+  font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: .3px;
+}
+.cv2-fav {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  font-size: 17px; color: #888; padding: 2px 4px; line-height: 1;
+  transition: color .18s; font-family: inherit; flex-shrink: 0;
+}
+.cv2-fav:hover { color: #f5c800; }
+.cv2-fav.ativo { color: #f5c800; }
+.cv2-local {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 3px 6px;
+  margin-bottom: 11px;
+}
+.cv2-regiao { font-size: 15px; font-weight: 600; color: var(--text); }
+.cv2-entrega { font-size: 12px; color: var(--text); opacity: .42; }
+.cv2-entrega::before { content: '· '; }
+.cv2-preco-label { font-size: 11px; color: var(--text); opacity: .42; margin-bottom: 2px; }
+.cv2-preco-val { font-size: 22px; font-weight: 600; color: var(--orange); letter-spacing: -.4px; line-height: 1; }
+.cv2-rodape { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.cv2-area { font-size: 11px; color: var(--text); opacity: .42; white-space: nowrap; flex-shrink: 0; }
+.cv2-barra { flex: 1; height: 3px; background: var(--s3); border-radius: 99px; overflow: hidden; }
+.cv2-barra-fill { height: 100%; background: var(--orange); border-radius: 99px; }
+.cv2-pct { font-size: 11px; color: var(--text); opacity: .38; white-space: nowrap; flex-shrink: 0; }
+
 /* ── STEP-0: LAYOUT AERADO ─────────────────────────────────── */
 #step-0.ativo {
   display: flex; flex-direction: column;
@@ -1717,8 +1752,32 @@ function montarMatch() {
 // favorito dos dois, só o grupo muda pra não colidir ids no DOM nem
 // misturar os sinais (D.cardsPrecoVisto/Favoritos vs D.extraPrecoVisto/
 // Favoritos), que o e-mail do lead relata em tabelas separadas.
+function cardV2HTML_(c, i, grupo, codSeq) {
+  const mostrarEntrega = D.situacoes.size === 0 || D.situacoes.has('em_obras');
+  return `
+    <div class="card-v2" data-id="${c.id || ''}" data-cod="${codSeq}">
+      <div class="cv2-top">
+        <span class="cv2-cod">${codSeq}</span>
+        ${situacaoBadgeHTML_(c.estagio)}
+        <button class="cv2-fav" id="fav-${grupo}-${i}" onclick="favoritarCard_('${c.id || ''}',${i},'${grupo}')" title="Favoritar">♥</button>
+      </div>
+      <div class="cv2-local">
+        <span class="cv2-regiao">${c.regiao}</span>
+        ${mostrarEntrega ? `<span class="cv2-entrega">${formatarDataEntrega_(c.entregaPrev)}</span>` : ''}
+      </div>
+      <div class="cv2-preco-label">a partir de</div>
+      <div class="cv2-preco-val">${formatBRL_(c.precoAPartir)}</div>
+      <div class="cv2-rodape">
+        <span class="cv2-area">${c.areaMin}–${c.areaMax} m²</span>
+        <div class="cv2-barra"><div class="cv2-barra-fill" style="width:${c.pctVendido}%"></div></div>
+        <span class="cv2-pct">${c.pctVendido}% vendido</span>
+      </div>
+    </div>`;
+}
+
 function cardOpcaoHTML_(c, i, grupo, offset = 0) {
   const codSeq = 'Cod. ' + String(offset + i + 1).padStart(3, '0');
+  if (offset + i === 0) return cardV2HTML_(c, i, grupo, codSeq);
   return `
       <div class="opcao-top" data-id="${c.id || ''}" data-cod="${codSeq}">
         <div class="opcao-top-header">
