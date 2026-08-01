@@ -541,7 +541,7 @@ input[type=range]::-moz-range-track {
         <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
         ENCONTRAR MEU APARTAMENTO
       </button>
-      <div class="btn-final-sub" style="margin-top:10px">Sem compromisso · Atendimento personalizado</div>
+      <div class="btn-final-sub" style="margin-top:10px">Resultado rápido · Dados reais e atualizados</div>
     </div>
 
   </div>
@@ -562,7 +562,7 @@ input[type=range]::-moz-range-track {
       <div class="step-title">Qual é o seu objetivo?</div>
       <div class="box-group" id="tagsMoradia">
         <button class="box-btn" onclick="toggleMoradia_(this,'morar')">Adquirir meu primeiro apartamento</button>
-        <button class="box-btn" onclick="toggleMoradia_(this,'mudanca')">Motivo de Mudança</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'mudanca')">Preciso mudar de bairro ou cidade</button>
         <button class="box-btn" onclick="toggleMoradia_(this,'investir')">Quero investir e gerar renda</button>
         <button class="box-btn" onclick="toggleMoradia_(this,'familia')">Presente familiar (Filho/Filha/Cônjuge/Outros)</button>
         <button class="box-btn" onclick="toggleMoradia_(this,'upgrade')">Melhorar minha realidade (Fazer um Upgrade)</button>
@@ -592,7 +592,7 @@ input[type=range]::-moz-range-track {
       <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
     </div>
 
-    <div class="s2-label">Seu preço limite é:</div>
+    <div class="step-title" style="margin:40px 0 10px">Até quanto você quer investir?</div>
     <div class="preco-input-row">
       <span class="preco-prefixo">R$</span>
       <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
@@ -602,7 +602,7 @@ input[type=range]::-moz-range-track {
       <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
     </div>
 
-    <div class="s2-label">Área Útil ideal pra você é:</div>
+    <div class="step-title" style="margin:40px 0 10px">Área Útil ideal pra você é:</div>
     <div class="preco-input-row">
       <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
       <span class="preco-prefixo">m²</span>
@@ -742,7 +742,8 @@ input[type=range]::-moz-range-track {
       <svg width="28" height="28" style="color:var(--green)"><use href="#ico-check"/></svg>
     </div>
     <div class="step-title" style="text-align:center;margin-bottom:6px">Confirmado, <span id="obrigadoNome"></span></div>
-    <div class="step-sub" style="text-align:center">Já recebemos suas informações e vamos te chamar em até 2 horas.</div>
+    <div class="step-sub" style="text-align:center;font-weight:700;color:var(--green);margin-bottom:6px">Sua consultoria está agendada.</div>
+    <div class="step-sub" style="text-align:center">Você recebe nossa mensagem no WhatsApp em até 2 horas.</div>
 
     <div id="baseProjecoes" style="margin-bottom:20px"><!-- populado por JS --></div>
 
@@ -770,11 +771,12 @@ input[type=range]::-moz-range-track {
 <!-- STICKY ATENDIMENTO — visível no step-6 enquanto o cliente lê os cards -->
 <div class="sticky-atend" id="stickyAtend" style="display:none">
   <div class="sticky-atend-inner">
+    <div id="stickyFavCount" style="display:none;text-align:center;font-size:14px;font-weight:700;color:#f5c800;margin-bottom:8px"></div>
     <button class="btn-final btn-quente" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
       QUERO ATENDIMENTO EXCLUSIVO
     </button>
-    <div class="btn-final-sub" style="opacity:.55;margin-top:6px">Sem compromisso · Atendimento personalizado</div>
+    <div class="btn-final-sub" style="opacity:.55;margin-top:6px">Resultado rápido · Dados reais e atualizados</div>
   </div>
 </div>
 
@@ -1023,8 +1025,8 @@ function avancarStep() {
 
 function montarCapturaTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
-  document.getElementById('capturaTitulo').innerHTML =
-    `${primeiroNome}, confirme seu <span style="color:var(--accent)">atendimento com um(a) de nossos(as) consultores(as).</span>`;
+  document.getElementById('capturaTitulo').textContent =
+    `${primeiroNome}, confirme seu pedido para entrarmos em contato com você.`;
 }
 
 function montarConfirmacao_() {
@@ -1735,9 +1737,11 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
               </div>
             </div>
             <div style="grid-column:1/-1">
-              <div class="opcao-top-cell-label">Unidades vendidas</div>
-              <div class="opcao-top-cell-val" style="color:var(--orange)">${c.pctVendido}% das unidades já foram vendidas</div>
-              <div style="height:10px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:6px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span class="opcao-top-cell-label" style="color:var(--orange);font-size:13px;font-weight:700">${c.pctVendido}% vendido</span>
+                <span class="opcao-top-cell-label" style="color:var(--green);font-size:13px;font-weight:700">${100 - c.pctVendido}% disponível</span>
+              </div>
+              <div style="height:10px;background:var(--s3);border-radius:99px;overflow:hidden">
                 <div style="height:100%;width:${c.pctVendido}%;background:var(--orange);border-radius:99px"></div>
               </div>
             </div>
@@ -1780,6 +1784,15 @@ function toggleVerPreco_(id, i, grupo) {
   if (id) (grupo === 'extra' ? D.extraPrecoVisto : D.cardsPrecoVisto).add(id);
 }
 
+function atualizarStickyFavCount_() {
+  const total = D.cardsFavoritos.size + D.extraFavoritos.size;
+  const el = document.getElementById('stickyFavCount');
+  if (!el) return;
+  if (total === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = `♥ ${total} apartamento${total > 1 ? 's' : ''} favoritado${total > 1 ? 's' : ''}`;
+}
+
 function favoritarCard_(id, i, grupo) {
   if (!id) return;
   const btn = document.getElementById(`fav-${grupo}-${i}`);
@@ -1794,6 +1807,7 @@ function favoritarCard_(id, i, grupo) {
     btn.textContent = '♥';
     btn.classList.add('ativo');
   }
+  atualizarStickyFavCount_();
 }
 
 // ── AGRADECIMENTO ─────────────────────────────────────────────────────────
