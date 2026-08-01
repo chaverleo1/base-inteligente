@@ -303,6 +303,10 @@ input[type=range]::-moz-range-track {
 .btn-favorito:hover { border-color: #f5c800; color: #f5c800; }
 .btn-favorito.ativo { border: 2px solid #f5c800; color: #f5c800; background: var(--s2); }
 .btn-favorito.ativo:hover { border-color: #f5c800; color: #f5c800; }
+.opcao-top.favorito-ativo {
+  border-color: #f5c800;
+  background: linear-gradient(135deg, rgba(245,200,0,.10), rgba(245,200,0,.03));
+}
 
 /* ── CARD: ALERTA ESTOQUE + BARRA DINÂMICA ─────────────────── */
 .card-alerta-estoque {
@@ -1838,14 +1842,17 @@ function favoritarCard_(id, i, grupo) {
   const btn = document.getElementById(`fav-${grupo}-${i}`);
   if (!btn) return;
   const set = grupo === 'extra' ? D.extraFavoritos : D.cardsFavoritos;
+  const card = btn.closest('.opcao-top');
   if (set.has(id)) {
     set.delete(id);
     btn.textContent = '♥';
     btn.classList.remove('ativo');
+    if (card) card.classList.remove('favorito-ativo');
   } else {
     set.add(id);
     btn.textContent = '♥';
     btn.classList.add('ativo');
+    if (card) card.classList.add('favorito-ativo');
   }
   atualizarStickyFavCount_();
 }
