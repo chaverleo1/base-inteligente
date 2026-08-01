@@ -562,9 +562,14 @@ input[type=range]::-moz-range-track {
       <div class="step-title">Qual é o seu objetivo?</div>
       <div class="box-group" id="tagsMoradia">
         <button class="box-btn" onclick="toggleMoradia_(this,'morar')">Adquirir meu primeiro apartamento</button>
+        <button class="box-btn" onclick="toggleMoradia_(this,'mudanca')">Motivo de Mudança</button>
         <button class="box-btn" onclick="toggleMoradia_(this,'investir')">Quero investir e gerar renda</button>
         <button class="box-btn" onclick="toggleMoradia_(this,'familia')">Presente familiar (Filho/Filha/Cônjuge/Outros)</button>
         <button class="box-btn" onclick="toggleMoradia_(this,'upgrade')">Melhorar minha realidade (Fazer um Upgrade)</button>
+        <button class="box-btn" onclick="toggleMoradiaOutro_(this)">Outro</button>
+        <div id="moradiaOutroWrap" style="display:none">
+          <input type="text" id="moradiaOutroTxt" class="preco-input" style="width:100%;margin-top:4px" placeholder="Descreva seu objetivo...">
+        </div>
       </div>
     </div>
   </div>
@@ -1127,6 +1132,13 @@ function toggleMoradia_(el, val) {
   el.classList.toggle('on');
   if (el.classList.contains('on')) D.moradias.add(val);
   else D.moradias.delete(val);
+}
+
+function toggleMoradiaOutro_(el) {
+  toggleMoradia_(el, 'outro');
+  const wrap = document.getElementById('moradiaOutroWrap');
+  if (wrap) wrap.style.display = el.classList.contains('on') ? 'block' : 'none';
+  if (el.classList.contains('on')) setTimeout(() => document.getElementById('moradiaOutroTxt')?.focus(), 50);
 }
 
 function selecionarAltura_(el, val) {
