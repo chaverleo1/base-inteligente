@@ -248,13 +248,17 @@ input[type=range]::-moz-range-track {
   padding: 10px 14px; cursor: pointer; font-family: inherit; transition: border-color .15s, background .15s;
 }
 .padrao-row:hover { border-color: var(--accent); }
-.padrao-row.on { border-color: var(--accent); background: rgba(79,124,255,.10); }
+/* Selecionado: fundo branco chapado + contraste invertido no texto --
+   pedido explícito do usuário. A cor do %  vem inline (corVendido_) e é
+   trocada em JS (selecionarPadrao_), não dá pra fazer só em CSS. */
+.padrao-row.on { border-color: #ffffff; background: #ffffff; }
+.padrao-row.on .padrao-row-label { color: #111; }
 .padrao-row-label { flex: 0 0 56px; font-size: 13px; font-weight: 700; color: var(--text); }
 .padrao-row-track { flex: 1; height: 20px; background: var(--bg); border-radius: 99px; overflow: hidden; }
 /* Cor da barra é definida inline por linha (corVendido_, igual às barras
    dos cards da Tela 7) -- não fixa aqui, varia por padrão/valor. */
 .padrao-row-fill { display: block; height: 100%; width: 0%; border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
-.padrao-row-pct { flex: 0 0 48px; text-align: right; font-size: 18px; font-weight: 800; }
+.padrao-row-pct { flex: 0 0 84px; text-align: right; font-size: 18px; font-weight: 800; }
 #tagsPadrao.tag-group-erro .padrao-row { border-color: var(--danger); animation: sitPulse .35s ease; }
 
 /* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
@@ -649,7 +653,7 @@ input[type=range]::-moz-range-track {
          escala usada nos cards da Tela 7 (corVendido_). Clicar na barra
          seleciona (múltipla escolha). -->
     <div id="blocoPadraoWrap" style="display:none;margin-top:40px">
-      <div class="step-title">Como você define o padrão do imóvel que busca?</div>
+      <div class="step-title">Como você define o <span style="color:var(--accent)">padrão do imóvel</span> que busca?</div>
       <div class="step-sub">Pode marcar mais de um · barra mostra % do estoque total</div>
       <div class="padrao-chart" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
     </div>
@@ -1257,9 +1261,12 @@ function padroesDisponiveis_() {
     .map(p => ({
       padrao: p,
       pct: estoqueTotalGeral > 0 ? Math.round((porPadrao[p].estoque / estoqueTotalGeral) * 100) : 0,
+      estoque: porPadrao[p].estoque,
     }));
 }
 
+// "X% | Y" -- mesmo formato de badgeVendidoHTML (config.js), Y é o estoque
+// total (unidades) daquele padrão, já somado em padroesDisponiveis_.
 function montarBlocoPadrao_() {
   const wrap = document.getElementById('tagsPadrao');
   if (!wrap) return;
@@ -1269,7 +1276,7 @@ function montarBlocoPadrao_() {
     <button class="padrao-row" onclick="selecionarPadrao_(this,'${p.padrao}')">
       <span class="padrao-row-label">${p.padrao}</span>
       <span class="padrao-row-track"><span class="padrao-row-fill" data-pct="${p.pct}" style="width:0%;background:${cor}"></span></span>
-      <span class="padrao-row-pct" style="color:${cor}">${p.pct}%</span>
+      <span class="padrao-row-pct" data-cor="${cor}" style="color:${cor}">${p.pct}% | ${p.estoque}</span>
     </button>
   `;
   }).join('');
@@ -1301,8 +1308,14 @@ function selecionarObjetivo_(el, val) {
 function selecionarPadrao_(el, val) {
   document.getElementById('tagsPadrao').classList.remove('tag-group-erro');
   el.classList.toggle('on');
-  if (el.classList.contains('on')) D.padroes.add(val);
-  else D.padroes.delete(val);
+  const ativo = el.classList.contains('on');
+  if (ativo) D.padroes.add(val); else D.padroes.delete(val);
+  // Cor do percentual vem inline (corVendido_) -- CSS sozinho não sobrescreve
+  // inline sem !important, então a inversão de contraste (fundo branco
+  // chapado ao selecionar) troca a cor do texto aqui também, guardando o
+  // valor original em data-cor pra restaurar ao desmarcar.
+  const pctEl = el.querySelector('.padrao-row-pct');
+  if (pctEl) pctEl.style.color = ativo ? '#111' : (pctEl.dataset.cor || '');
 }
 
 // Chamado ao SAIR da Tela 2 (objetivo+padrão) pra Tela 3 (sliders) --
