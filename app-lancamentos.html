@@ -827,6 +827,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
       </div>
       <div style="margin-top:44px">
+        <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Quantas vagas de garagem você precisa?</div>
+        <div class="tag-group" id="tagsVagas">
+          <button class="tag-btn" onclick="selecionarVagas_(this,1)">1 vaga</button>
+          <button class="tag-btn" onclick="selecionarVagas_(this,2)">2 vagas</button>
+          <button class="tag-btn" onclick="selecionarVagas_(this,3)">3 vagas</button>
+          <button class="tag-btn" onclick="selecionarVagas_(this,4)">4+ vagas</button>
+        </div>
+      </div>
+      <div style="margin-top:44px">
         <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
         <div class="tag-group" id="tagsAltura">
           <button class="tag-btn" onclick="selecionarAltura_(this,'baixo')">Até o 5º andar</button>
@@ -1074,7 +1083,7 @@ const D = {
   objetivo: null, padroes: new Set(),
   // Perfil do fluxo Investir (Tela 6, Fase 3, v3.0) -- paralelo a
   // quartosPref/alturaPref, que seguem exclusivos do fluxo Moradia.
-  tipologiaPref: null, prioridadeInvestimento: null,
+  tipologiaPref: null, prioridadeInvestimento: null, vagasPref: null,
   // true quando o contador da Tela 3 precisou ampliar a tolerância de
   // preço/área (±20% → ±30%) pra não mostrar zero opções -- controla o
   // aviso discreto que aparece perto do contador (ver contarComExpansaoTolerancia_).
@@ -1292,6 +1301,7 @@ function validar() {
       if (!D.prioridadeInvestimento)   { document.getElementById('tagsPrioridade').classList.add('tag-group-erro'); ok = false; }
     } else {
       if (!D.quartosPref) { document.getElementById('tagsQuartos').classList.add('tag-group-erro'); ok = false; }
+      if (!D.vagasPref)   { document.getElementById('tagsVagas').classList.add('tag-group-erro');   ok = false; }
       if (!D.alturaPref)  { document.getElementById('tagsAltura').classList.add('tag-group-erro');  ok = false; }
     }
     if (!ok) { toast('Marque pelo menos 1 opção em cada grupo para continuar'); return false; }
@@ -1521,6 +1531,13 @@ function selecionarAltura_(el, val) {
   document.querySelectorAll('#tagsAltura .tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.alturaPref = val;
+}
+
+function selecionarVagas_(el, val) {
+  document.getElementById('tagsVagas').classList.remove('tag-group-erro');
+  document.querySelectorAll('#tagsVagas .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.vagasPref = val;
 }
 
 function selecionarQuartos_(el, val) {
@@ -2351,6 +2368,7 @@ function montarAgradecimento() {
     ['Investimento estimado', formatBRL_(D.precoAlvo)],
     ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
     ['Quartos', D.quartosPref ? `${D.quartosPref}${D.quartosPref >= 5 ? '+' : ''} quarto${D.quartosPref > 1 ? 's' : ''}` : '—'],
+    ['Vagas de garagem', D.vagasPref ? `${D.vagasPref}${D.vagasPref >= 4 ? '+' : ''} vaga${D.vagasPref > 1 ? 's' : ''}` : '—'],
     ['Andar preferido', alturaMap[D.alturaPref] || '—'],
   ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
 
