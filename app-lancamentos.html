@@ -1166,7 +1166,12 @@ function atualizarBotoes() {
   const objBadge = document.getElementById('objBadge');
   if (objBadge) {
     objBadge.style.display = (D.objetivo && stepAtual !== 0 && stepAtual !== 5) ? '' : 'none';
-    objBadge.textContent = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
+    // Ao lado do MORADIA/INVESTIR, mostra também os padrões marcados --
+    // pedido explícito do usuário, pro contexto da bifurcação continuar
+    // visível durante o resto do funil.
+    const objTxt = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
+    const padroesTxt = [...D.padroes].join(', ');
+    objBadge.textContent = padroesTxt ? `${objTxt} · ${padroesTxt}` : objTxt;
   }
 
   bA.textContent = 'Próximo';
