@@ -695,28 +695,34 @@ input[type=range]::-moz-range-track {
     <div class="s2-sit-group" id="tagsSituacao">
       <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para Morar</button>
       <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
-      <span class="s2-cnt-inline"><strong id="cntCombo">—</strong> opções encontradas</span>
+      <span class="s2-cnt-inline" id="cntInlineWrap" style="display:none"><strong id="cntCombo">—</strong> opções encontradas</span>
     </div>
     <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
 
-    <div class="step-title" style="margin:20px 0 8px" id="tituloPreco">Qual seu orçamento?</div>
-    <div class="preco-input-row">
-      <span class="preco-prefixo" id="prefixoPreco">R$</span>
-      <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
-    </div>
-    <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
-    <div class="slider-label-row">
-      <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
-    </div>
+    <!-- Sliders só aparecem depois que o cliente marca Pronto para Morar/Em
+         Obras -- pedido explícito: não pode ficar mostrando contagem e
+         barras com as duas opções de situação desativadas. Visibilidade
+         controlada em atualizarVisibilidadeStep2_. -->
+    <div id="blocoSlidersWrap" style="display:none">
+      <div class="step-title" style="margin:20px 0 8px" id="tituloPreco">Qual seu orçamento?</div>
+      <div class="preco-input-row">
+        <span class="preco-prefixo" id="prefixoPreco">R$</span>
+        <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
+      </div>
+      <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
+      <div class="slider-label-row">
+        <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
+      </div>
 
-    <div class="step-title" style="margin:20px 0 8px">Qual a área útil?</div>
-    <div class="preco-input-row">
-      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-      <span class="preco-prefixo" id="prefixoArea">m²</span>
-    </div>
-    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
-    <div class="slider-label-row">
-      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+      <div class="step-title" style="margin:20px 0 8px">Qual a área útil?</div>
+      <div class="preco-input-row">
+        <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+        <span class="preco-prefixo" id="prefixoArea">m²</span>
+      </div>
+      <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
+      <div class="slider-label-row">
+        <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+      </div>
     </div>
 
   </div>
@@ -1283,6 +1289,23 @@ function montarConfigIniciais_() {
   }
   inicializarSliders();
   montarTitulosStep2_();
+  atualizarVisibilidadeStep2_();
+}
+
+// Sliders/contador só aparecem depois que pelo menos uma situação está
+// marcada -- pedido explícito do usuário. Chamada tanto ao entrar na Tela 3
+// (montarConfigIniciais_, cobre o caso de voltar já com situação marcada)
+// quanto a cada clique em selecionarSituacao_.
+function atualizarVisibilidadeStep2_() {
+  const mostrar = D.situacoes.size > 0;
+  const bloco = document.getElementById('blocoSlidersWrap');
+  const cnt = document.getElementById('cntInlineWrap');
+  if (bloco) bloco.style.display = mostrar ? '' : 'none';
+  if (cnt) cnt.style.display = mostrar ? '' : 'none';
+  if (!mostrar) {
+    const nota = document.getElementById('toleranciaNota');
+    if (nota) nota.style.display = 'none';
+  }
 }
 
 // Pergunta 1 muda por objetivo (Moradia/Investir); pergunta 2 (área) é igual
@@ -1311,6 +1334,7 @@ function selecionarSituacao_(el, val) {
     el.classList.add('on');
     D.situacoes.add(val);
   }
+  atualizarVisibilidadeStep2_();
   atualizarComboUI_();
 }
 
@@ -1598,7 +1622,7 @@ function atualizarComboUI_() {
   if (!D.precoAlvo || !D.metragemAlvo) return;
   animar('cntCombo', contarComExpansaoTolerancia_());
   const nota = document.getElementById('toleranciaNota');
-  if (nota) nota.style.display = D.toleranciaExpandidaTela3 ? '' : 'none';
+  if (nota) nota.style.display = (D.toleranciaExpandidaTela3 && D.situacoes.size > 0) ? '' : 'none';
 }
 
 // ── SCORE DE COMPATIBILIDADE (perfil geral, enviado no payload do lead) ────
