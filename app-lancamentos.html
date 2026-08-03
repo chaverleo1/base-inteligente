@@ -221,31 +221,39 @@ input[type=range]::-moz-range-track {
   color: var(--orange); border: 1px solid var(--orange); border-radius: 99px;
   padding: 3px 10px; margin-bottom: 14px;
 }
-.obj-group { display: flex; gap: 12px; margin-top: 16px; }
-.obj-btn {
-  flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
-  padding: 22px 12px; border: 1.5px solid var(--border2); border-radius: var(--r);
-  background: var(--s2); color: var(--text); cursor: pointer; font-family: inherit; transition: all .15s;
-}
-.obj-btn:hover { border-color: var(--accent); }
-.obj-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); }
-.obj-emoji { font-size: 28px; line-height: 1; }
-.obj-label { font-size: 14px; font-weight: 800; letter-spacing: .3px; }
-.obj-desc { font-size: 11px; color: var(--text); opacity: .7; line-height: 1.3; }
-#tagsObjetivo.obj-erro .obj-btn { border-color: var(--danger); animation: sitPulse .35s ease; }
-
-.padrao-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
-.padrao-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 14px 8px 12px; border: 1.5px solid var(--border2); border-radius: var(--r);
+/* Botões-tag destacados (não cards) -- pedido explícito: sem ícone, sem
+   descrição, só o rótulo em pílula grande e chapada, mesmo padrão visual
+   de destaque de .tag-btn-laranja/.s2-sit-btn usado no resto do app. */
+.obj-tag-group { display: flex; gap: 10px; flex-wrap: wrap; }
+.obj-tag-btn {
+  flex: 1; min-width: 140px; display: inline-flex; align-items: center; justify-content: center;
+  padding: 18px 16px; border: 2px solid var(--accent); border-radius: 99px;
+  font-size: 16px; font-weight: 800; letter-spacing: .3px; color: var(--accent);
   background: var(--s2); cursor: pointer; font-family: inherit; transition: all .15s;
 }
-.padrao-btn:hover { border-color: var(--accent); }
-.padrao-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); }
-.padrao-bar { display: block; width: 22px; background: var(--border2); border-radius: 3px; align-self: flex-end; transition: background .15s; }
-.padrao-btn.on .padrao-bar { background: var(--accent); }
-.padrao-label { font-size: 13px; font-weight: 700; color: var(--text); }
-.padrao-faixa { font-size: 10px; color: var(--text); opacity: .6; }
+.obj-tag-btn:hover { background: rgba(79,124,255,.10); }
+.obj-tag-btn.on { background: var(--accent); color: #fff; }
+#tagsObjetivo.obj-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
+
+/* Gráfico cartesiano horizontal -- uma linha por padrão, barra representa
+   % de unidades ainda disponíveis (mesmo verde = "disponível" usado nos
+   cards da Tela 7). Cor da barra é sempre a mesma (é DADO); seleção é
+   mostrada separadamente pela borda/fundo da linha, pra não confundir os
+   dois. Largura da barra começa em 0% e cresce via JS (animarBarrasPadrao_)
+   -- efeito de "carregando" pedido explicitamente. */
+.padrao-chart { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.padrao-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--s2); border: 1.5px solid var(--border2); border-radius: var(--r-sm);
+  padding: 10px 14px; cursor: pointer; font-family: inherit; transition: border-color .15s, background .15s;
+}
+.padrao-row:hover { border-color: var(--accent); }
+.padrao-row.on { border-color: var(--accent); background: rgba(79,124,255,.10); }
+.padrao-row-label { flex: 0 0 56px; font-size: 13px; font-weight: 700; color: var(--text); }
+.padrao-row-track { flex: 1; height: 20px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+.padrao-row-fill { display: block; height: 100%; width: 0%; background: var(--green); border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+.padrao-row-pct { flex: 0 0 38px; text-align: right; font-size: 12px; font-weight: 800; color: var(--text); }
+#tagsPadrao.tag-group-erro .padrao-row { border-color: var(--danger); animation: sitPulse .35s ease; }
 
 /* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
    mostrar zero opções (regra técnica 2 do documento; aviso visível é
@@ -622,24 +630,25 @@ input[type=range]::-moz-range-track {
        inventário real aparecem (montarBlocoPadrao_, chamado depois que
        carregarBaseReal() traz os dados). -->
   <div class="step" id="step-5">
-    <div class="step-title">Você busca apartamento para...</div>
-    <div class="obj-group" id="tagsObjetivo">
-      <button class="obj-btn" onclick="selecionarObjetivo_(this,'moradia')">
-        <span class="obj-emoji">🏠</span>
-        <span class="obj-label">MORADIA</span>
-        <span class="obj-desc">Quero morar ou presentear alguém</span>
-      </button>
-      <button class="obj-btn" onclick="selecionarObjetivo_(this,'investimento')">
-        <span class="obj-emoji">📈</span>
-        <span class="obj-label">INVESTIMENTO</span>
-        <span class="obj-desc">Quero gerar renda ou valorizar</span>
-      </button>
+    <div class="hero-phrase" style="margin-bottom:28px">
+      <span class="hp-eyebrow">Você busca apartamento</span>
+      <span class="hp-word1">para...</span>
+    </div>
+    <div class="obj-tag-group" id="tagsObjetivo">
+      <button class="obj-tag-btn" onclick="selecionarObjetivo_(this,'moradia')">MORADIA</button>
+      <button class="obj-tag-btn" onclick="selecionarObjetivo_(this,'investimento')">INVESTIMENTO</button>
     </div>
 
+    <!-- Padrão vira gráfico cartesiano horizontal (uma barra por padrão,
+         crescendo com efeito de "carregando" ao aparecer -- ver
+         animarBarrasPadrao_) em vez de cards -- pedido explícito do
+         usuário. Barra representa % de unidades ainda disponíveis
+         naquele padrão (mesma linguagem visual de "disponível" já usada
+         nos cards da Tela 7). Clicar na barra seleciona (múltipla escolha). -->
     <div id="blocoPadraoWrap" style="display:none;margin-top:40px">
       <div class="step-title">Como você define o padrão do imóvel que busca?</div>
-      <div class="step-sub">Pode marcar mais de um</div>
-      <div class="padrao-group" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
+      <div class="step-sub">Pode marcar mais de um · barra mostra % disponível</div>
+      <div class="padrao-chart" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
     </div>
   </div>
 
@@ -1215,34 +1224,32 @@ function validar() {
 
 // ── OBJETIVO + PADRÃO (Tela 2, bifurcação v3.0) ─────────────────────────
 const ORDEM_PADRAO_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
-// Só decorativo (altura da barrinha) -- não tem relação com quantidade real,
-// é só pra dar a sensação de "sobe conforme o padrão sobe" pedida no
-// documento original.
-const PADRAO_BAR_PX_ = { 'Popular': 16, 'Médio': 28, 'Alto': 40, 'Luxo': 52 };
 
 // Só padrões com inventário real aparecem como opção -- decisão explícita
 // do usuário (instrução 2): a base hoje não tem nenhum "Popular", por
 // exemplo, e oferecer uma escolha que sempre resulta em zero opções é pior
-// do que não oferecer. A faixa de preço mostrada é a REAL da base (min/max
-// de precoAPartir dos empreendimentos daquele padrão), não uma faixa fixa --
-// decisão explícita do usuário (instrução 1): "padrão" continua sendo
-// exatamente o campo que já existe (classificarPadraoPorM2Medio_, por R$/m²),
-// nenhuma regra nova.
+// do que não oferecer. "Padrão" continua sendo exatamente o campo que já
+// existe (classificarPadraoPorM2Medio_, por R$/m²) -- nenhuma regra nova
+// (instrução explícita do usuário). O percentual de cada barra é a média
+// de unidades DISPONÍVEIS (estoque/totalUnidades) entre os empreendimentos
+// daquele padrão -- mesma matemática de calcularPercentualVendido, só que
+// agregada por categoria em vez de por empreendimento, e invertida pra
+// "disponível" (mesmo sentido do verde já usado nos cards da Tela 7).
 function padroesDisponiveis_() {
   const porPadrao = {};
   TODOS_LANC.forEach(c => {
     const p = c.padrao;
     if (!p) return;
-    if (!porPadrao[p]) porPadrao[p] = { padrao: p, count: 0, precos: [] };
+    if (!porPadrao[p]) porPadrao[p] = { padrao: p, count: 0, estoque: 0, total: 0 };
     porPadrao[p].count++;
-    if (c.precoAPartir > 0) porPadrao[p].precos.push(c.precoAPartir);
+    porPadrao[p].estoque += Number(c.estoque) || 0;
+    porPadrao[p].total += Number(c.total) || 0;
   });
   return ORDEM_PADRAO_
     .filter(p => porPadrao[p] && porPadrao[p].count > 0)
     .map(p => ({
       padrao: p,
-      precoMin: Math.min(...porPadrao[p].precos),
-      precoMax: Math.max(...porPadrao[p].precos),
+      pct: porPadrao[p].total > 0 ? Math.round((porPadrao[p].estoque / porPadrao[p].total) * 100) : 0,
     }));
 }
 
@@ -1250,21 +1257,35 @@ function montarBlocoPadrao_() {
   const wrap = document.getElementById('tagsPadrao');
   if (!wrap) return;
   wrap.innerHTML = padroesDisponiveis_().map(p => `
-    <button class="padrao-btn" onclick="selecionarPadrao_(this,'${p.padrao}')">
-      <span class="padrao-bar" style="height:${PADRAO_BAR_PX_[p.padrao] || 24}px"></span>
-      <span class="padrao-label">${p.padrao}</span>
-      <span class="padrao-faixa">${formatBRL_(p.precoMin)} – ${formatBRL_(p.precoMax)}</span>
+    <button class="padrao-row" onclick="selecionarPadrao_(this,'${p.padrao}')">
+      <span class="padrao-row-label">${p.padrao}</span>
+      <span class="padrao-row-track"><span class="padrao-row-fill" data-pct="${p.pct}" style="width:0%"></span></span>
+      <span class="padrao-row-pct">${p.pct}%</span>
     </button>
   `).join('');
 }
 
+// Efeito de "carregando" pedido explicitamente: zera a largura, força
+// reflow e só então aplica a largura real -- sem o reflow no meio, o
+// navegador aplica a largura final direto, sem transição nenhuma.
+function animarBarrasPadrao_() {
+  const fills = document.querySelectorAll('#tagsPadrao .padrao-row-fill');
+  fills.forEach(el => { el.style.transition = 'none'; el.style.width = '0%'; });
+  void document.getElementById('tagsPadrao').offsetWidth;
+  fills.forEach(el => { el.style.transition = ''; });
+  requestAnimationFrame(() => {
+    fills.forEach(el => { el.style.width = (el.dataset.pct || 0) + '%'; });
+  });
+}
+
 function selecionarObjetivo_(el, val) {
   document.getElementById('tagsObjetivo').classList.remove('obj-erro');
-  document.querySelectorAll('#tagsObjetivo .obj-btn').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.objetivo = val;
   const blocoPadrao = document.getElementById('blocoPadraoWrap');
   if (blocoPadrao) blocoPadrao.style.display = '';
+  animarBarrasPadrao_();
 }
 
 function selecionarPadrao_(el, val) {
