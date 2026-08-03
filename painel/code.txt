@@ -171,7 +171,7 @@ const CABECALHO_LANCAMENTOS = [
 // anônimo de anúncio, sem login nenhum), além do Base Inteligente.
 // 'selecionar_isca' também é pública: chamada de app-lancamentos.html (landing
 // page de captura, sem login), igual listar_lancamentos.
-var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'rodar_matching', 'selecionar_isca'];
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'listar_lancamentos_resumo', 'rodar_matching', 'selecionar_isca'];
 
 function doGet(e) {
   if (!e || !e.parameter) return ok({ status: 'sem parametros' });
@@ -247,6 +247,7 @@ function doGet(e) {
   if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')         return ok(listarLancamentos_());
+  if (acao === 'listar_lancamentos_resumo')  return ok(listarLancamentosResumoPublico_());
   if (acao === 'listar_mix_segmentos')       return ok(listarMixSegmentosPublicados_());
   if (acao === 'selecionar_isca') return ok(selecionarIscaPublico_({
     motivacoes: String(e.parameter.motivacoes || '').split(',').filter(Boolean),
@@ -3086,6 +3087,116 @@ function listarLancamentos_() {
   }
 }
 
+// ── LISTAGEM PÚBLICA RESUMIDA (App Lançamentos v3.0, Fase 1) ────────────────
+// listar_lancamentos devolve 1 linha por TIPOLOGIA (unidade) -- ~1,8MB pra
+// toda a base hoje, porque repete todos os ~50 campos do empreendimento em
+// cada linha. O App Lançamentos só precisa do RESUMO por empreendimento (pra
+// os cards/filtros) + um array mínimo por unidade (areaUtil/precoTotal, só
+// pra checar compatibilidade real de tipologia -- ver temApartamentoCompativel_
+// no front). Esta rota agrega no servidor, replicando EXATAMENTE a mesma
+// chave de agrupamento e as mesmas fórmulas que carregarBaseReal() montava
+// no navegador antes -- só move o trabalho pro backend pra não trafegar bruto
+// pelo 4G do cliente. Mantém listar_lancamentos intacta (uso interno do CRM
+// continua precisando do detalhe por linha).
+var CIDADES_NORM_PUB_ = {
+  'goiania': 'Goiânia', 'goiânia': 'Goiânia',
+  'aparecida de goiania': 'Aparecida de Goiânia', 'aparecida de goiânia': 'Aparecida de Goiânia',
+  'senador canedo': 'Senador Canedo',
+};
+function normCidadePub_(s) {
+  if (!s) return s;
+  return CIDADES_NORM_PUB_[String(s).toLowerCase()] || s;
+}
+
+function tipoImovelDominantePub_(unidades) {
+  var cont = {};
+  (unidades || []).forEach(function(u) {
+    var t = String(u.tipo || '').trim();
+    if (t) cont[t] = (cont[t] || 0) + 1;
+  });
+  var melhor = '', max = 0;
+  Object.keys(cont).forEach(function(t) { if (cont[t] > max) { max = cont[t]; melhor = t; } });
+  return melhor;
+}
+
+function calcularM2MedioPub_(unidades) {
+  var m2s = unidades.map(function(u) {
+    var a = Number(u.areaUtil) || Number(u.areaTerr) || 0;
+    var p = Number(u.precoMedio) || 0;
+    return (a > 0 && p > 0) ? p / a : 0;
+  }).filter(function(v) { return v > 0; });
+  if (!m2s.length) return 0;
+  return m2s.reduce(function(a, b) { return a + b; }, 0) / m2s.length;
+}
+
+function calcularPercentualVendidoPub_(estoque, totalUnidades) {
+  var est = parseInt(estoque, 10);
+  var tot = parseInt(totalUnidades, 10);
+  if (!tot || tot <= 0 || isNaN(est) || est < 0) return null;
+  if (est === 0) return 100;
+  var vendidas = Math.max(0, tot - est);
+  return Math.min(99, Math.round((vendidas / tot) * 100));
+}
+
+function listarLancamentosResumoPublico_() {
+  try {
+    var linhas = listarLancamentos_().lancamentos;
+
+    // Mesma chave de agrupamento e mesma ordem de precedência (1ª linha vista
+    // vira a "info" do empreendimento) que o front usava -- se mudar aqui sem
+    // mudar lá (ou vice-versa), os dois caminhos divergem silenciosamente.
+    var grupos = {};
+    linhas.forEach(function(l) {
+      if (l.tipoEmpreendimento !== 'Condomínio Vertical') return;
+      var key = l.idLancamento || l.nomeEmpreendimento;
+      if (!grupos[key]) grupos[key] = { info: l, unidades: [] };
+      grupos[key].unidades.push(l);
+    });
+
+    var empreendimentos = Object.keys(grupos).map(function(key) {
+      var g = grupos[key].info;
+      var todasUnidades = grupos[key].unidades;
+
+      var areas  = todasUnidades.map(function(u) { return Number(u.areaUtil) || 0; }).filter(function(v) { return v > 0; });
+      var precos = todasUnidades.map(function(u) { return Number(u.precoMin) || Number(u.precoMedio) || 0; }).filter(function(v) { return v > 0; });
+      var total   = parseInt(g.totalUnidades, 10) || 0;
+      var estoque = parseInt(g.estoque, 10) || 0;
+
+      // Só o mínimo por tipologia -- área e preço -- pra checar compatibilidade
+      // real no front (ver comentário no topo do bloco).
+      var unidades = todasUnidades.map(function(u) {
+        var a = Number(u.areaUtil) || 0;
+        var p = Number(u.precoMedio) || 0;
+        return { areaUtil: a, precoTotal: p };
+      }).filter(function(u) { return u.areaUtil > 0 && u.precoTotal > 0; });
+
+      return {
+        id: g.idEmpreendimento || g.idLancamento,
+        nome: g.nomeEmpreendimento || '—',
+        regiao: [g.bairro, normCidadePub_(g.cidade)].filter(function(v) { return v; }).join(' · ') || 'Goiânia',
+        bairro: g.bairro || '',
+        tipoImovel: tipoImovelDominantePub_(todasUnidades),
+        padrao: g.padrao || '',
+        estagio: g.status || '—',
+        entregaPrev: g.previsaoEntrega || '—',
+        prazoPag: parseInt(g.prazoMaximo, 10) || 0,
+        areaMin: areas.length ? Math.min.apply(null, areas) : 0,
+        areaMax: areas.length ? Math.max.apply(null, areas) : 0,
+        precoAPartir: precos.length ? Math.min.apply(null, precos) : 0,
+        precoM2: calcularM2MedioPub_(todasUnidades),
+        unidades: unidades,
+        total: total, estoque: estoque,
+        pctVendido: calcularPercentualVendidoPub_(estoque, total),
+        temLazer: !!String(g.lazer || '').trim(),
+      };
+    }).filter(function(c) { return c.areaMin > 0 && c.precoAPartir > 0; });
+
+    return { empreendimentos: empreendimentos };
+  } catch (e) {
+    return { empreendimentos: [], erro: e.message };
+  }
+}
+
 // Chave de normalização para identificar par NOME+CONSTRUTORA de forma
 // resistente a variações de capitalização, acentuação e espaços extras.
 function chaveEmpreendimento_(nome, construtora) {
@@ -5657,17 +5768,31 @@ function montarBlocoRoteiroEmail_(d) {
     var res = selecionarIscaInterno_(perfil);
     if (!res.ok) return '\n\n(Mix estratégico indisponível: ' + res.erro + ')';
 
+    var rankingRaw = [];
+    try { rankingRaw = JSON.parse(d.rankingDetalhado || '[]'); } catch(e) {}
+    var codSeqPorId = {};
+    rankingRaw.forEach(function(r) { if (r.id && r.codSeq) codSeqPorId[r.id] = r.codSeq; });
+
+    function formatarIdMix_(resumo) {
+      if (!resumo || !resumo.idEmpreendimento) return '-';
+      var base = resumo.nomeEmpreendimento
+        ? (resumo.idEmpreendimento + ' (' + resumo.nomeEmpreendimento + ')')
+        : resumo.idEmpreendimento;
+      var cod = codSeqPorId[resumo.idEmpreendimento];
+      return cod ? (cod + ' | ' + base) : base;
+    }
+
     var alvo1 = res.roteiro.filter(function(r) { return r.papel === 'ALVO_1'; })[0];
     var linhas = ['', '', '═══ MIX ESTRATÉGICO (segmento ' + res.segmentoUsado + ') ═══'];
     if (alvo1) {
-      linhas.push('PRODUTO ALVO: ' + idComNomeResumoEmail_(alvo1.resumo) + ' — ' +
+      linhas.push('PRODUTO ALVO: ' + formatarIdMix_(alvo1.resumo) + ' — ' +
         formatarMoedaEmail_(alvo1.resumo.menorPreco) + ' · ' + (alvo1.resumo.percentualVendido || 0) + '% vendido' +
         (alvo1.escolhidoComoIsca ? ' (é o MESMO produto mostrado ao cliente como isca)' : ''));
     }
     linhas.push('MIX MONTADO:');
     res.roteiro.forEach(function(r) {
       linhas.push('  ' + PAPEL_LABEL_EMAIL_[r.papel] + (r.escolhidoComoIsca ? ' [ISCA]' : '') + ': ' +
-        idComNomeResumoEmail_(r.resumo) + ' — ' + formatarMoedaEmail_(r.resumo.menorPreco));
+        formatarIdMix_(r.resumo) + ' — ' + formatarMoedaEmail_(r.resumo.menorPreco));
     });
     linhas.push('Demais opções calculadas pelo simulador: ver "IDs selecionados" acima.');
     return linhas.join('\n');
@@ -5725,12 +5850,12 @@ function montarBlocoInteracaoCardsEmail_(d) {
     var naoClicou = comSinal.filter(function(r) { return !r.precoVisto; });
 
     return montarTabelaEmail_('★ FAVORITOS (o cliente curtiu ♥ no app)', favoritos, [
-      { label: 'COD',    width: 10, get: function(r) { return r.id || '-'; } },
-      { label: 'BAIRRO', width: 22, get: function(r) { return r.bairro || '-'; } },
-      { label: 'PREÇO',  width: 14, get: function(r) { return formatarMoedaEmail_(r.precoAPartir); } },
-    ]) + montarTabelaEmail_('CARDS QUE O CLIENTE NÃO CLICOU EM "VER PREÇO"', naoClicou, [
-      { label: 'COD',    width: 10, get: function(r) { return r.id || '-'; } },
-      { label: 'BAIRRO', width: 22, get: function(r) { return r.bairro || '-'; } },
+      { label: 'APRESENTADO', width: 22, get: function(r) { return (r.codSeq || ('Cod. ' + String(r.rank).padStart(3,'0'))) + ' | ' + (r.id || '-'); } },
+      { label: 'BAIRRO',      width: 22, get: function(r) { return r.bairro || '-'; } },
+      { label: 'PREÇO',       width: 14, get: function(r) { return formatarMoedaEmail_(r.precoAPartir); } },
+    ]) + '\n//\n//\n//' + montarTabelaEmail_('CARDS QUE O CLIENTE NÃO CLICOU EM "VER PREÇO"', naoClicou, [
+      { label: 'APRESENTADO', width: 22, get: function(r) { return (r.codSeq || ('Cod. ' + String(r.rank).padStart(3,'0'))) + ' | ' + (r.id || '-'); } },
+      { label: 'BAIRRO',      width: 22, get: function(r) { return r.bairro || '-'; } },
     ]);
   } catch (e) {
     return '';
@@ -5877,7 +6002,7 @@ function montarBlocoDadosTecnicosEmail_(d) {
       { label: 'TEMPO',  width: 12, get: function(r) { return r.tempo; } },
     ]);
 
-    return resumo + tabelaTempo;
+    return resumo + '\n//\n//\n//' + tabelaTempo;
   } catch (e) {
     return '';
   }
@@ -5921,12 +6046,13 @@ function montarBlocoAbandonoEmail_() {
 function enviarNotificacaoAtendente_(d) {
   try {
     var nome = d.nome || '(sem nome)';
+    var sep = '\n//\n//\n//';
     var corpo = montarBlocoResumoLeadEmail_(d);
-    corpo += montarBlocoInteracaoCardsEmail_(d);
+    corpo += sep + montarBlocoRoteiroEmail_(d);
+    corpo += sep + montarBlocoInteracaoCardsEmail_(d);
     corpo += montarBlocoExtraOpcoesEmail_(d);
-    corpo += montarBlocoRoteiroEmail_(d);
-    corpo += montarBlocoDadosTecnicosEmail_(d);
-    corpo += montarBlocoAbandonoEmail_();
+    corpo += sep + montarBlocoDadosTecnicosEmail_(d);
+    corpo += sep + montarBlocoAbandonoEmail_();
     MailApp.sendEmail({
       to: ADM_EMAIL,
       subject: '🔥 LEAD QUENTE — ' + nome + ' solicitou informações',

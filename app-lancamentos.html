@@ -215,6 +215,43 @@ input[type=range]::-moz-range-track {
   margin: 40px 0 10px; letter-spacing: -.1px;
 }
 
+/* ── OBJETIVO + PADRÃO (Tela 2, bifurcação v3.0) ─────────────────────── */
+.obj-badge {
+  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  color: var(--orange); border: 1px solid var(--orange); border-radius: 99px;
+  padding: 3px 10px; margin-bottom: 14px;
+}
+.obj-group { display: flex; gap: 12px; margin-top: 16px; }
+.obj-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+  padding: 22px 12px; border: 1.5px solid var(--border2); border-radius: var(--r);
+  background: var(--s2); color: var(--text); cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.obj-btn:hover { border-color: var(--accent); }
+.obj-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); }
+.obj-emoji { font-size: 28px; line-height: 1; }
+.obj-label { font-size: 14px; font-weight: 800; letter-spacing: .3px; }
+.obj-desc { font-size: 11px; color: var(--text); opacity: .7; line-height: 1.3; }
+#tagsObjetivo.obj-erro .obj-btn { border-color: var(--danger); animation: sitPulse .35s ease; }
+
+.padrao-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 14px; }
+.padrao-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px 12px; border: 1.5px solid var(--border2); border-radius: var(--r);
+  background: var(--s2); cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.padrao-btn:hover { border-color: var(--accent); }
+.padrao-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); }
+.padrao-bar { display: block; width: 22px; background: var(--border2); border-radius: 3px; align-self: flex-end; transition: background .15s; }
+.padrao-btn.on .padrao-bar { background: var(--accent); }
+.padrao-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.padrao-faixa { font-size: 10px; color: var(--text); opacity: .6; }
+
+/* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
+   mostrar zero opções (regra técnica 2 do documento; aviso visível é
+   decisão explícita do usuário). */
+.tolerancia-nota { font-size: 12px; color: var(--text); opacity: .65; margin-top: 8px; }
+
 /* ── CAPTURA ─────────────────────────────────────────────────────────── */
 .form-field { margin-bottom: 14px; }
 .form-field label {
@@ -545,6 +582,12 @@ input[type=range]::-moz-range-track {
 <div class="main">
 <div class="step-wrap">
 
+  <!-- Selo MORADIA/INVESTIR -- persiste por cima de todas as etapas a partir
+       da bifurcação (Tela 2), some na capa e na própria Tela 2 (instrução do
+       usuário no documento original). Visibilidade controlada em
+       atualizarBotoes(). -->
+  <div class="obj-badge" id="objBadge" style="display:none"></div>
+
   <!-- STEP 0 — ABERTURA -->
   <div class="step ativo" id="step-0">
 
@@ -570,6 +613,34 @@ input[type=range]::-moz-range-track {
       <div class="btn-final-sub" style="margin-top:10px">Resultado rápido · Dados reais e atualizados</div>
     </div>
 
+  </div>
+
+  <!-- STEP 5 — OBJETIVO + PADRÃO (bifurcação, v3.0) -- captura os dois dados
+       que definem o resto do fluxo. "Padrão" usa a MESMA classificação que
+       já existe no backend (classificarPadraoPorM2Medio_, por R$/m²) --
+       nenhuma regra nova (instrução explícita do usuário). Só padrões com
+       inventário real aparecem (montarBlocoPadrao_, chamado depois que
+       carregarBaseReal() traz os dados). -->
+  <div class="step" id="step-5">
+    <div class="step-title">Você busca apartamento para...</div>
+    <div class="obj-group" id="tagsObjetivo">
+      <button class="obj-btn" onclick="selecionarObjetivo_(this,'moradia')">
+        <span class="obj-emoji">🏠</span>
+        <span class="obj-label">MORADIA</span>
+        <span class="obj-desc">Quero morar ou presentear alguém</span>
+      </button>
+      <button class="obj-btn" onclick="selecionarObjetivo_(this,'investimento')">
+        <span class="obj-emoji">📈</span>
+        <span class="obj-label">INVESTIMENTO</span>
+        <span class="obj-desc">Quero gerar renda ou valorizar</span>
+      </button>
+    </div>
+
+    <div id="blocoPadraoWrap" style="display:none;margin-top:40px">
+      <div class="step-title">Como você define o padrão do imóvel que busca?</div>
+      <div class="step-sub">Pode marcar mais de um</div>
+      <div class="padrao-group" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
+    </div>
   </div>
 
   <!-- STEP 1 — NOME + OBJETIVO (2 perguntas na mesma tela, pedido explícito
@@ -641,6 +712,7 @@ input[type=range]::-moz-range-track {
     <div class="conf-obs" style="text-align:center;margin-top:24px">
       <span id="cntCombo" style="font-size:clamp(48px,14vw,64px);font-weight:800;color:var(--orange);letter-spacing:-1px">—</span>
       <strong>opções encontradas <span id="cntComboSufixo">com esse perfil</span>.</strong>
+      <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
     </div>
   </div>
 
@@ -650,6 +722,14 @@ input[type=range]::-moz-range-track {
     <div class="step-title">Antes de seguirmos, <span style="color:var(--accent)">confirme</span> o que você configurou!</div>
 
     <div class="conf-card">
+      <div class="conf-item">
+        <div class="conf-item-label">Objetivo</div>
+        <div class="conf-item-val conf-item-val-sit" id="confObjetivo">—</div>
+      </div>
+      <div class="conf-item">
+        <div class="conf-item-label">Padrão buscado</div>
+        <div class="conf-item-val conf-item-val-sit" id="confPadrao">—</div>
+      </div>
       <div class="conf-item">
         <div class="conf-item-label">Seu orçamento estimado</div>
         <div class="conf-item-val" id="confOrcamento">—</div>
@@ -805,31 +885,19 @@ input[type=range]::-moz-range-track {
 
 <script src="painel/config.js" onerror="void(0)"></script>
 <script>
-// ── DADOS REAIS (parte 97, 2026-07) ────────────────────────────────────────
-// Substituiu o MOCK_BASE anterior: busca listar_lancamentos (rota pública,
-// ver ACOES_PUBLICAS_GET em code.txt -- não precisa de token/sessão) e
-// agrupa por empreendimento, igual ao resto do projeto
-// (agruparPorEmpreendimento_ em lancamentos.html/estrategias.html). Só
-// "Condomínio Vertical" entra aqui -- lotes/Condomínio Horizontal já têm o
-// funil próprio em baseimob-funil.html.
+// ── DADOS REAIS (parte 97, 2026-07; migrado pra rota resumida na v3.0
+// Fase 1) ────────────────────────────────────────────────────────────────
+// Busca listar_lancamentos_resumo (rota pública, ver ACOES_PUBLICAS_GET em
+// code.txt -- não precisa de token/sessão), que já devolve o resumo por
+// empreendimento pronto (agregação feita no servidor). Antes esta função
+// buscava listar_lancamentos (uma linha por TIPOLOGIA, ~1,8MB pra base
+// inteira) e fazia o agrupamento aqui no navegador -- trocado porque o
+// download bruto sozinho já ameaçava a meta de <3s em 4G. Só "Condomínio
+// Vertical" entra aqui -- lotes/Condomínio Horizontal já têm o funil próprio
+// em baseimob-funil.html (isso já é filtrado no backend agora).
 let TODOS_LANC = [];
 let PRECO_BOUNDS = [200000, 2000000];
 let AREA_BOUNDS = [40, 140];
-
-const CIDADES_NORM_ = {
-  'goiania': 'Goiânia', 'goiânia': 'Goiânia',
-  'aparecida de goiania': 'Aparecida de Goiânia', 'aparecida de goiânia': 'Aparecida de Goiânia',
-  'senador canedo': 'Senador Canedo',
-};
-function normCidade_(s) { if (!s) return s; return CIDADES_NORM_[s.toLowerCase()] || s; }
-
-function tipoImovelDominanteSimulador_(unidades) {
-  const cont = {};
-  (unidades || []).forEach(u => { const t = String(u.tipo || '').trim(); if (t) cont[t] = (cont[t] || 0) + 1; });
-  let melhor = '', max = 0;
-  Object.keys(cont).forEach(t => { if (cont[t] > max) { max = cont[t]; melhor = t; } });
-  return melhor;
-}
 
 // previsaoEntrega às vezes vem como Date ISO em vez de "Mês/Ano" -- mesmo
 // problema já visto em lancamentos.html (célula formatada como Data no
@@ -846,56 +914,15 @@ function formatarDataEntrega_(v) {
 
 async function carregarBaseReal() {
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos');
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos_resumo');
     const data = await resp.json();
-    const linhas = data.lancamentos || [];
-
-    const grupos = {};
-    linhas.forEach(l => {
-      if (l.tipoEmpreendimento !== 'Condomínio Vertical') return;
-      if (l.statusAtivo === 'Excluído') return;
-      const key = l.idLancamento || l.nomeEmpreendimento;
-      if (!grupos[key]) grupos[key] = { ...l, unidades: [] };
-      grupos[key].unidades.push(l);
-    });
-
-    TODOS_LANC = Object.values(grupos).map(g => {
-      const areas  = g.unidades.map(u => Number(u.areaUtil) || 0).filter(v => v > 0);
-      const precos = g.unidades.map(u => Number(u.precoMin) || Number(u.precoMedio) || 0).filter(v => v > 0);
-      const total    = parseInt(g.totalUnidades, 10) || 0;
-      const estoque  = parseInt(g.estoque, 10) || 0;
-      // Unidades (tipologias) individuais, cada uma com sua própria área/preço-m² --
-      // preservado à parte pra poder checar, por tipologia, se o EMPREENDIMENTO tem
-      // de fato um apartamento com a metragem e o preço que a pessoa está buscando
-      // (não basta "estar dentro da média/faixa geral do prédio" -- ver
-      // temApartamentoCompativel_ abaixo).
-      const unidades = g.unidades
-        .map(u => {
-          const a = Number(u.areaUtil) || 0;
-          const p = Number(u.precoMedio) || 0;
-          return { areaUtil: a, precoTotal: p, precoM2: (a > 0 && p > 0) ? p / a : 0 };
-        })
-        .filter(u => u.areaUtil > 0 && u.precoTotal > 0);
-      return {
-        id: g.idEmpreendimento || g.idLancamento, nome: g.nomeEmpreendimento || '—',
-        regiao: [g.bairro, normCidade_(g.cidade)].filter(Boolean).join(' · ') || 'Goiânia',
-        bairro: g.bairro || '',
-        tipoImovel: tipoImovelDominanteSimulador_(g.unidades), padrao: g.padrao || '',
-        estagio: g.status || '—', entregaPrev: g.previsaoEntrega || '—',
-        prazoPag: parseInt(g.prazoMaximo, 10) || 0,
-        areaMin: areas.length ? Math.min(...areas) : 0,
-        areaMax: areas.length ? Math.max(...areas) : 0,
-        precoAPartir: precos.length ? Math.min(...precos) : 0,
-        precoM2: calcularM2Medio(g.unidades),
-        unidades,
-        total, estoque,
-        pctVendido: calcularPercentualVendido(estoque, total),
-        temLazer: !!String(g.lazer || '').trim(),
-      };
-    }).filter(c => c.areaMin > 0 && c.precoAPartir > 0);
+    // Já vem agregado por empreendimento (ver listarLancamentosResumoPublico_,
+    // code.txt) -- o filtro final de sanidade (área/preço válidos) fica aqui
+    // também, redundante com o backend, sem custo.
+    TODOS_LANC = (data.empreendimentos || []).filter(c => c.areaMin > 0 && c.precoAPartir > 0);
 
     if (TODOS_LANC.length) {
-      const totais  = TODOS_LANC.map(c => c.precoAPartir).filter(v => v > 0);
+      const totais    = TODOS_LANC.map(c => c.precoAPartir).filter(v => v > 0);
       const areasMin  = TODOS_LANC.map(c => c.areaMin);
       const areasMax  = TODOS_LANC.map(c => c.areaMax);
       PRECO_BOUNDS = [Math.floor(Math.min(...totais) / 25000) * 25000, Math.ceil(Math.max(...totais) / 25000) * 25000];
@@ -907,6 +934,23 @@ async function carregarBaseReal() {
   }
   inicializarSliders();
   montarStatsAbertura_();
+  montarBlocoPadrao_();
+}
+
+// Anima um contador de 0 até o valor real (Tela 1, "Temos hoje X lançamentos") --
+// pedido explícito do documento v3.0, efeito de contagem em vez de aparecer
+// o número pronto.
+function contarAte_(el, alvo, duracaoMs) {
+  duracaoMs = duracaoMs || 900;
+  const inicio = performance.now();
+  function passo(agora) {
+    const t = Math.min(1, (agora - inicio) / duracaoMs);
+    const val = Math.round(alvo * (1 - Math.pow(1 - t, 3))); // ease-out cúbico
+    el.textContent = val;
+    if (t < 1) requestAnimationFrame(passo);
+    else el.textContent = alvo;
+  }
+  requestAnimationFrame(passo);
 }
 
 // Estatísticas reais da base na tela de abertura -- pedido do usuário pra
@@ -914,8 +958,9 @@ async function carregarBaseReal() {
 // com dados de mercado reais e atuais, não só mais uma landing page comum.
 function montarStatsAbertura_() {
   const count = TODOS_LANC.length;
-  const val = count || '—';
-  document.querySelectorAll('.stats-total-emp').forEach(el => { el.textContent = val; });
+  document.querySelectorAll('.stats-total-emp').forEach(el => {
+    if (count) contarAte_(el, count); else el.textContent = '—';
+  });
 }
 
 // ── SCORE DE TRAÇÃO (versão pública e parcial) ─────────────────────────────
@@ -948,6 +993,13 @@ const TOTAL = 9; // steps 0..8
 
 const D = {
   filtroSituacao: 'todos', situacoes: new Set(), moradias: new Set(), alturaPref: null, quartosPref: null,
+  // Bifurcação v3.0 (Tela 2 do documento) -- objetivo exclusivo, padrão
+  // múltiplo. Preenchidos em selecionarObjetivo_/selecionarPadrao_.
+  objetivo: null, padroes: new Set(),
+  // true quando o contador da Tela 3 precisou ampliar a tolerância de
+  // preço/área (±20% → ±30%) pra não mostrar zero opções -- controla o
+  // aviso discreto que aparece perto do contador (ver contarComExpansaoTolerancia_).
+  toleranciaExpandidaTela3: false,
   // Sinais comportamentais por card (Etapa 6) -- id do empreendimento que o
   // cliente expandiu ("Ver Preço") ou favoritou (♥). Pedido explícito do
   // usuário: preferência REAL clicada vale mais que a declarada nos sliders.
@@ -993,7 +1045,10 @@ const D = {
 // step-3 mas vem ANTES de nome, que é step-1) pra "Etapa N" na ordem real
 // de navegação do cliente. Usado só pro rastreio comportamental (tempo por
 // etapa, taxa de abandono agregada) -- não afeta a navegação em si.
-const ETAPA_POR_STEP_ = { 0: 1, 2: 2, 3: 3, 1: 4, 4: 5, 6: 6, 7: 7, 8: 8 };
+// v3.0: Tela 2 (objetivo+padrão, step-5) entra como etapa 2, empurrando as
+// demais uma casa pra baixo -- alinhado 1:1 com a numeração de Telas do
+// documento de especificação (Tela 1..9).
+const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 3: 4, 1: 5, 4: 6, 6: 7, 7: 8, 8: 9 };
 let _stepEntradaTs = Date.now();
 
 // Beacon fire-and-forget: registra a transição de etapa (Fase 2 da Central
@@ -1036,7 +1091,8 @@ function irParaStep(n) {
 function avancarStep() {
   if (!validar()) return;
 
-  if (stepAtual === 0) { irParaStep(2); return; }                           // capa → sliders
+  if (stepAtual === 0) { irParaStep(5); return; }                           // capa → objetivo+padrão
+  if (stepAtual === 5) { montarConfigIniciais_(); irParaStep(2); return; }  // objetivo+padrão → sliders
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
   if (stepAtual === 3) { irParaStep(1); return; }                           // confirmação → nome
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
@@ -1053,6 +1109,8 @@ function montarCapturaTitulo_() {
 }
 
 function montarConfirmacao_() {
+  document.getElementById('confObjetivo').textContent = D.objetivo === 'investimento' ? 'Investimento' : 'Moradia';
+  document.getElementById('confPadrao').textContent = [...D.padroes].join(' + ') || '—';
   document.getElementById('confOrcamento').textContent = formatBRL_(D.precoAlvo);
   document.getElementById('confArea').textContent = D.metragemAlvo + ' m²';
   const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
@@ -1082,7 +1140,8 @@ function refazerSliders() {
 }
 
 function voltarStep() {
-  if (stepAtual === 2) { irParaStep(0); return; } // sliders → capa
+  if (stepAtual === 5) { irParaStep(0); return; } // objetivo+padrão → capa
+  if (stepAtual === 2) { irParaStep(5); return; } // sliders → objetivo+padrão
   if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
   if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
   if (stepAtual > 2) irParaStep(stepAtual - 1);
@@ -1104,13 +1163,27 @@ function atualizarBotoes() {
   // embutido; steps 6..8 também têm botões próprios.
   const semBotaoAvancarFooter = stepAtual === 3 || stepAtual === 4 || stepAtual >= 6;
   bA.classList.toggle('btn-hide', semBotaoAvancarFooter);
-  bV.classList.toggle('btn-hide', stepAtual === 3 || stepAtual === 0 || stepAtual === 4 || stepAtual === 8 || stepAtual >= 6);
+  // step 5 (objetivo+padrão) não tem "← Voltar" próprio, igual step 0
+  // (doc v3.0, Tela 2: rodapé só tem "Próximo →").
+  bV.classList.toggle('btn-hide', stepAtual === 3 || stepAtual === 0 || stepAtual === 5 || stepAtual === 4 || stepAtual === 8 || stepAtual >= 6);
+
+  const objBadge = document.getElementById('objBadge');
+  if (objBadge) {
+    objBadge.style.display = (D.objetivo && stepAtual !== 0 && stepAtual !== 5) ? '' : 'none';
+    objBadge.textContent = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
+  }
 
   bA.textContent = 'Próximo';
 }
 
 // ── VALIDAÇÃO ───────────────────────────────────────────────────────────
 function validar() {
+  if (stepAtual === 5) {
+    let ok = true;
+    if (!D.objetivo) { document.getElementById('tagsObjetivo').classList.add('obj-erro'); ok = false; }
+    if (D.padroes.size === 0) { document.getElementById('tagsPadrao').classList.add('tag-group-erro'); ok = false; }
+    if (!ok) { toast('Selecione seu objetivo e ao menos um padrão para continuar'); return false; }
+  }
   if (stepAtual === 2) {
     if (D.situacoes.size === 0) {
       document.getElementById('tagsSituacao').classList.add('sit-erro');
@@ -1138,6 +1211,87 @@ function validar() {
     D.whatsapp = whats;
   }
   return true;
+}
+
+// ── OBJETIVO + PADRÃO (Tela 2, bifurcação v3.0) ─────────────────────────
+const ORDEM_PADRAO_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
+// Só decorativo (altura da barrinha) -- não tem relação com quantidade real,
+// é só pra dar a sensação de "sobe conforme o padrão sobe" pedida no
+// documento original.
+const PADRAO_BAR_PX_ = { 'Popular': 16, 'Médio': 28, 'Alto': 40, 'Luxo': 52 };
+
+// Só padrões com inventário real aparecem como opção -- decisão explícita
+// do usuário (instrução 2): a base hoje não tem nenhum "Popular", por
+// exemplo, e oferecer uma escolha que sempre resulta em zero opções é pior
+// do que não oferecer. A faixa de preço mostrada é a REAL da base (min/max
+// de precoAPartir dos empreendimentos daquele padrão), não uma faixa fixa --
+// decisão explícita do usuário (instrução 1): "padrão" continua sendo
+// exatamente o campo que já existe (classificarPadraoPorM2Medio_, por R$/m²),
+// nenhuma regra nova.
+function padroesDisponiveis_() {
+  const porPadrao = {};
+  TODOS_LANC.forEach(c => {
+    const p = c.padrao;
+    if (!p) return;
+    if (!porPadrao[p]) porPadrao[p] = { padrao: p, count: 0, precos: [] };
+    porPadrao[p].count++;
+    if (c.precoAPartir > 0) porPadrao[p].precos.push(c.precoAPartir);
+  });
+  return ORDEM_PADRAO_
+    .filter(p => porPadrao[p] && porPadrao[p].count > 0)
+    .map(p => ({
+      padrao: p,
+      precoMin: Math.min(...porPadrao[p].precos),
+      precoMax: Math.max(...porPadrao[p].precos),
+    }));
+}
+
+function montarBlocoPadrao_() {
+  const wrap = document.getElementById('tagsPadrao');
+  if (!wrap) return;
+  wrap.innerHTML = padroesDisponiveis_().map(p => `
+    <button class="padrao-btn" onclick="selecionarPadrao_(this,'${p.padrao}')">
+      <span class="padrao-bar" style="height:${PADRAO_BAR_PX_[p.padrao] || 24}px"></span>
+      <span class="padrao-label">${p.padrao}</span>
+      <span class="padrao-faixa">${formatBRL_(p.precoMin)} – ${formatBRL_(p.precoMax)}</span>
+    </button>
+  `).join('');
+}
+
+function selecionarObjetivo_(el, val) {
+  document.getElementById('tagsObjetivo').classList.remove('obj-erro');
+  document.querySelectorAll('#tagsObjetivo .obj-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.objetivo = val;
+  const blocoPadrao = document.getElementById('blocoPadraoWrap');
+  if (blocoPadrao) blocoPadrao.style.display = '';
+}
+
+function selecionarPadrao_(el, val) {
+  document.getElementById('tagsPadrao').classList.remove('tag-group-erro');
+  el.classList.toggle('on');
+  if (el.classList.contains('on')) D.padroes.add(val);
+  else D.padroes.delete(val);
+}
+
+// Chamado ao SAIR da Tela 2 (objetivo+padrão) pra Tela 3 (sliders) --
+// recalcula os limites do preço/área só com os empreendimentos dos padrões
+// marcados (instrução 7: padrão filtra igual situação já filtra, e também
+// define os limites do slider) e reinicializa os sliders com esses novos
+// limites, em vez dos limites globais calculados em carregarBaseReal().
+function montarConfigIniciais_() {
+  const emps = TODOS_LANC.filter(c => D.padroes.has(c.padrao));
+  const base = emps.length ? emps : TODOS_LANC; // defensivo -- não deveria acontecer, padrão é obrigatório e só mostra opção com inventário
+  const precos   = base.map(c => c.precoAPartir).filter(v => v > 0);
+  const areasMin = base.map(c => c.areaMin).filter(v => v > 0);
+  const areasMax = base.map(c => c.areaMax).filter(v => v > 0);
+  if (precos.length) {
+    PRECO_BOUNDS = [Math.floor(Math.min(...precos) / 25000) * 25000, Math.ceil(Math.max(...precos) / 25000) * 25000];
+  }
+  if (areasMin.length && areasMax.length) {
+    AREA_BOUNDS = [Math.floor(Math.min(...areasMin) / 5) * 5, Math.ceil(Math.max(...areasMax) / 5) * 5];
+  }
+  inicializarSliders();
 }
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
@@ -1232,11 +1386,45 @@ function rankeados() {
 function filtrados() {
   return rankeados().filter(c => {
     if (!c.compativel) return false;
+    // Padrão filtra o resultado igual situação já filtra (instrução 7) --
+    // D.padroes vem obrigatoriamente preenchido da Tela 2, então size===0
+    // só existe como guarda defensiva (nunca deveria ocorrer no fluxo normal).
+    if (D.padroes.size > 0 && !D.padroes.has(c.padrao)) return false;
     const s = D.situacoes;
     if (s.size === 0) return true;
     return (s.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
            (s.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras'));
   });
+}
+
+// Contador da Tela 3 -- regra técnica 2 do documento: "nunca mostrar 0".
+// Escopo deliberadamente restrito a ESTE contador (não altera
+// TOLERANCIA_PRECO_/TOLERANCIA_METRAGEM_ globais, que continuam valendo
+// para o match final da Tela 7) -- ampliar a tolerância que decide os
+// cards reais mudaria o resultado que o cliente já confirmou depois, o que
+// é pior do que só evitar um "0" desanimador enquanto ele ainda está
+// mexendo nos sliders. Instrução do usuário: expansão automática, com aviso
+// discreto (D.toleranciaExpandidaTela3) pra não quebrar a confiança quando
+// o cliente comparar com o que confirmou na Tela 4.
+function contarComExpansaoTolerancia_() {
+  const base = filtrados().length;
+  if (base > 0 || !D.metragemAlvo || !D.precoAlvo) {
+    D.toleranciaExpandidaTela3 = false;
+    return base;
+  }
+  const aRangeExp = [Math.round(D.metragemAlvo * 0.70), Math.round(D.metragemAlvo * 1.30)];
+  const expandido = TODOS_LANC.filter(c => {
+    if (D.padroes.size > 0 && !D.padroes.has(c.padrao)) return false;
+    const s = D.situacoes;
+    if (s.size > 0 && !((s.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
+                         (s.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras')))) return false;
+    return (c.unidades || []).some(u =>
+      u.areaUtil >= aRangeExp[0] && u.areaUtil <= aRangeExp[1] &&
+      Math.abs(u.precoTotal - D.precoAlvo) / D.precoAlvo <= 0.30
+    );
+  }).length;
+  D.toleranciaExpandidaTela3 = expandido > 0;
+  return expandido;
 }
 
 // ── SLIDERS ──────────────────────────────────────────────────────────────
@@ -1401,7 +1589,9 @@ function atualizarComboUI_() {
   const sufEl = document.getElementById('cntComboSufixo');
   if (sufEl) sufEl.textContent = situacaoLabel ? `com "${situacaoLabel}"` : 'com esse perfil';
   if (!D.precoAlvo || !D.metragemAlvo) return;
-  animar('cntCombo', filtrados().length);
+  animar('cntCombo', contarComExpansaoTolerancia_());
+  const nota = document.getElementById('toleranciaNota');
+  if (nota) nota.style.display = D.toleranciaExpandidaTela3 ? '' : 'none';
 }
 
 // ── SCORE DE COMPATIBILIDADE (perfil geral, enviado no payload do lead) ────
