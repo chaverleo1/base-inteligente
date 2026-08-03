@@ -234,32 +234,10 @@ input[type=range]::-moz-range-track {
 .obj-tag-btn:hover { background: rgba(79,124,255,.10); }
 .obj-tag-btn.on { background: var(--accent); color: #fff; }
 #tagsObjetivo.obj-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
-
-/* Gráfico cartesiano horizontal -- uma linha por padrão, barra representa
-   % de unidades ainda disponíveis (mesmo verde = "disponível" usado nos
-   cards da Tela 7). Cor da barra é sempre a mesma (é DADO); seleção é
-   mostrada separadamente pela borda/fundo da linha, pra não confundir os
-   dois. Largura da barra começa em 0% e cresce via JS (animarBarrasPadrao_)
-   -- efeito de "carregando" pedido explicitamente. */
-.padrao-chart { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-.padrao-row {
-  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
-  background: var(--s2); border: 1.5px solid var(--border2); border-radius: var(--r-sm);
-  padding: 10px 14px; cursor: pointer; font-family: inherit; transition: border-color .15s, background .15s;
-}
-.padrao-row:hover { border-color: var(--accent); }
-/* Selecionado: fundo branco chapado + contraste invertido no texto --
-   pedido explícito do usuário. A cor do %  vem inline (corVendido_) e é
-   trocada em JS (selecionarPadrao_), não dá pra fazer só em CSS. */
-.padrao-row.on { border-color: #ffffff; background: #ffffff; }
-.padrao-row.on .padrao-row-label { color: #111; }
-.padrao-row-label { flex: 0 0 56px; font-size: 13px; font-weight: 700; color: var(--text); }
-.padrao-row-track { flex: 1; height: 20px; background: var(--bg); border-radius: 99px; overflow: hidden; }
-/* Cor da barra é definida inline por linha (corVendido_, igual às barras
-   dos cards da Tela 7) -- não fixa aqui, varia por padrão/valor. */
-.padrao-row-fill { display: block; height: 100%; width: 0%; border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
-.padrao-row-pct { flex: 0 0 84px; text-align: right; font-size: 18px; font-weight: 800; }
-#tagsPadrao.tag-group-erro .padrao-row { border-color: var(--danger); animation: sitPulse .35s ease; }
+/* Padrão reaproveita o mesmo botão-tag do objetivo (pedido explícito) --
+   só o estado de erro precisa de uma regra própria porque a classe de
+   erro aqui é .tag-group-erro (padrão do resto do app), não .obj-erro. */
+#tagsPadrao.tag-group-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
 
 /* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
    mostrar zero opções (regra técnica 2 do documento; aviso visível é
@@ -645,17 +623,13 @@ input[type=range]::-moz-range-track {
       <button class="obj-tag-btn" onclick="selecionarObjetivo_(this,'investimento')">INVESTIMENTO</button>
     </div>
 
-    <!-- Padrão vira gráfico cartesiano horizontal (uma barra por padrão,
-         crescendo com efeito de "carregando" ao aparecer -- ver
-         animarBarrasPadrao_) em vez de cards -- pedido explícito do
-         usuário. Barra representa a FATIA do estoque total que aquele
-         padrão representa (soma das barras ~100%), colorida pela mesma
-         escala usada nos cards da Tela 7 (corVendido_). Clicar na barra
-         seleciona (múltipla escolha). -->
+    <!-- Padrão volta a ser botões-tag destacados, igual objetivo (pedido
+         explícito: retirar o gráfico de barras) -- múltipla escolha, só
+         padrões com inventário real aparecem (montarBlocoPadrao_). -->
     <div id="blocoPadraoWrap" style="display:none;margin-top:40px">
       <div class="step-title">Como você define o <span style="color:var(--accent)">padrão do imóvel</span> que busca?</div>
-      <div class="step-sub">Pode marcar mais de um · barra mostra % do estoque total</div>
-      <div class="padrao-chart" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
+      <div class="step-sub">Pode marcar mais de um</div>
+      <div class="obj-tag-group" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
     </div>
   </div>
 
@@ -1237,62 +1211,21 @@ const ORDEM_PADRAO_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
 // exemplo, e oferecer uma escolha que sempre resulta em zero opções é pior
 // do que não oferecer. "Padrão" continua sendo exatamente o campo que já
 // existe (classificarPadraoPorM2Medio_, por R$/m²) -- nenhuma regra nova
-// (instrução explícita do usuário). O percentual de cada barra é a FATIA do
-// estoque total (soma de todos os padrões) que aquele padrão representa --
-// pedido explícito do usuário pra trocar a leitura anterior (% disponível
-// DENTRO da própria categoria) por uma comparação entre categorias. Soma
-// das barras dá ~100%. Cor de cada barra segue a mesma escala de
-// corVendido_ usada nos cards da Tela 7 (pedido explícito: "cores...
-// semelhante o que fizemos nos cards").
+// (instrução explícita do usuário).
 function padroesDisponiveis_() {
-  const porPadrao = {};
-  let estoqueTotalGeral = 0;
-  TODOS_LANC.forEach(c => {
-    const p = c.padrao;
-    if (!p) return;
-    const est = Number(c.estoque) || 0;
-    if (!porPadrao[p]) porPadrao[p] = { padrao: p, count: 0, estoque: 0 };
-    porPadrao[p].count++;
-    porPadrao[p].estoque += est;
-    estoqueTotalGeral += est;
-  });
-  return ORDEM_PADRAO_
-    .filter(p => porPadrao[p] && porPadrao[p].count > 0)
-    .map(p => ({
-      padrao: p,
-      pct: estoqueTotalGeral > 0 ? Math.round((porPadrao[p].estoque / estoqueTotalGeral) * 100) : 0,
-      estoque: porPadrao[p].estoque,
-    }));
+  const presentes = new Set();
+  TODOS_LANC.forEach(c => { if (c.padrao) presentes.add(c.padrao); });
+  return ORDEM_PADRAO_.filter(p => presentes.has(p));
 }
 
-// "X% | Y" -- mesmo formato de badgeVendidoHTML (config.js), Y é o estoque
-// total (unidades) daquele padrão, já somado em padroesDisponiveis_.
+// Botões-tag iguais aos de objetivo -- pedido explícito do usuário pra
+// retirar o gráfico de barras que existia aqui antes.
 function montarBlocoPadrao_() {
   const wrap = document.getElementById('tagsPadrao');
   if (!wrap) return;
-  wrap.innerHTML = padroesDisponiveis_().map(p => {
-    const cor = corVendido_(p.pct);
-    return `
-    <button class="padrao-row" onclick="selecionarPadrao_(this,'${p.padrao}')">
-      <span class="padrao-row-label">${p.padrao}</span>
-      <span class="padrao-row-track"><span class="padrao-row-fill" data-pct="${p.pct}" style="width:0%;background:${cor}"></span></span>
-      <span class="padrao-row-pct" data-cor="${cor}" style="color:${cor}">${p.pct}% | ${p.estoque}</span>
-    </button>
-  `;
-  }).join('');
-}
-
-// Efeito de "carregando" pedido explicitamente: zera a largura, força
-// reflow e só então aplica a largura real -- sem o reflow no meio, o
-// navegador aplica a largura final direto, sem transição nenhuma.
-function animarBarrasPadrao_() {
-  const fills = document.querySelectorAll('#tagsPadrao .padrao-row-fill');
-  fills.forEach(el => { el.style.transition = 'none'; el.style.width = '0%'; });
-  void document.getElementById('tagsPadrao').offsetWidth;
-  fills.forEach(el => { el.style.transition = ''; });
-  requestAnimationFrame(() => {
-    fills.forEach(el => { el.style.width = (el.dataset.pct || 0) + '%'; });
-  });
+  wrap.innerHTML = padroesDisponiveis_()
+    .map(p => `<button class="obj-tag-btn" onclick="selecionarPadrao_(this,'${p}')">${p}</button>`)
+    .join('');
 }
 
 function selecionarObjetivo_(el, val) {
@@ -1302,20 +1235,13 @@ function selecionarObjetivo_(el, val) {
   D.objetivo = val;
   const blocoPadrao = document.getElementById('blocoPadraoWrap');
   if (blocoPadrao) blocoPadrao.style.display = '';
-  animarBarrasPadrao_();
 }
 
 function selecionarPadrao_(el, val) {
   document.getElementById('tagsPadrao').classList.remove('tag-group-erro');
   el.classList.toggle('on');
-  const ativo = el.classList.contains('on');
-  if (ativo) D.padroes.add(val); else D.padroes.delete(val);
-  // Cor do percentual vem inline (corVendido_) -- CSS sozinho não sobrescreve
-  // inline sem !important, então a inversão de contraste (fundo branco
-  // chapado ao selecionar) troca a cor do texto aqui também, guardando o
-  // valor original em data-cor pra restaurar ao desmarcar.
-  const pctEl = el.querySelector('.padrao-row-pct');
-  if (pctEl) pctEl.style.color = ativo ? '#111' : (pctEl.dataset.cor || '');
+  if (el.classList.contains('on')) D.padroes.add(val);
+  else D.padroes.delete(val);
 }
 
 // Chamado ao SAIR da Tela 2 (objetivo+padrão) pra Tela 3 (sliders) --
