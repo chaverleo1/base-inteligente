@@ -309,12 +309,18 @@ input[type=range]::-moz-range-track {
    usuário, padrão Brasil +55. */
 .tel-input-row { display: flex; gap: 8px; }
 .tel-input-row input { flex: 1; min-width: 0; }
+/* <select> real (não mais um span fixo) -- pedido explícito do usuário,
+   o código do país precisa ser trocável de verdade, não só decorativo. */
 .tel-country-box {
-  display: flex; align-items: center; justify-content: center; gap: 4px;
-  flex-shrink: 0; padding: 0 12px;
+  flex-shrink: 0; width: 92px; height: 100%;
+  padding: 0 8px; text-align: center;
   background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r-sm);
-  font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap;
+  font-size: 14px; font-weight: 700; color: var(--text); font-family: inherit;
+  cursor: pointer; outline: none; transition: border .2s;
+  -webkit-appearance: none; appearance: none;
 }
+.tel-country-box:focus { border-color: var(--accent); }
+.tel-country-box option { background: var(--s2); color: var(--text); }
 .privacy-note { font-size: 12px; color: var(--text); margin-top: 14px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; }
 
 /* ── CAIXA DE CONFIRMAÇÃO DE WHATSAPP (2 campos, fundo destacado) ─────── */
@@ -965,14 +971,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="form-field">
         <label>Seu WhatsApp com DDD</label>
         <div class="tel-input-row">
-          <span class="tel-country-box">🇧🇷 +55</span>
+          <select class="tel-country-box" id="fWhatsPais" onchange="sincronizarPaisWhats_(this)"></select>
           <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
         </div>
       </div>
       <div class="form-field" style="margin-bottom:0">
         <label>Confirme o WhatsApp</label>
         <div class="tel-input-row">
-          <span class="tel-country-box">🇧🇷 +55</span>
+          <select class="tel-country-box" id="fWhatsPais2" onchange="sincronizarPaisWhats_(this)"></select>
           <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
         </div>
       </div>
@@ -1214,6 +1220,7 @@ const D = {
   // Pergunta de agendamento (Step 9, pós-confirmação) -- null até o
   // cliente responder Sim/Não.
   desejaAgendar: null, agendaDia: '', agendaHora: '', agendaModo: null,
+  paisDDI: '+55',
   // true quando o contador da Tela 3 precisou ampliar a tolerância de
   // preço/área (±20% → ±30%) pra não mostrar zero opções -- controla o
   // aviso discreto que aparece perto do contador (ver contarComExpansaoTolerancia_).
@@ -2087,6 +2094,7 @@ function submeter() {
       idEmpreendimentoIsca: D.iscaId,
       // Pergunta de agendamento (Step 9) -- pedido explícito do usuário.
       desejaAgendar: D.desejaAgendar, agendaDia: D.agendaDia, agendaHora: D.agendaHora, agendaModo: D.agendaModo,
+      paisDDI: D.paisDDI,
     }),
     canal: 'App Lançamentos',
     tipo_contato: 'LEAD QUENTE',
@@ -2613,6 +2621,50 @@ function mascaraTel(el) {
   el.value = v;
 }
 
+// ── CÓDIGO DE PAÍS (Tela "Quase lá") ────────────────────────────────────
+// <select> de verdade (pedido explícito do usuário -- antes era só um span
+// fixo mostrando +55, sem funcionar). Padrão Brasil +55.
+const PAISES_DDI_ = [
+  { flag: '🇧🇷', nome: 'Brasil', ddi: '+55' },
+  { flag: '🇵🇹', nome: 'Portugal', ddi: '+351' },
+  { flag: '🇺🇸', nome: 'Estados Unidos', ddi: '+1' },
+  { flag: '🇦🇷', nome: 'Argentina', ddi: '+54' },
+  { flag: '🇵🇾', nome: 'Paraguai', ddi: '+595' },
+  { flag: '🇺🇾', nome: 'Uruguai', ddi: '+598' },
+  { flag: '🇨🇱', nome: 'Chile', ddi: '+56' },
+  { flag: '🇧🇴', nome: 'Bolívia', ddi: '+591' },
+  { flag: '🇵🇪', nome: 'Peru', ddi: '+51' },
+  { flag: '🇨🇴', nome: 'Colômbia', ddi: '+57' },
+  { flag: '🇻🇪', nome: 'Venezuela', ddi: '+58' },
+  { flag: '🇪🇨', nome: 'Equador', ddi: '+593' },
+  { flag: '🇲🇽', nome: 'México', ddi: '+52' },
+  { flag: '🇪🇸', nome: 'Espanha', ddi: '+34' },
+  { flag: '🇮🇹', nome: 'Itália', ddi: '+39' },
+  { flag: '🇩🇪', nome: 'Alemanha', ddi: '+49' },
+  { flag: '🇫🇷', nome: 'França', ddi: '+33' },
+  { flag: '🇬🇧', nome: 'Reino Unido', ddi: '+44' },
+  { flag: '🇨🇦', nome: 'Canadá', ddi: '+1' },
+  { flag: '🇯🇵', nome: 'Japão', ddi: '+81' },
+  { flag: '🇨🇳', nome: 'China', ddi: '+86' },
+];
+
+function montarSelectPaises_(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = PAISES_DDI_
+    .map(p => `<option value="${p.ddi}"${p.ddi === D.paisDDI ? ' selected' : ''} title="${p.nome}">${p.flag} ${p.ddi}</option>`)
+    .join('');
+}
+
+// Os dois campos (WhatsApp / Confirme o WhatsApp) representam o MESMO
+// número, então o país selecionado num reflete automaticamente no outro.
+function sincronizarPaisWhats_(el) {
+  const outroId = el.id === 'fWhatsPais' ? 'fWhatsPais2' : 'fWhatsPais';
+  const outro = document.getElementById(outroId);
+  if (outro) outro.value = el.value;
+  D.paisDDI = el.value;
+}
+
 // Alerta visual em tempo real (borda vermelha + aviso) se os dois campos de
 // WhatsApp divergirem -- pedido explícito do usuário: o toast que só
 // aparecia ao clicar em "Confirmar" era fácil de perder. Compara por
@@ -2681,6 +2733,8 @@ function geolocalizarPorIp_() {
 
 // INIT
 atualizarBotoes();
+montarSelectPaises_('fWhatsPais');
+montarSelectPaises_('fWhatsPais2');
 carregarBaseReal();
 geolocalizarPorIp_();
 // Etapa 1 (capa) -- sem isso, quem some já na 1ª tela (bounce puro, nunca
