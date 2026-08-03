@@ -145,6 +145,9 @@ body {
 }
 .preco-input-row:focus-within { border-color: var(--accent); }
 .preco-prefixo { font-weight: 700; color: var(--accent); font-size: 16px; }
+/* Letra maior no prefixo (R$ ou m²) mais relevante pro objetivo escolhido --
+   pedido explícito do usuário: R$ maior na Moradia, m² maior no Investir. */
+.preco-prefixo.prefixo-grande { font-size: 26px; }
 .preco-input {
   flex: 1; width: 100%; background: none; border: none; outline: none; color: var(--text);
   font-family: inherit; font-size: 24px; font-weight: 800; text-align: center;
@@ -694,9 +697,9 @@ input[type=range]::-moz-range-track {
     </div>
     <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
 
-    <div class="step-title" style="margin:20px 0 8px">Até quanto você quer investir?</div>
+    <div class="step-title" style="margin:20px 0 8px" id="tituloPreco">Qual seu orçamento?</div>
     <div class="preco-input-row">
-      <span class="preco-prefixo">R$</span>
+      <span class="preco-prefixo" id="prefixoPreco">R$</span>
       <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
     </div>
     <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
@@ -704,10 +707,10 @@ input[type=range]::-moz-range-track {
       <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
     </div>
 
-    <div class="step-title" style="margin:20px 0 8px">Área Útil ideal pra você é:</div>
+    <div class="step-title" style="margin:20px 0 8px">Qual a área útil?</div>
     <div class="preco-input-row">
       <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-      <span class="preco-prefixo">m²</span>
+      <span class="preco-prefixo" id="prefixoArea">m²</span>
     </div>
     <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
     <div class="slider-label-row">
@@ -1277,6 +1280,23 @@ function montarConfigIniciais_() {
     AREA_BOUNDS = [Math.floor(Math.min(...areasMin) / 5) * 5, Math.ceil(Math.max(...areasMax) / 5) * 5];
   }
   inicializarSliders();
+  montarTitulosStep2_();
+}
+
+// Pergunta 1 muda por objetivo (Moradia/Investir); pergunta 2 (área) é igual
+// nos dois. Letra do prefixo (R$/m²) fica maior no lado mais relevante pro
+// objetivo -- pedido explícito do usuário.
+function montarTitulosStep2_() {
+  const tituloPreco = document.getElementById('tituloPreco');
+  if (tituloPreco) {
+    tituloPreco.textContent = D.objetivo === 'investimento'
+      ? 'Quanto está disposto a investir?'
+      : 'Qual seu orçamento?';
+  }
+  const prefixoPreco = document.getElementById('prefixoPreco');
+  const prefixoArea = document.getElementById('prefixoArea');
+  if (prefixoPreco) prefixoPreco.classList.toggle('prefixo-grande', D.objetivo !== 'investimento');
+  if (prefixoArea) prefixoArea.classList.toggle('prefixo-grande', D.objetivo === 'investimento');
 }
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
