@@ -684,18 +684,10 @@ input[type=range]::-moz-range-track {
     </div>
 
     <div style="margin-top:32px">
-      <div class="step-title">Qual é o seu objetivo?</div>
-      <div class="box-group" id="tagsMoradia">
-        <button class="box-btn" onclick="toggleMoradia_(this,'morar')">Adquirir meu primeiro apartamento</button>
-        <button class="box-btn" onclick="toggleMoradia_(this,'mudanca')">Preciso mudar de bairro ou cidade</button>
-        <button class="box-btn" onclick="toggleMoradia_(this,'investir')">Quero investir e gerar renda</button>
-        <button class="box-btn" onclick="toggleMoradia_(this,'familia')">Presente familiar (Filho/Filha/Cônjuge/Outros)</button>
-        <button class="box-btn" onclick="toggleMoradia_(this,'upgrade')">Melhorar minha realidade (Fazer um Upgrade)</button>
-        <button class="box-btn" onclick="toggleMoradiaOutro_(this)">Outro</button>
-        <div id="moradiaOutroWrap" style="display:none">
-          <input type="text" id="moradiaOutroTxt" class="preco-input" style="width:100%;margin-top:4px" placeholder="Descreva seu objetivo...">
-        </div>
-      </div>
+      <div class="step-title">Qual sua necessidade real?</div>
+      <!-- Opções trocam por objetivo (Fase 3, v3.0) -- ver
+           montarBlocoNecessidade_, chamado ao sair da confirmação. -->
+      <div class="box-group" id="tagsMoradia"><!-- populado por JS --></div>
     </div>
   </div>
 
@@ -800,24 +792,50 @@ input[type=range]::-moz-range-track {
     <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
     <div class="step-tag">Passo 4 de 4</div>
     <div class="step-title" id="motivacaoTitulo">O que define o tipo de apartamento mais adequado para você?</div>
-    <div style="margin-top:14px">
-      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Quantos quartos você precisa?</div>
-      <div class="tag-group" id="tagsQuartos">
-        <button class="tag-btn" onclick="selecionarQuartos_(this,1)">1 quarto</button>
-        <button class="tag-btn" onclick="selecionarQuartos_(this,2)">2 quartos</button>
-        <button class="tag-btn" onclick="selecionarQuartos_(this,3)">3 quartos</button>
-        <button class="tag-btn" onclick="selecionarQuartos_(this,4)">4 quartos</button>
-        <button class="tag-btn" onclick="selecionarQuartos_(this,5)">5+ quartos</button>
+
+    <!-- Fluxo Moradia -- pergunta original (quartos + andar). -->
+    <div id="blocoPerfilMoradia" style="display:none">
+      <div style="margin-top:14px">
+        <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Quantos quartos você precisa?</div>
+        <div class="tag-group" id="tagsQuartos">
+          <button class="tag-btn" onclick="selecionarQuartos_(this,1)">1 quarto</button>
+          <button class="tag-btn" onclick="selecionarQuartos_(this,2)">2 quartos</button>
+          <button class="tag-btn" onclick="selecionarQuartos_(this,3)">3 quartos</button>
+          <button class="tag-btn" onclick="selecionarQuartos_(this,4)">4 quartos</button>
+          <button class="tag-btn" onclick="selecionarQuartos_(this,5)">5+ quartos</button>
+        </div>
+      </div>
+      <div style="margin-top:44px">
+        <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
+        <div class="tag-group" id="tagsAltura">
+          <button class="tag-btn" onclick="selecionarAltura_(this,'baixo')">Até o 5º andar</button>
+          <button class="tag-btn" onclick="selecionarAltura_(this,'medio')">Do 5º ao 10º andar</button>
+          <button class="tag-btn" onclick="selecionarAltura_(this,'alto')">Acima do 10º andar</button>
+        </div>
       </div>
     </div>
-    <div style="margin-top:44px">
-      <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual a posição de altura ideal do apartamento pra você?</div>
-      <div class="tag-group" id="tagsAltura">
-        <button class="tag-btn" onclick="selecionarAltura_(this,'baixo')">Até o 5º andar</button>
-        <button class="tag-btn" onclick="selecionarAltura_(this,'medio')">Do 5º ao 10º andar</button>
-        <button class="tag-btn" onclick="selecionarAltura_(this,'alto')">Acima do 10º andar</button>
+
+    <!-- Fluxo Investir -- tipologia + prioridade (Fase 3, v3.0). -->
+    <div id="blocoPerfilInvestimento" style="display:none">
+      <div style="margin-top:14px">
+        <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Qual tipologia tem melhor potencial para sua estratégia?</div>
+        <div class="tag-group" id="tagsTipologia">
+          <button class="tag-btn" onclick="selecionarTipologia_(this,'studio')">Studio — melhor renda por m²</button>
+          <button class="tag-btn" onclick="selecionarTipologia_(this,'1q')">1 quarto — equilíbrio renda e liquidez</button>
+          <button class="tag-btn" onclick="selecionarTipologia_(this,'2q')">2 quartos — maior demanda de mercado</button>
+          <button class="tag-btn" onclick="selecionarTipologia_(this,'3q')">3+ quartos — ticket maior, público seleto</button>
+        </div>
+      </div>
+      <div style="margin-top:44px">
+        <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">O que importa mais para você neste investimento?</div>
+        <div class="tag-group" id="tagsPrioridade">
+          <button class="tag-btn" onclick="selecionarPrioridade_(this,'pronto')">Apartamento pronto para alugar logo</button>
+          <button class="tag-btn" onclick="selecionarPrioridade_(this,'valorizacao')">Maior potencial de valorização (lançamento)</button>
+          <button class="tag-btn" onclick="selecionarPrioridade_(this,'entrada')">Menor valor de entrada possível</button>
+        </div>
       </div>
     </div>
+
     <div class="hero-cta-count" id="cntStep4Wrap" style="margin-top:40px;margin-bottom:12px">Encontramos <strong>—</strong> opções para você!</div>
     <button class="btn-final btn-quente" id="btnVerOpcoes" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
@@ -1032,6 +1050,9 @@ const D = {
   // Bifurcação v3.0 (Tela 2 do documento) -- objetivo exclusivo, padrão
   // múltiplo. Preenchidos em selecionarObjetivo_/selecionarPadrao_.
   objetivo: null, padroes: new Set(),
+  // Perfil do fluxo Investir (Tela 6, Fase 3, v3.0) -- paralelo a
+  // quartosPref/alturaPref, que seguem exclusivos do fluxo Moradia.
+  tipologiaPref: null, prioridadeInvestimento: null,
   // true quando o contador da Tela 3 precisou ampliar a tolerância de
   // preço/área (±20% → ±30%) pra não mostrar zero opções -- controla o
   // aviso discreto que aparece perto do contador (ver contarComExpansaoTolerancia_).
@@ -1130,7 +1151,7 @@ function avancarStep() {
   if (stepAtual === 0) { irParaStep(5); return; }                           // capa → objetivo+padrão
   if (stepAtual === 5) { montarConfigIniciais_(); irParaStep(2); return; }  // objetivo+padrão → sliders
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
-  if (stepAtual === 3) { irParaStep(1); return; }                           // confirmação → nome
+  if (stepAtual === 3) { montarBlocoNecessidade_(); irParaStep(1); return; } // confirmação → nome
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
   if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
   if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
@@ -1163,6 +1184,7 @@ function montarMotivacaoTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('motivacaoTitulo').innerHTML =
     primeiroNome + ', o que define o <span style="color:var(--accent)">tipo de apartamento</span> mais adequado para você?';
+  montarPerfilStep4_();
   const _t4 = filtrados().length;
   const _w4 = document.getElementById('cntStep4Wrap');
   if (_w4) {
@@ -1243,8 +1265,13 @@ function validar() {
   }
   if (stepAtual === 4) {
     let ok = true;
-    if (!D.quartosPref) { document.getElementById('tagsQuartos').classList.add('tag-group-erro'); ok = false; }
-    if (!D.alturaPref)  { document.getElementById('tagsAltura').classList.add('tag-group-erro');  ok = false; }
+    if (D.objetivo === 'investimento') {
+      if (!D.tipologiaPref)            { document.getElementById('tagsTipologia').classList.add('tag-group-erro');  ok = false; }
+      if (!D.prioridadeInvestimento)   { document.getElementById('tagsPrioridade').classList.add('tag-group-erro'); ok = false; }
+    } else {
+      if (!D.quartosPref) { document.getElementById('tagsQuartos').classList.add('tag-group-erro'); ok = false; }
+      if (!D.alturaPref)  { document.getElementById('tagsAltura').classList.add('tag-group-erro');  ok = false; }
+    }
     if (!ok) { toast('Marque pelo menos 1 opção em cada grupo para continuar'); return false; }
   }
   if (stepAtual === 7) {
@@ -1410,6 +1437,62 @@ function toggleMoradiaOutro_(el) {
   const wrap = document.getElementById('moradiaOutroWrap');
   if (wrap) wrap.style.display = el.classList.contains('on') ? 'block' : 'none';
   if (el.classList.contains('on')) setTimeout(() => document.getElementById('moradiaOutroTxt')?.focus(), 50);
+}
+
+// ── NECESSIDADE REAL (Tela 5, Fase 3 v3.0) — opções forcadas por objetivo ──
+const NECESSIDADES_MORADIA_ = [
+  { val: 'aluguel',          label: 'Quero sair do aluguel e ter meu próprio apartamento' },
+  { val: 'mudanca',          label: 'Quero mudar para uma região ou cidade melhor' },
+  { val: 'investir_moradia', label: 'Quero investir e gerar renda com aluguel' },
+  { val: 'familiar',         label: 'Quero comprar para filho(a), cônjuge ou familiar' },
+  { val: 'upgrade',          label: 'Meu apartamento atual já ficou pequeno — quero um upgrade' },
+];
+const NECESSIDADES_INVESTIMENTO_ = [
+  { val: 'patrimonio',   label: 'Quero proteger e crescer meu patrimônio' },
+  { val: 'renda',        label: 'Quero receber aluguel todo mês (renda passiva)' },
+  { val: 'revender',     label: 'Quero comprar na planta e vender valorizado' },
+  { val: 'diversificar', label: 'Quero diversificar meus investimentos com imóvel' },
+];
+
+// Só reconstrói o HTML (e limpa D.moradias) quando o objetivo muda desde a
+// última vez -- preserva a seleção se o cliente só foi e voltou (step-3 ↔
+// step-1) sem mudar de fluxo lá atrás na Tela 2.
+let _necessidadeObjetivoRenderizado_ = undefined;
+function montarBlocoNecessidade_() {
+  const wrap = document.getElementById('tagsMoradia');
+  if (!wrap || _necessidadeObjetivoRenderizado_ === D.objetivo) return;
+  _necessidadeObjetivoRenderizado_ = D.objetivo;
+  D.moradias.clear();
+  const lista = D.objetivo === 'investimento' ? NECESSIDADES_INVESTIMENTO_ : NECESSIDADES_MORADIA_;
+  wrap.innerHTML = lista.map(n => `<button class="box-btn" onclick="toggleMoradia_(this,'${n.val}')">${n.label}</button>`).join('') + `
+    <button class="box-btn" onclick="toggleMoradiaOutro_(this)">Outro</button>
+    <div id="moradiaOutroWrap" style="display:none">
+      <input type="text" id="moradiaOutroTxt" class="preco-input" style="width:100%;margin-top:4px" placeholder="Descreva seu objetivo...">
+    </div>`;
+}
+
+// ── DETALHES DO PERFIL (Tela 6, Fase 3 v3.0) — quartos/andar no fluxo
+// Moradia, tipologia/prioridade no fluxo Investir. ─────────────────────────
+function montarPerfilStep4_() {
+  const investir = D.objetivo === 'investimento';
+  const blocoM = document.getElementById('blocoPerfilMoradia');
+  const blocoI = document.getElementById('blocoPerfilInvestimento');
+  if (blocoM) blocoM.style.display = investir ? 'none' : '';
+  if (blocoI) blocoI.style.display = investir ? '' : 'none';
+}
+
+function selecionarTipologia_(el, val) {
+  document.getElementById('tagsTipologia').classList.remove('tag-group-erro');
+  document.querySelectorAll('#tagsTipologia .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.tipologiaPref = val;
+}
+
+function selecionarPrioridade_(el, val) {
+  document.getElementById('tagsPrioridade').classList.remove('tag-group-erro');
+  document.querySelectorAll('#tagsPrioridade .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.prioridadeInvestimento = val;
 }
 
 function selecionarAltura_(el, val) {
@@ -1863,6 +1946,38 @@ function headlineImpacto_(qtd, primeiroNome) {
 // entre si mesmo quando não há nada "publicado" pra esse perfil específico.
 const ORDEM_PAPEIS_MIX_APP_ = ['ISCA', 'ALVO_1', 'ALVO_2', 'ALVO_3', 'ANCORA_SUP', 'ANCORA_INF', 'COMPLEMENTAR'];
 
+// ── ISCA POR NECESSIDADE (Fase 3, v3.0) ─────────────────────────────────────
+// Documento original mapeia necessidade -> critério de isca: upgrade (melhor
+// localização) e revender (maior potencial) já coincidem com o critério
+// padrão (maior tração, que já pondera atratividade/disponibilidade/prazo),
+// então só "renda" e "patrimônio" (fluxo Investir) mudam de fato o critério
+// de ordenação -- "sair do aluguel" fica de fora por enquanto (decisão do
+// usuário: precisaria de aluguel médio por bairro, dado que não existe na
+// base ainda).
+function criterioIscaPorNecessidade_() {
+  if (D.objetivo === 'investimento') {
+    if (D.moradias.has('renda')) return 'prazo';        // menor prazo de entrega
+    if (D.moradias.has('patrimonio')) return 'vendido';  // maior % vendido (prova de mercado)
+  }
+  return 'tracao';
+}
+
+// Meses até a previsão de entrega, a partir de hoje -- usado só pra ORDENAR
+// (menor primeiro), não pra exibição (isso é formatarDataEntrega_). Sem
+// previsão reconhecível vira Infinity, pra nunca "ganhar" por dado faltando.
+function timestampEntrega_(v) {
+  const s = String(v || '').trim();
+  const iso = s.match(/^(\d{4})-(\d{2})/);
+  if (!iso) return Infinity;
+  return new Date(parseInt(iso[1], 10), parseInt(iso[2], 10) - 1, 1).getTime();
+}
+
+function ordenarCandidatosIsca_(arr, criterio) {
+  if (criterio === 'prazo')   return [...arr].sort((a, b) => timestampEntrega_(a.entregaPrev) - timestampEntrega_(b.entregaPrev));
+  if (criterio === 'vendido') return [...arr].sort((a, b) => (b.pctVendido || 0) - (a.pctVendido || 0));
+  return [...arr].sort((a, b) => b.tracao - a.tracao);
+}
+
 function montarMixPorAlvo_(alvoItem, todosItens) {
   const statusAlvo = ['Pronto', 'Pronto novo', 'Entregue'].includes(alvoItem.estagio)
     ? ['Pronto', 'Pronto novo', 'Entregue'] : ['Em planta', 'Em obras'];
@@ -1913,8 +2028,9 @@ function montarMixPorAlvo_(alvoItem, todosItens) {
   papeis.ALVO_3 = c3.length ? usar(c3[0]) : null;
 
   // ISCA — faixa 62-84% do alvo, ponto de entrada mais acessível (só por
-  // preço/tração, sem exigir área parecida -- é isca, não substituto)
-  const ci = [...faixaP(0.62, 0.84)].sort((a, b) => b.tracao - a.tracao);
+  // preço, sem exigir área parecida -- é isca, não substituto). Critério de
+  // ORDENAÇÃO dentro dessa faixa muda por necessidade (criterioIscaPorNecessidade_).
+  const ci = ordenarCandidatosIsca_(faixaP(0.62, 0.84), criterioIscaPorNecessidade_());
   if (ci.length) {
     papeis.ISCA = usar(ci[0]);
   } else {
