@@ -251,8 +251,10 @@ input[type=range]::-moz-range-track {
 .padrao-row.on { border-color: var(--accent); background: rgba(79,124,255,.10); }
 .padrao-row-label { flex: 0 0 56px; font-size: 13px; font-weight: 700; color: var(--text); }
 .padrao-row-track { flex: 1; height: 20px; background: var(--bg); border-radius: 99px; overflow: hidden; }
-.padrao-row-fill { display: block; height: 100%; width: 0%; background: var(--green); border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
-.padrao-row-pct { flex: 0 0 38px; text-align: right; font-size: 12px; font-weight: 800; color: var(--text); }
+/* Cor da barra é definida inline por linha (corVendido_, igual às barras
+   dos cards da Tela 7) -- não fixa aqui, varia por padrão/valor. */
+.padrao-row-fill { display: block; height: 100%; width: 0%; border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+.padrao-row-pct { flex: 0 0 48px; text-align: right; font-size: 18px; font-weight: 800; }
 #tagsPadrao.tag-group-erro .padrao-row { border-color: var(--danger); animation: sitPulse .35s ease; }
 
 /* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
@@ -642,12 +644,13 @@ input[type=range]::-moz-range-track {
     <!-- Padrão vira gráfico cartesiano horizontal (uma barra por padrão,
          crescendo com efeito de "carregando" ao aparecer -- ver
          animarBarrasPadrao_) em vez de cards -- pedido explícito do
-         usuário. Barra representa % de unidades ainda disponíveis
-         naquele padrão (mesma linguagem visual de "disponível" já usada
-         nos cards da Tela 7). Clicar na barra seleciona (múltipla escolha). -->
+         usuário. Barra representa a FATIA do estoque total que aquele
+         padrão representa (soma das barras ~100%), colorida pela mesma
+         escala usada nos cards da Tela 7 (corVendido_). Clicar na barra
+         seleciona (múltipla escolha). -->
     <div id="blocoPadraoWrap" style="display:none;margin-top:40px">
       <div class="step-title">Como você define o padrão do imóvel que busca?</div>
-      <div class="step-sub">Pode marcar mais de um · barra mostra % disponível</div>
+      <div class="step-sub">Pode marcar mais de um · barra mostra % do estoque total</div>
       <div class="padrao-chart" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
     </div>
   </div>
@@ -1230,39 +1233,46 @@ const ORDEM_PADRAO_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
 // exemplo, e oferecer uma escolha que sempre resulta em zero opções é pior
 // do que não oferecer. "Padrão" continua sendo exatamente o campo que já
 // existe (classificarPadraoPorM2Medio_, por R$/m²) -- nenhuma regra nova
-// (instrução explícita do usuário). O percentual de cada barra é a média
-// de unidades DISPONÍVEIS (estoque/totalUnidades) entre os empreendimentos
-// daquele padrão -- mesma matemática de calcularPercentualVendido, só que
-// agregada por categoria em vez de por empreendimento, e invertida pra
-// "disponível" (mesmo sentido do verde já usado nos cards da Tela 7).
+// (instrução explícita do usuário). O percentual de cada barra é a FATIA do
+// estoque total (soma de todos os padrões) que aquele padrão representa --
+// pedido explícito do usuário pra trocar a leitura anterior (% disponível
+// DENTRO da própria categoria) por uma comparação entre categorias. Soma
+// das barras dá ~100%. Cor de cada barra segue a mesma escala de
+// corVendido_ usada nos cards da Tela 7 (pedido explícito: "cores...
+// semelhante o que fizemos nos cards").
 function padroesDisponiveis_() {
   const porPadrao = {};
+  let estoqueTotalGeral = 0;
   TODOS_LANC.forEach(c => {
     const p = c.padrao;
     if (!p) return;
-    if (!porPadrao[p]) porPadrao[p] = { padrao: p, count: 0, estoque: 0, total: 0 };
+    const est = Number(c.estoque) || 0;
+    if (!porPadrao[p]) porPadrao[p] = { padrao: p, count: 0, estoque: 0 };
     porPadrao[p].count++;
-    porPadrao[p].estoque += Number(c.estoque) || 0;
-    porPadrao[p].total += Number(c.total) || 0;
+    porPadrao[p].estoque += est;
+    estoqueTotalGeral += est;
   });
   return ORDEM_PADRAO_
     .filter(p => porPadrao[p] && porPadrao[p].count > 0)
     .map(p => ({
       padrao: p,
-      pct: porPadrao[p].total > 0 ? Math.round((porPadrao[p].estoque / porPadrao[p].total) * 100) : 0,
+      pct: estoqueTotalGeral > 0 ? Math.round((porPadrao[p].estoque / estoqueTotalGeral) * 100) : 0,
     }));
 }
 
 function montarBlocoPadrao_() {
   const wrap = document.getElementById('tagsPadrao');
   if (!wrap) return;
-  wrap.innerHTML = padroesDisponiveis_().map(p => `
+  wrap.innerHTML = padroesDisponiveis_().map(p => {
+    const cor = corVendido_(p.pct);
+    return `
     <button class="padrao-row" onclick="selecionarPadrao_(this,'${p.padrao}')">
       <span class="padrao-row-label">${p.padrao}</span>
-      <span class="padrao-row-track"><span class="padrao-row-fill" data-pct="${p.pct}" style="width:0%"></span></span>
-      <span class="padrao-row-pct">${p.pct}%</span>
+      <span class="padrao-row-track"><span class="padrao-row-fill" data-pct="${p.pct}" style="width:0%;background:${cor}"></span></span>
+      <span class="padrao-row-pct" style="color:${cor}">${p.pct}%</span>
     </button>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Efeito de "carregando" pedido explicitamente: zera a largura, força
