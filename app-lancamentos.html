@@ -255,6 +255,11 @@ input[type=range]::-moz-range-track {
 /* Estado de erro aqui é .tag-group-erro (padrão do resto do app), não
    .obj-erro -- regra própria, igual ao objetivo. */
 #tagsPadrao.tag-group-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
+/* Faixa de preço real dentro do botão de padrão, em letra pequena --
+   pedido explícito do usuário (ex: 200K|800K). */
+.padrao-btn-inner { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.padrao-btn-nome { line-height: 1; }
+.padrao-btn-faixa { font-size: 10px; font-weight: 600; letter-spacing: 0; opacity: .8; line-height: 1; }
 
 /* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
    mostrar zero opções (regra técnica 2 do documento; aviso visível é
@@ -464,34 +469,49 @@ input[type=range]::-moz-range-track {
 }
 
 /* ── TELA DE CONFIRMAÇÃO DOS DADOS (entre sliders e motivação) ────────── */
+/* 2 colunas quando possível (pedido explícito), pra diminuir a altura total
+   da caixa e evitar rolagem -- itens que não têm par (situação) e o bloco
+   de observação ocupam a largura toda via .conf-item-full. */
 .conf-card {
   background: var(--s2); border: 2px solid var(--accent);
   border-radius: var(--r); overflow: hidden; margin: 20px 0;
+  display: grid; grid-template-columns: 1fr 1fr;
 }
 .conf-item {
-  padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+  padding: 14px 14px 12px; border-bottom: 1px solid var(--border);
 }
-.conf-item-last { border-bottom: none; padding-bottom: 20px; }
+.conf-item:nth-child(odd) { border-right: 1px solid var(--border); }
+.conf-item-full { grid-column: 1 / -1; border-right: none; }
+.conf-item-last { border-bottom: none; padding-bottom: 14px; }
 .conf-item-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 1px; color: var(--text); opacity: .55; margin-bottom: 8px;
+  letter-spacing: 1px; color: var(--text); opacity: .55; margin-bottom: 6px;
 }
 .conf-item-val {
-  font-size: 38px; font-weight: 800; color: var(--orange);
-  letter-spacing: -1.5px; line-height: 1.05; overflow-wrap: break-word;
+  font-size: clamp(22px, 6vw, 30px); font-weight: 800; color: var(--orange);
+  letter-spacing: -1px; line-height: 1.05; overflow-wrap: break-word;
 }
 .conf-item-val-sit {
   font-size: clamp(20px, 5.5vw, 28px); letter-spacing: -.5px;
 }
 .conf-obs {
-  padding: 14px 20px; background: rgba(79,124,255,.07);
-  font-size: 13px; color: var(--text); line-height: 1.7;
+  grid-column: 1 / -1;
+  padding: 12px 16px; background: rgba(79,124,255,.07);
+  font-size: 13px; color: var(--text); line-height: 1.6;
   border-top: 1px solid var(--border);
 }
 .conf-obs strong { color: var(--accent); font-weight: 700; }
 .conf-btns { display: flex; gap: 8px; margin-top: 16px; }
 .conf-btn-ref { flex: 1; }
 .conf-btn-sim { flex: 2; }
+/* Badge de quantidade encontrada na confirmação -- fundo branco chapado,
+   texto escuro pra contraste (pedido explícito do usuário). */
+.conf-resultado-badge {
+  margin-top: 16px; padding: 14px 18px; text-align: center;
+  background: #ffffff; color: #111; border-radius: var(--r);
+  font-size: 15px; font-weight: 700;
+}
+.conf-resultado-badge strong { font-size: 24px; font-weight: 800; }
 
 /* ── TAG BUTTONS (filtros de seleção rápida) ─────────────────────────── */
 .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -693,7 +713,7 @@ input[type=range]::-moz-range-track {
     </div>
 
     <div class="s2-sit-group" id="tagsSituacao">
-      <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para Morar</button>
+      <button class="s2-sit-btn" id="btnSitProntoNovo" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para Morar</button>
       <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
       <span class="s2-cnt-inline" id="cntInlineWrap" style="display:none"><strong id="cntCombo">—</strong> opções encontradas</span>
     </div>
@@ -749,7 +769,7 @@ input[type=range]::-moz-range-track {
         <div class="conf-item-label">Área útil ideal do apartamento</div>
         <div class="conf-item-val" id="confArea">—</div>
       </div>
-      <div class="conf-item conf-item-last">
+      <div class="conf-item conf-item-last conf-item-full">
         <div class="conf-item-label">Ideal pra você é</div>
         <div class="conf-item-val conf-item-val-sit" id="confSituacao">—</div>
       </div>
@@ -758,6 +778,11 @@ input[type=range]::-moz-range-track {
         Intervalo de área compatível: <strong id="confFaixa">—</strong>
       </div>
     </div>
+
+    <!-- Quantidade encontrada, ao final da confirmação -- pedido explícito
+         do usuário, fundo branco chapado destacando o texto com contraste
+         (mesmo padrão já usado nos botões de padrão selecionados). -->
+    <div class="conf-resultado-badge" id="confResultadoBadge">— opções encontradas</div>
 
     <div class="conf-btns">
       <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Ajustar</button>
@@ -1129,6 +1154,9 @@ function montarConfirmacao_() {
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
   document.getElementById('confSituacao').textContent = situacaoEscolhidaLabel_() || '—';
+  const qtd = filtrados().length;
+  document.getElementById('confResultadoBadge').innerHTML =
+    `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
 }
 
 function montarMotivacaoTitulo_() {
@@ -1203,7 +1231,7 @@ function validar() {
   if (stepAtual === 2) {
     if (D.situacoes.size === 0) {
       document.getElementById('tagsSituacao').classList.add('sit-erro');
-      toast('Selecione Pronto para Morar ou Em Obras para continuar');
+      toast(`Selecione ${termoProntoParaMorar_()} ou Em Obras para continuar`);
       return false;
     }
   }
@@ -1238,20 +1266,51 @@ const ORDEM_PADRAO_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
 // do que não oferecer. "Padrão" continua sendo exatamente o campo que já
 // existe (classificarPadraoPorM2Medio_, por R$/m²) -- nenhuma regra nova
 // (instrução explícita do usuário).
+// Além de quais padrões existem, também traz a faixa real de preço
+// (precoAPartir min/max) de cada um -- pedido explícito do usuário, exibida
+// em letra pequena dentro do botão (ver montarBlocoPadrao_).
 function padroesDisponiveis_() {
-  const presentes = new Set();
-  TODOS_LANC.forEach(c => { if (c.padrao) presentes.add(c.padrao); });
-  return ORDEM_PADRAO_.filter(p => presentes.has(p));
+  const porPadrao = {};
+  TODOS_LANC.forEach(c => {
+    const p = c.padrao;
+    if (!p) return;
+    if (!porPadrao[p]) porPadrao[p] = { padrao: p, precos: [] };
+    if (c.precoAPartir > 0) porPadrao[p].precos.push(c.precoAPartir);
+  });
+  return ORDEM_PADRAO_
+    .filter(p => porPadrao[p])
+    .map(p => ({
+      padrao: p,
+      precoMin: porPadrao[p].precos.length ? Math.min(...porPadrao[p].precos) : 0,
+      precoMax: porPadrao[p].precos.length ? Math.max(...porPadrao[p].precos) : 0,
+    }));
+}
+
+// "200K"/"2Mi" -- formato compacto pra caber em letra pequena dentro do
+// botão, sem decimais desnecessários (200000 -> "200K", 2200000 -> "2.2Mi").
+function formatarValorCompacto_(v) {
+  if (v >= 1000000) {
+    const mi = v / 1000000;
+    return (Number.isInteger(mi) ? mi : mi.toFixed(1).replace(/\.0$/, '')) + 'Mi';
+  }
+  if (v >= 1000) return Math.round(v / 1000) + 'K';
+  return String(Math.round(v));
 }
 
 // Botões-tag iguais aos de objetivo -- pedido explícito do usuário pra
-// retirar o gráfico de barras que existia aqui antes.
+// retirar o gráfico de barras que existia aqui antes. Cada botão mostra,
+// em letra pequena, a faixa de preço real daquele padrão (ex: 200K|800K).
 function montarBlocoPadrao_() {
   const wrap = document.getElementById('tagsPadrao');
   if (!wrap) return;
-  wrap.innerHTML = padroesDisponiveis_()
-    .map(p => `<button class="obj-tag-btn obj-tag-btn-laranja" onclick="selecionarPadrao_(this,'${p}')">${p}</button>`)
-    .join('');
+  wrap.innerHTML = padroesDisponiveis_().map(p => `
+    <button class="obj-tag-btn obj-tag-btn-laranja" onclick="selecionarPadrao_(this,'${p.padrao}')">
+      <span class="padrao-btn-inner">
+        <span class="padrao-btn-nome">${p.padrao}</span>
+        <span class="padrao-btn-faixa">${formatarValorCompacto_(p.precoMin)}|${formatarValorCompacto_(p.precoMax)}</span>
+      </span>
+    </button>
+  `).join('');
 }
 
 function selecionarObjetivo_(el, val) {
@@ -1322,6 +1381,8 @@ function montarTitulosStep2_() {
   const prefixoArea = document.getElementById('prefixoArea');
   if (prefixoPreco) prefixoPreco.classList.toggle('prefixo-grande', D.objetivo !== 'investimento');
   if (prefixoArea) prefixoArea.classList.toggle('prefixo-grande', D.objetivo === 'investimento');
+  const btnPronto = document.getElementById('btnSitProntoNovo');
+  if (btnPronto) btnPronto.textContent = termoProntoParaMorar_();
 }
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
@@ -1597,13 +1658,22 @@ function validarLimitesMetragem_() {
   atualizarMetragem(v);
 }
 
-// "Pronto para morar"/"Em Obras" -- null quando é "Todos" (não precisa de
-// destaque, é a opção neutra). Usado tanto no badge quanto no texto da
-// contagem, pra manter os dois sempre consistentes.
+// Termo pra "pronto/entregue" muda por objetivo -- pedido explícito do
+// usuário: "Pronto para Morar" no fluxo Moradia, só "Pronto" no fluxo
+// Investir, valendo pro botão da Tela 3, pra confirmação e pros badges dos
+// cards de resultado (situacaoInfo_) -- um único ponto de verdade.
+function termoProntoParaMorar_() {
+  return D.objetivo === 'investimento' ? 'Pronto' : 'Pronto para Morar';
+}
+
+// Usado tanto no badge quanto no texto da contagem, pra manter os dois
+// sempre consistentes. null quando é "Todos" (não precisa de destaque, é a
+// opção neutra).
 function situacaoEscolhidaLabel_() {
   const s = D.situacoes;
-  if (s.has('pronto_novo') && s.has('em_obras')) return 'Pronto para morar e Em Obras';
-  if (s.has('pronto_novo')) return 'Pronto para morar';
+  const termoPronto = termoProntoParaMorar_();
+  if (s.has('pronto_novo') && s.has('em_obras')) return termoPronto + ' e Em Obras';
+  if (s.has('pronto_novo')) return termoPronto;
   if (s.has('em_obras'))   return 'Em Obras';
   return null;
 }
@@ -1740,7 +1810,7 @@ function submeter() {
 // nunca mostrar "Na planta" como rótulo diferente de "Em Obras"). ────────
 function situacaoInfo_(estagio) {
   if (['Pronto', 'Pronto novo', 'Entregue'].includes(estagio)) {
-    return { texto: 'Pronto para morar', bg: 'rgba(0,212,170,.15)', border: 'rgba(0,212,170,.4)', cor: 'var(--green)' };
+    return { texto: termoProntoParaMorar_(), bg: 'rgba(0,212,170,.15)', border: 'rgba(0,212,170,.4)', cor: 'var(--green)' };
   }
   return { texto: 'Em obras', bg: 'rgba(245,166,35,.15)', border: 'rgba(245,166,35,.4)', cor: '#f5a623' };
 }
