@@ -436,6 +436,15 @@ input[type=range]::-moz-range-track {
 .perfil-item-k { color: #fff; min-width: 0; overflow-wrap: break-word; }
 .perfil-item-v { color: #f5c800; font-weight: 600; text-align: right; min-width: 0; overflow-wrap: break-word; }
 
+/* Cards favoritados, versão resumida (Tela 7) -- pedido explícito do
+   usuário. */
+.fav-resumo-card {
+  background: var(--s2); border: 1px solid rgba(245,200,0,.35); border-radius: var(--r-sm);
+  padding: 10px 14px; margin-bottom: 8px;
+}
+.fav-resumo-linha1 { font-size: 13px; font-weight: 700; color: #f5c800; }
+.fav-resumo-preco { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
+
 .whats-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   background: #25D366; color: #fff; border: none; border-radius: var(--r-sm);
@@ -886,10 +895,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="opcoes-tabela" id="opcoesExtraTabela" style="display:none"><!-- populado por JS, ao clicar em "Ver +N opções" --></div>
   </div>
 
-  <!-- STEP 7 — CAPTURA -->
+  <!-- STEP 7 — CAPTURA (agora concentra resumo + favoritos + WhatsApp,
+       pedido explícito do usuário -- a tabela que antes ficava na tela
+       final (step-8) mudou pra cá, telefone continua por último). -->
   <div class="step" id="step-7">
     <div class="step-tag">Quase lá</div>
     <div class="step-title" id="capturaTitulo">Prepare-se para muitas novidades!</div>
+
+    <!-- Favoritos -- só aparece se o cliente favoritou ao menos 1 (ver
+         montarFavoritosResumoCaptura_, chamado ao sair da Tela 7 de
+         resultados). -->
+    <div id="favoritosResumoWrap" style="display:none;margin-top:20px">
+      <div class="label-section">Seus favoritos</div>
+      <div id="favoritosResumoCards"><!-- populado por JS --></div>
+    </div>
+
+    <div class="perfil-resumo" id="perfilResumo" style="margin-top:20px"><!-- populado por JS --></div>
+
     <div class="step-sub" style="color:#4caf7d;font-weight:700;display:flex;align-items:center;gap:6px;margin-top:20px">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-whatsapp"/></svg>
       Digite abaixo seu melhor WhatsApp!
@@ -933,11 +955,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="step-title" style="text-align:center;margin-bottom:6px">Confirmado, <span id="obrigadoNome"></span></div>
     <div class="step-sub" style="text-align:center;font-weight:700;color:var(--green);margin-bottom:6px">Sua consultoria está agendada.</div>
 
-    <div id="baseProjecoes" style="margin-top:32px;margin-bottom:20px"><!-- populado por JS --></div>
-
-    <div class="perfil-resumo" id="perfilResumo"><!-- populado por JS --></div>
-
-    <div style="font-size:13px;color:var(--text);text-align:center;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
+    <!-- Tela final simplificada -- pedido explícito do usuário: sem as
+         opções pessoais que o cliente configurou (isso agora fica na Tela
+         7, junto com o WhatsApp). -->
+    <div style="font-size:13px;color:var(--text);text-align:center;margin-top:24px;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
     <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
       <svg width="20" height="20"><use href="#ico-whats"/></svg>
       Falar agora no WhatsApp
@@ -1194,6 +1215,7 @@ function montarCapturaTitulo_() {
   const primeiroNome = D.nome.split(' ')[0];
   document.getElementById('capturaTitulo').innerHTML =
     `${primeiroNome}, <span style="color:var(--accent)">confirme seu atendimento</span> para entrarmos em contato com você.`;
+  montarFavoritosResumoCaptura_();
 }
 
 function montarConfirmacao_() {
@@ -2307,75 +2329,85 @@ function favoritarCard_(id, i, grupo) {
   atualizarStickyFavCount_();
 }
 
-// ── AGRADECIMENTO ─────────────────────────────────────────────────────────
+// Rótulo legível de uma necessidade (funciona pros dois fluxos, já que os
+// vals nunca colidem entre as duas listas) -- usado no resumo e na
+// mensagem de WhatsApp.
+function labelNecessidade_(val) {
+  const item = [...NECESSIDADES_MORADIA_, ...NECESSIDADES_INVESTIMENTO_].find(n => n.val === val);
+  return item ? item.label : val;
+}
+
+const alturaMap_ = { baixo: 'Até o 5º andar', medio: 'Do 5º ao 10º andar', alto: 'Acima do 10º andar' };
+const tipologiaMap_ = { studio: 'Studio', '1q': '1 quarto', '2q': '2 quartos', '3q': '3+ quartos' };
+const prioridadeMap_ = { pronto: 'Pronto pra alugar logo', valorizacao: 'Maior potencial de valorização', entrada: 'Menor valor de entrada' };
+
+// ── RESUMO + FAVORITOS (Tela 7, "Quase lá") ─────────────────────────────────
+// Chamado ao SAIR da Tela de resultados (step-6) pra Tela de captura --
+// pedido explícito do usuário: a tabela de resumo que antes só aparecia na
+// tela final agora mora aqui, junto com os cards favoritados, ANTES do
+// campo de WhatsApp (telefone continua sendo o último passo).
+function montarFavoritosResumoCaptura_() {
+  const favs = [];
+  D.ofertasMostradas.forEach((c, i) => {
+    if (D.cardsFavoritos.has(c.id)) favs.push({ c, codSeq: 'Cod. ' + String(i + 1).padStart(3, '0') });
+  });
+  D.extrasMostrados.forEach((c, i) => {
+    if (D.extraFavoritos.has(c.id)) favs.push({ c, codSeq: 'Cod. ' + String((D.qtdPrincipal || 7) + i + 1).padStart(3, '0') });
+  });
+
+  const wrap = document.getElementById('favoritosResumoWrap');
+  const cont = document.getElementById('favoritosResumoCards');
+  if (wrap && cont) {
+    if (favs.length) {
+      wrap.style.display = '';
+      cont.innerHTML = favs.map(({ c, codSeq }) => `
+        <div class="fav-resumo-card">
+          <div class="fav-resumo-linha1">♥ <strong>${codSeq}</strong> · ${c.bairro || c.regiao || '—'}</div>
+          <div class="fav-resumo-preco">A partir de ${formatBRL_(c.precoAPartir)}</div>
+        </div>`).join('');
+    } else {
+      wrap.style.display = 'none';
+      cont.innerHTML = '';
+    }
+  }
+
+  const necessidadesStr = D.moradias.size ? [...D.moradias].map(labelNecessidade_).join(', ') : '—';
+  const linhas = [
+    ['Objetivo', D.objetivo === 'investimento' ? 'Investimento' : 'Moradia'],
+    ['Necessidade', necessidadesStr],
+    ['Investimento estimado', formatBRL_(D.precoAlvo)],
+    ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
+    ['Situação', situacaoEscolhidaLabel_() || '—'],
+  ];
+  if (D.objetivo === 'investimento') {
+    linhas.push(['Tipologia', tipologiaMap_[D.tipologiaPref] || '—']);
+    linhas.push(['Prioridade', prioridadeMap_[D.prioridadeInvestimento] || '—']);
+  } else {
+    linhas.push(['Quartos', D.quartosPref ? `${D.quartosPref}${D.quartosPref >= 5 ? '+' : ''} quarto${D.quartosPref > 1 ? 's' : ''}` : '—']);
+    linhas.push(['Vagas de garagem', D.vagasPref ? `${D.vagasPref}${D.vagasPref >= 4 ? '+' : ''} vaga${D.vagasPref > 1 ? 's' : ''}` : '—']);
+    linhas.push(['Andar preferido', alturaMap_[D.alturaPref] || '—']);
+  }
+  document.getElementById('perfilResumo').innerHTML = linhas
+    .map(([k, v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`)
+    .join('');
+}
+
+// ── AGRADECIMENTO (Tela final, simplificada) ────────────────────────────────
+// Só o essencial -- confirmação + link de WhatsApp. As opções pessoais que
+// o cliente configurou já foram mostradas na Tela 7 (pedido explícito do
+// usuário: tela final "mais resumida").
 function montarAgradecimento() {
   document.getElementById('obrigadoNome').textContent = D.nome.split(' ')[0] + '!';
 
-  const emps    = filtrados();
-  const total   = emps.length;
-  const prontos = emps.filter(e => ['Pronto','Pronto novo','Entregue'].includes(e.estagio)).length;
-  const emObras = emps.filter(e => ['Em obras','Em planta'].includes(e.estagio)).length;
-  const areas   = emps.map(e => e.areaMin);
-  const precos  = emps.map(e => e.precoAPartir).filter(v => v > 0);
-  const menorPreco = precos.length ? Math.min(...precos) : null;
-  const maiorArea  = areas.length  ? Math.max(...areas)  : null;
-
+  const emps  = filtrados();
+  const total = emps.length;
   const totalFav = D.cardsFavoritos.size + D.extraFavoritos.size;
-
-  const linhasProjecao = [];
-  if (total > 0) {
-    linhasProjecao.push(['Empreendimentos com o apartamento que você busca', `<span style="color:var(--accent);font-weight:700">${total} empreendimento${total>1?'s':''}</span>`]);
-  }
-  if (totalFav > 0) {
-    linhasProjecao.push(['♥ Favoritados por você', `<span style="color:#f5c800;font-weight:700;font-size:15px">${totalFav} empreendimento${totalFav>1?'s':''}</span>`]);
-  }
-  if (menorPreco) {
-    linhasProjecao.push([`Investimento estimado: ${formatBRL_(D.precoAlvo)}`, `Encontrado a partir de ${formatBRL_(menorPreco)}`]);
-  }
-  if (maiorArea) {
-    linhasProjecao.push([`Apartamento de ${D.metragemAlvo} m² (±20%: ${D.areaRange[0]}–${D.areaRange[1]} m²)`, `Disponível até ${maiorArea} m² dentro do perfil`]);
-  }
-  if (prontos > 0) {
-    linhasProjecao.push(['Prontos para morar agora', `<span style="color:var(--green);font-weight:700">${prontos} disponíve${prontos>1?'is':'l'}</span>`]);
-  }
-  if (emObras > 0) {
-    linhasProjecao.push(['Em obras', `<span style="color:#f5a623;font-weight:700">${emObras} disponíve${emObras>1?'is':'l'}</span>`]);
-  }
-
-  const projecaoEl = document.getElementById('baseProjecoes');
-  if (linhasProjecao.length) {
-    projecaoEl.innerHTML = `
-      <div style="font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#fff;margin-bottom:10px">O que encontramos pra você</div>
-      <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px">
-        ${linhasProjecao.map(([k,v]) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)">
-            <span style="font-size:12px;color:#fff;min-width:0;overflow-wrap:break-word">${k}</span>
-            <span style="font-size:13px;font-weight:600;color:#f5c800;text-align:right;max-width:55%;min-width:0;overflow-wrap:break-word">${v}</span>
-          </div>`).join('')}
-      </div>`;
-    const linhas = projecaoEl.querySelectorAll('div[style*="border-bottom"]');
-    if (linhas.length) linhas[linhas.length-1].style.borderBottom = 'none';
-  } else {
-    projecaoEl.innerHTML = '';
-  }
-
-  const moradiaMap = { aluguel:'Quero sair do aluguel', proprio:'Tenho imóvel próprio', familia:'Moro com família', investidor:'Quero investir' };
-  const alturaMap  = { baixo:'Até o 5º andar', medio:'Do 5º ao 10º andar', alto:'Acima do 10º andar' };
-  const moradiasStr = D.moradias.size ? [...D.moradias].map(k => moradiaMap[k] || k).join(', ') : '—';
-
-  document.getElementById('perfilResumo').innerHTML = [
-    ['Situação atual', moradiasStr],
-    ['Investimento estimado', formatBRL_(D.precoAlvo)],
-    ['Apartamento — metragem', D.areaRange ? `${D.metragemAlvo} m² (considera ${D.areaRange[0]}–${D.areaRange[1]} m²)` : '—'],
-    ['Quartos', D.quartosPref ? `${D.quartosPref}${D.quartosPref >= 5 ? '+' : ''} quarto${D.quartosPref > 1 ? 's' : ''}` : '—'],
-    ['Vagas de garagem', D.vagasPref ? `${D.vagasPref}${D.vagasPref >= 4 ? '+' : ''} vaga${D.vagasPref > 1 ? 's' : ''}` : '—'],
-    ['Andar preferido', alturaMap[D.alturaPref] || '—'],
-  ].map(([k,v]) => `<div class="perfil-item"><span class="perfil-item-k">${k}</span><span class="perfil-item-v">${v}</span></div>`).join('');
+  const necessidadesStr = D.moradias.size ? [...D.moradias].map(labelNecessidade_).join(', ') : '—';
 
   const favMsg = totalFav > 0 ? ` Marquei ${totalFav} empreendimento${totalFav > 1 ? 's' : ''} como favorito${totalFav > 1 ? 's' : ''}.` : '';
   const msg = encodeURIComponent(
     'Olá! Acabei de confirmar minha consultoria gratuita no app lançamentos. ' +
-    `Meu objetivo: ${moradiasStr}. ` +
+    `Meu objetivo: ${necessidadesStr}. ` +
     `Estou buscando um apartamento com investimento estimado de ${formatBRL_(D.precoAlvo)}, metragem de ${D.metragemAlvo}m² (considerando ${D.areaRange[0]} a ${D.areaRange[1]}m²).` +
     favMsg +
     (total ? ` O simulador encontrou ${total} empreendimento${total>1?'s':''} com esse perfil — gostaria de iniciar minha consultoria exclusiva.` : ' Gostaria de iniciar minha consultoria exclusiva.')
