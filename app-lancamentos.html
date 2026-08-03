@@ -178,16 +178,18 @@ input[type=range]::-moz-range-track {
 }
 
 /* ── STEP-2 TIPOGRAFIA + SITUAÇÃO ────────────────────────────────────────── */
-.s2-phrase { margin: 20px 0 16px; }
+/* Pedido explícito: título em 1 linha só (era 2 blocks empilhados) e menos
+   espaço vertical na página inteira, pra reduzir rolagem. */
+.s2-phrase { margin: 0 0 14px; white-space: nowrap; }
 .s2-phrase-main {
-  display: block; font-size: clamp(28px, 8.5vw, 44px); font-weight: 900;
-  color: var(--accent); letter-spacing: -1px; line-height: .92;
+  font-size: clamp(18px, 5.5vw, 24px); font-weight: 900;
+  color: var(--accent); letter-spacing: -.4px;
 }
 .s2-phrase-sub {
-  display: block; font-size: clamp(18px, 5vw, 26px); font-weight: 700;
-  color: var(--text); letter-spacing: -.3px; line-height: 1.1; margin-top: 4px;
+  font-size: clamp(16px, 4.5vw, 20px); font-weight: 700;
+  color: var(--text); letter-spacing: -.2px;
 }
-.s2-sit-group { display: flex; gap: 8px; margin-bottom: 40px; flex-wrap: wrap; }
+.s2-sit-group { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
 .s2-sit-btn {
   display: inline-flex; align-items: center; padding: 10px 18px;
   border: 1.5px solid var(--orange); border-radius: 99px;
@@ -195,7 +197,7 @@ input[type=range]::-moz-range-track {
   background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
 }
 .s2-sit-btn:hover { background: rgba(255,138,0,.08); color: var(--orange); }
-.s2-sit-btn.on { background: rgba(255,138,0,.18); color: var(--orange); font-weight: 700; }
+.s2-sit-btn.on { background: var(--orange); color: #1a0a00; font-weight: 700; border-color: var(--orange); }
 /* Erro de validação — nenhum botão de situação selecionado */
 #tagsSituacao.sit-erro .s2-sit-btn {
   border-color: var(--danger); color: var(--danger);
@@ -491,11 +493,11 @@ input[type=range]::-moz-range-track {
   background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
 }
 .tag-btn:hover { border-color: var(--accent); color: var(--accent); }
-.tag-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
+.tag-btn.on { border-color: var(--accent); background: var(--accent); color: #fff; }
 /* Destaque em laranja pra "Pronto para morar"/"Em Obras" (pedido explícito) --
    sobrescreve a cor accent padrão dos tag-btn, em qualquer estado. */
 .tag-btn-laranja, .tag-btn-laranja:hover { border-color: var(--orange); color: var(--orange); }
-.tag-btn-laranja.on { border-color: var(--orange); background: rgba(255,138,0,.15); color: var(--orange); }
+.tag-btn-laranja.on { border-color: var(--orange); background: var(--orange); color: #1a0a00; }
 .ajustar-btn {
   display: inline-flex; align-items: center; gap: 6px; background: none;
   border: 1px solid var(--border2); border-radius: 99px; padding: 7px 14px;
@@ -516,7 +518,7 @@ input[type=range]::-moz-range-track {
   background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
 }
 .box-btn:hover { border-color: var(--accent); color: var(--accent); }
-.box-btn.on { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
+.box-btn.on { border-color: var(--accent); background: var(--accent); color: #fff; }
 
 
 /* ── STEP-0: LAYOUT AERADO ─────────────────────────────────── */
@@ -620,6 +622,7 @@ input[type=range]::-moz-range-track {
        inventário real aparecem (montarBlocoPadrao_, chamado depois que
        carregarBaseReal() traz os dados). -->
   <div class="step" id="step-5">
+    <div class="step-tag">Passo 1 de 4</div>
     <div class="hero-phrase" style="margin-bottom:28px">
       <span class="hp-eyebrow">Você busca apartamento</span>
       <span class="hp-word1">para...</span>
@@ -643,7 +646,7 @@ input[type=range]::-moz-range-track {
        do usuário -- "objetivo" (moradias) migrou pra cá, saiu do step-4,
        que agora fica só com quartos+altura). -->
   <div class="step" id="step-1">
-    <div class="step-tag">Passo 2 de 3</div>
+    <div class="step-tag">Passo 3 de 4</div>
     <div class="step-title">Como podemos te chamar?</div>
     <div class="step-sub">Só o primeiro nome já basta.</div>
     <div class="form-field">
@@ -673,7 +676,7 @@ input[type=range]::-moz-range-track {
        abaixo, tudo atualizando em tempo real junto). Vem ANTES do nome
        agora -- pega o dado técnico primeiro, personalização vem depois. -->
   <div class="step" id="step-2">
-    <div class="step-tag">Passo 1 de 3</div>
+    <div class="step-tag">Passo 2 de 4</div>
 
     <div class="s2-phrase">
       <span class="s2-phrase-main">O Apartamento</span>
@@ -685,7 +688,7 @@ input[type=range]::-moz-range-track {
       <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
     </div>
 
-    <div class="step-title" style="margin:40px 0 10px">Até quanto você quer investir?</div>
+    <div class="step-title" style="margin:20px 0 8px">Até quanto você quer investir?</div>
     <div class="preco-input-row">
       <span class="preco-prefixo">R$</span>
       <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
@@ -695,7 +698,7 @@ input[type=range]::-moz-range-track {
       <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
     </div>
 
-    <div class="step-title" style="margin:40px 0 10px">Área Útil ideal pra você é:</div>
+    <div class="step-title" style="margin:20px 0 8px">Área Útil ideal pra você é:</div>
     <div class="preco-input-row">
       <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
       <span class="preco-prefixo">m²</span>
@@ -705,7 +708,7 @@ input[type=range]::-moz-range-track {
       <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
     </div>
 
-    <div class="conf-obs" style="text-align:center;margin-top:24px">
+    <div class="conf-obs" style="text-align:center;margin-top:14px">
       <span id="cntCombo" style="font-size:clamp(48px,14vw,64px);font-weight:800;color:var(--orange);letter-spacing:-1px">—</span>
       <strong>opções encontradas <span id="cntComboSufixo">com esse perfil</span>.</strong>
       <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
@@ -758,7 +761,7 @@ input[type=range]::-moz-range-track {
        fixo só nesta etapa (ver atualizarBotoes). -->
   <div class="step" id="step-4">
     <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
-    <div class="step-tag">Passo 3 de 3</div>
+    <div class="step-tag">Passo 4 de 4</div>
     <div class="step-title" id="motivacaoTitulo">O que define o tipo de apartamento mais adequado para você?</div>
     <div style="margin-top:14px">
       <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Quantos quartos você precisa?</div>
