@@ -234,9 +234,15 @@ input[type=range]::-moz-range-track {
 .obj-tag-btn:hover { background: rgba(79,124,255,.10); }
 .obj-tag-btn.on { background: var(--accent); color: #fff; }
 #tagsObjetivo.obj-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
-/* Padrão reaproveita o mesmo botão-tag do objetivo (pedido explícito) --
-   só o estado de erro precisa de uma regra própria porque a classe de
-   erro aqui é .tag-group-erro (padrão do resto do app), não .obj-erro. */
+/* Padrão reaproveita a estrutura do botão-tag do objetivo, mas em laranja
+   (pedido explícito) -- hover e selecionado (fundo chapado) trocam de azul
+   pra laranja, texto escuro no selecionado (mesmo padrão de contraste já
+   usado em .btn-final.btn-quente pros botões quentes do app). */
+.obj-tag-btn-laranja { border-color: var(--orange); color: var(--orange); }
+.obj-tag-btn-laranja:hover { background: rgba(255,138,0,.10); border-color: var(--orange); color: var(--orange); }
+.obj-tag-btn-laranja.on { background: var(--orange); color: #1a0a00; border-color: var(--orange); }
+/* Estado de erro aqui é .tag-group-erro (padrão do resto do app), não
+   .obj-erro -- regra própria, igual ao objetivo. */
 #tagsPadrao.tag-group-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
 
 /* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
@@ -1224,7 +1230,7 @@ function montarBlocoPadrao_() {
   const wrap = document.getElementById('tagsPadrao');
   if (!wrap) return;
   wrap.innerHTML = padroesDisponiveis_()
-    .map(p => `<button class="obj-tag-btn" onclick="selecionarPadrao_(this,'${p}')">${p}</button>`)
+    .map(p => `<button class="obj-tag-btn obj-tag-btn-laranja" onclick="selecionarPadrao_(this,'${p}')">${p}</button>`)
     .join('');
 }
 
