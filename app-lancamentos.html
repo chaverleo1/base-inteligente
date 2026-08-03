@@ -443,14 +443,12 @@ input[type=range]::-moz-range-track {
 .perfil-item-k { color: #fff; min-width: 0; overflow-wrap: break-word; }
 .perfil-item-v { color: #f5c800; font-weight: 600; text-align: right; min-width: 0; overflow-wrap: break-word; }
 
-/* Cards favoritados, versão resumida (Tela 7) -- pedido explícito do
-   usuário. */
-.fav-resumo-card {
-  background: var(--s2); border: 1px solid rgba(245,200,0,.35); border-radius: var(--r-sm);
-  padding: 10px 14px; margin-bottom: 8px;
-}
-.fav-resumo-linha1 { font-size: 13px; font-weight: 700; color: #f5c800; }
-.fav-resumo-preco { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 2px; }
+/* Cards favoritados (Tela 7) -- mesmo padrão visual de .opcao-top (Tela de
+   resultados), só espaçamento entre eles + destaque dourado na borda pra
+   diferenciar visualmente que são os favoritos. */
+#favoritosResumoCards { display: flex; flex-direction: column; gap: 10px; }
+#favoritosResumoCards .opcao-top { border-color: rgba(245,200,0,.4); }
+#favoritosResumoCards .opcao-codigo { color: #f5c800; }
 
 .whats-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -2367,10 +2365,25 @@ function montarFavoritosResumoCaptura_() {
   if (wrap && cont) {
     if (favs.length) {
       wrap.style.display = '';
+      // Mesmo padrão visual dos cards da Tela de resultados (.opcao-top) --
+      // pedido explícito do usuário, já aberto (sem "VER PREÇO", é um
+      // recap, não exploração).
       cont.innerHTML = favs.map(({ c, codSeq }) => `
-        <div class="fav-resumo-card">
-          <div class="fav-resumo-linha1">♥ <strong>${codSeq}</strong> · ${c.bairro || c.regiao || '—'}</div>
-          <div class="fav-resumo-preco">A partir de ${formatBRL_(c.precoAPartir)}</div>
+        <div class="opcao-top">
+          <div class="opcao-top-header">
+            <span class="opcao-codigo">♥ ${codSeq}</span>
+            ${situacaoBadgeHTML_(c.estagio)}
+          </div>
+          <div class="opcao-top-grid">
+            <div class="opcao-cell-bairro"><div class="opcao-top-cell-val">${c.regiao || c.bairro || '—'}</div></div>
+          </div>
+          <div class="opcao-top-grid" style="margin-top:8px">
+            <div class="opcao-cell-destaque"><div class="opcao-top-cell-label">Área útil</div><div class="opcao-top-cell-val">${c.areaMin} a ${c.areaMax} m²</div></div>
+            <div>
+              <div class="opcao-top-cell-label">A partir de</div>
+              <span class="opcao-top-cell-val" style="font-size:18px;font-weight:500;color:var(--orange)">${formatBRL_(c.precoAPartir)}</span>
+            </div>
+          </div>
         </div>`).join('');
     } else {
       wrap.style.display = 'none';
