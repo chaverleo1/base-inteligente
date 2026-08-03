@@ -305,6 +305,16 @@ input[type=range]::-moz-range-track {
 .form-field input:focus { border-color: var(--accent); }
 #fNome, #fNome:focus { border-color: var(--orange); }
 .form-field input::placeholder { color: #6a7290; }
+/* Caixa de código do país, antes do campo local -- pedido explícito do
+   usuário, padrão Brasil +55. */
+.tel-input-row { display: flex; gap: 8px; }
+.tel-input-row input { flex: 1; min-width: 0; }
+.tel-country-box {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  flex-shrink: 0; padding: 0 12px;
+  background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap;
+}
 .privacy-note { font-size: 12px; color: var(--text); margin-top: 14px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px; }
 
 /* ── CAIXA DE CONFIRMAÇÃO DE WHATSAPP (2 campos, fundo destacado) ─────── */
@@ -954,11 +964,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="whats-box">
       <div class="form-field">
         <label>Seu WhatsApp com DDD</label>
-        <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
+        <div class="tel-input-row">
+          <span class="tel-country-box">🇧🇷 +55</span>
+          <input type="tel" id="fWhats" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
+        </div>
       </div>
       <div class="form-field" style="margin-bottom:0">
         <label>Confirme o WhatsApp</label>
-        <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
+        <div class="tel-input-row">
+          <span class="tel-country-box">🇧🇷 +55</span>
+          <input type="tel" id="fWhats2" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel(this); checarWhatsMatch_();">
+        </div>
       </div>
     </div>
 
@@ -981,23 +997,79 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="app-footer">CJ 27357- Líder Empreendimentos Imobiliários LTDA</div>
   </div>
 
+  <!-- STEP 9 — AGENDAMENTO (pergunta surpresa logo após "Confirmar
+       Consultoria", antes da tela final) -- pedido explícito do usuário. -->
+  <div class="step" id="step-9">
+    <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
+    <div class="step-tag">Só mais uma coisa</div>
+    <div class="step-title">Gostaria de agendar o atendimento?</div>
+
+    <div class="obj-tag-group" id="tagsAgendar" style="margin-top:16px;flex-direction:column">
+      <button class="obj-tag-btn" onclick="selecionarAgendar_(this,true)">Sim, quero agendar</button>
+      <button class="obj-tag-btn" onclick="selecionarAgendar_(this,false)">Não quero agendar, aguardo retorno</button>
+    </div>
+
+    <div id="blocoAgendamentoDetalhes" style="display:none;margin-top:28px">
+      <div class="form-field">
+        <label>Dia preferido</label>
+        <input type="date" id="fAgendaDia" oninput="D.agendaDia=this.value">
+      </div>
+      <div class="form-field" style="margin-bottom:0">
+        <label>Horário preferido</label>
+        <input type="time" id="fAgendaHora" oninput="D.agendaHora=this.value">
+      </div>
+      <div style="margin-top:28px">
+        <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Modo de atendimento</div>
+        <div class="tag-group" id="tagsModoAtendimento">
+          <button class="tag-btn" onclick="selecionarModoAtendimento_(this,'voz')">Chamada de voz</button>
+          <button class="tag-btn" onclick="selecionarModoAtendimento_(this,'whatsapp')">Mensagem no WhatsApp</button>
+        </div>
+      </div>
+      <button class="btn-final btn-amarelo" id="btnConfirmarAgendamento" style="margin-top:28px" onclick="finalizarAgendamentoEEnviar_()">
+        <svg width="20" height="20" style="flex-shrink:0"><use href="#ico-handshake"/></svg>
+        CONFIRMAR AGENDAMENTO
+      </button>
+    </div>
+  </div>
+
   <!-- STEP 8 — AGRADECIMENTO -->
   <div class="step" id="step-8">
     <div class="check-circle">
       <svg width="28" height="28" style="color:var(--green)"><use href="#ico-check"/></svg>
     </div>
     <div class="step-title" style="text-align:center;margin-bottom:6px">Confirmado, <span id="obrigadoNome"></span></div>
-    <div class="step-sub" style="text-align:center;font-weight:700;color:var(--green);margin-bottom:6px">Sua consultoria está agendada.</div>
+    <div class="step-sub" id="agradecimentoSub" style="text-align:center;font-weight:700;color:var(--green);margin-bottom:6px">Sua consultoria está agendada.</div>
 
     <!-- Tela final simplificada -- pedido explícito do usuário: sem as
          opções pessoais que o cliente configurou (isso agora fica na Tela
-         7, junto com o WhatsApp). -->
-    <div style="font-size:13px;color:var(--text);text-align:center;margin-top:24px;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
-    <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
-      <svg width="20" height="20"><use href="#ico-whats"/></svg>
-      Falar agora no WhatsApp
-    </a>
-    <div style="font-size:12px;color:var(--text);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
+         7, junto com o WhatsApp). Conteúdo abaixo muda conforme o cliente
+         respondeu a pergunta de agendamento (Step 9) -- ver
+         montarAgradecimento(). -->
+
+    <!-- Não agendou (ou pulou) -- mantém o botão de WhatsApp de sempre. -->
+    <div id="blocoSemAgendamento">
+      <div style="font-size:13px;color:var(--text);text-align:center;margin-top:24px;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
+      <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
+        <svg width="20" height="20"><use href="#ico-whats"/></svg>
+        Falar agora no WhatsApp
+      </a>
+      <div style="font-size:12px;color:var(--text);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
+    </div>
+
+    <!-- Agendou -- sem botão de WhatsApp, destaca o agendamento em si. -->
+    <div id="blocoComAgendamento" style="display:none;margin-top:24px">
+      <div class="conf-card" style="border-color:var(--green)">
+        <div class="conf-item">
+          <div class="conf-item-label">Atendimento agendado para</div>
+          <div class="conf-item-val conf-item-val-sit" id="agendaResumoDiaHora">—</div>
+        </div>
+        <div class="conf-item conf-item-last">
+          <div class="conf-item-label">Modo de atendimento</div>
+          <div class="conf-item-val conf-item-val-sit" id="agendaResumoModo">—</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text);text-align:center;margin-top:14px">Você vai receber uma mensagem de confirmação do agendamento em breve.</div>
+    </div>
   </div>
 
 </div><!-- /step-wrap -->
@@ -1129,7 +1201,7 @@ const WHATSAPP_NUM = '5562981049078';
 
 // ── ESTADO ──────────────────────────────────────────────────────────────
 let stepAtual = 0;
-const TOTAL = 9; // steps 0..8
+const TOTAL = 10; // steps 0..9 -- ordem de navegação não é sequencial, ver avancarStep/voltarStep
 
 const D = {
   filtroSituacao: 'todos', situacoes: new Set(), moradias: new Set(), alturaPref: null, quartosPref: null,
@@ -1139,6 +1211,9 @@ const D = {
   // Perfil do fluxo Investir (Tela 6, Fase 3, v3.0) -- paralelo a
   // quartosPref/alturaPref, que seguem exclusivos do fluxo Moradia.
   tipologiaPref: null, prioridadeInvestimento: null, vagasPref: null,
+  // Pergunta de agendamento (Step 9, pós-confirmação) -- null até o
+  // cliente responder Sim/Não.
+  desejaAgendar: null, agendaDia: '', agendaHora: '', agendaModo: null,
   // true quando o contador da Tela 3 precisou ampliar a tolerância de
   // preço/área (±20% → ±30%) pra não mostrar zero opções -- controla o
   // aviso discreto que aparece perto do contador (ver contarComExpansaoTolerancia_).
@@ -1191,7 +1266,7 @@ const D = {
 // v3.0: Tela 2 (objetivo+padrão, step-5) entra como etapa 2, empurrando as
 // demais uma casa pra baixo -- alinhado 1:1 com a numeração de Telas do
 // documento de especificação (Tela 1..9).
-const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 3: 4, 1: 5, 4: 6, 6: 7, 7: 8, 8: 9 };
+const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 3: 4, 1: 5, 4: 6, 6: 7, 7: 8, 9: 9, 8: 10 };
 let _stepEntradaTs = Date.now();
 
 // Beacon fire-and-forget: registra a transição de etapa (Fase 2 da Central
@@ -1241,7 +1316,7 @@ function avancarStep() {
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
   if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
   if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
-  if (stepAtual === 7) { submeter(); return; }
+  if (stepAtual === 7) { irParaStep(9); return; }        // captura → agendamento (pergunta surpresa)
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
@@ -1292,6 +1367,7 @@ function voltarStep() {
   if (stepAtual === 2) { irParaStep(5); return; } // sliders → objetivo+padrão
   if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
   if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
+  if (stepAtual === 9) { irParaStep(7); return; } // agendamento → captura
   if (stepAtual > 2) irParaStep(stepAtual - 1);
 }
 
@@ -1580,6 +1656,44 @@ function selecionarPrioridade_(el, val) {
   document.querySelectorAll('#tagsPrioridade .tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.prioridadeInvestimento = val;
+}
+
+// ── AGENDAMENTO (Step 9, pergunta surpresa pós-confirmação) ─────────────
+function selecionarAgendar_(el, sim) {
+  document.querySelectorAll('#tagsAgendar .obj-tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.desejaAgendar = sim;
+  const bloco = document.getElementById('blocoAgendamentoDetalhes');
+  if (sim) {
+    if (bloco) bloco.style.display = '';
+  } else {
+    if (bloco) bloco.style.display = 'none';
+    // "Não quero agendar" -- segue direto, sem precisar de outro clique.
+    finalizarAgendamentoEEnviar_();
+  }
+}
+
+function selecionarModoAtendimento_(el, val) {
+  document.getElementById('tagsModoAtendimento').classList.remove('tag-group-erro');
+  document.querySelectorAll('#tagsModoAtendimento .tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.agendaModo = val;
+}
+
+// Só valida dia/hora/modo quando o cliente escolheu agendar -- "não quero
+// agendar" já chega aqui sem exigir nada (ver selecionarAgendar_).
+function finalizarAgendamentoEEnviar_() {
+  if (D.desejaAgendar) {
+    const dia = document.getElementById('fAgendaDia').value;
+    const hora = document.getElementById('fAgendaHora').value;
+    if (!dia || !hora || !D.agendaModo) {
+      toast('Preencha dia, horário e modo de atendimento pra continuar');
+      return;
+    }
+    D.agendaDia = dia;
+    D.agendaHora = hora;
+  }
+  submeter();
 }
 
 function selecionarAltura_(el, val) {
@@ -1898,17 +2012,20 @@ function submeter() {
   D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + (Date.now() - _stepEntradaTs);
   _stepEntradaTs = Date.now();
 
-  const btn = document.getElementById('btnConfirmarFinal');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  // Botão de feedback (Enviando.../Confirmado) só existe quando o cliente
+  // respondeu "Sim, quero agendar" (fica no step-9). No caminho "Não quero
+  // agendar" a submissão é automática, sem botão pra dar feedback --
+  // segue direto pra tela final com um delay menor, só pra transição não
+  // parecer instantânea/quebrada.
+  const btn = document.getElementById('btnConfirmarAgendamento');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
 
   // Encerra com a tela de "Confirmado" só depois do WhatsApp confirmado --
   // pedido explícito do usuário (a captura agora é a penúltima etapa, e o
   // fluxo só termina depois que os telefones são cadastrados).
   const continuar = () => {
-    btn.textContent = 'Confirmado';
-    btn.classList.add('confirmado');
-    setTimeout(() => { montarAgradecimento(); irParaStep(8); }, 700);
+    if (btn) { btn.textContent = 'Confirmado'; btn.classList.add('confirmado'); }
+    setTimeout(() => { montarAgradecimento(); irParaStep(8); }, btn ? 700 : 300);
   };
 
   if (typeof WEBHOOK_URL === 'undefined') {
@@ -1968,6 +2085,8 @@ function submeter() {
       // ainda não construída) conseguir mostrar "isca apresentada" sem
       // precisar recalcular nada.
       idEmpreendimentoIsca: D.iscaId,
+      // Pergunta de agendamento (Step 9) -- pedido explícito do usuário.
+      desejaAgendar: D.desejaAgendar, agendaDia: D.agendaDia, agendaHora: D.agendaHora, agendaModo: D.agendaModo,
     }),
     canal: 'App Lançamentos',
     tipo_contato: 'LEAD QUENTE',
@@ -2447,6 +2566,27 @@ function montarFavoritosResumoCaptura_() {
 // usuário: tela final "mais resumida").
 function montarAgradecimento() {
   document.getElementById('obrigadoNome').textContent = D.nome.split(' ')[0] + '!';
+
+  // Tela final muda conforme a resposta da pergunta de agendamento (Step 9)
+  // -- pedido explícito do usuário: agendou não mostra botão de WhatsApp,
+  // mostra o resumo do agendamento; não agendou mantém o botão de sempre.
+  const subEl = document.getElementById('agradecimentoSub');
+  const blocoSem = document.getElementById('blocoSemAgendamento');
+  const blocoCom = document.getElementById('blocoComAgendamento');
+  if (D.desejaAgendar) {
+    if (subEl) subEl.textContent = 'Sua consultoria está agendada.';
+    if (blocoSem) blocoSem.style.display = 'none';
+    if (blocoCom) blocoCom.style.display = '';
+    const [ano, mes, dia] = (D.agendaDia || '').split('-');
+    const dataFmt = (ano && mes && dia) ? `${dia}/${mes}/${ano}` : '—';
+    const modoMap = { voz: 'Chamada de voz', whatsapp: 'Mensagem no WhatsApp' };
+    document.getElementById('agendaResumoDiaHora').textContent = dataFmt + (D.agendaHora ? ' às ' + D.agendaHora : '');
+    document.getElementById('agendaResumoModo').textContent = modoMap[D.agendaModo] || '—';
+  } else {
+    if (subEl) subEl.textContent = 'Recebemos sua solicitação.';
+    if (blocoSem) blocoSem.style.display = '';
+    if (blocoCom) blocoCom.style.display = 'none';
+  }
 
   const emps  = filtrados();
   const total = emps.length;
