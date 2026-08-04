@@ -891,8 +891,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Quantidade encontrada, ao final da confirmação -- pedido explícito
          do usuário, fundo branco chapado destacando o texto com contraste
-         (mesmo padrão já usado nos botões de padrão selecionados). -->
+         (mesmo padrão já usado nos botões de padrão selecionados). Usa a
+         MESMA contagem (com expansão de tolerância) da Tela 3 -- antes
+         usava filtrados() puro, que podia mostrar "0" aqui mesmo depois da
+         Tela 3 ter mostrado um número > 0 (bug reportado pelo usuário). -->
     <div class="conf-resultado-badge" id="confResultadoBadge">— opções encontradas</div>
+    <div class="tolerancia-nota" id="toleranciaNotaConfirmacao" style="display:none;text-align:center"></div>
 
     <div class="conf-btns">
       <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Ajustar</button>
@@ -1435,9 +1439,14 @@ function montarConfirmacao_() {
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
   document.getElementById('confSituacao').textContent = situacaoEscolhidaLabel_() || '—';
-  const qtd = filtrados().length;
+  const qtd = contarComExpansaoTolerancia_();
   document.getElementById('confResultadoBadge').innerHTML =
     `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
+  const notaConf = document.getElementById('toleranciaNotaConfirmacao');
+  if (notaConf) {
+    notaConf.style.display = D.toleranciaExpandidaTela3 ? '' : 'none';
+    notaConf.textContent = 'Ampliamos sua busca um pouco pra não faltar opção.';
+  }
 }
 
 function montarMotivacaoTitulo_() {
