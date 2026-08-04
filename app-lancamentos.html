@@ -289,6 +289,12 @@ input[type=range]::-moz-range-track {
    mostrar zero opções (regra técnica 2 do documento; aviso visível é
    decisão explícita do usuário). */
 .tolerancia-nota { font-size: 12px; color: var(--text); opacity: .65; margin-top: 8px; }
+/* Aviso de horário fora da janela de atendimento (agendamento). */
+.aviso-janela {
+  font-size: 12px; color: var(--danger); background: rgba(255,82,82,.1);
+  border: 1px solid rgba(255,82,82,.3); border-radius: var(--r-sm);
+  padding: 10px 12px; margin-top: 10px; line-height: 1.5;
+}
 
 /* ── CAPTURA ─────────────────────────────────────────────────────────── */
 .form-field { margin-bottom: 14px; }
@@ -738,7 +744,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <a class="mini-mapa-card" href="https://maps.app.goo.gl/YPxF53jHYHUt7jaP6" target="_blank" rel="noopener noreferrer">
       <svg width="22" height="22" style="flex-shrink:0"><use href="#ico-pin"/></svg>
       <span class="mini-mapa-texto">
-        <span class="mini-mapa-titulo">Grande Goiânia</span>
+        <span class="mini-mapa-titulo">🇧🇷 Goiânia-GO</span>
         <span class="mini-mapa-sub">Ver localização no mapa</span>
       </span>
     </a>
@@ -1050,12 +1056,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="blocoAgendamentoDetalhes" style="display:none;margin-top:28px">
       <div class="form-field">
         <label>Dia preferido</label>
-        <input type="date" id="fAgendaDia" oninput="D.agendaDia=this.value">
+        <input type="date" id="fAgendaDia" oninput="D.agendaDia=this.value; atualizarJanelaAgendamento_();">
       </div>
       <div class="form-field" style="margin-bottom:0">
         <label>Horário preferido</label>
-        <input type="time" id="fAgendaHora" oninput="D.agendaHora=this.value">
+        <input type="time" id="fAgendaHora" oninput="D.agendaHora=this.value; atualizarJanelaAgendamento_();">
       </div>
+      <div class="aviso-janela" id="avisoJanelaAgendamento" style="display:none"></div>
       <div style="margin-top:28px">
         <div style="font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px">Modo de atendimento</div>
         <div class="tag-group" id="tagsModoAtendimento">
@@ -1086,12 +1093,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Não agendou (ou pulou) -- mantém o botão de WhatsApp de sempre. -->
     <div id="blocoSemAgendamento">
-      <div style="font-size:13px;color:var(--text);text-align:center;margin-top:24px;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
-      <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
-        <svg width="20" height="20"><use href="#ico-whats"/></svg>
-        Falar agora no WhatsApp
-      </a>
-      <div style="font-size:12px;color:var(--text);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
+      <!-- Botão de WhatsApp só aparece dentro da janela de atendimento (pedido
+           explícito do usuário) -- fora dela seria prometer "fale agora" sem
+           ter ninguém pra responder de verdade. Visibilidade decidida em
+           montarAgradecimento(). -->
+      <div id="blocoSemAgendamentoDentroHorario" style="display:none">
+        <div style="font-size:13px;color:var(--text);text-align:center;margin-top:24px;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
+        <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
+          <svg width="20" height="20"><use href="#ico-whats"/></svg>
+          Falar agora no WhatsApp
+        </a>
+        <div style="font-size:12px;color:var(--text);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
+      </div>
+      <div id="blocoSemAgendamentoForaHorario" style="display:none;font-size:13px;color:var(--text);text-align:center;margin-top:24px;line-height:1.6">
+        Recebemos sua solicitação! Estamos fora do nosso horário de atendimento agora — entraremos em contato assim que possível.
+      </div>
     </div>
 
     <!-- Agendou -- sem botão de WhatsApp, destaca o agendamento em si. -->
@@ -1728,6 +1744,50 @@ function selecionarPrioridade_(el, val) {
 }
 
 // ── AGENDAMENTO (Step 9, pergunta surpresa pós-confirmação) ─────────────
+// ── JANELA DE ATENDIMENTO (usada no agendamento e no botão de WhatsApp da
+// tela final) -- pedido explícito do usuário: seg-sex 8h-18h, sáb 8h-12h,
+// domingo fechado. Um único ponto de verdade pros dois usos.
+function textoJanelaAtendimento_() {
+  return 'segunda a sexta das 8h às 18h, e sábado das 8h às 12h';
+}
+function dentroJanelaAtendimento_(date) {
+  const dia = date.getDay(); // 0 = domingo, 6 = sábado
+  const hora = date.getHours() + date.getMinutes() / 60;
+  if (dia === 0) return false;
+  if (dia === 6) return hora >= 8 && hora < 12;
+  return dia >= 1 && dia <= 5 && hora >= 8 && hora < 18;
+}
+
+// Revalida o dia/horário escolhido pro agendamento a cada mudança -- some
+// com o botão de confirmar e mostra um aviso quando cai fora da janela de
+// atendimento (pedido explícito do usuário).
+function atualizarJanelaAgendamento_() {
+  const diaStr = document.getElementById('fAgendaDia').value;
+  const horaStr = document.getElementById('fAgendaHora').value;
+  const aviso = document.getElementById('avisoJanelaAgendamento');
+  const btn = document.getElementById('btnConfirmarAgendamento');
+  if (!diaStr || !horaStr) {
+    if (aviso) aviso.style.display = 'none';
+    if (btn) btn.style.display = '';
+    return;
+  }
+  const [ano, mes, dia] = diaStr.split('-').map(Number);
+  const [h, m] = horaStr.split(':').map(Number);
+  const dataEscolhida = new Date(ano, mes - 1, dia, h, m);
+  const valido = dentroJanelaAtendimento_(dataEscolhida);
+  if (aviso) {
+    if (valido) {
+      aviso.style.display = 'none';
+    } else {
+      aviso.style.display = '';
+      aviso.textContent = dataEscolhida.getDay() === 0
+        ? `Não atendemos aos domingos. Nosso horário de atendimento é ${textoJanelaAtendimento_()}.`
+        : `Esse horário está fora do nosso atendimento. Nosso horário é ${textoJanelaAtendimento_()}.`;
+    }
+  }
+  if (btn) btn.style.display = valido ? '' : 'none';
+}
+
 function selecionarAgendar_(el, sim) {
   document.querySelectorAll('#tagsAgendar .obj-tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
@@ -1757,6 +1817,14 @@ function finalizarAgendamentoEEnviar_() {
     const hora = document.getElementById('fAgendaHora').value;
     if (!dia || !hora || !D.agendaModo) {
       toast('Preencha dia, horário e modo de atendimento pra continuar');
+      return;
+    }
+    // Checagem final (o botão já some sozinho fora da janela -- isso aqui é
+    // só uma rede de segurança contra manipulação/autofill do navegador).
+    const [ano, mes, diaN] = dia.split('-').map(Number);
+    const [h, m] = hora.split(':').map(Number);
+    if (!dentroJanelaAtendimento_(new Date(ano, mes - 1, diaN, h, m))) {
+      toast('Escolha um horário dentro do nosso atendimento: ' + textoJanelaAtendimento_());
       return;
     }
     D.agendaDia = dia;
@@ -2657,6 +2725,14 @@ function montarAgradecimento() {
     if (subEl) subEl.textContent = 'Recebemos sua solicitação.';
     if (blocoSem) blocoSem.style.display = '';
     if (blocoCom) blocoCom.style.display = 'none';
+    // Botão de WhatsApp só dentro da janela de atendimento (pedido
+    // explícito do usuário) -- checa o horário ATUAL (momento em que a
+    // pessoa chega nessa tela), não o que ela configurou no agendamento.
+    const dentroAgora = dentroJanelaAtendimento_(new Date());
+    const blocoDentro = document.getElementById('blocoSemAgendamentoDentroHorario');
+    const blocoFora = document.getElementById('blocoSemAgendamentoForaHorario');
+    if (blocoDentro) blocoDentro.style.display = dentroAgora ? '' : 'none';
+    if (blocoFora) blocoFora.style.display = dentroAgora ? 'none' : '';
   }
 
   const emps  = filtrados();
