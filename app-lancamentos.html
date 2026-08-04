@@ -2192,7 +2192,16 @@ function submeter() {
       precoVisto: D.cardsPrecoVisto.has(c.id), favoritado: D.cardsFavoritos.has(c.id),
     }))),
     tags: JSON.stringify({
-      moradias: [...D.moradias], alturaPref: D.alturaPref, quartosPref: D.quartosPref, filtroSituacao: D.filtroSituacao,
+      // Bifurcação + necessidade + perfil (v3.0) -- raw + rótulo legível
+      // (o backend não tem acesso às listas de opções do front, então manda
+      // pronto pra tabela do e-mail, ver montarBlocoResumoLeadEmail_).
+      objetivo: D.objetivo,
+      padroes: [...D.padroes],
+      moradias: [...D.moradias], necessidadeLabel: [...D.moradias].map(labelNecessidade_).join(', ') || '—',
+      situacoes: [...D.situacoes], situacaoLabel: situacaoEscolhidaLabel_() || '—',
+      alturaPref: D.alturaPref, quartosPref: D.quartosPref, vagasPref: D.vagasPref,
+      tipologiaPref: D.tipologiaPref, tipologiaLabel: tipologiaMap_[D.tipologiaPref] || null,
+      prioridadeInvestimento: D.prioridadeInvestimento, prioridadeLabel: prioridadeMap_[D.prioridadeInvestimento] || null,
       cardsPrecoVisto: [...D.cardsPrecoVisto], cardsFavoritos: [...D.cardsFavoritos],
       // "Opções extras" (atrás do botão "VER +N OPÇÕES ENCONTRADAS") --
       // pedido explícito do usuário: registrar o clique em "ver mais" e
@@ -2224,6 +2233,7 @@ function submeter() {
       idEmpreendimentoIsca: D.iscaId,
       // Pergunta de agendamento (Step 9) -- pedido explícito do usuário.
       desejaAgendar: D.desejaAgendar, agendaDia: D.agendaDia, agendaHora: D.agendaHora, agendaModo: D.agendaModo,
+      agendaModoLabel: D.agendaModo === 'voz' ? 'Chamada de voz' : (D.agendaModo === 'whatsapp' ? 'Mensagem no WhatsApp' : null),
       paisDDI: D.paisDDI,
     }),
     canal: 'App Lançamentos',

@@ -5147,9 +5147,14 @@ function registrarEventoFunil_(d) {
 // "Etapa N — Nome" na ordem real de navegação do cliente (ver
 // ETAPA_POR_STEP_ em app-lancamentos.html). Usado por listarEstatisticasFunil_
 // e por montarBlocoAbandonoEmail_/montarBlocoDadosTecnicosEmail_.
+// v3.0: 10 etapas (era 8) -- Objetivo/Padrão virou etapa própria (2) e
+// Agendamento entrou como etapa 9, empurrando "Concluiu" pra 10. Mesma
+// ordem de ETAPA_POR_STEP_ em app-lancamentos.html.
+var TOTAL_ETAPAS_FUNIL_ = 10;
 var NOME_ETAPA_FUNIL_ = {
-  1: 'Capa', 2: 'Orçamento/Área', 3: 'Confirmação', 4: 'Nome/Objetivo',
-  5: 'Quartos/Altura', 6: 'Resultados', 7: 'WhatsApp', 8: 'Concluiu',
+  1: 'Capa', 2: 'Objetivo/Padrão', 3: 'Orçamento/Área', 4: 'Confirmação',
+  5: 'Nome/Necessidade', 6: 'Perfil', 7: 'Resultados', 8: 'WhatsApp',
+  9: 'Agendamento', 10: 'Concluiu',
 };
 
 // Reconstrói um Date a partir do formato 'dd/MM/yyyy HH:mm:ss' usado em
@@ -5228,14 +5233,16 @@ function listarEstatisticasFunil_(params) {
   var sessoes = Object.keys(maxPorSessao);
   var totalSessoes = sessoes.length;
 
-  var funil = [1, 2, 3, 4, 5, 6, 7, 8].map(function(etapa) {
+  var etapasFunil = [];
+  for (var _e = 1; _e <= TOTAL_ETAPAS_FUNIL_; _e++) etapasFunil.push(_e);
+  var funil = etapasFunil.map(function(etapa) {
     var alcancaram  = sessoes.filter(function(sid) { return maxPorSessao[sid] >= etapa; }).length;
     var pararamAqui = sessoes.filter(function(sid) { return maxPorSessao[sid] === etapa; }).length;
     return {
       etapa: etapa, nome: NOME_ETAPA_FUNIL_[etapa],
       alcancaram: alcancaram,
       pctTotal: totalSessoes ? Math.round(alcancaram / totalSessoes * 100) : 0,
-      pararamAqui: etapa < 8 ? pararamAqui : 0,
+      pararamAqui: etapa < TOTAL_ETAPAS_FUNIL_ ? pararamAqui : 0,
     };
   });
 
@@ -5253,7 +5260,7 @@ function listarEstatisticasFunil_(params) {
     var origem = utmPorSessao[sid] || 'direto';
     if (!origemAgg[origem]) origemAgg[origem] = { sessoes: 0, concluiram: 0, dispositivos: {} };
     origemAgg[origem].sessoes++;
-    if (maxPorSessao[sid] >= 8) origemAgg[origem].concluiram++;
+    if (maxPorSessao[sid] >= TOTAL_ETAPAS_FUNIL_) origemAgg[origem].concluiram++;
     var disp = dispositivoPorSessao[sid] || '—';
     origemAgg[origem].dispositivos[disp] = (origemAgg[origem].dispositivos[disp] || 0) + 1;
   });
@@ -5290,7 +5297,7 @@ function listarEstatisticasFunil_(params) {
     });
   }
 
-  var totalConcluiram = sessoes.filter(function(sid) { return maxPorSessao[sid] >= 8; }).length;
+  var totalConcluiram = sessoes.filter(function(sid) { return maxPorSessao[sid] >= TOTAL_ETAPAS_FUNIL_; }).length;
 
   return {
     ok: true,
@@ -5337,8 +5344,12 @@ var DEF_SEGMENTOS_COMPORTAMENTAIS_ = [
     },
   },
   {
+    // v3.0: "investidor" era um valor de necessidade que não existe mais
+    // (inferência comportamental por palavra-chave). Agora existe o campo
+    // objetivo explícito (Tela 2, bifurcação) -- usa ele direto, sinal
+    // muito mais confiável que adivinhar pela necessidade escolhida.
     chave: 'investidor_provavel', nome: 'Investidor provável',
-    teste: function(p) { return p.moradias.indexOf('investidor') >= 0 && p.dispositivo === 'Desktop'; },
+    teste: function(p) { return p.objetivo === 'investimento' && p.dispositivo === 'Desktop'; },
   },
 ];
 
@@ -5363,8 +5374,12 @@ function listarSegmentosComportamentais_() {
         cardsPrecoVisto:   Array.isArray(tags.cardsPrecoVisto) ? tags.cardsPrecoVisto : [],
         cardsFavoritos:    Array.isArray(tags.cardsFavoritos)  ? tags.cardsFavoritos  : [],
         tempoSegundos:     Number(tags.tempoSegundos) || 0,
+        // tempoPorStep é indexado pelo STEP-ID cru do DOM (não pela "etapa"
+        // de exibição) -- resultados sempre foi step-6, não mudou com a
+        // renumeração de etapas do funil.
         tempoResultadosMs: (tags.tempoPorStep && Number(tags.tempoPorStep['6'])) || 0,
         moradias:          Array.isArray(tags.moradias) ? tags.moradias : [],
+        objetivo:          tags.objetivo || '',
         dispositivo:       tags.dispositivo || '',
         geoCidade:         (tags.geoAprox && tags.geoAprox.cidade) || '',
       };
@@ -5378,8 +5393,12 @@ function listarSegmentosComportamentais_() {
     });
   }
 
-  // Abandono precoce (etapa 1-2) -- só dá pra ver em FUNIL_EVENTOS_APP,
-  // essas sessões nunca se identificaram, não tem lead pra listar.
+  // Abandono precoce (etapa 1-3: Capa, Objetivo/Padrão, Orçamento/Área) --
+  // só dá pra ver em FUNIL_EVENTOS_APP, essas sessões nunca se
+  // identificaram, não tem lead pra listar. Limiar subiu de 2 pra 3 na
+  // v3.0: Objetivo/Padrão virou etapa própria (2), empurrando Orçamento/
+  // Área pra 3 -- mesma faixa real de telas "abandono cedo" de antes, só
+  // com a numeração nova.
   var totalSessoesFunil = 0, abandonoPrecoce = 0;
   var abaFunil = obterAbaFunilEventos_();
   var lrF = abaFunil.getLastRow();
@@ -5400,7 +5419,7 @@ function listarSegmentosComportamentais_() {
     });
     var sessoes = Object.keys(maxPorSessao);
     totalSessoesFunil = sessoes.length;
-    abandonoPrecoce = sessoes.filter(function(sid) { return maxPorSessao[sid] <= 2; }).length;
+    abandonoPrecoce = sessoes.filter(function(sid) { return maxPorSessao[sid] <= 3; }).length;
   }
 
   var segmentos = DEF_SEGMENTOS_COMPORTAMENTAIS_.map(function(s) {
@@ -6013,8 +6032,12 @@ function montarBlocoExtraOpcoesEmail_(d) {
   }
 }
 
-var SITUACAO_LABEL_EMAIL_ = { pronto_novo: 'Pronto para morar', em_obras: 'Em Obras', todos: 'Sem preferência' };
-var MORADIA_LABEL_EMAIL_  = { aluguel: 'Quer sair do aluguel', proprio: 'Tem imóvel próprio', familia: 'Mora com família ou amigos', investidor: 'Quer investir' };
+// SITUACAO_LABEL_EMAIL_/MORADIA_LABEL_EMAIL_ removidos (v3.0) -- eram pra
+// traduzir valores crus (tags.filtroSituacao/tags.moradias) com um mapa que
+// não acompanhou a reformulação das telas (novas necessidades por objetivo,
+// situação virou multi-select). App Lançamentos agora manda o texto já
+// legível pronto (tags.situacaoLabel/tags.necessidadeLabel), então o
+// backend só imprime -- sem mapa de tradução pra manter em dia.
 var ALTURA_LABEL_EMAIL_   = { baixo: 'Até o 5º andar', medio: 'Do 5º ao 10º andar', alto: 'Acima do 10º andar' };
 
 // "COD (Nome do empreendimento)" -- pedido explícito do usuário: todo ID
@@ -6033,6 +6056,11 @@ function idComNomeEmail_(id, ranking) {
 // payload (tempoSegundos, ajustesSlider, origemAcesso, etc.) continuam
 // gravados normalmente na planilha (coluna tags, sem alteração) -- só não
 // entram mais no e-mail, que é pro corretor ligar, não analisar funil.
+// v3.0: objetivo (Moradia/Investimento) e necessidade viraram conceitos
+// separados (antes só existia "objetivo" = o que hoje é necessidade). Perfil
+// (quartos/vagas/andar vs. tipologia/prioridade) muda por objetivo -- só um
+// dos dois blocos entra na tabela, o que faz sentido pro lead em questão.
+// Agendamento (Step 9) entra condicionalmente também.
 function montarBlocoResumoLeadEmail_(d) {
   var ranking = [];
   try { ranking = JSON.parse(d.rankingDetalhado || '[]'); } catch (e) {}
@@ -6043,33 +6071,55 @@ function montarBlocoResumoLeadEmail_(d) {
     ? ranking.map(function(r) { return idComNomeEmail_(r.id, ranking); }).join(', ')
     : (d.idsInteresse || '-');
 
-  var objetivo = (Array.isArray(tags.moradias) && tags.moradias.length)
-    ? tags.moradias.map(function(m) { return MORADIA_LABEL_EMAIL_[m] || m; }).join(', ')
-    : '-';
-  var quartos = tags.quartosPref
-    ? tags.quartosPref + (tags.quartosPref >= 5 ? '+' : '') + ' quarto' + (tags.quartosPref > 1 ? 's' : '')
-    : '-';
+  var ehInvestimento = tags.objetivo === 'investimento';
+  var padroesTxt = (Array.isArray(tags.padroes) && tags.padroes.length) ? tags.padroes.join(', ') : '-';
   var metragem = tags.metragemAlvo
     ? tags.metragemAlvo + ' m²' + (Array.isArray(tags.areaRange) ? ' (considera ' + tags.areaRange[0] + '–' + tags.areaRange[1] + ' m²)' : '')
     : '-';
 
-  return montarTabelaChaveValorEmail_('RESUMO DO LEAD', [
+  var linhas = [
     { campo: 'Nome',                      valor: d.nome || '(sem nome)' },
     { campo: 'Email',                     valor: d.email },
     { campo: 'WhatsApp',                  valor: d.telefone },
     { campo: 'Score',                     valor: d.score },
     { campo: 'Qtd. imóveis de interesse', valor: d.qtdInteresse },
     { campo: 'IDs selecionados',          valor: idsComNome },
-    { campo: 'Situação buscada',          valor: SITUACAO_LABEL_EMAIL_[tags.filtroSituacao] || tags.filtroSituacao },
-    { campo: 'Objetivo',                  valor: objetivo },
-    { campo: 'Quartos',                   valor: quartos },
-    { campo: 'Andar preferido',           valor: ALTURA_LABEL_EMAIL_[tags.alturaPref] },
-    { campo: 'Orçamento',                 valor: tags.precoAlvo ? formatarMoedaEmail_(tags.precoAlvo) : '' },
-    { campo: 'Metragem',                  valor: metragem },
-    { campo: 'Produto mostrado (isca)',   valor: idComNomeEmail_(tags.idEmpreendimentoIsca, ranking) },
-    { campo: 'Canal',                     valor: d.canal },
-    { campo: 'Data',                      valor: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm') },
-  ]);
+    { campo: 'Objetivo',                  valor: ehInvestimento ? 'Investimento' : 'Moradia' },
+    { campo: 'Padrão buscado',            valor: padroesTxt },
+    { campo: 'Necessidade',               valor: tags.necessidadeLabel || '-' },
+    { campo: 'Situação buscada',          valor: tags.situacaoLabel || '-' },
+  ];
+
+  if (ehInvestimento) {
+    linhas.push({ campo: 'Tipologia',  valor: tags.tipologiaLabel || '-' });
+    linhas.push({ campo: 'Prioridade', valor: tags.prioridadeLabel || '-' });
+  } else {
+    var quartosTxt = tags.quartosPref
+      ? tags.quartosPref + (tags.quartosPref >= 5 ? '+' : '') + ' quarto' + (tags.quartosPref > 1 ? 's' : '')
+      : '-';
+    var vagasTxt = tags.vagasPref
+      ? tags.vagasPref + (tags.vagasPref >= 4 ? '+' : '') + ' vaga' + (tags.vagasPref > 1 ? 's' : '')
+      : '-';
+    linhas.push({ campo: 'Quartos',          valor: quartosTxt });
+    linhas.push({ campo: 'Vagas de garagem', valor: vagasTxt });
+    linhas.push({ campo: 'Andar preferido',  valor: ALTURA_LABEL_EMAIL_[tags.alturaPref] || '-' });
+  }
+
+  linhas.push({ campo: 'Orçamento', valor: tags.precoAlvo ? formatarMoedaEmail_(tags.precoAlvo) : '' });
+  linhas.push({ campo: 'Metragem',  valor: metragem });
+
+  linhas.push({ campo: 'Deseja agendar atendimento', valor: tags.desejaAgendar === true ? 'Sim' : (tags.desejaAgendar === false ? 'Não' : '-') });
+  if (tags.desejaAgendar === true) {
+    linhas.push({ campo: 'Dia do agendamento',     valor: tags.agendaDia || '-' });
+    linhas.push({ campo: 'Horário do agendamento', valor: tags.agendaHora || '-' });
+    linhas.push({ campo: 'Modo de atendimento',    valor: tags.agendaModoLabel || '-' });
+  }
+
+  linhas.push({ campo: 'Produto mostrado (isca)', valor: idComNomeEmail_(tags.idEmpreendimentoIsca, ranking) });
+  linhas.push({ campo: 'Canal', valor: d.canal });
+  linhas.push({ campo: 'Data',  valor: Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm') });
+
+  return montarTabelaChaveValorEmail_('RESUMO DO LEAD', linhas);
 }
 
 function segundosParaTextoEmail_(ms) {
@@ -6082,9 +6132,9 @@ function segundosParaTextoEmail_(ms) {
 // ETAPA_POR_STEP_ em app-lancamentos.html) -- chave aqui é o step-id CRU
 // que chega em tags.tempoPorStep (objeto {stepId: ms}).
 var NOME_ETAPA_POR_STEP_EMAIL_ = {
-  0: 'Etapa 1 — Capa', 2: 'Etapa 2 — Orçamento/Área', 3: 'Etapa 3 — Confirmação',
-  1: 'Etapa 4 — Nome/Objetivo', 4: 'Etapa 5 — Quartos/Altura', 6: 'Etapa 6 — Resultados',
-  7: 'Etapa 7 — WhatsApp',
+  0: 'Etapa 1 — Capa', 5: 'Etapa 2 — Objetivo/Padrão', 2: 'Etapa 3 — Orçamento/Área',
+  3: 'Etapa 4 — Confirmação', 1: 'Etapa 5 — Nome/Necessidade', 4: 'Etapa 6 — Perfil',
+  6: 'Etapa 7 — Resultados', 7: 'Etapa 8 — WhatsApp', 9: 'Etapa 9 — Agendamento',
 };
 
 // Dados técnicos capturados sem perguntar nada ao cliente (pedido explícito
@@ -6113,7 +6163,7 @@ function montarBlocoDadosTecnicosEmail_(d) {
     // Ordem de navegação real do cliente, não a ordem crescente dos
     // step-ids crus (que pula: confirmação é step-3 mas vem antes de nome,
     // que é step-1) -- mesma ordem de ETAPA_POR_STEP_ em app-lancamentos.html.
-    var ORDEM_STEP_IDS_ = [0, 2, 3, 1, 4, 6, 7];
+    var ORDEM_STEP_IDS_ = [0, 5, 2, 3, 1, 4, 6, 7, 9];
     var linhasTempo = ORDEM_STEP_IDS_
       .filter(function(k) { return tempoPorStep[k] !== undefined; })
       .map(function(k) { return { etapa: NOME_ETAPA_POR_STEP_EMAIL_[k], tempo: segundosParaTextoEmail_(tempoPorStep[k]) }; });
@@ -6166,6 +6216,14 @@ function montarBlocoAbandonoEmail_() {
 function enviarNotificacaoAtendente_(d) {
   try {
     var nome = d.nome || '(sem nome)';
+    // Assunto muda por desejaAgendar (Step 9, App Lançamentos) -- pedido
+    // explícito do usuário. Leads sem esse campo (ex: BaseImob, que não
+    // passa pela pergunta de agendamento) mantêm o assunto genérico de sempre.
+    var tagsAssunto = {};
+    try { tagsAssunto = JSON.parse(d.tags || '{}'); } catch (eAssunto) {}
+    var prefixoAssunto = tagsAssunto.desejaAgendar === true  ? '📅 AGENDAMENTO DE LEAD'
+                       : tagsAssunto.desejaAgendar === false ? '⚠️ LEAD NÃO AGENDADO'
+                       : '🔥 LEAD QUENTE';
     var sep = '\n//\n//\n//';
     var corpo = montarBlocoResumoLeadEmail_(d);
     corpo += sep + montarBlocoRoteiroEmail_(d);
@@ -6175,7 +6233,7 @@ function enviarNotificacaoAtendente_(d) {
     corpo += sep + montarBlocoAbandonoEmail_();
     MailApp.sendEmail({
       to: ADM_EMAIL,
-      subject: '🔥 LEAD QUENTE — ' + nome + ' solicitou informações',
+      subject: prefixoAssunto + ' — ' + nome + ' solicitou informações',
       body: corpo
     });
   } catch(e) {
