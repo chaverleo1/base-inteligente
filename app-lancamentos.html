@@ -968,6 +968,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
     <div class="hero-cta-count" id="cntStep4Wrap" style="margin-top:40px;margin-bottom:12px">Encontramos <strong>—</strong> opções para você!</div>
+    <div class="tolerancia-nota" id="toleranciaNotaStep4" style="display:none;text-align:center;margin-top:-6px;margin-bottom:12px"></div>
     <button class="btn-final btn-quente" id="btnVerOpcoes" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
       <span id="btnVerOpcoesTxt">QUERO VER MINHAS OPÇÕES</span>
@@ -1318,8 +1319,10 @@ const D = {
   estrelasApp: 0,
   // true quando o contador da Tela 3 precisou ampliar a tolerância de
   // preço/área (±20% → ±30%) pra não mostrar zero opções -- controla o
-  // aviso discreto que aparece perto do contador (ver contarComExpansaoTolerancia_).
-  toleranciaExpandidaTela3: false,
+  // aviso discreto que aparece perto do contador (ver qtdOpcoesReais_).
+  // Vale pro motor de match inteiro, não só pra exibição -- por isso não
+  // tem mais "Tela3" no nome (afeta Telas 3, 4, 6 e o resultado real da 7).
+  toleranciaExpandida: false,
   // Sinais comportamentais por card (Etapa 6) -- id do empreendimento que o
   // cliente expandiu ("Ver Preço") ou favoritou (♥). Pedido explícito do
   // usuário: preferência REAL clicada vale mais que a declarada nos sliders.
@@ -1439,12 +1442,12 @@ function montarConfirmacao_() {
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
   document.getElementById('confSituacao').textContent = situacaoEscolhidaLabel_() || '—';
-  const qtd = contarComExpansaoTolerancia_();
+  const qtd = qtdOpcoesReais_();
   document.getElementById('confResultadoBadge').innerHTML =
     `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
   const notaConf = document.getElementById('toleranciaNotaConfirmacao');
   if (notaConf) {
-    notaConf.style.display = D.toleranciaExpandidaTela3 ? '' : 'none';
+    notaConf.style.display = D.toleranciaExpandida ? '' : 'none';
     notaConf.textContent = 'Ampliamos sua busca um pouco pra não faltar opção.';
   }
 }
@@ -1454,7 +1457,11 @@ function montarMotivacaoTitulo_() {
   document.getElementById('motivacaoTitulo').innerHTML =
     primeiroNome + ', o que define o <span style="color:var(--accent)">tipo de apartamento</span> mais adequado para você?';
   montarPerfilStep4_();
-  const _t4 = filtrados().length;
+  // qtdOpcoesReais_ -- mesma contagem (com a mesma expansão de tolerância,
+  // se precisar) das Telas 3 e 4, pra nunca mais divergir entre telas
+  // (bug reportado pelo usuário: aqui chegou a mostrar "0" depois de outra
+  // tela já ter mostrado um número > 0 pro mesmo perfil).
+  const _t4 = qtdOpcoesReais_();
   const _w4 = document.getElementById('cntStep4Wrap');
   if (_w4) {
     if (_t4 <= 7) {
@@ -1462,6 +1469,11 @@ function montarMotivacaoTitulo_() {
     } else {
       _w4.innerHTML = `Encontramos <strong style="font-size:2em;line-height:1;vertical-align:middle">7</strong> opções especiais para você! <span style="color:var(--orange)">(+${_t4 - 7} adicionais)</span>`;
     }
+  }
+  const _notaStep4 = document.getElementById('toleranciaNotaStep4');
+  if (_notaStep4) {
+    _notaStep4.style.display = D.toleranciaExpandida ? '' : 'none';
+    _notaStep4.textContent = 'Ampliamos sua busca um pouco pra não faltar opção.';
   }
 }
 
@@ -1948,7 +1960,13 @@ function refinarBusca_() { irParaStep(2); }
 // tolerância) que a pessoa pediu -- não basta a MÉDIA/faixa geral do prédio
 // bater por acaso enquanto nenhum apartamento específico atende aos dois
 // critérios ao mesmo tempo.
-const TOLERANCIA_PRECO_ = 0.20;
+// Mutável de propósito (não é mais const) -- pode ser ampliada por
+// qtdOpcoesReais_ quando a busca estrita não acha nada, e essa ampliação
+// passa a valer DE VERDADE pro motor de match inteiro (rankeados/filtrados/
+// temApartamentoCompativel_), não só pra um contador de exibição. Pedido
+// explícito do usuário: o número mostrado em qualquer tela tem que ser
+// real e bater com o que a Tela 7 realmente entrega.
+let TOLERANCIA_PRECO_ = 0.20;
 
 function matchSituacao_(estagio, filtro) {
   if (filtro === 'pronto_novo') return ['Pronto', 'Pronto novo', 'Entregue'].includes(estagio);
@@ -2000,34 +2018,45 @@ function filtrados() {
   });
 }
 
-// Contador da Tela 3 -- regra técnica 2 do documento: "nunca mostrar 0".
-// Escopo deliberadamente restrito a ESTE contador (não altera
-// TOLERANCIA_PRECO_/TOLERANCIA_METRAGEM_ globais, que continuam valendo
-// para o match final da Tela 7) -- ampliar a tolerância que decide os
-// cards reais mudaria o resultado que o cliente já confirmou depois, o que
-// é pior do que só evitar um "0" desanimador enquanto ele ainda está
-// mexendo nos sliders. Instrução do usuário: expansão automática, com aviso
-// discreto (D.toleranciaExpandidaTela3) pra não quebrar a confiança quando
-// o cliente comparar com o que confirmou na Tela 4.
-function contarComExpansaoTolerancia_() {
-  const base = filtrados().length;
-  if (base > 0 || !D.metragemAlvo || !D.precoAlvo) {
-    D.toleranciaExpandidaTela3 = false;
-    return base;
+// Volta as tolerâncias pro padrão (±20%) e recalcula D.areaRange -- chamado
+// no início de qtdOpcoesReais_ pra sempre reavaliar a busca ESTRITA primeiro
+// a partir do zero, com os critérios atuais (situação/padrão/preço/área).
+function resetTolerancia_() {
+  TOLERANCIA_PRECO_ = 0.20;
+  TOLERANCIA_METRAGEM_ = 0.20;
+  if (D.metragemAlvo) {
+    D.areaRange = [Math.round(D.metragemAlvo * (1 - TOLERANCIA_METRAGEM_)), Math.round(D.metragemAlvo * (1 + TOLERANCIA_METRAGEM_))];
   }
-  const aRangeExp = [Math.round(D.metragemAlvo * 0.70), Math.round(D.metragemAlvo * 1.30)];
-  const expandido = TODOS_LANC.filter(c => {
-    if (D.padroes.size > 0 && !D.padroes.has(c.padrao)) return false;
-    const s = D.situacoes;
-    if (s.size > 0 && !((s.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
-                         (s.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras')))) return false;
-    return (c.unidades || []).some(u =>
-      u.areaUtil >= aRangeExp[0] && u.areaUtil <= aRangeExp[1] &&
-      Math.abs(u.precoTotal - D.precoAlvo) / D.precoAlvo <= 0.30
-    );
-  }).length;
-  D.toleranciaExpandidaTela3 = expandido > 0;
-  return expandido;
+}
+
+// Única fonte de verdade pra "quantas opções foram encontradas" -- usada em
+// TODA tela que faz referência a essa contagem (Tela 3, Tela 4, Tela 6) e
+// também antes de montar os cards de verdade (Tela 7, ver montarMatch) --
+// pedido explícito do usuário depois de um caso real onde a Tela 3 mostrava
+// "2" e a Tela 4 mostrava "0" pro MESMO perfil configurado.
+//
+// Regra técnica 2 do documento ("nunca mostrar 0") passa a ser de VERDADE:
+// se a busca estrita (±20%) não acha nada, AMPLIA TOLERANCIA_PRECO_/
+// TOLERANCIA_METRAGEM_ pra ±30% (mutáveis, não são mais const) -- essa
+// ampliação afeta o motor de match inteiro (rankeados/filtrados/
+// temApartamentoCompativel_ leem essas mesmas variáveis), não só um
+// contador isolado. Assim, o que qualquer tela promete é exatamente o que
+// a Tela 7 entrega depois. D.toleranciaExpandida controla o aviso discreto
+// ("ampliamos sua busca...") em qualquer tela que precisar dele.
+function qtdOpcoesReais_() {
+  resetTolerancia_();
+  if (!D.metragemAlvo || !D.precoAlvo) { D.toleranciaExpandida = false; return filtrados().length; }
+  let n = filtrados().length;
+  if (n === 0) {
+    TOLERANCIA_PRECO_ = 0.30;
+    TOLERANCIA_METRAGEM_ = 0.30;
+    D.areaRange = [Math.round(D.metragemAlvo * 0.70), Math.round(D.metragemAlvo * 1.30)];
+    n = filtrados().length;
+    D.toleranciaExpandida = n > 0;
+  } else {
+    D.toleranciaExpandida = false;
+  }
+  return n;
 }
 
 // ── SLIDERS ──────────────────────────────────────────────────────────────
@@ -2124,7 +2153,7 @@ function validarLimitesPreco_() {
 // o cliente escolhe o tamanho que quer, e o motor de match já embute uma
 // tolerância de ±20% pra cima/baixo (ex.: escolheu 50m² -> entra no cálculo
 // de 40m² a 60m²), sem precisar de uma segunda alça pra isso.
-const TOLERANCIA_METRAGEM_ = 0.20;
+let TOLERANCIA_METRAGEM_ = 0.20;
 function atualizarMetragem(val) {
   const v = parseInt(val);
   if (D.areaInicial === null) D.areaInicial = v;
@@ -2201,9 +2230,9 @@ function situacaoEscolhidaLabel_() {
 // perfil"/"com [situação]" nem a caixa grande que existia antes.
 function atualizarComboUI_() {
   if (!D.precoAlvo || !D.metragemAlvo) return;
-  animar('cntCombo', contarComExpansaoTolerancia_());
+  animar('cntCombo', qtdOpcoesReais_());
   const nota = document.getElementById('toleranciaNota');
-  if (nota) nota.style.display = (D.toleranciaExpandidaTela3 && D.situacoes.size > 0) ? '' : 'none';
+  if (nota) nota.style.display = (D.toleranciaExpandida && D.situacoes.size > 0) ? '' : 'none';
 }
 
 // ── SCORE DE COMPATIBILIDADE (perfil geral, enviado no payload do lead) ────
@@ -2515,6 +2544,11 @@ function montarMixPorAlvo_(alvoItem, todosItens) {
 }
 
 function montarMatch() {
+  // Garante que a tolerância usada aqui é a MESMA que qualquer tela anterior
+  // já mostrou como contagem (qtdOpcoesReais_ tem esse efeito colateral
+  // proposital) -- sem isso, a Tela 7 podia prometer implicitamente um
+  // número e entregar outro, mesmo depois do fix de exibição.
+  qtdOpcoesReais_();
   const localCompativeis = filtrados();
 
   let ofertas = [];
