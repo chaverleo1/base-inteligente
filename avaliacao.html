@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação — Líder Empreendimentos</title>
+<style>
+:root {
+  --bg: #09090f; --s1: #0f1018; --s2: #13151f; --border: #1e2232;
+  --accent: #4f7cff; --green: #00d4aa; --text: #eef0f6; --r: 12px; --r-sm: 8px;
+}
+* , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; font-size: 15px; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100%; -webkit-font-smoothing: antialiased;
+}
+.main { max-width: 480px; margin: 0 auto; padding: 32px 20px 40px; }
+.step-tag { font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.step-title { font-size: 26px; font-weight: 800; line-height: 1.25; letter-spacing: -.4px; margin-bottom: 8px; }
+.step-sub { font-size: 14px; color: var(--text); opacity: .8; line-height: 1.5; margin-bottom: 24px; }
+.form-field { margin-bottom: 14px; }
+.form-field label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 6px; }
+.form-field input, .form-field textarea {
+  width: 100%; background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text); font-size: 16px; font-family: inherit; padding: 14px 16px; outline: none;
+  transition: border .2s; -webkit-appearance: none;
+}
+.form-field textarea { min-height: 90px; resize: vertical; font-size: 14px; }
+.form-field input:focus, .form-field textarea:focus { border-color: var(--accent); }
+.form-field input::placeholder, .form-field textarea::placeholder { color: #6a7290; }
+.estrelas-input { display: flex; gap: 6px; margin: 20px 0; }
+.estrela-btn { background: none; border: none; font-size: 40px; line-height: 1; cursor: pointer; color: #252840; transition: color .15s, transform .1s; padding: 4px; }
+.estrela-btn:active { transform: scale(1.15); }
+.estrela-btn.ativa { color: #f5c800; }
+.btn-final {
+  width: 100%; padding: 18px 20px; background: var(--accent); color: #fff; border: none;
+  border-radius: var(--r-sm); font-size: 16px; font-weight: 700; font-family: inherit;
+  cursor: pointer; margin-top: 6px; transition: all .2s;
+}
+.btn-final:hover { background: #3d6aee; }
+.btn-final:disabled { opacity: .5; cursor: default; }
+.msg-enviado { display: none; text-align: center; font-size: 15px; font-weight: 700; color: var(--green); margin-top: 20px; }
+.app-footer { font-size: 10px; color: var(--text); text-align: center; margin-top: 32px; opacity: .5; }
+</style>
+</head>
+<body>
+
+<div class="main">
+  <div class="step-tag">Sua opinião importa</div>
+  <div class="step-title">Como foi seu atendimento?</div>
+  <div class="step-sub">Conte pra gente como foi sua experiência com a Líder Empreendimentos.</div>
+
+  <div id="blocoForm">
+    <div class="form-field">
+      <label>Seu nome</label>
+      <input type="text" id="fNome" placeholder="Ex: Maria" autocomplete="name">
+    </div>
+    <div class="form-field">
+      <label>Seu WhatsApp (opcional)</label>
+      <input type="tel" id="fTel" placeholder="(62) 99999-9999" autocomplete="tel" oninput="mascaraTel_(this)">
+    </div>
+
+    <div class="estrelas-input" id="estrelasInput">
+      <button class="estrela-btn" onclick="selecionarEstrelas_(1)">★</button>
+      <button class="estrela-btn" onclick="selecionarEstrelas_(2)">★</button>
+      <button class="estrela-btn" onclick="selecionarEstrelas_(3)">★</button>
+      <button class="estrela-btn" onclick="selecionarEstrelas_(4)">★</button>
+      <button class="estrela-btn" onclick="selecionarEstrelas_(5)">★</button>
+    </div>
+
+    <div class="form-field">
+      <label>Comentário (opcional)</label>
+      <textarea id="fComentario" placeholder="Conte como foi..."></textarea>
+    </div>
+
+    <button class="btn-final" id="btnEnviar" onclick="enviarAvaliacao_()">Enviar avaliação</button>
+  </div>
+  <div class="msg-enviado" id="msgEnviado">Obrigado pela sua avaliação! 🙏</div>
+
+  <div class="app-footer">CJ 27357- Líder Empreendimentos Imobiliários LTDA</div>
+</div>
+
+<script src="painel/config.js" onerror="void(0)"></script>
+<script>
+let estrelas = 0;
+function selecionarEstrelas_(n) {
+  estrelas = n;
+  document.querySelectorAll('#estrelasInput .estrela-btn').forEach((btn, i) => {
+    btn.classList.toggle('ativa', i < n);
+  });
+}
+
+function mascaraTel_(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,11);
+  if (v.length > 6) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+  else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
+  else if (v.length) v = '(' + v;
+  el.value = v;
+}
+
+function enviarAvaliacao_() {
+  if (!estrelas) { alert('Escolha de 1 a 5 estrelas pra continuar.'); return; }
+  const btn = document.getElementById('btnEnviar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const finalizar = () => {
+    document.getElementById('blocoForm').style.display = 'none';
+    document.getElementById('msgEnviado').style.display = '';
+  };
+
+  if (typeof WEBHOOK_URL === 'undefined') { finalizar(); return; }
+
+  const payload = {
+    acao: 'enviar_comentario_app',
+    nome: document.getElementById('fNome').value.trim() || 'Cliente',
+    telefone: document.getElementById('fTel').value.replace(/\D/g, ''),
+    estrelas: estrelas,
+    comentario: document.getElementById('fComentario').value.trim(),
+    tipo: 'pos_atendimento',
+  };
+  fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)))
+    .then(finalizar)
+    .catch(finalizar);
+}
+</script>
+</body>
+</html>

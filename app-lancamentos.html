@@ -522,6 +522,31 @@ input[type=range]::-moz-range-track {
   color: var(--text); margin: 18px 0 10px;
 }
 
+/* ── PROVA SOCIAL (Tela final) ───────────────────────────────────────── */
+.prova-social-wrap { margin-top: 32px; }
+.estrelas-input { display: flex; gap: 6px; }
+.estrela-btn {
+  background: none; border: none; font-size: 34px; line-height: 1; cursor: pointer;
+  color: var(--border2); transition: color .15s, transform .1s; padding: 4px;
+}
+.estrela-btn:active { transform: scale(1.15); }
+.estrela-btn.ativa { color: #f5c800; }
+.comentario-textarea {
+  width: 100%; min-height: 76px; background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); color: var(--text); font-size: 14px; font-family: inherit;
+  padding: 12px 14px; outline: none; resize: vertical; transition: border .2s;
+}
+.comentario-textarea:focus { border-color: var(--accent); }
+.comentario-textarea::placeholder { color: #6a7290; }
+.comentario-card {
+  background: var(--s2); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 12px 14px; margin-bottom: 10px;
+}
+.comentario-card-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
+.comentario-card-nome { font-size: 13px; font-weight: 700; color: var(--text); min-width: 0; overflow-wrap: break-word; }
+.comentario-card-estrelas { color: #f5c800; font-size: 13px; letter-spacing: 1px; flex-shrink: 0; }
+.comentario-card-texto { font-size: 13px; color: var(--text); opacity: .85; line-height: 1.5; overflow-wrap: break-word; }
+
 /* ── TELA DE CONFIRMAÇÃO DOS DADOS (entre sliders e motivação) ────────── */
 /* 2 colunas quando possível (pedido explícito), pra diminuir a altura total
    da caixa e evitar rolagem -- itens que não têm par (situação) e o bloco
@@ -1083,6 +1108,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
       <div style="font-size:13px;color:var(--text);text-align:center;margin-top:14px">Você vai receber uma mensagem de confirmação do agendamento em breve.</div>
     </div>
+
+    <!-- Prova social -- pedido explícito do usuário: avaliação do
+         pré-atendimento (até 5 estrelas + comentário livre) logo depois da
+         caixa de confirmação, e lista de comentários já aprovados abaixo. -->
+    <div class="prova-social-wrap">
+      <div class="label-section">Sua opinião importa</div>
+      <div class="step-sub" style="margin-bottom:8px">Como foi sua experiência até aqui?</div>
+
+      <div id="blocoAvaliacaoForm">
+        <div class="estrelas-input" id="estrelasInput">
+          <button class="estrela-btn" onclick="selecionarEstrelas_(1)">★</button>
+          <button class="estrela-btn" onclick="selecionarEstrelas_(2)">★</button>
+          <button class="estrela-btn" onclick="selecionarEstrelas_(3)">★</button>
+          <button class="estrela-btn" onclick="selecionarEstrelas_(4)">★</button>
+          <button class="estrela-btn" onclick="selecionarEstrelas_(5)">★</button>
+        </div>
+
+        <div class="form-field" style="margin-top:14px;margin-bottom:0">
+          <textarea id="fComentarioApp" class="comentario-textarea" placeholder="Deixe um comentário (opcional)"></textarea>
+        </div>
+
+        <button class="btn-final btn-quente" id="btnEnviarComentario" style="margin-top:14px" onclick="enviarComentarioApp_()">Enviar avaliação</button>
+      </div>
+      <div id="comentarioEnviadoMsg" style="display:none;text-align:center;font-size:13px;color:var(--green);font-weight:700;margin-top:14px">Obrigado pela sua avaliação! 🙏</div>
+
+      <div id="comentariosAprovadosWrap" style="margin-top:28px"><!-- populado por JS --></div>
+    </div>
   </div>
 
 </div><!-- /step-wrap -->
@@ -1228,6 +1280,9 @@ const D = {
   // cliente responder Sim/Não.
   desejaAgendar: null, agendaDia: '', agendaHora: '', agendaModo: null,
   paisDDI: '+55',
+  // Avaliação de prova social (Tela final) -- 0 até o cliente clicar numa
+  // estrela.
+  estrelasApp: 0,
   // true quando o contador da Tela 3 precisou ampliar a tolerância de
   // preço/área (±20% → ±30%) pra não mostrar zero opções -- controla o
   // aviso discreto que aparece perto do contador (ver contarComExpansaoTolerancia_).
@@ -2581,6 +2636,7 @@ function montarFavoritosResumoCaptura_() {
 // usuário: tela final "mais resumida").
 function montarAgradecimento() {
   document.getElementById('obrigadoNome').textContent = D.nome.split(' ')[0] + '!';
+  carregarComentariosAprovados_();
 
   // Tela final muda conforme a resposta da pergunta de agendamento (Step 9)
   // -- pedido explícito do usuário: agendou não mostra botão de WhatsApp,
@@ -2670,6 +2726,74 @@ function sincronizarPaisWhats_(el) {
   const outro = document.getElementById(outroId);
   if (outro) outro.value = el.value;
   D.paisDDI = el.value;
+}
+
+// ── PROVA SOCIAL (Tela final) ────────────────────────────────────────────
+function selecionarEstrelas_(n) {
+  D.estrelasApp = n;
+  document.querySelectorAll('#estrelasInput .estrela-btn').forEach((btn, i) => {
+    btn.classList.toggle('ativa', i < n);
+  });
+}
+
+// Escapa texto do cliente antes de injetar via innerHTML (nome/comentário
+// são texto livre público -- sem isso, um comentário malicioso vira XSS
+// pra todo mundo que abrir a Tela final depois).
+function escapeHtml_(s) {
+  const div = document.createElement('div');
+  div.textContent = String(s || '');
+  return div.innerHTML;
+}
+
+function enviarComentarioApp_() {
+  if (!D.estrelasApp) { toast('Escolha de 1 a 5 estrelas pra continuar'); return; }
+  const btn = document.getElementById('btnEnviarComentario');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  const finalizarEnvio = () => {
+    document.getElementById('blocoAvaliacaoForm').style.display = 'none';
+    document.getElementById('comentarioEnviadoMsg').style.display = '';
+  };
+
+  if (typeof WEBHOOK_URL === 'undefined') { finalizarEnvio(); return; }
+
+  const payload = {
+    acao: 'enviar_comentario_app',
+    nome: D.nome, telefone: D.whatsapp,
+    estrelas: D.estrelasApp,
+    comentario: document.getElementById('fComentarioApp').value.trim(),
+    tipo: 'pre_atendimento',
+  };
+  fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)))
+    .then(finalizarEnvio)
+    .catch(() => finalizarEnvio());
+}
+
+// Lista pública de comentários já aprovados no painel (Lançamentos > App >
+// Comentários) -- a prova social de verdade, mais recentes primeiro.
+function carregarComentariosAprovados_() {
+  const wrap = document.getElementById('comentariosAprovadosWrap');
+  if (!wrap || typeof WEBHOOK_URL === 'undefined') return;
+  fetch(WEBHOOK_URL + '?acao=listar_comentarios_aprovados')
+    .then(r => r.json())
+    .then(data => {
+      const lista = data.comentarios || [];
+      if (!lista.length) { wrap.innerHTML = ''; return; }
+      wrap.innerHTML = '<div class="label-section">O que outros clientes disseram</div>' +
+        lista.map(c => {
+          const estrelas = Math.max(0, Math.min(5, Number(c.estrelas) || 0));
+          return `
+          <div class="comentario-card">
+            <div class="comentario-card-header">
+              <span class="comentario-card-nome">${escapeHtml_(c.nome || 'Cliente')}</span>
+              <span class="comentario-card-estrelas">${'★'.repeat(estrelas)}${'☆'.repeat(5 - estrelas)}</span>
+            </div>
+            ${c.comentario ? `<div class="comentario-card-texto">${escapeHtml_(c.comentario)}</div>` : ''}
+          </div>`;
+        }).join('');
+    })
+    .catch(() => {});
 }
 
 // Alerta visual em tempo real (borda vermelha + aviso) se os dois campos de

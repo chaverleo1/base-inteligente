@@ -171,7 +171,7 @@ const CABECALHO_LANCAMENTOS = [
 // anônimo de anúncio, sem login nenhum), além do Base Inteligente.
 // 'selecionar_isca' também é pública: chamada de app-lancamentos.html (landing
 // page de captura, sem login), igual listar_lancamentos.
-var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'listar_lancamentos_resumo', 'rodar_matching', 'selecionar_isca'];
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'listar_lancamentos_resumo', 'rodar_matching', 'selecionar_isca', 'listar_comentarios_aprovados'];
 
 function doGet(e) {
   if (!e || !e.parameter) return ok({ status: 'sem parametros' });
@@ -187,6 +187,7 @@ function doGet(e) {
     if (dadosGet.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(dadosGet));
     if (dadosGet.acao === 'interesse_lancamento') return ok(salvarInteresse_(dadosGet));
     if (dadosGet.acao === 'registrar_evento_funil') return ok(registrarEventoFunil_(dadosGet));
+    if (dadosGet.acao === 'enviar_comentario_app') return ok(salvarComentarioApp_(dadosGet));
   }
 
   if (ACOES_PUBLICAS_GET.indexOf(acao) < 0 && !sessaoValida_(e.parameter.token)) {
@@ -248,6 +249,8 @@ function doGet(e) {
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')         return ok(listarLancamentos_());
   if (acao === 'listar_lancamentos_resumo')  return ok(listarLancamentosResumoPublico_());
+  if (acao === 'listar_comentarios_aprovados') return ok(listarComentariosAprovados_());
+  if (acao === 'listar_comentarios_app')     return ok(listarComentariosAppTodos_());
   if (acao === 'listar_mix_segmentos')       return ok(listarMixSegmentosPublicados_());
   if (acao === 'selecionar_isca') return ok(selecionarIscaPublico_({
     motivacoes: String(e.parameter.motivacoes || '').split(',').filter(Boolean),
@@ -801,6 +804,7 @@ function doPost(e) {
 
   if (!sessaoValida_(d.token)) return ok({ status: 'nao_autenticado' });
 
+  if (d.acao === 'moderar_comentario_app') return ok(moderarComentarioApp_(d));
   if (d.acao === 'excluir')       return ok(excluir_(d));
   if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
@@ -4986,6 +4990,122 @@ function obterAbaInteresses_() {
        .setFontWeight('bold').setBackground('#C55A11').setFontColor('#ffffff');
   }
   return aba;
+}
+
+// ── COMENTÁRIOS DO APP LANÇAMENTOS (prova social) ────────────────────────────
+// Cliente avalia (1-5 estrelas + comentário livre) direto na Tela final do
+// App Lançamentos (pré-atendimento, automático) ou via link de avaliação
+// pós-atendimento que o corretor envia manualmente depois do contato --
+// mesma aba, campo "tipo" diferencia os dois. Todo comentário novo entra
+// como "Pendente" -- só fica público (listarComentariosAprovados_, exibido
+// como prova social na Tela final) depois de aprovado no painel
+// (Lançamentos > App > Comentários, ver moderarComentarioApp_).
+var CABECALHO_COMENTARIOS_APP_ = [
+  'id', 'dataHora', 'nome', 'telefone', 'estrelas', 'comentario', 'tipo', 'status',
+];
+
+function obterAbaComentariosApp_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('COMENTARIOS_APP');
+  if (!aba) {
+    aba = ss.insertSheet('COMENTARIOS_APP');
+    aba.setTabColor('#f5c800');
+    aba.appendRow(CABECALHO_COMENTARIOS_APP_);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_COMENTARIOS_APP_.length)
+       .setFontWeight('bold').setBackground('#f5c800').setFontColor('#1a1200');
+  }
+  return aba;
+}
+
+// Pública (sem sessão) -- qualquer visitante do App Lançamentos ou de um
+// link de avaliação pós-atendimento pode enviar. Nunca fica visível direto:
+// sempre entra "Pendente".
+function salvarComentarioApp_(d) {
+  try {
+    var estrelas = Math.max(1, Math.min(5, parseInt(d.estrelas, 10) || 0));
+    if (!estrelas) return { ok: false, erro: 'estrelas invalidas' };
+    var aba = obterAbaComentariosApp_();
+    var id = 'CMT-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    aba.appendRow([
+      id,
+      Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss'),
+      String(d.nome || '').trim() || 'Cliente',
+      String(d.telefone || '').trim(),
+      estrelas,
+      String(d.comentario || '').trim(),
+      (d.tipo === 'pos_atendimento') ? 'pos_atendimento' : 'pre_atendimento',
+      'Pendente',
+    ]);
+    return { ok: true, id: id };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+// Pública -- alimenta a prova social na Tela final do App Lançamentos. Só
+// comentários já aprovados, mais recentes primeiro.
+function listarComentariosAprovados_() {
+  try {
+    var aba = obterAbaComentariosApp_();
+    var lr = aba.getLastRow();
+    if (lr < 2) return { comentarios: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_COMENTARIOS_APP_.length).getValues();
+    var idxStatus = CABECALHO_COMENTARIOS_APP_.indexOf('status');
+    var lista = dados
+      .filter(function(r) { return r[0] && r[idxStatus] === 'Aprovado'; })
+      .map(function(r) {
+        var obj = {};
+        CABECALHO_COMENTARIOS_APP_.forEach(function(c, i) { obj[c] = r[i]; });
+        return obj;
+      });
+    lista.sort(function(a, b) { return parseDataHoraBR_(b.dataHora) - parseDataHoraBR_(a.dataHora); });
+    return { comentarios: lista.slice(0, 30) };
+  } catch (e) {
+    return { comentarios: [], erro: e.message };
+  }
+}
+
+// Protegida (sessão) -- todos os comentários, qualquer status, pro painel de
+// moderação (Lançamentos > App > Comentários), mais recentes primeiro.
+function listarComentariosAppTodos_() {
+  try {
+    var aba = obterAbaComentariosApp_();
+    var lr = aba.getLastRow();
+    if (lr < 2) return { comentarios: [] };
+    var dados = aba.getRange(2, 1, lr - 1, CABECALHO_COMENTARIOS_APP_.length).getValues();
+    var lista = dados.filter(function(r) { return r[0]; }).map(function(r) {
+      var obj = {};
+      CABECALHO_COMENTARIOS_APP_.forEach(function(c, i) { obj[c] = r[i]; });
+      return obj;
+    });
+    lista.sort(function(a, b) { return parseDataHoraBR_(b.dataHora) - parseDataHoraBR_(a.dataHora); });
+    return { comentarios: lista };
+  } catch (e) {
+    return { comentarios: [], erro: e.message };
+  }
+}
+
+// Protegida (sessão) -- aprova/rejeita um comentário pelo id.
+function moderarComentarioApp_(d) {
+  try {
+    var novoStatus = d.status === 'Aprovado' ? 'Aprovado' : (d.status === 'Rejeitado' ? 'Rejeitado' : null);
+    if (!novoStatus) return { ok: false, erro: 'status invalido' };
+    var aba = obterAbaComentariosApp_();
+    var lr = aba.getLastRow();
+    if (lr < 2) return { ok: false, erro: 'nao encontrado' };
+    var ids = aba.getRange(2, 1, lr - 1, 1).getValues();
+    var idxStatus = CABECALHO_COMENTARIOS_APP_.indexOf('status') + 1;
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i][0]) === String(d.id)) {
+        aba.getRange(i + 2, idxStatus).setValue(novoStatus);
+        return { ok: true };
+      }
+    }
+    return { ok: false, erro: 'nao encontrado' };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
 }
 
 function obterAbaFunilEventos_() {

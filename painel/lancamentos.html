@@ -1146,6 +1146,29 @@ select.form-input option { background: var(--surface2); }
       🚀 Abrir App Lançamentos
     </a>
   </div>
+
+  <!-- COMENTÁRIOS -- prova social do App Lançamentos: pré-atendimento vem
+       direto da Tela final do funil, pós-atendimento vem do link abaixo,
+       enviado manualmente pelo corretor depois do contato. Nenhum dos dois
+       aparece pro público sem passar por aqui primeiro. -->
+  <div class="sec-header" style="margin-top:28px">
+    <div class="sec-title" style="font-size:16px">Comentários</div>
+    <div class="sec-sub">Avaliações (1-5 estrelas + comentário) enviadas por clientes. Só aparecem como prova social na Tela final do App Lançamentos depois de aprovadas aqui.</div>
+  </div>
+
+  <div class="card" style="max-width:640px;margin-bottom:16px">
+    <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+      Link de avaliação pós-atendimento — envie pro cliente pelo WhatsApp depois do contato:
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <code id="linkAvaliacaoPos" style="font-size:12px;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--border);word-break:break-all">carregando…</code>
+      <button class="btn-extrair" style="padding:8px 14px;font-size:12px" onclick="copiarLinkAvaliacaoPos_()">Copiar link</button>
+    </div>
+  </div>
+
+  <div class="card" id="comentariosAppWrap" style="padding:0;overflow:auto">
+    <div class="loading dot-anim" style="padding:24px">Carregando</div>
+  </div>
   </div>
 
   <!-- MODELOS E PADRÕES VENDEDORES (consolida Modelos Vendedores + Padrão
@@ -1840,6 +1863,7 @@ function mudarAbaLancamentos(nome) {
   if (nome === 'busca') document.getElementById('busca-input').focus();
   if (nome === 'estrategias') carregarEstrategiasLazy_();
   if (nome === 'inteligencia') carregarInteligenciaLazy_();
+  if (nome === 'applancamentos') carregarComentariosAppLazy_();
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
@@ -2001,6 +2025,96 @@ function carregarInteligenciaLazy_() {
   if (_inteligenciaCarregada_) return;
   _inteligenciaCarregada_ = true;
   carregarInteligencia_();
+}
+
+// ── COMENTÁRIOS DO APP LANÇAMENTOS (Lançamentos > App > Comentários) ────────
+let _comentariosAppCarregado_ = false;
+function carregarComentariosAppLazy_() {
+  if (_comentariosAppCarregado_) return;
+  _comentariosAppCarregado_ = true;
+  const linkEl = document.getElementById('linkAvaliacaoPos');
+  if (linkEl) linkEl.textContent = location.origin.indexOf('lidderimoveis') >= 0
+    ? location.origin + '/avaliacao.html'
+    : 'https://lidderimoveis.com/avaliacao.html';
+  carregarComentariosApp_();
+}
+
+function copiarLinkAvaliacaoPos_() {
+  const link = document.getElementById('linkAvaliacaoPos').textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => mostrarToast('Link copiado!', 'ok')).catch(() => {});
+  }
+}
+
+function escapeHtmlPainel_(s) {
+  const div = document.createElement('div');
+  div.textContent = String(s || '');
+  return div.innerHTML;
+}
+
+function badgeStatusComentario_(status) {
+  const cores = { Pendente: '#f5a623', Aprovado: 'var(--green, #00d4aa)', Rejeitado: 'var(--danger)' };
+  const cor = cores[status] || 'var(--text2)';
+  return `<span style="color:${cor};font-weight:700;font-size:12px">${status || '—'}</span>`;
+}
+
+async function carregarComentariosApp_() {
+  const wrap = document.getElementById('comentariosAppWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_comentarios_app&token=' + encodeURIComponent(tokenSessao()));
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    const lista = json.comentarios || [];
+    if (!lista.length) {
+      wrap.innerHTML = '<div class="empty-state" style="padding:24px">Nenhum comentário ainda.</div>';
+      return;
+    }
+    wrap.innerHTML = `<table class="adm-table"><thead><tr>
+      <th>Data</th><th>Nome</th><th>Estrelas</th><th>Comentário</th><th>Tipo</th><th>Status</th><th></th>
+    </tr></thead><tbody>
+      ${lista.map(c => {
+        const est = Math.max(0, Math.min(5, Number(c.estrelas) || 0));
+        return `
+        <tr>
+          <td style="white-space:nowrap">${escapeHtmlPainel_(c.dataHora || '—')}</td>
+          <td>${escapeHtmlPainel_(c.nome || '—')}</td>
+          <td style="color:#f5c800;white-space:nowrap">${'★'.repeat(est)}${'☆'.repeat(5 - est)}</td>
+          <td style="max-width:280px;overflow-wrap:break-word">${escapeHtmlPainel_(c.comentario || '—')}</td>
+          <td style="white-space:nowrap">${c.tipo === 'pos_atendimento' ? 'Pós-atendimento' : 'Pré-atendimento'}</td>
+          <td>${badgeStatusComentario_(c.status)}</td>
+          <td style="white-space:nowrap">
+            ${c.status === 'Pendente' ? `
+              <button class="btn-extrair" style="padding:5px 10px;font-size:11px;background:var(--green)" onclick="moderarComentario_('${c.id}','Aprovado')">Aprovar</button>
+              <button class="btn-extrair" style="padding:5px 10px;font-size:11px;background:var(--danger)" onclick="moderarComentario_('${c.id}','Rejeitado')">Rejeitar</button>
+            ` : ''}
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>`;
+  } catch (e) {
+    wrap.innerHTML = '<div class="empty-state" style="padding:24px">Erro ao carregar comentários.</div>';
+  }
+}
+
+async function moderarComentario_(id, status) {
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'moderar_comentario_app', id, status, token: tokenSessao() }) })
+    });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json && json.ok) {
+      mostrarToast(status === 'Aprovado' ? 'Comentário aprovado.' : 'Comentário rejeitado.', 'ok');
+      carregarComentariosApp_();
+    } else {
+      mostrarToast('Erro ao atualizar comentário.', 'erro');
+    }
+  } catch (e) {
+    mostrarToast('Erro ao atualizar comentário.', 'erro');
+  }
 }
 
 // Imprime/gera PDF só da aba de LISTA que estiver ativa no momento
