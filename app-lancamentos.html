@@ -1907,11 +1907,19 @@ function formatarContagemMin_(totalMinutos) {
   const h = Math.floor(t / 60), m = t % 60;
   return h > 0 ? `${h}h ${m}min` : `${m}min`;
 }
+// Horário ATUAL sempre no fuso de Brasília (America/Sao_Paulo, UTC-3, sem
+// horário de verão desde 2019) -- pedido explícito do usuário: o
+// expediente é o de Brasília/Goiânia, não pode depender do fuso
+// configurado no aparelho de quem está acessando (ex: lead viajando).
+function agoraBrasilia_() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+}
 // Estado atual da janela pra exibição -- usado tanto no Step 9 quanto na
 // Tela final, sempre com o horário ATUAL (momento em que a pessoa está
-// vendo a tela), nunca o horário que ela escolheu num agendamento.
+// vendo a tela, em Brasília), nunca o horário que ela escolheu num
+// agendamento.
 function infoJanelaAtendimento_() {
-  const agora = new Date();
+  const agora = agoraBrasilia_();
   const dentro = dentroJanelaAtendimento_(agora);
   if (dentro) {
     const fechamento = proximoFechamento_(agora);
@@ -1932,7 +1940,13 @@ function atualizarContadorJanela_() {
   const blocoDetalhes9 = document.getElementById('blocoAgendamentoDetalhes');
   const blocoFora9 = document.getElementById('blocoForaHorarioAgendar');
   const avisoFechando9 = document.getElementById('avisoFechandoBreve');
-  if (tagsAgendar && blocoFora9) {
+  // Se a confirmação final (Finalizar Atendimento) já está sendo revisada,
+  // não mexe mais no bloco "fora do horário" -- senão o tick de 30s
+  // reaparece com ele por cima da confirmação (pedido explícito do
+  // usuário: os dois nunca podem aparecer juntos).
+  const blocoConfirmacao9 = document.getElementById('blocoConfirmacaoAgendamento');
+  const emRevisao9 = blocoConfirmacao9 && blocoConfirmacao9.style.display !== 'none';
+  if (tagsAgendar && blocoFora9 && !emRevisao9) {
     tagsAgendar.style.display = info.dentro ? '' : 'none';
     blocoFora9.style.display = info.dentro ? 'none' : '';
     if (!info.dentro) {
@@ -1940,13 +1954,13 @@ function atualizarContadorJanela_() {
       const spanAb = document.getElementById('foraHorarioProximaAbertura');
       if (spanAb) spanAb.textContent = info.textoAbertura;
       const c9 = document.getElementById('contadorJanelaStep9');
-      if (c9) c9.textContent = 'ESTAREMOS ONLINE EM: ' + formatarContagemMin_(info.minutosParaAbrir).toUpperCase();
+      if (c9) c9.textContent = 'ESTAREMOS ONLINE EM: ' + formatarContagemMin_(info.minutosParaAbrir).toUpperCase() + ' (horário de Brasília)';
     }
   }
   if (avisoFechando9) {
-    const mostrar9 = info.dentro && info.fechandoBreve;
+    const mostrar9 = info.dentro && info.fechandoBreve && !emRevisao9;
     avisoFechando9.style.display = mostrar9 ? '' : 'none';
-    if (mostrar9) avisoFechando9.textContent = '⚠ Atenção, ficaremos offline em: ' + formatarContagemMin_(info.minutosParaFechar);
+    if (mostrar9) avisoFechando9.textContent = '⚠ Atenção, ficaremos offline em: ' + formatarContagemMin_(info.minutosParaFechar) + ' (horário de Brasília)';
   }
 
   const blocoDentroFinal = document.getElementById('blocoSemAgendamentoDentroHorario');
@@ -1958,14 +1972,14 @@ function atualizarContadorJanela_() {
       const spanAbF = document.getElementById('foraHorarioProximaAberturaFinal');
       if (spanAbF) spanAbF.textContent = info.textoAbertura;
       const cF = document.getElementById('contadorJanelaFinal');
-      if (cF) cF.textContent = 'ESTAREMOS ONLINE EM: ' + formatarContagemMin_(info.minutosParaAbrir).toUpperCase();
+      if (cF) cF.textContent = 'ESTAREMOS ONLINE EM: ' + formatarContagemMin_(info.minutosParaAbrir).toUpperCase() + ' (horário de Brasília)';
     }
   }
   const avisoFechandoFinal = document.getElementById('avisoFechandoBreveFinal');
   if (avisoFechandoFinal) {
     const mostrarF = info.dentro && info.fechandoBreve;
     avisoFechandoFinal.style.display = mostrarF ? '' : 'none';
-    if (mostrarF) avisoFechandoFinal.textContent = '⚠ Atenção, ficaremos offline em: ' + formatarContagemMin_(info.minutosParaFechar);
+    if (mostrarF) avisoFechandoFinal.textContent = '⚠ Atenção, ficaremos offline em: ' + formatarContagemMin_(info.minutosParaFechar) + ' (horário de Brasília)';
   }
 }
 setInterval(atualizarContadorJanela_, 30000);
@@ -2065,6 +2079,15 @@ function mostrarConfirmacaoFinalAgendamento_() {
       <div class="conf-item-val conf-item-val-sit" style="font-size:20px">Não agendar agora</div>
       <div style="margin-top:10px;font-size:13px;color:var(--text)">Vamos aguardar seu retorno por conta própria.</div>`;
   }
+  // Esconde qualquer bloco com botão amarelo que levou até aqui (detalhes
+  // do agendamento com "CONFIRMAR AGENDAMENTO", ou o aviso de fora do
+  // horário com "Continuar") -- pedido explícito do usuário: o botão que
+  // foi clicado deve sumir, só o "Finalizar Atendimento" fica visível.
+  const blocoDetalhesEsconder = document.getElementById('blocoAgendamentoDetalhes');
+  if (blocoDetalhesEsconder) blocoDetalhesEsconder.style.display = 'none';
+  const blocoForaEsconder = document.getElementById('blocoForaHorarioAgendar');
+  if (blocoForaEsconder) blocoForaEsconder.style.display = 'none';
+
   const blocoConf = document.getElementById('blocoConfirmacaoAgendamento');
   blocoConf.style.display = '';
   blocoConf.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
