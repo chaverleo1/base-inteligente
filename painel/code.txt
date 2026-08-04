@@ -6191,7 +6191,7 @@ function montarBlocoResumoLeadEmail_(d) {
 
   linhas.push({ campo: 'Deseja agendar atendimento', valor: tags.desejaAgendar === true ? 'Sim' : (tags.desejaAgendar === false ? 'Não' : '-') });
   if (tags.desejaAgendar === true) {
-    linhas.push({ campo: 'Dia do agendamento',     valor: tags.agendaDia || '-' });
+    linhas.push({ campo: 'Dia do agendamento',     valor: formatarDataAgendaEmail_(tags.agendaDia) });
     linhas.push({ campo: 'Horário do agendamento', valor: tags.agendaHora || '-' });
     linhas.push({ campo: 'Modo de atendimento',    valor: tags.agendaModoLabel || '-' });
   }
@@ -6292,6 +6292,29 @@ function montarBlocoAbandonoEmail_() {
   }
 }
 
+// "YYYY-MM-DD" (valor cru do <input type="date">, o que o front manda) ->
+// "dd/MM/yyyy" pra leitura -- usada no destaque do topo e na tabela RESUMO
+// DO LEAD (as duas mostravam a data crua antes).
+function formatarDataAgendaEmail_(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? (m[3] + '/' + m[2] + '/' + m[1]) : (iso || '-');
+}
+
+// Destaque do agendamento logo no topo do e-mail -- pedido explícito do
+// usuário: dia/horário ficavam enterrados no meio da tabela RESUMO DO LEAD,
+// só visíveis rolando a mensagem inteira. Um lead que já escolheu dia/hora
+// não pode depender de o corretor ler a tabela toda pra notar isso.
+function montarDestaqueAgendamentoEmail_(tags) {
+  if (tags.desejaAgendar !== true) return '';
+  var linha = '========================================';
+  return [
+    linha,
+    '📌 AGENDADO PARA ' + formatarDataAgendaEmail_(tags.agendaDia) + ' ÀS ' + (tags.agendaHora || '-'),
+    tags.agendaModoLabel ? ('   ' + tags.agendaModoLabel) : '',
+    linha,
+  ].filter(Boolean).join('\n');
+}
+
 // E-mail pro corretor sempre que um lead pede atendimento — é o momento
 // mais quente do funil BaseImob, não pode passar batido.
 function enviarNotificacaoAtendente_(d) {
@@ -6302,11 +6325,17 @@ function enviarNotificacaoAtendente_(d) {
     // passa pela pergunta de agendamento) mantêm o assunto genérico de sempre.
     var tagsAssunto = {};
     try { tagsAssunto = JSON.parse(d.tags || '{}'); } catch (eAssunto) {}
-    var prefixoAssunto = tagsAssunto.desejaAgendar === true  ? '📅 AGENDAMENTO DE LEAD'
+    // 📆 (tear-off calendar) no lugar de 📅 (calendar) -- pedido explícito
+    // do usuário: o ícone anterior mostra um número de dia desenhado no
+    // próprio emoji (ex: "31") na maioria dos apps de e-mail/celular, o que
+    // confundia com o dia real do agendamento. 📆 é o mesmo tema
+    // (calendário) sem número embutido no desenho.
+    var prefixoAssunto = tagsAssunto.desejaAgendar === true  ? '📆 AGENDAMENTO DE LEAD'
                        : tagsAssunto.desejaAgendar === false ? '⚠️ LEAD NÃO AGENDADO'
                        : '🔥 LEAD QUENTE';
     var sep = '\n//\n//\n//';
-    var corpo = montarBlocoResumoLeadEmail_(d);
+    var corpo = montarDestaqueAgendamentoEmail_(tagsAssunto);
+    corpo += (corpo ? sep : '') + montarBlocoResumoLeadEmail_(d);
     corpo += sep + montarBlocoRoteiroEmail_(d);
     corpo += sep + montarBlocoInteracaoCardsEmail_(d);
     corpo += montarBlocoExtraOpcoesEmail_(d);
