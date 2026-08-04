@@ -295,6 +295,19 @@ input[type=range]::-moz-range-track {
   border: 1px solid rgba(255,82,82,.3); border-radius: var(--r-sm);
   padding: 10px 12px; margin-top: 10px; line-height: 1.5;
 }
+/* Variante laranja -- aviso de "vamos fechar em breve" (não é erro, é só um
+   heads-up nos últimos 30min de expediente, pedido explícito do usuário). */
+.aviso-janela-warn {
+  font-size: 12px; font-weight: 700; text-align: center; color: var(--orange);
+  background: rgba(255,138,0,.1); border: 1px solid rgba(255,138,0,.3);
+  border-radius: var(--r-sm); padding: 10px 12px; margin-top: 10px; line-height: 1.5;
+}
+/* "Caixa destacada" -- pedido explícito do usuário pra Tela 10, envolve o
+   bloco de WhatsApp/fora-do-horário na tela final. */
+.destaque-box {
+  background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--r); padding: 20px 18px; margin-top: 24px;
+}
 
 /* ── CAPTURA ─────────────────────────────────────────────────────────── */
 .form-field { margin-bottom: 14px; }
@@ -453,11 +466,17 @@ input[type=range]::-moz-range-track {
 .btn-final.btn-amarelo:hover { background: var(--orange); transform: scale(0.96); }
 
 /* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
+@keyframes checkPop {
+  0% { transform: scale(.4); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
 .check-circle {
   width: 64px; height: 64px; border-radius: 50%;
   background: rgba(0,212,170,.12); border: 1.5px solid rgba(0,212,170,.3);
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 20px;
+  animation: checkPop .5s cubic-bezier(.34,1.56,.64,1) both;
 }
 .perfil-resumo {
   background: var(--s2); border: 1px solid var(--border);
@@ -1053,9 +1072,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="step-tag">Só mais uma coisa</div>
     <div class="step-title">Gostaria de agendar o atendimento?</div>
 
+    <!-- Aviso de "vamos fechar em breve" -- só nos últimos 30min de
+         expediente (pedido explícito do usuário), decidido em
+         atualizarContadorJanela_(). -->
+    <div class="aviso-janela-warn" id="avisoFechandoBreve" style="display:none"></div>
+
     <div class="obj-tag-group" id="tagsAgendar" style="margin-top:16px;flex-direction:column">
       <button class="obj-tag-btn" onclick="selecionarAgendar_(this,true)">Sim, quero agendar</button>
       <button class="obj-tag-btn" onclick="selecionarAgendar_(this,false)">Não quero agendar, aguardo retorno</button>
+    </div>
+
+    <!-- Fora do horário comercial (obs explícita do usuário): não oferece
+         nem agendamento nem contato direto -- mostra quando voltamos a
+         abrir + contador ao vivo. Visibilidade e conteúdo decididos em
+         atualizarContadorJanela_(). -->
+    <div id="blocoForaHorarioAgendar" style="display:none;margin-top:16px">
+      <div class="destaque-box" style="text-align:center">
+        <div style="font-size:14px;color:var(--text);line-height:1.6">
+          Estamos fora do horário de atendimento.<br>
+          Retornamos <strong id="foraHorarioProximaAbertura" style="color:var(--accent)">—</strong>.<br>
+          Sua solicitação foi recebida e você será o primeiro a ser atendido.
+        </div>
+        <div id="contadorJanelaStep9" style="margin-top:14px;font-size:13px;font-weight:800;color:var(--accent);letter-spacing:.3px"></div>
+      </div>
+      <button class="btn-final btn-amarelo" style="margin-top:20px" onclick="D.desejaAgendar=false; mostrarConfirmacaoFinalAgendamento_();">
+        <svg width="20" height="20" style="flex-shrink:0"><use href="#ico-handshake"/></svg>
+        Continuar
+      </button>
     </div>
 
     <div id="blocoAgendamentoDetalhes" style="display:none;margin-top:28px">
@@ -1115,16 +1158,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
            explícito do usuário) -- fora dela seria prometer "fale agora" sem
            ter ninguém pra responder de verdade. Visibilidade decidida em
            montarAgradecimento(). -->
-      <div id="blocoSemAgendamentoDentroHorario" style="display:none">
-        <div style="font-size:13px;color:var(--text);text-align:center;margin-top:24px;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
+      <div id="blocoSemAgendamentoDentroHorario" style="display:none" class="destaque-box">
+        <div style="font-size:13px;color:var(--text);text-align:center;margin-bottom:14px">Entraremos em contato em até 2 horas. Prefere falar agora?</div>
         <a id="whatsLink" href="#" target="_blank" rel="noopener" class="whats-btn">
           <svg width="20" height="20"><use href="#ico-whats"/></svg>
           Falar agora no WhatsApp
         </a>
         <div style="font-size:12px;color:var(--text);text-align:center;margin-top:10px">Abre diretamente no WhatsApp</div>
+        <div class="aviso-janela-warn" id="avisoFechandoBreveFinal" style="display:none"></div>
       </div>
-      <div id="blocoSemAgendamentoForaHorario" style="display:none;font-size:13px;color:var(--text);text-align:center;margin-top:24px;line-height:1.6">
-        Recebemos sua solicitação! Estamos fora do nosso horário de atendimento agora — entraremos em contato assim que possível.
+      <div id="blocoSemAgendamentoForaHorario" style="display:none;text-align:center" class="destaque-box">
+        <div style="font-size:13px;color:var(--text);line-height:1.6">
+          Estamos fora do horário de atendimento.<br>
+          Retornamos <strong id="foraHorarioProximaAberturaFinal" style="color:var(--accent)">—</strong>.<br>
+          Sua solicitação foi recebida e você será o primeiro a ser atendido.
+        </div>
+        <div id="contadorJanelaFinal" style="margin-top:14px;font-size:13px;font-weight:800;color:var(--accent);letter-spacing:.3px"></div>
       </div>
     </div>
 
@@ -1421,7 +1470,7 @@ function avancarStep() {
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
   if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
   if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
-  if (stepAtual === 7) { irParaStep(9); return; }        // captura → agendamento (pergunta surpresa)
+  if (stepAtual === 7) { atualizarContadorJanela_(); irParaStep(9); return; }  // captura → agendamento (pergunta surpresa)
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
@@ -1599,7 +1648,8 @@ function padroesDisponiveis_() {
   TODOS_LANC.forEach(c => {
     const p = c.padrao;
     if (!p) return;
-    if (!porPadrao[p]) porPadrao[p] = { padrao: p, precos: [] };
+    if (!porPadrao[p]) porPadrao[p] = { padrao: p, precos: [], qtd: 0 };
+    porPadrao[p].qtd++;
     if (c.precoAPartir > 0) porPadrao[p].precos.push(c.precoAPartir);
   });
   return ORDEM_PADRAO_
@@ -1609,7 +1659,7 @@ function padroesDisponiveis_() {
       const faixa = precos.length >= 5
         ? [percentil_(precos, 0.10), percentil_(precos, 0.90)]
         : [precos[0] || 0, precos[precos.length - 1] || 0];
-      return { padrao: p, precoMin: faixa[0], precoMax: faixa[1] };
+      return { padrao: p, precoMin: faixa[0], precoMax: faixa[1], qtd: porPadrao[p].qtd };
     });
 }
 
@@ -1652,8 +1702,18 @@ function selecionarObjetivo_(el, val) {
 function selecionarPadrao_(el, val) {
   document.getElementById('tagsPadrao').classList.remove('tag-group-erro');
   el.classList.toggle('on');
-  if (el.classList.contains('on')) D.padroes.add(val);
-  else D.padroes.delete(val);
+  if (el.classList.contains('on')) {
+    D.padroes.add(val);
+    // Melhoria explícita do usuário: reforça que a base é real e abundante
+    // antes de qualquer filtro, mostrando brevemente quantos empreendimentos
+    // existem naquele padrão assim que o cliente seleciona.
+    const info = padroesDisponiveis_().find(p => p.padrao === val);
+    if (info) {
+      toast(`${val}: ${info.qtd} empreendimento${info.qtd === 1 ? '' : 's'} disponíve${info.qtd === 1 ? 'l' : 'is'}`);
+    }
+  } else {
+    D.padroes.delete(val);
+  }
 }
 
 // Chamado ao SAIR da Tela 2 (objetivo+padrão) pra Tela 3 (sliders) --
@@ -1766,7 +1826,7 @@ function montarBlocoNecessidade_() {
   wrap.innerHTML = lista.map(n => `<button class="box-btn" onclick="toggleMoradia_(this,'${n.val}')">${n.label}</button>`).join('') + `
     <button class="box-btn" onclick="toggleMoradiaOutro_(this)">Outro</button>
     <div id="moradiaOutroWrap" style="display:none">
-      <input type="text" id="moradiaOutroTxt" class="preco-input" style="width:100%;margin-top:4px" placeholder="Descreva seu objetivo...">
+      <input type="text" id="moradiaOutroTxt" class="preco-input" style="width:100%;margin-top:4px" placeholder="Descreva em poucas palavras sua situação">
     </div>`;
 }
 
@@ -1808,6 +1868,108 @@ function dentroJanelaAtendimento_(date) {
   if (dia === 6) return hora >= 8 && hora < 12;
   return dia >= 1 && dia <= 5 && hora >= 8 && hora < 18;
 }
+
+// ── CONTADOR DE JANELA (pedido explícito do usuário, Tela 10) ──────────────
+// Fora do horário comercial não oferece agendamento nem WhatsApp direto --
+// mostra quando volta a abrir, com contador ao vivo. Dentro do horário,
+// avisa quando está perto de fechar (só nos últimos 30min, senão vira
+// alarme falso o dia inteiro). "agora" é sempre injetado pra facilitar
+// teste/reprodução, igual ao padrão já usado em dentroJanelaAtendimento_.
+function proximaAbertura_(agora) {
+  const diaAtual = agora.getDay();
+  if (diaAtual >= 1 && diaAtual <= 6) {
+    const hojeAbertura = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 8, 0, 0);
+    if (hojeAbertura > agora) return hojeAbertura; // ainda não abriu hoje -- reabre hoje mesmo
+  }
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + i, 8, 0, 0);
+    if (d.getDay() >= 1 && d.getDay() <= 6) return d; // próximo dia útil (seg-sáb)
+  }
+  return null; // nunca deveria chegar aqui
+}
+function proximoFechamento_(agora) {
+  const dia = agora.getDay();
+  if (dia === 6) return new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 12, 0, 0);
+  if (dia >= 1 && dia <= 5) return new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 18, 0, 0);
+  return null;
+}
+function formatarProximaAberturaTexto_(dataAbertura, agora) {
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const diaAb = new Date(dataAbertura.getFullYear(), dataAbertura.getMonth(), dataAbertura.getDate());
+  const diffDias = Math.round((diaAb - hoje) / 86400000);
+  if (diffDias === 0) return 'hoje às 8h';
+  if (diffDias === 1) return 'amanhã às 8h';
+  const DIAS_SEMANA_ = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  return DIAS_SEMANA_[dataAbertura.getDay()] + ' às 8h';
+}
+function formatarContagemMin_(totalMinutos) {
+  const t = Math.max(0, Math.round(totalMinutos || 0));
+  const h = Math.floor(t / 60), m = t % 60;
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+// Estado atual da janela pra exibição -- usado tanto no Step 9 quanto na
+// Tela final, sempre com o horário ATUAL (momento em que a pessoa está
+// vendo a tela), nunca o horário que ela escolheu num agendamento.
+function infoJanelaAtendimento_() {
+  const agora = new Date();
+  const dentro = dentroJanelaAtendimento_(agora);
+  if (dentro) {
+    const fechamento = proximoFechamento_(agora);
+    const minutosParaFechar = fechamento ? (fechamento - agora) / 60000 : null;
+    return { dentro: true, fechandoBreve: minutosParaFechar !== null && minutosParaFechar <= 30, minutosParaFechar };
+  }
+  const abertura = proximaAbertura_(agora);
+  const minutosParaAbrir = abertura ? (abertura - agora) / 60000 : null;
+  return { dentro: false, textoAbertura: abertura ? formatarProximaAberturaTexto_(abertura, agora) : '', minutosParaAbrir };
+}
+// Aplica o estado da janela nos dois lugares que dependem dele (Step 9 e
+// Tela final) -- roda a cada 30s (setInterval abaixo) e também nas
+// transições de tela, pra nunca ficar "parado" com um horário velho.
+function atualizarContadorJanela_() {
+  const info = infoJanelaAtendimento_();
+
+  const tagsAgendar = document.getElementById('tagsAgendar');
+  const blocoDetalhes9 = document.getElementById('blocoAgendamentoDetalhes');
+  const blocoFora9 = document.getElementById('blocoForaHorarioAgendar');
+  const avisoFechando9 = document.getElementById('avisoFechandoBreve');
+  if (tagsAgendar && blocoFora9) {
+    tagsAgendar.style.display = info.dentro ? '' : 'none';
+    blocoFora9.style.display = info.dentro ? 'none' : '';
+    if (!info.dentro) {
+      if (blocoDetalhes9) blocoDetalhes9.style.display = 'none';
+      const spanAb = document.getElementById('foraHorarioProximaAbertura');
+      if (spanAb) spanAb.textContent = info.textoAbertura;
+      const c9 = document.getElementById('contadorJanelaStep9');
+      if (c9) c9.textContent = 'ESTAREMOS ONLINE EM: ' + formatarContagemMin_(info.minutosParaAbrir).toUpperCase();
+    }
+  }
+  if (avisoFechando9) {
+    const mostrar9 = info.dentro && info.fechandoBreve;
+    avisoFechando9.style.display = mostrar9 ? '' : 'none';
+    if (mostrar9) avisoFechando9.textContent = '⚠ Atenção, ficaremos offline em: ' + formatarContagemMin_(info.minutosParaFechar);
+  }
+
+  const blocoDentroFinal = document.getElementById('blocoSemAgendamentoDentroHorario');
+  const blocoForaFinal = document.getElementById('blocoSemAgendamentoForaHorario');
+  if (blocoDentroFinal && blocoForaFinal) {
+    blocoDentroFinal.style.display = info.dentro ? '' : 'none';
+    blocoForaFinal.style.display = info.dentro ? 'none' : '';
+    if (!info.dentro) {
+      const spanAbF = document.getElementById('foraHorarioProximaAberturaFinal');
+      if (spanAbF) spanAbF.textContent = info.textoAbertura;
+      const cF = document.getElementById('contadorJanelaFinal');
+      if (cF) cF.textContent = 'ESTAREMOS ONLINE EM: ' + formatarContagemMin_(info.minutosParaAbrir).toUpperCase();
+    }
+  }
+  const avisoFechandoFinal = document.getElementById('avisoFechandoBreveFinal');
+  if (avisoFechandoFinal) {
+    const mostrarF = info.dentro && info.fechandoBreve;
+    avisoFechandoFinal.style.display = mostrarF ? '' : 'none';
+    if (mostrarF) avisoFechandoFinal.textContent = '⚠ Atenção, ficaremos offline em: ' + formatarContagemMin_(info.minutosParaFechar);
+  }
+}
+setInterval(atualizarContadorJanela_, 30000);
+atualizarContadorJanela_();
 
 // Revalida o dia/horário escolhido pro agendamento a cada mudança -- some
 // com o botão de confirmar e mostra um aviso quando cai fora da janela de
@@ -2243,6 +2405,12 @@ function scoreCompatibilidade() {
   s += cnt >= 6 ? 10 : cnt >= 3 ? 5 : 0;
   const top = rankeados()[0];
   if (top) s += Math.round(top.tracao / 2); // até +5, empurrado pela nota real de tração do melhor achado
+  // Melhoria explícita do usuário: quem opta por agendar atendimento (em vez
+  // de só aguardar retorno passivo) demonstra intenção real de compra --
+  // soma pontual ao score. Não é a recalibração completa da fórmula (isso
+  // segue fora de escopo por enquanto, ver decisões anteriores), só esse
+  // sinal específico que o usuário pediu explicitamente.
+  if (D.desejaAgendar === true) s += 10;
   return Math.min(s, 98);
 }
 
@@ -2850,15 +3018,13 @@ function montarAgradecimento() {
     if (subEl) subEl.textContent = 'Recebemos sua solicitação.';
     if (blocoSem) blocoSem.style.display = '';
     if (blocoCom) blocoCom.style.display = 'none';
-    // Botão de WhatsApp só dentro da janela de atendimento (pedido
-    // explícito do usuário) -- checa o horário ATUAL (momento em que a
-    // pessoa chega nessa tela), não o que ela configurou no agendamento.
-    const dentroAgora = dentroJanelaAtendimento_(new Date());
-    const blocoDentro = document.getElementById('blocoSemAgendamentoDentroHorario');
-    const blocoFora = document.getElementById('blocoSemAgendamentoForaHorario');
-    if (blocoDentro) blocoDentro.style.display = dentroAgora ? '' : 'none';
-    if (blocoFora) blocoFora.style.display = dentroAgora ? 'none' : '';
+    // Botão de WhatsApp/mensagem "fora do horário" com contador ao vivo --
+    // checa o horário ATUAL (momento em que a pessoa chega nessa tela), não
+    // o que ela configurou num agendamento. Toggle centralizado em
+    // atualizarContadorJanela_() (único ponto de verdade, usado também no
+    // Step 9), chamada logo abaixo.
   }
+  atualizarContadorJanela_();
 
   const emps  = filtrados();
   const total = emps.length;
