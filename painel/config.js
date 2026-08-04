@@ -7,6 +7,14 @@
 // URL estável — só "Nova implantação" gera uma URL nova que precisaria ser
 // colada aqui.
 const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxxlKelRh51vwcPq86z8pIWRF4YSwAE6K8b7Gh7Isu1ia8J4xiRAW_8EAOMI6sEmJd5/exec';
+
+// Chave do App Lançamentos (app-lancamentos.html/avaliacao.html) -- pedido
+// explícito do usuário: dificultar reaproveitamento direto da API por quem
+// copiar o HTML. Precisa bater com APP_KEY_LANCAMENTOS_ em painel/code.txt;
+// pra rotacionar, troca aqui E lá juntos. É visível a quem abrir "Ver
+// código-fonte" -- não impede uma cópia fiel e deliberada do arquivo, só
+// dificulta uso casual/automatizado direto da API sem passar pelo app.
+const APP_KEY_LANCAMENTOS_ = 'ldapp26-7hK3pQxvN2';
 // (touch 2026-07-03 13:xx — forca novo build do GitHub Pages, que travou apos o commit anterior)
 // (touch 2026-07-06 12:5x — deploy travou nos ultimos commits de novo, forcando novo build)
 // (touch 2 2026-07-06 13:2x — primeiro touch nao desprendeu o deploy, tentando de novo)

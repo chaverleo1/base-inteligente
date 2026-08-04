@@ -173,6 +173,24 @@ const CABECALHO_LANCAMENTOS = [
 // page de captura, sem login), igual listar_lancamentos.
 var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'listar_lancamentos_resumo', 'rodar_matching', 'selecionar_isca', 'listar_comentarios_aprovados'];
 
+// ── CHAVE DO APP LANÇAMENTOS ──────────────────────────────────────────────
+// Camada extra pras rotas públicas que só o App Lançamentos usa (não a
+// sessão do painel -- essas rotas continuam sem login de propósito, pro
+// visitante anônimo do funil). Pedido explícito do usuário: dificultar que
+// alguém copie o HTML/JS do app e reaproveite a estrutura puxando dados
+// reais de um backend que não é dele. IMPORTANTE ser honesto sobre o
+// alcance disso: como a chave vai dentro do HTML/config.js que o navegador
+// baixa, ela é visível a quem abrir "Ver código-fonte" -- não impede uma
+// cópia fiel e deliberada do arquivo inteiro. O que ela impede de verdade é
+// uso casual/automatizado direto da API (scraper batendo na rota sem passar
+// pelo app, reimplementação rápida sem notar que precisa da chave). Se
+// precisar rotacionar (ex: chave vazou e está sendo abusada), troca o valor
+// aqui E em painel/config.js (APP_KEY_LANCAMENTOS_) juntos.
+var APP_KEY_LANCAMENTOS_ = 'ldapp26-7hK3pQxvN2';
+function chaveAppValida_(chave) {
+  return String(chave || '') === APP_KEY_LANCAMENTOS_;
+}
+
 function doGet(e) {
   if (!e || !e.parameter) return ok({ status: 'sem parametros' });
   var acao = e.parameter.acao;
@@ -180,14 +198,27 @@ function doGet(e) {
   // BASEIMOB manda os dados via GET com ?dados=<json> (mesmo truque do
   // no-cors usado no restante do projeto) — a acao fica DENTRO do JSON, não
   // como parâmetro solto. São ações públicas: visitante de anúncio não tem
-  // sessão, e nunca gravam na aba CONTATOS.
+  // sessão, e nunca gravam na aba CONTATOS. As três usadas pelo App
+  // Lançamentos (interesse_lancamento/registrar_evento_funil/
+  // enviar_comentario_app) também exigem a chave do app (ver comentário
+  // acima) -- lead_lancamento é do BASEIMOB, sem chave, não é escopo desse
+  // pedido.
   if (e.parameter.dados) {
     var dadosGet = {};
     try { dadosGet = JSON.parse(e.parameter.dados); } catch(errGet) {}
     if (dadosGet.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(dadosGet));
-    if (dadosGet.acao === 'interesse_lancamento') return ok(salvarInteresse_(dadosGet));
-    if (dadosGet.acao === 'registrar_evento_funil') return ok(registrarEventoFunil_(dadosGet));
-    if (dadosGet.acao === 'enviar_comentario_app') return ok(salvarComentarioApp_(dadosGet));
+    if (dadosGet.acao === 'interesse_lancamento') {
+      if (!chaveAppValida_(dadosGet.chave)) return ok({ status: 'nao_autorizado' });
+      return ok(salvarInteresse_(dadosGet));
+    }
+    if (dadosGet.acao === 'registrar_evento_funil') {
+      if (!chaveAppValida_(dadosGet.chave)) return ok({ status: 'nao_autorizado' });
+      return ok(registrarEventoFunil_(dadosGet));
+    }
+    if (dadosGet.acao === 'enviar_comentario_app') {
+      if (!chaveAppValida_(dadosGet.chave)) return ok({ status: 'nao_autorizado' });
+      return ok(salvarComentarioApp_(dadosGet));
+    }
   }
 
   if (ACOES_PUBLICAS_GET.indexOf(acao) < 0 && !sessaoValida_(e.parameter.token)) {
@@ -248,8 +279,18 @@ function doGet(e) {
   if (acao === 'listar_acoes_planejadas') return ok(listarAcoesPlanejadas_(e.parameter.idCliente));
   if (acao === 'opcoes_filtro')    return ok(opcoesFiltro_());
   if (acao === 'listar_lancamentos')         return ok(listarLancamentos_());
-  if (acao === 'listar_lancamentos_resumo')  return ok(listarLancamentosResumoPublico_());
-  if (acao === 'listar_comentarios_aprovados') return ok(listarComentariosAprovados_());
+  // As duas rotas de leitura do App Lançamentos também exigem a chave do
+  // app (ver APP_KEY_LANCAMENTOS_/chaveAppValida_ acima) -- devolve vazio em
+  // vez de erro, pra não dar pista nenhuma sobre o motivo pra quem tentar
+  // bater direto na rota sem passar pelo app de verdade.
+  if (acao === 'listar_lancamentos_resumo') {
+    if (!chaveAppValida_(e.parameter.chave)) return ok({ empreendimentos: [], atualizadoEm: '' });
+    return ok(listarLancamentosResumoPublico_());
+  }
+  if (acao === 'listar_comentarios_aprovados') {
+    if (!chaveAppValida_(e.parameter.chave)) return ok({ comentarios: [] });
+    return ok(listarComentariosAprovados_());
+  }
   if (acao === 'listar_comentarios_app')     return ok(listarComentariosAppTodos_());
   if (acao === 'listar_mix_segmentos')       return ok(listarMixSegmentosPublicados_());
   if (acao === 'selecionar_isca') return ok(selecionarIscaPublico_({

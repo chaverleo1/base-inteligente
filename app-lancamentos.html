@@ -1284,7 +1284,7 @@ function formatarDataEntrega_(v) {
 
 async function carregarBaseReal() {
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos_resumo');
+    const resp = await fetch(WEBHOOK_URL + '?acao=listar_lancamentos_resumo&chave=' + encodeURIComponent(APP_KEY_LANCAMENTOS_));
     const data = await resp.json();
     // Já vem agregado por empreendimento (ver listarLancamentosResumoPublico_,
     // code.txt) -- o filtro final de sanidade (área/preço válidos) fica aqui
@@ -1462,7 +1462,7 @@ function registrarEventoFunil_(opts) {
   if (typeof WEBHOOK_URL === 'undefined') return;
   try {
     const payload = Object.assign({
-      acao: 'registrar_evento_funil', sessionId: D.sessionId, canal: 'App Lançamentos',
+      acao: 'registrar_evento_funil', chave: APP_KEY_LANCAMENTOS_, sessionId: D.sessionId, canal: 'App Lançamentos',
       utmSource: D.utmSource || D.origemAcesso, dispositivo: D.dispositivo,
     }, opts);
     fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
@@ -2506,6 +2506,7 @@ function submeter() {
   const top7 = D.ofertasMostradas.length ? D.ofertasMostradas : filtrados().slice(0, 7);
   const payload = {
     acao: 'interesse_lancamento',
+    chave: APP_KEY_LANCAMENTOS_,
     nome: D.nome,
     telefone: D.whatsapp,
     qtdInteresse: filtrados().length,
@@ -3176,6 +3177,7 @@ function enviarComentarioApp_() {
 
   const payload = {
     acao: 'enviar_comentario_app',
+    chave: APP_KEY_LANCAMENTOS_,
     nome: D.nome, telefone: D.whatsapp,
     estrelas: D.estrelasApp,
     comentario: document.getElementById('fComentarioApp').value.trim(),
@@ -3191,7 +3193,7 @@ function enviarComentarioApp_() {
 function carregarComentariosAprovados_() {
   const wrap = document.getElementById('comentariosAprovadosWrap');
   if (!wrap || typeof WEBHOOK_URL === 'undefined') return;
-  fetch(WEBHOOK_URL + '?acao=listar_comentarios_aprovados')
+  fetch(WEBHOOK_URL + '?acao=listar_comentarios_aprovados&chave=' + encodeURIComponent(APP_KEY_LANCAMENTOS_))
     .then(r => r.json())
     .then(data => {
       const lista = data.comentarios || [];
@@ -3258,7 +3260,7 @@ window.addEventListener('beforeunload', () => {
     if (typeof WEBHOOK_URL !== 'undefined' && navigator.sendBeacon) {
       try {
         const payload = JSON.stringify({
-          acao: 'registrar_evento_funil', sessionId: D.sessionId,
+          acao: 'registrar_evento_funil', chave: APP_KEY_LANCAMENTOS_, sessionId: D.sessionId,
           etapaSaida: ETAPA_POR_STEP_[stepAtual] || stepAtual, tempoMsEtapaSaida: duracaoMs,
           etapaChegada: null, abandonou: true, canal: 'App Lançamentos',
           utmSource: D.utmSource || D.origemAcesso, dispositivo: D.dispositivo,
