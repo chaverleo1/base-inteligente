@@ -3142,6 +3142,38 @@ function calcularPercentualVendidoPub_(estoque, totalUnidades) {
   return Math.min(99, Math.round((vendidas / tot) * 100));
 }
 
+var MESES_PT_COMPLETO_PUB_ = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+// Mesmo parse defensivo de diasDesdeData_ (dataAtualizacao pode chegar como
+// Date de verdade -- célula formatada como Data no Sheets -- ou como string
+// "dd/MM/yyyy HH:mm"; new Date(string) NÃO pode ser usado direto porque o
+// parser nativo do JS trata datas não-ISO como MM/DD/YYYY, embaralhando dia
+// e mês sempre que o dia é <= 12).
+function parseDataAtualizacaoPub_(dataStr) {
+  if (!dataStr) return null;
+  var d;
+  if (dataStr instanceof Date) {
+    d = dataStr;
+  } else {
+    var m = String(dataStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (!m) return null;
+    d = new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10),
+                 parseInt(m[4] || 0, 10), parseInt(m[5] || 0, 10));
+  }
+  return isNaN(d.getTime()) ? null : d;
+}
+// "Mês/Ano" (ex: "Julho/2026") do registro mais recentemente atualizado em
+// TODA a base (qualquer tipo de tabela -- não só Condomínio Vertical) --
+// pedido explícito do usuário pra Tela 1: mostrar que os dados são reais e
+// atualizados, com a data de verdade da atualização mais recente.
+function dataBaseMaisRecentePub_(linhas) {
+  var maisRecente = null;
+  linhas.forEach(function(l) {
+    var d = parseDataAtualizacaoPub_(l.dataAtualizacao);
+    if (d && (!maisRecente || d > maisRecente)) maisRecente = d;
+  });
+  return maisRecente ? (MESES_PT_COMPLETO_PUB_[maisRecente.getMonth()] + '/' + maisRecente.getFullYear()) : '';
+}
+
 function listarLancamentosResumoPublico_() {
   try {
     var linhas = listarLancamentos_().lancamentos;
@@ -3195,7 +3227,7 @@ function listarLancamentosResumoPublico_() {
       };
     }).filter(function(c) { return c.areaMin > 0 && c.precoAPartir > 0; });
 
-    return { empreendimentos: empreendimentos };
+    return { empreendimentos: empreendimentos, atualizadoEm: dataBaseMaisRecentePub_(linhas) };
   } catch (e) {
     return { empreendimentos: [], erro: e.message };
   }

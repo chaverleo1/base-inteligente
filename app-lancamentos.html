@@ -457,6 +457,11 @@ input[type=range]::-moz-range-track {
 .btn-final:active { transform: scale(.98); }
 .btn-final.confirmado { background: var(--green); cursor: default; }
 .btn-final-sub { font-size: 12px; color: var(--text); text-align: center; margin-top: 10px; }
+/* Mensagem de "dados reais e atualizados" da capa -- pedido explícito do
+   usuário: letra maior que o padrão de .btn-final-sub, e o mês/ano da
+   atualização mais recente da base em negrito. */
+.capa-dados-sub { font-size: 15px; line-height: 1.4; }
+.capa-dados-sub strong { font-weight: 800; color: var(--text); }
 
 /* ── BOTÃO QUENTE (confirmar atendimento humano — pedido: cores quentes,
    vermelho/amarelo/laranja, pra chamar mais atenção que o resto da tela) ── */
@@ -776,7 +781,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
         ENCONTRAR MEU APARTAMENTO
       </button>
-      <div class="btn-final-sub" style="margin-top:10px">Resultado rápido · Dados reais e atualizados</div>
+      <div class="btn-final-sub capa-dados-sub" style="margin-top:10px" id="capaDadosAtualizados">Resultado rápido · Dados reais e atualizados</div>
     </div>
 
   </div>
@@ -1258,6 +1263,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 let TODOS_LANC = [];
 let PRECO_BOUNDS = [200000, 2000000];
 let AREA_BOUNDS = [40, 140];
+// Mês/Ano do registro mais recentemente atualizado em toda a base (qualquer
+// tipo de tabela), devolvido por listar_lancamentos_resumo (ver
+// dataBaseMaisRecentePub_, code.txt) -- pedido explícito do usuário pra
+// mostrar na capa que os dados são reais e atualizados de verdade.
+let DATA_BASE_ATUALIZADA_ = '';
 
 // previsaoEntrega às vezes vem como Date ISO em vez de "Mês/Ano" -- mesmo
 // problema já visto em lancamentos.html (célula formatada como Data no
@@ -1280,6 +1290,7 @@ async function carregarBaseReal() {
     // code.txt) -- o filtro final de sanidade (área/preço válidos) fica aqui
     // também, redundante com o backend, sem custo.
     TODOS_LANC = (data.empreendimentos || []).filter(c => c.areaMin > 0 && c.precoAPartir > 0);
+    DATA_BASE_ATUALIZADA_ = data.atualizadoEm || '';
 
     if (TODOS_LANC.length) {
       const totais    = TODOS_LANC.map(c => c.precoAPartir).filter(v => v > 0);
@@ -1291,9 +1302,11 @@ async function carregarBaseReal() {
   } catch (e) {
     console.error('[simulador] erro ao carregar base real:', e);
     TODOS_LANC = [];
+    DATA_BASE_ATUALIZADA_ = '';
   }
   inicializarSliders();
   montarStatsAbertura_();
+  montarDadosAtualizadosTexto_();
   montarBlocoPadrao_();
 }
 
@@ -1321,6 +1334,19 @@ function montarStatsAbertura_() {
   document.querySelectorAll('.stats-total-emp').forEach(el => {
     if (count) contarAte_(el, count); else el.textContent = '—';
   });
+}
+
+// Mensagem "Resultado rápido · Dados reais e atualizados em [Mês/Ano]" da
+// capa -- pedido explícito do usuário: mês/ano em negrito, vindo do dado
+// real mais recente da base (DATA_BASE_ATUALIZADA_). Sem dado (erro/base
+// vazia), cai pro texto genérico de sempre, sem prometer uma data que não
+// existe.
+function montarDadosAtualizadosTexto_() {
+  const el = document.getElementById('capaDadosAtualizados');
+  if (!el) return;
+  el.innerHTML = DATA_BASE_ATUALIZADA_
+    ? `Resultado rápido · Dados reais e atualizados em <strong>${DATA_BASE_ATUALIZADA_}</strong>`
+    : 'Resultado rápido · Dados reais e atualizados';
 }
 
 // ── SCORE DE TRAÇÃO (versão pública e parcial) ─────────────────────────────
