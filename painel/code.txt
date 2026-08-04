@@ -3209,7 +3209,15 @@ function parseDataAtualizacaoPub_(dataStr) {
 function dataBaseMaisRecentePub_(linhas) {
   var maisRecente = null;
   linhas.forEach(function(l) {
-    var d = parseDataAtualizacaoPub_(l.dataAtualizacao);
+    // dataAtualizacao é o sinal mais correto (grava toda vez que o registro
+    // é editado de verdade), mas na base real ela está vazia em TODA linha
+    // hoje (confirmado: 0 de 1321) -- os cadastros em massa (extração)
+    // nunca passam pelo caminho que a preenche. dataCadastro, por outro
+    // lado, é preenchida sempre (é isso que fez a mensagem da capa não
+    // mostrar nenhuma data, ficando no fallback genérico). Usa
+    // dataAtualizacao quando existir, cai pra dataCadastro senão -- ainda
+    // é um sinal real de "quando esse registro entrou/foi tocado na base".
+    var d = parseDataAtualizacaoPub_(l.dataAtualizacao) || parseDataAtualizacaoPub_(l.dataCadastro);
     if (d && (!maisRecente || d > maisRecente)) maisRecente = d;
   });
   return maisRecente ? (MESES_PT_COMPLETO_PUB_[maisRecente.getMonth()] + '/' + maisRecente.getFullYear()) : '';

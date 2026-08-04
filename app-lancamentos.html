@@ -525,6 +525,10 @@ input[type=range]::-moz-range-track {
   background: var(--s1); border-top: 1px solid var(--border);
   padding: 12px 20px 20px;
 }
+/* Espaço extra no fim da tela de resultados -- pedido explícito do
+   usuário: sem isso, o botão fixo (.sticky-atend) fica em cima da imagem
+   do último card, que some atrás dele. */
+#step-6 { padding-bottom: 170px; }
 .sticky-atend-inner { max-width: 520px; margin: 0 auto; }
 .btn-nav {
   flex: 1; padding: 14px; border-radius: var(--r-sm); border: none;
@@ -1074,18 +1078,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
        Consultoria", antes da tela final) -- pedido explícito do usuário. -->
   <div class="step" id="step-9">
     <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
-    <div class="step-tag">Só mais uma coisa</div>
-    <div class="step-title">Gostaria de agendar o atendimento?</div>
+
+    <!-- Pergunta (título + os dois botões) -- pedido explícito do usuário:
+         some inteira assim que o cliente escolhe Sim ou Não, ficando só o
+         "← Voltar" e o restante das opções abaixo. Visibilidade controlada
+         em selecionarAgendar_()/prepararStep9_()/atualizarContadorJanela_(). -->
+    <div id="blocoPerguntaAgendar">
+      <div class="step-tag">Só mais uma coisa</div>
+      <div class="step-title">Gostaria de agendar o atendimento?</div>
+
+      <div class="obj-tag-group" id="tagsAgendar" style="margin-top:16px;flex-direction:column">
+        <button class="obj-tag-btn" onclick="selecionarAgendar_(this,true)">Sim, quero agendar</button>
+        <button class="obj-tag-btn" onclick="selecionarAgendar_(this,false)">Não quero agendar, aguardo retorno</button>
+      </div>
+    </div>
 
     <!-- Aviso de "vamos fechar em breve" -- só nos últimos 30min de
          expediente (pedido explícito do usuário), decidido em
-         atualizarContadorJanela_(). -->
+         atualizarContadorJanela_(). Fica FORA do bloco da pergunta de
+         propósito: ainda é útil durante o preenchimento do agendamento
+         (Sim), não só na hora de escolher. -->
     <div class="aviso-janela-warn" id="avisoFechandoBreve" style="display:none"></div>
-
-    <div class="obj-tag-group" id="tagsAgendar" style="margin-top:16px;flex-direction:column">
-      <button class="obj-tag-btn" onclick="selecionarAgendar_(this,true)">Sim, quero agendar</button>
-      <button class="obj-tag-btn" onclick="selecionarAgendar_(this,false)">Não quero agendar, aguardo retorno</button>
-    </div>
 
     <!-- Fora do horário comercial (obs explícita do usuário): não oferece
          nem agendamento nem contato direto -- mostra quando voltamos a
@@ -1496,7 +1509,7 @@ function avancarStep() {
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
   if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
   if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
-  if (stepAtual === 7) { atualizarContadorJanela_(); irParaStep(9); return; }  // captura → agendamento (pergunta surpresa)
+  if (stepAtual === 7) { prepararStep9_(); atualizarContadorJanela_(); irParaStep(9); return; }  // captura → agendamento (pergunta surpresa)
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
@@ -1962,18 +1975,21 @@ function infoJanelaAtendimento_() {
 function atualizarContadorJanela_() {
   const info = infoJanelaAtendimento_();
 
-  const tagsAgendar = document.getElementById('tagsAgendar');
+  const blocoPergunta9 = document.getElementById('blocoPerguntaAgendar');
   const blocoDetalhes9 = document.getElementById('blocoAgendamentoDetalhes');
   const blocoFora9 = document.getElementById('blocoForaHorarioAgendar');
   const avisoFechando9 = document.getElementById('avisoFechandoBreve');
   // Se a confirmação final (Finalizar Atendimento) já está sendo revisada,
-  // não mexe mais no bloco "fora do horário" -- senão o tick de 30s
-  // reaparece com ele por cima da confirmação (pedido explícito do
-  // usuário: os dois nunca podem aparecer juntos).
+  // OU se o cliente já escolheu Sim/Não (pergunta já escondida de propósito,
+  // pedido explícito do usuário), não mexe mais nesses blocos -- senão o
+  // tick de 30s reaparece a pergunta/o bloco "fora do horário" por cima do
+  // que já foi escolhido.
   const blocoConfirmacao9 = document.getElementById('blocoConfirmacaoAgendamento');
   const emRevisao9 = blocoConfirmacao9 && blocoConfirmacao9.style.display !== 'none';
-  if (tagsAgendar && blocoFora9 && !emRevisao9) {
-    tagsAgendar.style.display = info.dentro ? '' : 'none';
+  const jaEscolheu9 = D.desejaAgendar !== null;
+  const pausaToggle9 = emRevisao9 || jaEscolheu9;
+  if (blocoPergunta9 && blocoFora9 && !pausaToggle9) {
+    blocoPergunta9.style.display = info.dentro ? '' : 'none';
     blocoFora9.style.display = info.dentro ? 'none' : '';
     if (!info.dentro) {
       if (blocoDetalhes9) blocoDetalhes9.style.display = 'none';
@@ -2048,6 +2064,12 @@ function selecionarAgendar_(el, sim) {
   // Trocar de opção depois de já ter revisado esconde a confirmação antiga
   // (senão ficaria uma confirmação desatualizada visível na tela).
   document.getElementById('blocoConfirmacaoAgendamento').style.display = 'none';
+  // Pedido explícito do usuário: a pergunta inteira (título + os dois
+  // botões) some assim que uma opção é escolhida -- fica só o "← Voltar" e
+  // o restante das opções abaixo (detalhes do agendamento, ou a
+  // confirmação final).
+  const blocoPergunta = document.getElementById('blocoPerguntaAgendar');
+  if (blocoPergunta) blocoPergunta.style.display = 'none';
   const bloco = document.getElementById('blocoAgendamentoDetalhes');
   if (sim) {
     if (bloco) bloco.style.display = '';
@@ -2057,6 +2079,21 @@ function selecionarAgendar_(el, sim) {
     // ("Finalizar Atendimento") em vez de enviar direto.
     mostrarConfirmacaoFinalAgendamento_();
   }
+}
+
+// Reseta o Step 9 pro estado inicial (pergunta visível, nada preenchido)
+// sempre que é (re)aberto -- cobre o caso de "← Voltar" e avançar de novo,
+// que sem isso deixaria a pergunta escondida (ou uma confirmação velha) de
+// uma passada anterior.
+function prepararStep9_() {
+  const blocoPergunta = document.getElementById('blocoPerguntaAgendar');
+  if (blocoPergunta) blocoPergunta.style.display = '';
+  const blocoDetalhes = document.getElementById('blocoAgendamentoDetalhes');
+  if (blocoDetalhes) blocoDetalhes.style.display = 'none';
+  const blocoConf = document.getElementById('blocoConfirmacaoAgendamento');
+  if (blocoConf) blocoConf.style.display = 'none';
+  document.querySelectorAll('#tagsAgendar .obj-tag-btn').forEach(b => b.classList.remove('on'));
+  D.desejaAgendar = null;
 }
 
 function selecionarModoAtendimento_(el, val) {
@@ -2103,7 +2140,8 @@ function mostrarConfirmacaoFinalAgendamento_() {
     resumoEl.innerHTML = `
       <div class="conf-item-label">Você optou por</div>
       <div class="conf-item-val conf-item-val-sit" style="font-size:20px">Não agendar agora</div>
-      <div style="margin-top:10px;font-size:13px;color:var(--text)">Vamos aguardar seu retorno por conta própria.</div>`;
+      <div style="margin-top:10px;font-size:13px;color:var(--text)">Clique no botão abaixo para confirmar.</div>
+      <div style="margin-top:10px;font-size:13px;color:var(--text)">Entraremos em contato em até 2 horas. Prefere falar agora?</div>`;
   }
   // Esconde qualquer bloco com botão amarelo que levou até aqui (detalhes
   // do agendamento com "CONFIRMAR AGENDAMENTO", ou o aviso de fora do
