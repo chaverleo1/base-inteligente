@@ -310,11 +310,18 @@ input[type=range]::-moz-range-track {
 .tel-input-row { display: flex; gap: 8px; }
 .tel-input-row input { flex: 1; min-width: 0; }
 /* <select> real (não mais um span fixo) -- pedido explícito do usuário,
-   o código do país precisa ser trocável de verdade, não só decorativo. */
+   o código do país precisa ser trocável de verdade, não só decorativo.
+   appearance:none tira a seta NATIVA do navegador -- sem repor uma seta
+   própria, a caixa fica com cara de texto fixo (bug real reportado pelo
+   usuário: o <select> já funcionava, só não parecia clicável). Seta em
+   SVG embutida via background-image resolve isso. */
 .tel-country-box {
-  flex-shrink: 0; width: 92px; height: 100%;
-  padding: 0 8px; text-align: center;
-  background: var(--s2); border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  flex-shrink: 0; width: 104px; height: 100%;
+  padding: 0 24px 0 10px; text-align: left;
+  background-color: var(--s2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236a7290' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 6px center; background-size: 14px;
+  border: 1.5px solid var(--border); border-radius: var(--r-sm);
   font-size: 14px; font-weight: 700; color: var(--text); font-family: inherit;
   cursor: pointer; outline: none; transition: border .2s;
   -webkit-appearance: none; appearance: none;
