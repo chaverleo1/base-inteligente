@@ -3277,9 +3277,9 @@ function setMapaPapelFiltro_(papel) {
 
 // ── RADAR DE MERCADO ────────────────────────────────────────────────────────
 let _radarSort = {
-  sup: { col: 'estoque', dir: 'desc' },
-  res: { col: 'estoque', dir: 'desc' },
-  tra: { col: 'estoque', dir: 'desc' },
+  sup: { col: 'prazoAtual', dir: 'asc'  },  // menor prazo = mais recente = maior força de suporte
+  res: { col: 'prazoAtual', dir: 'desc' },  // maior prazo = mais tempo parado = maior resistência
+  tra: { col: 'estoque',    dir: 'desc' },  // transição: estoque como referência
 };
 let _radarFiltroEstagios = new Set(); // vazio = mostra todos
 let _radarFiltroPadroes  = new Set(); // vazio = mostra todos
@@ -3443,14 +3443,16 @@ function renderRadarMercado_() {
   function sortList(lista, frente, limit) {
     const { col, dir } = _radarSort[frente];
     const sorted = [...lista].sort((a, b) => {
-      // 1) Padrão canonical
+      // 1) Coluna ativa como primário
+      const va = colVal(a, col), vb = colVal(b, col);
+      let cmp = 0;
+      if (typeof va === 'string') cmp = dir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      else cmp = dir === 'desc' ? vb - va : va - vb;
+      if (cmp !== 0) return cmp;
+      // 2) Padrão canonical como desempate
       const pi = ORDEM_PAD_RADAR.indexOf(a.padrao || '');
       const pj = ORDEM_PAD_RADAR.indexOf(b.padrao || '');
-      if (pi !== pj) return (pi < 0 ? 99 : pi) - (pj < 0 ? 99 : pj);
-      // 2) Coluna ativa
-      const va = colVal(a, col), vb = colVal(b, col);
-      if (typeof va === 'string') return dir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
-      return dir === 'desc' ? vb - va : va - vb;
+      return (pi < 0 ? 99 : pi) - (pj < 0 ? 99 : pj);
     });
     return sorted.slice(0, limit);
   }
