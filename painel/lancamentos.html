@@ -3208,43 +3208,38 @@ function prazoAtualMeses_(r) {
   return null;
 }
 
-// Classifica pelo papel de mercado baseado em ESTOQUE × TEMPO.
+// Classifica pelo papel de mercado: ESTÁGIO + % VENDIDO.
 //
-// SUPORTE    → produto recente com estoque disponível: absorção esperada rápida.
-//   Em obras / Em planta : prazoVenda ≤ 12 meses desde lançamento
-//   Pronto novo           : ≤ 6 meses desde a entrega
+// SUPORTE    → apenas Em obras / Em planta com ≤ 39% vendido
+//   Quanto mais próximo do lançamento (mais meses de countdown restantes), maior a força.
+//   Pronto novo NUNCA é suporte.
 //
-// RESISTÊNCIA → produto travado: estoque parado há muito tempo.
-//   Em obras / Em planta : prazoVenda ≥ 24 meses desde lançamento
-//   Pronto novo           : ≥ 12 meses desde a entrega
+// RESISTÊNCIA → apenas Pronto novo com ≥ 61% vendido
+//   Quanto mais distante da entrega (mais meses desde delivery), maior a força.
+//   Em obras NUNCA é resistência.
 //
-// TRANSIÇÃO  → faixa intermediária entre os dois extremos
-// null       → sem dados suficientes ou estoque zerado (não classificado)
+// TRANSIÇÃO  → 40%–60% vendido (qualquer estágio), ou faixa errada de estágio,
+//              ou sem dados suficientes.
+// null       → estoque zerado ou estágio não mapeado.
 function papelMercado_(r) {
   if (!r.estoque || r.estoque <= 0) return null;
-  const prazo = prazoAtualMeses_(r);
-  if (prazo === null) return null;
+  if (r.pctVendido == null)         return null;
 
-  // Terceira variável: % disponível
-  // SUPORTE exige mercado ativo com estoque representativo (≥40% disponível)
-  // RESISTÊNCIA exige estoque parado há muito tempo com absorção baixa (≥40% disponível)
-  // Se já vendeu >60%, está em processo de esgotamento → TRANSIÇÃO independente do tempo
-  const pctDisp = r.pctVendido != null ? (100 - r.pctVendido) : null;
-  if (pctDisp === null) return null;
-  const altaDisp = pctDisp >= 40;  // ainda tem volume relevante para classificar
+  const pctV = r.pctVendido;
+  const est  = r.estagio || '';
+  const isObras  = /em obras|em planta/i.test(est);
+  const isPronto = /pronto novo/i.test(est);
 
-  const est = r.estagio || '';
-  if (/em obras|em planta/i.test(est)) {
-    if (prazo <= 12 && altaDisp)  return 'suporte';     // novo + estoque farto = mercado ativo
-    if (prazo >= 24 && altaDisp)  return 'resistencia'; // antigo + estoque parado = oportunidade
-    return 'transicao';
-  }
-  if (/pronto novo/i.test(est)) {
-    if (prazo <= 6  && altaDisp)  return 'suporte';     // recém entregue + estoque farto
-    if (prazo >= 12 && altaDisp)  return 'resistencia'; // entregue há muito + estoque parado
-    return 'transicao';
-  }
-  return null;
+  if (!isObras && !isPronto) return null;
+
+  // SUPORTE: apenas Em obras/planta com ≤ 39% vendido
+  if (isObras  && pctV <= 39) return 'suporte';
+
+  // RESISTÊNCIA: apenas Pronto novo com ≥ 61% vendido
+  if (isPronto && pctV >= 61) return 'resistencia';
+
+  // Tudo mais: transição
+  return 'transicao';
 }
 
 // Oportunidade = resistência com estoque relevante (≥ 20 unidades paradas há muito tempo)
@@ -3472,11 +3467,15 @@ function renderRadarMercado_() {
     return `<div style="overflow-x:auto"><table class="radar-tabela"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
   }
 
-  // Helper: % disponível — sempre verde (é estoque disponível, não vendido)
-  function pctDispCell(r) {
+  // Helper: % vendido — cores seguem a regra das barras de vendas
+  //   ≤ 39% vendido → verde  (suporte: mercado ativo, muito disponível)
+  //   40–60% vendido → laranja (transição)
+  //   ≥ 61% vendido → vermelho (resistência: muito vendido, pouco disponível)
+  function pctVendidoCell(r) {
     if (r.pctVendido == null) return '<span style="color:var(--text3)">—</span>';
-    const pct = 100 - r.pctVendido;
-    return `<span style="font-weight:700;color:#00c878">${pct}%</span>`;
+    const pct = r.pctVendido;
+    const cor = pct >= 61 ? '#ff6b6b' : pct >= 40 ? '#ff9800' : '#00c878';
+    return `<span style="font-weight:700;color:${cor}">${pct}%</span>`;
   }
 
   // Helper: R$/m² formatado
@@ -3503,7 +3502,7 @@ function renderRadarMercado_() {
     { label:'Estágio',     col:'estagio',       render:r=>r.estagio||'—' },
     { label:'Prazo',       col:'prazoAtual', num:true, render:r=>prazoCell(r) },
     { label:'Estoque',     col:'estoque',    num:true, render:r=>`<strong>${r.estoque!=null?r.estoque:'—'}</strong>` },
-    { label:'%',           col:'pctDisp',    num:true, render:r=>pctDispCell(r) },
+    { label:'% Vend.',     col:'pctVendido', num:true, render:r=>pctVendidoCell(r) },
     { label:'Total',       col:'totalUnidades',num:true, render:r=>`<span style="color:var(--text3)">${r.totalUnidades>0?r.totalUnidades:'—'}</span>` },
   ];
 
