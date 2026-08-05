@@ -2154,6 +2154,48 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
   ligarVerCardVG_('cardEstoqueProntos', 'insEstoqueProntos');
   ligarVerCardVG_('cardTabelaDesatualizada', 'insTabelaDesatualizada');
   ligarVerCardVG_('cardVendedorSemAvaliacao', 'insVendedorSemAvaliacao');
+
+  // 4 + 5) Radar: Suporte e Resistência
+  // Mesma lógica de papelMercado_() do lancamentos.html:
+  //   Suporte     = Em obras/planta  + pctVendido ≤ 39%
+  //   Resistência = Pronto novo      + pctVendido ≥ 61%
+  function _pctVendidoEmp(e) {
+    const est = parseInt(e.estoque)      || 0;
+    const tot = parseInt(e.totalUnidades) || 0;
+    if (!tot) return null;
+    return Math.round((1 - est / tot) * 100);
+  }
+  const radarSuporte = emps.filter(e => {
+    if (!(parseInt(e.estoque) > 0)) return false;
+    if (!/em obras|em planta/i.test(e.status || '')) return false;
+    const pct = _pctVendidoEmp(e);
+    return pct !== null && pct <= 39;
+  });
+  const radarResistencia = emps.filter(e => {
+    if (!(parseInt(e.estoque) > 0)) return false;
+    if (!/pronto novo/i.test(e.status || '')) return false;
+    const pct = _pctVendidoEmp(e);
+    return pct !== null && pct >= 61;
+  });
+
+  const valSup = document.getElementById('cardRadarSuporteValue');
+  const valRes = document.getElementById('cardRadarResistenciaValue');
+  if (valSup) valSup.textContent = radarSuporte.length;
+  if (valRes) valRes.textContent = radarResistencia.length;
+
+  window._insightDetails['insRadarSuporte'] = {
+    title: '🟢 Suporte — Em obras com ≤39% vendido',
+    icon: '🟢', color: '#00c878', type: 'lancamentos',
+    items: radarSuporte.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
+  };
+  window._insightDetails['insRadarResistencia'] = {
+    title: '🔴 Resistência — Pronto novo com ≥61% vendido',
+    icon: '🔴', color: '#ff6b6b', type: 'lancamentos',
+    items: radarResistencia.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
+  };
+
+  ligarVerCardVG_('cardRadarSuporte',     'insRadarSuporte');
+  ligarVerCardVG_('cardRadarResistencia', 'insRadarResistencia');
 }
 
 // Liga o botão "Ver →" de um card .vg-stat a um id de window._insightDetails
@@ -2244,6 +2286,21 @@ function renderDados(json) {
       <div class="vg-stat-value" id="cardVendedorSemAvaliacaoValue" style="color:#f5a623">—</div>
       <div class="vg-stat-sub">lançamentos</div>
       <button class="vg-stat-link" style="display:none;color:#f5a623;background:rgba(245,158,35,.1);border-color:rgba(245,158,35,.25);font-family:inherit">Ver →</button>
+    </div>
+    <div style="grid-column:1/-1;padding:8px 2px 2px;border-top:1px solid var(--border);margin-top:2px">
+      <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">📡 Oportunidades de Lançamentos</span>
+    </div>
+    <div class="vg-stat" id="cardRadarSuporte">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🟢</span><span class="vg-stat-label">Suporte</span></div>
+      <div class="vg-stat-value" id="cardRadarSuporteValue" style="color:#00c878">—</div>
+      <div class="vg-stat-sub">Em obras · ≤39% vendido</div>
+      <button class="vg-stat-link" style="display:none;color:#00c878;background:rgba(0,200,120,.1);border-color:rgba(0,200,120,.25);font-family:inherit">Ver →</button>
+    </div>
+    <div class="vg-stat" id="cardRadarResistencia">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🔴</span><span class="vg-stat-label">Resistência</span></div>
+      <div class="vg-stat-value" id="cardRadarResistenciaValue" style="color:#ff6b6b">—</div>
+      <div class="vg-stat-sub">Pronto novo · ≥61% vendido</div>
+      <button class="vg-stat-link" style="display:none;color:#ff6b6b;background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.25);font-family:inherit">Ver →</button>
     </div>`;
 
   // ── Matches
