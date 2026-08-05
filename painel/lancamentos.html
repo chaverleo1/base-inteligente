@@ -304,10 +304,10 @@ select.form-input option { background: var(--surface2); }
   font-size: 10px; font-weight: 700; padding: 2px 9px;
   border-radius: 4px; letter-spacing: .04em;
 }
-.fatia-a { background: rgba(138,143,158,.20); color: #9aa0b4; }
-.fatia-b { background: rgba(138,143,158,.10); color: #7a8090; }
-.fatia-c { background: rgba(255,152,0,.15);   color: #d4880a; }
-.fatia-d { background: rgba(255,107,107,.18); color: #e05a5a; }
+.fatia-a { background: rgba(0,200,120,.18);   color: #00c878; }
+.fatia-b { background: rgba(50,150,255,.18);  color: #3296ff; }
+.fatia-c { background: rgba(255,152,0,.18);   color: #d4880a; }
+.fatia-d { background: rgba(255,107,107,.20); color: #e05a5a; }
 .grafico-estoque-wrap canvas { display: block; width: 100%; cursor: crosshair; }
 .grafico-tooltip {
   position: absolute; pointer-events: none;
@@ -1051,10 +1051,10 @@ select.form-input option { background: var(--surface2); }
     <div class="grafico-estoque-titulo">
       Distribuição de Estoque
       <div class="grafico-fatia-legenda">
-        <span class="fatia-chip fatia-a">A · 0–25%</span>
-        <span class="fatia-chip fatia-b">B · 26–50%</span>
-        <span class="fatia-chip fatia-c">C · 51–75%</span>
-        <span class="fatia-chip fatia-d">D · 76–99%</span>
+        <span class="fatia-chip fatia-a" id="fatiaChipA">A · 0–25%</span>
+        <span class="fatia-chip fatia-b" id="fatiaChipB">B · 26–50%</span>
+        <span class="fatia-chip fatia-c" id="fatiaChipC">C · 51–75%</span>
+        <span class="fatia-chip fatia-d" id="fatiaChipD">D · 76–99%</span>
       </div>
     </div>
     <div style="position:relative">
@@ -1083,10 +1083,11 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
           <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
           <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
+          <th onclick="ordenarMapaGeral_('faixa')" title="Faixa de estoque vendido: A(0–25%) B(26–50%) C(51–75%) D(76–99%)">Faixa<span class="mapa-seta" id="seta-mapa-faixa"></span></th>
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="16" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="17" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -4091,6 +4092,7 @@ function mapaCampoValor_(r, campo) {
   if (campo === 'pv')          return r.prazoVenda;
   if (campo === 'estagio')     return r.estagioOrd;
   if (campo === 'alerta')      return r.alertaRank;
+  if (campo === 'faixa')       return r.pctVendido == null ? -1 : r.pctVendido;
   return 0;
 }
 
@@ -4113,7 +4115,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -4129,7 +4131,7 @@ function renderMapaGeral_() {
                     && (!_mapaBairrosAtivos.size  || _mapaBairrosAtivos.has(r.bairro)));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -4173,6 +4175,14 @@ function renderMapaGeral_() {
       <td>${r.estagio}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
       <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
+      ${(() => {
+        const f = typeof fatiaEstoque_ === 'function' ? fatiaEstoque_(r.pctVendido) : '—';
+        const bg = f==='A' ? 'rgba(0,200,120,.16)'  : f==='B' ? 'rgba(50,150,255,.16)'
+                 : f==='C' ? 'rgba(255,152,0,.16)'  : f==='D' ? 'rgba(255,107,107,.18)' : '';
+        const cl = f==='A' ? '#00c878' : f==='B' ? '#3296ff'
+                 : f==='C' ? '#ff9800' : f==='D' ? '#ff6b6b' : 'var(--text3)';
+        return `<td style="text-align:center;font-weight:700;font-size:12px;background:${bg};color:${cl};letter-spacing:.04em">${f}</td>`;
+      })()}
     </tr>`).join('');
 
   atualizarSetasMapaGeral_();
@@ -4181,28 +4191,57 @@ function renderMapaGeral_() {
 }
 
 // ── GRÁFICO CARTESIANO DE ESTOQUE ───────────────────────────────────────────
-// X = posição ordenada (1..N), Y = pctVendido; ordenado por pctVendido ASC.
-// Fatias verticais de fundo: A(0–25%) B(26–50%) C(51–75%) D(76–99%).
-// Tooltip ao passar o mouse: id + nome do empreendimento.
+// Responde ao filtro de Estágio/Bairro do Mapa Geral (mesma seleção da
+// tabela). Fatias: A(0–25% verde) B(26–50% azul) C(51–75% laranja) D(76–99% vermelho).
+// Chips de legenda exibem % de empreendimentos em cada faixa.
 (function () {
-  let _tooltipTimer = null;
+  // Definição das fatias: cores novas conforme pedido do usuário.
   const FATIAS = [
-    { max: 25,  cor: 'rgba(138,143,158,.13)', label: 'A', dotCor: '#8a8f9e' },
-    { max: 50,  cor: 'rgba(138,143,158,.07)', label: 'B', dotCor: '#b0b5c5' },
-    { max: 75,  cor: 'rgba(255,152,0,.09)',   label: 'C', dotCor: '#ff9800' },
-    { max: 100, cor: 'rgba(255,107,107,.14)', label: 'D', dotCor: '#ff6b6b' },
+    { min: 0,  max: 25,  label: 'A', cor: 'rgba(0,200,120,.11)',   dotCor: '#00c878', chipCor: 'rgba(0,200,120,.80)'   },
+    { min: 26, max: 50,  label: 'B', cor: 'rgba(50,150,255,.10)',   dotCor: '#3296ff', chipCor: 'rgba(50,150,255,.80)'  },
+    { min: 51, max: 75,  label: 'C', cor: 'rgba(255,152,0,.09)',    dotCor: '#ff9800', chipCor: 'rgba(210,140,10,.85)'  },
+    { min: 76, max: 100, label: 'D', cor: 'rgba(255,107,107,.14)',  dotCor: '#ff6b6b', chipCor: 'rgba(220,90,90,.85)'   },
   ];
+
+  // Retorna a faixa (A/B/C/D) de um pctVendido.
+  function fatiaDesteEmp_(pct) {
+    if (pct <= 25) return 'A';
+    if (pct <= 50) return 'B';
+    if (pct <= 75) return 'C';
+    return 'D';
+  }
+  // Expõe globalmente para a tabela e mapaCampoValor_ usarem.
+  window.fatiaEstoque_ = fatiaDesteEmp_;
 
   window.renderGraficoEstoque_ = function () {
     const canvas = document.getElementById('graficoEstoqueCanvas');
     if (!canvas) return;
 
-    // Se o painel estiver oculto o offsetWidth é 0; agenda retry
     const W = canvas.offsetWidth || canvas.parentElement.offsetWidth;
     if (!W) { requestAnimationFrame(window.renderGraficoEstoque_); return; }
 
-    const rows = (typeof _mapaRows !== 'undefined') ? _mapaRows : [];
-    if (!rows.length) { canvas.height = 0; return; }
+    // Aplica o mesmo filtro de Estágio/Bairro que a tabela Mapa Geral usa.
+    const allRows = (typeof _mapaRows !== 'undefined') ? _mapaRows : [];
+    const rows = allRows.filter(r =>
+      (!_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio))
+      && (!_mapaBairrosAtivos.size  || _mapaBairrosAtivos.has(r.bairro))
+    );
+    const N = rows.length;
+
+    // ── Atualiza os chips de legenda com % de empreendimentos por faixa ──
+    const chipIds = { A: 'fatiaChipA', B: 'fatiaChipB', C: 'fatiaChipC', D: 'fatiaChipD' };
+    const contagens = { A: 0, B: 0, C: 0, D: 0 };
+    rows.forEach(r => { contagens[fatiaDesteEmp_(r.pctVendido)]++; });
+    FATIAS.forEach(f => {
+      const el = document.getElementById(chipIds[f.label]);
+      if (!el) return;
+      const pctFaixa = N > 0 ? Math.round(contagens[f.label] / N * 100) : 0;
+      el.textContent = `${f.label} · ${pctFaixa}%`;
+      el.title = `${contagens[f.label]} empreendimento${contagens[f.label] !== 1 ? 's' : ''} na faixa ${f.label} (${f.min}–${f.max}%)`;
+    });
+
+    if (!N) { canvas.style.height = '0'; return; }
+    canvas.style.height = '';
 
     const H   = 260;
     const dpr = window.devicePixelRatio || 1;
@@ -4216,16 +4255,14 @@ function renderMapaGeral_() {
 
     const PL = 48, PR = 16, PT = 26, PB = 34;
     const cW = W - PL - PR, cH = H - PT - PB;
-    const N  = rows.length;
 
     // Ordena por pctVendido crescente
     const sorted = [...rows].sort((a, b) => a.pctVendido - b.pctVendido);
 
-    const xOf = i  => PL + (N < 2 ? cW / 2 : (i / (N - 1)) * cW);
+    const xOf = i   => PL + (N < 2 ? cW / 2 : (i / (N - 1)) * cW);
     const yOf = pct => PT + cH - Math.min(pct, 100) / 100 * cH;
 
-    // ── Fatias de fundo (verticais) ─────────────────────────────────────
-    // Calcula a posição X de corte para cada limiar de pctVendido
+    // ── Fatias de fundo (verticais, delimitadas pelo X onde pct cruza limiares)
     const limiares = [25, 50, 75];
     const xCortes  = limiares.map(lim => {
       let last = -1;
@@ -4237,32 +4274,29 @@ function renderMapaGeral_() {
     const bordas = [PL, ...xCortes, PL + cW];
 
     FATIAS.forEach((f, z) => {
-      const x0 = bordas[z], x1 = bordas[z + 1];
       ctx.fillStyle = f.cor;
-      ctx.fillRect(x0, PT, x1 - x0, cH);
+      ctx.fillRect(bordas[z], PT, bordas[z + 1] - bordas[z], cH);
     });
 
-    // ── Separadores de fatia ─────────────────────────────────────────────
+    // ── Separadores de fatia (tracejado) ─────────────────────────────────
     xCortes.forEach(x => {
-      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.strokeStyle = 'rgba(255,255,255,.10)';
       ctx.lineWidth   = 1;
       ctx.setLineDash([4, 4]);
       ctx.beginPath(); ctx.moveTo(x, PT); ctx.lineTo(x, PT + cH); ctx.stroke();
       ctx.setLineDash([]);
     });
 
-    // ── Labels das fatias (A B C D) ──────────────────────────────────────
-    const fatiaCores = ['rgba(160,168,190,.65)', 'rgba(130,138,158,.45)',
-                        'rgba(210,140,10,.70)',  'rgba(220,90,90,.70)'];
+    // ── Labels A B C D no topo de cada fatia ─────────────────────────────
     FATIAS.forEach((f, z) => {
       const cx = (bordas[z] + bordas[z + 1]) / 2;
-      ctx.fillStyle  = fatiaCores[z];
-      ctx.font       = 'bold 11px system-ui,sans-serif';
-      ctx.textAlign  = 'center';
+      ctx.fillStyle = f.chipCor;
+      ctx.font      = 'bold 11px system-ui,sans-serif';
+      ctx.textAlign = 'center';
       ctx.fillText(f.label, cx, PT + 14);
     });
 
-    // ── Grades horizontais ───────────────────────────────────────────────
+    // ── Grades horizontais ────────────────────────────────────────────────
     [0, 25, 50, 75, 100].forEach(pct => {
       const y = yOf(pct);
       ctx.strokeStyle = 'rgba(255,255,255,.06)';
@@ -4270,104 +4304,88 @@ function renderMapaGeral_() {
       ctx.setLineDash([3, 5]);
       ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(PL + cW, y); ctx.stroke();
       ctx.setLineDash([]);
-      // Rótulo do eixo Y
       ctx.fillStyle  = 'rgba(180,190,215,.5)';
       ctx.font       = '9px system-ui,sans-serif';
       ctx.textAlign  = 'right';
       ctx.fillText(pct + '%', PL - 5, y + 3);
     });
 
-    // ── Eixos ────────────────────────────────────────────────────────────
+    // ── Eixos ─────────────────────────────────────────────────────────────
     ctx.strokeStyle = 'rgba(255,255,255,.15)';
     ctx.lineWidth   = 1;
     ctx.beginPath();
-    ctx.moveTo(PL, PT); ctx.lineTo(PL, PT + cH);   // Y
-    ctx.moveTo(PL, PT + cH); ctx.lineTo(PL + cW, PT + cH); // X
+    ctx.moveTo(PL, PT); ctx.lineTo(PL, PT + cH);
+    ctx.moveTo(PL, PT + cH); ctx.lineTo(PL + cW, PT + cH);
     ctx.stroke();
 
-    // ── Linha de conexão ─────────────────────────────────────────────────
+    // ── Linha de conexão ──────────────────────────────────────────────────
     ctx.beginPath();
     sorted.forEach((r, i) => {
       const x = xOf(i), y = yOf(r.pctVendido);
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
-    ctx.strokeStyle = 'rgba(160,185,255,.4)';
+    ctx.strokeStyle = 'rgba(160,185,255,.35)';
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
     ctx.stroke();
 
-    // ── Bolinhas ─────────────────────────────────────────────────────────
+    // ── Bolinhas coloridas por fatia ──────────────────────────────────────
     sorted.forEach((r, i) => {
-      const x   = xOf(i), y = yOf(r.pctVendido);
-      const pct = r.pctVendido;
-      const dotCor = pct <= 25 ? '#8a8f9e'
-                   : pct <= 50 ? '#b0b5c5'
-                   : pct <= 75 ? '#ff9800'
-                   :             '#ff6b6b';
+      const x  = xOf(i), y = yOf(r.pctVendido);
+      const fi = FATIAS.find(f => r.pctVendido <= f.max) || FATIAS[3];
       ctx.beginPath();
       ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle   = dotCor;
+      ctx.fillStyle   = fi.dotCor;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.25)';
+      ctx.strokeStyle = 'rgba(255,255,255,.22)';
       ctx.lineWidth   = .8;
       ctx.stroke();
     });
 
-    // ── Rótulos do eixo X ────────────────────────────────────────────────
+    // ── Rótulos do eixo X ─────────────────────────────────────────────────
     const passo = Math.max(1, Math.ceil(N / 12));
     ctx.fillStyle = 'rgba(180,190,215,.4)';
     ctx.font      = '9px system-ui,sans-serif';
     ctx.textAlign = 'center';
     for (let i = 0; i < N; i += passo) ctx.fillText(i + 1, xOf(i), PT + cH + 14);
-    ctx.fillText(N, xOf(N - 1), PT + cH + 14); // sempre mostra o último
+    ctx.fillText(N, xOf(N - 1), PT + cH + 14);
 
-    // ── Salva metadados no canvas para o hover ───────────────────────────
-    canvas._gData    = sorted;
-    canvas._gLayout  = { PL, PR, PT, PB, cW, cH, W, H, N };
+    // ── Metadados para o hover ────────────────────────────────────────────
+    canvas._gData   = sorted;
+    canvas._gLayout = { PL, PR, PT, PB, cW, cH, W, H, N };
   };
 
-  // ── Tooltip (hover) ──────────────────────────────────────────────────────
+  // ── Tooltip (hover) ───────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     const canvas  = document.getElementById('graficoEstoqueCanvas');
     const tooltip = document.getElementById('graficoEstoqueTooltip');
     if (!canvas || !tooltip) return;
 
     canvas.addEventListener('mousemove', e => {
-      const data   = canvas._gData;
-      const layout = canvas._gLayout;
+      const data = canvas._gData, layout = canvas._gLayout;
       if (!data || !layout) return;
-
       const rect = canvas.getBoundingClientRect();
-      const mx   = e.clientX - rect.left;
-      const my   = e.clientY - rect.top;
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
       const { PL, cW, PT, cH, N } = layout;
-
       if (mx < PL - 8 || mx > PL + cW + 8) { tooltip.style.opacity = '0'; setTimeout(() => { tooltip.style.display = 'none'; }, 100); return; }
-
-      // Acha o índice mais próximo no eixo X
-      const idx = Math.max(0, Math.min(N - 1, Math.round((mx - PL) / cW * (N - 1))));
-      const r   = data[idx];
+      const idx  = Math.max(0, Math.min(N - 1, Math.round((mx - PL) / cW * (N - 1))));
+      const r    = data[idx];
       const xDot = PL + (N < 2 ? cW / 2 : (idx / (N - 1)) * cW);
       const yDot = PT + cH - Math.min(r.pctVendido, 100) / 100 * cH;
-      const dist = Math.hypot(mx - xDot, my - yDot);
-
-      if (dist > 24) { tooltip.style.opacity = '0'; setTimeout(() => { tooltip.style.display = 'none'; }, 100); return; }
-
-      const pct  = Number(r.pctVendido).toFixed(1);
-      const fatia = pct <= 25 ? 'A' : pct <= 50 ? 'B' : pct <= 75 ? 'C' : 'D';
+      if (Math.hypot(mx - xDot, my - yDot) > 24) { tooltip.style.opacity = '0'; setTimeout(() => { tooltip.style.display = 'none'; }, 100); return; }
+      const pct   = Number(r.pctVendido).toFixed(1);
+      const fatia = fatiaDesteEmp_(r.pctVendido);
+      const fi    = FATIAS.find(f => f.label === fatia);
       tooltip.innerHTML =
+        `<strong style="color:${fi ? fi.dotCor : 'var(--accent)'}">${fatia}</strong>&nbsp;` +
         `<strong style="color:var(--accent)">${r.idEmpreendimento || '—'}</strong>&nbsp;·&nbsp;${r.nome}<br>` +
-        `<span style="opacity:.7">% vendido: <strong>${pct}%</strong>&nbsp;·&nbsp;Fatia ${fatia}&nbsp;·&nbsp;Estoque: ${r.estoque}</span>`;
-
-      // Posicionamento: evita sair da caixa
+        `<span style="opacity:.7">Vendido: <strong>${pct}%</strong>&nbsp;·&nbsp;Estoque: ${r.estoque}</span>`;
       tooltip.style.display = 'block';
       tooltip.style.opacity = '1';
       const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
       const wrap = canvas.parentElement.offsetWidth;
-      let tx = xDot + 12;
-      if (tx + tw > wrap - 4) tx = xDot - tw - 12;
-      let ty = yDot - th - 8;
-      if (ty < 0) ty = yDot + 14;
+      let tx = xDot + 12; if (tx + tw > wrap - 4) tx = xDot - tw - 12;
+      let ty = yDot - th - 8; if (ty < 0) ty = yDot + 14;
       tooltip.style.left = tx + 'px';
       tooltip.style.top  = ty + 'px';
     });
@@ -4377,7 +4395,6 @@ function renderMapaGeral_() {
       setTimeout(() => { tooltip.style.display = 'none'; }, 120);
     });
 
-    // Re-renderiza quando o painel redimensiona
     if (typeof ResizeObserver !== 'undefined') {
       new ResizeObserver(() => { if (canvas._gData) window.renderGraficoEstoque_(); })
         .observe(canvas.parentElement);
