@@ -3224,15 +3224,24 @@ function papelMercado_(r) {
   if (!r.estoque || r.estoque <= 0) return null;
   const prazo = prazoAtualMeses_(r);
   if (prazo === null) return null;
+
+  // Terceira variável: % disponível
+  // SUPORTE exige mercado ativo com estoque representativo (≥40% disponível)
+  // RESISTÊNCIA exige estoque parado há muito tempo com absorção baixa (≥40% disponível)
+  // Se já vendeu >60%, está em processo de esgotamento → TRANSIÇÃO independente do tempo
+  const pctDisp = r.pctVendido != null ? (100 - r.pctVendido) : null;
+  if (pctDisp === null) return null;
+  const altaDisp = pctDisp >= 40;  // ainda tem volume relevante para classificar
+
   const est = r.estagio || '';
   if (/em obras|em planta/i.test(est)) {
-    if (prazo <= 12) return 'suporte';
-    if (prazo >= 24) return 'resistencia';
+    if (prazo <= 12 && altaDisp)  return 'suporte';     // novo + estoque farto = mercado ativo
+    if (prazo >= 24 && altaDisp)  return 'resistencia'; // antigo + estoque parado = oportunidade
     return 'transicao';
   }
   if (/pronto novo/i.test(est)) {
-    if (prazo <= 6)  return 'suporte';
-    if (prazo >= 12) return 'resistencia';
+    if (prazo <= 6  && altaDisp)  return 'suporte';     // recém entregue + estoque farto
+    if (prazo >= 12 && altaDisp)  return 'resistencia'; // entregue há muito + estoque parado
     return 'transicao';
   }
   return null;
