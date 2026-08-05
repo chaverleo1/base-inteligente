@@ -2179,22 +2179,29 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
   ligarVerCardVG_('cardTabelaDesatualizada', 'insTabelaDesatualizada');
   ligarVerCardVG_('cardVendedorSemAvaliacao', 'insVendedorSemAvaliacao');
 
-  // 4 + 5) Radar: Suporte e Resistência
+  // 4 + 5 + 6) Radar: Breve Lançamento, Suporte e Resistência
   // Mesma lógica de papelMercado_() do lancamentos.html:
-  //   Suporte     = Em obras/planta  + pctVendido < 50%
-  //   Resistência = Pronto novo      + pctVendido > 50%
+  //   Breve Lançamento = Em obras/planta  + pctVendido === 0  (sem abertura de vendas)
+  //   Suporte          = Em obras/planta  + 0 < pctVendido < 50%
+  //   Resistência      = Pronto novo      + pctVendido > 50%
   function _pctVendidoEmp(e) {
     const est = parseInt(e.estoque)      || 0;
     const tot = parseInt(e.totalUnidades) || 0;
     if (!tot) return null;
     return Math.round((1 - est / tot) * 100);
   }
+  const radarBreveLancamento = emps.filter(e => {
+    if (!(parseInt(e.estoque) > 0)) return false;
+    if (!/em obras|em planta/i.test((e.status || '').trim())) return false;
+    const pct = _pctVendidoEmp(e);
+    return pct !== null && pct === 0;
+  });
   const radarSuporte = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
     if (!/em obras|em planta/i.test((e.status || '').trim())) return false;
     const pct = _pctVendidoEmp(e);
-    // null = totalUnidades não preenchido → inclui (estágio já garante a classificação)
-    return pct === null || pct < 50;
+    // null = totalUnidades não preenchido → inclui; exclui 0% (Breve Lançamento)
+    return pct === null || (pct > 0 && pct < 50);
   });
   const radarResistencia = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
@@ -2204,8 +2211,10 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
     return pct === null || pct > 50;
   });
 
+  const valBrv = document.getElementById('cardRadarBreveValue');
   const valSup = document.getElementById('cardRadarSuporteValue');
   const valRes = document.getElementById('cardRadarResistenciaValue');
+  if (valBrv) valBrv.textContent = radarBreveLancamento.length;
   if (valSup) valSup.textContent = radarSuporte.length;
   if (valRes) valRes.textContent = radarResistencia.length;
 
@@ -2213,6 +2222,11 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
   const btnBriefSup = document.getElementById('btnBriefingSup');
   if (btnBriefSup) btnBriefSup.style.display = radarSuporte.length ? '' : 'none';
 
+  window._insightDetails['insRadarBreve'] = {
+    title: '🔵 Breve Lançamento — Em obras com 0% vendido (sem abertura de vendas)',
+    icon: '🔵', color: '#60a5fa', type: 'lancamentos',
+    items: radarBreveLancamento.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
+  };
   window._insightDetails['insRadarSuporte'] = {
     title: '🟢 Suporte — Em obras com <50% vendido',
     icon: '🟢', color: '#00c878', type: 'lancamentos',
@@ -2239,6 +2253,7 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
       btn.style.display = 'none';
     }
   }
+  ligarRadarCard_('cardRadarBreve',       'insRadarBreve',       'desc'); // mais próximos da entrega primeiro
   ligarRadarCard_('cardRadarSuporte',     'insRadarSuporte',     'desc'); // maior prazo restante primeiro
   ligarRadarCard_('cardRadarResistencia', 'insRadarResistencia', 'asc');  // mais tempo parado primeiro
 }
@@ -2334,6 +2349,12 @@ function renderDados(json) {
     </div>
     <div style="grid-column:1/-1;padding:8px 2px 2px;border-top:1px solid var(--border);margin-top:2px">
       <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">📡 Oportunidades de Lançamentos</span>
+    </div>
+    <div class="vg-stat" id="cardRadarBreve">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🔵</span><span class="vg-stat-label">Breve Lançamento</span></div>
+      <div class="vg-stat-value" id="cardRadarBreveValue" style="color:#60a5fa">—</div>
+      <div class="vg-stat-sub">Em obras · 0% vendido (sem abertura)</div>
+      <button class="vg-stat-link" style="display:none;color:#60a5fa;background:rgba(96,165,250,.1);border-color:rgba(96,165,250,.25);font-family:inherit">Ver →</button>
     </div>
     <div class="vg-stat" id="cardRadarSuporte">
       <div class="vg-stat-top"><span class="vg-stat-icon">🟢</span><span class="vg-stat-label">Suporte</span></div>

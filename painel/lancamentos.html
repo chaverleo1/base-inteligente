@@ -100,6 +100,8 @@ a { text-decoration: none; color: inherit; }
 .radar-kpi.kpi-resistencia .radar-kpi-val { color:#ff6b6b; }
 .radar-kpi.kpi-oport       { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.06); }
 .radar-kpi.kpi-oport       .radar-kpi-val { color:#ff6b6b; }
+.radar-kpi.kpi-breve       { border-color:rgba(96,165,250,.3); }
+.radar-kpi.kpi-breve       .radar-kpi-val { color:#60a5fa; }
 .btn-briefing-dl { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:5px 10px; border:1px solid rgba(0,200,120,.35); border-radius:6px; background:rgba(0,200,120,.08); color:#00c878; font-size:10px; font-weight:700; letter-spacing:.04em; cursor:pointer; transition:background .15s,opacity .15s; }
 .btn-briefing-dl:hover { background:rgba(0,200,120,.18); }
 .btn-briefing-dl svg { width:12px; height:12px; flex-shrink:0; }
@@ -3563,6 +3565,9 @@ function papelMercado_(r) {
 
   if (!isObras && !isPronto) return null;
 
+  // BREVE LANÇAMENTO: Em obras/planta com 0% vendido (sem abertura de vendas ainda)
+  if (isObras  && pctV === 0) return 'breveLancamento';
+
   // SUPORTE: apenas Em obras/planta com < 50% vendido
   if (isObras  && pctV < 50) return 'suporte';
 
@@ -3582,14 +3587,15 @@ function renderMapaPapelFiltros_() {
   const bar = document.getElementById('mapa-papel-filtros');
   if (!bar) return;
   const total = _mapaRows.length;
-  const cnt = { suporte: 0, transicao: 0, resistencia: 0 };
+  const cnt = { breveLancamento: 0, suporte: 0, transicao: 0, resistencia: 0 };
   _mapaRows.forEach(r => { const p = papelMercado_(r); if (p) cnt[p]++; });
 
   const chips = [
-    { key: null,          label: `Todos (${total})`,                                cls: 'papel-chip-todos' },
-    { key: 'suporte',     label: `🟢 Suporte (${cnt.suporte})`,                    cls: 'papel-chip-suporte' },
-    { key: 'transicao',   label: `🟡 Transição (${cnt.transicao})`,                cls: 'papel-chip-transicao' },
-    { key: 'resistencia', label: `🔴 Resistência (${cnt.resistencia})`,             cls: 'papel-chip-resistencia' },
+    { key: null,               label: `Todos (${total})`,                                    cls: 'papel-chip-todos' },
+    { key: 'breveLancamento',  label: `🔵 Breve Lançamento (${cnt.breveLancamento})`,        cls: 'papel-chip-breve' },
+    { key: 'suporte',          label: `🟢 Suporte (${cnt.suporte})`,                        cls: 'papel-chip-suporte' },
+    { key: 'transicao',        label: `🟡 Transição (${cnt.transicao})`,                    cls: 'papel-chip-transicao' },
+    { key: 'resistencia',      label: `🔴 Resistência (${cnt.resistencia})`,                 cls: 'papel-chip-resistencia' },
   ];
   bar.innerHTML = chips.map(c => `
     <button type="button" class="papel-chip ${c.cls}${_mapaPapelFiltro === c.key ? ' on' : ''}"
@@ -3609,6 +3615,7 @@ let _radarSort = {
   // prazoEntrega = prazoEntregaMeses_() raw: positivo = futuro (suporte); negativo = passado (resistência)
   // Suporte  DESC: +33 > +30 > +24  → exibe (-33), (-30), (-24) = mais tempo restante primeiro
   // Resistência ASC: -24 < -18 < -12 → exibe (+24), (+18), (+12) = mais tempo parado primeiro
+  brv: { col: 'prazoEntrega', dir: 'desc' },  // Breve Lançamento: mais próximos da entrega primeiro
   sup: { col: 'prazoEntrega', dir: 'desc' },
   res: { col: 'prazoEntrega', dir: 'asc'  },
   tra: { col: 'estoque',      dir: 'desc' },
@@ -3684,19 +3691,21 @@ function renderRadarMercado_() {
   });
 
   // Classifica cada linha filtrada
-  const sup = [], tra = [], res = [], oport = [];
+  const brv = [], sup = [], tra = [], res = [], oport = [];
   rows.forEach(r => {
     const p = papelMercado_(r);
-    if (p === 'suporte')          { sup.push(r); }
+    if (p === 'breveLancamento')  { brv.push(r); }
+    else if (p === 'suporte')     { sup.push(r); }
     else if (p === 'transicao')   { tra.push(r); }
     else if (p === 'resistencia') { res.push(r); if (isOportunidade_(r)) oport.push(r); }
   });
 
   // Registra listas no cache do modal para os KPIs clicáveis
-  _listaEmpModalData_['KPI_SUP']  = { titulo: '🟢 Suporte — Em obras/planta com <50% vendido',         rows: sup   };
-  _listaEmpModalData_['KPI_TRA']  = { titulo: '🟡 Transição — 50% vendido ou estágio intermediário',  rows: tra   };
-  _listaEmpModalData_['KPI_RES']  = { titulo: '🔴 Resistência — Pronto novo com >50% vendido',        rows: res   };
-  _listaEmpModalData_['KPI_OPT']  = { titulo: '⚡ Oportunidades — Resistência com ≥ 20 unidades paradas',          rows: oport };
+  _listaEmpModalData_['KPI_BRV']  = { titulo: '🔵 Breve Lançamento — Em obras/planta com 0% vendido (sem abertura de vendas)', rows: brv  };
+  _listaEmpModalData_['KPI_SUP']  = { titulo: '🟢 Suporte — Em obras/planta com <50% vendido',                                rows: sup  };
+  _listaEmpModalData_['KPI_TRA']  = { titulo: '🟡 Transição — 50% vendido ou estágio intermediário',                          rows: tra  };
+  _listaEmpModalData_['KPI_RES']  = { titulo: '🔴 Resistência — Pronto novo com >50% vendido',                                rows: res  };
+  _listaEmpModalData_['KPI_OPT']  = { titulo: '⚡ Oportunidades — Resistência com ≥ 20 unidades paradas',                     rows: oport };
 
   // Helper: botão de número no KPI (clicável se lista não vazia)
   function kpiBtn(key, count) {
@@ -3707,6 +3716,11 @@ function renderRadarMercado_() {
   // KPI bar — subtítulos refletem a nova lógica estoque × tempo
   const kpiHtml = `
     <div class="radar-kpis">
+      <div class="radar-kpi kpi-breve">
+        <div class="radar-kpi-label">🔵 Breve Lançamento</div>
+        ${kpiBtn('KPI_BRV', brv.length)}
+        <div class="radar-kpi-sub">Em obras · 0% vendido (sem abertura)</div>
+      </div>
       <div class="radar-kpi kpi-suporte">
         <div class="radar-kpi-label">🟢 Suporte</div>
         ${kpiBtn('KPI_SUP', sup.length)}
@@ -3874,6 +3888,7 @@ function renderRadarMercado_() {
     { label:'Total',       col:'totalUnidades',num:true, render:r=>`<span style="color:var(--text3)">${r.totalUnidades>0?r.totalUnidades:'—'}</span>` },
   ];
 
+  const brvCols = colsBase('brv', false);
   const supCols = colsBase('sup', false);
   const resCols = colsBase('res', true);
   const traCols = colsBase('tra', false);
@@ -3881,13 +3896,14 @@ function renderRadarMercado_() {
   // Distribuição por padrão
   const PADS = ['Popular','Médio','Alto','Luxo'];
   const dist = {};
-  PADS.forEach(p => { dist[p] = { sup:0, tra:0, res:0, total:0 }; });
+  PADS.forEach(p => { dist[p] = { brv:0, sup:0, tra:0, res:0, total:0 }; });
   rows.forEach(r => {
     const p = r.padrao;
     if (!dist[p]) return;
     const papel = papelMercado_(r);
     dist[p].total++;
-    if (papel === 'suporte')          dist[p].sup++;
+    if (papel === 'breveLancamento')  dist[p].brv++;
+    else if (papel === 'suporte')     dist[p].sup++;
     else if (papel === 'transicao')   dist[p].tra++;
     else if (papel === 'resistencia') dist[p].res++;
   });
@@ -3896,6 +3912,7 @@ function renderRadarMercado_() {
     return `
       <div class="radar-dist-row">
         <div class="radar-dist-cell pad-label">${p}</div>
+        <div class="radar-dist-cell brv">🔵 ${d.brv}</div>
         <div class="radar-dist-cell sup">🟢 ${d.sup}</div>
         <div class="radar-dist-cell tra">🟡 ${d.tra}</div>
         <div class="radar-dist-cell res">🔴 ${d.res}</div>
@@ -3903,6 +3920,14 @@ function renderRadarMercado_() {
   }).join('');
 
   el.innerHTML = filtrosHtml + kpiHtml +
+    `<div class="radar-secao rs-breve">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo" style="color:#60a5fa">🔵 Breve Lançamento</span>
+        <span class="radar-secao-sub">Em obras/planta · 0% vendido — sem abertura de vendas ainda</span>
+        <span class="radar-secao-count">${brv.length}</span>
+      </div>
+      ${radarTable(brv, 'brv', brvCols, 15)}
+    </div>` +
     `<div class="radar-secao rs-suporte">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🟢 Frente 1 — Suporte</span>
@@ -3934,7 +3959,7 @@ function renderRadarMercado_() {
       </div>
       <div class="radar-dist">
         <div class="radar-dist-header">
-          <div>Padrão</div><div>🟢 Suporte</div><div>🟡 Transição</div><div>🔴 Resistência</div>
+          <div>Padrão</div><div>🔵 Breve</div><div>🟢 Suporte</div><div>🟡 Transição</div><div>🔴 Resistência</div>
         </div>
         ${distRows}
       </div>
