@@ -1086,7 +1086,10 @@ select.form-input option { background: var(--surface2); }
       <thead>
         <tr>
           <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
+          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
           <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
+          <th onclick="ordenarMapaGeral_('faixa')" title="Faixa de estoque vendido: A(0–25%) B(26–50%) C(51–75%) D(76–99%)">Faixa<span class="mapa-seta" id="seta-mapa-faixa"></span></th>
+          <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
           <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
@@ -1098,10 +1101,7 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('vendido')">Estoque<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
           <th onclick="ordenarMapaGeral_('prazo')" title="Prazo de Pagamento (meses)">PG<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
           <th onclick="ordenarMapaGeral_('pv')" title="Prazo de Venda — meses desde o lançamento">PV<span class="mapa-seta" id="seta-mapa-pv"></span></th>
-          <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
           <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
-          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
-          <th onclick="ordenarMapaGeral_('faixa')" title="Faixa de estoque vendido: A(0–25%) B(26–50%) C(51–75%) D(76–99%)">Faixa<span class="mapa-seta" id="seta-mapa-faixa"></span></th>
         </tr>
       </thead>
       <tbody id="mapa-tbody">
@@ -4173,7 +4173,17 @@ function renderMapaGeral_() {
   tbody.innerHTML = linhas.map(({ r, i }) => `
     <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar" class="${_mapaSelecionados.has(i) ? 'mapa-row-selecionada' : ''}">
       <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
+      <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}</td>
+      ${(() => {
+        const f = typeof fatiaEstoque_ === 'function' ? fatiaEstoque_(r.pctVendido) : '—';
+        const bg = f==='A' ? 'rgba(0,200,120,.16)'  : f==='B' ? 'rgba(50,150,255,.16)'
+                 : f==='C' ? 'rgba(255,152,0,.16)'  : f==='D' ? 'rgba(255,107,107,.18)' : '';
+        const cl = f==='A' ? '#00c878' : f==='B' ? '#3296ff'
+                 : f==='C' ? '#ff9800' : f==='D' ? '#ff6b6b' : 'var(--text3)';
+        return `<td style="text-align:center;font-weight:700;font-size:12px;background:${bg};color:${cl};letter-spacing:.04em">${f}</td>`;
+      })()}
+      <td>${r.estagio}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
       <td>${r.construtora}</td>
       <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
@@ -4190,17 +4200,7 @@ function renderMapaGeral_() {
         const apos = r.prazoVenda - r.prazoLancEntrega;
         return `(${r.prazoLancEntrega}${apos >= 0 ? '+' : ''}${apos})=${r.prazoVenda}`;
       })()}</td>
-      <td>${r.estagio}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
-      <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
-      ${(() => {
-        const f = typeof fatiaEstoque_ === 'function' ? fatiaEstoque_(r.pctVendido) : '—';
-        const bg = f==='A' ? 'rgba(0,200,120,.16)'  : f==='B' ? 'rgba(50,150,255,.16)'
-                 : f==='C' ? 'rgba(255,152,0,.16)'  : f==='D' ? 'rgba(255,107,107,.18)' : '';
-        const cl = f==='A' ? '#00c878' : f==='B' ? '#3296ff'
-                 : f==='C' ? '#ff9800' : f==='D' ? '#ff6b6b' : 'var(--text3)';
-        return `<td style="text-align:center;font-weight:700;font-size:12px;background:${bg};color:${cl};letter-spacing:.04em">${f}</td>`;
-      })()}
     </tr>`).join('');
 
   atualizarSetasMapaGeral_();
