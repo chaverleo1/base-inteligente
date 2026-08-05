@@ -3277,9 +3277,12 @@ function setMapaPapelFiltro_(papel) {
 
 // ── RADAR DE MERCADO ────────────────────────────────────────────────────────
 let _radarSort = {
-  sup: { col: 'prazoAtual', dir: 'asc'  },  // menor prazo = mais recente = maior força de suporte
-  res: { col: 'prazoAtual', dir: 'desc' },  // maior prazo = mais tempo parado = maior resistência
-  tra: { col: 'estoque',    dir: 'desc' },  // transição: estoque como referência
+  // prazoEntrega = prazoEntregaMeses_() raw: positivo = futuro (suporte); negativo = passado (resistência)
+  // Suporte  DESC: +33 > +30 > +24  → exibe (-33), (-30), (-24) = mais tempo restante primeiro
+  // Resistência ASC: -24 < -18 < -12 → exibe (+24), (+18), (+12) = mais tempo parado primeiro
+  sup: { col: 'prazoEntrega', dir: 'desc' },
+  res: { col: 'prazoEntrega', dir: 'asc'  },
+  tra: { col: 'estoque',      dir: 'desc' },
 };
 let _radarFiltroEstagios = new Set(); // vazio = mostra todos
 let _radarFiltroPadroes  = new Set(); // vazio = mostra todos
@@ -3423,7 +3426,8 @@ function renderRadarMercado_() {
   function colVal(r, col) {
     if (col === 'estoque')        return r.estoque        != null ? Number(r.estoque)        : -1;
     if (col === 'totalUnidades')  return r.totalUnidades  != null ? Number(r.totalUnidades)  : -1;
-    if (col === 'prazoAtual')     { const p = prazoAtualMeses_(r); return p !== null ? p : -1; }
+    if (col === 'prazoAtual')     { const p = prazoAtualMeses_(r);    return p !== null ? p    : -1; }
+    if (col === 'prazoEntrega')   { const p = prazoEntregaMeses_(r); return p !== null ? p    : -999; }
     if (col === 'pctVendido')     return r.pctVendido     != null ? r.pctVendido             : -1;
     if (col === 'pctDisp')        return r.pctVendido     != null ? (100 - r.pctVendido)     : -1;
     if (col === 'm2Medio')        return r.m2Medio        != null ? Number(r.m2Medio)         : -1;
@@ -3516,7 +3520,7 @@ function renderRadarMercado_() {
         return `<span style="color:var(--text2)">${loc||'—'}</span>`;
     }},
     { label:'Estágio',     col:'estagio',       render:r=>r.estagio||'—' },
-    { label:'Prazo',       col:'prazoAtual', num:true, render:r=>prazoCell(r) },
+    { label:'Prazo',       col:'prazoEntrega', num:true, render:r=>prazoCell(r) },
     { label:'Estoque',     col:'estoque',    num:true, render:r=>`<strong>${r.estoque!=null?r.estoque:'—'}</strong>` },
     { label:'% Vend.',     col:'pctVendido', num:true, render:r=>pctVendidoCell(r) },
     { label:'Total',       col:'totalUnidades',num:true, render:r=>`<span style="color:var(--text3)">${r.totalUnidades>0?r.totalUnidades:'—'}</span>` },
