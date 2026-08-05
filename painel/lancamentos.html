@@ -390,6 +390,14 @@ select.form-input option { background: var(--surface2); }
 .fatia-c { background: rgba(255,152,0,.18);   color: #d4880a; }
 .fatia-d { background: rgba(255,107,107,.20); color: #e05a5a; }
 /* Tabela resumo de faixas por estágio — agrupada por padrão */
+.resumo-secao-titulo {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text2); margin-bottom: 8px; padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.resumo-secao-sep {
+  height: 1px; background: rgba(255,255,255,.07); margin: 14px 0 12px;
+}
 .resumo-blocos-wrap {
   display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
 }
@@ -1167,7 +1175,7 @@ select.form-input option { background: var(--surface2); }
   <!-- GRÁFICO CARTESIANO DE ESTOQUE — acima da tabela Mapa Geral -->
   <div class="grafico-estoque-wrap" id="graficoEstoqueWrap">
     <div class="grafico-estoque-titulo">
-      ESTOQUE GERAL por QUANTIDADES DE UNIDADES&nbsp;<span style="opacity:.45">|</span>&nbsp;% PERCENTUAIS
+      <span style="opacity:.55">Faixas de estoque vendido:</span>
       <span class="grafico-faixa-legenda-inline">
         <span style="color:#00c878">A</span><span class="gfl-sep">0–25%</span>
         <span style="color:#3296ff">B</span><span class="gfl-sep">26–50%</span>
@@ -4651,16 +4659,14 @@ function renderMapaGeral_() {
   // ── Tabela resumo por estágio × faixa ─────────────────────────────────────
   // Sempre usa _mapaRows completo (panorama geral independente do filtro
   // do gráfico). Exibe por linha cada estágio presente na base, colunas A-D.
-  // Cada célula: "qtd | pct%" onde qtd = soma de unidades disponíveis (r.estoque)
-  // e pct = % dessa qtd em relação ao total de unidades disponíveis da linha.
   function renderTabelaResumoFaixas_() {
     const wrap = document.getElementById('graficoTabelaResumoWrap');
     if (!wrap) return;
     const all = (typeof _mapaRows !== 'undefined') ? _mapaRows : [];
     if (!all.length) { wrap.innerHTML = ''; return; }
 
-    const ORDEM_EST  = { 'Em obras': 1, 'Pronto': 2, 'Pronto novo': 3, 'Entregue': 4 };
-    const ORDEM_PAD  = ['Popular', 'Médio', 'Alto', 'Luxo'];
+    const ORDEM_EST = { 'Em obras': 1, 'Pronto': 2, 'Pronto novo': 3, 'Entregue': 4 };
+    const ORDEM_PAD = ['Popular', 'Médio', 'Alto', 'Luxo'];
     const FAIXA_LABELS = ['A', 'B', 'C', 'D'];
     const COR = {
       A: { txt: '#00c878', bg: 'rgba(0,200,120,.13)'   },
@@ -4670,67 +4676,6 @@ function renderMapaGeral_() {
     };
     const normEst = e => (e === 'Em planta' ? 'Em obras' : e);
 
-    // Gera uma mini-tabela (estágio × faixa) para um subconjunto de rows
-    function renderBloco(rows, label, isTotal) {
-      if (!rows.length) return '';
-      const porEst = {};
-      rows.forEach(r => {
-        if (!r.estagio || r.estagio === '—') return;
-        const est = normEst(r.estagio);
-        if (!porEst[est]) porEst[est] = [];
-        porEst[est].push(r);
-      });
-      const estagios = Object.keys(porEst).sort((a, b) => (ORDEM_EST[a] || 99) - (ORDEM_EST[b] || 99));
-
-      let t = `<div class="resumo-bloco${isTotal ? ' resumo-bloco-total' : ''}">
-        <div class="resumo-bloco-titulo">${label}</div>
-        <table class="grafico-resumo-tabela">
-          <thead><tr>
-            <th class="col-estagio">Estágio</th>
-            ${FAIXA_LABELS.map(f => `<th style="color:${COR[f].txt}">${f}</th>`).join('')}
-            <th style="color:var(--text2)">Total</th>
-          </tr></thead><tbody>`;
-
-      estagios.forEach(est => {
-        const lista = porEst[est];
-        const estq = { A: 0, B: 0, C: 0, D: 0 };
-        lista.forEach(r => { estq[fatiaDesteEmp_(r.pctVendido)] += Number(r.estoque) || 0; });
-        const totalEstqRow = FAIXA_LABELS.reduce((s, f) => s + estq[f], 0);
-        t += `<tr>
-          <td class="col-estagio">${est}</td>
-          ${FAIXA_LABELS.map(f => {
-            if (!estq[f]) return `<td class="cell-vazio">—</td>`;
-            const pct = totalEstqRow > 0 ? Math.round(estq[f] / totalEstqRow * 100) : 0;
-            return `<td style="background:${COR[f].bg}"><span class="cell-faixa">
-              <span class="cf-cnt" style="color:${COR[f].txt}">${estq[f].toLocaleString('pt-BR')}</span>
-              <span class="cf-pct">|&nbsp;${pct}%</span>
-            </span></td>`;
-          }).join('')}
-          <td style="color:var(--text2);font-weight:600">${totalEstqRow.toLocaleString('pt-BR')}</td>
-        </tr>`;
-      });
-
-      // Linha de total do bloco
-      const estqT = { A: 0, B: 0, C: 0, D: 0 };
-      rows.forEach(r => { estqT[fatiaDesteEmp_(r.pctVendido)] += Number(r.estoque) || 0; });
-      const gtEstq = FAIXA_LABELS.reduce((s, f) => s + estqT[f], 0);
-      t += `<tr style="border-top:1px solid rgba(255,255,255,.10)">
-        <td class="col-estagio" style="color:var(--text)">TOTAL</td>
-        ${FAIXA_LABELS.map(f => {
-          if (!estqT[f]) return `<td class="cell-vazio">—</td>`;
-          const pct = gtEstq > 0 ? Math.round(estqT[f] / gtEstq * 100) : 0;
-          return `<td style="background:${COR[f].bg}"><span class="cell-faixa">
-            <span class="cf-cnt" style="color:${COR[f].txt}">${estqT[f].toLocaleString('pt-BR')}</span>
-            <span class="cf-pct">|&nbsp;${pct}%</span>
-          </span></td>`;
-        }).join('')}
-        <td style="color:var(--text);font-weight:700">${gtEstq.toLocaleString('pt-BR')}</td>
-      </tr>`;
-
-      t += '</tbody></table></div>';
-      return t;
-    }
-
     // Agrupa rows por padrão
     const porPad = {};
     all.forEach(r => {
@@ -4739,19 +4684,104 @@ function renderMapaGeral_() {
       porPad[p].push(r);
     });
 
-    let html = '<div class="resumo-blocos-wrap">';
-    ORDEM_PAD.forEach(p => {
-      if (porPad[p] && porPad[p].length) html += renderBloco(porPad[p], p.toUpperCase());
-    });
-    // Padrões fora da ordem canônica
-    Object.keys(porPad).forEach(p => {
-      if (!ORDEM_PAD.includes(p)) html += renderBloco(porPad[p], p.toUpperCase());
-    });
-    // Bloco TOTAL GERAL
-    html += renderBloco(all, 'TOTAL GERAL', true);
-    html += '</div>';
+    // ── TABELA 1: % VENDIDO POR FAIXA ────────────────────────────────────────
+    // Células: apenas pct% (participação de cada faixa no total de unidades da linha)
+    // Sem coluna Total.
+    function blocoFaixaPct(rows, label, isTotal) {
+      if (!rows.length) return '';
+      const porEst = {};
+      rows.forEach(r => {
+        if (!r.estagio || r.estagio === '—') return;
+        const est = normEst(r.estagio);
+        if (!porEst[est]) porEst[est] = [];
+        porEst[est].push(r);
+      });
+      const estagios = Object.keys(porEst).sort((a,b)=>(ORDEM_EST[a]||99)-(ORDEM_EST[b]||99));
+      if (!estagios.length) return '';
 
-    wrap.innerHTML = html;
+      let t = `<div class="resumo-bloco${isTotal ? ' resumo-bloco-total' : ''}">
+        <div class="resumo-bloco-titulo">${label}</div>
+        <table class="grafico-resumo-tabela">
+          <thead><tr>
+            <th class="col-estagio">Estágio</th>
+            ${FAIXA_LABELS.map(f=>`<th style="color:${COR[f].txt}">${f}</th>`).join('')}
+          </tr></thead><tbody>`;
+
+      estagios.forEach(est => {
+        const estq = { A:0, B:0, C:0, D:0 };
+        porEst[est].forEach(r => { estq[fatiaDesteEmp_(r.pctVendido)] += Number(r.estoque)||0; });
+        const total = FAIXA_LABELS.reduce((s,f)=>s+estq[f], 0);
+        t += `<tr><td class="col-estagio">${est}</td>
+          ${FAIXA_LABELS.map(f => {
+            if (!estq[f]) return `<td class="cell-vazio">—</td>`;
+            const pct = total > 0 ? Math.round(estq[f]/total*100) : 0;
+            return `<td style="background:${COR[f].bg};color:${COR[f].txt};font-weight:700;text-align:center">${pct}%</td>`;
+          }).join('')}
+        </tr>`;
+      });
+      t += '</tbody></table></div>';
+      return t;
+    }
+
+    // ── TABELA 2: QUANTIDADES SEM FAIXAS ─────────────────────────────────────
+    // Células: total de unidades disponíveis por estágio, sem breakdown de faixa.
+    function blocoQtd(rows, label, isTotal) {
+      if (!rows.length) return '';
+      const porEst = {};
+      rows.forEach(r => {
+        if (!r.estagio || r.estagio === '—') return;
+        const est = normEst(r.estagio);
+        if (!porEst[est]) porEst[est] = { qtdUn: 0, qtdEmp: 0 };
+        porEst[est].qtdUn  += Number(r.estoque) || 0;
+        porEst[est].qtdEmp += 1;
+      });
+      const estagios = Object.keys(porEst).sort((a,b)=>(ORDEM_EST[a]||99)-(ORDEM_EST[b]||99));
+      if (!estagios.length) return '';
+
+      let t = `<div class="resumo-bloco${isTotal ? ' resumo-bloco-total' : ''}">
+        <div class="resumo-bloco-titulo">${label}</div>
+        <table class="grafico-resumo-tabela">
+          <thead><tr>
+            <th class="col-estagio">Estágio</th>
+            <th style="color:var(--text2);text-align:right">Unidades</th>
+            <th style="color:var(--text2);text-align:right">Empreend.</th>
+          </tr></thead><tbody>`;
+
+      estagios.forEach(est => {
+        const d = porEst[est];
+        t += `<tr>
+          <td class="col-estagio">${est}</td>
+          <td style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums">${d.qtdUn.toLocaleString('pt-BR')}</td>
+          <td style="text-align:right;color:var(--text3)">${d.qtdEmp}</td>
+        </tr>`;
+      });
+
+      // Linha de totais
+      const totUn  = Object.values(porEst).reduce((s,d)=>s+d.qtdUn, 0);
+      const totEmp = Object.values(porEst).reduce((s,d)=>s+d.qtdEmp, 0);
+      t += `<tr style="border-top:1px solid rgba(255,255,255,.10)">
+        <td class="col-estagio" style="color:var(--text);font-weight:700">TOTAL</td>
+        <td style="text-align:right;font-weight:700;color:var(--text)">${totUn.toLocaleString('pt-BR')}</td>
+        <td style="text-align:right;color:var(--text2)">${totEmp}</td>
+      </tr>`;
+      t += '</tbody></table></div>';
+      return t;
+    }
+
+    // Monta HTML: seção 1 (%) + separador + seção 2 (qtd)
+    function renderSecao(fnBloco, rows, titulo) {
+      let html = `<div class="resumo-secao-titulo">${titulo}</div><div class="resumo-blocos-wrap">`;
+      ORDEM_PAD.forEach(p => { if (porPad[p]?.length) html += fnBloco(porPad[p], p.toUpperCase(), false); });
+      Object.keys(porPad).forEach(p => { if (!ORDEM_PAD.includes(p)) html += fnBloco(porPad[p], p.toUpperCase(), false); });
+      html += fnBloco(rows, 'TOTAL GERAL', true);
+      html += '</div>';
+      return html;
+    }
+
+    wrap.innerHTML =
+      renderSecao(blocoFaixaPct, all, 'ESTOQUE GERAL por PERCENTUAL VENDIDO') +
+      `<div class="resumo-secao-sep"></div>` +
+      renderSecao(blocoQtd, all, 'ESTOQUE GERAL por QUANTIDADES DE UNIDADES');
   }
 
   window.renderGraficoEstoque_ = function () {
