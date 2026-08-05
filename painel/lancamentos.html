@@ -631,6 +631,11 @@ select.form-input option { background: var(--surface2); }
   .sobra-flag { color: #fbbf24; background: rgba(255,160,0,.15); border-color: rgba(255,160,0,.35); }
 }
 .mapa-simil { font-family: monospace; font-size: 11px; white-space: nowrap; }
+.simil-badge.simil-alta {
+  background: rgba(0,200,120,.18); color: #00c878;
+  border-color: rgba(0,200,120,.45);
+  box-shadow: 0 0 7px rgba(0,200,120,.3);
+}
 .padrao-pct     { font-weight: 700; font-size: 13px; }
 .padrao-id      { font-family: monospace; font-size: 10px; color: var(--text3); }
 
@@ -3428,6 +3433,8 @@ function renderRadarMercado_() {
     if (col === 'totalUnidades')  return r.totalUnidades  != null ? Number(r.totalUnidades)  : -1;
     if (col === 'prazoAtual')     { const p = prazoAtualMeses_(r);    return p !== null ? p    : -1; }
     if (col === 'prazoEntrega')   { const p = prazoEntregaMeses_(r); return p !== null ? p    : -999; }
+    if (col === 'simil')          return r.simil          != null ? Number(r.simil)          : -1;
+    if (col === 'areaMin')        return r.areaMin        != null ? Number(r.areaMin)        : -1;
     if (col === 'pctVendido')     return r.pctVendido     != null ? r.pctVendido             : -1;
     if (col === 'pctDisp')        return r.pctVendido     != null ? (100 - r.pctVendido)     : -1;
     if (col === 'm2Medio')        return r.m2Medio        != null ? Number(r.m2Medio)         : -1;
@@ -3504,6 +3511,22 @@ function renderRadarMercado_() {
     return `<span style="color:var(--text2)">R$&nbsp;${exibirPrecoBR(r.m2Medio)}</span>`;
   }
 
+  // Helper: S% similaridade — verde destacado se ≥ 90%
+  function similCell(r) {
+    if (!r.simil) return '<span style="color:var(--text3)">—</span>';
+    const cls = r.simil >= 90 ? 'simil-badge simil-alta' : 'simil-badge';
+    return `<span class="${cls}" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>`;
+  }
+
+  // Helper: faixa de áreas (mesmo formato do Mapa Geral)
+  function faixaAreaCell(r) {
+    if (!(r.areaMin > 0)) return '<span style="color:var(--text3)">—</span>';
+    const fmt = v => v.toLocaleString('pt-BR', { minimumFractionDigits:1, maximumFractionDigits:1 });
+    return r.areaMax > r.areaMin
+      ? `<span style="color:var(--text2)">${fmt(r.areaMin)}–${fmt(r.areaMax)}m²</span>`
+      : `<span style="color:var(--text2)">${fmt(r.areaMin)}m²</span>`;
+  }
+
   // Colunas completas para todas as frentes do Radar
   const colsBase = (frente, showOport) => [
     { label:'ID',          col:'id',           render:r=>`<span style="color:var(--text3);font-size:10px">${r.idEmpreendimento||'—'}</span>` },
@@ -3512,14 +3535,14 @@ function renderRadarMercado_() {
           ? '<span class="badge-oportunidade" style="margin-left:5px;font-size:9px">OPORT.</span>' : '';
         return `<span class="radar-nome">${r.nome}</span>${badge}`;
     }},
+    { label:'S%',          col:'simil',      num:true, render:r=>similCell(r) },
     { label:'Construtora', col:'construtora',   render:r=>`<span style="color:var(--text3)">${r.construtora||'—'}</span>` },
-    { label:'Padrão',      col:'padrao',        render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Faixa m²',    col:'areaMin',       render:r=>faixaAreaCell(r) },
     { label:'R$/m²',       col:'m2Medio',    num:true, render:r=>m2Cell(r) },
     { label:'Local',       col:'bairro',        render:r=>{
         const loc = [r.bairro, r.cidade].filter(v=>v&&v!=='—').join('/');
         return `<span style="color:var(--text2)">${loc||'—'}</span>`;
     }},
-    { label:'Estágio',     col:'estagio',       render:r=>r.estagio||'—' },
     { label:'Prazo',       col:'prazoEntrega', num:true, render:r=>prazoCell(r) },
     { label:'Estoque',     col:'estoque',    num:true, render:r=>`<strong>${r.estoque!=null?r.estoque:'—'}</strong>` },
     { label:'% Vend.',     col:'pctVendido', num:true, render:r=>pctVendidoCell(r) },
