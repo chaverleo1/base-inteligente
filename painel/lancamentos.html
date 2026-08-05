@@ -73,6 +73,55 @@ a { text-decoration: none; color: inherit; }
 .mapa-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .mapa-toolbar .filtro-chip { padding: 3px 10px; font-size: 11px; }
 
+/* ── RADAR DE MERCADO ────────────────────────────────────────────────── */
+.radar-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:24px; }
+.radar-kpi  { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+.radar-kpi-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
+.radar-kpi-val   { font-size:28px; font-weight:800; line-height:1; }
+.radar-kpi-sub   { font-size:11px; color:var(--text3); margin-top:4px; }
+.radar-kpi.kpi-suporte     { border-color:rgba(0,200,120,.3); }
+.radar-kpi.kpi-suporte     .radar-kpi-val { color:#00c878; }
+.radar-kpi.kpi-transicao   { border-color:rgba(255,152,0,.3); }
+.radar-kpi.kpi-transicao   .radar-kpi-val { color:#ff9800; }
+.radar-kpi.kpi-resistencia { border-color:rgba(255,107,107,.3); }
+.radar-kpi.kpi-resistencia .radar-kpi-val { color:#ff6b6b; }
+.radar-kpi.kpi-oport       { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.06); }
+.radar-kpi.kpi-oport       .radar-kpi-val { color:#ff6b6b; }
+
+.radar-secao { margin-bottom:28px; }
+.radar-secao-header { display:flex; align-items:baseline; gap:10px; margin-bottom:6px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,.07); }
+.radar-secao-titulo { font-size:13px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.radar-secao-sub    { font-size:11px; color:var(--text3); }
+.radar-secao-count  { margin-left:auto; font-size:11px; font-weight:700; padding:2px 9px; border-radius:99px; }
+.rs-suporte     .radar-secao-titulo { color:#00c878; }
+.rs-suporte     .radar-secao-count  { background:rgba(0,200,120,.15); color:#00c878; }
+.rs-transicao   .radar-secao-titulo { color:#ff9800; }
+.rs-transicao   .radar-secao-count  { background:rgba(255,152,0,.15); color:#ff9800; }
+.rs-resistencia .radar-secao-titulo { color:#ff6b6b; }
+.rs-resistencia .radar-secao-count  { background:rgba(255,107,107,.15); color:#ff6b6b; }
+
+.radar-tabela { width:100%; border-collapse:collapse; font-size:12px; }
+.radar-tabela th { padding:5px 10px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.07); white-space:nowrap; }
+.radar-tabela th.num { text-align:right; }
+.radar-tabela td { padding:7px 10px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
+.radar-tabela td.num { text-align:right; font-variant-numeric:tabular-nums; }
+.radar-tabela tr:hover td { background:rgba(255,255,255,.03); cursor:pointer; }
+.radar-tabela tr:last-child td { border-bottom:none; }
+.radar-nome { font-weight:600; color:var(--text); }
+.radar-pad  { font-size:10px; font-weight:700; letter-spacing:.04em; padding:1px 7px; border-radius:4px; background:rgba(255,255,255,.07); color:var(--text2); }
+.radar-pct-bar { display:inline-flex; align-items:center; gap:6px; }
+.radar-pct-track { width:52px; height:5px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; display:inline-block; vertical-align:middle; }
+.radar-pct-fill  { height:100%; border-radius:99px; }
+
+.radar-dist { display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; margin-bottom:28px; }
+.radar-dist-header { grid-column:1/-1; display:grid; grid-template-columns:100px 1fr 1fr 1fr; gap:2px; padding:4px 0; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); }
+.radar-dist-row    { display:grid; grid-template-columns:100px 1fr 1fr 1fr; gap:2px; }
+.radar-dist-cell   { padding:7px 12px; background:var(--surface2); border-radius:4px; font-size:12px; font-variant-numeric:tabular-nums; }
+.radar-dist-cell.pad-label { font-weight:700; color:var(--text2); font-size:11px; }
+.radar-dist-cell.sup { background:rgba(0,200,120,.09);   color:#00c878; font-weight:600; }
+.radar-dist-cell.tra { background:rgba(255,152,0,.08);   color:#ff9800; font-weight:600; }
+.radar-dist-cell.res { background:rgba(255,107,107,.09); color:#ff6b6b; font-weight:600; }
+
 /* ── PAPEL DE MERCADO — suporte / transição / resistência ─────────────── */
 .mapa-papel-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.06); }
 .mapa-papel-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); white-space: nowrap; }
@@ -844,6 +893,7 @@ select.form-input option { background: var(--surface2); }
   <!-- ABAS -->
   <div class="lanc-tabs">
     <button class="lanc-tab active" id="tabBtnMapa" onclick="mudarAbaLancamentos('mapa')">Mapa Geral</button>
+    <button class="lanc-tab" id="tabBtnRadar" onclick="mudarAbaLancamentos('radar')">📡 Radar</button>
     <button class="lanc-tab" id="tabBtnBusca" onclick="mudarAbaLancamentos('busca')">Busca</button>
     <button class="lanc-tab" id="tabBtnEstrategias" onclick="mudarAbaLancamentos('estrategias')">Estratégias</button>
     <button class="lanc-tab" id="tabBtnInteligencia" onclick="mudarAbaLancamentos('inteligencia')">Inteligência</button>
@@ -1094,6 +1144,11 @@ select.form-input option { background: var(--surface2); }
       <span class="motor-hint">Extrai pro mesmo formulário de revisão da aba "Extrair Modelo 1".</span>
     </div>
   </div>
+  </div>
+
+  <!-- RADAR DE MERCADO -->
+  <div id="tabPainelRadar" class="tab-panel" style="display:none">
+    <div id="radarConteudo"></div>
   </div>
 
   <!-- MAPA GERAL -->
@@ -1964,6 +2019,7 @@ function atualizarUrlLink(val) {
 // "modelos" (a aba de import se fundiu com Modelos e Padrão Vendedor). ──────
 function mudarAbaLancamentos(nome) {
   document.getElementById('tabPainelMapa').style.display          = nome === 'mapa'          ? '' : 'none';
+  document.getElementById('tabPainelRadar').style.display         = nome === 'radar'         ? '' : 'none';
   document.getElementById('tabPainelBusca').style.display         = nome === 'busca'         ? '' : 'none';
   document.getElementById('tabPainelEstrategias').style.display   = nome === 'estrategias'   ? '' : 'none';
   document.getElementById('tabPainelInteligencia').style.display  = nome === 'inteligencia'  ? '' : 'none';
@@ -1973,6 +2029,7 @@ function mudarAbaLancamentos(nome) {
   document.getElementById('tabPainelOutros').style.display        = nome === 'outros'        ? '' : 'none';
   document.getElementById('tabPainelModelos').style.display       = nome === 'modelos'       ? '' : 'none';
   document.getElementById('tabBtnMapa').classList.toggle('active', nome === 'mapa');
+  document.getElementById('tabBtnRadar').classList.toggle('active', nome === 'radar');
   document.getElementById('tabBtnBusca').classList.toggle('active', nome === 'busca');
   document.getElementById('tabBtnEstrategias').classList.toggle('active', nome === 'estrategias');
   document.getElementById('tabBtnInteligencia').classList.toggle('active', nome === 'inteligencia');
@@ -1987,7 +2044,8 @@ function mudarAbaLancamentos(nome) {
   if (nome === 'applancamentos') carregarComentariosAppLazy_();
   // Re-renderiza o gráfico ao voltar pra aba Mapa Geral (canvas oculto tinha
   // offsetWidth=0 quando os dados foram carregados pela primeira vez).
-  if (nome === 'mapa') requestAnimationFrame(renderGraficoEstoque_);
+  if (nome === 'mapa')  requestAnimationFrame(renderGraficoEstoque_);
+  if (nome === 'radar') renderRadarMercado_();
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
@@ -3029,6 +3087,165 @@ function setMapaPapelFiltro_(papel) {
   _mapaPapelFiltro = papel;
   renderMapaPapelFiltros_();
   renderMapaGeral_();
+}
+
+// ── RADAR DE MERCADO ────────────────────────────────────────────────────────
+function renderRadarMercado_() {
+  const el = document.getElementById('radarConteudo');
+  if (!el) return;
+  const rows = _mapaRows;
+  if (!rows.length) {
+    el.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text3);font-size:13px">Nenhum dado carregado. Acesse o Mapa Geral primeiro.</div>';
+    return;
+  }
+
+  // Classifica cada linha
+  const sup = [], tra = [], res = [], oport = [];
+  rows.forEach(r => {
+    const p = papelMercado_(r);
+    if (p === 'suporte')      { sup.push(r); }
+    else if (p === 'transicao')   { tra.push(r); }
+    else if (p === 'resistencia') { res.push(r); if (isOportunidade_(r)) oport.push(r); }
+  });
+
+  // KPI bar
+  const kpiHtml = `
+    <div class="radar-kpis">
+      <div class="radar-kpi kpi-suporte">
+        <div class="radar-kpi-label">🟢 Suporte</div>
+        <div class="radar-kpi-val">${sup.length}</div>
+        <div class="radar-kpi-sub">Alta absorção &gt;75%</div>
+      </div>
+      <div class="radar-kpi kpi-transicao">
+        <div class="radar-kpi-label">🟡 Transição</div>
+        <div class="radar-kpi-val">${tra.length}</div>
+        <div class="radar-kpi-sub">Absorção 51–75%</div>
+      </div>
+      <div class="radar-kpi kpi-resistencia">
+        <div class="radar-kpi-label">🔴 Resistência</div>
+        <div class="radar-kpi-val">${res.length}</div>
+        <div class="radar-kpi-sub">Baixa absorção ≤50%</div>
+      </div>
+      <div class="radar-kpi kpi-oport">
+        <div class="radar-kpi-label">⚡ Oportunidades</div>
+        <div class="radar-kpi-val">${oport.length}</div>
+        <div class="radar-kpi-sub">Resistência + Score ≥60</div>
+      </div>
+    </div>`;
+
+  // Helper: tabela ranqueada
+  function radarTable(lista, cols) {
+    if (!lista.length) return '<p style="color:var(--text3);font-size:12px;padding:10px 0">Sem dados suficientes.</p>';
+    const ths = cols.map(c => `<th class="${c.num ? 'num' : ''}">${c.label}</th>`).join('');
+    const trs = lista.map((r, idx) => {
+      const tds = cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.render(r, idx)}</td>`).join('');
+      const ri = rows.indexOf(r);
+      return `<tr onclick="mudarAbaLancamentos('mapa');setTimeout(()=>editarEmpMapa_(${ri}),80)" title="Clique para editar">${tds}</tr>`;
+    }).join('');
+    return `<div style="overflow-x:auto"><table class="radar-tabela"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
+  }
+
+  function pctBar(pct, cor) {
+    return `<div class="radar-pct-bar"><div class="radar-pct-track"><div class="radar-pct-fill" style="width:${Math.min(pct,100)}%;background:${cor}"></div></div><span>${pct}%</span></div>`;
+  }
+
+  // Suporte — ordenado por pctVendido DESC, top 15
+  const supSorted = [...sup].sort((a,b)=>(b.pctVendido||0)-(a.pctVendido||0)).slice(0,15);
+  const supCols = [
+    { label:'#',            render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
+    { label:'Empreendimento', render:r=>`<span class="radar-nome">${r.nome}</span>` },
+    { label:'Padrão',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Estágio',      render:r=>r.estagio||'—' },
+    { label:'% Vend.',      num:true, render:r=>pctBar(r.pctVendido||0,'#00c878') },
+    { label:'QTD',          num:true, render:r=>r.estoque!=null?r.estoque:'—' },
+  ];
+
+  // Resistência — ordenado por scoreVendedor DESC, top 15
+  const resSorted = [...res].sort((a,b)=>(b.scoreVendedor||0)-(a.scoreVendedor||0)).slice(0,15);
+  const resCols = [
+    { label:'#',            render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
+    { label:'Empreendimento', render:r=>{
+        const badge = isOportunidade_(r) ? '<span class="badge-oportunidade" style="margin-left:6px;font-size:9px">OPORT.</span>' : '';
+        return `<span class="radar-nome">${r.nome}</span>${badge}`;
+    }},
+    { label:'Padrão',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Estágio',      render:r=>r.estagio||'—' },
+    { label:'% Vend.',      num:true, render:r=>pctBar(r.pctVendido||0,'#ff6b6b') },
+    { label:'Score V.',     num:true, render:r=>`<span style="color:${(r.scoreVendedor||0)>=60?'#ff6b6b':'var(--text2)'};font-weight:700">${r.scoreVendedor!=null?r.scoreVendedor:'—'}</span>` },
+  ];
+
+  // Transição — ordenado por comp (tração) DESC, top 10
+  const traSorted = [...tra].sort((a,b)=>(b.comp||0)-(a.comp||0)).slice(0,10);
+  const traCols = [
+    { label:'#',            render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
+    { label:'Empreendimento', render:r=>`<span class="radar-nome">${r.nome}</span>` },
+    { label:'Padrão',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Estágio',      render:r=>r.estagio||'—' },
+    { label:'% Vend.',      num:true, render:r=>pctBar(r.pctVendido||0,'#ff9800') },
+    { label:'Tração',       num:true, render:r=>r.comp!=null?r.comp:'—' },
+  ];
+
+  // Distribuição por padrão
+  const PADS = ['Popular','Médio','Alto','Luxo'];
+  const dist = {};
+  PADS.forEach(p => { dist[p] = { sup:0, tra:0, res:0, total:0 }; });
+  rows.forEach(r => {
+    const p = r.padrao;
+    if (!dist[p]) return;
+    const papel = papelMercado_(r);
+    dist[p].total++;
+    if (papel === 'suporte')      dist[p].sup++;
+    else if (papel === 'transicao')   dist[p].tra++;
+    else if (papel === 'resistencia') dist[p].res++;
+  });
+  const distRows = PADS.filter(p => dist[p].total > 0).map(p => {
+    const d = dist[p];
+    return `
+      <div class="radar-dist-row">
+        <div class="radar-dist-cell pad-label">${p}</div>
+        <div class="radar-dist-cell sup">🟢 ${d.sup}</div>
+        <div class="radar-dist-cell tra">🟡 ${d.tra}</div>
+        <div class="radar-dist-cell res">🔴 ${d.res}</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = kpiHtml +
+    `<div class="radar-secao rs-suporte">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo">🟢 Frente 1 — Suporte</span>
+        <span class="radar-secao-sub">Alta absorção · % vendido DESC</span>
+        <span class="radar-secao-count">${sup.length}</span>
+      </div>
+      ${radarTable(supSorted, supCols)}
+    </div>` +
+    `<div class="radar-secao rs-resistencia">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo">🔴 Frente 2 — Resistência</span>
+        <span class="radar-secao-sub">Baixa absorção · urgência do vendedor DESC</span>
+        <span class="radar-secao-count">${res.length}</span>
+      </div>
+      ${radarTable(resSorted, resCols)}
+    </div>` +
+    `<div class="radar-secao rs-transicao">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo">🟡 Transição</span>
+        <span class="radar-secao-sub">Absorção moderada · tração DESC</span>
+        <span class="radar-secao-count">${tra.length}</span>
+      </div>
+      ${radarTable(traSorted, traCols)}
+    </div>` +
+    `<div class="radar-secao">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo" style="color:var(--text2)">📊 Distribuição por Padrão</span>
+        <span class="radar-secao-sub">Concentração de papéis por segmento</span>
+      </div>
+      <div class="radar-dist">
+        <div class="radar-dist-header">
+          <div>Padrão</div><div>🟢 Suporte</div><div>🟡 Transição</div><div>🔴 Resistência</div>
+        </div>
+        ${distRows}
+      </div>
+    </div>`;
 }
 
 let _listaPadroes = [];
