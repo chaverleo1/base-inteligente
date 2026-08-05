@@ -4243,12 +4243,14 @@ function renderMapaGeral_() {
     if (!all.length) { wrap.innerHTML = ''; return; }
 
     // Agrupa por estágio, ordena pela ordem canônica
-    const ORDEM = { 'Em planta': 1, 'Em obras': 2, 'Pronto': 3, 'Pronto novo': 4, 'Entregue': 5 };
+    // "Em planta" é unificado com "Em obras" na linha final
+    const ORDEM = { 'Em obras': 1, 'Pronto': 2, 'Pronto novo': 3, 'Entregue': 4 };
     const porEstagio = {};
     all.forEach(r => {
       if (!r.estagio || r.estagio === '—') return;
-      if (!porEstagio[r.estagio]) porEstagio[r.estagio] = [];
-      porEstagio[r.estagio].push(r);
+      const est = r.estagio === 'Em planta' ? 'Em obras' : r.estagio;
+      if (!porEstagio[est]) porEstagio[est] = [];
+      porEstagio[est].push(r);
     });
     const estagios = Object.keys(porEstagio).sort((a, b) => (ORDEM[a] || 99) - (ORDEM[b] || 99));
 
