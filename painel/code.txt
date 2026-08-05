@@ -6069,13 +6069,19 @@ function montarBlocoInteracaoCardsEmail_(d) {
     var favoritos = comSinal.filter(function(r) { return r.favoritado; });
     var naoClicou = comSinal.filter(function(r) { return !r.precoVisto; });
 
+    function codComNome_(r) {
+      var cod = r.codSeq || ('Cod. ' + String(r.rank).padStart(3,'0'));
+      var emp = r.id || '-';
+      var nome = r.nome ? ' (' + r.nome + ')' : '';
+      return cod + ' | ' + emp + nome;
+    }
     return montarTabelaEmail_('★ FAVORITOS (o cliente curtiu ♥ no app)', favoritos, [
-      { label: 'APRESENTADO', width: 22, get: function(r) { return (r.codSeq || ('Cod. ' + String(r.rank).padStart(3,'0'))) + ' | ' + (r.id || '-'); } },
-      { label: 'BAIRRO',      width: 22, get: function(r) { return r.bairro || '-'; } },
-      { label: 'PREÇO',       width: 14, get: function(r) { return formatarMoedaEmail_(r.precoAPartir); } },
+      { label: 'APRESENTADO',  width: 46, get: codComNome_ },
+      { label: 'BAIRRO',       width: 22, get: function(r) { return r.bairro || '-'; } },
+      { label: 'PREÇO',        width: 14, get: function(r) { return formatarMoedaEmail_(r.precoAPartir); } },
     ]) + '\n//\n//\n//' + montarTabelaEmail_('CARDS QUE O CLIENTE NÃO CLICOU EM "VER PREÇO"', naoClicou, [
-      { label: 'APRESENTADO', width: 22, get: function(r) { return (r.codSeq || ('Cod. ' + String(r.rank).padStart(3,'0'))) + ' | ' + (r.id || '-'); } },
-      { label: 'BAIRRO',      width: 22, get: function(r) { return r.bairro || '-'; } },
+      { label: 'APRESENTADO',  width: 46, get: codComNome_ },
+      { label: 'BAIRRO',       width: 22, get: function(r) { return r.bairro || '-'; } },
     ]);
   } catch (e) {
     return '';
