@@ -1390,40 +1390,38 @@ function aplicarPresetURL_() {
 
   // ── 1. Objetivo ─────────────────────────────────────────────────────────
   D.objetivo = cfg.objetivo;
+  // Marca o botão cujo onclick contém o valor do objetivo
   document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(btn => {
-    const val = btn.getAttribute('onclick').match(/'([^']+)'\)$/)?.[1];
-    btn.classList.toggle('on', val === cfg.objetivo);
+    const oc = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('on', oc.includes("'" + cfg.objetivo + "'"));
   });
   const blocoPadrao = document.getElementById('blocoPadraoWrap');
   if (blocoPadrao) blocoPadrao.style.display = '';
 
   // ── 2. Padrões ──────────────────────────────────────────────────────────
+  // Seta D.padroes com os padrões do preset (independe de botões existirem)
   D.padroes.clear();
+  cfg.padroes.forEach(p => D.padroes.add(p));
+  // Marca botões gerados por montarBlocoPadrao_ usando texto visível do botão
   document.querySelectorAll('#tagsPadrao .obj-tag-btn').forEach(btn => {
-    const val = btn.getAttribute('onclick').match(/'([^']+)'\)$/)?.[1];
-    if (val && cfg.padroes.includes(val)) {
-      btn.classList.add('on');
-      D.padroes.add(val);
-    }
+    const nome = (btn.querySelector('.padrao-btn-nome') || btn).textContent.trim();
+    btn.classList.toggle('on', cfg.padroes.includes(nome));
   });
-  // Padrões do preset que ainda não apareceram nos botões (inventário ainda
-  // não disponível) são ignorados silenciosamente — o funil roda igual.
   atualizarPadraoPhrase_();
 
   // ── 3. Situações (step 2 — "Pronto para Morar" / "Em Obras") ──────────
+  D.situacoes.clear();
   if (cfg.situacoes && cfg.situacoes.length) {
-    D.situacoes.clear();
     cfg.situacoes.forEach(val => {
-      const btn = document.querySelector(`#tagsSituacao .s2-sit-btn[onclick*="${val}"]`);
-      if (btn) { btn.classList.add('on'); D.situacoes.add(val); }
+      D.situacoes.add(val);
+      const btn = document.querySelector(`#tagsSituacao [onclick*="'${val}'"]`);
+      if (btn) btn.classList.add('on');
     });
   }
 
   // ── 4. Pula direto para os sliders (step 2) ────────────────────────────
-  if (D.padroes.size > 0) {
-    montarConfigIniciais_();
-    irParaStep(2);
-  }
+  montarConfigIniciais_();
+  irParaStep(2);
 }
 
 // Anima um contador de 0 até o valor real (Tela 1, "Temos hoje X lançamentos") --
