@@ -308,8 +308,25 @@ select.form-input option { background: var(--surface2); }
 .fatia-b { background: rgba(50,150,255,.18);  color: #3296ff; }
 .fatia-c { background: rgba(255,152,0,.18);   color: #d4880a; }
 .fatia-d { background: rgba(255,107,107,.20); color: #e05a5a; }
-/* Tabela resumo de faixas por estágio (acima do gráfico) */
-.grafico-resumo-tabela { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 11px; }
+/* Tabela resumo de faixas por estágio — agrupada por padrão */
+.resumo-blocos-wrap {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
+}
+.resumo-bloco {
+  flex: 1 1 200px; min-width: 160px;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px; padding: 8px 10px; overflow: hidden;
+}
+.resumo-bloco-total {
+  flex: 1 1 100%; border-color: rgba(255,255,255,.13);
+  background: rgba(255,255,255,.055);
+}
+.resumo-bloco-titulo {
+  font-size: 10px; font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+}
+.resumo-bloco-total .resumo-bloco-titulo { color: var(--text); }
+.grafico-resumo-tabela { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 11px; }
 .grafico-resumo-tabela th {
   padding: 4px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .04em; text-align: center;
@@ -4245,86 +4262,98 @@ function renderMapaGeral_() {
     const all = (typeof _mapaRows !== 'undefined') ? _mapaRows : [];
     if (!all.length) { wrap.innerHTML = ''; return; }
 
-    // Agrupa por estágio, ordena pela ordem canônica
-    // "Em planta" é unificado com "Em obras" na linha final
-    const ORDEM = { 'Em obras': 1, 'Pronto': 2, 'Pronto novo': 3, 'Entregue': 4 };
-    const porEstagio = {};
-    all.forEach(r => {
-      if (!r.estagio || r.estagio === '—') return;
-      const est = r.estagio === 'Em planta' ? 'Em obras' : r.estagio;
-      if (!porEstagio[est]) porEstagio[est] = [];
-      porEstagio[est].push(r);
-    });
-    const estagios = Object.keys(porEstagio).sort((a, b) => (ORDEM[a] || 99) - (ORDEM[b] || 99));
-
-    // Cores das faixas (text + bg) — mesmas do gráfico
+    const ORDEM_EST  = { 'Em obras': 1, 'Pronto': 2, 'Pronto novo': 3, 'Entregue': 4 };
+    const ORDEM_PAD  = ['Popular', 'Médio', 'Alto', 'Luxo'];
+    const FAIXA_LABELS = ['A', 'B', 'C', 'D'];
     const COR = {
       A: { txt: '#00c878', bg: 'rgba(0,200,120,.13)'   },
       B: { txt: '#3296ff', bg: 'rgba(50,150,255,.13)'  },
       C: { txt: '#ff9800', bg: 'rgba(255,152,0,.11)'   },
       D: { txt: '#ff6b6b', bg: 'rgba(255,107,107,.14)' },
     };
-    const FAIXA_LABELS = ['A', 'B', 'C', 'D'];
+    const normEst = e => (e === 'Em planta' ? 'Em obras' : e);
 
-    // Cabeçalho
-    let html = `<table class="grafico-resumo-tabela">
-      <thead><tr>
-        <th class="col-estagio">Estágio</th>
-        ${FAIXA_LABELS.map(f =>
-          `<th style="color:${COR[f].txt}">${f}</th>`
-        ).join('')}
-        <th style="color:var(--text2)">Total</th>
-      </tr></thead><tbody>`;
-
-    estagios.forEach(est => {
-      const lista = porEstagio[est];
-      const total = lista.length;
-      // Conta e soma estoque por faixa
-      const cnt = { A: 0, B: 0, C: 0, D: 0 };
-      const est_ = { A: 0, B: 0, C: 0, D: 0 }; // soma de r.estoque
-      lista.forEach(r => {
-        const f = fatiaDesteEmp_(r.pctVendido);
-        cnt[f]++;
-        est_[f] += (r.estoque || 0);
+    // Gera uma mini-tabela (estágio × faixa) para um subconjunto de rows
+    function renderBloco(rows, label, isTotal) {
+      if (!rows.length) return '';
+      const porEst = {};
+      rows.forEach(r => {
+        if (!r.estagio || r.estagio === '—') return;
+        const est = normEst(r.estagio);
+        if (!porEst[est]) porEst[est] = [];
+        porEst[est].push(r);
       });
-      const totalEst = Object.values(est_).reduce((a, b) => a + b, 0);
+      const estagios = Object.keys(porEst).sort((a, b) => (ORDEM_EST[a] || 99) - (ORDEM_EST[b] || 99));
 
-      html += `<tr>
-        <td class="col-estagio">${est}</td>
-        ${FAIXA_LABELS.map(f => {
-          if (!cnt[f]) return `<td class="cell-vazio">—</td>`;
-          const pct = Math.round(cnt[f] / total * 100);
-          return `<td style="background:${COR[f].bg}">
-            <span class="cell-faixa">
+      let t = `<div class="resumo-bloco${isTotal ? ' resumo-bloco-total' : ''}">
+        <div class="resumo-bloco-titulo">${label}</div>
+        <table class="grafico-resumo-tabela">
+          <thead><tr>
+            <th class="col-estagio">Estágio</th>
+            ${FAIXA_LABELS.map(f => `<th style="color:${COR[f].txt}">${f}</th>`).join('')}
+            <th style="color:var(--text2)">Total</th>
+          </tr></thead><tbody>`;
+
+      estagios.forEach(est => {
+        const lista = porEst[est];
+        const total = lista.length;
+        const cnt = { A: 0, B: 0, C: 0, D: 0 };
+        lista.forEach(r => { cnt[fatiaDesteEmp_(r.pctVendido)]++; });
+        t += `<tr>
+          <td class="col-estagio">${est}</td>
+          ${FAIXA_LABELS.map(f => {
+            if (!cnt[f]) return `<td class="cell-vazio">—</td>`;
+            const pct = Math.round(cnt[f] / total * 100);
+            return `<td style="background:${COR[f].bg}"><span class="cell-faixa">
               <span class="cf-cnt" style="color:${COR[f].txt}">${cnt[f]}</span>
               <span class="cf-pct">|&nbsp;${pct}%</span>
-            </span>
-          </td>`;
+            </span></td>`;
+          }).join('')}
+          <td style="color:var(--text2);font-weight:600">${total}</td>
+        </tr>`;
+      });
+
+      // Linha de total do bloco
+      const cntT = { A: 0, B: 0, C: 0, D: 0 };
+      rows.forEach(r => { cntT[fatiaDesteEmp_(r.pctVendido)]++; });
+      const gt = rows.length;
+      t += `<tr style="border-top:1px solid rgba(255,255,255,.10)">
+        <td class="col-estagio" style="color:var(--text)">TOTAL</td>
+        ${FAIXA_LABELS.map(f => {
+          if (!cntT[f]) return `<td class="cell-vazio">—</td>`;
+          const pct = Math.round(cntT[f] / gt * 100);
+          return `<td style="background:${COR[f].bg}"><span class="cell-faixa">
+            <span class="cf-cnt" style="color:${COR[f].txt}">${cntT[f]}</span>
+            <span class="cf-pct">|&nbsp;${pct}%</span>
+          </span></td>`;
         }).join('')}
-        <td style="color:var(--text2);font-weight:600">${total}</td>
+        <td style="color:var(--text);font-weight:700">${gt}</td>
       </tr>`;
+
+      t += '</tbody></table></div>';
+      return t;
+    }
+
+    // Agrupa rows por padrão
+    const porPad = {};
+    all.forEach(r => {
+      const p = r.padrao || '—';
+      if (!porPad[p]) porPad[p] = [];
+      porPad[p].push(r);
     });
 
-    // Linha de totais gerais
-    const cntTotal = { A: 0, B: 0, C: 0, D: 0 };
-    all.forEach(r => { const f = fatiaDesteEmp_(r.pctVendido); cntTotal[f]++; });
-    const grandTotal = all.length;
-    html += `<tr style="border-top:1px solid rgba(255,255,255,.10)">
-      <td class="col-estagio" style="color:var(--text)">TOTAL</td>
-      ${FAIXA_LABELS.map(f => {
-        if (!cntTotal[f]) return `<td class="cell-vazio">—</td>`;
-        const pct = Math.round(cntTotal[f] / grandTotal * 100);
-        return `<td style="background:${COR[f].bg}">
-          <span class="cell-faixa">
-            <span class="cf-cnt" style="color:${COR[f].txt}">${cntTotal[f]}</span>
-            <span class="cf-pct">|&nbsp;${pct}%</span>
-          </span>
-        </td>`;
-      }).join('')}
-      <td style="color:var(--text);font-weight:700">${grandTotal}</td>
-    </tr>`;
+    let html = '<div class="resumo-blocos-wrap">';
+    ORDEM_PAD.forEach(p => {
+      if (porPad[p] && porPad[p].length) html += renderBloco(porPad[p], p.toUpperCase());
+    });
+    // Padrões fora da ordem canônica
+    Object.keys(porPad).forEach(p => {
+      if (!ORDEM_PAD.includes(p)) html += renderBloco(porPad[p], p.toUpperCase());
+    });
+    // Bloco TOTAL GERAL
+    html += renderBloco(all, 'TOTAL GERAL', true);
+    html += '</div>';
 
-    html += '</tbody></table>';
     wrap.innerHTML = html;
   }
 
