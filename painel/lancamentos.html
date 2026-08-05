@@ -3175,17 +3175,55 @@ function renderPrazoCelula_(r) {
   return `<span style="color:var(--text3)">${val}</span>`;
 }
 
-function papelMercado_(r) {
-  const pct = r.pctVendido;
-  if (pct == null || pct < 0) return null;
-  if (pct > 75) return 'suporte';
-  if (pct > 50) return 'transicao';
-  return 'resistencia';
+// Retorna o tempo atual de mercado em meses:
+//   Em obras / Em planta → meses desde o lançamento  (r.prazoVenda)
+//   Pronto novo          → meses desde a entrega (-prazoEntregaMeses_, positivo = já entregue)
+// Retorna null quando os dados são insuficientes.
+function prazoAtualMeses_(r) {
+  const est = r.estagio || '';
+  if (/em obras|em planta/i.test(est)) return (r.prazoVenda > 0 ? r.prazoVenda : null);
+  if (/pronto novo/i.test(est)) {
+    const raw = prazoEntregaMeses_(r);   // + = futuro, - = passado
+    if (raw === null) return null;
+    const meses = -raw;                  // positivo = entregue há X meses
+    return meses >= 0 ? meses : null;
+  }
+  return null;
 }
 
-// Retorna true se o empreendimento é resistência com alta urgência do vendedor
+// Classifica pelo papel de mercado baseado em ESTOQUE × TEMPO.
+//
+// SUPORTE    → produto recente com estoque disponível: absorção esperada rápida.
+//   Em obras / Em planta : prazoVenda ≤ 12 meses desde lançamento
+//   Pronto novo           : ≤ 6 meses desde a entrega
+//
+// RESISTÊNCIA → produto travado: estoque parado há muito tempo.
+//   Em obras / Em planta : prazoVenda ≥ 24 meses desde lançamento
+//   Pronto novo           : ≥ 12 meses desde a entrega
+//
+// TRANSIÇÃO  → faixa intermediária entre os dois extremos
+// null       → sem dados suficientes ou estoque zerado (não classificado)
+function papelMercado_(r) {
+  if (!r.estoque || r.estoque <= 0) return null;
+  const prazo = prazoAtualMeses_(r);
+  if (prazo === null) return null;
+  const est = r.estagio || '';
+  if (/em obras|em planta/i.test(est)) {
+    if (prazo <= 12) return 'suporte';
+    if (prazo >= 24) return 'resistencia';
+    return 'transicao';
+  }
+  if (/pronto novo/i.test(est)) {
+    if (prazo <= 6)  return 'suporte';
+    if (prazo >= 12) return 'resistencia';
+    return 'transicao';
+  }
+  return null;
+}
+
+// Oportunidade = resistência com estoque relevante (≥ 20 unidades paradas há muito tempo)
 function isOportunidade_(r) {
-  return papelMercado_(r) === 'resistencia' && (r.scoreVendedor || 0) >= 60;
+  return papelMercado_(r) === 'resistencia' && (r.estoque || 0) >= 20;
 }
 
 function renderMapaPapelFiltros_() {
@@ -3216,9 +3254,9 @@ function setMapaPapelFiltro_(papel) {
 
 // ── RADAR DE MERCADO ────────────────────────────────────────────────────────
 let _radarSort = {
-  sup: { col: 'pctVendido',    dir: 'desc' },
-  res: { col: 'scoreVendedor', dir: 'desc' },
-  tra: { col: 'comp',          dir: 'desc' },
+  sup: { col: 'estoque',    dir: 'desc' },
+  res: { col: 'estoque',    dir: 'desc' },
+  tra: { col: 'estoque',    dir: 'desc' },
 };
 
 function setRadarSort_(frente, col) {
@@ -3248,44 +3286,53 @@ function renderRadarMercado_() {
     else if (p === 'resistencia') { res.push(r); if (isOportunidade_(r)) oport.push(r); }
   });
 
-  // KPI bar
+  // KPI bar — subtítulos refletem a nova lógica estoque × tempo
   const kpiHtml = `
     <div class="radar-kpis">
       <div class="radar-kpi kpi-suporte">
         <div class="radar-kpi-label">🟢 Suporte</div>
         <div class="radar-kpi-val">${sup.length}</div>
-        <div class="radar-kpi-sub">Alta absorção &gt;75%</div>
+        <div class="radar-kpi-sub">Estoque alto · lançamento recente</div>
       </div>
       <div class="radar-kpi kpi-transicao">
         <div class="radar-kpi-label">🟡 Transição</div>
         <div class="radar-kpi-val">${tra.length}</div>
-        <div class="radar-kpi-sub">Absorção 51–75%</div>
+        <div class="radar-kpi-sub">Estoque moderado · prazo intermediário</div>
       </div>
       <div class="radar-kpi kpi-resistencia">
         <div class="radar-kpi-label">🔴 Resistência</div>
         <div class="radar-kpi-val">${res.length}</div>
-        <div class="radar-kpi-sub">Baixa absorção ≤50%</div>
+        <div class="radar-kpi-sub">Estoque parado · tempo longo no mercado</div>
       </div>
       <div class="radar-kpi kpi-oport">
         <div class="radar-kpi-label">⚡ Oportunidades</div>
         <div class="radar-kpi-val">${oport.length}</div>
-        <div class="radar-kpi-sub">Resistência + Score ≥60</div>
+        <div class="radar-kpi-sub">Resistência com ≥ 20 unidades paradas</div>
       </div>
     </div>`;
 
-  function pctBar(pct, cor) {
-    return `<div class="radar-pct-bar"><div class="radar-pct-track"><div class="radar-pct-fill" style="width:${Math.min(pct||0,100)}%;background:${cor}"></div></div><span>${pct||0}%</span></div>`;
+  // Renderiza célula de prazo com cor por contexto
+  function prazoCell(r) {
+    const p = prazoAtualMeses_(r);
+    if (p === null) return '<span style="color:var(--text3)">—</span>';
+    const est = r.estagio || '';
+    const isObras  = /em obras|em planta/i.test(est);
+    const isPronto = /pronto novo/i.test(est);
+    let cor = 'var(--text2)';
+    if (isObras)  cor = p <= 12 ? '#00c878' : p >= 24 ? '#ff6b6b' : '#ff9800';
+    if (isPronto) cor = p <= 6  ? '#00c878' : p >= 12 ? '#ff6b6b' : '#ff9800';
+    return `<span style="font-weight:700;color:${cor}">${p}m</span>`;
   }
 
   // Valor numérico de uma coluna para ordenação
   function colVal(r, col) {
-    if (col === 'pctVendido')    return r.pctVendido    != null ? r.pctVendido    : -1;
-    if (col === 'estoque')       return r.estoque       != null ? Number(r.estoque): -1;
-    if (col === 'scoreVendedor') return r.scoreVendedor != null ? r.scoreVendedor  : -1;
-    if (col === 'comp')          return r.comp          != null ? r.comp           : -1;
-    if (col === 'nome')          return (r.nome || '').toLowerCase();
-    if (col === 'padrao')        return (r.padrao || '').toLowerCase();
-    if (col === 'estagio')       return r.estagioOrd != null ? r.estagioOrd : -1;
+    if (col === 'estoque')     return r.estoque       != null ? Number(r.estoque) : -1;
+    if (col === 'prazoAtual')  { const p = prazoAtualMeses_(r); return p !== null ? p : -1; }
+    if (col === 'pctVendido')  return r.pctVendido    != null ? r.pctVendido     : -1;
+    if (col === 'comp')        return r.comp          != null ? r.comp           : -1;
+    if (col === 'nome')        return (r.nome   || '').toLowerCase();
+    if (col === 'padrao')      return (r.padrao || '').toLowerCase();
+    if (col === 'estagio')     return r.estagioOrd != null ? r.estagioOrd : -1;
     return 0;
   }
 
@@ -3326,38 +3373,24 @@ function renderRadarMercado_() {
     return `<div style="overflow-x:auto"><table class="radar-tabela"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
   }
 
-  // Colunas — Suporte
-  const supCols = [
+  // Colunas compartilhadas: base para suporte, resistência e transição
+  // Ordenação padrão: estoque DESC | col Prazo mostra tempo desde lançamento/entrega
+  const colsBase = (frente, showOport) => [
     { label:'#',              render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
-    { label:'Empreendimento', col:'nome',         render:r=>`<span class="radar-nome">${r.nome}</span>` },
-    { label:'Padrão',         col:'padrao',        render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
-    { label:'Estágio',        col:'estagio',       render:r=>r.estagio||'—' },
-    { label:'% Vend.',        col:'pctVendido', num:true, render:r=>pctBar(r.pctVendido,'#00c878') },
-    { label:'QTD Estq',       col:'estoque',    num:true, render:r=>r.estoque!=null?r.estoque:'—' },
-  ];
-
-  // Colunas — Resistência
-  const resCols = [
-    { label:'#',              render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
-    { label:'Empreendimento', col:'nome',          render:r=>{
-        const badge = isOportunidade_(r) ? '<span class="badge-oportunidade" style="margin-left:6px;font-size:9px">OPORT.</span>' : '';
+    { label:'Empreendimento', col:'nome', render:r=>{
+        const badge = showOport && isOportunidade_(r)
+          ? '<span class="badge-oportunidade" style="margin-left:6px;font-size:9px">OPORT.</span>' : '';
         return `<span class="radar-nome">${r.nome}</span>${badge}`;
     }},
-    { label:'Padrão',         col:'padrao',         render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
-    { label:'Estágio',        col:'estagio',        render:r=>r.estagio||'—' },
-    { label:'% Vend.',        col:'pctVendido',  num:true, render:r=>pctBar(r.pctVendido,'#ff6b6b') },
-    { label:'Score V.',       col:'scoreVendedor',num:true, render:r=>`<span style="color:${(r.scoreVendedor||0)>=60?'#ff6b6b':'var(--text2)'};font-weight:700">${r.scoreVendedor!=null?r.scoreVendedor:'—'}</span>` },
+    { label:'Padrão',  col:'padrao',    render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Estágio', col:'estagio',   render:r=>r.estagio||'—' },
+    { label:'Prazo',   col:'prazoAtual',num:true, render:r=>prazoCell(r) },
+    { label:'Estoque', col:'estoque',   num:true, render:r=>`<strong>${r.estoque!=null?r.estoque:'—'}</strong>` },
   ];
 
-  // Colunas — Transição
-  const traCols = [
-    { label:'#',              render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
-    { label:'Empreendimento', col:'nome',        render:r=>`<span class="radar-nome">${r.nome}</span>` },
-    { label:'Padrão',         col:'padrao',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
-    { label:'Estágio',        col:'estagio',      render:r=>r.estagio||'—' },
-    { label:'% Vend.',        col:'pctVendido', num:true, render:r=>pctBar(r.pctVendido,'#ff9800') },
-    { label:'Tração',         col:'comp',        num:true, render:r=>r.comp!=null?r.comp:'—' },
-  ];
+  const supCols = colsBase('sup', false);
+  const resCols = colsBase('res', true);
+  const traCols = colsBase('tra', false);
 
   // Distribuição por padrão
   const PADS = ['Popular','Médio','Alto','Luxo'];
@@ -3387,7 +3420,7 @@ function renderRadarMercado_() {
     `<div class="radar-secao rs-suporte">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🟢 Frente 1 — Suporte</span>
-        <span class="radar-secao-sub">Alta absorção — clique no cabeçalho para ordenar</span>
+        <span class="radar-secao-sub">Maior estoque + menor tempo desde lançamento/entrega · ordenado por estoque</span>
         <span class="radar-secao-count">${sup.length}</span>
       </div>
       ${radarTable(sup, 'sup', supCols, 15)}
@@ -3395,7 +3428,7 @@ function renderRadarMercado_() {
     `<div class="radar-secao rs-resistencia">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🔴 Frente 2 — Resistência</span>
-        <span class="radar-secao-sub">Baixa absorção — clique no cabeçalho para ordenar</span>
+        <span class="radar-secao-sub">Maior estoque + maior tempo no mercado sem saída · ordenado por estoque</span>
         <span class="radar-secao-count">${res.length}</span>
       </div>
       ${radarTable(res, 'res', resCols, 15)}
@@ -3403,7 +3436,7 @@ function renderRadarMercado_() {
     `<div class="radar-secao rs-transicao">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🟡 Transição</span>
-        <span class="radar-secao-sub">Absorção moderada — clique no cabeçalho para ordenar</span>
+        <span class="radar-secao-sub">Prazo intermediário — entre suporte e resistência · ordenado por estoque</span>
         <span class="radar-secao-count">${tra.length}</span>
       </div>
       ${radarTable(tra, 'tra', traCols, 10)}
