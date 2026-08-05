@@ -2089,6 +2089,7 @@ async function carregarComentariosApp_() {
               <button class="btn-extrair" style="padding:5px 10px;font-size:11px;background:var(--green)" onclick="moderarComentario_('${c.id}','Aprovado')">Aprovar</button>
               <button class="btn-extrair" style="padding:5px 10px;font-size:11px;background:var(--danger)" onclick="moderarComentario_('${c.id}','Rejeitado')">Rejeitar</button>
             ` : ''}
+            <button class="btn-extrair" style="padding:5px 10px;font-size:11px;background:#555;margin-left:2px" onclick="excluirComentario_('${c.id}','${escapeHtmlPainel_(c.nome || 'este comentário')}')">🗑</button>
           </td>
         </tr>`;
       }).join('')}
@@ -2114,6 +2115,26 @@ async function moderarComentario_(id, status) {
     }
   } catch (e) {
     mostrarToast('Erro ao atualizar comentário.', 'erro');
+  }
+}
+
+async function excluirComentario_(id, nomeExibir) {
+  if (!confirm('Excluir permanentemente o comentário de ' + nomeExibir + '?\nEssa ação não pode ser desfeita.')) return;
+  try {
+    const resp = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: new URLSearchParams({ dados: JSON.stringify({ acao: 'excluir_comentario_app', id, token: tokenSessao() }) })
+    });
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    if (json && json.ok) {
+      mostrarToast('Comentário excluído.', 'ok');
+      carregarComentariosApp_();
+    } else {
+      mostrarToast('Erro ao excluir comentário.', 'erro');
+    }
+  } catch (e) {
+    mostrarToast('Erro ao excluir comentário.', 'erro');
   }
 }
 

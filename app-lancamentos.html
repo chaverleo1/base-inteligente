@@ -447,7 +447,7 @@ input[type=range]::-moz-range-track {
   background: rgba(255,59,48,.1); border: 1px solid rgba(255,59,48,.28);
   border-radius: 6px; padding: 5px 10px; margin-bottom: 8px; text-align: center;
 }
-.bar-seg { transition: width .45s cubic-bezier(.4,0,.2,1); }
+.bar-seg { transition: width .3s cubic-bezier(.4,0,.2,1); }
 
 /* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
 .btn-final-wrap {
@@ -1520,7 +1520,19 @@ function avancarStep() {
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
   if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
   if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
-  if (stepAtual === 7) { prepararStep9_(); atualizarContadorJanela_(); irParaStep(9); return; }  // captura → agendamento (pergunta surpresa)
+  if (stepAtual === 7) {                                                                           // captura → agendamento ou tela final
+    if (!dentroJanelaAtendimento_(agoraBrasilia_())) {
+      // Fora do horário comercial: pula step 9 e vai direto à tela final.
+      // desejaAgendar=false aparece no e-mail como "Lead não agendado" e
+      // montarAgradecimento() já chama atualizarContadorJanela_() que exibe
+      // o bloco "fora do horário" na tela de confirmação.
+      D.desejaAgendar = false;
+      submeter();
+    } else {
+      prepararStep9_(); atualizarContadorJanela_(); irParaStep(9);
+    }
+    return;
+  }
   if (stepAtual < TOTAL - 1) irParaStep(stepAtual + 1);
 }
 
@@ -2922,7 +2934,7 @@ function cardOpcaoHTML_(c, i, grupo, offset = 0) {
                 <span id="pct-v-${grupo}-${i}" data-val="${c.pctVendido}% vendido" style="color:${corVendido_(c.pctVendido)};font-size:12px;font-weight:500">–</span>
                 <span id="pct-d-${grupo}-${i}" data-val="${100-c.pctVendido}% disponível" style="color:var(--green);font-size:12px;font-weight:500">–</span>
               </div>
-              <div style="height:6px;border-radius:99px;overflow:hidden;display:flex">
+              <div style="height:12px;border-radius:99px;overflow:hidden;display:flex">
                 <div id="bar-v-${grupo}-${i}" class="bar-seg" data-pct="${c.pctVendido}" style="width:0%;height:100%;background:${corVendido_(c.pctVendido)}"></div>
                 <div id="bar-d-${grupo}-${i}" class="bar-seg" data-pct="${100-c.pctVendido}" style="width:0%;height:100%;background:var(--green)"></div>
               </div>
