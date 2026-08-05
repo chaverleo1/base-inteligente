@@ -83,6 +83,9 @@
   .vg-stat-sub{font-size:10px; color:var(--text3); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .vg-stat-link{position:absolute; top:10px; right:10px; font-size:10px; font-weight:700;
                 border-radius:5px; padding:2px 7px; text-decoration:none; cursor:pointer; border:1px solid; white-space:nowrap}
+  .btn-briefing-dl{display:inline-flex;align-items:center;gap:4px;margin-top:9px;padding:4px 9px;border:1px solid rgba(0,200,120,.35);border-radius:6px;background:rgba(0,200,120,.08);color:#00c878;font-size:10px;font-weight:700;letter-spacing:.04em;cursor:pointer;transition:background .15s}
+  .btn-briefing-dl:hover{background:rgba(0,200,120,.18)}
+  .btn-briefing-dl svg{width:11px;height:11px;flex-shrink:0}
   @media(max-width:640px){
     .vg-panel{grid-template-columns:repeat(2,1fr)}
     .vg-stat-value{font-size:19px}
@@ -2206,6 +2209,10 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
   if (valSup) valSup.textContent = radarSuporte.length;
   if (valRes) valRes.textContent = radarResistencia.length;
 
+  // Mostra botão de briefing quando há itens de suporte
+  const btnBriefSup = document.getElementById('btnBriefingSup');
+  if (btnBriefSup) btnBriefSup.style.display = radarSuporte.length ? '' : 'none';
+
   window._insightDetails['insRadarSuporte'] = {
     title: '🟢 Suporte — Em obras com <50% vendido',
     icon: '🟢', color: '#00c878', type: 'lancamentos',
@@ -2333,6 +2340,7 @@ function renderDados(json) {
       <div class="vg-stat-value" id="cardRadarSuporteValue" style="color:#00c878">—</div>
       <div class="vg-stat-sub">Em obras · &lt;50% vendido</div>
       <button class="vg-stat-link" style="display:none;color:#00c878;background:rgba(0,200,120,.1);border-color:rgba(0,200,120,.25);font-family:inherit">Ver →</button>
+      <button class="btn-briefing-dl" id="btnBriefingSup" style="display:none" onclick="baixarBriefingSuporteDash_()" title="Baixar briefing para IA Editora (Google Ads)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>Briefing IA</button>
     </div>
     <div class="vg-stat" id="cardRadarResistencia">
       <div class="vg-stat-top"><span class="vg-stat-icon">🔴</span><span class="vg-stat-label">Resistência</span></div>
@@ -5387,6 +5395,304 @@ function renderTriangulo(lista) {
     + '<table class="tri-table"><thead><tr>'
     + '<th>#</th><th>Score</th><th>Cliente · Imóvel</th><th>Categoria</th><th>Status</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+
+// ── BRIEFING SUPORTE para IA Editora (Google Ads) ────────────────────────────
+function baixarBriefingSuporteDash_() {
+  const ins = window._insightDetails && window._insightDetails['insRadarSuporte'];
+  const rows = ins && ins.items && ins.items.length ? ins.items : [];
+  if (!rows.length) { alert('Nenhum empreendimento em Suporte identificado.'); return; }
+
+  const fmtPreco = v => {
+    const n = parseInt(v) || 0;
+    if (!n) return 'N/D';
+    return 'R$ ' + (n >= 1000000 ? (n/1000000).toFixed(1).replace('.',',') + 'M' : Math.round(n/1000) + 'k');
+  };
+  const fmtPct = e => {
+    const est = parseInt(e.estoque) || 0, tot = parseInt(e.totalUnidades) || 0;
+    return tot ? Math.round((1 - est/tot)*100) + '%' : 'N/D';
+  };
+  const fmtMeses = previsao => {
+    if (!previsao) return 'N/D';
+    const m = Math.round((new Date(previsao) - new Date()) / (1000*60*60*24*30.44));
+    return m > 0 ? `em ${m} meses` : `${-m} meses atrás`;
+  };
+
+  const padroes = [...new Set(rows.map(e => e.padrao).filter(Boolean))].sort();
+  const bairros = [...new Set(rows.map(e => e.bairro).filter(b => b && b !== '—'))].sort();
+  const cidades = [...new Set(rows.map(e => e.cidade).filter(Boolean))].sort();
+  const agora   = new Date().toLocaleString('pt-BR', { dateStyle:'full', timeStyle:'short' });
+
+  const listaEmp = rows.map((e, i) => {
+    const nome = e.nomeEmpreendimento || '—';
+    return `\n### ${i + 1}. ${nome}
+- **Construtora:** ${e.construtora || '—'}
+- **Padrão:** ${e.padrao || 'N/D'}
+- **Estágio:** ${e.status || '—'}
+- **Localização:** ${e.bairro || '—'} / ${e.cidade || '—'}
+- **Previsão de entrega:** ${e.previsaoEntrega || 'N/D'} (${fmtMeses(e.previsaoEntrega)})
+- **Estoque disponível:** ${parseInt(e.estoque) || 'N/D'} unidades
+- **Total de unidades:** ${parseInt(e.totalUnidades) || 'N/D'}
+- **% Vendido:** ${fmtPct(e)}
+- **Preço médio:** ${fmtPreco(e.precoMedio || e.preco)}
+- **ID:** ${e.idLancamento || '—'}`;
+  }).join('\n');
+
+  const bairrosKw = bairros.map(b =>
+    `**${b}:** "lançamento ${b.toLowerCase()}", "apartamento novo ${b.toLowerCase()}", "imóvel ${b.toLowerCase()} na planta"`
+  ).join('\n- ');
+
+  const txt = `# BRIEFING IA EDITORA — SUPORTE DE MERCADO
+## BASE INTELIGENTE · Análise de Lançamentos Imobiliários
+*Gerado em: ${agora} · ${rows.length} empreendimentos identificados*
+
+---
+
+## 1. CONTEXTO DO PROJETO
+
+**BASE INTELIGENTE** é o CRM interno de um corretor imobiliário especializado em lançamentos da Grande Goiânia. O sistema analisa continuamente o mercado e classifica cada empreendimento em três categorias estratégicas, cruzando dois critérios:
+
+1. **Estágio da obra:** Em planta · Em obras · Pronto novo
+2. **Percentual de unidades vendidas** (= 1 − estoque ÷ total × 100)
+
+---
+
+## 2. O QUE É SUPORTE (força compradora ativa)
+
+**Critério técnico:**
+- Estágio = "Em obras" ou "Em planta"
+- % vendido < 50 % (menos da metade já foi comercializada)
+- Estoque disponível > 0
+
+**O que significa:**
+- Há **demanda real comprovada** — o mercado está comprando enquanto a obra ainda está em andamento
+- O comprador aceita esperar a entrega (perfil de médio prazo: 12–36 meses)
+- Potencial de **valorização durante a obra** (preço na planta < preço na entrega)
+- Ainda há unidades disponíveis — janela de oportunidade aberta
+
+**Perfil típico do comprador de Suporte:**
+- Investidor buscando valorização + aluguel futuro
+- Família planejando mudança nos próximos 1–3 anos
+- Primeira compra aproveitando preço de lançamento
+- Interessado em imóvel 100% novo sem histórico de uso
+
+---
+
+## 3. O QUE É RESISTÊNCIA (para contexto)
+
+**Critério técnico:** Pronto novo + % vendido > 50 %
+
+**O que significa:**
+- Produto entregue, validado pelo mercado (>50% das unidades vendidas)
+- Disponibilidade **imediata** (mudança em 30–60 dias)
+- Ideal para: quem precisa mudar rápido, investidor de renda imediata (aluguel)
+
+---
+
+## 4. EMPREENDIMENTOS EM SUPORTE — LISTA COMPLETA
+
+> **Total: ${rows.length} empreendimentos · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}**
+${listaEmp}
+
+---
+
+## 5. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS
+
+### OBJETIVO GERAL
+Criar uma estratégia de tráfego pago no **Google Ads** para atrair leads altamente qualificados — pessoas com intenção real de comprar um imóvel de lançamento — que clicarão no anúncio e acessarão o **App Lançamentos** já com os filtros configurados conforme o nicho do anúncio.
+
+A **meta de conversão final** é a tela **"Confirmado! Sua consultoria está agendada"** (Step 8 do App), acionada quando o cliente confirma o WhatsApp.
+
+---
+
+### FUNIL EM 3 ETAPAS
+
+#### ① TOPO DE FUNIL — Reconhecimento e Volume
+**Objetivo:** Mapear a demanda real; identificar quais nichos, bairros e padrões geram mais interesse.
+
+- **Tipo:** Search ampla + Performance Max
+- **Segmentação:** In-market "Imóveis para comprar", "Financiamento imobiliário"
+- **Público:** 25–55 anos · Grande Goiânia · Renda acima da média
+- **Chamada isca:** "Veja os melhores lançamentos de [Bairro] antes de todos — Consulta gratuita"
+- **Destino:** App Lançamentos SEM preset (cliente faz os próprios filtros)
+- **URL:** \`app-lancamentos.html?utm_source=google&utm_medium=cpc&utm_campaign=sup-topo\`
+- **Meta:** Volume de cliques + identificação dos segmentos que mais convertem
+
+#### ② MEIO DE FUNIL — Consideração por Nicho
+**Objetivo:** Direcionar leads aquecidos para produtos específicos alinhados ao perfil detectado na Etapa 1.
+
+- **Tipo:** Search segmentada + Display Remarketing
+
+**Grupo A — Investidor de Alto Padrão (Em obras)**
+- Palavras-chave: \`apartamento alto padrão na planta [cidade]\`, \`lançamento luxo investimento [bairro]\`, \`apartamento valorização em obras\`
+- Título 1: "Invista Antes da Entrega · Alto Padrão"
+- Título 2: "Consulta Gratuita · Sem Compromisso"
+- Descrição: "Lançamentos alto padrão em obras em ${cidades[0] || 'Goiânia'}. Compre na planta e valorize antes da entrega."
+- Preset: \`?objetivo=investimento&padroes=Alto,Luxo&situacoes=em_obras\`
+
+**Grupo B — Morador de Padrão Médio (Em obras)**
+- Palavras-chave: \`apartamento médio padrão ${bairros[0] || '[bairro]'}\`, \`2 quartos novo ${bairros[0] || '[bairro]'}\`, \`lançamento ${cidades[0] || 'Goiânia'}\`
+- Título 1: "Seu Apart. Novo em ${bairros[0] || '[Bairro]'}"
+- Título 2: "Preço de Lançamento · Em Obras"
+- Descrição: "Empreendimentos em obras com preço de planta. Financiamento facilitado em ${cidades[0] || 'Goiânia'}."
+- Preset: \`?objetivo=moradia&padroes=Médio&situacoes=em_obras\`
+
+**Grupo C — Comprador Popular (Planta/Em obras)**
+- Palavras-chave: \`apartamento popular novo ${cidades[0] || '[cidade]'}\`, \`financiamento imóvel lançamento\`, \`1 quartos novo ${bairros[0] || '[bairro]'}\`
+- Título 1: "Realize Seu Sonho na Planta"
+- Título 2: "Parcelamento Direto · Sem Entrada"
+- Descrição: "Lançamentos populares e médios em obras. Entre antes da valorização com parcelamento facilitado."
+- Preset: \`?objetivo=moradia&padroes=Popular,Médio&situacoes=em_obras\`
+
+#### ③ FUNDO DE FUNIL — Decisão e Conversão
+**Objetivo:** Atingir usuários com altíssima intenção — visitaram o app, viram resultados, mas ainda não converteram.
+
+- **Tipo:** RLSA (Remarketing List for Search Ads) + Customer Match
+- **Segmentação:** Visitantes que chegaram ao Step 6 (resultados) mas não completaram o Step 8
+- **Chamada:** "Você viu ${rows[0] ? rows[0].nomeEmpreendimento || rows[0].nome : '[Empreendimento]'} · Ainda há unidades · Consulta gratuita"
+- **Preset:** Configurado com o padrão e situação do empreendimento específico
+- **Meta:** Maximizar conversão com custo mínimo
+
+---
+
+### PALAVRAS-CHAVE POR LOCALIDADE
+
+${bairros.length ? '- ' + bairrosKw : '(bairros a definir conforme a base de dados)'}
+
+### EXTENSÕES RECOMENDADAS
+
+- **Sitelinks:** "Ver em obras" · "Ver prontos para morar" · "Calcular parcelas" · "Falar com especialista"
+- **Frases de destaque:** "Sem entrada" · "Documentação gratuita" · "Lançamento exclusivo" · "Alta valorização"
+- **Callout:** "${rows.length} lançamentos em ${cidades[0] || 'Goiânia'}" · "Consulta 100% gratuita" · "Atendimento em até 2h"
+
+---
+
+## 6. APP LANÇAMENTOS — RESUMO DO FUNIL
+
+**URL Base:** \`https://chaverleo1.github.io/base-inteligente/app-lancamentos.html\`
+**Google Analytics:** G-1XHJ44834Q
+
+### ETAPAS (STEPS) DO APP
+
+| Step | Nome | O que acontece | Dado capturado |
+|------|------|---------------|---------------|
+| 0 | Landing | Hero animado com contador de lançamentos ativos | — |
+| 5 | Passo 1/4 | Padrão (Popular/Médio/Alto/Luxo) + objetivo (morar/investir) | \`D.padroes\`, \`D.objetivo\` |
+| 2 | Passo 2/4 | Sliders de orçamento máximo e área útil mínima | \`D.orcamento\`, \`D.area\` |
+| 1 | Passo 3/4 | Primeiro nome do cliente | \`D.nome\` |
+| 3 | Confirmação | Resumo dos filtros + contagem de empreendimentos compatíveis | — |
+| 4 | Passo 4/4 | Motivação / tipo de imóvel mais adequado | \`D.motivacao\` |
+| 6 | Resultados | Cards dos empreendimentos compatíveis; cliente pode favoritar | \`D.favoritados\` |
+| 7 | Captura | WhatsApp + favoritos + botão "CONFIRMAR CONSULTORIA GRATUITA" | \`D.whatsapp\` |
+| 9 | Agendamento | Pergunta surpresa: deseja agendar atendimento? (opcional) | \`D.agendamento\` |
+| **8** | **CONFIRMADO ✅** | **"Confirmado, [Nome]! Sua consultoria está agendada."** | **🎯 META DE CONVERSÃO** |
+
+### VARIÁVEIS DO SISTEMA
+
+\`\`\`
+D.nome          — Primeiro nome do cliente
+D.whatsapp      — WhatsApp com DDD (validado em dois campos)
+D.objetivo      — "moradia" ou "investimento"
+D.padroes       — Set: Popular · Médio · Alto · Luxo (múltipla escolha)
+D.situacoes     — Set: "em_obras" · "pronto_novo" (múltipla escolha)
+D.orcamento     — Orçamento máximo em R$ (slider)
+D.area          — Área útil mínima em m² (slider)
+D.motivacao     — Perfil de necessidade específica
+D.favoritados   — IDs dos empreendimentos salvos como favorito
+D.agendamento   — { dia, hora, modo } se agendou atendimento (Step 9)
+D.sessionId     — ID único de sessão (rastreamento por etapa)
+D.utmSource     — utm_source da URL (ex: "google")
+D.utmMedium     — utm_medium (ex: "cpc")
+D.utmCampaign   — utm_campaign (ex: "suporte-obras-medio-q3")
+\`\`\`
+
+### CONDICIONAIS IMPORTANTES
+
+- **Preset de URL:** \`?preset=\` ou \`?situacoes=em_obras\` pré-marca filtros e pula direto para os sliders (Step 2), reduzindo o atrito do funil
+- **Horário de atendimento:** Botão de WhatsApp na tela final SÓ aparece seg–sex 8h–18h, sáb 8h–12h. Fora do horário: exibe contador de próxima abertura
+- **Validação de WhatsApp:** Step 7 exige que os dois campos coincidam antes de habilitar "Confirmar"
+- **Agendamento surpresa:** Step 9 fica entre "Confirmar" e a tela final — opcional; se aceito, modifica a tela final
+
+---
+
+## 7. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
+
+### Presets pré-configurados
+
+| Preset | Objetivo | Padrões | Situação |
+|--------|----------|---------|----------|
+| \`investidor-alto\` | Investimento | Alto, Luxo | Pronto novo |
+| \`investidor-medio\` | Investimento | Médio, Alto | Qualquer |
+| \`investidor-todos\` | Investimento | Todos | Qualquer |
+| \`moradia-popular\` | Moradia | Popular, Médio | Pronto novo |
+| \`moradia-alto\` | Moradia | Alto | Pronto novo |
+| \`obras-medio\` | Investimento | Médio | Em obras |
+
+### URL completa para Google Ads (com UTM)
+
+\`\`\`
+https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-medio&utm_source=google&utm_medium=cpc&utm_campaign=suporte-obras-q3
+\`\`\`
+
+### Parâmetros raw (personalização total)
+
+\`\`\`
+?objetivo=[moradia|investimento]
+&padroes=[Popular,Médio,Alto,Luxo]   ← vírgula-separado, múltiplos possíveis
+&situacoes=[em_obras,pronto_novo]    ← filtra por estágio da obra
+&utm_source=google
+&utm_medium=cpc
+&utm_campaign=[nome-da-campanha]
+\`\`\`
+
+**Exemplos práticos:**
+\`\`\`
+# Moradia em obras padrão médio
+?objetivo=moradia&padroes=Médio&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-moradia-medio
+
+# Investimento em obras alto padrão
+?objetivo=investimento&padroes=Alto&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-inv-alto
+
+# Todos os padrões em obras (ampla)
+?objetivo=investimento&padroes=Popular,Médio,Alto,Luxo&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-obras-todos
+\`\`\`
+
+---
+
+## 8. META DE CONVERSÃO (Google Ads)
+
+**Evento principal:**
+- **Plataforma:** Google Analytics 4 · ID: G-1XHJ44834Q
+- **Tela de conversão:** Step 8 — "Confirmado, [Nome]! Sua consultoria está agendada."
+- **Gatilho:** Conclusão do preenchimento de WhatsApp + clique em "CONFIRMAR CONSULTORIA GRATUITA"
+- **Valor de conversão sugerido:** R$ 200 (custo médio de lead qualificado no setor imobiliário)
+
+**Micro-conversões para otimização:**
+1. Step 5 iniciado → interesse inicial (topo)
+2. Step 6 alcançado → alta intenção (viu resultados)
+3. Step 7 alcançado → quase convertido (preencheu WhatsApp)
+4. **Step 8 concluído → ✅ MACRO-CONVERSÃO** ← configurar no Google Ads
+
+**Configuração recomendada:**
+- Tipo: Importar do Google Analytics 4
+- Modelo de atribuição: Data-driven (ou Último clique como fallback)
+- Janela de conversão: 30 dias
+- Fase inicial: Maximizar conversões (sem meta de ROAS); após 30+ conversões → mudar para ROAS alvo
+
+---
+
+*Documento gerado automaticamente pela BASE INTELIGENTE em ${agora}*
+*Para uso exclusivo de estratégia de tráfego pago — não distribuir publicamente*`;
+
+  const blob = new Blob([txt], { type: 'text/markdown;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `briefing-suporte-${new Date().toISOString().slice(0,10)}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── MODAL RADAR (Suporte / Resistência) ─────────────────────────────────────
