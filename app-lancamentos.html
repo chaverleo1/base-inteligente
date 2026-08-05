@@ -99,7 +99,7 @@ body {
    clamp() garante que funciona de 320px até 600px+ sem breakpoints. */
 .hero-phrase { margin: 0; }
 
-/* "Vamos achar o" e "pra você na" — conectores legíveis, parte da frase */
+/* "Vamos achar o" e "pra você —" — conectores legíveis, parte da frase */
 .hp-eyebrow, .hp-bridge {
   display: block; font-size: 18px; font-weight: 600;
   color: var(--text); opacity: .75; line-height: 1.3;
@@ -107,33 +107,34 @@ body {
 .hp-eyebrow { margin-bottom: 2px; }
 .hp-bridge  { margin: 10px 0 2px; }
 
-/* "apartamento" — destaque em azul accent, preenche bem a linha */
+/* "imóvel" — destaque em azul accent, palavra-chave principal */
 .hp-word1 {
   display: block;
-  font-size: clamp(42px, 13vw, 72px); font-weight: 900;
-  color: var(--accent); letter-spacing: -2.5px; line-height: .88;
+  font-size: clamp(52px, 16vw, 88px); font-weight: 900;
+  color: var(--accent); letter-spacing: -3px; line-height: .88;
 }
 
-/* "ideal" — palavra de impacto: MUITO maior que apartamento,
-   cria contraste dramático (5 chars vs 11 → pode ser 2× maior) */
+/* "ideal" — palavra de impacto: contraste dramático contra "imóvel" */
 .hp-word2 {
   display: block;
   font-size: clamp(88px, 27.5vw, 152px); font-weight: 900;
   color: var(--text); letter-spacing: -5px; line-height: .82;
 }
 
-/* "Grande Goiânia" — laranja, peso médio-alto */
-.hp-city {
+/* "apartamento, loft, cobertura ou garden" — lista de tipos em letra menor */
+.hp-tipos {
   display: block;
-  font-size: clamp(22px, 6.5vw, 36px); font-weight: 800;
-  color: var(--orange); letter-spacing: -.5px; line-height: 1.1;
+  font-size: clamp(14px, 3.8vw, 18px); font-weight: 500;
+  color: var(--text); opacity: .55; line-height: 1.5;
+  margin: 8px 0 6px; letter-spacing: .01em;
 }
 
-/* "e região!" — tail discreto */
-.hp-tail {
+/* "na Grande Goiânia!" — laranja, peso médio-alto */
+.hp-city {
   display: block;
-  font-size: 18px; font-weight: 600; color: var(--text); opacity: .75;
-  margin-top: 4px;
+  font-size: clamp(20px, 5.5vw, 30px); font-weight: 800;
+  color: var(--orange); letter-spacing: -.5px; line-height: 1.2;
+  margin-top: 2px;
 }
 
 /* CTA area hero */
@@ -284,6 +285,19 @@ input[type=range]::-moz-range-track {
 .padrao-btn-inner { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .padrao-btn-nome { line-height: 1; }
 .padrao-btn-faixa { font-size: 10px; font-weight: 600; letter-spacing: 0; opacity: .8; line-height: 1; }
+/* Frase de quantidade por padrão selecionado — aparece abaixo dos botões,
+   acima do CTA, mesmo estilo do contador da capa (números em laranja grande). */
+.padrao-phrase {
+  text-align: center; font-size: 15px; font-weight: 600;
+  color: var(--text); line-height: 1.5; margin-top: 20px;
+}
+.padrao-phrase .pq-num {
+  color: var(--orange); font-size: 2.4em; font-weight: 900;
+  line-height: 1; vertical-align: middle; display: inline-block;
+}
+.padrao-phrase .pq-nome {
+  color: var(--accent); font-weight: 700;
+}
 
 /* Nota discreta quando o contador da Tela 3 amplia a tolerância pra não
    mostrar zero opções (regra técnica 2 do documento; aviso visível é
@@ -769,11 +783,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <div class="hero-phrase">
       <span class="hp-eyebrow">Vamos achar o</span>
-      <span class="hp-word1">apartamento</span>
+      <span class="hp-word1">imóvel</span>
       <span class="hp-word2">ideal</span>
-      <span class="hp-bridge">pra você na</span>
-      <span class="hp-city">Grande Goiânia</span>
-      <span class="hp-tail">e região!</span>
+      <span class="hp-bridge">pra você —</span>
+      <span class="hp-tipos">apartamento, loft,<br>cobertura ou garden</span>
+      <span class="hp-city">na Grande Goiânia!</span>
     </div>
 
     <!-- Mini card de mapa -- pedido explícito do usuário, abre o mapa real
@@ -794,7 +808,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
       <button class="btn-final btn-quente" onclick="avancarStep()">
         <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-        ENCONTRAR MEU APARTAMENTO
+        ENCONTRAR MEU IMÓVEL IDEAL
       </button>
       <div class="btn-final-sub capa-dados-sub" style="margin-top:10px" id="capaDadosAtualizados">Resultado rápido · Dados reais e atualizados</div>
     </div>
@@ -825,6 +839,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="step-title">Como você define o <span style="color:var(--accent)">padrão do imóvel</span> que busca?</div>
       <div class="step-sub">Pode marcar mais de um</div>
       <div class="obj-tag-group" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
+      <div id="padraoPhraseWrap" class="padrao-phrase" style="display:none"></div>
     </div>
   </div>
 
@@ -1764,18 +1779,40 @@ function selecionarObjetivo_(el, val) {
 function selecionarPadrao_(el, val) {
   document.getElementById('tagsPadrao').classList.remove('tag-group-erro');
   el.classList.toggle('on');
-  if (el.classList.contains('on')) {
-    D.padroes.add(val);
-    // Melhoria explícita do usuário: reforça que a base é real e abundante
-    // antes de qualquer filtro, mostrando brevemente quantos empreendimentos
-    // existem naquele padrão assim que o cliente seleciona.
-    const info = padroesDisponiveis_().find(p => p.padrao === val);
-    if (info) {
-      toast(`${val}: ${info.qtd} empreendimento${info.qtd === 1 ? '' : 's'} disponíve${info.qtd === 1 ? 'l' : 'is'}`);
+  if (el.classList.contains('on')) D.padroes.add(val);
+  else D.padroes.delete(val);
+  atualizarPadraoPhrase_();
+}
+
+// Exibe abaixo dos botões de padrão uma frase com a quantidade real de
+// lançamentos por padrão selecionado — números em laranja grande, igual
+// ao contador da capa. Substitui o toast anterior (pedido explícito).
+function atualizarPadraoPhrase_() {
+  const wrap = document.getElementById('padraoPhraseWrap');
+  if (!wrap) return;
+  if (D.padroes.size === 0) { wrap.style.display = 'none'; return; }
+
+  const disponiveis = padroesDisponiveis_();
+  // Mantém a ordem canônica (Popular → Médio → Alto → Luxo)
+  const selecionados = ORDEM_PADRAO_.filter(p => D.padroes.has(p));
+
+  let html = 'Temos ';
+  selecionados.forEach((p, i) => {
+    const info = disponiveis.find(d => d.padrao === p);
+    const qtd  = info ? info.qtd : 0;
+    const num  = `<strong class="pq-num">${qtd}</strong>`;
+    const nome = `<span class="pq-nome">${p}</span>`;
+    if (i === 0) {
+      html += `${num} lançamento${qtd !== 1 ? 's' : ''} no padrão ${nome}`;
+    } else {
+      const sep = i === selecionados.length - 1 ? ' e ' : ', ';
+      html += `${sep}${num} no padrão ${nome}`;
     }
-  } else {
-    D.padroes.delete(val);
-  }
+  });
+  html += '.';
+
+  wrap.innerHTML = html;
+  wrap.style.display = '';
 }
 
 // Chamado ao SAIR da Tela 2 (objetivo+padrão) pra Tela 3 (sliders) --
