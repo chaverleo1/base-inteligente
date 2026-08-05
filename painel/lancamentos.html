@@ -89,6 +89,8 @@ a { text-decoration: none; color: inherit; }
 .radar-kpi  { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
 .radar-kpi-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
 .radar-kpi-val   { font-size:28px; font-weight:800; line-height:1; }
+.radar-kpi-btn   { background:none; border:none; padding:0; cursor:pointer; font-size:28px; font-weight:800; line-height:1; text-decoration:underline dotted; text-underline-offset:3px; transition:opacity .15s; }
+.radar-kpi-btn:hover { opacity:.75; }
 .radar-kpi-sub   { font-size:11px; color:var(--text3); margin-top:4px; }
 .radar-kpi.kpi-suporte     { border-color:rgba(0,200,120,.3); }
 .radar-kpi.kpi-suporte     .radar-kpi-val { color:#00c878; }
@@ -3358,27 +3360,39 @@ function renderRadarMercado_() {
     else if (p === 'resistencia') { res.push(r); if (isOportunidade_(r)) oport.push(r); }
   });
 
+  // Registra listas no cache do modal para os KPIs clicáveis
+  _listaEmpModalData_['KPI_SUP']  = { titulo: '🟢 Suporte — Em obras/planta com ≤39% vendido',                     rows: sup   };
+  _listaEmpModalData_['KPI_TRA']  = { titulo: '🟡 Transição — 40–60% vendido ou estágio intermediário',            rows: tra   };
+  _listaEmpModalData_['KPI_RES']  = { titulo: '🔴 Resistência — Pronto novo com ≥61% vendido',                    rows: res   };
+  _listaEmpModalData_['KPI_OPT']  = { titulo: '⚡ Oportunidades — Resistência com ≥ 20 unidades paradas',          rows: oport };
+
+  // Helper: botão de número no KPI (clicável se lista não vazia)
+  function kpiBtn(key, count) {
+    if (!count) return `<div class="radar-kpi-val" style="cursor:default">${count}</div>`;
+    return `<button class="radar-kpi-val radar-kpi-btn" onclick="abrirModalListaEmp_('${key}')" title="Ver lista">${count}</button>`;
+  }
+
   // KPI bar — subtítulos refletem a nova lógica estoque × tempo
   const kpiHtml = `
     <div class="radar-kpis">
       <div class="radar-kpi kpi-suporte">
         <div class="radar-kpi-label">🟢 Suporte</div>
-        <div class="radar-kpi-val">${sup.length}</div>
-        <div class="radar-kpi-sub">Estoque alto · lançamento recente</div>
+        ${kpiBtn('KPI_SUP', sup.length)}
+        <div class="radar-kpi-sub">Em obras · ≤ 39% vendido</div>
       </div>
       <div class="radar-kpi kpi-transicao">
         <div class="radar-kpi-label">🟡 Transição</div>
-        <div class="radar-kpi-val">${tra.length}</div>
-        <div class="radar-kpi-sub">Estoque moderado · prazo intermediário</div>
+        ${kpiBtn('KPI_TRA', tra.length)}
+        <div class="radar-kpi-sub">40–60% vendido · faixa intermediária</div>
       </div>
       <div class="radar-kpi kpi-resistencia">
         <div class="radar-kpi-label">🔴 Resistência</div>
-        <div class="radar-kpi-val">${res.length}</div>
-        <div class="radar-kpi-sub">Estoque parado · tempo longo no mercado</div>
+        ${kpiBtn('KPI_RES', res.length)}
+        <div class="radar-kpi-sub">Pronto novo · ≥ 61% vendido</div>
       </div>
       <div class="radar-kpi kpi-oport">
         <div class="radar-kpi-label">⚡ Oportunidades</div>
-        <div class="radar-kpi-val">${oport.length}</div>
+        ${kpiBtn('KPI_OPT', oport.length)}
         <div class="radar-kpi-sub">Resistência com ≥ 20 unidades paradas</div>
       </div>
     </div>`;
