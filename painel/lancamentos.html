@@ -101,8 +101,11 @@ a { text-decoration: none; color: inherit; }
 .rs-resistencia .radar-secao-count  { background:rgba(255,107,107,.15); color:#ff6b6b; }
 
 .radar-tabela { width:100%; border-collapse:collapse; font-size:12px; }
-.radar-tabela th { padding:5px 10px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.07); white-space:nowrap; }
+.radar-tabela th { padding:5px 10px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.07); white-space:nowrap; transition:color .15s; }
 .radar-tabela th.num { text-align:right; }
+.radar-tabela th.radar-th-ativo { color:var(--text); }
+.radar-tabela th:hover { color:var(--text2); }
+.radar-seta { font-size:9px; margin-left:3px; opacity:.7; }
 .radar-tabela td { padding:7px 10px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; }
 .radar-tabela td.num { text-align:right; font-variant-numeric:tabular-nums; }
 .radar-tabela tr:hover td { background:rgba(255,255,255,.03); cursor:pointer; }
@@ -3090,6 +3093,21 @@ function setMapaPapelFiltro_(papel) {
 }
 
 // ── RADAR DE MERCADO ────────────────────────────────────────────────────────
+let _radarSort = {
+  sup: { col: 'pctVendido',    dir: 'desc' },
+  res: { col: 'scoreVendedor', dir: 'desc' },
+  tra: { col: 'comp',          dir: 'desc' },
+};
+
+function setRadarSort_(frente, col) {
+  const cur = _radarSort[frente];
+  _radarSort[frente] = {
+    col,
+    dir: cur.col === col && cur.dir === 'desc' ? 'asc' : 'desc',
+  };
+  renderRadarMercado_();
+}
+
 function renderRadarMercado_() {
   const el = document.getElementById('radarConteudo');
   if (!el) return;
@@ -3103,7 +3121,7 @@ function renderRadarMercado_() {
   const sup = [], tra = [], res = [], oport = [];
   rows.forEach(r => {
     const p = papelMercado_(r);
-    if (p === 'suporte')      { sup.push(r); }
+    if (p === 'suporte')          { sup.push(r); }
     else if (p === 'transicao')   { tra.push(r); }
     else if (p === 'resistencia') { res.push(r); if (isOportunidade_(r)) oport.push(r); }
   });
@@ -3133,56 +3151,90 @@ function renderRadarMercado_() {
       </div>
     </div>`;
 
-  // Helper: tabela ranqueada
-  function radarTable(lista, cols) {
+  function pctBar(pct, cor) {
+    return `<div class="radar-pct-bar"><div class="radar-pct-track"><div class="radar-pct-fill" style="width:${Math.min(pct||0,100)}%;background:${cor}"></div></div><span>${pct||0}%</span></div>`;
+  }
+
+  // Valor numérico de uma coluna para ordenação
+  function colVal(r, col) {
+    if (col === 'pctVendido')    return r.pctVendido    != null ? r.pctVendido    : -1;
+    if (col === 'estoque')       return r.estoque       != null ? Number(r.estoque): -1;
+    if (col === 'scoreVendedor') return r.scoreVendedor != null ? r.scoreVendedor  : -1;
+    if (col === 'comp')          return r.comp          != null ? r.comp           : -1;
+    if (col === 'nome')          return (r.nome || '').toLowerCase();
+    if (col === 'padrao')        return (r.padrao || '').toLowerCase();
+    if (col === 'estagio')       return r.estagioOrd != null ? r.estagioOrd : -1;
+    return 0;
+  }
+
+  // Ordena e retorna lista cortada no limite
+  function sortList(lista, frente, limit) {
+    const { col, dir } = _radarSort[frente];
+    const sorted = [...lista].sort((a, b) => {
+      const va = colVal(a, col), vb = colVal(b, col);
+      if (typeof va === 'string') return dir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
+      return dir === 'desc' ? vb - va : va - vb;
+    });
+    return sorted.slice(0, limit);
+  }
+
+  // Helper: renderiza tabela com cabeçalhos clicáveis
+  function radarTable(lista, frente, cols, limit) {
     if (!lista.length) return '<p style="color:var(--text3);font-size:12px;padding:10px 0">Sem dados suficientes.</p>';
-    const ths = cols.map(c => `<th class="${c.num ? 'num' : ''}">${c.label}</th>`).join('');
-    const trs = lista.map((r, idx) => {
+    const sorted = sortList(lista, frente, limit);
+    const { col: activeCol, dir } = _radarSort[frente];
+    const arrow = dir === 'desc' ? ' ▼' : ' ▲';
+
+    const ths = cols.map(c => {
+      if (!c.col) return `<th class="${c.num ? 'num' : ''}">${c.label}</th>`;
+      const isActive = c.col === activeCol;
+      return `<th class="${c.num ? 'num' : ''}${isActive ? ' radar-th-ativo' : ''}"
+        style="cursor:pointer;user-select:none" title="Ordenar por ${c.label}"
+        onclick="setRadarSort_('${frente}','${c.col}')">
+        ${c.label}${isActive ? `<span class="radar-seta">${arrow}</span>` : ''}
+      </th>`;
+    }).join('');
+
+    const trs = sorted.map((r, idx) => {
       const tds = cols.map(c => `<td class="${c.num ? 'num' : ''}">${c.render(r, idx)}</td>`).join('');
       const ri = rows.indexOf(r);
       return `<tr onclick="mudarAbaLancamentos('mapa');setTimeout(()=>editarEmpMapa_(${ri}),80)" title="Clique para editar">${tds}</tr>`;
     }).join('');
+
     return `<div style="overflow-x:auto"><table class="radar-tabela"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
   }
 
-  function pctBar(pct, cor) {
-    return `<div class="radar-pct-bar"><div class="radar-pct-track"><div class="radar-pct-fill" style="width:${Math.min(pct,100)}%;background:${cor}"></div></div><span>${pct}%</span></div>`;
-  }
-
-  // Suporte — ordenado por pctVendido DESC, top 15
-  const supSorted = [...sup].sort((a,b)=>(b.pctVendido||0)-(a.pctVendido||0)).slice(0,15);
+  // Colunas — Suporte
   const supCols = [
-    { label:'#',            render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
-    { label:'Empreendimento', render:r=>`<span class="radar-nome">${r.nome}</span>` },
-    { label:'Padrão',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
-    { label:'Estágio',      render:r=>r.estagio||'—' },
-    { label:'% Vend.',      num:true, render:r=>pctBar(r.pctVendido||0,'#00c878') },
-    { label:'QTD',          num:true, render:r=>r.estoque!=null?r.estoque:'—' },
+    { label:'#',              render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
+    { label:'Empreendimento', col:'nome',         render:r=>`<span class="radar-nome">${r.nome}</span>` },
+    { label:'Padrão',         col:'padrao',        render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Estágio',        col:'estagio',       render:r=>r.estagio||'—' },
+    { label:'% Vend.',        col:'pctVendido', num:true, render:r=>pctBar(r.pctVendido,'#00c878') },
+    { label:'QTD Estq',       col:'estoque',    num:true, render:r=>r.estoque!=null?r.estoque:'—' },
   ];
 
-  // Resistência — ordenado por scoreVendedor DESC, top 15
-  const resSorted = [...res].sort((a,b)=>(b.scoreVendedor||0)-(a.scoreVendedor||0)).slice(0,15);
+  // Colunas — Resistência
   const resCols = [
-    { label:'#',            render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
-    { label:'Empreendimento', render:r=>{
+    { label:'#',              render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
+    { label:'Empreendimento', col:'nome',          render:r=>{
         const badge = isOportunidade_(r) ? '<span class="badge-oportunidade" style="margin-left:6px;font-size:9px">OPORT.</span>' : '';
         return `<span class="radar-nome">${r.nome}</span>${badge}`;
     }},
-    { label:'Padrão',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
-    { label:'Estágio',      render:r=>r.estagio||'—' },
-    { label:'% Vend.',      num:true, render:r=>pctBar(r.pctVendido||0,'#ff6b6b') },
-    { label:'Score V.',     num:true, render:r=>`<span style="color:${(r.scoreVendedor||0)>=60?'#ff6b6b':'var(--text2)'};font-weight:700">${r.scoreVendedor!=null?r.scoreVendedor:'—'}</span>` },
+    { label:'Padrão',         col:'padrao',         render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Estágio',        col:'estagio',        render:r=>r.estagio||'—' },
+    { label:'% Vend.',        col:'pctVendido',  num:true, render:r=>pctBar(r.pctVendido,'#ff6b6b') },
+    { label:'Score V.',       col:'scoreVendedor',num:true, render:r=>`<span style="color:${(r.scoreVendedor||0)>=60?'#ff6b6b':'var(--text2)'};font-weight:700">${r.scoreVendedor!=null?r.scoreVendedor:'—'}</span>` },
   ];
 
-  // Transição — ordenado por comp (tração) DESC, top 10
-  const traSorted = [...tra].sort((a,b)=>(b.comp||0)-(a.comp||0)).slice(0,10);
+  // Colunas — Transição
   const traCols = [
-    { label:'#',            render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
-    { label:'Empreendimento', render:r=>`<span class="radar-nome">${r.nome}</span>` },
-    { label:'Padrão',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
-    { label:'Estágio',      render:r=>r.estagio||'—' },
-    { label:'% Vend.',      num:true, render:r=>pctBar(r.pctVendido||0,'#ff9800') },
-    { label:'Tração',       num:true, render:r=>r.comp!=null?r.comp:'—' },
+    { label:'#',              render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
+    { label:'Empreendimento', col:'nome',        render:r=>`<span class="radar-nome">${r.nome}</span>` },
+    { label:'Padrão',         col:'padrao',       render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Estágio',        col:'estagio',      render:r=>r.estagio||'—' },
+    { label:'% Vend.',        col:'pctVendido', num:true, render:r=>pctBar(r.pctVendido,'#ff9800') },
+    { label:'Tração',         col:'comp',        num:true, render:r=>r.comp!=null?r.comp:'—' },
   ];
 
   // Distribuição por padrão
@@ -3194,7 +3246,7 @@ function renderRadarMercado_() {
     if (!dist[p]) return;
     const papel = papelMercado_(r);
     dist[p].total++;
-    if (papel === 'suporte')      dist[p].sup++;
+    if (papel === 'suporte')          dist[p].sup++;
     else if (papel === 'transicao')   dist[p].tra++;
     else if (papel === 'resistencia') dist[p].res++;
   });
@@ -3213,26 +3265,26 @@ function renderRadarMercado_() {
     `<div class="radar-secao rs-suporte">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🟢 Frente 1 — Suporte</span>
-        <span class="radar-secao-sub">Alta absorção · % vendido DESC</span>
+        <span class="radar-secao-sub">Alta absorção — clique no cabeçalho para ordenar</span>
         <span class="radar-secao-count">${sup.length}</span>
       </div>
-      ${radarTable(supSorted, supCols)}
+      ${radarTable(sup, 'sup', supCols, 15)}
     </div>` +
     `<div class="radar-secao rs-resistencia">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🔴 Frente 2 — Resistência</span>
-        <span class="radar-secao-sub">Baixa absorção · urgência do vendedor DESC</span>
+        <span class="radar-secao-sub">Baixa absorção — clique no cabeçalho para ordenar</span>
         <span class="radar-secao-count">${res.length}</span>
       </div>
-      ${radarTable(resSorted, resCols)}
+      ${radarTable(res, 'res', resCols, 15)}
     </div>` +
     `<div class="radar-secao rs-transicao">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🟡 Transição</span>
-        <span class="radar-secao-sub">Absorção moderada · tração DESC</span>
+        <span class="radar-secao-sub">Absorção moderada — clique no cabeçalho para ordenar</span>
         <span class="radar-secao-count">${tra.length}</span>
       </div>
-      ${radarTable(traSorted, traCols)}
+      ${radarTable(tra, 'tra', traCols, 10)}
     </div>` +
     `<div class="radar-secao">
       <div class="radar-secao-header">
