@@ -642,6 +642,27 @@
   .tri-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:11px;padding:3px 8px;cursor:pointer;transition:border-color .15s}
   .tri-btn:hover{border-color:var(--accent);color:var(--accent)}
   @media(max-width:900px){.intel-row{grid-template-columns:1fr}}
+
+  /* ── MODAL RADAR (Suporte / Resistência) ── */
+  .rd-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+  .rd-modal-inner{background:#1e2335;border:1px solid rgba(255,255,255,.1);border-radius:12px;width:100%;max-width:860px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+  .rd-modal-header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0}
+  .rd-modal-title{font-size:13px;font-weight:700;color:#fff;flex:1}
+  .rd-modal-count{font-size:11px;color:rgba(255,255,255,.4)}
+  .rd-modal-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px;border-radius:4px}
+  .rd-modal-close:hover{color:#fff;background:rgba(255,255,255,.08)}
+  .rd-modal-scroll{overflow-y:auto;flex:1;padding:12px 16px 16px}
+  .rd-table{width:100%;border-collapse:collapse;font-size:12px}
+  .rd-table th{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.07);white-space:nowrap;text-align:left}
+  .rd-table th.num{text-align:right}
+  .rd-table td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle;color:rgba(255,255,255,.85)}
+  .rd-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .rd-table tbody tr:hover{background:rgba(255,255,255,.03);cursor:default}
+  /* simil-badge (mesmas 4 faixas do lancamentos.html) */
+  .rd-simil{display:inline-block;padding:2px 6px;border-radius:99px;font-size:10px;font-weight:700;background:transparent;color:rgba(255,255,255,.65);border:1px solid rgba(255,255,255,.35)}
+  .rd-simil.s-media{background:#fff;color:#000;border-color:#e5e7eb}
+  .rd-simil.s-boa  {background:#fef9c3;color:#000;border-color:#fbbf24}
+  .rd-simil.s-alta {background:#ff9800;color:#000;border-color:#e67e00;box-shadow:0 0 7px rgba(255,152,0,.35)}
 </style>
 </head>
 <body>
@@ -2194,8 +2215,23 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
     items: radarResistencia.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
   };
 
-  ligarVerCardVG_('cardRadarSuporte',     'insRadarSuporte');
-  ligarVerCardVG_('cardRadarResistencia', 'insRadarResistencia');
+  // Radar cards usam modal interno (formatação igual ao Radar de lancamentos.html)
+  function ligarRadarCard_(cardId, detId, sortDir) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    const btn = card.querySelector('.vg-stat-link');
+    if (!btn) return;
+    const d = window._insightDetails[detId];
+    const hasItems = d && d.items && d.items.length > 0;
+    if (hasItems) {
+      btn.style.display = '';
+      btn.onclick = () => abrirRadarModal_({ titulo: d.title, items: d.items, _sortDir: sortDir });
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+  ligarRadarCard_('cardRadarSuporte',     'insRadarSuporte',     'desc'); // maior prazo restante primeiro
+  ligarRadarCard_('cardRadarResistencia', 'insRadarResistencia', 'asc');  // mais tempo parado primeiro
 }
 
 // Liga o botão "Ver →" de um card .vg-stat a um id de window._insightDetails
@@ -5350,6 +5386,99 @@ function renderTriangulo(lista) {
     + '<th>#</th><th>Score</th><th>Cliente · Imóvel</th><th>Categoria</th><th>Status</th><th></th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
+
+// ── MODAL RADAR (Suporte / Resistência) ─────────────────────────────────────
+// Exibe lista de empreendimentos com formatação estilo Radar.
+// data = { titulo, cor, items: [...emps raw] }
+function abrirRadarModal_(data) {
+  const el = document.getElementById('rdModal');
+  if (!el) return;
+  document.getElementById('rdModalTitle').textContent = data.titulo;
+  document.getElementById('rdModalCount').textContent = data.items.length + ' empreendimento' + (data.items.length !== 1 ? 's' : '');
+
+  // helpers
+  function pctV(e) {
+    const est = parseInt(e.estoque) || 0, tot = parseInt(e.totalUnidades) || 0;
+    return tot ? Math.round((1 - est / tot) * 100) : null;
+  }
+  function pctCell(e) {
+    const p = pctV(e);
+    if (p == null) return '—';
+    const cor = p > 50 ? '#ff6b6b' : p === 50 ? '#ff9800' : '#00c878';
+    return `<span style="font-weight:700;color:${cor}">${p}%</span>`;
+  }
+  function prazoCell(e) {
+    if (!e.previsaoEntrega) return '<span style="color:rgba(255,255,255,.3)">—</span>';
+    const meses = Math.round((new Date(e.previsaoEntrega) - new Date()) / (1000*60*60*24*30.44));
+    const est = (e.status || '').toLowerCase();
+    if (/em obras|em planta/.test(est)) {
+      if (meses > 0) return `<span style="font-weight:700;color:#3296ff">(-${meses})</span>`;
+      if (meses === 0) return `<span style="font-weight:700;color:#ff9800">(0)</span>`;
+      return `<span style="font-weight:700;color:#ff6b6b">(+${-meses} ⚠)</span>`;
+    }
+    if (/pronto novo/.test(est)) {
+      const desde = -meses;
+      if (desde >= 0) return `<span style="font-weight:700;color:#00c878">(+${desde})</span>`;
+      return `<span style="color:rgba(255,255,255,.4)">(${desde})</span>`;
+    }
+    return '—';
+  }
+  function similCell(e) {
+    const s = parseInt(e.simil) || 0;
+    if (!s) return '<span style="color:rgba(255,255,255,.3)">—</span>';
+    const cls = s >= 90 ? 's-alta' : s >= 80 ? 's-boa' : s >= 70 ? 's-media' : '';
+    return `<span class="rd-simil${cls ? ' '+cls : ''}">${s}%</span>`;
+  }
+  function local(e) {
+    return [e.bairro, e.cidade].filter(v => v && v !== '—').join('/') || '—';
+  }
+
+  const sorted = [...data.items].sort((a, b) => {
+    // mesma lógica de sort do Radar: prazoEntrega
+    const pa = a.previsaoEntrega ? Math.round((new Date(a.previsaoEntrega) - new Date()) / (1000*60*60*24*30.44)) : -999;
+    const pb = b.previsaoEntrega ? Math.round((new Date(b.previsaoEntrega) - new Date()) / (1000*60*60*24*30.44)) : -999;
+    return data._sortDir === 'asc' ? pa - pb : pb - pa;
+  });
+
+  const rows = sorted.map(e => `<tr>
+    <td style="color:rgba(255,255,255,.35);font-size:10px;font-family:monospace">${e.idLancamento||'—'}</td>
+    <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.nomeEmpreendimento||'—'}</td>
+    <td>${similCell(e)}</td>
+    <td style="color:rgba(255,255,255,.5)">${e.construtora||'—'}</td>
+    <td style="color:rgba(255,255,255,.7)">${local(e)}</td>
+    <td class="num">${prazoCell(e)}</td>
+    <td class="num"><strong>${e.estoque != null ? e.estoque : '—'}</strong></td>
+    <td class="num">${pctCell(e)}</td>
+    <td class="num" style="color:rgba(255,255,255,.4)">${parseInt(e.totalUnidades)||0 > 0 ? e.totalUnidades : '—'}</td>
+  </tr>`).join('');
+
+  document.getElementById('rdModalBody').innerHTML = `<div style="overflow-x:auto"><table class="rd-table">
+    <thead><tr>
+      <th>ID</th><th>Empreendimento</th><th>S%</th><th>Construtora</th>
+      <th>Local</th><th class="num">Prazo</th><th class="num">Estoque</th>
+      <th class="num">% Vend.</th><th class="num">Total</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+
+  el.style.display = '';
+}
+function fecharRadarModal_() {
+  const el = document.getElementById('rdModal');
+  if (el) el.style.display = 'none';
+}
 </script>
+
+<!-- Modal Radar -->
+<div id="rdModal" class="rd-modal-overlay" style="display:none" onclick="if(event.target===this)fecharRadarModal_()">
+  <div class="rd-modal-inner">
+    <div class="rd-modal-header">
+      <span class="rd-modal-title" id="rdModalTitle"></span>
+      <span class="rd-modal-count" id="rdModalCount"></span>
+      <button class="rd-modal-close" onclick="fecharRadarModal_()">✕</button>
+    </div>
+    <div class="rd-modal-scroll" id="rdModalBody"></div>
+  </div>
+</div>
 </body>
 </html>

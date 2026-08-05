@@ -611,16 +611,23 @@ select.form-input option { background: var(--surface2); }
 .card-padrao-vendedor.padrao-potencial { background: rgba(90,160,255,.2); color: #5aa0ff; }
 .card-padrao-vendedor.padrao-moderado  { background: rgba(180,150,255,.2); color: #b496ff; }
 
-/* ── SIMILARIDADE PADRÃO VENDEDOR ── */
+/* ── SIMILARIDADE PADRÃO VENDEDOR — 4 faixas de cor ── */
+/* base / ≤69%: contorno branco, letra branca */
 .simil-badge {
   display: inline-block; padding: 2px 7px; border-radius: 99px;
   font-size: 10px; font-weight: 700; letter-spacing: .4px;
-  background: rgba(139,92,246,.12); color: #7c3aed;
-  border: 1px solid rgba(139,92,246,.25);
+  background: transparent; color: rgba(255,255,255,.75);
+  border: 1px solid rgba(255,255,255,.4);
 }
-@media (prefers-color-scheme: dark) {
-  .simil-badge { color: #c4b5fd; background: rgba(139,92,246,.18); border-color: rgba(139,92,246,.3); }
+@media (prefers-color-scheme: light) {
+  .simil-badge { color: var(--text3); border-color: rgba(0,0,0,.25); }
 }
+/* 70–79%: fundo branco, letra preta */
+.simil-badge.s-media { background:#fff; color:#000; border-color:#e5e7eb; }
+/* 80–89%: amarelo claro, letra preta */
+.simil-badge.s-boa   { background:#fef9c3; color:#000; border-color:#fbbf24; }
+/* ≥90%: laranja chapado, letra preta */
+.simil-badge.s-alta  { background:#ff9800; color:#000; border-color:#e67e00; box-shadow:0 0 8px rgba(255,152,0,.4); }
 .sobra-flag {
   display: inline-block; padding: 2px 7px; border-radius: 99px;
   font-size: 10px; font-weight: 700;
@@ -631,11 +638,7 @@ select.form-input option { background: var(--surface2); }
   .sobra-flag { color: #fbbf24; background: rgba(255,160,0,.15); border-color: rgba(255,160,0,.35); }
 }
 .mapa-simil { font-family: monospace; font-size: 11px; white-space: nowrap; }
-.simil-badge.simil-alta {
-  background: rgba(0,200,120,.18); color: #00c878;
-  border-color: rgba(0,200,120,.45);
-  box-shadow: 0 0 7px rgba(0,200,120,.3);
-}
+/* helper global: retorna classe extra para simil-badge */
 .padrao-pct     { font-weight: 700; font-size: 13px; }
 .padrao-id      { font-family: monospace; font-size: 10px; color: var(--text3); }
 
@@ -3227,6 +3230,19 @@ function prazoAtualMeses_(r) {
 //
 // TRANSIÇÃO  → exatamente 50% vendido, faixa errada de estágio, ou sem dados.
 // null       → estoque zerado ou estágio não mapeado.
+
+// Retorna classe CSS extra para .simil-badge de acordo com o percentual:
+//   ≥90%  → s-alta  (laranja chapado, letra preta)
+//   80–89 → s-boa   (amarelo claro, letra preta)
+//   70–79 → s-media (branco, letra preta)
+//   ≤69%  → ''      (base: contorno branco, letra branca)
+function similBadgeCls_(pct) {
+  if (pct >= 90) return 's-alta';
+  if (pct >= 80) return 's-boa';
+  if (pct >= 70) return 's-media';
+  return '';
+}
+
 function papelMercado_(r) {
   if (!r.estoque || r.estoque <= 0) return null;
   if (r.pctVendido == null)         return null;
@@ -3513,7 +3529,7 @@ function renderRadarMercado_() {
   // Helper: S% similaridade — verde destacado se ≥ 90%
   function similCell(r) {
     if (!r.simil) return '<span style="color:var(--text3)">—</span>';
-    const cls = r.simil >= 90 ? 'simil-badge simil-alta' : 'simil-badge';
+    const cls = 'simil-badge' + (similBadgeCls_(r.simil) ? ' ' + similBadgeCls_(r.simil) : '');
     return `<span class="${cls}" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>`;
   }
 
@@ -4539,7 +4555,7 @@ async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam, lis
     // ambos já calculados ANTES do render (ver `scored` acima), diferente da
     // versão anterior que pintava isso depois via getElementById.
     const alertaHtml = s.alerta ? `<div class="card-alerta card-alerta-${s.alerta.tipo}">${s.alerta.titulo}</div>` : '';
-    const similHtml       = s.simil > 0 ? `<span class="simil-badge" title="Similaridade com Padrão Vendedor ${s.simil}% (peso 5 na Tração)">S ${s.simil}%</span>` : '';
+    const similHtml       = s.simil > 0 ? `<span class="simil-badge${similBadgeCls_(s.simil) ? ' '+similBadgeCls_(s.simil) : ''}" title="Similaridade com Padrão Vendedor ${s.simil}% (peso 5 na Tração)">S ${s.simil}%</span>` : '';
     const sobraFlagHtml   = s.isSobraSuspeita ? `<span class="sobra-flag" title="SOBRA SUSPEITA: vendeu 80%+, mas isso só aconteceu mais de 2 anos depois da entrega">⚠ Sobra suspeita</span>` : '';
     const tvHtml = s.comp > 0 ? `
         <div class="tv-score-badge ${classeScoreTracao_(s.comp)}" title="Score de Tração ${s.comp.toFixed(1)} — ${s.perfil} · Similaridade Padrão Vendedor ${s.simil}%">T ${s.comp.toFixed(1)}|V ${s.scoreVendedor > 0 ? s.scoreVendedor : '–'}</div>
@@ -4882,7 +4898,7 @@ function renderMapaGeral_() {
       <td>${r.construtora}</td>
       <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
       <td>${r.padrao || '—'}</td>
-      <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>` : '—'}</td>
+      <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge${similBadgeCls_(r.simil) ? ' '+similBadgeCls_(r.simil) : ''}" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>` : '—'}</td>
       <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
       <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
