@@ -2188,15 +2188,17 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
   }
   const radarSuporte = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
-    if (!/em obras|em planta/i.test(e.status || '')) return false;
+    if (!/em obras|em planta/i.test((e.status || '').trim())) return false;
     const pct = _pctVendidoEmp(e);
-    return pct !== null && pct < 50;
+    // null = totalUnidades não preenchido → inclui (estágio já garante a classificação)
+    return pct === null || pct < 50;
   });
   const radarResistencia = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
-    if (!/pronto novo/i.test(e.status || '')) return false;
+    if (!/pronto novo/i.test((e.status || '').trim())) return false;
     const pct = _pctVendidoEmp(e);
-    return pct !== null && pct > 50;
+    // null = totalUnidades não preenchido → inclui (estágio já garante a classificação)
+    return pct === null || pct > 50;
   });
 
   const valSup = document.getElementById('cardRadarSuporteValue');
@@ -5440,10 +5442,19 @@ function abrirRadarModal_(data) {
     return data._sortDir === 'asc' ? pa - pb : pb - pa;
   });
 
+  function estagioCell(e) {
+    const st = (e.status || '').trim();
+    const isObras  = /em obras|em planta/i.test(st);
+    const isPronto = /pronto novo/i.test(st);
+    const cor = isPronto ? '#ff6b6b' : isObras ? '#3296ff' : 'rgba(255,255,255,.4)';
+    return `<span style="font-size:10px;color:${cor};white-space:nowrap">${st||'—'}</span>`;
+  }
+
   const rows = sorted.map(e => `<tr>
     <td style="color:rgba(255,255,255,.35);font-size:10px;font-family:monospace">${e.idLancamento||'—'}</td>
-    <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.nomeEmpreendimento||'—'}</td>
+    <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.nomeEmpreendimento||'—'}</td>
     <td>${similCell(e)}</td>
+    <td>${estagioCell(e)}</td>
     <td style="color:rgba(255,255,255,.5)">${e.construtora||'—'}</td>
     <td style="color:rgba(255,255,255,.7)">${local(e)}</td>
     <td class="num">${prazoCell(e)}</td>
@@ -5454,7 +5465,7 @@ function abrirRadarModal_(data) {
 
   document.getElementById('rdModalBody').innerHTML = `<div style="overflow-x:auto"><table class="rd-table">
     <thead><tr>
-      <th>ID</th><th>Empreendimento</th><th>S%</th><th>Construtora</th>
+      <th>ID</th><th>Empreendimento</th><th>S%</th><th>Estágio</th><th>Construtora</th>
       <th>Local</th><th class="num">Prazo</th><th class="num">Estoque</th>
       <th class="num">% Vend.</th><th class="num">Total</th>
     </tr></thead>
