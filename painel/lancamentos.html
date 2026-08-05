@@ -74,6 +74,17 @@ a { text-decoration: none; color: inherit; }
 .mapa-toolbar .filtro-chip { padding: 3px 10px; font-size: 11px; }
 
 /* ── RADAR DE MERCADO ────────────────────────────────────────────────── */
+.radar-filtros-bar {
+  display:flex; flex-direction:column; gap:8px;
+  margin-bottom:18px; padding:12px 14px;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:10px;
+}
+.radar-filtros-grupo { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.radar-filtros-label {
+  font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--text3); white-space:nowrap; min-width:48px;
+}
 .radar-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:24px; }
 .radar-kpi  { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
 .radar-kpi-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
@@ -3254,30 +3265,81 @@ function setMapaPapelFiltro_(papel) {
 
 // ── RADAR DE MERCADO ────────────────────────────────────────────────────────
 let _radarSort = {
-  sup: { col: 'estoque',    dir: 'desc' },
-  res: { col: 'estoque',    dir: 'desc' },
-  tra: { col: 'estoque',    dir: 'desc' },
+  sup: { col: 'estoque', dir: 'desc' },
+  res: { col: 'estoque', dir: 'desc' },
+  tra: { col: 'estoque', dir: 'desc' },
 };
+let _radarFiltroEstagios = new Set(); // vazio = mostra todos
+let _radarFiltroPadroes  = new Set(); // vazio = mostra todos
 
 function setRadarSort_(frente, col) {
   const cur = _radarSort[frente];
-  _radarSort[frente] = {
-    col,
-    dir: cur.col === col && cur.dir === 'desc' ? 'asc' : 'desc',
-  };
+  _radarSort[frente] = { col, dir: cur.col === col && cur.dir === 'desc' ? 'asc' : 'desc' };
   renderRadarMercado_();
 }
+function toggleRadarEstagio_(est) {
+  if (_radarFiltroEstagios.has(est)) _radarFiltroEstagios.delete(est);
+  else _radarFiltroEstagios.add(est);
+  renderRadarMercado_();
+}
+function toggleRadarPadrao_(pad) {
+  if (_radarFiltroPadroes.has(pad)) _radarFiltroPadroes.delete(pad);
+  else _radarFiltroPadroes.add(pad);
+  renderRadarMercado_();
+}
+function limparRadarEstagio_() { _radarFiltroEstagios.clear(); renderRadarMercado_(); }
+function limparRadarPadrao_()  { _radarFiltroPadroes.clear();  renderRadarMercado_(); }
 
 function renderRadarMercado_() {
   const el = document.getElementById('radarConteudo');
   if (!el) return;
-  const rows = _mapaRows;
-  if (!rows.length) {
+  const allRows = _mapaRows;
+  if (!allRows.length) {
     el.innerHTML = '<div style="padding:48px;text-align:center;color:var(--text3);font-size:13px">Nenhum dado carregado. Acesse o Mapa Geral primeiro.</div>';
     return;
   }
 
-  // Classifica cada linha
+  // ── Filtros de Estágio e Padrão ─────────────────────────────────────────
+  const ORDEM_PAD_RADAR = ['Popular','Médio','Alto','Luxo'];
+  const normEstRadar = e => (e === 'Em planta' ? 'Em obras' : e);
+
+  // Coleta valores únicos de todo o dataset (não do filtrado)
+  const estagiosUnicos = [...new Set(allRows.map(r => normEstRadar(r.estagio||'')).filter(Boolean))].sort();
+  const padraoUnico    = ORDEM_PAD_RADAR.filter(p => allRows.some(r => r.padrao === p));
+
+  function chipEstagio(est) {
+    const on = _radarFiltroEstagios.has(est);
+    return `<button type="button" class="filtro-chip${on ? ' on' : ''}" onclick="toggleRadarEstagio_('${est.replace(/'/g,"\\'")}')">${est}</button>`;
+  }
+  function chipPadrao(pad) {
+    const on = _radarFiltroPadroes.has(pad);
+    return `<button type="button" class="filtro-chip${on ? ' on' : ''}" onclick="toggleRadarPadrao_('${pad}')">${pad}</button>`;
+  }
+  const todosEstOn  = _radarFiltroEstagios.size === 0;
+  const todosPadOn  = _radarFiltroPadroes.size  === 0;
+
+  const filtrosHtml = `
+    <div class="radar-filtros-bar">
+      <div class="radar-filtros-grupo">
+        <span class="radar-filtros-label">Estágio</span>
+        <button type="button" class="filtro-chip${todosEstOn ? ' on' : ''}" onclick="limparRadarEstagio_()">Todos</button>
+        ${estagiosUnicos.map(chipEstagio).join('')}
+      </div>
+      <div class="radar-filtros-grupo">
+        <span class="radar-filtros-label">Padrão</span>
+        <button type="button" class="filtro-chip${todosPadOn ? ' on' : ''}" onclick="limparRadarPadrao_()">Todos</button>
+        ${padraoUnico.map(chipPadrao).join('')}
+      </div>
+    </div>`;
+
+  // Aplica filtros
+  const rows = allRows.filter(r => {
+    if (_radarFiltroEstagios.size > 0 && !_radarFiltroEstagios.has(normEstRadar(r.estagio||''))) return false;
+    if (_radarFiltroPadroes.size  > 0 && !_radarFiltroPadroes.has(r.padrao||''))                 return false;
+    return true;
+  });
+
+  // Classifica cada linha filtrada
   const sup = [], tra = [], res = [], oport = [];
   rows.forEach(r => {
     const p = papelMercado_(r);
@@ -3311,17 +3373,26 @@ function renderRadarMercado_() {
       </div>
     </div>`;
 
-  // Renderiza célula de prazo com cor por contexto
+  // Renderiza célula de prazo no Radar:
+  //   Em obras/Em planta → contagem regressiva até entrega: (-20)
+  //   Pronto novo        → contagem progressiva desde entrega: (+5)
   function prazoCell(r) {
-    const p = prazoAtualMeses_(r);
-    if (p === null) return '<span style="color:var(--text3)">—</span>';
+    const raw = prazoEntregaMeses_(r);   // + = futuro, - = passado
+    if (raw === null) return '<span style="color:var(--text3)">—</span>';
+    const val = -raw;   // negativo = faltam meses; positivo = meses desde entrega
     const est = r.estagio || '';
     const isObras  = /em obras|em planta/i.test(est);
     const isPronto = /pronto novo/i.test(est);
-    let cor = 'var(--text2)';
-    if (isObras)  cor = p <= 12 ? '#00c878' : p >= 24 ? '#ff6b6b' : '#ff9800';
-    if (isPronto) cor = p <= 6  ? '#00c878' : p >= 12 ? '#ff6b6b' : '#ff9800';
-    return `<span style="font-weight:700;color:${cor}">${p}m</span>`;
+    if (isObras) {
+      if (val < 0)  return `<span style="font-weight:700;color:#3296ff">(${val})</span>`;
+      if (val === 0) return `<span style="font-weight:700;color:#ff9800">(0)</span>`;
+      return `<span style="font-weight:700;color:#ff6b6b">(+${val} ⚠)</span>`;  // atrasado
+    }
+    if (isPronto) {
+      if (val >= 0) return `<span style="font-weight:700;color:#00c878">(+${val})</span>`;
+      return `<span style="color:var(--text3)">(${val})</span>`;
+    }
+    return '<span style="color:var(--text3)">—</span>';
   }
 
   // Valor numérico de uma coluna para ordenação
@@ -3336,10 +3407,17 @@ function renderRadarMercado_() {
     return 0;
   }
 
-  // Ordena e retorna lista cortada no limite
+  // Ordena e retorna lista cortada no limite.
+  // Primário: Padrão (canonical order Popular→Médio→Alto→Luxo).
+  // Secundário: coluna ativa do frente (padrão: estoque DESC).
   function sortList(lista, frente, limit) {
     const { col, dir } = _radarSort[frente];
     const sorted = [...lista].sort((a, b) => {
+      // 1) Padrão canonical
+      const pi = ORDEM_PAD_RADAR.indexOf(a.padrao || '');
+      const pj = ORDEM_PAD_RADAR.indexOf(b.padrao || '');
+      if (pi !== pj) return (pi < 0 ? 99 : pi) - (pj < 0 ? 99 : pj);
+      // 2) Coluna ativa
       const va = colVal(a, col), vb = colVal(b, col);
       if (typeof va === 'string') return dir === 'desc' ? vb.localeCompare(va) : va.localeCompare(vb);
       return dir === 'desc' ? vb - va : va - vb;
@@ -3416,7 +3494,7 @@ function renderRadarMercado_() {
       </div>`;
   }).join('');
 
-  el.innerHTML = kpiHtml +
+  el.innerHTML = filtrosHtml + kpiHtml +
     `<div class="radar-secao rs-suporte">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo">🟢 Frente 1 — Suporte</span>
