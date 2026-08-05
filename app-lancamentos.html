@@ -1347,6 +1347,83 @@ async function carregarBaseReal() {
   montarStatsAbertura_();
   montarDadosAtualizadosTexto_();
   montarBlocoPadrao_();
+  aplicarPresetURL_(); // deep-link de anúncios — aplica se houver ?preset= ou ?padroes= na URL
+}
+
+// ── PRESETS DE URL (deep-link para anúncios Google/Meta) ─────────────────────
+// Uso: app-lancamentos.html?preset=investidor-alto
+// Uso raw: app-lancamentos.html?objetivo=investimento&padroes=Alto,Luxo&situacoes=pronto_novo
+//
+// Presets nomeados — cada chave vira um parâmetro de URL limpo para usar
+// nos anúncios. Adicione novos conforme as campanhas.
+const PRESETS_URL_ = {
+  'investidor-alto':   { objetivo: 'investimento', padroes: ['Alto', 'Luxo'],      situacoes: ['pronto_novo'] },
+  'investidor-medio':  { objetivo: 'investimento', padroes: ['Médio', 'Alto'],     situacoes: [] },
+  'investidor-todos':  { objetivo: 'investimento', padroes: ['Popular','Médio','Alto','Luxo'], situacoes: [] },
+  'moradia-popular':   { objetivo: 'moradia',       padroes: ['Popular', 'Médio'], situacoes: ['pronto_novo'] },
+  'moradia-alto':      { objetivo: 'moradia',       padroes: ['Alto'],             situacoes: ['pronto_novo'] },
+  'pronto-alto':       { objetivo: 'investimento', padroes: ['Alto', 'Luxo'],      situacoes: ['pronto_novo'] },
+  'obras-medio':       { objetivo: 'investimento', padroes: ['Médio'],             situacoes: ['em_obras'] },
+};
+
+function aplicarPresetURL_() {
+  const params = new URLSearchParams(location.search);
+
+  // Resolve config: preset nomeado tem prioridade; fallback para params raw
+  let cfg = null;
+  const presetKey = params.get('preset');
+  if (presetKey && PRESETS_URL_[presetKey]) {
+    cfg = PRESETS_URL_[presetKey];
+  } else {
+    const obj = params.get('objetivo');
+    const pad = params.get('padroes');
+    const sit = params.get('situacoes');
+    if (obj || pad) {
+      cfg = {
+        objetivo:  obj || 'moradia',
+        padroes:   pad ? pad.split(',').map(s => s.trim()) : [],
+        situacoes: sit ? sit.split(',').map(s => s.trim()) : [],
+      };
+    }
+  }
+  if (!cfg) return; // URL normal, sem preset — não faz nada
+
+  // ── 1. Objetivo ─────────────────────────────────────────────────────────
+  D.objetivo = cfg.objetivo;
+  document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(btn => {
+    const val = btn.getAttribute('onclick').match(/'([^']+)'\)$/)?.[1];
+    btn.classList.toggle('on', val === cfg.objetivo);
+  });
+  const blocoPadrao = document.getElementById('blocoPadraoWrap');
+  if (blocoPadrao) blocoPadrao.style.display = '';
+
+  // ── 2. Padrões ──────────────────────────────────────────────────────────
+  D.padroes.clear();
+  document.querySelectorAll('#tagsPadrao .obj-tag-btn').forEach(btn => {
+    const val = btn.getAttribute('onclick').match(/'([^']+)'\)$/)?.[1];
+    if (val && cfg.padroes.includes(val)) {
+      btn.classList.add('on');
+      D.padroes.add(val);
+    }
+  });
+  // Padrões do preset que ainda não apareceram nos botões (inventário ainda
+  // não disponível) são ignorados silenciosamente — o funil roda igual.
+  atualizarPadraoPhrase_();
+
+  // ── 3. Situações (step 2 — "Pronto para Morar" / "Em Obras") ──────────
+  if (cfg.situacoes && cfg.situacoes.length) {
+    D.situacoes.clear();
+    cfg.situacoes.forEach(val => {
+      const btn = document.querySelector(`#tagsSituacao .s2-sit-btn[onclick*="${val}"]`);
+      if (btn) { btn.classList.add('on'); D.situacoes.add(val); }
+    });
+  }
+
+  // ── 4. Pula direto para os sliders (step 2) ────────────────────────────
+  if (D.padroes.size > 0) {
+    montarConfigIniciais_();
+    irParaStep(2);
+  }
 }
 
 // Anima um contador de 0 até o valor real (Tela 1, "Temos hoje X lançamentos") --
