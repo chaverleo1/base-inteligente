@@ -4266,8 +4266,8 @@ function renderMapaGeral_() {
   // ── Tabela resumo por estágio × faixa ─────────────────────────────────────
   // Sempre usa _mapaRows completo (panorama geral independente do filtro
   // do gráfico). Exibe por linha cada estágio presente na base, colunas A-D.
-  // Cada célula: "count · pct%" onde count = nº de empreendimentos e
-  // pct = % desse estágio que pertence à faixa.
+  // Cada célula: "qtd | pct%" onde qtd = soma de unidades disponíveis (r.estoque)
+  // e pct = % dessa qtd em relação ao total de unidades disponíveis da linha.
   function renderTabelaResumoFaixas_() {
     const wrap = document.getElementById('graficoTabelaResumoWrap');
     if (!wrap) return;
@@ -4308,38 +4308,38 @@ function renderMapaGeral_() {
 
       estagios.forEach(est => {
         const lista = porEst[est];
-        const total = lista.length;
-        const cnt = { A: 0, B: 0, C: 0, D: 0 };
-        lista.forEach(r => { cnt[fatiaDesteEmp_(r.pctVendido)]++; });
+        const estq = { A: 0, B: 0, C: 0, D: 0 };
+        lista.forEach(r => { estq[fatiaDesteEmp_(r.pctVendido)] += Number(r.estoque) || 0; });
+        const totalEstqRow = FAIXA_LABELS.reduce((s, f) => s + estq[f], 0);
         t += `<tr>
           <td class="col-estagio">${est}</td>
           ${FAIXA_LABELS.map(f => {
-            if (!cnt[f]) return `<td class="cell-vazio">—</td>`;
-            const pct = Math.round(cnt[f] / total * 100);
+            if (!estq[f]) return `<td class="cell-vazio">—</td>`;
+            const pct = totalEstqRow > 0 ? Math.round(estq[f] / totalEstqRow * 100) : 0;
             return `<td style="background:${COR[f].bg}"><span class="cell-faixa">
-              <span class="cf-cnt" style="color:${COR[f].txt}">${cnt[f]}</span>
+              <span class="cf-cnt" style="color:${COR[f].txt}">${estq[f].toLocaleString('pt-BR')}</span>
               <span class="cf-pct">|&nbsp;${pct}%</span>
             </span></td>`;
           }).join('')}
-          <td style="color:var(--text2);font-weight:600">${total}</td>
+          <td style="color:var(--text2);font-weight:600">${totalEstqRow.toLocaleString('pt-BR')}</td>
         </tr>`;
       });
 
       // Linha de total do bloco
-      const cntT = { A: 0, B: 0, C: 0, D: 0 };
-      rows.forEach(r => { cntT[fatiaDesteEmp_(r.pctVendido)]++; });
-      const gt = rows.length;
+      const estqT = { A: 0, B: 0, C: 0, D: 0 };
+      rows.forEach(r => { estqT[fatiaDesteEmp_(r.pctVendido)] += Number(r.estoque) || 0; });
+      const gtEstq = FAIXA_LABELS.reduce((s, f) => s + estqT[f], 0);
       t += `<tr style="border-top:1px solid rgba(255,255,255,.10)">
         <td class="col-estagio" style="color:var(--text)">TOTAL</td>
         ${FAIXA_LABELS.map(f => {
-          if (!cntT[f]) return `<td class="cell-vazio">—</td>`;
-          const pct = Math.round(cntT[f] / gt * 100);
+          if (!estqT[f]) return `<td class="cell-vazio">—</td>`;
+          const pct = gtEstq > 0 ? Math.round(estqT[f] / gtEstq * 100) : 0;
           return `<td style="background:${COR[f].bg}"><span class="cell-faixa">
-            <span class="cf-cnt" style="color:${COR[f].txt}">${cntT[f]}</span>
+            <span class="cf-cnt" style="color:${COR[f].txt}">${estqT[f].toLocaleString('pt-BR')}</span>
             <span class="cf-pct">|&nbsp;${pct}%</span>
           </span></td>`;
         }).join('')}
-        <td style="color:var(--text);font-weight:700">${gt}</td>
+        <td style="color:var(--text);font-weight:700">${gtEstq.toLocaleString('pt-BR')}</td>
       </tr>`;
 
       t += '</tbody></table></div>';
