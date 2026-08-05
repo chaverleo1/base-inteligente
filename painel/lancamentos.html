@@ -72,6 +72,25 @@ a { text-decoration: none; color: inherit; }
 .mapa-bairro-section .filtro-chip { padding: 3px 10px; font-size: 11px; }
 .mapa-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .mapa-toolbar .filtro-chip { padding: 3px 10px; font-size: 11px; }
+
+/* ── PAPEL DE MERCADO — suporte / transição / resistência ─────────────── */
+.mapa-papel-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.06); }
+.mapa-papel-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); white-space: nowrap; }
+.papel-chip { padding: 3px 11px; border-radius: 99px; border: 1.5px solid var(--border2); background: transparent; color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit; }
+.papel-chip:hover { border-color: var(--text2); }
+.papel-chip-todos.on   { background: rgba(255,255,255,.10); border-color: var(--text); color: var(--text); }
+.papel-chip-suporte.on    { background: rgba(0,200,120,.16);   border-color: #00c878; color: #00c878; }
+.papel-chip-transicao.on  { background: rgba(255,152,0,.16);   border-color: #ff9800; color: #ff9800; }
+.papel-chip-resistencia.on{ background: rgba(255,107,107,.16); border-color: #ff6b6b; color: #ff6b6b; }
+/* Indicador visual nas linhas da tabela */
+.papel-suporte     > td:first-child { box-shadow: inset 3px 0 0 #00c878; }
+.papel-transicao   > td:first-child { box-shadow: inset 3px 0 0 #ff9800; }
+.papel-resistencia > td:first-child { box-shadow: inset 3px 0 0 #ff6b6b; }
+.papel-suporte     { background: rgba(0,200,120,.025) !important; }
+.papel-transicao   { background: rgba(255,152,0,.02)  !important; }
+.papel-resistencia { background: rgba(255,107,107,.03) !important; }
+/* Badge de oportunidade (resistência + score vendedor alto) */
+.badge-oportunidade { display:inline-block; font-size:9px; font-weight:800; letter-spacing:.05em; padding:1px 6px; border-radius:4px; background:rgba(255,107,107,.18); color:#ff6b6b; border:1px solid rgba(255,107,107,.35); margin-left:5px; vertical-align:middle; }
 .btn-imprimir-lista { padding: 3px 12px; border-radius: 99px; border: 1px solid var(--border2); background: var(--surface);
   color: var(--text2); font-size: 11px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif;
   transition: all .15s; white-space: nowrap; }
@@ -1090,6 +1109,10 @@ select.form-input option { background: var(--surface2); }
       <div class="filtro-bar" id="mapa-estagio-filtros"></div>
       <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
       <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem) -- com itens marcados, imprime só eles">🖨️ PDF</button>
+    </div>
+    <div class="mapa-papel-bar" id="mapa-papel-bar">
+      <span class="mapa-papel-label">Papel:</span>
+      <div id="mapa-papel-filtros"></div>
     </div>
   </div>
   <!-- GRÁFICO CARTESIANO DE ESTOQUE — acima da tabela Mapa Geral -->
@@ -2965,6 +2988,48 @@ let _todos = [], _filtroStatus = '', _emps = [];
 let _mapaRows = [], _mapaSort = { campo: null, dir: 'desc' };
 let _mapaEstagiosAtivos = new Set();
 let _mapaBairrosAtivos  = new Set(); // vazio = mostra todos
+let _mapaPapelFiltro    = null;      // null=todos | 'suporte' | 'transicao' | 'resistencia'
+
+// Classifica cada empreendimento pelo papel de mercado (suporte/resistência).
+// Baseado em % vendido (faixa) como critério principal.
+function papelMercado_(r) {
+  const pct = r.pctVendido;
+  if (pct == null || pct < 0) return null;
+  if (pct > 75) return 'suporte';
+  if (pct > 50) return 'transicao';
+  return 'resistencia';
+}
+
+// Retorna true se o empreendimento é resistência com alta urgência do vendedor
+function isOportunidade_(r) {
+  return papelMercado_(r) === 'resistencia' && (r.scoreVendedor || 0) >= 60;
+}
+
+function renderMapaPapelFiltros_() {
+  const bar = document.getElementById('mapa-papel-filtros');
+  if (!bar) return;
+  const total = _mapaRows.length;
+  const cnt = { suporte: 0, transicao: 0, resistencia: 0 };
+  _mapaRows.forEach(r => { const p = papelMercado_(r); if (p) cnt[p]++; });
+
+  const chips = [
+    { key: null,          label: `Todos (${total})`,                                cls: 'papel-chip-todos' },
+    { key: 'suporte',     label: `🟢 Suporte (${cnt.suporte})`,                    cls: 'papel-chip-suporte' },
+    { key: 'transicao',   label: `🟡 Transição (${cnt.transicao})`,                cls: 'papel-chip-transicao' },
+    { key: 'resistencia', label: `🔴 Resistência (${cnt.resistencia})`,             cls: 'papel-chip-resistencia' },
+  ];
+  bar.innerHTML = chips.map(c => `
+    <button type="button" class="papel-chip ${c.cls}${_mapaPapelFiltro === c.key ? ' on' : ''}"
+      onclick="setMapaPapelFiltro_(${c.key == null ? 'null' : "'" + c.key + "'"})">
+      ${c.label}
+    </button>`).join('');
+}
+
+function setMapaPapelFiltro_(papel) {
+  _mapaPapelFiltro = papel;
+  renderMapaPapelFiltros_();
+  renderMapaGeral_();
+}
 
 let _listaPadroes = [];
 let _listaModelos = [];
@@ -4033,9 +4098,11 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam, l
   // Recarregou os dados -- reseta filtros e seleção.
   _mapaEstagiosAtivos = new Set();
   _mapaBairrosAtivos  = new Set();
+  _mapaPapelFiltro    = null;
   _mapaSelecionados = new Set();
   renderMapaBairroFiltros_();
   renderMapaEstagioFiltros_();
+  renderMapaPapelFiltros_();
   renderMapaGeral_();
 }
 
@@ -4177,7 +4244,8 @@ function renderMapaGeral_() {
   let linhas = _mapaRows
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => (!_mapaEstagiosAtivos.size || _mapaEstagiosAtivos.has(r.estagio))
-                    && (!_mapaBairrosAtivos.size  || _mapaBairrosAtivos.has(r.bairro)));
+                    && (!_mapaBairrosAtivos.size  || _mapaBairrosAtivos.has(r.bairro))
+                    && (_mapaPapelFiltro == null  || papelMercado_(r) === _mapaPapelFiltro));
 
   if (!linhas.length) {
     tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
@@ -4201,11 +4269,15 @@ function renderMapaGeral_() {
   // (classeScoreTracao_, baseado no score composto) — aqui cada nota vira
   // sua própria coluna em vez de um badge combinado.
   _mapaIndicesVisiveis = linhas.map(({ i }) => i);
-  tbody.innerHTML = linhas.map(({ r, i }) => `
-    <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar" class="${_mapaSelecionados.has(i) ? 'mapa-row-selecionada' : ''}">
+  tbody.innerHTML = linhas.map(({ r, i }) => {
+    const papel = papelMercado_(r);
+    const papelCls = papel ? 'papel-' + papel : '';
+    const oport = isOportunidade_(r) ? '<span class="badge-oportunidade">OPORTUNIDADE</span>' : '';
+    return `
+    <tr onclick="editarEmpMapa_(${i})" title="Clique pra editar" class="${[_mapaSelecionados.has(i) ? 'mapa-row-selecionada' : '', papelCls].filter(Boolean).join(' ')}">
       <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
       <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
-      <td>${r.nome}</td>
+      <td>${r.nome}${oport}</td>
       ${(() => {
         const f = typeof fatiaEstoque_ === 'function' ? fatiaEstoque_(r.pctVendido) : '—';
         const bg = f==='A' ? 'rgba(0,200,120,.16)'  : f==='B' ? 'rgba(50,150,255,.16)'
@@ -4233,7 +4305,8 @@ function renderMapaGeral_() {
         return `(${r.prazoLancEntrega}${apos >= 0 ? '+' : ''}${apos})=${r.prazoVenda}`;
       })()}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   atualizarSetasMapaGeral_();
   atualizarUiSelecaoMapa_();
