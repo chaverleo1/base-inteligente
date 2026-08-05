@@ -3401,15 +3401,20 @@ function renderRadarMercado_() {
     return '<span style="color:var(--text3)">—</span>';
   }
 
-  // Valor numérico de uma coluna para ordenação
+  // Valor numérico (ou string) de uma coluna para ordenação
   function colVal(r, col) {
-    if (col === 'estoque')     return r.estoque       != null ? Number(r.estoque) : -1;
-    if (col === 'prazoAtual')  { const p = prazoAtualMeses_(r); return p !== null ? p : -1; }
-    if (col === 'pctVendido')  return r.pctVendido    != null ? r.pctVendido     : -1;
-    if (col === 'comp')        return r.comp          != null ? r.comp           : -1;
-    if (col === 'nome')        return (r.nome   || '').toLowerCase();
-    if (col === 'padrao')      return (r.padrao || '').toLowerCase();
-    if (col === 'estagio')     return r.estagioOrd != null ? r.estagioOrd : -1;
+    if (col === 'estoque')        return r.estoque        != null ? Number(r.estoque)        : -1;
+    if (col === 'totalUnidades')  return r.totalUnidades  != null ? Number(r.totalUnidades)  : -1;
+    if (col === 'prazoAtual')     { const p = prazoAtualMeses_(r); return p !== null ? p : -1; }
+    if (col === 'pctVendido')     return r.pctVendido     != null ? r.pctVendido             : -1;
+    if (col === 'pctDisp')        return r.pctVendido     != null ? (100 - r.pctVendido)     : -1;
+    if (col === 'comp')           return r.comp           != null ? r.comp                   : -1;
+    if (col === 'id')             return (r.idEmpreendimento || '').toLowerCase();
+    if (col === 'nome')           return (r.nome          || '').toLowerCase();
+    if (col === 'construtora')    return (r.construtora   || '').toLowerCase();
+    if (col === 'padrao')         return (r.padrao        || '').toLowerCase();
+    if (col === 'bairro')         return (r.bairro        || '').toLowerCase();
+    if (col === 'estagio')        return r.estagioOrd     != null ? r.estagioOrd             : -1;
     return 0;
   }
 
@@ -3457,19 +3462,33 @@ function renderRadarMercado_() {
     return `<div style="overflow-x:auto"><table class="radar-tabela"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table></div>`;
   }
 
-  // Colunas compartilhadas: base para suporte, resistência e transição
-  // Ordenação padrão: estoque DESC | col Prazo mostra tempo desde lançamento/entrega
+  // Helper: % disponível
+  function pctDispCell(r) {
+    if (r.pctVendido == null) return '<span style="color:var(--text3)">—</span>';
+    const pct = 100 - r.pctVendido;
+    const cor = pct >= 75 ? '#ff6b6b' : pct >= 50 ? '#ff9800' : pct >= 25 ? '#3296ff' : '#00c878';
+    return `<span style="font-weight:700;color:${cor}">${pct}%</span>`;
+  }
+
+  // Colunas completas para todas as frentes do Radar
   const colsBase = (frente, showOport) => [
-    { label:'#',              render:(_,i)=>`<span style="color:var(--text3)">${i+1}</span>` },
-    { label:'Empreendimento', col:'nome', render:r=>{
+    { label:'ID',          col:'id',           render:r=>`<span style="color:var(--text3);font-size:10px">${r.idEmpreendimento||'—'}</span>` },
+    { label:'Empreendimento', col:'nome',       render:r=>{
         const badge = showOport && isOportunidade_(r)
-          ? '<span class="badge-oportunidade" style="margin-left:6px;font-size:9px">OPORT.</span>' : '';
+          ? '<span class="badge-oportunidade" style="margin-left:5px;font-size:9px">OPORT.</span>' : '';
         return `<span class="radar-nome">${r.nome}</span>${badge}`;
     }},
-    { label:'Padrão',  col:'padrao',    render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
-    { label:'Estágio', col:'estagio',   render:r=>r.estagio||'—' },
-    { label:'Prazo',   col:'prazoAtual',num:true, render:r=>prazoCell(r) },
-    { label:'Estoque', col:'estoque',   num:true, render:r=>`<strong>${r.estoque!=null?r.estoque:'—'}</strong>` },
+    { label:'Construtora', col:'construtora',   render:r=>`<span style="color:var(--text3)">${r.construtora||'—'}</span>` },
+    { label:'Padrão',      col:'padrao',        render:r=>`<span class="radar-pad">${r.padrao||'—'}</span>` },
+    { label:'Local',       col:'bairro',        render:r=>{
+        const loc = [r.bairro, r.cidade].filter(v=>v&&v!=='—').join('/');
+        return `<span style="color:var(--text2)">${loc||'—'}</span>`;
+    }},
+    { label:'Estágio',     col:'estagio',       render:r=>r.estagio||'—' },
+    { label:'Prazo',       col:'prazoAtual', num:true, render:r=>prazoCell(r) },
+    { label:'Estoque',     col:'estoque',    num:true, render:r=>`<strong>${r.estoque!=null?r.estoque:'—'}</strong>` },
+    { label:'%',           col:'pctDisp',    num:true, render:r=>pctDispCell(r) },
+    { label:'Total',       col:'totalUnidades',num:true, render:r=>`<span style="color:var(--text3)">${r.totalUnidades>0?r.totalUnidades:'—'}</span>` },
   ];
 
   const supCols = colsBase('sup', false);
@@ -4601,7 +4620,9 @@ function atualizarMapaGeral_(lista, mapaScoreVendedorParam, listaPadroesParam, l
       prazoVenda: prazoDeVendaMeses_(e.dataLancamento),
       prazoLancEntrega: calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega),
       previsaoEntrega: e.previsaoEntrega || '',
+      totalUnidades: parseInt(e.totalUnidades, 10) || 0,
       bairro: e.bairro || '—',
+      cidade: e.cidade || '',
     };
   });
   // Recarregou os dados -- reseta filtros e seleção.
