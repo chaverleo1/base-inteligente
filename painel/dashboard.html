@@ -2157,8 +2157,8 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
 
   // 4 + 5) Radar: Suporte e Resistência
   // Mesma lógica de papelMercado_() do lancamentos.html:
-  //   Suporte     = Em obras/planta  + pctVendido ≤ 39%
-  //   Resistência = Pronto novo      + pctVendido ≥ 61%
+  //   Suporte     = Em obras/planta  + pctVendido < 50%
+  //   Resistência = Pronto novo      + pctVendido > 50%
   function _pctVendidoEmp(e) {
     const est = parseInt(e.estoque)      || 0;
     const tot = parseInt(e.totalUnidades) || 0;
@@ -2169,13 +2169,13 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
     if (!(parseInt(e.estoque) > 0)) return false;
     if (!/em obras|em planta/i.test(e.status || '')) return false;
     const pct = _pctVendidoEmp(e);
-    return pct !== null && pct <= 39;
+    return pct !== null && pct < 50;
   });
   const radarResistencia = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
     if (!/pronto novo/i.test(e.status || '')) return false;
     const pct = _pctVendidoEmp(e);
-    return pct !== null && pct >= 61;
+    return pct !== null && pct > 50;
   });
 
   const valSup = document.getElementById('cardRadarSuporteValue');
@@ -2184,12 +2184,12 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
   if (valRes) valRes.textContent = radarResistencia.length;
 
   window._insightDetails['insRadarSuporte'] = {
-    title: '🟢 Suporte — Em obras com ≤39% vendido',
+    title: '🟢 Suporte — Em obras com <50% vendido',
     icon: '🟢', color: '#00c878', type: 'lancamentos',
     items: radarSuporte.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
   };
   window._insightDetails['insRadarResistencia'] = {
-    title: '🔴 Resistência — Pronto novo com ≥61% vendido',
+    title: '🔴 Resistência — Pronto novo com >50% vendido',
     icon: '🔴', color: '#ff6b6b', type: 'lancamentos',
     items: radarResistencia.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
   };
@@ -2293,13 +2293,13 @@ function renderDados(json) {
     <div class="vg-stat" id="cardRadarSuporte">
       <div class="vg-stat-top"><span class="vg-stat-icon">🟢</span><span class="vg-stat-label">Suporte</span></div>
       <div class="vg-stat-value" id="cardRadarSuporteValue" style="color:#00c878">—</div>
-      <div class="vg-stat-sub">Em obras · ≤39% vendido</div>
+      <div class="vg-stat-sub">Em obras · &lt;50% vendido</div>
       <button class="vg-stat-link" style="display:none;color:#00c878;background:rgba(0,200,120,.1);border-color:rgba(0,200,120,.25);font-family:inherit">Ver →</button>
     </div>
     <div class="vg-stat" id="cardRadarResistencia">
       <div class="vg-stat-top"><span class="vg-stat-icon">🔴</span><span class="vg-stat-label">Resistência</span></div>
       <div class="vg-stat-value" id="cardRadarResistenciaValue" style="color:#ff6b6b">—</div>
-      <div class="vg-stat-sub">Pronto novo · ≥61% vendido</div>
+      <div class="vg-stat-sub">Pronto novo · &gt;50% vendido</div>
       <button class="vg-stat-link" style="display:none;color:#ff6b6b;background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.25);font-family:inherit">Ver →</button>
     </div>`;
 

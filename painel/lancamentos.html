@@ -3217,16 +3217,15 @@ function prazoAtualMeses_(r) {
 
 // Classifica pelo papel de mercado: ESTÁGIO + % VENDIDO.
 //
-// SUPORTE    → apenas Em obras / Em planta com ≤ 39% vendido
+// SUPORTE    → apenas Em obras / Em planta com < 50% vendido
 //   Quanto mais próximo do lançamento (mais meses de countdown restantes), maior a força.
 //   Pronto novo NUNCA é suporte.
 //
-// RESISTÊNCIA → apenas Pronto novo com ≥ 61% vendido
+// RESISTÊNCIA → apenas Pronto novo com > 50% vendido
 //   Quanto mais distante da entrega (mais meses desde delivery), maior a força.
 //   Em obras NUNCA é resistência.
 //
-// TRANSIÇÃO  → 40%–60% vendido (qualquer estágio), ou faixa errada de estágio,
-//              ou sem dados suficientes.
+// TRANSIÇÃO  → exatamente 50% vendido, faixa errada de estágio, ou sem dados.
 // null       → estoque zerado ou estágio não mapeado.
 function papelMercado_(r) {
   if (!r.estoque || r.estoque <= 0) return null;
@@ -3239,11 +3238,11 @@ function papelMercado_(r) {
 
   if (!isObras && !isPronto) return null;
 
-  // SUPORTE: apenas Em obras/planta com ≤ 39% vendido
-  if (isObras  && pctV <= 39) return 'suporte';
+  // SUPORTE: apenas Em obras/planta com < 50% vendido
+  if (isObras  && pctV < 50) return 'suporte';
 
-  // RESISTÊNCIA: apenas Pronto novo com ≥ 61% vendido
-  if (isPronto && pctV >= 61) return 'resistencia';
+  // RESISTÊNCIA: apenas Pronto novo com > 50% vendido
+  if (isPronto && pctV > 50) return 'resistencia';
 
   // Tudo mais: transição
   return 'transicao';
@@ -3369,9 +3368,9 @@ function renderRadarMercado_() {
   });
 
   // Registra listas no cache do modal para os KPIs clicáveis
-  _listaEmpModalData_['KPI_SUP']  = { titulo: '🟢 Suporte — Em obras/planta com ≤39% vendido',                     rows: sup   };
-  _listaEmpModalData_['KPI_TRA']  = { titulo: '🟡 Transição — 40–60% vendido ou estágio intermediário',            rows: tra   };
-  _listaEmpModalData_['KPI_RES']  = { titulo: '🔴 Resistência — Pronto novo com ≥61% vendido',                    rows: res   };
+  _listaEmpModalData_['KPI_SUP']  = { titulo: '🟢 Suporte — Em obras/planta com <50% vendido',         rows: sup   };
+  _listaEmpModalData_['KPI_TRA']  = { titulo: '🟡 Transição — 50% vendido ou estágio intermediário',  rows: tra   };
+  _listaEmpModalData_['KPI_RES']  = { titulo: '🔴 Resistência — Pronto novo com >50% vendido',        rows: res   };
   _listaEmpModalData_['KPI_OPT']  = { titulo: '⚡ Oportunidades — Resistência com ≥ 20 unidades paradas',          rows: oport };
 
   // Helper: botão de número no KPI (clicável se lista não vazia)
@@ -3386,17 +3385,17 @@ function renderRadarMercado_() {
       <div class="radar-kpi kpi-suporte">
         <div class="radar-kpi-label">🟢 Suporte</div>
         ${kpiBtn('KPI_SUP', sup.length)}
-        <div class="radar-kpi-sub">Em obras · ≤ 39% vendido</div>
+        <div class="radar-kpi-sub">Em obras · &lt;50% vendido</div>
       </div>
       <div class="radar-kpi kpi-transicao">
         <div class="radar-kpi-label">🟡 Transição</div>
         ${kpiBtn('KPI_TRA', tra.length)}
-        <div class="radar-kpi-sub">40–60% vendido · faixa intermediária</div>
+        <div class="radar-kpi-sub">50% vendido · faixa intermediária</div>
       </div>
       <div class="radar-kpi kpi-resistencia">
         <div class="radar-kpi-label">🔴 Resistência</div>
         ${kpiBtn('KPI_RES', res.length)}
-        <div class="radar-kpi-sub">Pronto novo · ≥ 61% vendido</div>
+        <div class="radar-kpi-sub">Pronto novo · &gt;50% vendido</div>
       </div>
       <div class="radar-kpi kpi-oport">
         <div class="radar-kpi-label">⚡ Oportunidades</div>
@@ -3495,13 +3494,13 @@ function renderRadarMercado_() {
   }
 
   // Helper: % vendido — cores seguem a regra das barras de vendas
-  //   ≤ 39% vendido → verde  (suporte: mercado ativo, muito disponível)
-  //   40–60% vendido → laranja (transição)
-  //   ≥ 61% vendido → vermelho (resistência: muito vendido, pouco disponível)
+  //   < 50% vendido → verde   (suporte)
+  //   = 50% vendido → laranja (transição)
+  //   > 50% vendido → vermelho (resistência)
   function pctVendidoCell(r) {
     if (r.pctVendido == null) return '<span style="color:var(--text3)">—</span>';
     const pct = r.pctVendido;
-    const cor = pct >= 61 ? '#ff6b6b' : pct >= 40 ? '#ff9800' : '#00c878';
+    const cor = pct > 50 ? '#ff6b6b' : pct === 50 ? '#ff9800' : '#00c878';
     return `<span style="font-weight:700;color:${cor}">${pct}%</span>`;
   }
 
