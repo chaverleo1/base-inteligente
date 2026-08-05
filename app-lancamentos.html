@@ -251,12 +251,27 @@ input[type=range]::-moz-range-track {
   margin: 40px 0 10px; letter-spacing: -.1px;
 }
 
-/* ── OBJETIVO + PADRÃO (Tela 2, bifurcação v3.0) ─────────────────────── */
-.obj-badge {
-  display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 1px;
-  color: var(--orange); border: 1px solid var(--orange); border-radius: 99px;
-  padding: 3px 10px; margin-bottom: 14px;
+/* ── HEADER DE NAVEGAÇÃO (badge + Voltar) ────────────────────────────── */
+.funil-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 10px 4px; margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
+.obj-badge {
+  font-size: 15px; font-weight: 800; letter-spacing: .06em;
+  color: var(--orange); border: 2px solid var(--orange); border-radius: 99px;
+  padding: 7px 18px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;
+}
+.funil-voltar-btn {
+  flex-shrink: 0;
+  font-size: 14px; font-weight: 700; letter-spacing: .02em;
+  padding: 7px 18px; border-radius: 10px;
+  background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.18);
+  color: var(--text2); cursor: pointer; transition: background .15s, color .15s;
+}
+.funil-voltar-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
+.funil-voltar-btn.hidden { visibility: hidden; pointer-events: none; }
 /* Botões-tag destacados (não cards) -- pedido explícito: sem ícone, sem
    descrição, só o rótulo em pílula grande e chapada, mesmo padrão visual
    de destaque de .tag-btn-laranja/.s2-sit-btn usado no resto do app. */
@@ -770,11 +785,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="main">
 <div class="step-wrap">
 
-  <!-- Selo MORADIA/INVESTIR -- persiste por cima de todas as etapas a partir
-       da bifurcação (Tela 2), some na capa e na própria Tela 2 (instrução do
-       usuário no documento original). Visibilidade controlada em
-       atualizarBotoes(). -->
-  <div class="obj-badge" id="objBadge" style="display:none"></div>
+  <!-- Header de navegação — aparece a partir da bifurcação (Tela 2).
+       Contém badge de contexto (esquerda) e botão Voltar (direita).
+       Visibilidade controlada em atualizarBotoes(). -->
+  <div class="funil-header" id="funilHeader" style="display:none">
+    <div class="obj-badge" id="objBadge"></div>
+    <button class="funil-voltar-btn" id="btnVoltarHeader" onclick="voltarStep()">← Voltar</button>
+  </div>
 
   <!-- STEP 0 — ABERTURA -->
   <div class="step ativo" id="step-0">
@@ -965,7 +982,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
        tela de resultado) -- pedido explícito, some o Voltar do rodapé
        fixo só nesta etapa (ver atualizarBotoes). -->
   <div class="step" id="step-4">
-    <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
     <div class="step-tag">Passo 4 de 4</div>
     <div class="step-title" id="motivacaoTitulo">O que define o tipo de apartamento mais adequado para você?</div>
 
@@ -1103,7 +1119,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- STEP 9 — AGENDAMENTO (pergunta surpresa logo após "Confirmar
        Consultoria", antes da tela final) -- pedido explícito do usuário. -->
   <div class="step" id="step-9">
-    <button class="ajustar-btn" onclick="voltarStep()">← Voltar</button>
 
     <!-- Pergunta (título + os dois botões) -- pedido explícito do usuário:
          some inteira assim que o cliente escolhe Sim ou Não, ficando só o
@@ -1692,35 +1707,41 @@ function voltarStep() {
 }
 
 function atualizarBotoes() {
-  const bV = document.getElementById('btnVoltar');
-  const bA = document.getElementById('btnAvancar');
-  const navBar = document.getElementById('navBar');
-  const main = document.querySelector('.main');
+  const bV      = document.getElementById('btnVoltar');       // nav-bar (mantido, escondido)
+  const bA      = document.getElementById('btnAvancar');
+  const navBar  = document.getElementById('navBar');
+  const main    = document.querySelector('.main');
+  const funilHeader     = document.getElementById('funilHeader');
+  const btnVoltarHeader = document.getElementById('btnVoltarHeader');
+  const objBadge        = document.getElementById('objBadge');
 
-  // Step 0 tem CTA inline — nav bar some e o padding de fundo some junto
+  // Step 0 tem CTA inline — nav bar some e padding de fundo some junto
   if (navBar) navBar.style.display = (stepAtual === 0 || stepAtual === 6) ? 'none' : '';
-  if (main) main.style.paddingBottom = stepAtual === 0 ? '24px' : '';
+  if (main)   main.style.paddingBottom = stepAtual === 0 ? '24px' : '';
   const stickyAtend = document.getElementById('stickyAtend');
   if (stickyAtend) stickyAtend.style.display = stepAtual === 6 ? 'block' : 'none';
 
-  // step 3 (confirmação) e step 4 (quartos/altura) têm botão de avançar
-  // embutido; steps 6..8 também têm botões próprios.
+  // Botão avançar no rodapé
   const semBotaoAvancarFooter = stepAtual === 3 || stepAtual === 4 || stepAtual >= 6;
   bA.classList.toggle('btn-hide', semBotaoAvancarFooter);
-  // step 5 (objetivo+padrão) não tem "← Voltar" próprio, igual step 0
-  // (doc v3.0, Tela 2: rodapé só tem "Próximo →").
-  bV.classList.toggle('btn-hide', stepAtual === 3 || stepAtual === 0 || stepAtual === 5 || stepAtual === 4 || stepAtual === 8 || stepAtual >= 6);
 
-  const objBadge = document.getElementById('objBadge');
-  if (objBadge) {
-    objBadge.style.display = (D.objetivo && stepAtual !== 0 && stepAtual !== 5) ? '' : 'none';
-    // Ao lado do MORADIA/INVESTIR, mostra também os padrões marcados --
-    // pedido explícito do usuário, pro contexto da bifurcação continuar
-    // visível durante o resto do funil.
-    const objTxt = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
+  // btnVoltar do rodapé: sempre oculto — Voltar agora é só no header
+  if (bV) bV.classList.add('btn-hide');
+
+  // ── Header de navegação ────────────────────────────────────────────────
+  const mostrarHeader = D.objetivo && stepAtual !== 0 && stepAtual !== 5;
+  if (funilHeader) funilHeader.style.display = mostrarHeader ? '' : 'none';
+
+  if (objBadge && D.objetivo) {
+    const objTxt     = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
     const padroesTxt = [...D.padroes].join(', ');
     objBadge.textContent = padroesTxt ? `${objTxt} · ${padroesTxt}` : objTxt;
   }
+
+  // Botão Voltar no header: visível em todas as etapas intermediárias;
+  // usa .hidden (visibility:hidden) pra preservar o espaço no layout
+  const semVoltar = !mostrarHeader || stepAtual === 8 || stepAtual >= 6;
+  if (btnVoltarHeader) btnVoltarHeader.classList.toggle('hidden', semVoltar);
 
   bA.textContent = 'Próximo';
 }
