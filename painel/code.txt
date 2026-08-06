@@ -171,7 +171,7 @@ const CABECALHO_LANCAMENTOS = [
 // anônimo de anúncio, sem login nenhum), além do Base Inteligente.
 // 'selecionar_isca' também é pública: chamada de app-lancamentos.html (landing
 // page de captura, sem login), igual listar_lancamentos.
-var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'listar_lancamentos_resumo', 'rodar_matching', 'selecionar_isca', 'listar_comentarios_aprovados'];
+var ACOES_PUBLICAS_GET = ['verificar_senha', 'esqueci_senha', 'validar_token', 'listar_lancamentos', 'listar_lancamentos_resumo', 'rodar_matching', 'selecionar_isca', 'listar_comentarios_aprovados', 'moderar_comentario_email'];
 
 // ── CHAVE DO APP LANÇAMENTOS ──────────────────────────────────────────────
 // Camada extra pras rotas públicas que só o App Lançamentos usa (não a
@@ -290,6 +290,27 @@ function doGet(e) {
   if (acao === 'listar_comentarios_aprovados') {
     if (!chaveAppValida_(e.parameter.chave)) return ok({ comentarios: [] });
     return ok(listarComentariosAprovados_());
+  }
+  // Moderação via link de e-mail -- pública, protegida pela chave do app.
+  // Clicado diretamente no e-mail de notificação de avaliação (GET puro,
+  // sem login), devolve uma página HTML com mensagem de confirmação.
+  if (acao === 'moderar_comentario_email') {
+    if (!chaveAppValida_(e.parameter.chave)) {
+      return HtmlService.createHtmlOutput('<p>Link inválido ou expirado.</p>').setTitle('Erro');
+    }
+    var statusEmail = e.parameter.status;
+    var idEmail     = e.parameter.id;
+    if (statusEmail === 'Excluido') {
+      excluirComentarioApp_({ id: idEmail });
+      return HtmlService.createHtmlOutput('<h2>🗑 Avaliação excluída.</h2>').setTitle('Excluída');
+    }
+    var resEmail = moderarComentarioApp_({ id: idEmail, status: statusEmail });
+    var msgEmail = resEmail.ok
+      ? (statusEmail === 'Aprovado'
+          ? '<h2 style="color:green">✅ Avaliação aprovada e publicada.</h2>'
+          : '<h2 style="color:#c00">❌ Avaliação rejeitada.</h2>')
+      : '<h2>Erro: ' + (resEmail.erro || 'não encontrado') + '</h2>';
+    return HtmlService.createHtmlOutput(msgEmail).setTitle('Moderação');
   }
   if (acao === 'listar_comentarios_app')     return ok(listarComentariosAppTodos_());
   if (acao === 'listar_mix_segmentos')       return ok(listarMixSegmentosPublicados_());
@@ -846,6 +867,7 @@ function doPost(e) {
   if (!sessaoValida_(d.token)) return ok({ status: 'nao_autenticado' });
 
   if (d.acao === 'moderar_comentario_app') return ok(moderarComentarioApp_(d));
+  if (d.acao === 'excluir_comentario_app') return ok(excluirComentarioApp_(d));
   if (d.acao === 'excluir')       return ok(excluir_(d));
   if (d.acao === 'busca_aberta')      return ok(buscaAberta_(d));
   if (d.acao === 'salvar_lancamento') return ok(salvarLancamento_(d.dados || d));
@@ -5108,16 +5130,51 @@ function salvarComentarioApp_(d) {
     if (!estrelas) return { ok: false, erro: 'estrelas invalidas' };
     var aba = obterAbaComentariosApp_();
     var id = 'CMT-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    var nome = String(d.nome || '').trim() || 'Cliente';
+    var comentario = String(d.comentario || '').trim();
+    var tipo = (d.tipo === 'pos_atendimento') ? 'pos_atendimento' : 'pre_atendimento';
     aba.appendRow([
       id,
       Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss'),
-      String(d.nome || '').trim() || 'Cliente',
+      nome,
       String(d.telefone || '').trim(),
       estrelas,
-      String(d.comentario || '').trim(),
-      (d.tipo === 'pos_atendimento') ? 'pos_atendimento' : 'pre_atendimento',
+      comentario,
+      tipo,
       'Pendente',
     ]);
+
+    // Notificação por e-mail ao administrador: mostra estrelas + texto +
+    // links de aprovar/rejeitar clicáveis direto do cliente de e-mail
+    // (via GET com a chave do app, sem precisar de login no painel).
+    try {
+      var urlBase = ScriptApp.getService().getUrl();
+      var aprovLink   = urlBase + '?acao=moderar_comentario_email&id=' + encodeURIComponent(id) + '&status=Aprovado&chave='  + APP_KEY_LANCAMENTOS_;
+      var rejeitaLink = urlBase + '?acao=moderar_comentario_email&id=' + encodeURIComponent(id) + '&status=Rejeitado&chave=' + APP_KEY_LANCAMENTOS_;
+      var excluiLink  = urlBase + '?acao=moderar_comentario_email&id=' + encodeURIComponent(id) + '&status=Excluido&chave='  + APP_KEY_LANCAMENTOS_;
+      var estrelasStr = '★'.repeat(estrelas) + '☆'.repeat(5 - estrelas) + ' (' + estrelas + '/5)';
+      var tipoLabel   = tipo === 'pos_atendimento' ? 'Pós-atendimento' : 'Pré-atendimento';
+      var corpo = '=== NOVA AVALIAÇÃO RECEBIDA ===\n\n'
+        + 'De: ' + nome + '\n'
+        + 'Estrelas: ' + estrelasStr + '\n'
+        + 'Tipo: ' + tipoLabel + '\n'
+        + 'Comentário:\n' + (comentario || '(sem texto)') + '\n\n'
+        + '// MODERAR\n\n'
+        + '✅ APROVAR:\n'   + aprovLink   + '\n\n'
+        + '❌ REJEITAR:\n'  + rejeitaLink + '\n\n'
+        + '🗑 EXCLUIR:\n'   + excluiLink  + '\n\n'
+        + '//\n'
+        + '(Acesse o painel → App Lançamentos → Comentários para gerenciar todas as avaliações.)';
+      MailApp.sendEmail({
+        to: ADM_EMAIL,
+        subject: '⭐ NOVA AVALIAÇÃO — ' + estrelasStr + ' — ' + nome,
+        body: corpo,
+      });
+    } catch (eMail) {
+      // Falha no e-mail não deve bloquear o salvamento; ignora silenciosamente.
+      Logger.log('salvarComentarioApp_ email err: ' + eMail.message);
+    }
+
     return { ok: true, id: id };
   } catch (e) {
     return { ok: false, erro: e.message };
@@ -5180,6 +5237,27 @@ function moderarComentarioApp_(d) {
     for (var i = 0; i < ids.length; i++) {
       if (String(ids[i][0]) === String(d.id)) {
         aba.getRange(i + 2, idxStatus).setValue(novoStatus);
+        return { ok: true };
+      }
+    }
+    return { ok: false, erro: 'nao encontrado' };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+// Protegida (sessão) OU via link de e-mail (chave do app) -- exclui
+// definitivamente um comentário pelo id. Nenhum dado fica na planilha.
+function excluirComentarioApp_(d) {
+  try {
+    if (!d.id) return { ok: false, erro: 'id ausente' };
+    var aba = obterAbaComentariosApp_();
+    var lr = aba.getLastRow();
+    if (lr < 2) return { ok: false, erro: 'nao encontrado' };
+    var ids = aba.getRange(2, 1, lr - 1, 1).getValues();
+    for (var i = ids.length - 1; i >= 0; i--) {
+      if (String(ids[i][0]) === String(d.id)) {
+        aba.deleteRow(i + 2);
         return { ok: true };
       }
     }
@@ -6331,12 +6409,11 @@ function enviarNotificacaoAtendente_(d) {
     // passa pela pergunta de agendamento) mantêm o assunto genérico de sempre.
     var tagsAssunto = {};
     try { tagsAssunto = JSON.parse(d.tags || '{}'); } catch (eAssunto) {}
-    // 📆 (tear-off calendar) no lugar de 📅 (calendar) -- pedido explícito
-    // do usuário: o ícone anterior mostra um número de dia desenhado no
-    // próprio emoji (ex: "31") na maioria dos apps de e-mail/celular, o que
-    // confundia com o dia real do agendamento. 📆 é o mesmo tema
-    // (calendário) sem número embutido no desenho.
-    var prefixoAssunto = tagsAssunto.desejaAgendar === true  ? '📆 AGENDAMENTO DE LEAD'
+    // 📝 (memo/notepad) no lugar de 📆 -- pedido explícito do usuário:
+    // ícones de calendário (📅 📆) mostram números em muitos clientes de
+    // e-mail/celular, o que confundia com o dia real do agendamento. 📝
+    // é neutro e não carrega número embutido no desenho.
+    var prefixoAssunto = tagsAssunto.desejaAgendar === true  ? '📝 AGENDAMENTO DE LEAD'
                        : tagsAssunto.desejaAgendar === false ? '⚠️ LEAD NÃO AGENDADO'
                        : '🔥 LEAD QUENTE';
     var sep = '\n//\n//\n//';
