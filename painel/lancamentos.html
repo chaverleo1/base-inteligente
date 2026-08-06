@@ -89,14 +89,20 @@ a { text-decoration: none; color: inherit; }
    explícito do usuário: substitui os cards de KPI por uma tabela
    compacta, em 3 blocos (Resistência/Suporte/Outros), letra pequena e
    pouca altura por linha pra caber mais sem precisar rolar tanto. */
-.radar-resumo-tabela { width:100%; border-collapse:collapse; font-size:11px; }
+.radar-resumo-tabela { width:100%; border-collapse:collapse; font-size:11px; border:1px solid rgba(255,255,255,.14); }
 .radar-resumo-tabela th { padding:5px 8px; text-align:left; font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.08); white-space:nowrap; }
 .radar-resumo-tabela th.num, .radar-resumo-tabela td.num { text-align:center; }
+.radar-resumo-tabela th.rr-total, .radar-resumo-tabela th.rr-nome, .radar-resumo-tabela th.rr-conceito { font-size:11px; }
 .radar-resumo-tabela td { padding:4px 8px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; line-height:1.3; color:var(--text2); }
 .radar-resumo-tabela td.num { width:52px; font-variant-numeric:tabular-nums; }
+.radar-resumo-tabela td.rr-total, .radar-resumo-tabela td.rr-nome, .radar-resumo-tabela td.rr-conceito { font-size:14px; }
+.radar-resumo-tabela td.rr-briefing { width:36px; text-align:center; }
 .radar-resumo-tabela tr:last-child td { border-bottom:none; }
 .radar-resumo-bloco td { padding:6px 8px; font-size:10px; font-weight:800; letter-spacing:.06em; background:rgba(255,255,255,.03); color:var(--text2); border-bottom:1px solid rgba(255,255,255,.08); }
 .radar-resumo-btn { background:none; border:none; padding:0; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px; transition:opacity .15s; }
+.radar-resumo-briefing-btn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; border:1px solid rgba(0,200,120,.35); border-radius:5px; background:rgba(0,200,120,.08); color:#00c878; cursor:pointer; transition:background .15s; }
+.radar-resumo-briefing-btn:hover { background:rgba(0,200,120,.18); }
+.radar-resumo-briefing-btn svg { width:11px; height:11px; }
 .radar-resumo-btn:hover { opacity:.75; }
 .btn-briefing-dl { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:5px 10px; border:1px solid rgba(0,200,120,.35); border-radius:6px; background:rgba(0,200,120,.08); color:#00c878; font-size:10px; font-weight:700; letter-spacing:.04em; cursor:pointer; transition:background .15s,opacity .15s; }
 .btn-briefing-dl:hover { background:rgba(0,200,120,.18); }
@@ -4068,14 +4074,15 @@ function renderRadarMercado_() {
   const resumoLinhasHtml = BLOCOS_ORDEM_.map(b => {
     const linhasBloco = linhasResumo.filter(l => l.bloco === b.key).map(l => `
           <tr>
-            <td class="num">${l.total
+            <td class="num rr-total">${l.total
               ? `<button class="radar-resumo-btn" style="color:${l.cor}" onclick="abrirModalListaEmp_('${l.key}')" title="Ver lista">${l.total}</button>`
               : `<span style="color:var(--text3)">0</span>`}</td>
-            <td><span style="color:${l.cor};font-weight:700">${l.emoji} ${l.nome}</span></td>
-            <td>${l.conceito}</td>
+            <td class="rr-nome"><span style="color:${l.cor};font-weight:700">${l.emoji} ${l.nome}</span></td>
+            <td class="rr-conceito">${l.conceito}</td>
             <td>${l.regras}</td>
+            <td class="rr-briefing"><button class="radar-resumo-briefing-btn" onclick="baixarBriefingSuporte_()" title="Baixar briefing para IA Editora (Google Ads)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg></button></td>
           </tr>`).join('');
-    return `<tr class="radar-resumo-bloco"><td colspan="4">${b.label}</td></tr>${linhasBloco}`;
+    return `<tr class="radar-resumo-bloco"><td colspan="5">${b.label}</td></tr>${linhasBloco}`;
   }).join('');
 
   const kpiHtml = `
@@ -4087,7 +4094,7 @@ function renderRadarMercado_() {
       </div>
       <div style="overflow-x:auto">
         <table class="radar-resumo-tabela">
-          <thead><tr><th class="num">Total</th><th>Nome</th><th>Conceito</th><th>Regras</th></tr></thead>
+          <thead><tr><th class="num rr-total">Total</th><th class="rr-nome">Nome</th><th class="rr-conceito">Conceito</th><th>Regras</th><th>Briefing IA</th></tr></thead>
           <tbody>${resumoLinhasHtml}</tbody>
         </table>
       </div>
