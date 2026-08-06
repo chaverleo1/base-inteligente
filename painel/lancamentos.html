@@ -3204,7 +3204,7 @@ function baixarBriefingSuporte_() {
     else                                 grupoA.push(r);
   });
 
-  // A estratégia de Ads (seção 6) e o orçamento (seção 7) são montados só
+  // A estratégia de Ads (seção 7) e o orçamento (seção 8) são montados só
   // com o Grupo A -- é o único com dado completo o bastante pra virar
   // anúncio agora.
   const padroes = [...new Set(grupoA.map(r => r.padrao).filter(Boolean))].sort();
@@ -3276,13 +3276,13 @@ Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landin
 
 1. **Identificação da empresa:** toda peça que reproduzir a identificação da empresa deve usar exatamente **"CJ 27357 - Líder Empreendimentos Imobiliários LTDA."** — sem abreviar, sem trocar a ordem, sem omitir o CJ.
 
-2. **Nunca prometer nome de empreendimento, endereço exato ou "unidade específica" antes do contato.** A única exceção é o remarketing de fundo de funil (Etapa ③, seção 6) pra quem já viu aquele nome específico dentro do próprio funil (App Lançamentos). Nos anúncios de topo e meio de funil, usar sempre bairro/região/padrão — nunca o nome do produto.
+2. **Nunca prometer nome de empreendimento, endereço exato ou "unidade específica" antes do contato.** A única exceção é o remarketing de fundo de funil (Etapa ③, seção 7) pra quem já viu aquele nome específico dentro do próprio funil (App Lançamentos). Nos anúncios de topo e meio de funil, usar sempre bairro/região/padrão — nunca o nome do produto.
 
-3. **Nunca usar claims de condição de pagamento sem dado real que sustente** (ex: "sem entrada", "documentação gratuita", "financiamento facilitado", "parcelamento direto"). Só usar esse tipo de chamada se houver confirmação de que a condição está disponível pros produtos do Grupo A ativo (seção 5). Sem essa confirmação, preferir chamadas neutras como "Consulte condições de pagamento" ou "Fale com um especialista sobre financiamento" — a "Consulta gratuita"/"Atendimento gratuito" em si pode ser usada normalmente, é sobre o atendimento, não sobre a condição de pagamento do imóvel.
+3. **Nunca usar claims de condição de pagamento sem dado real que sustente** (ex: "sem entrada", "documentação gratuita", "financiamento facilitado", "parcelamento direto"). Só usar esse tipo de chamada se houver confirmação de que a condição está disponível pros produtos do Grupo A ativo (seção 6). Sem essa confirmação, preferir chamadas neutras como "Consulte condições de pagamento" ou "Fale com um especialista sobre financiamento" — a "Consulta gratuita"/"Atendimento gratuito" em si pode ser usada normalmente, é sobre o atendimento, não sobre a condição de pagamento do imóvel.
 
-4. **Nunca usar "apartamento popular" nem preço abaixo do piso real da base (R$ 283 mil)** até haver estoque de verdade na categoria Popular. ${padroes.includes('Popular') ? 'O Grupo A ativo TEM produtos em Popular agora -- ainda assim, confirme o preço mínimo real antes de anunciar qualquer valor específico.' : 'O Grupo A ativo NÃO tem nenhum produto em Popular agora (ver seção 5) -- qualquer anúncio de "apartamento popular" ou preço de entrada abaixo de R$ 283 mil estaria prometendo produto que não existe na base hoje.'}
+4. **Nunca usar "apartamento popular" nem preço abaixo do piso real da base (R$ 283 mil)** até haver estoque de verdade na categoria Popular. ${padroes.includes('Popular') ? 'O Grupo A ativo TEM produtos em Popular agora -- ainda assim, confirme o preço mínimo real antes de anunciar qualquer valor específico.' : 'O Grupo A ativo NÃO tem nenhum produto em Popular agora (ver seção 6) -- qualquer anúncio de "apartamento popular" ou preço de entrada abaixo de R$ 283 mil estaria prometendo produto que não existe na base hoje.'}
 
-5. **Horário real de veiculação dos anúncios (ad schedule/dayparting):** configurar os anúncios pra rodar **seg–sex 10h–20h, sáb e dom 10h–18h**. Isso é DIFERENTE do horário de atendimento humano (seg–sex 8h–18h, sáb 8h–12h, ver seção 8/CONDICIONAIS IMPORTANTES) — o anúncio pode ficar no ar em uma janela mais ampla, é só a resposta humana em tempo real que fica restrita ao horário de atendimento.
+5. **Horário real de veiculação dos anúncios (ad schedule/dayparting):** configurar os anúncios pra rodar **seg–sex 10h–20h, sáb e dom 10h–18h**. Isso é DIFERENTE do horário de atendimento humano (seg–sex 8h–18h, sáb 8h–12h, ver seção 9/CONDICIONAIS IMPORTANTES) — o anúncio pode ficar no ar em uma janela mais ampla, é só a resposta humana em tempo real que fica restrita ao horário de atendimento.
 
 ---
 
@@ -3318,16 +3318,52 @@ Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landin
 
 ---
 
-## 5. EMPREENDIMENTOS — SEGMENTADOS POR GRUPO OPERACIONAL
+---
+
+## 5. SUBGRUPOS POR PRAZO — TAXONOMIA COMPLETA DO RADAR DE MERCADO
+
+As seções 3 e 4 explicam os dois conceitos-base (Suporte/Resistência). Na prática, o Radar detalha cada um em subgrupos cruzando **estágio + %vendido + prazo até a entrega**, pra dar um sinal mais preciso de urgência/qualidade do que só "Suporte" ou "Resistência" isolados. Cada empreendimento cai em EXATAMENTE UM desses grupos (nunca mais de um) -- a ordem abaixo é a ordem real de prioridade na checagem.
+
+**Variáveis usadas:**
+- **Estágio:** "Em obras"/"Em planta" (ainda não entregue) ou "Pronto novo" (já entregue)
+- **%vendido:** 1 − (estoque ÷ total de unidades) × 100
+- **Prazo:** meses até a entrega prometida (negativo = faltam meses) ou meses de atraso além dela (positivo = já atrasado) -- só existe/importa pra "Em obras"
+
+### Produtos "Em obras" / "Em planta" (ordem de prioridade)
+
+| # | Grupo | Critério exato | O que significa |
+|---|---|---|---|
+| 1 | 🔵 **Breve Lançamento** | %vendido = 0 (QUALQUER prazo, inclusive perto da entrega) | Lançamento sem venda nenhuma ainda -- prioridade máxima, nunca vira outro grupo mesmo perto de entregar |
+| 2 | 🟠 **Potencial de Resistência Forte** | 1–48% vendido · prazo ≥ -7 (7 meses ou menos até a entrega, inclusive atrasado) | Vendendo pouco E perto de ficar pronto -- alerta forte, tende a virar "Resistência Forte" assim que entregar |
+| 2 | 🟠 **Potencial de Resistência** | 1–48% vendido · prazo entre -24 e -8 | Vendendo pouco, ainda com 8 a 24 meses até a entrega -- alerta em formação, dá tempo de reagir |
+| 2 | 🟢 **Suporte Pré-entrega** | ≥50% vendido · prazo ≥ -7 (inclusive atrasado) | Vendendo bem E quase pronto -- melhor cenário possível, estoque tende a esgotar em breve |
+| 2 | 🟢 **Suporte Lento** | ≥50% vendido · prazo entre -23 e -8 | Vendendo bem, obra avançando (8 a 23 meses até a entrega) |
+| 2 | 🟢 **Suporte Em Andamento** | ≥50% vendido · prazo entre -50 e -24 | Vendendo bem, obra ainda no início/meio (24 a 50 meses até a entrega) |
+| 3 | 🟢 **Suporte** | 1–49% vendido, e o prazo NÃO caiu em nenhuma faixa acima (prazo < -24, sem previsão de entrega cadastrada, ou %vendido = 49% exato) | Demanda real comprovada, cedo demais na obra pros subgrupos acima, ou dado de prazo insuficiente -- o grupo "saudável" genérico |
+| 3 | 🟡 **Transição** | ≥50% vendido, e o prazo NÃO caiu em nenhuma faixa acima (prazo < -50 ou sem previsão de entrega cadastrada) | Vendendo bem mas cedo demais na obra (mais de 50 meses até entregar) ou sem prazo suficiente pra classificar no detalhe |
+
+### Produtos "Pronto novo" (já entregue)
+
+| Grupo | Critério exato | O que significa |
+|---|---|---|
+| 🔴 **Resistência Forte** | %vendido < 49 | Produto pronto mas vendendo mal -- estoque parado mesmo sem mais nenhuma obra pra esperar, sinal mais forte de resistência que o grupo padrão |
+| 🔴 **Resistência** | %vendido > 50 | Produto entregue e validado pelo mercado (mais da metade já vendida) -- disponibilidade imediata |
+| 🟡 **Transição** | %vendido = 49 ou 50 exatos | Zona neutra entre os dois grupos acima |
+
+**Por que o corte em 49% (não 50%) nos subgrupos por prazo:** os 6 subgrupos (Potencial de Resistência/Forte, Suporte Em Andamento/Lento/Pré-entrega, Resistência Forte) usam 49% como referência, deixando exatos 49-50% como faixa neutra que cai em Suporte/Transição comum -- evita empurrar um produto no limite artificialmente pra um lado ou outro.
+
+---
+
+## 6. EMPREENDIMENTOS — SEGMENTADOS POR GRUPO OPERACIONAL
 
 A lista de Suporte mistura produto com dado completo e pré-lançamento sem preço definido -- misturar os dois na mesma campanha faz a IA Editora promover produto que ainda não devia ser anunciado. Segmentação obrigatória em 3 grupos:
 
 **GRUPO A — CAMPANHA ATIVA AGORA (dados completos)**
-> ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} com ticket e % vendido definidos — é este grupo que alimenta a estratégia de Google Ads (seção 6) e o orçamento (seção 7).
+> ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} com ticket e % vendido definidos — é este grupo que alimenta a estratégia de Google Ads (seção 7) e o orçamento (seção 8).
 ${grupoA.length ? grupoA.map(r => r.nome).join(' • ') : '(nenhum)'}
 
 **GRUPO B — PRÉ-LANÇAMENTO (monitorar, não anunciar ainda)**
-> ${grupoB.length} produto${grupoB.length === 1 ? '' : 's'} sem preço definido — aguardar tabela de vendas. NÃO usar nos grupos de anúncio da seção 6.
+> ${grupoB.length} produto${grupoB.length === 1 ? '' : 's'} sem preço definido — aguardar tabela de vendas. NÃO usar nos grupos de anúncio da seção 7.
 ${grupoB.length ? grupoB.map(r => r.nome).join(' • ') : '(nenhum)'}
 
 **GRUPO C — DADO INCORRETO (corrigir na base)**
@@ -3347,7 +3383,7 @@ ${detalheGrupoC_}
 
 ---
 
-## 6. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS
+## 7. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS
 
 ### OBJETIVO GERAL
 Criar uma estratégia de tráfego pago no **Google Ads** para atrair leads altamente qualificados — pessoas com intenção real de comprar um imóvel de lançamento — que clicarão no anúncio e acessarão o **App Lançamentos** já com os filtros configurados conforme o nicho do anúncio.
@@ -3356,7 +3392,7 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 
 ---
 
-> **Base de produtos desta seção: Grupo A apenas** (${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}). Grupo B (pré-lançamento) e Grupo C (dado incorreto) ficam de fora até serem corrigidos/liberados — ver seção 5. Vale também a seção 2 (Orientações obrigatórias de conformidade e marca) em todas as peças criadas a partir daqui.
+> **Base de produtos desta seção: Grupo A apenas** (${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}). Grupo B (pré-lançamento) e Grupo C (dado incorreto) ficam de fora até serem corrigidos/liberados — ver seção 6. Vale também a seção 2 (Orientações obrigatórias de conformidade e marca) em todas as peças criadas a partir daqui.
 
 ### FUNIL EM 3 ETAPAS
 
@@ -3369,7 +3405,7 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - **Chamada isca:** "Veja os melhores lançamentos de [Bairro] antes de todos — Consulta gratuita"
 - **Destino:** App Lançamentos SEM preset (tela inicial, cliente faz os próprios filtros)
 - **URL:** \`https://lidderimoveis.com/?utm_source=google&utm_medium=cpc&utm_campaign=sup-topo\`
-- **Orçamento e CPC:** ver seção 7 (R$ 20/dia, CPC máximo R$ 6,00 nesta etapa)
+- **Orçamento e CPC:** ver seção 8 (R$ 20/dia, CPC máximo R$ 6,00 nesta etapa)
 - **Meta:** Volume de cliques + identificação dos segmentos que mais convertem
 
 #### ② MEIO DE FUNIL — Consideração por Nicho
@@ -3404,7 +3440,7 @@ ${padroes.includes('Popular') ? `**PÚBLICO 3 — Comprador Popular (Planta/Em o
 - Descrição 1: "Lançamentos populares e médios em obras em ${cidades[0] || 'Goiânia'}. Fale com um especialista sobre financiamento."
 - Descrição 2: "Descubra quanto cabe no seu bolso. Acesse o app e configure em menos de 3 minutos."
 - Preset: \`?objetivo=moradia&padroes=Popular,Médio&situacoes=em_obras\`` : `**PÚBLICO 3 — Comprador Entrada (Médio, em obras)**
-> Grupo A não tem produto em Popular agora (ver seção 5/2) -- este público usa só Médio, sem mencionar "popular" nem preço de entrada, conforme a regra 4 da seção 2.
+> Grupo A não tem produto em Popular agora (ver seção 6/2) -- este público usa só Médio, sem mencionar "popular" nem preço de entrada, conforme a regra 4 da seção 2.
 - Palavras-chave: \`apartamento médio novo [cidade]\`, \`1 ou 2 quartos novo [bairro]\`, \`apartamento entrada [cidade]\`
 - Título 1: "Seu Primeiro Apartamento Novo"
 - Título 2: "Consulte Condições de Pagamento"
@@ -3453,7 +3489,7 @@ ${negativasSugeridas.length ? negativasSugeridas.join(' • ') : '(Grupo A cobre
 
 ---
 
-## 7. ORÇAMENTO SUGERIDO — FASE DE VALIDAÇÃO (30 DIAS)
+## 8. ORÇAMENTO SUGERIDO — FASE DE VALIDAÇÃO (30 DIAS)
 
 **Grupo A ativo:** ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} em ${padroes.length} padr${padroes.length === 1 ? 'ão' : 'ões'}
 
@@ -3468,11 +3504,11 @@ ${negativasSugeridas.length ? negativasSugeridas.join(' • ') : '(Grupo A cobre
 
 **Horário de veiculação (ad schedule):** seg–sex 10h–20h, sáb e dom 10h–18h (ver regra 5 da seção 2 — diferente do horário de atendimento humano).
 
-**Após os 30 dias:** dobrar o orçamento no público (dos 3 da seção 6) com o menor CPL e pausar os que não converteram nenhum lead.
+**Após os 30 dias:** dobrar o orçamento no público (dos 3 da seção 7) com o menor CPL e pausar os que não converteram nenhum lead.
 
 ---
 
-## 8. APP LANÇAMENTOS — RESUMO DO FUNIL
+## 9. APP LANÇAMENTOS — RESUMO DO FUNIL
 
 **URL Base (produção):** \`https://lidderimoveis.com\` (a raiz do domínio redireciona pro App Lançamentos preservando todos os parâmetros da URL -- não precisa do caminho /app-lancamentos.html)
 **URL Base (GitHub Pages, referência/repositório):** \`https://chaverleo1.github.io/base-inteligente/app-lancamentos.html\`
@@ -3522,7 +3558,7 @@ D.origemAcesso  — Origem calculada (utm_source ou "direto")
 
 ---
 
-## 9. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
+## 10. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
 
 O App Lançamentos aceita presets nomeados ou parâmetros raw na URL.
 
@@ -3574,7 +3610,7 @@ https://lidderimoveis.com/?objetivo=investimento&padroes=Popular,Médio,Alto,Lux
 
 ---
 
-## 10. META DE CONVERSÃO (Google Ads)
+## 11. META DE CONVERSÃO (Google Ads)
 
 **Evento principal:**
 - **Plataforma:** Google Analytics 4 · ID: G-1XHJ44834Q
