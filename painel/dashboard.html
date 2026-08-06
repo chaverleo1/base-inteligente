@@ -2242,7 +2242,7 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
     items: radarSuporte.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
   };
   window._insightDetails['insRadarResistencia'] = {
-    title: '🔴 Resistência — Pronto novo com >50% vendido',
+    title: '🟢 Resistência | Validada — Pronto novo com >50% vendido',
     icon: '🔴', color: '#ff6b6b', type: 'lancamentos',
     items: radarResistencia.map(e => ({ ...e, estoque: parseInt(e.estoque) || 0 })),
   };
@@ -2373,10 +2373,10 @@ function renderDados(json) {
       <button class="btn-briefing-dl" id="btnBriefingSup" style="display:none" onclick="baixarBriefingSuporteDash_()" title="Baixar briefing para IA Editora (Google Ads)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>Briefing IA</button>
     </div>
     <div class="vg-stat" id="cardRadarResistencia">
-      <div class="vg-stat-top"><span class="vg-stat-icon">🔴</span><span class="vg-stat-label">Resistência</span></div>
-      <div class="vg-stat-value" id="cardRadarResistenciaValue" style="color:#ff6b6b">—</div>
+      <div class="vg-stat-top"><span class="vg-stat-icon">🟢</span><span class="vg-stat-label">Resistência | Validada</span></div>
+      <div class="vg-stat-value" id="cardRadarResistenciaValue" style="color:#00c878">—</div>
       <div class="vg-stat-sub">Pronto novo · &gt;50% vendido</div>
-      <button class="vg-stat-link" style="display:none;color:#ff6b6b;background:rgba(255,107,107,.1);border-color:rgba(255,107,107,.25);font-family:inherit">Ver →</button>
+      <button class="vg-stat-link" style="display:none;color:#00c878;background:rgba(0,200,120,.1);border-color:rgba(0,200,120,.25);font-family:inherit">Ver →</button>
     </div>`;
 
   // ── Matches
@@ -5575,7 +5575,7 @@ Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landin
 
 ---
 
-## 4. O QUE É RESISTÊNCIA (para contexto)
+## 4. O QUE É RESISTÊNCIA | VALIDADA (para contexto)
 
 **Critério técnico:** Pronto novo + % vendido > 50 %
 
@@ -5586,11 +5586,11 @@ Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landin
 
 ---
 
----
-
 ## 5. SUBGRUPOS POR PRAZO — TAXONOMIA COMPLETA DO RADAR DE MERCADO
 
 As seções 3 e 4 explicam os dois conceitos-base (Suporte/Resistência). Na prática, o Radar detalha cada um em subgrupos cruzando **estágio + %vendido + prazo até a entrega**, pra dar um sinal mais preciso de urgência/qualidade do que só "Suporte" ou "Resistência" isolados. Cada empreendimento cai em EXATAMENTE UM desses grupos (nunca mais de um) -- a ordem abaixo é a ordem real de prioridade na checagem.
+
+**Nomenclatura:** os grupos da família "Resistência" usam o formato "Resistência | Especificidade" pra deixar claro que são variações do mesmo conceito, sem duplicar o nome cru entre o caso "Em obras perto da entrega" e o caso "Pronto novo" (que são situações diferentes, mas com o mesmo nível de urgência).
 
 **Variáveis usadas:**
 - **Estágio:** "Em obras"/"Em planta" (ainda não entregue) ou "Pronto novo" (já entregue)
@@ -5602,8 +5602,8 @@ As seções 3 e 4 explicam os dois conceitos-base (Suporte/Resistência). Na pr�
 | # | Grupo | Critério exato | O que significa |
 |---|---|---|---|
 | 1 | 🔵 **Breve Lançamento** | %vendido = 0 (QUALQUER prazo, inclusive perto da entrega) | Lançamento sem venda nenhuma ainda -- prioridade máxima, nunca vira outro grupo mesmo perto de entregar |
-| 2 | 🟠 **Potencial de Resistência Forte** | 1–48% vendido · prazo ≥ -7 (7 meses ou menos até a entrega, inclusive atrasado) | Vendendo pouco E perto de ficar pronto -- alerta forte, tende a virar "Resistência Forte" assim que entregar |
-| 2 | 🟠 **Potencial de Resistência** | 1–48% vendido · prazo entre -24 e -8 | Vendendo pouco, ainda com 8 a 24 meses até a entrega -- alerta em formação, dá tempo de reagir |
+| 2 | 🔴 **Resistência \\| Alerta Crítico** | 1–48% vendido · prazo ≥ -7 (7 meses ou menos até a entrega, inclusive atrasado) | Vendendo pouco E perto de ficar pronto -- alerta forte, tende a virar "Resistência \\| Estoque Crítico" assim que entregar |
+| 2 | 🟠 **Alerta de Resistência** | 1–48% vendido · prazo entre -24 e -8 | Vendendo pouco, ainda com 8 a 24 meses até a entrega -- alerta em formação, dá tempo de reagir |
 | 2 | 🟢 **Suporte Pré-entrega** | ≥50% vendido · prazo ≥ -7 (inclusive atrasado) | Vendendo bem E quase pronto -- melhor cenário possível, estoque tende a esgotar em breve |
 | 2 | 🟢 **Suporte Lento** | ≥50% vendido · prazo entre -23 e -8 | Vendendo bem, obra avançando (8 a 23 meses até a entrega) |
 | 2 | 🟢 **Suporte Em Andamento** | ≥50% vendido · prazo entre -50 e -24 | Vendendo bem, obra ainda no início/meio (24 a 50 meses até a entrega) |
@@ -5614,11 +5614,11 @@ As seções 3 e 4 explicam os dois conceitos-base (Suporte/Resistência). Na pr�
 
 | Grupo | Critério exato | O que significa |
 |---|---|---|
-| 🔴 **Resistência Forte** | %vendido < 49 | Produto pronto mas vendendo mal -- estoque parado mesmo sem mais nenhuma obra pra esperar, sinal mais forte de resistência que o grupo padrão |
-| 🔴 **Resistência** | %vendido > 50 | Produto entregue e validado pelo mercado (mais da metade já vendida) -- disponibilidade imediata |
+| 🔴 **Resistência \\| Estoque Crítico** | %vendido < 49 | Produto pronto mas vendendo mal -- estoque parado mesmo sem mais nenhuma obra pra esperar, sinal mais forte de resistência que o grupo padrão |
+| 🟢 **Resistência \\| Validada** | %vendido > 50 | Produto entregue e validado pelo mercado (mais da metade já vendida) -- disponibilidade imediata |
 | 🟡 **Transição** | %vendido = 49 ou 50 exatos | Zona neutra entre os dois grupos acima |
 
-**Por que o corte em 49% (não 50%) nos subgrupos por prazo:** os 6 subgrupos (Potencial de Resistência/Forte, Suporte Em Andamento/Lento/Pré-entrega, Resistência Forte) usam 49% como referência, deixando exatos 49-50% como faixa neutra que cai em Suporte/Transição comum -- evita empurrar um produto no limite artificialmente pra um lado ou outro.
+**Por que o corte em 49% (não 50%) nos subgrupos por prazo:** os 6 subgrupos (Alerta de Resistência, Resistência | Alerta Crítico, Suporte Em Andamento/Lento/Pré-entrega, Resistência | Estoque Crítico) usam 49% como referência, deixando exatos 49-50% como faixa neutra que cai em Suporte/Transição comum -- evita empurrar um produto no limite artificialmente pra um lado ou outro.
 
 ---
 
