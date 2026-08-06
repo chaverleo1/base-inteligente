@@ -2180,35 +2180,44 @@ async function atualizarCardsVisaoGeralLancamentos_(listaBruta) {
   ligarVerCardVG_('cardVendedorSemAvaliacao', 'insVendedorSemAvaliacao');
 
   // 4 + 5 + 6) Radar: Breve Lançamento, Suporte e Resistência
-  // Mesma lógica de papelMercado_() do lancamentos.html:
+  // Pedido explícito do usuário: "o cálculo correto do grupo de Suporte é o
+  // que está no Radar" (papelMercado_(), lancamentos.html) -- devem bater
+  // sempre. Reescrito pra espelhar EXATAMENTE os mesmos dois passos, na
+  // mesma ordem:
+  //   1) estoque<=0 (nada mais pra vender) fica de FORA de qualquer grupo
+  //   2) %vendido indeterminado (totalUnidades ausente) TAMBÉM fica de FORA
+  //      -- a versão antiga aqui fazia o oposto (incluía em Suporte), que
+  //      é exatamente por onde os dois números divergiam.
   //   Breve Lançamento = Em obras/planta  + pctVendido === 0  (sem abertura de vendas)
   //   Suporte          = Em obras/planta  + 0 < pctVendido < 50%
   //   Resistência      = Pronto novo      + pctVendido > 50%
+  // A fórmula do %vendido em si também passa a ser a oficial e única
+  // (calcularPercentualVendido, painel/config.js -- já carregado nesta
+  // página) em vez da reimplementação local que nem tinha o teto de 99%
+  // nem validava estoque negativo/NaN.
   function _pctVendidoEmp(e) {
-    const est = parseInt(e.estoque)      || 0;
-    const tot = parseInt(e.totalUnidades) || 0;
-    if (!tot) return null;
-    return Math.round((1 - est / tot) * 100);
+    return calcularPercentualVendido(e.estoque, e.totalUnidades);
   }
   const radarBreveLancamento = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
-    if (!/em obras|em planta/i.test((e.status || '').trim())) return false;
     const pct = _pctVendidoEmp(e);
-    return pct !== null && pct === 0;
+    if (pct == null) return false;
+    if (!/em obras|em planta/i.test((e.status || '').trim())) return false;
+    return pct === 0;
   });
   const radarSuporte = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
-    if (!/em obras|em planta/i.test((e.status || '').trim())) return false;
     const pct = _pctVendidoEmp(e);
-    // null = totalUnidades não preenchido → inclui; exclui 0% (Breve Lançamento)
-    return pct === null || (pct > 0 && pct < 50);
+    if (pct == null) return false;
+    if (!/em obras|em planta/i.test((e.status || '').trim())) return false;
+    return pct > 0 && pct < 50;
   });
   const radarResistencia = emps.filter(e => {
     if (!(parseInt(e.estoque) > 0)) return false;
-    if (!/pronto novo/i.test((e.status || '').trim())) return false;
     const pct = _pctVendidoEmp(e);
-    // null = totalUnidades não preenchido → inclui (estágio já garante a classificação)
-    return pct === null || pct > 50;
+    if (pct == null) return false;
+    if (!/pronto novo/i.test((e.status || '').trim())) return false;
+    return pct > 50;
   });
 
   const valBrv = document.getElementById('cardRadarBreveValue');
