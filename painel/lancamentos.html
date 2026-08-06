@@ -3877,10 +3877,10 @@ const FRENTES_PRAZO_ = [
   { chave: 'resistenciaForte',          frente: 'resF',  nome: 'Resistência | Estoque Crítico',   emoji: '🔴', cor: '#e53935', bloco: 'resistencia',
     sub: 'Pronto novo · <49% vendido — estoque parado mesmo já pronto', sortDir: 'asc',
     conceito: 'Pronto mas vendendo mal — estoque parado', regras: 'Pronto novo · <49% vendido' },
-  { chave: 'potencialResistenciaForte', frente: 'potRF', nome: 'Resistência | Alerta Crítico',    emoji: '🔴', cor: '#e53935', bloco: 'resistencia',
+  { chave: 'potencialResistenciaForte', frente: 'potRF', nome: 'Resistência | Alerta Crítico',    nomeResumo: 'Suporte | Alerta Crítico de Resistência', emoji: '🔴', cor: '#e53935', bloco: 'resistencia',
     sub: 'Em obras · <49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc',
     conceito: 'Vendendo pouco e perto de entregar', regras: 'Em obras · <49% vendido · prazo ≥ -7' },
-  { chave: 'potencialResistencia',      frente: 'potR',  nome: 'Alerta de Resistência',           emoji: '🟠', cor: '#f57c00', bloco: 'resistencia',
+  { chave: 'potencialResistencia',      frente: 'potR',  nome: 'Alerta de Resistência',           nomeResumo: 'Suporte - Alerta de Resistência em formação', emoji: '🟠', cor: '#f57c00', bloco: 'resistencia',
     sub: 'Em obras · <49% vendido · entre 8 e 24 meses da entrega', sortDir: 'asc',
     conceito: 'Vendendo pouco, alerta em formação', regras: 'Em obras · <49% vendido · prazo -24 a -8' },
   { chave: 'suporteEmAndamento',        frente: 'supEA', nome: 'Suporte Em Andamento',           emoji: '🟢', cor: '#43a047', bloco: 'suporte',
@@ -4056,13 +4056,13 @@ function renderRadarMercado_() {
       conceito: 'Zero vendas ainda — prioridade máxima', regras: 'Em obras/planta · 0% vendido (qualquer prazo)' },
     { bloco: 'outros',      key: 'KPI_TRA', nome: 'Transição', emoji: '🟡', cor: '#ff9800', total: tra.length,
       conceito: 'Zona neutra / dado insuficiente', regras: '≥50% vendido sem prazo suficiente (obras), ou 49–50% exatos (pronto)' },
-    { bloco: 'resistencia', key: 'KPI_RES', nome: 'Resistência | Validada', emoji: '🟢', cor: '#00c878', total: res.length,
+    { bloco: 'resistencia', key: 'KPI_RES', nome: 'Resistência | Porém Validado e Pouco Estoque', emoji: '🟢', cor: '#00c878', total: res.length,
       conceito: 'Validado pelo mercado, disponível já', regras: 'Pronto novo · >50% vendido' },
-    { bloco: 'resistencia', key: 'KPI_OPT', nome: 'Oportunidades', emoji: '⚡', cor: '#ff6b6b', total: oport.length,
+    { bloco: 'resistencia', key: 'KPI_OPT', nome: 'Resistencia - Oportunidades com Estoque', emoji: '⚡', cor: '#ff6b6b', total: oport.length,
       conceito: 'Estoque parado relevante — ação prioritária', regras: 'Resistência | Validada · estoque ≥ 20 unidades' },
   ];
   const linhasResumo = FRENTES_PRAZO_.map(f => ({
-    bloco: f.bloco, key: 'KPI_' + f.frente.toUpperCase(), nome: f.nome, emoji: f.emoji, cor: f.cor,
+    bloco: f.bloco, key: 'KPI_' + f.frente.toUpperCase(), nome: f.nomeResumo || f.nome, emoji: f.emoji, cor: f.cor,
     total: extra[f.chave].length, conceito: f.conceito, regras: f.regras,
   })).concat(RESUMO_CLASSICOS_);
 
