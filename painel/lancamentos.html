@@ -85,23 +85,19 @@ a { text-decoration: none; color: inherit; }
   font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
   color:var(--text3); white-space:nowrap; min-width:48px;
 }
-.radar-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:24px; }
-.radar-kpi  { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
-.radar-kpi-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
-.radar-kpi-val   { font-size:28px; font-weight:800; line-height:1; }
-.radar-kpi-btn   { background:none; border:none; padding:0; cursor:pointer; font-size:28px; font-weight:800; line-height:1; text-decoration:underline dotted; text-underline-offset:3px; transition:opacity .15s; }
-.radar-kpi-btn:hover { opacity:.75; }
-.radar-kpi-sub   { font-size:11px; color:var(--text3); margin-top:4px; }
-.radar-kpi.kpi-suporte     { border-color:rgba(0,200,120,.3); }
-.radar-kpi.kpi-suporte     .radar-kpi-val { color:#00c878; }
-.radar-kpi.kpi-transicao   { border-color:rgba(255,152,0,.3); }
-.radar-kpi.kpi-transicao   .radar-kpi-val { color:#ff9800; }
-.radar-kpi.kpi-resistencia { border-color:rgba(0,200,120,.3); }
-.radar-kpi.kpi-resistencia .radar-kpi-val { color:#00c878; }
-.radar-kpi.kpi-oport       { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.06); }
-.radar-kpi.kpi-oport       .radar-kpi-val { color:#ff6b6b; }
-.radar-kpi.kpi-breve       { border-color:rgba(96,165,250,.3); }
-.radar-kpi.kpi-breve       .radar-kpi-val { color:#60a5fa; }
+/* Tabela-resumo dos grupos (Total/Nome/Conceito/Regras) -- pedido
+   explícito do usuário: substitui os cards de KPI por uma tabela
+   compacta, em 3 blocos (Resistência/Suporte/Outros), letra pequena e
+   pouca altura por linha pra caber mais sem precisar rolar tanto. */
+.radar-resumo-tabela { width:100%; border-collapse:collapse; font-size:11px; }
+.radar-resumo-tabela th { padding:5px 8px; text-align:left; font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.08); white-space:nowrap; }
+.radar-resumo-tabela th.num, .radar-resumo-tabela td.num { text-align:center; }
+.radar-resumo-tabela td { padding:4px 8px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; line-height:1.3; color:var(--text2); }
+.radar-resumo-tabela td.num { width:52px; font-variant-numeric:tabular-nums; }
+.radar-resumo-tabela tr:last-child td { border-bottom:none; }
+.radar-resumo-bloco td { padding:6px 8px; font-size:10px; font-weight:800; letter-spacing:.06em; background:rgba(255,255,255,.03); color:var(--text2); border-bottom:1px solid rgba(255,255,255,.08); }
+.radar-resumo-btn { background:none; border:none; padding:0; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px; transition:opacity .15s; }
+.radar-resumo-btn:hover { opacity:.75; }
 .btn-briefing-dl { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:5px 10px; border:1px solid rgba(0,200,120,.35); border-radius:6px; background:rgba(0,200,120,.08); color:#00c878; font-size:10px; font-weight:700; letter-spacing:.04em; cursor:pointer; transition:background .15s,opacity .15s; }
 .btn-briefing-dl:hover { background:rgba(0,200,120,.18); }
 .btn-briefing-dl svg { width:12px; height:12px; flex-shrink:0; }
@@ -3807,19 +3803,27 @@ const FRENTES_PRAZO_ = [
   // Nomenclatura pedida explicitamente pelo usuário -- "Resistência | X"
   // pra deixar claro que são variações do mesmo conceito (resistência),
   // sem duplicar o nome cru "Resistência Forte" que já existia (evita
-  // confundir com a resistência de produto Pronto novo).
-  { chave: 'resistenciaForte',          frente: 'resF',  nome: 'Resistência | Estoque Crítico',   emoji: '🔴', cor: '#e53935',
-    sub: 'Pronto novo · <49% vendido — estoque parado mesmo já pronto', sortDir: 'asc' },
-  { chave: 'potencialResistenciaForte', frente: 'potRF', nome: 'Resistência | Alerta Crítico',    emoji: '🔴', cor: '#e53935',
-    sub: 'Em obras · <49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc' },
-  { chave: 'potencialResistencia',      frente: 'potR',  nome: 'Alerta de Resistência',           emoji: '🟠', cor: '#f57c00',
-    sub: 'Em obras · <49% vendido · entre 8 e 24 meses da entrega', sortDir: 'asc' },
-  { chave: 'suporteEmAndamento',        frente: 'supEA', nome: 'Suporte Em Andamento',           emoji: '🟢', cor: '#43a047',
-    sub: 'Em obras · >49% vendido · entre 24 e 50 meses da entrega', sortDir: 'desc' },
-  { chave: 'suporteLento',              frente: 'supL',  nome: 'Suporte Lento',                  emoji: '🟢', cor: '#26a69a',
-    sub: 'Em obras · >49% vendido · entre 8 e 23 meses da entrega', sortDir: 'desc' },
-  { chave: 'suportePreEntrega',         frente: 'supPE', nome: 'Suporte Pré-entrega',            emoji: '🟢', cor: '#00c878',
-    sub: 'Em obras · >49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc' },
+  // confundir com a resistência de produto Pronto novo). `bloco` +
+  // `conceito` + `regras` alimentam a tabela-resumo (pedido explícito do
+  // usuário, substitui os cards de KPI).
+  { chave: 'resistenciaForte',          frente: 'resF',  nome: 'Resistência | Estoque Crítico',   emoji: '🔴', cor: '#e53935', bloco: 'resistencia',
+    sub: 'Pronto novo · <49% vendido — estoque parado mesmo já pronto', sortDir: 'asc',
+    conceito: 'Pronto mas vendendo mal — estoque parado', regras: 'Pronto novo · <49% vendido' },
+  { chave: 'potencialResistenciaForte', frente: 'potRF', nome: 'Resistência | Alerta Crítico',    emoji: '🔴', cor: '#e53935', bloco: 'resistencia',
+    sub: 'Em obras · <49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc',
+    conceito: 'Vendendo pouco e perto de entregar', regras: 'Em obras · <49% vendido · prazo ≥ -7' },
+  { chave: 'potencialResistencia',      frente: 'potR',  nome: 'Alerta de Resistência',           emoji: '🟠', cor: '#f57c00', bloco: 'resistencia',
+    sub: 'Em obras · <49% vendido · entre 8 e 24 meses da entrega', sortDir: 'asc',
+    conceito: 'Vendendo pouco, alerta em formação', regras: 'Em obras · <49% vendido · prazo -24 a -8' },
+  { chave: 'suporteEmAndamento',        frente: 'supEA', nome: 'Suporte Em Andamento',           emoji: '🟢', cor: '#43a047', bloco: 'suporte',
+    sub: 'Em obras · >49% vendido · entre 24 e 50 meses da entrega', sortDir: 'desc',
+    conceito: 'Vendendo bem, obra no início/meio', regras: 'Em obras · ≥50% vendido · prazo -50 a -24' },
+  { chave: 'suporteLento',              frente: 'supL',  nome: 'Suporte Lento',                  emoji: '🟢', cor: '#26a69a', bloco: 'suporte',
+    sub: 'Em obras · >49% vendido · entre 8 e 23 meses da entrega', sortDir: 'desc',
+    conceito: 'Vendendo bem, obra avançando', regras: 'Em obras · ≥50% vendido · prazo -23 a -8' },
+  { chave: 'suportePreEntrega',         frente: 'supPE', nome: 'Suporte Pré-entrega',            emoji: '🟢', cor: '#00c878', bloco: 'suporte',
+    sub: 'Em obras · >49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc',
+    conceito: 'Vendendo bem e quase pronto', regras: 'Em obras · ≥50% vendido · prazo ≥ -7' },
 ];
 
 // Oportunidade = resistência com estoque relevante (≥ 20 unidades paradas há muito tempo)
@@ -3973,55 +3977,57 @@ function renderRadarMercado_() {
   _listaEmpModalData_['KPI_RES']  = { titulo: '🟢 Resistência | Validada — Pronto novo com >50% vendido',                     rows: res  };
   _listaEmpModalData_['KPI_OPT']  = { titulo: '⚡ Oportunidades — Resistência com ≥ 20 unidades paradas',                     rows: oport };
 
-  // Helper: botão de número no KPI (clicável se lista não vazia)
-  function kpiBtn(key, count) {
-    if (!count) return `<div class="radar-kpi-val" style="cursor:default">${count}</div>`;
-    return `<button class="radar-kpi-val radar-kpi-btn" onclick="abrirModalListaEmp_('${key}')" title="Ver lista">${count}</button>`;
-  }
-  // Mesma coisa, mas com cor customizada -- usado pelas 6 frentes por
-  // prazo (FRENTES_PRAZO_), que não têm classe CSS própria de propósito
-  // (cor vem de f.cor, mesmo padrão do chip do Mapa Geral).
-  function kpiBtnCor(key, count, cor) {
-    if (!count) return `<div class="radar-kpi-val" style="cursor:default;color:${cor}">${count}</div>`;
-    return `<button class="radar-kpi-val radar-kpi-btn" style="color:${cor}" onclick="abrirModalListaEmp_('${key}')" title="Ver lista">${count}</button>`;
-  }
+  // Tabela-resumo dos grupos -- pedido explícito do usuário: substitui os
+  // cards de KPI por uma tabela compacta (Total/Nome/Conceito/Regras),
+  // organizada em 3 blocos (Resistência/Suporte/Outros), letra menor e
+  // menos altura pra precisar de menos rolagem.
+  const RESUMO_CLASSICOS_ = [
+    { bloco: 'suporte',     key: 'KPI_SUP', nome: 'Suporte', emoji: '🟢', cor: '#00c878', total: sup.length,
+      conceito: 'Demanda real, cedo na obra', regras: 'Em obras · 1–49% vendido · prazo < -24 ou sem previsão' },
+    { bloco: 'outros',      key: 'KPI_BRV', nome: 'Breve Lançamento', emoji: '🔵', cor: '#60a5fa', total: brv.length,
+      conceito: 'Zero vendas ainda — prioridade máxima', regras: 'Em obras/planta · 0% vendido (qualquer prazo)' },
+    { bloco: 'outros',      key: 'KPI_TRA', nome: 'Transição', emoji: '🟡', cor: '#ff9800', total: tra.length,
+      conceito: 'Zona neutra / dado insuficiente', regras: '≥50% vendido sem prazo suficiente (obras), ou 49–50% exatos (pronto)' },
+    { bloco: 'resistencia', key: 'KPI_RES', nome: 'Resistência | Validada', emoji: '🟢', cor: '#00c878', total: res.length,
+      conceito: 'Validado pelo mercado, disponível já', regras: 'Pronto novo · >50% vendido' },
+    { bloco: 'resistencia', key: 'KPI_OPT', nome: 'Oportunidades', emoji: '⚡', cor: '#ff6b6b', total: oport.length,
+      conceito: 'Estoque parado relevante — ação prioritária', regras: 'Resistência | Validada · estoque ≥ 20 unidades' },
+  ];
+  const linhasResumo = FRENTES_PRAZO_.map(f => ({
+    bloco: f.bloco, key: 'KPI_' + f.frente.toUpperCase(), nome: f.nome, emoji: f.emoji, cor: f.cor,
+    total: extra[f.chave].length, conceito: f.conceito, regras: f.regras,
+  })).concat(RESUMO_CLASSICOS_);
 
-  // KPI bar — subtítulos refletem a nova lógica estoque × tempo.
-  const kpiExtraHtml = FRENTES_PRAZO_.map(f => `
-      <div class="radar-kpi" style="border-color:${f.cor}4d">
-        <div class="radar-kpi-label">${f.emoji} ${f.nome}</div>
-        ${kpiBtnCor('KPI_' + f.frente.toUpperCase(), extra[f.chave].length, f.cor)}
-        <div class="radar-kpi-sub">${f.sub}</div>
-      </div>`).join('');
+  const BLOCOS_ORDEM_ = [
+    { key: 'resistencia', label: '🔴 RESISTÊNCIA' },
+    { key: 'suporte',     label: '🟢 SUPORTE' },
+    { key: 'outros',      label: '⚪ OUTROS' },
+  ];
+  const resumoLinhasHtml = BLOCOS_ORDEM_.map(b => {
+    const linhasBloco = linhasResumo.filter(l => l.bloco === b.key).map(l => `
+          <tr>
+            <td class="num">${l.total
+              ? `<button class="radar-resumo-btn" style="color:${l.cor}" onclick="abrirModalListaEmp_('${l.key}')" title="Ver lista">${l.total}</button>`
+              : `<span style="color:var(--text3)">0</span>`}</td>
+            <td><span style="color:${l.cor};font-weight:700">${l.emoji} ${l.nome}</span></td>
+            <td>${l.conceito}</td>
+            <td>${l.regras}</td>
+          </tr>`).join('');
+    return `<tr class="radar-resumo-bloco"><td colspan="4">${b.label}</td></tr>${linhasBloco}`;
+  }).join('');
 
   const kpiHtml = `
-    <div class="radar-kpis">
-      ${kpiExtraHtml}
-      <div class="radar-kpi kpi-breve">
-        <div class="radar-kpi-label">🔵 Breve Lançamento</div>
-        ${kpiBtn('KPI_BRV', brv.length)}
-        <div class="radar-kpi-sub">Em obras · 0% vendido (sem abertura)</div>
-      </div>
-      <div class="radar-kpi kpi-suporte">
-        <div class="radar-kpi-label">🟢 Suporte</div>
-        ${kpiBtn('KPI_SUP', sup.length)}
-        <div class="radar-kpi-sub">Em obras · &lt;50% vendido</div>
+    <div class="radar-secao">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo" style="color:var(--text2)">📋 Resumo dos Grupos</span>
+        <span class="radar-secao-sub">Clique no total pra ver a lista de empreendimentos</span>
         ${sup.length ? `<button class="btn-briefing-dl" onclick="baixarBriefingSuporte_()" title="Baixar briefing para IA Editora (Google Ads)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>Briefing IA</button>` : ''}
       </div>
-      <div class="radar-kpi kpi-transicao">
-        <div class="radar-kpi-label">🟡 Transição</div>
-        ${kpiBtn('KPI_TRA', tra.length)}
-        <div class="radar-kpi-sub">50% vendido · faixa intermediária</div>
-      </div>
-      <div class="radar-kpi kpi-resistencia">
-        <div class="radar-kpi-label">🟢 Resistência | Validada</div>
-        ${kpiBtn('KPI_RES', res.length)}
-        <div class="radar-kpi-sub">Pronto novo · &gt;50% vendido</div>
-      </div>
-      <div class="radar-kpi kpi-oport">
-        <div class="radar-kpi-label">⚡ Oportunidades</div>
-        ${kpiBtn('KPI_OPT', oport.length)}
-        <div class="radar-kpi-sub">Resistência com ≥ 20 unidades paradas</div>
+      <div style="overflow-x:auto">
+        <table class="radar-resumo-tabela">
+          <thead><tr><th class="num">Total</th><th>Nome</th><th>Conceito</th><th>Regras</th></tr></thead>
+          <tbody>${resumoLinhasHtml}</tbody>
+        </table>
       </div>
     </div>`;
 
