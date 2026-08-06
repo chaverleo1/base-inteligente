@@ -3683,13 +3683,21 @@ function papelMercado_(r) {
 
   if (!isObras && !isPronto) return null;
 
+  // BREVE LANÇAMENTO: Em obras/planta com 0% vendido (sem abertura de vendas
+  // ainda) -- pedido explícito do usuário: 0% vendido tem que continuar
+  // SEMPRE nesse grupo, mesmo perto da entrega. Por isso checado ANTES dos
+  // subgrupos por prazo abaixo (senão um 0% vendido bem perto da entrega
+  // "vazava" pra Potencial de Resistência Forte).
+  if (isObras && pctV === 0) return 'breveLancamento';
+
   if (isObras) {
     const raw = prazoEntregaMeses_(r);
     const val = raw == null ? null : -raw;   // negativo = faltam meses; positivo = atrasado (mesmo sinal da coluna Prazo)
 
     if (val != null) {
       if (pctV < LIMITE_VENDIDO_SUBGRUPO_) {
-        // POTENCIAL DE RESISTÊNCIA (FORTE): em obras, vendendo pouco (<49%),
+        // POTENCIAL DE RESISTÊNCIA (FORTE): em obras, vendendo pouco (<49%,
+        // mas > 0 -- 0% já foi capturado acima como Breve Lançamento),
         // ficando perto da entrega sem ter vendido o suficiente -- alerta
         // de que pode virar "Resistência Forte" assim que ficar pronto.
         if (val >= -7)               return 'potencialResistenciaForte';
@@ -3703,12 +3711,9 @@ function papelMercado_(r) {
         if (val >= -50 && val <= -24) return 'suporteEmAndamento';
       }
       // pctV === 49 exatos, ou fora de todas as faixas de prazo acima: cai
-      // no critério antigo (Breve Lançamento/Suporte) logo abaixo.
+      // no critério antigo (Suporte) logo abaixo.
     }
   }
-
-  // BREVE LANÇAMENTO: Em obras/planta com 0% vendido (sem abertura de vendas ainda)
-  if (isObras  && pctV === 0) return 'breveLancamento';
 
   // SUPORTE: apenas Em obras/planta com < 50% vendido
   if (isObras  && pctV < 50) return 'suporte';
