@@ -3176,31 +3176,78 @@ function baixarBriefingSuporte_() {
     : 'N/D';
   const fmtMeses = m => m == null ? 'N/D' : (m < 0 ? `${-m} meses atrás` : `em ${m} meses`);
 
-  const padroes = [...new Set(rows.map(r => r.padrao).filter(Boolean))].sort();
-  const bairros = [...new Set(rows.map(r => r.bairro).filter(b => b && b !== '—'))].sort();
-  const cidades = [...new Set(rows.map(r => r.cidade).filter(Boolean))].sort();
-  const agora   = new Date().toLocaleString('pt-BR', { dateStyle:'full', timeStyle:'short' });
+  const agora = new Date().toLocaleString('pt-BR', { dateStyle:'full', timeStyle:'short' });
 
-  const listaEmp = rows.map((r, i) => {
-    const prazoMeses = prazoEntregaMeses_(r);
-    return `\n### ${i + 1}. ${r.nome}
-- **Construtora:** ${r.construtora}
-- **Padrão:** ${r.padrao || 'N/D'}
-- **Estágio:** ${r.estagio}
-- **Localização:** ${r.bairro} / ${r.cidade}
-- **Previsão de entrega:** ${r.previsaoEntrega || 'N/D'} (${fmtMeses(prazoMeses)})
-- **Estoque disponível:** ${r.estoque != null ? r.estoque : 'N/D'} unidades
-- **Total de unidades:** ${r.totalUnidades || 'N/D'}
-- **% Vendido:** ${r.pctVendido != null ? r.pctVendido + '%' : 'N/D'}
-- **Faixa de área:** ${fmtArea(r)}
-- **Ticket a partir de:** ${fmtPreco(r.menorPreco)}
-- **Custo/m²:** ${r.m2Medio > 0 ? fmtPreco(r.m2Medio) + '/m²' : 'N/D'}
-- **Tempo em vendas:** ${r.prazoVenda != null ? r.prazoVenda + ' meses' : 'N/D'}`;
-  }).join('\n');
+  // ── Melhoria 1 (pedido explícito do usuário): separar em 3 grupos
+  // operacionais -- a lista de Suporte mistura produto com dado completo e
+  // pré-lançamento sem preço definido, e às vezes um nome que veio errado
+  // da extração (ex: texto de aviso de cookies capturado por engano).
+  // Passar tudo isso junto pra IA Editora faz ela tentar montar anúncio
+  // pra produto que não devia ser anunciado ainda, ou nem existe de verdade.
+  function nomeSuspeito_(nome) {
+    const n = String(nome || '').trim();
+    if (!n) return true;
+    if (/cookie|pol[íi]tica de (privacidade|cookies)|termos de uso|consentimento|website utiliza|aceitar? (os )?cookies/i.test(n)) return true;
+    if (n.length > 60) return true;
+    return false;
+  }
+  const grupoA = [], grupoB = [], grupoC = [];
+  rows.forEach(r => {
+    if (nomeSuspeito_(r.nome))          grupoC.push(r);
+    else if (!(r.menorPreco > 0))       grupoB.push(r);
+    else                                 grupoA.push(r);
+  });
+
+  // A estratégia de Ads (seção 5) e o orçamento (seção 6) são montados só
+  // com o Grupo A -- é o único com dado completo o bastante pra virar
+  // anúncio agora.
+  const padroes = [...new Set(grupoA.map(r => r.padrao).filter(Boolean))].sort();
+  const bairros = [...new Set(grupoA.map(r => r.bairro).filter(b => b && b !== '—'))].sort();
+  const cidades = [...new Set(grupoA.map(r => r.cidade).filter(Boolean))].sort();
+
+  function detalheEmp_(arr, comPreco) {
+    if (!arr.length) return '(nenhum produto neste grupo)';
+    return arr.map((r, i) => {
+      const prazoMeses = prazoEntregaMeses_(r);
+      const campos = [
+        `- **Construtora:** ${r.construtora}`,
+        `- **Padrão:** ${r.padrao || 'N/D'}`,
+        `- **Estágio:** ${r.estagio}`,
+        `- **Localização:** ${r.bairro} / ${r.cidade}`,
+        `- **Previsão de entrega:** ${r.previsaoEntrega || 'N/D'} (${fmtMeses(prazoMeses)})`,
+        `- **Estoque disponível:** ${r.estoque != null ? r.estoque : 'N/D'} unidades`,
+        `- **Total de unidades:** ${r.totalUnidades || 'N/D'}`,
+      ];
+      if (comPreco) {
+        campos.push(`- **% Vendido:** ${r.pctVendido != null ? r.pctVendido + '%' : 'N/D'}`);
+        campos.push(`- **Faixa de área:** ${fmtArea(r)}`);
+        campos.push(`- **Ticket a partir de:** ${fmtPreco(r.menorPreco)}`);
+        campos.push(`- **Custo/m²:** ${r.m2Medio > 0 ? fmtPreco(r.m2Medio) + '/m²' : 'N/D'}`);
+        campos.push(`- **Tempo em vendas:** ${r.prazoVenda != null ? r.prazoVenda + ' meses' : 'N/D'}`);
+      }
+      return `\n### ${i + 1}. ${r.nome}\n${campos.join('\n')}`;
+    }).join('\n');
+  }
+  const detalheGrupoC_ = grupoC.length
+    ? grupoC.map((r, i) => `\n### ${i + 1}. "${r.nome}"\n- **Bairro:** ${r.bairro || '—'}\n- **ID:** ${r.id || r.idLancamento || '—'}\n- **Ação:** corrigir o nome no cadastro (parece texto de extração errada, não nome de empreendimento)`).join('\n')
+    : '(nenhum produto neste grupo)';
 
   const bairrosKw = bairros.map(b =>
     `**${b}:** "lançamento ${b.toLowerCase()}", "apartamento novo ${b.toLowerCase()}", "imóvel ${b.toLowerCase()} na planta"`
   ).join('\n- ');
+
+  // ── Melhoria 5 (pedido explícito do usuário): sugerir palavras negativas
+  // extras com base no mix real do Grupo A -- se o padrão Popular (ou
+  // Luxo/Alto) não está sendo anunciado agora, buscas por esse patamar de
+  // preço não devem cair nesse anúncio.
+  const ORDEM_PADRAO_BRIEF_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
+  const MAPA_NEG_PADRAO_ = {
+    'Popular': ['popular', 'econômico', 'minha casa minha vida', 'baixo custo'],
+    'Alto':    ['alto padrão', 'premium'],
+    'Luxo':    ['luxo', 'cobertura duplex', 'mansão'],
+  };
+  const padroesAusentes = ORDEM_PADRAO_BRIEF_.filter(p => !padroes.includes(p));
+  const negativasSugeridas = padroesAusentes.flatMap(p => MAPA_NEG_PADRAO_[p] || []);
 
   const txt = `# BRIEFING IA EDITORA — SUPORTE DE MERCADO
 ## BASE INTELIGENTE · Análise de Lançamentos Imobiliários
@@ -3249,10 +3296,32 @@ function baixarBriefingSuporte_() {
 
 ---
 
-## 4. EMPREENDIMENTOS EM SUPORTE — LISTA COMPLETA
+## 4. EMPREENDIMENTOS — SEGMENTADOS POR GRUPO OPERACIONAL
 
-> **Total: ${rows.length} empreendimentos · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}**
-${listaEmp}
+A lista de Suporte mistura produto com dado completo e pré-lançamento sem preço definido -- misturar os dois na mesma campanha faz a IA Editora promover produto que ainda não devia ser anunciado. Segmentação obrigatória em 3 grupos:
+
+**GRUPO A — CAMPANHA ATIVA AGORA (dados completos)**
+> ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} com ticket e % vendido definidos — é este grupo que alimenta a estratégia de Google Ads (seção 5) e o orçamento (seção 6).
+${grupoA.length ? grupoA.map(r => r.nome).join(' • ') : '(nenhum)'}
+
+**GRUPO B — PRÉ-LANÇAMENTO (monitorar, não anunciar ainda)**
+> ${grupoB.length} produto${grupoB.length === 1 ? '' : 's'} sem preço definido — aguardar tabela de vendas. NÃO usar nos grupos de anúncio da seção 5.
+${grupoB.length ? grupoB.map(r => r.nome).join(' • ') : '(nenhum)'}
+
+**GRUPO C — DADO INCORRETO (corrigir na base)**
+> ${grupoC.length} produto${grupoC.length === 1 ? '' : 's'} com nome suspeito de erro de extração — revisar/corrigir o cadastro antes de qualquer uso. Excluído da estratégia.
+${grupoC.length ? grupoC.map(r => `"${r.nome}" — ${r.bairro || '—'}`).join(' • ') : '(nenhum)'}
+
+---
+
+### Detalhamento — Grupo A (campanha ativa)
+${detalheEmp_(grupoA, true)}
+
+### Detalhamento — Grupo B (pré-lançamento)
+${detalheEmp_(grupoB, false)}
+
+### Detalhamento — Grupo C (dado incorreto)
+${detalheGrupoC_}
 
 ---
 
@@ -3265,6 +3334,8 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 
 ---
 
+> **Base de produtos desta seção: Grupo A apenas** (${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}). Grupo B (pré-lançamento) e Grupo C (dado incorreto) ficam de fora até serem corrigidos/liberados — ver seção 4.
+
 ### FUNIL EM 3 ETAPAS
 
 #### ① TOPO DE FUNIL — Reconhecimento e Volume
@@ -3276,6 +3347,7 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - **Chamada isca:** "Veja os melhores lançamentos de [Bairro] antes de todos — Consulta gratuita"
 - **Destino:** App Lançamentos SEM preset (tela inicial, cliente faz os próprios filtros)
 - **URL:** \`app-lancamentos.html?utm_source=google&utm_medium=cpc&utm_campaign=sup-topo\`
+- **Orçamento e CPC:** ver seção 6 (R$ 20/dia, CPC máximo R$ 6,00 nesta etapa)
 - **Meta:** Volume de cliques + identificação dos segmentos que mais convertem
 
 #### ② MEIO DE FUNIL — Consideração por Nicho
@@ -3284,16 +3356,16 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - **Tipo:** Search segmentada + Display Remarketing
 - **Segmentação:** Remarketing de visitantes que não converteram + lookalike de conversores
 
-**Grupo A — Investidor de Alto Padrão (Em obras)**
+**PÚBLICO 1 — Investidor de Alto Padrão (Em obras)**
 - Palavras-chave: \`apartamento alto padrão na planta [cidade]\`, \`lançamento luxo investimento [bairro]\`, \`apartamento valorização em obras\`
 - Título 1: "Invista Antes da Entrega · Alto Padrão"
-- Título 2: "${rows.filter(r => /alto|luxo/i.test(r.padrao||'')).length || 'N'} opções em obras disponíveis"
+- Título 2: "${grupoA.filter(r => /alto|luxo/i.test(r.padrao||'')).length || 'N'} opções em obras disponíveis"
 - Título 3: "Consulta Gratuita · Sem Compromisso"
 - Descrição 1: "Lançamentos alto padrão em obras em ${cidades[0] || 'Goiânia'}. Compre na planta e valorize antes da entrega."
 - Descrição 2: "Veja opções filtrando por bairro, área e orçamento. Atendimento gratuito com especialista."
 - Preset: \`?objetivo=investimento&padroes=Alto,Luxo&situacoes=em_obras\`
 
-**Grupo B — Morador de Padrão Médio (Em obras)**
+**PÚBLICO 2 — Morador de Padrão Médio (Em obras)**
 - Palavras-chave: \`apartamento médio padrão [bairro]\`, \`2 quartos novo [bairro]\`, \`lançamento ${bairros[0] || '[bairro]'}\`
 - Título 1: "Seu Apart. Novo em ${bairros[0] || '[Bairro]'}"
 - Título 2: "Preço de Lançamento · Em Obras"
@@ -3302,7 +3374,7 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - Descrição 2: "Configure seu perfil e veja quantas opções combinam com você em ${cidades.join(' e ') || 'Goiânia'}."
 - Preset: \`?objetivo=moradia&padroes=Médio&situacoes=em_obras\`
 
-**Grupo C — Comprador Popular (Planta/Em obras)**
+**PÚBLICO 3 — Comprador Popular (Planta/Em obras)**
 - Palavras-chave: \`apartamento popular novo [cidade]\`, \`1 ou 2 quartos novo [bairro]\`, \`financiamento imóvel lançamento\`
 - Título 1: "Realize Seu Sonho na Planta"
 - Título 2: "Parcelamento Direto · Sem Entrada"
@@ -3317,7 +3389,7 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - **Tipo:** RLSA (Remarketing List for Search Ads) + Customer Match
 - **Segmentação:** Visitantes que chegaram ao Step 6 (resultados) mas não completaram o Step 8 (conversão)
 - **Anúncios:** Personalizados por empreendimento específico quando possível
-- **Chamada:** "Você viu ${rows[0] ? rows[0].nome : '[Empreendimento]'} · Ainda há unidades · Consulta gratuita"
+- **Chamada:** "Você viu ${grupoA[0] ? grupoA[0].nome : '[Empreendimento]'} · Ainda há unidades · Consulta gratuita"
 - **Preset:** Configurado com o padrão e situação do empreendimento específico
 - **Meta:** Maximizar conversão com custo mínimo por lead
 
@@ -3331,12 +3403,44 @@ ${bairros.length ? '- ' + bairrosKw : '(bairros a definir conforme a base de dad
 
 - **Sitelinks:** "Ver em obras" · "Ver prontos para morar" · "Calcular parcelas" · "Falar com especialista"
 - **Frases de destaque:** "Sem entrada" · "Documentação gratuita" · "Lançamento exclusivo" · "Alta valorização"
-- **Callout:** "[N] lançamentos em ${cidades[0] || 'Goiânia'}" · "Consulta 100% gratuita" · "Atendimento em até 2h"
-- **Imagem:** Renderização do empreendimento + selo "Em obras · [N] unidades disponíveis"
+- **Callout:** "${grupoA.length} lançamentos em ${cidades[0] || 'Goiânia'}" · "Consulta 100% gratuita" · "Atendimento em até 2h"
+- **Imagem:** Renderização do empreendimento + selo "Em obras · ${grupoA.length} unidades disponíveis"
+
+### PALAVRAS NEGATIVAS (OBRIGATÓRIO — adicionar em todas as campanhas)
+
+Sem negativação, o Google mostra o anúncio pra buscas irrelevantes e gasta orçamento sem retorno.
+
+**Fixas (todas as campanhas de lançamento):**
+aluguel • para alugar • locação • temporada • airbnb
+usado • segunda mão • revenda • particular
+terreno • rural • chácara • sítio
+emprego • vaga • trabalho • corretor de imóveis
+gratuito • grátis • de graça
+financiamento caixa (só quando fora de contexto de compra — não negativar a palavra isolada)
+
+**Sugeridas com base no mix atual do Grupo A${padroesAusentes.length ? ' (não inclui: ' + padroesAusentes.join(', ') + ')' : ''}:**
+${negativasSugeridas.length ? negativasSugeridas.join(' • ') : '(Grupo A cobre todos os padrões — nenhuma sugestão adicional)'}
 
 ---
 
-## 6. APP LANÇAMENTOS — RESUMO DO FUNIL
+## 6. ORÇAMENTO SUGERIDO — FASE DE VALIDAÇÃO (30 DIAS)
+
+**Grupo A ativo:** ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} em ${padroes.length} padr${padroes.length === 1 ? 'ão' : 'ões'}
+
+| Etapa do funil | Orçamento diário | Orçamento mensal |
+|---|---|---|
+| Topo de funil (sondagem) | R$ 20/dia | R$ 600/mês |
+| Meio de funil (por nicho) | R$ 50/dia | R$ 1.500/mês |
+| Fundo de funil (remarketing) | R$ 20/dia | R$ 600/mês |
+| **TOTAL** | **R$ 90/dia** | **R$ 2.700/mês** |
+
+**CPC máximo (topo de funil):** R$ 6,00 — lance manual ou meta de CPC no Google Ads, pra não deixar o algoritmo consumir o orçamento rápido demais numa etapa que ainda é só sondagem.
+
+**Após os 30 dias:** dobrar o orçamento no público (dos 3 da seção 5) com o menor CPL e pausar os que não converteram nenhum lead.
+
+---
+
+## 7. APP LANÇAMENTOS — RESUMO DO FUNIL
 
 **URL Base:** \`https://chaverleo1.github.io/base-inteligente/app-lancamentos.html\`
 **Google Analytics:** G-1XHJ44834Q
@@ -3385,7 +3489,7 @@ D.origemAcesso  — Origem calculada (utm_source ou "direto")
 
 ---
 
-## 7. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
+## 8. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
 
 O App Lançamentos aceita presets nomeados ou parâmetros raw na URL.
 
@@ -3431,7 +3535,7 @@ https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-
 
 ---
 
-## 8. META DE CONVERSÃO (Google Ads)
+## 9. META DE CONVERSÃO (Google Ads)
 
 **Evento principal:**
 - **Plataforma:** Google Analytics 4 · ID: G-1XHJ44834Q
