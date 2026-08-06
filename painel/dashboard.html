@@ -5523,6 +5523,77 @@ function baixarBriefingSuporteDash_() {
   const padroesAusentes = ORDEM_PADRAO_BRIEF_.filter(p => !padroes.includes(p));
   const negativasSugeridas = padroesAusentes.flatMap(p => MAPA_NEG_PADRAO_[p] || []);
 
+  // ── Públicos de Meio de Funil, 100% data-driven (correção pedida pela IA
+  // Editora, relatório 06/08/2026) ──────────────────────────────────────
+  // Bug real reportado: os 3 públicos eram hardcoded (Alto/Luxo, Médio,
+  // Popular+Médio) e sempre geravam keyword/preset pra esses padrões,
+  // mesmo quando o Grupo A não tinha NENHUM produto ali (ex: leva 100%
+  // Alto ainda gerava um público "Médio" com preset ?padroes=Médio, que
+  // levava o cliente pro Step 6 com ZERO resultados). Regra nova, fixa:
+  // só existe público pra padrão que o Grupo A realmente tem -- nunca um
+  // padrão hipotético. Um público por padrão presente (nunca combinado
+  // com um padrão ausente), preset sempre single-padrão.
+  const COPY_POR_PADRAO_ = {
+    Luxo: {
+      objetivo: 'investimento',
+      keywords: (cidade, bairro) => [`apartamento de luxo na planta ${cidade}`, `lançamento premium investimento ${bairro}`, `cobertura alto padrão em obras`],
+      titulo1: 'Exclusividade Antes da Entrega',
+      titulo2: 'Consulta Gratuita · Sem Compromisso',
+      descricao: cidade => `Lançamentos de luxo em obras em ${cidade}. Invista na planta com valorização projetada.`,
+    },
+    Alto: {
+      objetivo: 'investimento',
+      keywords: (cidade, bairro) => [`apartamento alto padrão na planta ${cidade}`, `lançamento alto padrão investimento ${bairro}`, `apartamento valorização em obras`],
+      titulo1: 'Invista Antes da Entrega · Alto Padrão',
+      titulo2: 'Consulta Gratuita · Sem Compromisso',
+      descricao: cidade => `Lançamentos alto padrão em obras em ${cidade}. Compre na planta e valorize antes da entrega.`,
+    },
+    Médio: {
+      objetivo: 'moradia',
+      keywords: (cidade, bairro) => [`apartamento médio padrão ${bairro}`, `2 quartos novo ${bairro}`, `lançamento ${cidade}`],
+      titulo1: bairro => `Seu Apart. Novo em ${bairro}`,
+      titulo2: 'Preço de Lançamento · Em Obras',
+      descricao: cidade => `Empreendimentos em obras com preço de planta em ${cidade}. Consulte condições de pagamento.`,
+    },
+    Popular: {
+      objetivo: 'moradia',
+      keywords: (cidade, bairro) => [`apartamento popular novo ${cidade}`, `apartamento entrada ${cidade}`, `1 quarto novo ${bairro}`],
+      titulo1: 'Realize Seu Sonho na Planta',
+      titulo2: 'Consulte Condições de Pagamento',
+      descricao: cidade => `Lançamentos populares em obras em ${cidade}. Fale com um especialista sobre financiamento.`,
+    },
+  };
+  const NOME_PUBLICO_POR_PADRAO_ = {
+    Luxo: 'Investidor de Alto Padrão (Luxo)', Alto: 'Investidor de Alto Padrão',
+    Médio: 'Morador de Padrão Médio', Popular: 'Comprador de Entrada (Popular)',
+  };
+  const ORDEM_PADRAO_MISSAO_ = ['Luxo', 'Alto', 'Médio', 'Popular'];
+  const publicosHtml = ORDEM_PADRAO_MISSAO_
+    .filter(p => padroes.includes(p))
+    .map((p, i) => {
+      const copy = COPY_POR_PADRAO_[p];
+      const produtosDoPadrao = grupoA.filter(e => e.padrao === p);
+      const cidade = cidades[0] || 'Goiânia';
+      const bairroDoPadrao = bairros.find(b => produtosDoPadrao.some(e => e.bairro === b)) || bairros[0] || '[bairro]';
+      const [kw1, kw2, kw3] = copy.keywords(cidade, bairroDoPadrao);
+      const titulo1 = typeof copy.titulo1 === 'function' ? copy.titulo1(bairroDoPadrao) : copy.titulo1;
+      const descricao = copy.descricao(cidade);
+
+      // Melhoria 3 do relatório da IA Editora: sinalizar dispersão de
+      // ticket dentro do mesmo padrão.
+      const tickets = produtosDoPadrao.map(e => e.precoMedio || e.preco).filter(v => v > 0);
+      const dispersaoNota = (tickets.length >= 2 && Math.max(...tickets) > Math.min(...tickets) * 1.8)
+        ? `\n> ⚠️ **Ticket disperso dentro do padrão ${p}:** ${fmtPreco(Math.min(...tickets))} a ${fmtPreco(Math.max(...tickets))}. Considere segmentar por faixa de ticket dentro deste público, em vez de tratar como um público único.`
+        : '';
+
+      return `**PÚBLICO ${i + 1} — ${NOME_PUBLICO_POR_PADRAO_[p]} (Em obras)**
+- Palavras-chave: \`${kw1}\`, \`${kw2}\`, \`${kw3}\`
+- Título 1: "${titulo1}"
+- Título 2: "${copy.titulo2}"
+- Descrição: "${descricao}"
+- Preset: \`?objetivo=${copy.objetivo}&padroes=${p}&situacoes=em_obras\`${dispersaoNota}`;
+    }).join('\n\n');
+
   const txt = `# BRIEFING IA EDITORA — SUPORTE DE MERCADO
 ## BASE INTELIGENTE · Análise de Lançamentos Imobiliários
 *Gerado em: ${agora} · ${rows.length} empreendimentos identificados*
@@ -5681,32 +5752,7 @@ A **meta de conversão final** é a tela **"Confirmado! Sua consultoria está ag
 
 - **Tipo:** Search segmentada + Display Remarketing
 
-**PÚBLICO 1 — Investidor de Alto Padrão (Em obras)**
-- Palavras-chave: \`apartamento alto padrão na planta [cidade]\`, \`lançamento luxo investimento [bairro]\`, \`apartamento valorização em obras\`
-- Título 1: "Invista Antes da Entrega · Alto Padrão"
-- Título 2: "Consulta Gratuita · Sem Compromisso"
-- Descrição: "Lançamentos alto padrão em obras em ${cidades[0] || 'Goiânia'}. Compre na planta e valorize antes da entrega."
-- Preset: \`?objetivo=investimento&padroes=Alto,Luxo&situacoes=em_obras\`
-
-**PÚBLICO 2 — Morador de Padrão Médio (Em obras)**
-- Palavras-chave: \`apartamento médio padrão ${bairros[0] || '[bairro]'}\`, \`2 quartos novo ${bairros[0] || '[bairro]'}\`, \`lançamento ${cidades[0] || 'Goiânia'}\`
-- Título 1: "Seu Apart. Novo em ${bairros[0] || '[Bairro]'}"
-- Título 2: "Preço de Lançamento · Em Obras"
-- Descrição: "Empreendimentos em obras com preço de planta em ${cidades[0] || 'Goiânia'}. Consulte condições de pagamento."
-- Preset: \`?objetivo=moradia&padroes=Médio&situacoes=em_obras\`
-
-${padroes.includes('Popular') ? `**PÚBLICO 3 — Comprador Popular (Planta/Em obras)**
-- Palavras-chave: \`apartamento popular novo ${cidades[0] || '[cidade]'}\`, \`apartamento entrada ${cidades[0] || '[cidade]'}\`, \`1 quartos novo ${bairros[0] || '[bairro]'}\`
-- Título 1: "Realize Seu Sonho na Planta"
-- Título 2: "Consulte Condições de Pagamento"
-- Descrição: "Lançamentos populares e médios em obras. Fale com um especialista sobre financiamento."
-- Preset: \`?objetivo=moradia&padroes=Popular,Médio&situacoes=em_obras\`` : `**PÚBLICO 3 — Comprador Entrada (Médio, em obras)**
-> Grupo A não tem produto em Popular agora (ver seção 6/2) -- este público usa só Médio, sem mencionar "popular" nem preço de entrada, conforme a regra 4 da seção 2.
-- Palavras-chave: \`apartamento médio novo ${cidades[0] || '[cidade]'}\`, \`apartamento entrada ${cidades[0] || '[cidade]'}\`, \`1 quartos novo ${bairros[0] || '[bairro]'}\`
-- Título 1: "Seu Primeiro Apartamento Novo"
-- Título 2: "Consulte Condições de Pagamento"
-- Descrição: "Lançamentos padrão médio em obras em ${cidades[0] || 'Goiânia'}. Fale com um especialista sobre financiamento."
-- Preset: \`?objetivo=moradia&padroes=Médio&situacoes=em_obras\``}
+${publicosHtml || '_Nenhum público gerado — Grupo A não tem padrão algum identificado nesta leva._'}
 
 #### ③ FUNDO DE FUNIL — Decisão e Conversão
 **Objetivo:** Atingir usuários com altíssima intenção — visitaram o app, viram resultados, mas ainda não converteram.
@@ -5773,18 +5819,20 @@ ${negativasSugeridas.length ? negativasSugeridas.join(' • ') : '(Grupo A cobre
 
 ### ETAPAS (STEPS) DO APP
 
-| Step | Nome | O que acontece | Dado capturado |
-|------|------|---------------|---------------|
-| 0 | Landing | Hero animado com contador de lançamentos ativos | — |
-| 5 | Passo 1/4 | Padrão (Popular/Médio/Alto/Luxo) + objetivo (morar/investir) | \`D.padroes\`, \`D.objetivo\` |
-| 2 | Passo 2/4 | Sliders de orçamento máximo e área útil mínima | \`D.orcamento\`, \`D.area\` |
-| 1 | Passo 3/4 | Primeiro nome do cliente | \`D.nome\` |
-| 3 | Confirmação | Resumo dos filtros + contagem de empreendimentos compatíveis | — |
-| 4 | Passo 4/4 | Motivação / tipo de imóvel mais adequado | \`D.motivacao\` |
-| 6 | Resultados | Cards dos empreendimentos compatíveis; cliente pode favoritar | \`D.favoritados\` |
-| 7 | Captura | WhatsApp + favoritos + botão "CONFIRMAR CONSULTORIA GRATUITA" | \`D.whatsapp\` |
-| 9 | Agendamento | Pergunta surpresa: deseja agendar atendimento? (opcional) | \`D.agendamento\` |
-| **8** | **CONFIRMADO ✅** | **"Confirmado, [Nome]! Sua consultoria está agendada."** | **🎯 META DE CONVERSÃO** |
+**Nota (pedido explícito da IA Editora):** "Step" é o ID interno usado no código (não-sequencial, histórico) — "Ordem de exibição" é a ordem real que o cliente vê (1 a 10), é essa que importa pra configurar conversão/funil no Google Ads. As linhas abaixo já estão na ordem de exibição, não na ordem numérica do Step.
+
+| Step (ID interno) | Ordem de exibição | Nome | O que acontece | Dado capturado |
+|------|------|------|---------------|---------------|
+| 0 | 1 | Landing | Hero animado com contador de lançamentos ativos | — |
+| 5 | 2 | Passo 1/4 | Padrão (Popular/Médio/Alto/Luxo) + objetivo (morar/investir) | \`D.padroes\`, \`D.objetivo\` |
+| 2 | 3 | Passo 2/4 | Sliders de orçamento máximo e área útil mínima | \`D.orcamento\`, \`D.area\` |
+| 3 | 4 | Confirmação | Resumo dos filtros + contagem de empreendimentos compatíveis | — |
+| 1 | 5 | Passo 3/4 | Primeiro nome do cliente | \`D.nome\` |
+| 4 | 6 | Passo 4/4 | Motivação / tipo de imóvel mais adequado | \`D.motivacao\` |
+| 6 | 7 | Resultados | Cards dos empreendimentos compatíveis; cliente pode favoritar | \`D.favoritados\` |
+| 7 | 8 | Captura | WhatsApp + favoritos + botão "CONFIRMAR CONSULTORIA GRATUITA" | \`D.whatsapp\` |
+| 9 | 9 | Agendamento | Pergunta surpresa: deseja agendar atendimento? (opcional) | \`D.agendamento\` |
+| **8** | **10** | **CONFIRMADO ✅** | **"Confirmado, [Nome]! Sua consultoria está agendada."** | **🎯 META DE CONVERSÃO** |
 
 ### VARIÁVEIS DO SISTEMA
 
@@ -5818,14 +5866,17 @@ D.utmCampaign   — utm_campaign (ex: "suporte-obras-medio-q3")
 
 ### Presets pré-configurados
 
-| Preset | Objetivo | Padrões | Situação |
-|--------|----------|---------|----------|
-| \`investidor-alto\` | Investimento | Alto, Luxo | Pronto novo |
-| \`investidor-medio\` | Investimento | Médio, Alto | Qualquer |
-| \`investidor-todos\` | Investimento | Todos | Qualquer |
-| \`moradia-popular\` | Moradia | Popular, Médio | Pronto novo |
-| \`moradia-alto\` | Moradia | Alto | Pronto novo |
-| \`obras-medio\` | Investimento | Médio | Em obras |
+**Implementado (pedido explícito da IA Editora):** conferido direto contra \`PRESETS_URL_\` em app-lancamentos.html nesta geração -- todos os presets abaixo já estão publicados e funcionando, não são sugestão.
+
+| Preset | Objetivo | Padrões | Situação | Implementado |
+|--------|----------|---------|----------|--------------|
+| \`investidor-alto\` | Investimento | Alto, Luxo | Pronto novo | ✅ Sim |
+| \`investidor-medio\` | Investimento | Médio, Alto | Qualquer | ✅ Sim |
+| \`investidor-todos\` | Investimento | Todos | Qualquer | ✅ Sim |
+| \`moradia-popular\` | Moradia | Popular, Médio | Pronto novo | ✅ Sim |
+| \`moradia-alto\` | Moradia | Alto | Pronto novo | ✅ Sim |
+| \`pronto-alto\` | Investimento | Alto, Luxo | Pronto novo | ✅ Sim |
+| \`obras-medio\` | Investimento | Médio | Em obras | ✅ Sim |
 
 ### URL completa para Google Ads (com UTM)
 
@@ -5878,7 +5929,12 @@ https://lidderimoveis.com/?objetivo=investimento&padroes=Popular,Médio,Alto,Lux
 3. Step 7 alcançado → quase convertido (preencheu WhatsApp)
 4. **Step 8 concluído → ✅ MACRO-CONVERSÃO** ← configurar no Google Ads
 
-**Configuração recomendada:**
+**STATUS DA CONVERSÃO — 3 estados (pedido explícito da IA Editora, evita ler "configuração recomendada" como já concluído):**
+- **(a) Instalada no GA4:** ✅ SIM — tag G-1XHJ44834Q confirmada no código do App Lançamentos
+- **(b) Configurada como evento no GA4:** ✅ SIM — \`registrarEventoFunil_\` dispara evento a cada etapa, incluindo a chegada no Step 8 (confirmado)
+- **(c) Importada como conversão no Google Ads:** ❓ **NÃO VERIFICÁVEL PELO CÓDIGO** — isso é uma configuração dentro da conta do Google Ads (Conversões → Importar do Google Analytics), fora do que o App Lançamentos consegue confirmar sozinho. **Checar direto no painel do Google Ads antes de assumir que já está configurada.**
+
+**Configuração recomendada (proposta, ainda a aplicar/validar no item c acima):**
 - Tipo: Importar do Google Analytics 4
 - Modelo de atribuição: Data-driven (ou Último clique como fallback)
 - Janela de conversão: 30 dias
