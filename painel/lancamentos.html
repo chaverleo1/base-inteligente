@@ -102,8 +102,6 @@ a { text-decoration: none; color: inherit; }
 .radar-kpi.kpi-oport       .radar-kpi-val { color:#ff6b6b; }
 .radar-kpi.kpi-breve       { border-color:rgba(96,165,250,.3); }
 .radar-kpi.kpi-breve       .radar-kpi-val { color:#60a5fa; }
-.radar-kpi.kpi-preentrega  { border-color:rgba(167,139,250,.3); }
-.radar-kpi.kpi-preentrega  .radar-kpi-val { color:#a78bfa; }
 .btn-briefing-dl { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:5px 10px; border:1px solid rgba(0,200,120,.35); border-radius:6px; background:rgba(0,200,120,.08); color:#00c878; font-size:10px; font-weight:700; letter-spacing:.04em; cursor:pointer; transition:background .15s,opacity .15s; }
 .btn-briefing-dl:hover { background:rgba(0,200,120,.18); }
 .btn-briefing-dl svg { width:12px; height:12px; flex-shrink:0; }
@@ -119,8 +117,6 @@ a { text-decoration: none; color: inherit; }
 .rs-transicao   .radar-secao-count  { background:rgba(255,152,0,.15); color:#ff9800; }
 .rs-resistencia .radar-secao-titulo { color:#ff6b6b; }
 .rs-resistencia .radar-secao-count  { background:rgba(255,107,107,.15); color:#ff6b6b; }
-.rs-preentrega  .radar-secao-titulo { color:#a78bfa; }
-.rs-preentrega  .radar-secao-count  { background:rgba(167,139,250,.15); color:#a78bfa; }
 
 .radar-tabela { width:100%; border-collapse:collapse; font-size:12px; }
 .radar-tabela th { padding:5px 10px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.07); white-space:nowrap; transition:color .15s; }
@@ -139,14 +135,15 @@ a { text-decoration: none; color: inherit; }
 .radar-pct-fill  { height:100%; border-radius:99px; }
 
 .radar-dist { display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; margin-bottom:28px; }
-/* 100px (rótulo do padrão) + 5 categorias (pré-entrega/breve/suporte/
-   transição/resistência) -- antes era só 4 colunas pra 5 células (breve
-   já não cabia certinho), corrigido junto ao adicionar pré-entrega. */
-.radar-dist-header { grid-column:1/-1; display:grid; grid-template-columns:100px repeat(5,1fr); gap:2px; padding:4px 0; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); }
-.radar-dist-row    { display:grid; grid-template-columns:100px repeat(5,1fr); gap:2px; }
+/* 100px (rótulo do padrão) + 4 categorias (breve/suporte/transição/
+   resistência) -- a "Distribuição por Padrão" mostra só os 4 papéis
+   originais, de propósito: com os subgrupos novos de prazo (pré-entrega,
+   potencial de resistência, suporte lento etc.) essa tabela ficaria
+   grande demais pra caber num grid compacto por padrão. */
+.radar-dist-header { grid-column:1/-1; display:grid; grid-template-columns:100px repeat(4,1fr); gap:2px; padding:4px 0; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); }
+.radar-dist-row    { display:grid; grid-template-columns:100px repeat(4,1fr); gap:2px; }
 .radar-dist-cell   { padding:7px 12px; background:var(--surface2); border-radius:4px; font-size:12px; font-variant-numeric:tabular-nums; }
 .radar-dist-cell.pad-label { font-weight:700; color:var(--text2); font-size:11px; }
-.radar-dist-cell.pre { background:rgba(167,139,250,.09); color:#a78bfa; font-weight:600; }
 .radar-dist-cell.sup { background:rgba(0,200,120,.09);   color:#00c878; font-weight:600; }
 .radar-dist-cell.tra { background:rgba(255,152,0,.08);   color:#ff9800; font-weight:600; }
 .radar-dist-cell.res { background:rgba(255,107,107,.09); color:#ff6b6b; font-weight:600; }
@@ -161,7 +158,6 @@ a { text-decoration: none; color: inherit; }
 .papel-chip-suporte.on    { background: rgba(0,200,120,.16);   border-color: #00c878; color: #00c878; }
 .papel-chip-transicao.on  { background: rgba(255,152,0,.16);   border-color: #ff9800; color: #ff9800; }
 .papel-chip-resistencia.on{ background: rgba(255,107,107,.16); border-color: #ff6b6b; color: #ff6b6b; }
-.papel-chip-preentrega.on { background: rgba(167,139,250,.16); border-color: #a78bfa; color: #a78bfa; }
 /* Indicador visual nas linhas da tabela */
 .papel-suporte     > td:first-child { box-shadow: inset 3px 0 0 #00c878; }
 .papel-transicao   > td:first-child { box-shadow: inset 3px 0 0 #ff9800; }
@@ -3668,6 +3664,14 @@ function similBadgeCls_(pct) {
   return '';
 }
 
+// Subgrupos por PRAZO -- pedido explícito do usuário, substitui o antigo
+// grupo único "Pré-entrega" (turno anterior) por 6 categorias mais
+// específicas, cruzando estágio + faixa de %vendido (49% é o corte, não
+// mais 50%) + faixa de prazo (mesmo "val" mostrado na coluna Prazo do
+// Radar: negativo = faltam meses, positivo = atrasado). Usado em
+// papelMercado_() e na config de UI (FRENTES_PRAZO_) mais abaixo.
+const LIMITE_VENDIDO_SUBGRUPO_ = 49;
+
 function papelMercado_(r) {
   if (!r.estoque || r.estoque <= 0) return null;
   if (r.pctVendido == null)         return null;
@@ -3679,17 +3683,28 @@ function papelMercado_(r) {
 
   if (!isObras && !isPronto) return null;
 
-  // PRÉ-ENTREGA: Em obras/planta muito perto do prazo prometido de entrega
-  // -- pedido explícito do usuário: mesmo "Prazo" mostrado na coluna do
-  // Radar (val = -prazoEntregaMeses_(r); negativo = faltam meses,
-  // positivo = atrasado), a partir de -7 (ou seja, faltam 7 meses ou
-  // menos, incluindo já atrasado). Prioridade sobre Breve Lançamento e
-  // Suporte -- projeto perto de entregar é o sinal mais forte pro
-  // comprador, independente de quanto já vendeu.
   if (isObras) {
     const raw = prazoEntregaMeses_(r);
-    const val = raw == null ? null : -raw;
-    if (val != null && val >= -7) return 'preEntrega';
+    const val = raw == null ? null : -raw;   // negativo = faltam meses; positivo = atrasado (mesmo sinal da coluna Prazo)
+
+    if (val != null) {
+      if (pctV < LIMITE_VENDIDO_SUBGRUPO_) {
+        // POTENCIAL DE RESISTÊNCIA (FORTE): em obras, vendendo pouco (<49%),
+        // ficando perto da entrega sem ter vendido o suficiente -- alerta
+        // de que pode virar "Resistência Forte" assim que ficar pronto.
+        if (val >= -7)               return 'potencialResistenciaForte';
+        if (val >= -24 && val <= -8) return 'potencialResistencia';
+      } else if (pctV > LIMITE_VENDIDO_SUBGRUPO_) {
+        // SUPORTE (variações): em obras, vendendo bem (>49%), em diferentes
+        // estágios de proximidade da entrega -- sinal positivo em todos os
+        // casos, só muda a urgência/momento.
+        if (val >= -7)                return 'suportePreEntrega';
+        if (val >= -23 && val <= -8)  return 'suporteLento';
+        if (val >= -50 && val <= -24) return 'suporteEmAndamento';
+      }
+      // pctV === 49 exatos, ou fora de todas as faixas de prazo acima: cai
+      // no critério antigo (Breve Lançamento/Suporte) logo abaixo.
+    }
   }
 
   // BREVE LANÇAMENTO: Em obras/planta com 0% vendido (sem abertura de vendas ainda)
@@ -3698,12 +3713,36 @@ function papelMercado_(r) {
   // SUPORTE: apenas Em obras/planta com < 50% vendido
   if (isObras  && pctV < 50) return 'suporte';
 
+  // RESISTÊNCIA FORTE: Pronto novo com <49% vendido -- estoque parado
+  // mesmo já pronto, sinal de resistência mais forte que o grupo padrão.
+  if (isPronto && pctV < LIMITE_VENDIDO_SUBGRUPO_) return 'resistenciaForte';
+
   // RESISTÊNCIA: apenas Pronto novo com > 50% vendido
   if (isPronto && pctV > 50) return 'resistencia';
 
   // Tudo mais: transição
   return 'transicao';
 }
+
+// Config das 6 frentes por prazo (Melhoria pedida pelo usuário) -- um só
+// lugar pra nome/emoji/cor/subtítulo/ordenação padrão, reaproveitado no
+// KPI bar, nas seções de tabela e no _radarSort. `chave` bate com o
+// retorno de papelMercado_(); `frente` é o id curto usado em
+// colsBase()/radarTable()/_radarSort (mesmo padrão de 'brv'/'sup'/'tra'/'res').
+const FRENTES_PRAZO_ = [
+  { chave: 'resistenciaForte',          frente: 'resF',  nome: 'Resistência Forte',              emoji: '🔴', cor: '#e53935',
+    sub: 'Pronto novo · <49% vendido — estoque parado mesmo já pronto', sortDir: 'asc' },
+  { chave: 'potencialResistenciaForte', frente: 'potRF', nome: 'Potencial de Resistência Forte', emoji: '🟠', cor: '#e64a19',
+    sub: 'Em obras · <49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc' },
+  { chave: 'potencialResistencia',      frente: 'potR',  nome: 'Potencial de Resistência',       emoji: '🟠', cor: '#f57c00',
+    sub: 'Em obras · <49% vendido · entre 8 e 24 meses da entrega', sortDir: 'asc' },
+  { chave: 'suporteEmAndamento',        frente: 'supEA', nome: 'Suporte Em Andamento',           emoji: '🟢', cor: '#43a047',
+    sub: 'Em obras · >49% vendido · entre 24 e 50 meses da entrega', sortDir: 'desc' },
+  { chave: 'suporteLento',              frente: 'supL',  nome: 'Suporte Lento',                  emoji: '🟢', cor: '#26a69a',
+    sub: 'Em obras · >49% vendido · entre 8 e 23 meses da entrega', sortDir: 'desc' },
+  { chave: 'suportePreEntrega',         frente: 'supPE', nome: 'Suporte Pré-entrega',            emoji: '🟢', cor: '#00c878',
+    sub: 'Em obras · >49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc' },
+];
 
 // Oportunidade = resistência com estoque relevante (≥ 20 unidades paradas há muito tempo)
 function isOportunidade_(r) {
@@ -3714,12 +3753,12 @@ function renderMapaPapelFiltros_() {
   const bar = document.getElementById('mapa-papel-filtros');
   if (!bar) return;
   const total = _mapaRows.length;
-  const cnt = { breveLancamento: 0, suporte: 0, transicao: 0, resistencia: 0, preEntrega: 0 };
+  const cnt = { breveLancamento: 0, suporte: 0, transicao: 0, resistencia: 0 };
+  FRENTES_PRAZO_.forEach(f => { cnt[f.chave] = 0; });
   _mapaRows.forEach(r => { const p = papelMercado_(r); if (p) cnt[p]++; });
 
   const chips = [
     { key: null,               label: `Todos (${total})`,                                    cls: 'papel-chip-todos' },
-    { key: 'preEntrega',       label: `🟣 Pré-entrega (${cnt.preEntrega})`,                  cls: 'papel-chip-preentrega' },
     { key: 'breveLancamento',  label: `🔵 Breve Lançamento (${cnt.breveLancamento})`,        cls: 'papel-chip-breve' },
     { key: 'suporte',          label: `🟢 Suporte (${cnt.suporte})`,                        cls: 'papel-chip-suporte' },
     { key: 'transicao',        label: `🟡 Transição (${cnt.transicao})`,                    cls: 'papel-chip-transicao' },
@@ -3729,7 +3768,17 @@ function renderMapaPapelFiltros_() {
     <button type="button" class="papel-chip ${c.cls}${_mapaPapelFiltro === c.key ? ' on' : ''}"
       onclick="setMapaPapelFiltro_(${c.key == null ? 'null' : "'" + c.key + "'"})">
       ${c.label}
-    </button>`).join('');
+    </button>`).join('')
+    // 6 subgrupos por prazo -- sem classe CSS própria (cor vem de
+    // FRENTES_PRAZO_.cor via style inline), pedido explícito do usuário.
+    + FRENTES_PRAZO_.map(f => {
+      const on = _mapaPapelFiltro === f.chave;
+      const style = on ? `style="background:${f.cor}26;border-color:${f.cor};color:${f.cor}"` : '';
+      return `<button type="button" class="papel-chip" ${style}
+        onclick="setMapaPapelFiltro_('${f.chave}')">
+        ${f.emoji} ${f.nome} (${cnt[f.chave]})
+      </button>`;
+    }).join('');
 }
 
 function setMapaPapelFiltro_(papel) {
@@ -3747,8 +3796,10 @@ let _radarSort = {
   sup: { col: 'prazoEntrega', dir: 'desc' },
   res: { col: 'prazoEntrega', dir: 'asc'  },
   tra: { col: 'estoque',      dir: 'desc' },
-  pre: { col: 'prazoEntrega', dir: 'asc'  },  // Pré-entrega: mais atrasado (ou mais perto) primeiro
 };
+// Sort padrão das 6 frentes por prazo (FRENTES_PRAZO_) -- todas ordenadas
+// por Prazo, cada uma na direção que já vem configurada ali.
+FRENTES_PRAZO_.forEach(f => { _radarSort[f.frente] = { col: 'prazoEntrega', dir: f.sortDir }; });
 let _radarFiltroEstagios = new Set(); // vazio = mostra todos
 let _radarFiltroPadroes  = new Set(); // vazio = mostra todos
 
@@ -3820,18 +3871,24 @@ function renderRadarMercado_() {
   });
 
   // Classifica cada linha filtrada
-  const brv = [], sup = [], tra = [], res = [], oport = [], pre = [];
+  const brv = [], sup = [], tra = [], res = [], oport = [];
+  // Uma lista por chave das 6 frentes por prazo (FRENTES_PRAZO_) --
+  // pedido explícito do usuário, substitui o antigo grupo único "Pré-entrega".
+  const extra = {};
+  FRENTES_PRAZO_.forEach(f => { extra[f.chave] = []; });
   rows.forEach(r => {
     const p = papelMercado_(r);
-    if (p === 'preEntrega')       { pre.push(r); }
+    if (extra[p])                      { extra[p].push(r); }
     else if (p === 'breveLancamento')  { brv.push(r); }
-    else if (p === 'suporte')     { sup.push(r); }
-    else if (p === 'transicao')   { tra.push(r); }
-    else if (p === 'resistencia') { res.push(r); if (isOportunidade_(r)) oport.push(r); }
+    else if (p === 'suporte')          { sup.push(r); }
+    else if (p === 'transicao')        { tra.push(r); }
+    else if (p === 'resistencia')      { res.push(r); if (isOportunidade_(r)) oport.push(r); }
   });
 
   // Registra listas no cache do modal para os KPIs clicáveis
-  _listaEmpModalData_['KPI_PRE']  = { titulo: '🟣 Pré-entrega — Em obras a até 7 meses da entrega (ou já atrasado)',           rows: pre  };
+  FRENTES_PRAZO_.forEach(f => {
+    _listaEmpModalData_['KPI_' + f.frente.toUpperCase()] = { titulo: `${f.emoji} ${f.nome} — ${f.sub}`, rows: extra[f.chave] };
+  });
   _listaEmpModalData_['KPI_BRV']  = { titulo: '🔵 Breve Lançamento — Em obras/planta com 0% vendido (sem abertura de vendas)', rows: brv  };
   _listaEmpModalData_['KPI_SUP']  = { titulo: '🟢 Suporte — Em obras/planta com <50% vendido',                                rows: sup  };
   _listaEmpModalData_['KPI_TRA']  = { titulo: '🟡 Transição — 50% vendido ou estágio intermediário',                          rows: tra  };
@@ -3843,15 +3900,25 @@ function renderRadarMercado_() {
     if (!count) return `<div class="radar-kpi-val" style="cursor:default">${count}</div>`;
     return `<button class="radar-kpi-val radar-kpi-btn" onclick="abrirModalListaEmp_('${key}')" title="Ver lista">${count}</button>`;
   }
+  // Mesma coisa, mas com cor customizada -- usado pelas 6 frentes por
+  // prazo (FRENTES_PRAZO_), que não têm classe CSS própria de propósito
+  // (cor vem de f.cor, mesmo padrão do chip do Mapa Geral).
+  function kpiBtnCor(key, count, cor) {
+    if (!count) return `<div class="radar-kpi-val" style="cursor:default;color:${cor}">${count}</div>`;
+    return `<button class="radar-kpi-val radar-kpi-btn" style="color:${cor}" onclick="abrirModalListaEmp_('${key}')" title="Ver lista">${count}</button>`;
+  }
 
-  // KPI bar — subtítulos refletem a nova lógica estoque × tempo
+  // KPI bar — subtítulos refletem a nova lógica estoque × tempo.
+  const kpiExtraHtml = FRENTES_PRAZO_.map(f => `
+      <div class="radar-kpi" style="border-color:${f.cor}4d">
+        <div class="radar-kpi-label">${f.emoji} ${f.nome}</div>
+        ${kpiBtnCor('KPI_' + f.frente.toUpperCase(), extra[f.chave].length, f.cor)}
+        <div class="radar-kpi-sub">${f.sub}</div>
+      </div>`).join('');
+
   const kpiHtml = `
     <div class="radar-kpis">
-      <div class="radar-kpi kpi-preentrega">
-        <div class="radar-kpi-label">🟣 Pré-entrega</div>
-        ${kpiBtn('KPI_PRE', pre.length)}
-        <div class="radar-kpi-sub">Em obras · a até 7 meses da entrega (ou atrasado)</div>
-      </div>
+      ${kpiExtraHtml}
       <div class="radar-kpi kpi-breve">
         <div class="radar-kpi-label">🔵 Breve Lançamento</div>
         ${kpiBtn('KPI_BRV', brv.length)}
@@ -4024,23 +4091,25 @@ function renderRadarMercado_() {
     { label:'Total',       col:'totalUnidades',num:true, render:r=>`<span style="color:var(--text3)">${r.totalUnidades>0?r.totalUnidades:'—'}</span>` },
   ];
 
-  const preCols = colsBase('pre', false);
   const brvCols = colsBase('brv', false);
   const supCols = colsBase('sup', false);
   const resCols = colsBase('res', true);
   const traCols = colsBase('tra', false);
+  const extraCols = {};
+  FRENTES_PRAZO_.forEach(f => { extraCols[f.chave] = colsBase(f.frente, false); });
 
-  // Distribuição por padrão
+  // Distribuição por padrão -- só os 4 papéis originais, de propósito (ver
+  // comentário na CSS .radar-dist-header): as 6 frentes por prazo têm suas
+  // próprias seções abaixo, com contagem já visível no cabeçalho de cada uma.
   const PADS = ['Popular','Médio','Alto','Luxo'];
   const dist = {};
-  PADS.forEach(p => { dist[p] = { pre:0, brv:0, sup:0, tra:0, res:0, total:0 }; });
+  PADS.forEach(p => { dist[p] = { brv:0, sup:0, tra:0, res:0, total:0 }; });
   rows.forEach(r => {
     const p = r.padrao;
     if (!dist[p]) return;
     const papel = papelMercado_(r);
     dist[p].total++;
-    if (papel === 'preEntrega')       dist[p].pre++;
-    else if (papel === 'breveLancamento')  dist[p].brv++;
+    if (papel === 'breveLancamento')  dist[p].brv++;
     else if (papel === 'suporte')     dist[p].sup++;
     else if (papel === 'transicao')   dist[p].tra++;
     else if (papel === 'resistencia') dist[p].res++;
@@ -4050,7 +4119,6 @@ function renderRadarMercado_() {
     return `
       <div class="radar-dist-row">
         <div class="radar-dist-cell pad-label">${p}</div>
-        <div class="radar-dist-cell pre">🟣 ${d.pre}</div>
         <div class="radar-dist-cell brv">🔵 ${d.brv}</div>
         <div class="radar-dist-cell sup">🟢 ${d.sup}</div>
         <div class="radar-dist-cell tra">🟡 ${d.tra}</div>
@@ -4058,15 +4126,20 @@ function renderRadarMercado_() {
       </div>`;
   }).join('');
 
-  el.innerHTML = filtrosHtml + kpiHtml +
-    `<div class="radar-secao rs-preentrega">
+  // Seções das 6 frentes por prazo (FRENTES_PRAZO_) -- mesmo padrão visual
+  // das seções fixas abaixo, só que geradas em loop pra não repetir 6x o
+  // mesmo bloco de HTML.
+  const secoesExtraHtml = FRENTES_PRAZO_.map(f => `
+    <div class="radar-secao">
       <div class="radar-secao-header">
-        <span class="radar-secao-titulo" style="color:#a78bfa">🟣 Pré-entrega</span>
-        <span class="radar-secao-sub">Em obras/planta · a até 7 meses da entrega prometida (ou já atrasado) · ordenado por prazo</span>
-        <span class="radar-secao-count">${pre.length}</span>
+        <span class="radar-secao-titulo" style="color:${f.cor}">${f.emoji} ${f.nome}</span>
+        <span class="radar-secao-sub">${f.sub} · ordenado por prazo</span>
+        <span class="radar-secao-count" style="background:${f.cor}26;color:${f.cor}">${extra[f.chave].length}</span>
       </div>
-      ${radarTable(pre, 'pre', preCols, 15)}
-    </div>` +
+      ${radarTable(extra[f.chave], f.frente, extraCols[f.chave], 15)}
+    </div>`).join('');
+
+  el.innerHTML = filtrosHtml + kpiHtml + secoesExtraHtml +
     `<div class="radar-secao rs-breve">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo" style="color:#60a5fa">🔵 Breve Lançamento</span>
