@@ -1322,6 +1322,7 @@ select.form-input option { background: var(--surface2); }
           <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
           <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
           <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
+          <th onclick="ordenarMapaGeral_('bairro')">Bairro<span class="mapa-seta" id="seta-mapa-bairro"></span></th>
           <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Padrão<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
           <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
           <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
@@ -1331,16 +1332,13 @@ select.form-input option { background: var(--surface2); }
           <th onclick="ordenarMapaGeral_('vendido')" title="Percentual de estoque vendido (%)">% ESTQ<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
           <th onclick="ordenarMapaGeral_('qtdestq')" title="Quantidade de unidades disponíveis em estoque">QTD ESTQ<span class="mapa-seta" id="seta-mapa-qtdestq"></span></th>
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
-          <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
           <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
           <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
-          <th onclick="ordenarMapaGeral_('prazo')" title="Prazo de Pagamento (meses)">PG<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
-          <th onclick="ordenarMapaGeral_('pv')" title="Prazo de Venda — meses desde o lançamento">PV<span class="mapa-seta" id="seta-mapa-pv"></span></th>
           <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="18" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="16" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -5923,6 +5921,7 @@ function mapaCampoValor_(r, campo) {
   if (campo === 'construtora') return r.construtora.toLowerCase();
   if (campo === 'v')           return r.scoreVendedor;
   if (campo === 'tipo')        return (r.padrao || '').toLowerCase();
+  if (campo === 'bairro')      return (r.bairro || '').toLowerCase();
   if (campo === 's')           return r.simil;
   if (campo === 'area')        return r.areaMin;
   if (campo === 'preco')       return r.menorPreco;
@@ -5957,7 +5956,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="18" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -5974,7 +5973,7 @@ function renderMapaGeral_() {
                     && (_mapaPapelFiltro == null  || papelMercado_(r) === _mapaPapelFiltro));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="18" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -6004,6 +6003,7 @@ function renderMapaGeral_() {
       <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
       <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}${oport}</td>
+      <td>${r.bairro || '—'}</td>
       <td>${r.padrao || '—'}</td>
       <td>${r.construtora}</td>
       <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
@@ -6013,16 +6013,8 @@ function renderMapaGeral_() {
       <td class="mapa-num">${r.pctVendido > 0 ? r.pctVendido + '%' : '—'}</td>
       <td class="mapa-num">${r.estoque > 0 ? r.estoque : (r.estoque === 0 ? '0' : '—')}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
-      <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
       <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge${similBadgeCls_(r.simil) ? ' '+similBadgeCls_(r.simil) : ''}" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>` : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
-      <td class="mapa-num">${r.prazo > 0 ? r.prazo + 'm' : '—'}</td>
-      <td class="mapa-num" style="white-space:nowrap;font-size:11px;${r.prazoLancEntrega !== null && r.prazoVenda > 0 ? `color:${r.prazoVenda > r.prazoLancEntrega ? 'var(--danger)' : 'var(--accent2)'}` : ''}">${(() => {
-        if (!r.prazoVenda) return '—';
-        if (r.prazoLancEntrega === null) return r.prazoVenda + 'm';
-        const apos = r.prazoVenda - r.prazoLancEntrega;
-        return `(${r.prazoLancEntrega}${apos >= 0 ? '+' : ''}${apos})=${r.prazoVenda}`;
-      })()}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
     </tr>`;
   }).join('');
