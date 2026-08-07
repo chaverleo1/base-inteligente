@@ -64,6 +64,14 @@ a { text-decoration: none; color: inherit; }
 .lanc-tab:hover:not(.active) { color: var(--text); }
 @media (max-width: 560px) { .lanc-tabs { width: 100%; } .lanc-tab { flex: 1; text-align: center; padding: 10px 8px; } }
 
+/* ── SUB-ABAS do Mapa Geral (Lista / Dados) — mesmo padrão visual das abas
+   principais (.lanc-tab), só um pouco menor por ser um nível abaixo. ── */
+.mapa-subtabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; margin-bottom: 16px; width: fit-content; }
+.mapa-subtab { padding: 7px 16px; border-radius: 6px; border: none; background: transparent; color: var(--text2);
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
+.mapa-subtab.active { background: var(--accent); color: #fff; }
+.mapa-subtab:hover:not(.active) { color: var(--text); }
+
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
    baixos que os padrões do resto da tela. */
@@ -1288,24 +1296,15 @@ select.form-input option { background: var(--surface2); }
       <div class="filtro-bar" id="mapa-bairro-filtros"></div>
     </div>
   </div>
-  <!-- GRÁFICO CARTESIANO DE ESTOQUE — acima da tabela Mapa Geral -->
-  <div class="grafico-estoque-wrap" id="graficoEstoqueWrap">
-    <div class="grafico-estoque-titulo">
-      <span style="opacity:.55">Faixas de estoque vendido:</span>
-      <span class="grafico-faixa-legenda-inline">
-        <span style="color:#00c878">A</span><span class="gfl-sep">0–25%</span>
-        <span style="color:#3296ff">B</span><span class="gfl-sep">26–50%</span>
-        <span style="color:#ff9800">C</span><span class="gfl-sep">51–75%</span>
-        <span style="color:#ff6b6b">D</span><span class="gfl-sep">76–99%</span>
-      </span>
-    </div>
-    <div id="graficoTabelaResumoWrap" style="margin-bottom:12px"></div>
-    <div style="position:relative">
-      <canvas id="graficoEstoqueCanvas" height="260"></canvas>
-      <div id="graficoEstoqueTooltip" class="grafico-tooltip" style="display:none;opacity:0"></div>
-    </div>
+  <!-- Sub-abas do Mapa Geral: Lista (tabela principal) e Dados (gráfico +
+       tabelas de estoque geral) -- pedido do usuário, tira o gráfico/tabelas
+       resumo de cima da lista e organiza numa aba própria. -->
+  <div class="mapa-subtabs">
+    <button class="mapa-subtab active" id="mapaSubBtnLista" onclick="mudarSubAbaMapa_('lista')">Lista</button>
+    <button class="mapa-subtab" id="mapaSubBtnDados" onclick="mudarSubAbaMapa_('dados')">Dados</button>
   </div>
 
+  <div id="mapaSubPainelLista" class="mapa-subpanel">
   <div class="mapa-toolbar">
     <div class="filtro-bar" id="mapa-estagio-filtros"></div>
     <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
@@ -1344,6 +1343,27 @@ select.form-input option { background: var(--surface2); }
         <tr><td colspan="18" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
+  </div>
+  </div>
+
+  <div id="mapaSubPainelDados" class="mapa-subpanel" style="display:none">
+  <!-- GRÁFICO CARTESIANO DE ESTOQUE + tabelas ESTOQUE GERAL por %/QTD -->
+  <div class="grafico-estoque-wrap" id="graficoEstoqueWrap">
+    <div class="grafico-estoque-titulo">
+      <span style="opacity:.55">Faixas de estoque vendido:</span>
+      <span class="grafico-faixa-legenda-inline">
+        <span style="color:#00c878">A</span><span class="gfl-sep">0–25%</span>
+        <span style="color:#3296ff">B</span><span class="gfl-sep">26–50%</span>
+        <span style="color:#ff9800">C</span><span class="gfl-sep">51–75%</span>
+        <span style="color:#ff6b6b">D</span><span class="gfl-sep">76–99%</span>
+      </span>
+    </div>
+    <div id="graficoTabelaResumoWrap" style="margin-bottom:12px"></div>
+    <div style="position:relative">
+      <canvas id="graficoEstoqueCanvas" height="260"></canvas>
+      <div id="graficoEstoqueTooltip" class="grafico-tooltip" style="display:none;opacity:0"></div>
+    </div>
+  </div>
   </div>
   </div>
 
@@ -2178,10 +2198,26 @@ function mudarAbaLancamentos(nome) {
   if (nome === 'estrategias') carregarEstrategiasLazy_();
   if (nome === 'inteligencia') carregarInteligenciaLazy_();
   if (nome === 'applancamentos') carregarComentariosAppLazy_();
-  // Re-renderiza o gráfico ao voltar pra aba Mapa Geral (canvas oculto tinha
-  // offsetWidth=0 quando os dados foram carregados pela primeira vez).
-  if (nome === 'mapa')  requestAnimationFrame(renderGraficoEstoque_);
+  // Re-renderiza o gráfico ao voltar pra aba Mapa Geral -- só se a sub-aba
+  // Dados (onde o gráfico mora agora) estiver aberta, senão o canvas
+  // continua com offsetWidth=0 e renderGraficoEstoque_ ficaria reagendando
+  // via requestAnimationFrame pra sempre (ver guarda de offsetParent nela).
+  if (nome === 'mapa' && _mapaSubAbaAtual === 'dados') requestAnimationFrame(renderGraficoEstoque_);
   if (nome === 'radar') renderRadarMercado_();
+}
+
+// Sub-abas do Mapa Geral: "lista" (tabela principal, padrão) e "dados"
+// (gráfico de estoque + tabelas ESTOQUE GERAL por %/QTD). O gráfico só é
+// (re)desenhado quando a sub-aba Dados está de fato visível -- ver guarda
+// de offsetParent em renderGraficoEstoque_.
+let _mapaSubAbaAtual = 'lista';
+function mudarSubAbaMapa_(nome) {
+  _mapaSubAbaAtual = nome;
+  document.getElementById('mapaSubPainelLista').style.display = nome === 'lista' ? '' : 'none';
+  document.getElementById('mapaSubPainelDados').style.display = nome === 'dados' ? '' : 'none';
+  document.getElementById('mapaSubBtnLista').classList.toggle('active', nome === 'lista');
+  document.getElementById('mapaSubBtnDados').classList.toggle('active', nome === 'dados');
+  if (nome === 'dados') requestAnimationFrame(renderGraficoEstoque_);
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
@@ -6213,6 +6249,11 @@ function renderMapaGeral_() {
 
     const canvas = document.getElementById('graficoEstoqueCanvas');
     if (!canvas) return;
+
+    // Sub-aba "Dados" fechada (display:none) -- offsetParent é null nesse
+    // caso. Sai sem reagendar: senão o requestAnimationFrame logo abaixo
+    // ficaria se rechamando pra sempre enquanto a aba nunca é aberta.
+    if (canvas.offsetParent === null) return;
 
     const W = canvas.offsetWidth || canvas.parentElement.offsetWidth;
     if (!W) { requestAnimationFrame(window.renderGraficoEstoque_); return; }
