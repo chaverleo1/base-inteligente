@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -85,31 +85,29 @@ a { text-decoration: none; color: inherit; }
   font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
   color:var(--text3); white-space:nowrap; min-width:48px;
 }
-.radar-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:24px; }
-.radar-kpi  { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
-.radar-kpi-label { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
-.radar-kpi-val   { font-size:28px; font-weight:800; line-height:1; }
-.radar-kpi-btn   { background:none; border:none; padding:0; cursor:pointer; font-size:28px; font-weight:800; line-height:1; text-decoration:underline dotted; text-underline-offset:3px; transition:opacity .15s; }
-.radar-kpi-btn:hover { opacity:.75; }
-.radar-kpi-sub   { font-size:11px; color:var(--text3); margin-top:4px; }
-.radar-kpi.kpi-suporte     { border-color:rgba(0,200,120,.3); }
-.radar-kpi.kpi-suporte     .radar-kpi-val { color:#00c878; }
-.radar-kpi.kpi-transicao   { border-color:rgba(255,152,0,.3); }
-.radar-kpi.kpi-transicao   .radar-kpi-val { color:#ff9800; }
-.radar-kpi.kpi-resistencia { border-color:rgba(255,107,107,.3); }
-.radar-kpi.kpi-resistencia .radar-kpi-val { color:#ff6b6b; }
-.radar-kpi.kpi-oport       { border-color:rgba(255,107,107,.5); background:rgba(255,107,107,.06); }
-.radar-kpi.kpi-oport       .radar-kpi-val { color:#ff6b6b; }
-.radar-kpi.kpi-breve       { border-color:rgba(96,165,250,.3); }
-.radar-kpi.kpi-breve       .radar-kpi-val { color:#60a5fa; }
+/* Tabela-resumo dos grupos (Total/Nome/Conceito/Regras) -- pedido
+   explícito do usuário: substitui os cards de KPI por uma tabela
+   compacta, em 3 blocos (Resistência/Suporte/Outros), letra pequena e
+   pouca altura por linha pra caber mais sem precisar rolar tanto. */
+.radar-resumo-tabela { width:100%; border-collapse:collapse; font-size:11px; border:1px solid rgba(255,255,255,.14); }
+.radar-resumo-tabela th { padding:5px 8px; text-align:left; font-size:9px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.08); white-space:nowrap; }
+.radar-resumo-tabela th.num, .radar-resumo-tabela td.num { text-align:center; }
+.radar-resumo-tabela th.rr-total, .radar-resumo-tabela th.rr-nome, .radar-resumo-tabela th.rr-conceito { font-size:11px; }
+.radar-resumo-tabela td { padding:4px 8px; border-bottom:1px solid rgba(255,255,255,.04); vertical-align:middle; line-height:1.3; color:var(--text2); }
+.radar-resumo-tabela td.num { width:52px; font-variant-numeric:tabular-nums; }
+.radar-resumo-tabela td.rr-total, .radar-resumo-tabela td.rr-nome, .radar-resumo-tabela td.rr-conceito { font-size:14px; }
+.radar-resumo-tabela td.rr-briefing { width:36px; text-align:center; }
+.radar-resumo-tabela tr:last-child td { border-bottom:none; }
+.radar-resumo-bloco td { padding:6px 8px; font-size:10px; font-weight:800; letter-spacing:.06em; background:rgba(255,255,255,.03); color:var(--text2); border-bottom:1px solid rgba(255,255,255,.08); }
+.radar-resumo-btn { background:none; border:none; padding:0; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px; transition:opacity .15s; }
+.radar-resumo-briefing-btn { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; border:1px solid rgba(0,200,120,.35); border-radius:5px; background:rgba(0,200,120,.08); color:#00c878; cursor:pointer; transition:background .15s; }
+.radar-resumo-briefing-btn:hover { background:rgba(0,200,120,.18); }
+.radar-resumo-briefing-btn svg { width:11px; height:11px; }
+.radar-resumo-btn:hover { opacity:.75; }
 .btn-briefing-dl { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:5px 10px; border:1px solid rgba(0,200,120,.35); border-radius:6px; background:rgba(0,200,120,.08); color:#00c878; font-size:10px; font-weight:700; letter-spacing:.04em; cursor:pointer; transition:background .15s,opacity .15s; }
 .btn-briefing-dl:hover { background:rgba(0,200,120,.18); }
 .btn-briefing-dl svg { width:12px; height:12px; flex-shrink:0; }
-.radar-kpi.kpi-sup-forca { border-color:rgba(0,200,120,.35); }
-.radar-kpi.kpi-sup-forca .radar-kpi-val { color:#00c878; }
-.radar-kpi.kpi-sup-prazo { border-color:rgba(52,210,140,.25); }
-.radar-kpi.kpi-sup-prazo .radar-kpi-val { color:#34d28c; }
-/* ── GRUPO PÁGINA — overlay full-screen ao clicar nos KPIs ──────────── */
+/* ── GRUPO PÁGINA — overlay full-screen ao clicar nos totais do Resumo ── */
 .grupo-pagina { position:fixed;inset:0;background:var(--bg);z-index:9900;display:flex;flex-direction:column;overflow:hidden; }
 .gp-header { display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface); }
 .gp-voltar { display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);font-size:12px;cursor:pointer;transition:background .15s; }
@@ -119,7 +117,7 @@ a { text-decoration: none; color: inherit; }
 .gp-corpo { flex:1;overflow-y:auto;padding:20px; }
 .gp-pad-bloco { margin-bottom:28px; }
 .gp-pad-titulo { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px; }
-.gp-pad-cnt { color:var(--text2);font-size:11px; }
+.gp-pad-cnt { color:var(--text2);font-size:11px;text-transform:none;letter-spacing:0; }
 
 .radar-secao { margin-bottom:28px; }
 .radar-secao-header { display:flex; align-items:baseline; gap:10px; margin-bottom:6px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,.07); }
@@ -130,8 +128,8 @@ a { text-decoration: none; color: inherit; }
 .rs-suporte     .radar-secao-count  { background:rgba(0,200,120,.15); color:#00c878; }
 .rs-transicao   .radar-secao-titulo { color:#ff9800; }
 .rs-transicao   .radar-secao-count  { background:rgba(255,152,0,.15); color:#ff9800; }
-.rs-resistencia .radar-secao-titulo { color:#ff6b6b; }
-.rs-resistencia .radar-secao-count  { background:rgba(255,107,107,.15); color:#ff6b6b; }
+.rs-resistencia .radar-secao-titulo { color:#00c878; }
+.rs-resistencia .radar-secao-count  { background:rgba(0,200,120,.15); color:#00c878; }
 
 .radar-tabela { width:100%; border-collapse:collapse; font-size:12px; }
 .radar-tabela th { padding:5px 10px; text-align:left; font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text3); border-bottom:1px solid rgba(255,255,255,.07); white-space:nowrap; transition:color .15s; }
@@ -150,32 +148,36 @@ a { text-decoration: none; color: inherit; }
 .radar-pct-fill  { height:100%; border-radius:99px; }
 
 .radar-dist { display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px; margin-bottom:28px; }
-.radar-dist-header { grid-column:1/-1; display:grid; grid-template-columns:100px 1fr 1fr 1fr 1fr; gap:2px; padding:4px 0; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); }
-.radar-dist-row    { display:grid; grid-template-columns:100px 1fr 1fr 1fr 1fr; gap:2px; }
+/* 100px (rótulo do padrão) + 4 categorias (breve/suporte/transição/
+   resistência) -- a "Distribuição por Padrão" mostra só os 4 papéis
+   originais, de propósito: com os subgrupos novos de prazo (pré-entrega,
+   potencial de resistência, suporte lento etc.) essa tabela ficaria
+   grande demais pra caber num grid compacto por padrão. */
+.radar-dist-header { grid-column:1/-1; display:grid; grid-template-columns:100px repeat(4,1fr); gap:2px; padding:4px 0; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text3); }
+.radar-dist-row    { display:grid; grid-template-columns:100px repeat(4,1fr); gap:2px; }
 .radar-dist-cell   { padding:7px 12px; background:var(--surface2); border-radius:4px; font-size:12px; font-variant-numeric:tabular-nums; }
 .radar-dist-cell.pad-label { font-weight:700; color:var(--text2); font-size:11px; }
-.radar-dist-cell.brv { background:rgba(96,165,250,.09);  color:#60a5fa; font-weight:600; }
 .radar-dist-cell.sup { background:rgba(0,200,120,.09);   color:#00c878; font-weight:600; }
 .radar-dist-cell.tra { background:rgba(255,152,0,.08);   color:#ff9800; font-weight:600; }
-.radar-dist-cell.res { background:rgba(255,107,107,.09); color:#ff6b6b; font-weight:600; }
+.radar-dist-cell.res { background:rgba(0,200,120,.09); color:#00c878; font-weight:600; }
 
 /* ── PAPEL DE MERCADO — suporte / transição / resistência ─────────────── */
 .mapa-papel-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.06); }
 .mapa-papel-label { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); white-space: nowrap; }
 .papel-chip { padding: 3px 11px; border-radius: 99px; border: 1.5px solid var(--border2); background: transparent; color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; font-family: inherit; }
 .papel-chip:hover { border-color: var(--text2); }
-.papel-chip-todos.on      { background: rgba(255,255,255,.10); border-color: var(--text);  color: var(--text);  }
+.papel-chip-todos.on   { background: rgba(255,255,255,.10); border-color: var(--text); color: var(--text); }
 .papel-chip-breve.on      { background: rgba(96,165,250,.16);  border-color: #60a5fa; color: #60a5fa; }
 .papel-chip-suporte.on    { background: rgba(0,200,120,.16);   border-color: #00c878; color: #00c878; }
 .papel-chip-transicao.on  { background: rgba(255,152,0,.16);   border-color: #ff9800; color: #ff9800; }
-.papel-chip-resistencia.on{ background: rgba(255,107,107,.16); border-color: #ff6b6b; color: #ff6b6b; }
+.papel-chip-resistencia.on{ background: rgba(0,200,120,.16); border-color: #00c878; color: #00c878; }
 /* Indicador visual nas linhas da tabela */
 .papel-suporte     > td:first-child { box-shadow: inset 3px 0 0 #00c878; }
 .papel-transicao   > td:first-child { box-shadow: inset 3px 0 0 #ff9800; }
-.papel-resistencia > td:first-child { box-shadow: inset 3px 0 0 #ff6b6b; }
+.papel-resistencia > td:first-child { box-shadow: inset 3px 0 0 #00c878; }
 .papel-suporte     { background: rgba(0,200,120,.025) !important; }
 .papel-transicao   { background: rgba(255,152,0,.02)  !important; }
-.papel-resistencia { background: rgba(255,107,107,.03) !important; }
+.papel-resistencia { background: rgba(0,200,120,.025) !important; }
 /* Badge de oportunidade (resistência + score vendedor alto) */
 .badge-oportunidade { display:inline-block; font-size:9px; font-weight:800; letter-spacing:.05em; padding:1px 6px; border-radius:4px; background:rgba(255,107,107,.18); color:#ff6b6b; border:1px solid rgba(255,107,107,.35); margin-left:5px; vertical-align:middle; }
 .btn-imprimir-lista { padding: 3px 12px; border-radius: 99px; border: 1px solid var(--border2); background: var(--surface);
@@ -3193,31 +3195,163 @@ function baixarBriefingSuporte_() {
     : 'N/D';
   const fmtMeses = m => m == null ? 'N/D' : (m < 0 ? `${-m} meses atrás` : `em ${m} meses`);
 
-  const padroes = [...new Set(rows.map(r => r.padrao).filter(Boolean))].sort();
-  const bairros = [...new Set(rows.map(r => r.bairro).filter(b => b && b !== '—'))].sort();
-  const cidades = [...new Set(rows.map(r => r.cidade).filter(Boolean))].sort();
-  const agora   = new Date().toLocaleString('pt-BR', { dateStyle:'full', timeStyle:'short' });
+  const agora = new Date().toLocaleString('pt-BR', { dateStyle:'full', timeStyle:'short' });
 
-  const listaEmp = rows.map((r, i) => {
-    const prazoMeses = prazoEntregaMeses_(r);
-    return `\n### ${i + 1}. ${r.nome}
-- **Construtora:** ${r.construtora}
-- **Padrão:** ${r.padrao || 'N/D'}
-- **Estágio:** ${r.estagio}
-- **Localização:** ${r.bairro} / ${r.cidade}
-- **Previsão de entrega:** ${r.previsaoEntrega || 'N/D'} (${fmtMeses(prazoMeses)})
-- **Estoque disponível:** ${r.estoque != null ? r.estoque : 'N/D'} unidades
-- **Total de unidades:** ${r.totalUnidades || 'N/D'}
-- **% Vendido:** ${r.pctVendido != null ? r.pctVendido + '%' : 'N/D'}
-- **Faixa de área:** ${fmtArea(r)}
-- **Ticket a partir de:** ${fmtPreco(r.menorPreco)}
-- **Custo/m²:** ${r.m2Medio > 0 ? fmtPreco(r.m2Medio) + '/m²' : 'N/D'}
-- **Tempo em vendas:** ${r.prazoVenda != null ? r.prazoVenda + ' meses' : 'N/D'}`;
-  }).join('\n');
+  // ── Melhoria 1 (pedido explícito do usuário): separar em 3 grupos
+  // operacionais -- a lista de Suporte mistura produto com dado completo e
+  // pré-lançamento sem preço definido, e às vezes um nome que veio errado
+  // da extração (ex: texto de aviso de cookies capturado por engano).
+  // Passar tudo isso junto pra IA Editora faz ela tentar montar anúncio
+  // pra produto que não devia ser anunciado ainda, ou nem existe de verdade.
+  function nomeSuspeito_(nome) {
+    const n = String(nome || '').trim();
+    if (!n) return true;
+    if (/cookie|pol[íi]tica de (privacidade|cookies)|termos de uso|consentimento|website utiliza|aceitar? (os )?cookies/i.test(n)) return true;
+    if (n.length > 60) return true;
+    return false;
+  }
+  const grupoA = [], grupoB = [], grupoC = [];
+  rows.forEach(r => {
+    if (nomeSuspeito_(r.nome))          grupoC.push(r);
+    else if (!(r.menorPreco > 0))       grupoB.push(r);
+    else                                 grupoA.push(r);
+  });
+
+  // A estratégia de Ads (seção 7) e o orçamento (seção 8) são montados só
+  // com o Grupo A -- é o único com dado completo o bastante pra virar
+  // anúncio agora.
+  const padroes = [...new Set(grupoA.map(r => r.padrao).filter(Boolean))].sort();
+  const bairros = [...new Set(grupoA.map(r => r.bairro).filter(b => b && b !== '—'))].sort();
+  const cidades = [...new Set(grupoA.map(r => r.cidade).filter(Boolean))].sort();
+
+  function detalheEmp_(arr, comPreco) {
+    if (!arr.length) return '(nenhum produto neste grupo)';
+    return arr.map((r, i) => {
+      const prazoMeses = prazoEntregaMeses_(r);
+      const campos = [
+        `- **Construtora:** ${r.construtora}`,
+        `- **Padrão:** ${r.padrao || 'N/D'}`,
+        `- **Estágio:** ${r.estagio}`,
+        `- **Localização:** ${r.bairro} / ${r.cidade}`,
+        `- **Previsão de entrega:** ${r.previsaoEntrega || 'N/D'} (${fmtMeses(prazoMeses)})`,
+        `- **Estoque disponível:** ${r.estoque != null ? r.estoque : 'N/D'} unidades`,
+        `- **Total de unidades:** ${r.totalUnidades || 'N/D'}`,
+      ];
+      if (comPreco) {
+        campos.push(`- **% Vendido:** ${r.pctVendido != null ? r.pctVendido + '%' : 'N/D'}`);
+        campos.push(`- **Faixa de área:** ${fmtArea(r)}`);
+        campos.push(`- **Ticket a partir de:** ${fmtPreco(r.menorPreco)}`);
+        campos.push(`- **Custo/m²:** ${r.m2Medio > 0 ? fmtPreco(r.m2Medio) + '/m²' : 'N/D'}`);
+        campos.push(`- **Tempo em vendas:** ${r.prazoVenda != null ? r.prazoVenda + ' meses' : 'N/D'}`);
+      }
+      return `\n### ${i + 1}. ${r.nome}\n${campos.join('\n')}`;
+    }).join('\n');
+  }
+  const detalheGrupoC_ = grupoC.length
+    ? grupoC.map((r, i) => `\n### ${i + 1}. "${r.nome}"\n- **Bairro:** ${r.bairro || '—'}\n- **ID:** ${r.id || r.idLancamento || '—'}\n- **Ação:** corrigir o nome no cadastro (parece texto de extração errada, não nome de empreendimento)`).join('\n')
+    : '(nenhum produto neste grupo)';
 
   const bairrosKw = bairros.map(b =>
     `**${b}:** "lançamento ${b.toLowerCase()}", "apartamento novo ${b.toLowerCase()}", "imóvel ${b.toLowerCase()} na planta"`
   ).join('\n- ');
+
+  // ── Melhoria 5 (pedido explícito do usuário): sugerir palavras negativas
+  // extras com base no mix real do Grupo A -- se o padrão Popular (ou
+  // Luxo/Alto) não está sendo anunciado agora, buscas por esse patamar de
+  // preço não devem cair nesse anúncio.
+  const ORDEM_PADRAO_BRIEF_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
+  const MAPA_NEG_PADRAO_ = {
+    'Popular': ['popular', 'econômico', 'minha casa minha vida', 'baixo custo'],
+    'Alto':    ['alto padrão', 'premium'],
+    'Luxo':    ['luxo', 'cobertura duplex', 'mansão'],
+  };
+  const padroesAusentes = ORDEM_PADRAO_BRIEF_.filter(p => !padroes.includes(p));
+  const negativasSugeridas = padroesAusentes.flatMap(p => MAPA_NEG_PADRAO_[p] || []);
+
+  // ── Públicos de Meio de Funil, 100% data-driven (correção pedida pela IA
+  // Editora, relatório 06/08/2026) ──────────────────────────────────────
+  // Bug real reportado: os 3 públicos eram hardcoded (Alto/Luxo, Médio,
+  // Popular+Médio) e sempre geravam keyword/preset pra esses padrões,
+  // mesmo quando o Grupo A não tinha NENHUM produto ali (ex: leva 100%
+  // Alto ainda gerava um público "Médio" com preset ?padroes=Médio, que
+  // levava o cliente pro Step 6 com ZERO resultados). Regra nova, fixa:
+  // só existe público pra padrão que o Grupo A realmente tem -- nunca um
+  // padrão hipotético. Um público por padrão presente (nunca combinado
+  // com um padrão ausente), preset sempre single-padrão.
+  const COPY_POR_PADRAO_ = {
+    Luxo: {
+      objetivo: 'investimento',
+      keywords: (cidade, bairro) => [`apartamento de luxo na planta ${cidade}`, `lançamento premium investimento ${bairro}`, `cobertura alto padrão em obras`],
+      titulo1: 'Exclusividade Antes da Entrega',
+      titulo2: n => `${n} unidade${n === 1 ? '' : 's'} de altíssimo padrão`,
+      titulo3: 'Consulta Gratuita · Sem Compromisso',
+      descricao1: cidade => `Lançamentos de luxo em obras em ${cidade}. Invista na planta com valorização projetada.`,
+      descricao2: 'Atendimento personalizado com especialista. Sem compromisso.',
+    },
+    Alto: {
+      objetivo: 'investimento',
+      keywords: (cidade, bairro) => [`apartamento alto padrão na planta ${cidade}`, `lançamento alto padrão investimento ${bairro}`, `apartamento valorização em obras`],
+      titulo1: 'Invista Antes da Entrega · Alto Padrão',
+      titulo2: n => `${n} opç${n === 1 ? 'ão' : 'ões'} em obras disponíve${n === 1 ? 'l' : 'is'}`,
+      titulo3: 'Consulta Gratuita · Sem Compromisso',
+      descricao1: cidade => `Lançamentos alto padrão em obras em ${cidade}. Compre na planta e valorize antes da entrega.`,
+      descricao2: 'Veja opções filtrando por bairro, área e orçamento. Atendimento gratuito com especialista.',
+    },
+    Médio: {
+      objetivo: 'moradia',
+      keywords: (cidade, bairro) => [`apartamento médio padrão ${bairro}`, `2 quartos novo ${bairro}`, `lançamento ${cidade}`],
+      titulo1: bairro => `Seu Apart. Novo em ${bairro}`,
+      titulo2: 'Preço de Lançamento · Em Obras',
+      titulo3: 'Consulta Gratuita Hoje',
+      descricao1: cidade => `Empreendimentos em obras com preço de planta em ${cidade}. Consulte condições de pagamento.`,
+      descricao2: 'Configure seu perfil e veja quantas opções combinam com você. Atendimento gratuito com especialista.',
+    },
+    Popular: {
+      objetivo: 'moradia',
+      keywords: (cidade, bairro) => [`apartamento popular novo ${cidade}`, `apartamento entrada ${cidade}`, `1 quarto novo ${bairro}`],
+      titulo1: 'Realize Seu Sonho na Planta',
+      titulo2: 'Consulte Condições de Pagamento',
+      titulo3: 'Veja Opções · Consulta Gratuita',
+      descricao1: cidade => `Lançamentos populares em obras em ${cidade}. Fale com um especialista sobre financiamento.`,
+      descricao2: 'Descubra quanto cabe no seu bolso. Acesse o app e configure em menos de 3 minutos.',
+    },
+  };
+  const NOME_PUBLICO_POR_PADRAO_ = {
+    Luxo: 'Investidor de Alto Padrão (Luxo)', Alto: 'Investidor de Alto Padrão',
+    Médio: 'Morador de Padrão Médio', Popular: 'Comprador de Entrada (Popular)',
+  };
+  // Ordem de exibição: do tier mais alto pro mais acessível -- não é a
+  // mesma ordem alfabética de `padroes` (que é só pra exibição de badge).
+  const ORDEM_PADRAO_MISSAO_ = ['Luxo', 'Alto', 'Médio', 'Popular'];
+  const publicosHtml = ORDEM_PADRAO_MISSAO_
+    .filter(p => padroes.includes(p))
+    .map((p, i) => {
+      const copy = COPY_POR_PADRAO_[p];
+      const produtosDoPadrao = grupoA.filter(r => r.padrao === p);
+      const cidade = cidades[0] || 'Goiânia';
+      const bairroDoPadrao = bairros.find(b => produtosDoPadrao.some(r => r.bairro === b)) || bairros[0] || '[bairro]';
+      const [kw1, kw2, kw3] = copy.keywords(cidade, bairroDoPadrao);
+      const titulo1 = typeof copy.titulo1 === 'function' ? copy.titulo1(bairroDoPadrao) : copy.titulo1;
+      const titulo2 = typeof copy.titulo2 === 'function' ? copy.titulo2(produtosDoPadrao.length) : copy.titulo2;
+      const descricao1 = typeof copy.descricao1 === 'function' ? copy.descricao1(cidade) : copy.descricao1;
+
+      // Melhoria 3 do relatório da IA Editora: sinalizar dispersão de
+      // ticket dentro do mesmo padrão (ex: R$745k a R$2,6M, todos Alto) --
+      // permite segmentar por faixa de ticket em vez de padrão inexistente.
+      const tickets = produtosDoPadrao.map(r => r.menorPreco).filter(v => v > 0);
+      const dispersaoNota = (tickets.length >= 2 && Math.max(...tickets) > Math.min(...tickets) * 1.8)
+        ? `\n> ⚠️ **Ticket disperso dentro do padrão ${p}:** ${fmtPreco(Math.min(...tickets))} a ${fmtPreco(Math.max(...tickets))}. Considere segmentar por faixa de ticket dentro deste público, em vez de tratar como um público único.`
+        : '';
+
+      return `**PÚBLICO ${i + 1} — ${NOME_PUBLICO_POR_PADRAO_[p]} (Em obras)**
+- Palavras-chave: \`${kw1}\`, \`${kw2}\`, \`${kw3}\`
+- Título 1: "${titulo1}"
+- Título 2: "${titulo2}"
+- Título 3: "${copy.titulo3}"
+- Descrição 1: "${descricao1}"
+- Descrição 2: "${copy.descricao2}"
+- Preset: \`?objetivo=${copy.objetivo}&padroes=${p}&situacoes=em_obras\`${dispersaoNota}`;
+    }).join('\n\n');
 
   const txt = `# BRIEFING IA EDITORA — SUPORTE DE MERCADO
 ## BASE INTELIGENTE · Análise de Lançamentos Imobiliários
@@ -3234,7 +3368,23 @@ function baixarBriefingSuporte_() {
 
 ---
 
-## 2. O QUE É SUPORTE (força compradora ativa)
+## 2. ORIENTAÇÕES OBRIGATÓRIAS DE CONFORMIDADE E MARCA (LEIA ANTES DE CRIAR QUALQUER PEÇA)
+
+Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landing page, e-mail) gerada a partir deste briefing:
+
+1. **Identificação da empresa:** toda peça que reproduzir a identificação da empresa deve usar exatamente **"CJ 27357 - Líder Empreendimentos Imobiliários LTDA."** — sem abreviar, sem trocar a ordem, sem omitir o CJ.
+
+2. **Nunca prometer nome de empreendimento, endereço exato ou "unidade específica" antes do contato.** A única exceção é o remarketing de fundo de funil (Etapa ③, seção 7) pra quem já viu aquele nome específico dentro do próprio funil (App Lançamentos). Nos anúncios de topo e meio de funil, usar sempre bairro/região/padrão — nunca o nome do produto.
+
+3. **Nunca usar claims de condição de pagamento sem dado real que sustente** (ex: "sem entrada", "documentação gratuita", "financiamento facilitado", "parcelamento direto"). Só usar esse tipo de chamada se houver confirmação de que a condição está disponível pros produtos do Grupo A ativo (seção 6). Sem essa confirmação, preferir chamadas neutras como "Consulte condições de pagamento" ou "Fale com um especialista sobre financiamento" — a "Consulta gratuita"/"Atendimento gratuito" em si pode ser usada normalmente, é sobre o atendimento, não sobre a condição de pagamento do imóvel.
+
+4. **Nunca usar "apartamento popular" nem preço abaixo do piso real da base (R$ 283 mil)** até haver estoque de verdade na categoria Popular. ${padroes.includes('Popular') ? 'O Grupo A ativo TEM produtos em Popular agora -- ainda assim, confirme o preço mínimo real antes de anunciar qualquer valor específico.' : 'O Grupo A ativo NÃO tem nenhum produto em Popular agora (ver seção 6) -- qualquer anúncio de "apartamento popular" ou preço de entrada abaixo de R$ 283 mil estaria prometendo produto que não existe na base hoje.'}
+
+5. **Horário real de veiculação dos anúncios (ad schedule/dayparting):** configurar os anúncios pra rodar **seg–sex 10h–20h, sáb e dom 10h–18h**. Isso é DIFERENTE do horário de atendimento humano (seg–sex 8h–18h, sáb 8h–12h, ver seção 9/CONDICIONAIS IMPORTANTES) — o anúncio pode ficar no ar em uma janela mais ampla, é só a resposta humana em tempo real que fica restrita ao horário de atendimento.
+
+---
+
+## 3. O QUE É SUPORTE (força compradora ativa)
 
 **Critério técnico:**
 - Estágio = "Em obras" ou "Em planta"
@@ -3255,7 +3405,7 @@ function baixarBriefingSuporte_() {
 
 ---
 
-## 3. O QUE É RESISTÊNCIA (para contexto)
+## 4. O QUE É RESISTÊNCIA | VALIDADA (para contexto)
 
 **Critério técnico:** Pronto novo + % vendido > 50 %
 
@@ -3266,14 +3416,72 @@ function baixarBriefingSuporte_() {
 
 ---
 
-## 4. EMPREENDIMENTOS EM SUPORTE — LISTA COMPLETA
+## 5. SUBGRUPOS POR PRAZO — TAXONOMIA COMPLETA DO RADAR DE MERCADO
 
-> **Total: ${rows.length} empreendimentos · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}**
-${listaEmp}
+As seções 3 e 4 explicam os dois conceitos-base (Suporte/Resistência). Na prática, o Radar detalha cada um em subgrupos cruzando **estágio + %vendido + prazo até a entrega**, pra dar um sinal mais preciso de urgência/qualidade do que só "Suporte" ou "Resistência" isolados. Cada empreendimento cai em EXATAMENTE UM desses grupos (nunca mais de um) -- a ordem abaixo é a ordem real de prioridade na checagem.
+
+**Nomenclatura:** os grupos da família "Resistência" usam o formato "Resistência | Especificidade" pra deixar claro que são variações do mesmo conceito, sem duplicar o nome cru entre o caso "Em obras perto da entrega" e o caso "Pronto novo" (que são situações diferentes, mas com o mesmo nível de urgência).
+
+**Variáveis usadas:**
+- **Estágio:** "Em obras"/"Em planta" (ainda não entregue) ou "Pronto novo" (já entregue)
+- **%vendido:** 1 − (estoque ÷ total de unidades) × 100
+- **Prazo:** meses até a entrega prometida (negativo = faltam meses) ou meses de atraso além dela (positivo = já atrasado) -- só existe/importa pra "Em obras"
+
+### Produtos "Em obras" / "Em planta" (ordem de prioridade)
+
+| # | Grupo | Critério exato | O que significa |
+|---|---|---|---|
+| 1 | 🔵 **Breve Lançamento** | %vendido = 0 (QUALQUER prazo, inclusive perto da entrega) | Lançamento sem venda nenhuma ainda -- prioridade máxima, nunca vira outro grupo mesmo perto de entregar |
+| 2 | 🔴 **Resistência \\| Alerta Crítico** | 1–48% vendido · prazo ≥ -7 (7 meses ou menos até a entrega, inclusive atrasado) | Vendendo pouco E perto de ficar pronto -- alerta forte, tende a virar "Resistência \\| Estoque Crítico" assim que entregar |
+| 2 | 🟠 **Alerta de Resistência** | 1–48% vendido · prazo entre -24 e -8 | Vendendo pouco, ainda com 8 a 24 meses até a entrega -- alerta em formação, dá tempo de reagir |
+| 2 | 🟢 **Suporte Pré-entrega** | ≥50% vendido · prazo ≥ -7 (inclusive atrasado) | Vendendo bem E quase pronto -- melhor cenário possível, estoque tende a esgotar em breve |
+| 2 | 🟢 **Suporte Lento** | ≥50% vendido · prazo entre -23 e -8 | Vendendo bem, obra avançando (8 a 23 meses até a entrega) |
+| 2 | 🟢 **Suporte Em Andamento** | ≥50% vendido · prazo entre -50 e -24 | Vendendo bem, obra ainda no início/meio (24 a 50 meses até a entrega) |
+| 3 | 🟢 **Suporte** | 1–49% vendido, e o prazo NÃO caiu em nenhuma faixa acima (prazo < -24, sem previsão de entrega cadastrada, ou %vendido = 49% exato) | Demanda real comprovada, cedo demais na obra pros subgrupos acima, ou dado de prazo insuficiente -- o grupo "saudável" genérico |
+| 3 | 🟡 **Transição** | ≥50% vendido, e o prazo NÃO caiu em nenhuma faixa acima (prazo < -50 ou sem previsão de entrega cadastrada) | Vendendo bem mas cedo demais na obra (mais de 50 meses até entregar) ou sem prazo suficiente pra classificar no detalhe |
+
+### Produtos "Pronto novo" (já entregue)
+
+| Grupo | Critério exato | O que significa |
+|---|---|---|
+| 🔴 **Resistência \\| Estoque Crítico** | %vendido < 49 | Produto pronto mas vendendo mal -- estoque parado mesmo sem mais nenhuma obra pra esperar, sinal mais forte de resistência que o grupo padrão |
+| 🟢 **Resistência \\| Validada** | %vendido > 50 | Produto entregue e validado pelo mercado (mais da metade já vendida) -- disponibilidade imediata |
+| 🟡 **Transição** | %vendido = 49 ou 50 exatos | Zona neutra entre os dois grupos acima |
+
+**Por que o corte em 49% (não 50%) nos subgrupos por prazo:** os 6 subgrupos (Alerta de Resistência, Resistência | Alerta Crítico, Suporte Em Andamento/Lento/Pré-entrega, Resistência | Estoque Crítico) usam 49% como referência, deixando exatos 49-50% como faixa neutra que cai em Suporte/Transição comum -- evita empurrar um produto no limite artificialmente pra um lado ou outro.
 
 ---
 
-## 5. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS
+## 6. EMPREENDIMENTOS — SEGMENTADOS POR GRUPO OPERACIONAL
+
+A lista de Suporte mistura produto com dado completo e pré-lançamento sem preço definido -- misturar os dois na mesma campanha faz a IA Editora promover produto que ainda não devia ser anunciado. Segmentação obrigatória em 3 grupos:
+
+**GRUPO A — CAMPANHA ATIVA AGORA (dados completos)**
+> ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} com ticket e % vendido definidos — é este grupo que alimenta a estratégia de Google Ads (seção 7) e o orçamento (seção 8).
+${grupoA.length ? grupoA.map(r => r.nome).join(' • ') : '(nenhum)'}
+
+**GRUPO B — PRÉ-LANÇAMENTO (monitorar, não anunciar ainda)**
+> ${grupoB.length} produto${grupoB.length === 1 ? '' : 's'} sem preço definido — aguardar tabela de vendas. NÃO usar nos grupos de anúncio da seção 7.
+${grupoB.length ? grupoB.map(r => r.nome).join(' • ') : '(nenhum)'}
+
+**GRUPO C — DADO INCORRETO (corrigir na base)**
+> ${grupoC.length} produto${grupoC.length === 1 ? '' : 's'} com nome suspeito de erro de extração — revisar/corrigir o cadastro antes de qualquer uso. Excluído da estratégia.
+${grupoC.length ? grupoC.map(r => `"${r.nome}" — ${r.bairro || '—'}`).join(' • ') : '(nenhum)'}
+
+---
+
+### Detalhamento — Grupo A (campanha ativa)
+${detalheEmp_(grupoA, true)}
+
+### Detalhamento — Grupo B (pré-lançamento)
+${detalheEmp_(grupoB, false)}
+
+### Detalhamento — Grupo C (dado incorreto)
+${detalheGrupoC_}
+
+---
+
+## 7. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS
 
 ### OBJETIVO GERAL
 Criar uma estratégia de tráfego pago no **Google Ads** para atrair leads altamente qualificados — pessoas com intenção real de comprar um imóvel de lançamento — que clicarão no anúncio e acessarão o **App Lançamentos** já com os filtros configurados conforme o nicho do anúncio.
@@ -3281,6 +3489,8 @@ Criar uma estratégia de tráfego pago no **Google Ads** para atrair leads altam
 A **meta de conversão final** (configurada no Google Ads) é a conclusão da última etapa: a tela **"Confirmado! Sua consultoria está agendada"** (Step 8 do App), acionada quando o cliente confirma o WhatsApp.
 
 ---
+
+> **Base de produtos desta seção: Grupo A apenas** (${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}). Grupo B (pré-lançamento) e Grupo C (dado incorreto) ficam de fora até serem corrigidos/liberados — ver seção 6. Vale também a seção 2 (Orientações obrigatórias de conformidade e marca) em todas as peças criadas a partir daqui.
 
 ### FUNIL EM 3 ETAPAS
 
@@ -3292,7 +3502,8 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - **Público:** 25–55 anos · Grande Goiânia · Renda acima da média
 - **Chamada isca:** "Veja os melhores lançamentos de [Bairro] antes de todos — Consulta gratuita"
 - **Destino:** App Lançamentos SEM preset (tela inicial, cliente faz os próprios filtros)
-- **URL:** \`app-lancamentos.html?utm_source=google&utm_medium=cpc&utm_campaign=sup-topo\`
+- **URL:** \`https://lidderimoveis.com/?utm_source=google&utm_medium=cpc&utm_campaign=sup-topo\`
+- **Orçamento e CPC:** ver seção 8 (R$ 20/dia, CPC máximo R$ 6,00 nesta etapa)
 - **Meta:** Volume de cliques + identificação dos segmentos que mais convertem
 
 #### ② MEIO DE FUNIL — Consideração por Nicho
@@ -3301,32 +3512,7 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - **Tipo:** Search segmentada + Display Remarketing
 - **Segmentação:** Remarketing de visitantes que não converteram + lookalike de conversores
 
-**Grupo A — Investidor de Alto Padrão (Em obras)**
-- Palavras-chave: \`apartamento alto padrão na planta [cidade]\`, \`lançamento luxo investimento [bairro]\`, \`apartamento valorização em obras\`
-- Título 1: "Invista Antes da Entrega · Alto Padrão"
-- Título 2: "${rows.filter(r => /alto|luxo/i.test(r.padrao||'')).length || 'N'} opções em obras disponíveis"
-- Título 3: "Consulta Gratuita · Sem Compromisso"
-- Descrição 1: "Lançamentos alto padrão em obras em ${cidades[0] || 'Goiânia'}. Compre na planta e valorize antes da entrega."
-- Descrição 2: "Veja opções filtrando por bairro, área e orçamento. Atendimento gratuito com especialista."
-- Preset: \`?objetivo=investimento&padroes=Alto,Luxo&situacoes=em_obras\`
-
-**Grupo B — Morador de Padrão Médio (Em obras)**
-- Palavras-chave: \`apartamento médio padrão [bairro]\`, \`2 quartos novo [bairro]\`, \`lançamento ${bairros[0] || '[bairro]'}\`
-- Título 1: "Seu Apart. Novo em ${bairros[0] || '[Bairro]'}"
-- Título 2: "Preço de Lançamento · Em Obras"
-- Título 3: "Consulta Gratuita Hoje"
-- Descrição 1: "Empreendimentos em obras com preço de planta. Financiamento facilitado, sem entrada em muitos casos."
-- Descrição 2: "Configure seu perfil e veja quantas opções combinam com você em ${cidades.join(' e ') || 'Goiânia'}."
-- Preset: \`?objetivo=moradia&padroes=Médio&situacoes=em_obras\`
-
-**Grupo C — Comprador Popular (Planta/Em obras)**
-- Palavras-chave: \`apartamento popular novo [cidade]\`, \`1 ou 2 quartos novo [bairro]\`, \`financiamento imóvel lançamento\`
-- Título 1: "Realize Seu Sonho na Planta"
-- Título 2: "Parcelamento Direto · Sem Entrada"
-- Título 3: "Veja Opções Gratuito Agora"
-- Descrição 1: "Lançamentos populares e médios em obras. Entre antes da valorização com parcelamento facilitado."
-- Descrição 2: "Descubra quanto cabe no seu bolso. Acesse o app e configure em menos de 3 minutos."
-- Preset: \`?objetivo=moradia&padroes=Popular,Médio&situacoes=em_obras\`
+${publicosHtml || '_Nenhum público gerado — Grupo A não tem padrão algum identificado nesta leva._'}
 
 #### ③ FUNDO DE FUNIL — Decisão e Conversão
 **Objetivo:** Atingir usuários com altíssima intenção — visitaram o app, viram resultados, mas ainda não converteram.
@@ -3334,7 +3520,7 @@ A **meta de conversão final** (configurada no Google Ads) é a conclusão da ú
 - **Tipo:** RLSA (Remarketing List for Search Ads) + Customer Match
 - **Segmentação:** Visitantes que chegaram ao Step 6 (resultados) mas não completaram o Step 8 (conversão)
 - **Anúncios:** Personalizados por empreendimento específico quando possível
-- **Chamada:** "Você viu ${rows[0] ? rows[0].nome : '[Empreendimento]'} · Ainda há unidades · Consulta gratuita"
+- **Chamada:** "Você viu ${grupoA[0] ? grupoA[0].nome : '[Empreendimento]'} · Ainda há unidades · Consulta gratuita"
 - **Preset:** Configurado com o padrão e situação do empreendimento específico
 - **Meta:** Maximizar conversão com custo mínimo por lead
 
@@ -3347,31 +3533,68 @@ ${bairros.length ? '- ' + bairrosKw : '(bairros a definir conforme a base de dad
 ### EXTENSÕES RECOMENDADAS
 
 - **Sitelinks:** "Ver em obras" · "Ver prontos para morar" · "Calcular parcelas" · "Falar com especialista"
-- **Frases de destaque:** "Sem entrada" · "Documentação gratuita" · "Lançamento exclusivo" · "Alta valorização"
-- **Callout:** "[N] lançamentos em ${cidades[0] || 'Goiânia'}" · "Consulta 100% gratuita" · "Atendimento em até 2h"
-- **Imagem:** Renderização do empreendimento + selo "Em obras · [N] unidades disponíveis"
+- **Frases de destaque:** "Consulte condições de pagamento" · "Atendimento gratuito" · "Lançamento exclusivo" · "Alta valorização"
+- **Callout:** "${grupoA.length} lançamentos em ${cidades[0] || 'Goiânia'}" · "Consulta 100% gratuita" · "Atendimento em até 2h"
+- **Imagem:** Renderização do empreendimento + selo "Em obras · ${grupoA.length} unidades disponíveis"
+
+### PALAVRAS NEGATIVAS (OBRIGATÓRIO — adicionar em todas as campanhas)
+
+Sem negativação, o Google mostra o anúncio pra buscas irrelevantes e gasta orçamento sem retorno.
+
+**Fixas (todas as campanhas de lançamento):**
+aluguel • para alugar • locação • temporada • airbnb
+usado • segunda mão • revenda • particular
+terreno • rural • chácara • sítio
+emprego • vaga • trabalho • corretor de imóveis
+gratuito • grátis • de graça
+financiamento caixa (só quando fora de contexto de compra — não negativar a palavra isolada)
+
+**Sugeridas com base no mix atual do Grupo A${padroesAusentes.length ? ' (não inclui: ' + padroesAusentes.join(', ') + ')' : ''}:**
+${negativasSugeridas.length ? negativasSugeridas.join(' • ') : '(Grupo A cobre todos os padrões — nenhuma sugestão adicional)'}
 
 ---
 
-## 6. APP LANÇAMENTOS — RESUMO DO FUNIL
+## 8. ORÇAMENTO SUGERIDO — FASE DE VALIDAÇÃO (30 DIAS)
 
-**URL Base:** \`https://chaverleo1.github.io/base-inteligente/app-lancamentos.html\`
+**Grupo A ativo:** ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} em ${padroes.length} padr${padroes.length === 1 ? 'ão' : 'ões'}
+
+| Etapa do funil | Orçamento diário | Orçamento mensal |
+|---|---|---|
+| Topo de funil (sondagem) | R$ 20/dia | R$ 600/mês |
+| Meio de funil (por nicho) | R$ 50/dia | R$ 1.500/mês |
+| Fundo de funil (remarketing) | R$ 20/dia | R$ 600/mês |
+| **TOTAL** | **R$ 90/dia** | **R$ 2.700/mês** |
+
+**CPC máximo (topo de funil):** R$ 6,00 — lance manual ou meta de CPC no Google Ads, pra não deixar o algoritmo consumir o orçamento rápido demais numa etapa que ainda é só sondagem.
+
+**Horário de veiculação (ad schedule):** seg–sex 10h–20h, sáb e dom 10h–18h (ver regra 5 da seção 2 — diferente do horário de atendimento humano).
+
+**Após os 30 dias:** dobrar o orçamento no público (dos 3 da seção 7) com o menor CPL e pausar os que não converteram nenhum lead.
+
+---
+
+## 9. APP LANÇAMENTOS — RESUMO DO FUNIL
+
+**URL Base (produção):** \`https://lidderimoveis.com\` (a raiz do domínio redireciona pro App Lançamentos preservando todos os parâmetros da URL -- não precisa do caminho /app-lancamentos.html)
+**URL Base (GitHub Pages, referência/repositório):** \`https://chaverleo1.github.io/base-inteligente/app-lancamentos.html\`
 **Google Analytics:** G-1XHJ44834Q
 
 ### ETAPAS (STEPS) DO APP
 
-| Step | Nome | O que acontece | Dado capturado |
-|------|------|---------------|---------------|
-| 0 | Landing | Hero animado com contador de lançamentos ativos | — |
-| 5 | Passo 1/4 | Cliente escolhe padrão (Popular/Médio/Alto/Luxo) + objetivo (morar/investir) | \`D.padroes\`, \`D.objetivo\` |
-| 2 | Passo 2/4 | Sliders de orçamento máximo e área útil mínima | \`D.orcamento\`, \`D.area\` |
-| 1 | Passo 3/4 | Primeiro nome do cliente | \`D.nome\` |
-| 3 | Confirmação | Resumo dos filtros + quantidade de empreendimentos compatíveis | — |
-| 4 | Passo 4/4 | Motivação / tipo de imóvel mais adequado | \`D.motivacao\` |
-| 6 | Resultados | Cards dos empreendimentos compatíveis; cliente pode favoritar | \`D.favoritados\` |
-| 7 | Captura | Resumo + favoritos + campo de WhatsApp → botão "CONFIRMAR CONSULTORIA" | \`D.whatsapp\` |
-| 9 | Agendamento | Pergunta surpresa: deseja agendar atendimento? (opcional) | \`D.agendamento\` |
-| **8** | **CONFIRMADO ✅** | **"Confirmado, [Nome]! Sua consultoria está agendada."** | **🎯 META DE CONVERSÃO** |
+**Nota (pedido explícito da IA Editora):** "Step" é o ID interno usado no código (não-sequencial, histórico) — "Ordem de exibição" é a ordem real que o cliente vê (1 a 10), é essa que importa pra configurar conversão/funil no Google Ads. As linhas abaixo já estão na ordem de exibição, não na ordem numérica do Step.
+
+| Step (ID interno) | Ordem de exibição | Nome | O que acontece | Dado capturado |
+|------|------|------|---------------|---------------|
+| 0 | 1 | Landing | Hero animado com contador de lançamentos ativos | — |
+| 5 | 2 | Passo 1/4 | Cliente escolhe padrão (Popular/Médio/Alto/Luxo) + objetivo (morar/investir) | \`D.padroes\`, \`D.objetivo\` |
+| 2 | 3 | Passo 2/4 | Sliders de orçamento máximo e área útil mínima | \`D.orcamento\`, \`D.area\` |
+| 3 | 4 | Confirmação | Resumo dos filtros + quantidade de empreendimentos compatíveis | — |
+| 1 | 5 | Passo 3/4 | Primeiro nome do cliente | \`D.nome\` |
+| 4 | 6 | Passo 4/4 | Motivação / tipo de imóvel mais adequado | \`D.motivacao\` |
+| 6 | 7 | Resultados | Cards dos empreendimentos compatíveis; cliente pode favoritar | \`D.favoritados\` |
+| 7 | 8 | Captura | Resumo + favoritos + campo de WhatsApp → botão "CONFIRMAR CONSULTORIA" | \`D.whatsapp\` |
+| 9 | 9 | Agendamento | Pergunta surpresa: deseja agendar atendimento? (opcional) | \`D.agendamento\` |
+| **8** | **10** | **CONFIRMADO ✅** | **"Confirmado, [Nome]! Sua consultoria está agendada."** | **🎯 META DE CONVERSÃO** |
 
 ### VARIÁVEIS DO SISTEMA (coletadas ao longo do funil)
 
@@ -3402,23 +3625,32 @@ D.origemAcesso  — Origem calculada (utm_source ou "direto")
 
 ---
 
-## 7. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
+## 10. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
 
 O App Lançamentos aceita presets nomeados ou parâmetros raw na URL.
 
 ### Presets pré-configurados
 
-| Preset | Objetivo | Padrões | Situação |
-|--------|----------|---------|----------|
-| \`investidor-alto\` | Investimento | Alto, Luxo | Pronto novo |
-| \`investidor-medio\` | Investimento | Médio, Alto | Qualquer |
-| \`investidor-todos\` | Investimento | Todos | Qualquer |
-| \`moradia-popular\` | Moradia | Popular, Médio | Pronto novo |
-| \`moradia-alto\` | Moradia | Alto | Pronto novo |
-| \`obras-medio\` | Investimento | Médio | Em obras |
+**Implementado (pedido explícito da IA Editora):** conferido direto contra \`PRESETS_URL_\` em app-lancamentos.html nesta geração -- todos os presets abaixo já estão publicados e funcionando, não são sugestão.
+
+| Preset | Objetivo | Padrões | Situação | Implementado |
+|--------|----------|---------|----------|--------------|
+| \`investidor-alto\` | Investimento | Alto, Luxo | Pronto novo | ✅ Sim |
+| \`investidor-medio\` | Investimento | Médio, Alto | Qualquer | ✅ Sim |
+| \`investidor-todos\` | Investimento | Todos | Qualquer | ✅ Sim |
+| \`moradia-popular\` | Moradia | Popular, Médio | Pronto novo | ✅ Sim |
+| \`moradia-alto\` | Moradia | Alto | Pronto novo | ✅ Sim |
+| \`pronto-alto\` | Investimento | Alto, Luxo | Pronto novo | ✅ Sim |
+| \`obras-medio\` | Investimento | Médio | Em obras | ✅ Sim |
 
 ### URL completa para Google Ads (com UTM)
 
+**Como deve ir ao ar (produção):**
+\`\`\`
+https://lidderimoveis.com/?preset=obras-medio&utm_source=google&utm_medium=cpc&utm_campaign=suporte-obras-q3
+\`\`\`
+
+**Referência (GitHub Pages, mesmo conteúdo):**
 \`\`\`
 https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-medio&utm_source=google&utm_medium=cpc&utm_campaign=suporte-obras-q3
 \`\`\`
@@ -3426,7 +3658,7 @@ https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-
 ### Parâmetros raw (personalização total)
 
 \`\`\`
-?objetivo=[moradia|investimento]
+https://lidderimoveis.com/?objetivo=[moradia|investimento]
 &padroes=[Popular,Médio,Alto,Luxo]   ← vírgula-separado, múltiplos possíveis
 &situacoes=[em_obras,pronto_novo]    ← filtra por estágio da obra
 &utm_source=google
@@ -3434,21 +3666,21 @@ https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-
 &utm_campaign=[nome-da-campanha]
 \`\`\`
 
-**Exemplos práticos:**
+**Exemplos práticos (produção):**
 \`\`\`
 # Moradia em obras padrão médio
-?objetivo=moradia&padroes=Médio&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-moradia-medio
+https://lidderimoveis.com/?objetivo=moradia&padroes=Médio&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-moradia-medio
 
 # Investimento em obras alto padrão
-?objetivo=investimento&padroes=Alto&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-inv-alto
+https://lidderimoveis.com/?objetivo=investimento&padroes=Alto&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-inv-alto
 
 # Todos os padrões em obras (campanha ampla)
-?objetivo=investimento&padroes=Popular,Médio,Alto,Luxo&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-obras-todos
+https://lidderimoveis.com/?objetivo=investimento&padroes=Popular,Médio,Alto,Luxo&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=sup-obras-todos
 \`\`\`
 
 ---
 
-## 8. META DE CONVERSÃO (Google Ads)
+## 11. META DE CONVERSÃO (Google Ads)
 
 **Evento principal:**
 - **Plataforma:** Google Analytics 4 · ID: G-1XHJ44834Q
@@ -3463,7 +3695,12 @@ https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-
 3. Step 7 alcançado → quase convertido (preencheu WhatsApp)
 4. **Step 8 concluído → ✅ MACRO-CONVERSÃO** ← configurar no Google Ads
 
-**Configuração recomendada:**
+**STATUS DA CONVERSÃO — 3 estados (pedido explícito da IA Editora, evita ler "configuração recomendada" como já concluído):**
+- **(a) Instalada no GA4:** ✅ SIM — tag G-1XHJ44834Q confirmada no código do App Lançamentos
+- **(b) Configurada como evento no GA4:** ✅ SIM — \`registrarEventoFunil_\` dispara evento a cada etapa, incluindo a chegada no Step 8 (confirmado)
+- **(c) Importada como conversão no Google Ads:** ❓ **NÃO VERIFICÁVEL PELO CÓDIGO** — isso é uma configuração dentro da conta do Google Ads (Conversões → Importar do Google Analytics), fora do que o App Lançamentos consegue confirmar sozinho. **Checar direto no painel do Google Ads antes de assumir que já está configurada.**
+
+**Configuração recomendada (proposta, ainda a aplicar/validar no item c acima):**
 - Tipo: Importar do Google Analytics 4
 - Evento: Chegada ao Step 8
 - Modelo de atribuição: Data-driven (ou Último clique como fallback)
@@ -3571,6 +3808,14 @@ function similBadgeCls_(pct) {
   return '';
 }
 
+// Subgrupos por PRAZO -- pedido explícito do usuário, substitui o antigo
+// grupo único "Pré-entrega" (turno anterior) por 6 categorias mais
+// específicas, cruzando estágio + faixa de %vendido (49% é o corte, não
+// mais 50%) + faixa de prazo (mesmo "val" mostrado na coluna Prazo do
+// Radar: negativo = faltam meses, positivo = atrasado). Usado em
+// papelMercado_() e na config de UI (FRENTES_PRAZO_) mais abaixo.
+const LIMITE_VENDIDO_SUBGRUPO_ = 49;
+
 function papelMercado_(r) {
   if (!r.estoque || r.estoque <= 0) return null;
   if (r.pctVendido == null)         return null;
@@ -3582,11 +3827,44 @@ function papelMercado_(r) {
 
   if (!isObras && !isPronto) return null;
 
-  // BREVE LANÇAMENTO: Em obras/planta com 0% vendido (sem abertura de vendas ainda)
-  if (isObras  && pctV === 0) return 'breveLancamento';
+  // BREVE LANÇAMENTO: Em obras/planta com 0% vendido (sem abertura de vendas
+  // ainda) -- pedido explícito do usuário: 0% vendido tem que continuar
+  // SEMPRE nesse grupo, mesmo perto da entrega. Por isso checado ANTES dos
+  // subgrupos por prazo abaixo (senão um 0% vendido bem perto da entrega
+  // "vazava" pra Resistência | Alerta Crítico).
+  if (isObras && pctV === 0) return 'breveLancamento';
+
+  if (isObras) {
+    const raw = prazoEntregaMeses_(r);
+    const val = raw == null ? null : -raw;   // negativo = faltam meses; positivo = atrasado (mesmo sinal da coluna Prazo)
+
+    if (val != null) {
+      if (pctV < LIMITE_VENDIDO_SUBGRUPO_) {
+        // POTENCIAL DE RESISTÊNCIA (FORTE): em obras, vendendo pouco (<49%,
+        // mas > 0 -- 0% já foi capturado acima como Breve Lançamento),
+        // ficando perto da entrega sem ter vendido o suficiente -- alerta
+        // de que pode virar "Resistência Forte" assim que ficar pronto.
+        if (val >= -7)               return 'potencialResistenciaForte';
+        if (val >= -24 && val <= -8) return 'potencialResistencia';
+      } else if (pctV > LIMITE_VENDIDO_SUBGRUPO_) {
+        // SUPORTE (variações): em obras, vendendo bem (>49%), em diferentes
+        // estágios de proximidade da entrega -- sinal positivo em todos os
+        // casos, só muda a urgência/momento.
+        if (val >= -7)                return 'suportePreEntrega';
+        if (val >= -23 && val <= -8)  return 'suporteLento';
+        if (val >= -50 && val <= -24) return 'suporteEmAndamento';
+      }
+      // pctV === 49 exatos, ou fora de todas as faixas de prazo acima: cai
+      // no critério antigo (Suporte) logo abaixo.
+    }
+  }
 
   // SUPORTE: apenas Em obras/planta com < 50% vendido
   if (isObras  && pctV < 50) return 'suporte';
+
+  // RESISTÊNCIA FORTE: Pronto novo com <49% vendido -- estoque parado
+  // mesmo já pronto, sinal de resistência mais forte que o grupo padrão.
+  if (isPronto && pctV < LIMITE_VENDIDO_SUBGRUPO_) return 'resistenciaForte';
 
   // RESISTÊNCIA: apenas Pronto novo com > 50% vendido
   if (isPronto && pctV > 50) return 'resistencia';
@@ -3594,6 +3872,38 @@ function papelMercado_(r) {
   // Tudo mais: transição
   return 'transicao';
 }
+
+// Config das 6 frentes por prazo (Melhoria pedida pelo usuário) -- um só
+// lugar pra nome/emoji/cor/subtítulo/ordenação padrão, reaproveitado no
+// KPI bar, nas seções de tabela e no _radarSort. `chave` bate com o
+// retorno de papelMercado_(); `frente` é o id curto usado em
+// colsBase()/radarTable()/_radarSort (mesmo padrão de 'brv'/'sup'/'tra'/'res').
+const FRENTES_PRAZO_ = [
+  // Nomenclatura pedida explicitamente pelo usuário -- "Resistência | X"
+  // pra deixar claro que são variações do mesmo conceito (resistência),
+  // sem duplicar o nome cru "Resistência Forte" que já existia (evita
+  // confundir com a resistência de produto Pronto novo). `bloco` +
+  // `conceito` + `regras` alimentam a tabela-resumo (pedido explícito do
+  // usuário, substitui os cards de KPI).
+  { chave: 'resistenciaForte',          frente: 'resF',  nome: 'Resistência | Estoque Crítico',   emoji: '🔴', cor: '#e53935', bloco: 'resistencia',
+    sub: 'Pronto novo · <49% vendido — estoque parado mesmo já pronto', sortDir: 'asc',
+    conceito: 'Pronto mas vendendo mal — estoque parado', regras: 'Pronto novo · <49% vendido' },
+  { chave: 'potencialResistenciaForte', frente: 'potRF', nome: 'Resistência | Alerta Crítico',    nomeResumo: 'Suporte | Alerta Crítico de Resistência', emoji: '🔴', cor: '#e53935', bloco: 'resistencia',
+    sub: 'Em obras · <49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc',
+    conceito: 'Vendendo pouco e perto de entregar', regras: 'Em obras · <49% vendido · prazo ≥ -7' },
+  { chave: 'potencialResistencia',      frente: 'potR',  nome: 'Alerta de Resistência',           nomeResumo: 'Suporte - Alerta de Resistência em formação', emoji: '🟠', cor: '#f57c00', bloco: 'resistencia',
+    sub: 'Em obras · <49% vendido · entre 8 e 24 meses da entrega', sortDir: 'asc',
+    conceito: 'Vendendo pouco, alerta em formação', regras: 'Em obras · <49% vendido · prazo -24 a -8' },
+  { chave: 'suporteEmAndamento',        frente: 'supEA', nome: 'Suporte | Força Compradora',      emoji: '🟢', cor: '#43a047', bloco: 'suporte',
+    sub: 'Em obras · >49% vendido · entre 24 e 50 meses da entrega', sortDir: 'desc',
+    conceito: 'Vendendo bem, obra no início/meio', regras: 'Em obras · ≥50% vendido · prazo -50 a -24' },
+  { chave: 'suporteLento',              frente: 'supL',  nome: 'Suporte | Prazo Fechando',        emoji: '🟢', cor: '#26a69a', bloco: 'suporte',
+    sub: 'Em obras · >49% vendido · entre 8 e 23 meses da entrega', sortDir: 'desc',
+    conceito: 'Vendendo bem, entrega se aproximando', regras: 'Em obras · ≥50% vendido · prazo -23 a -8' },
+  { chave: 'suportePreEntrega',         frente: 'supPE', nome: 'Suporte Pré-entrega',            emoji: '🟢', cor: '#00c878', bloco: 'suporte',
+    sub: 'Em obras · >49% vendido · a até 7 meses da entrega (ou já atrasado)', sortDir: 'asc',
+    conceito: 'Vendendo bem e quase pronto', regras: 'Em obras · ≥50% vendido · prazo ≥ -7' },
+];
 
 // Oportunidade = resistência com estoque relevante (≥ 20 unidades paradas há muito tempo)
 function isOportunidade_(r) {
@@ -3605,6 +3915,7 @@ function renderMapaPapelFiltros_() {
   if (!bar) return;
   const total = _mapaRows.length;
   const cnt = { breveLancamento: 0, suporte: 0, transicao: 0, resistencia: 0 };
+  FRENTES_PRAZO_.forEach(f => { cnt[f.chave] = 0; });
   _mapaRows.forEach(r => { const p = papelMercado_(r); if (p) cnt[p]++; });
 
   const chips = [
@@ -3612,13 +3923,23 @@ function renderMapaPapelFiltros_() {
     { key: 'breveLancamento',  label: `🔵 Breve Lançamento (${cnt.breveLancamento})`,        cls: 'papel-chip-breve' },
     { key: 'suporte',          label: `🟢 Suporte (${cnt.suporte})`,                        cls: 'papel-chip-suporte' },
     { key: 'transicao',        label: `🟡 Transição (${cnt.transicao})`,                    cls: 'papel-chip-transicao' },
-    { key: 'resistencia',      label: `🔴 Resistência (${cnt.resistencia})`,                 cls: 'papel-chip-resistencia' },
+    { key: 'resistencia',      label: `🟢 Resistência | Validada (${cnt.resistencia})`,      cls: 'papel-chip-resistencia' },
   ];
   bar.innerHTML = chips.map(c => `
     <button type="button" class="papel-chip ${c.cls}${_mapaPapelFiltro === c.key ? ' on' : ''}"
       onclick="setMapaPapelFiltro_(${c.key == null ? 'null' : "'" + c.key + "'"})">
       ${c.label}
-    </button>`).join('');
+    </button>`).join('')
+    // 6 subgrupos por prazo -- sem classe CSS própria (cor vem de
+    // FRENTES_PRAZO_.cor via style inline), pedido explícito do usuário.
+    + FRENTES_PRAZO_.map(f => {
+      const on = _mapaPapelFiltro === f.chave;
+      const style = on ? `style="background:${f.cor}26;border-color:${f.cor};color:${f.cor}"` : '';
+      return `<button type="button" class="papel-chip" ${style}
+        onclick="setMapaPapelFiltro_('${f.chave}')">
+        ${f.emoji} ${f.nome} (${cnt[f.chave]})
+      </button>`;
+    }).join('');
 }
 
 function setMapaPapelFiltro_(papel) {
@@ -3632,13 +3953,14 @@ let _radarSort = {
   // prazoEntrega = prazoEntregaMeses_() raw: positivo = futuro (suporte); negativo = passado (resistência)
   // Suporte  DESC: +33 > +30 > +24  → exibe (-33), (-30), (-24) = mais tempo restante primeiro
   // Resistência ASC: -24 < -18 < -12 → exibe (+24), (+18), (+12) = mais tempo parado primeiro
-  brv:  { col: 'prazoEntrega', dir: 'desc' },  // Breve Lançamento: mais próximos da entrega primeiro
-  supF: { col: 'prazoEntrega', dir: 'desc' },  // Força Compradora: mais prazo restante primeiro
-  supP: { col: 'prazoEntrega', dir: 'asc'  },  // Prazo Fechando: entrega mais próxima primeiro
-  sup:  { col: 'prazoEntrega', dir: 'desc' },  // legacy – mantido para compatibilidade
-  res:  { col: 'prazoEntrega', dir: 'asc'  },
-  tra:  { col: 'estoque',      dir: 'desc' },
+  brv: { col: 'prazoEntrega', dir: 'desc' },  // Breve Lançamento: mais próximos da entrega primeiro
+  sup: { col: 'prazoEntrega', dir: 'desc' },
+  res: { col: 'prazoEntrega', dir: 'asc'  },
+  tra: { col: 'estoque',      dir: 'desc' },
 };
+// Sort padrão das 6 frentes por prazo (FRENTES_PRAZO_) -- todas ordenadas
+// por Prazo, cada uma na direção que já vem configurada ali.
+FRENTES_PRAZO_.forEach(f => { _radarSort[f.frente] = { col: 'prazoEntrega', dir: f.sortDir }; });
 let _radarFiltroEstagios = new Set(); // vazio = mostra todos
 let _radarFiltroPadroes  = new Set(); // vazio = mostra todos
 
@@ -3711,74 +4033,81 @@ function renderRadarMercado_() {
 
   // Classifica cada linha filtrada
   const brv = [], sup = [], tra = [], res = [], oport = [];
+  // Uma lista por chave das 6 frentes por prazo (FRENTES_PRAZO_) --
+  // pedido explícito do usuário, substitui o antigo grupo único "Pré-entrega".
+  const extra = {};
+  FRENTES_PRAZO_.forEach(f => { extra[f.chave] = []; });
   rows.forEach(r => {
     const p = papelMercado_(r);
-    if (p === 'breveLancamento')  { brv.push(r); }
-    else if (p === 'suporte')     { sup.push(r); }
-    else if (p === 'transicao')   { tra.push(r); }
-    else if (p === 'resistencia') { res.push(r); if (isOportunidade_(r)) oport.push(r); }
-  });
-
-  // Sub-grupos de Suporte por prazo de entrega:
-  //   Força Compradora → prazo > 12 meses ou sem data (obra início/meio)
-  //   Prazo Fechando   → prazo ≤ 12 meses         (entrega se aproximando)
-  const LIMIAR_PRAZO_FECHANDO = 12; // meses
-  const supForca = sup.filter(r => {
-    const p = prazoEntregaMeses_(r);
-    return p === null || p > LIMIAR_PRAZO_FECHANDO;
-  });
-  const supPrazo = sup.filter(r => {
-    const p = prazoEntregaMeses_(r);
-    return p !== null && p <= LIMIAR_PRAZO_FECHANDO;
+    if (extra[p])                      { extra[p].push(r); }
+    else if (p === 'breveLancamento')  { brv.push(r); }
+    else if (p === 'suporte')          { sup.push(r); }
+    else if (p === 'transicao')        { tra.push(r); }
+    else if (p === 'resistencia')      { res.push(r); if (isOportunidade_(r)) oport.push(r); }
   });
 
   // Registra listas no cache do modal para os KPIs clicáveis
-  _listaEmpModalData_['KPI_BRV']       = { titulo: '🔵 Breve Lançamento — Em obras/planta · 0% vendido (sem abertura de vendas)', rows: brv      };
-  _listaEmpModalData_['KPI_SUP_FORCA'] = { titulo: '🟢 Suporte | Força Compradora — Em obras/planta · início/meio da obra · <50% vendido',   rows: supForca };
-  _listaEmpModalData_['KPI_SUP_PRAZO'] = { titulo: '🟢 Suporte | Prazo Fechando — Em obras/planta · entrega se aproximando · <50% vendido',   rows: supPrazo };
-  _listaEmpModalData_['KPI_TRA']       = { titulo: '🟡 Transição — 50% vendido ou estágio intermediário',                                     rows: tra      };
-  _listaEmpModalData_['KPI_RES']       = { titulo: '🔴 Resistência — Pronto novo com >50% vendido',                                           rows: res      };
-  _listaEmpModalData_['KPI_OPT']       = { titulo: '⚡ Oportunidades — Resistência com ≥ 20 unidades paradas',                                rows: oport    };
+  FRENTES_PRAZO_.forEach(f => {
+    _listaEmpModalData_['KPI_' + f.frente.toUpperCase()] = { titulo: `${f.emoji} ${f.nome} — ${f.sub}`, rows: extra[f.chave] };
+  });
+  _listaEmpModalData_['KPI_BRV']  = { titulo: '🔵 Breve Lançamento — Em obras/planta com 0% vendido (sem abertura de vendas)', rows: brv  };
+  _listaEmpModalData_['KPI_SUP']  = { titulo: '🟢 Suporte — Em obras/planta com <50% vendido',                                rows: sup  };
+  _listaEmpModalData_['KPI_TRA']  = { titulo: '🟡 Transição — 50% vendido ou estágio intermediário',                          rows: tra  };
+  _listaEmpModalData_['KPI_RES']  = { titulo: '🟢 Resistência | Validada — Pronto novo com >50% vendido',                     rows: res  };
+  _listaEmpModalData_['KPI_OPT']  = { titulo: '⚡ Oportunidades — Resistência com ≥ 20 unidades paradas',                     rows: oport };
 
-  // Helper: botão de número no KPI — abre página completa de grupo
-  function kpiBtn(key, count) {
-    if (!count) return `<div class="radar-kpi-val" style="cursor:default">${count}</div>`;
-    return `<button class="radar-kpi-val radar-kpi-btn" onclick="abrirPaginaGrupo_('${key}')" title="Ver lista completa">${count}</button>`;
-  }
+  // Tabela-resumo dos grupos -- pedido explícito do usuário: substitui os
+  // cards de KPI por uma tabela compacta (Total/Nome/Conceito/Regras),
+  // organizada em 3 blocos (Resistência/Suporte/Outros), letra menor e
+  // menos altura pra precisar de menos rolagem.
+  const RESUMO_CLASSICOS_ = [
+    { bloco: 'suporte',     key: 'KPI_SUP', nome: 'Suporte', emoji: '🟢', cor: '#00c878', total: sup.length,
+      conceito: 'Demanda real, cedo na obra', regras: 'Em obras · 1–49% vendido · prazo < -24 ou sem previsão' },
+    { bloco: 'outros',      key: 'KPI_BRV', nome: 'Breve Lançamento', emoji: '🔵', cor: '#60a5fa', total: brv.length,
+      conceito: 'Zero vendas ainda — prioridade máxima', regras: 'Em obras/planta · 0% vendido (qualquer prazo)' },
+    { bloco: 'outros',      key: 'KPI_TRA', nome: 'Transição', emoji: '🟡', cor: '#ff9800', total: tra.length,
+      conceito: 'Zona neutra / dado insuficiente', regras: '≥50% vendido sem prazo suficiente (obras), ou 49–50% exatos (pronto)' },
+    { bloco: 'resistencia', key: 'KPI_RES', nome: 'Resistência | Porém Validado e Pouco Estoque', emoji: '🟢', cor: '#00c878', total: res.length,
+      conceito: 'Validado pelo mercado, disponível já', regras: 'Pronto novo · >50% vendido' },
+    { bloco: 'resistencia', key: 'KPI_OPT', nome: 'Resistencia - Oportunidades com Estoque', emoji: '⚡', cor: '#ff6b6b', total: oport.length,
+      conceito: 'Estoque parado relevante — ação prioritária', regras: 'Resistência | Validada · estoque ≥ 20 unidades' },
+  ];
+  const linhasResumo = FRENTES_PRAZO_.map(f => ({
+    bloco: f.bloco, key: 'KPI_' + f.frente.toUpperCase(), nome: f.nomeResumo || f.nome, emoji: f.emoji, cor: f.cor,
+    total: extra[f.chave].length, conceito: f.conceito, regras: f.regras,
+  })).concat(RESUMO_CLASSICOS_);
 
-  // KPI bar — subtítulos refletem a nova lógica estoque × tempo
+  const BLOCOS_ORDEM_ = [
+    { key: 'resistencia', label: '🔴 RESISTÊNCIA' },
+    { key: 'suporte',     label: '🟢 SUPORTE' },
+    { key: 'outros',      label: '⚪ OUTROS' },
+  ];
+  const resumoLinhasHtml = BLOCOS_ORDEM_.map(b => {
+    const linhasBloco = linhasResumo.filter(l => l.bloco === b.key).map(l => `
+          <tr>
+            <td class="num rr-total">${l.total
+              ? `<button class="radar-resumo-btn" style="color:${l.cor}" onclick="abrirPaginaGrupo_('${l.key}')" title="Ver lista completa">${l.total}</button>`
+              : `<span style="color:var(--text3)">0</span>`}</td>
+            <td class="rr-nome"><span style="color:${l.cor};font-weight:700">${l.emoji} ${l.nome}</span></td>
+            <td class="rr-conceito">${l.conceito}</td>
+            <td>${l.regras}</td>
+            <td class="rr-briefing"><button class="radar-resumo-briefing-btn" onclick="baixarBriefingSuporte_()" title="Baixar briefing para IA Editora (Google Ads)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg></button></td>
+          </tr>`).join('');
+    return `<tr class="radar-resumo-bloco"><td colspan="5">${b.label}</td></tr>${linhasBloco}`;
+  }).join('');
+
   const kpiHtml = `
-    <div class="radar-kpis">
-      <div class="radar-kpi kpi-breve">
-        <div class="radar-kpi-label">🔵 Breve Lançamento</div>
-        ${kpiBtn('KPI_BRV', brv.length)}
-        <div class="radar-kpi-sub">Em obras · 0% vendido (sem abertura)</div>
-      </div>
-      <div class="radar-kpi kpi-sup-forca">
-        <div class="radar-kpi-label">🟢 Suporte | Força Compradora</div>
-        ${kpiBtn('KPI_SUP_FORCA', supForca.length)}
-        <div class="radar-kpi-sub">Vendendo bem · obra no início/meio</div>
+    <div class="radar-secao">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo" style="color:var(--text2)">📋 Resumo dos Grupos</span>
+        <span class="radar-secao-sub">Clique no total pra ver a lista de empreendimentos</span>
         ${sup.length ? `<button class="btn-briefing-dl" onclick="baixarBriefingSuporte_()" title="Baixar briefing para IA Editora (Google Ads)"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg>Briefing IA</button>` : ''}
       </div>
-      <div class="radar-kpi kpi-sup-prazo">
-        <div class="radar-kpi-label">🟢 Suporte | Prazo Fechando</div>
-        ${kpiBtn('KPI_SUP_PRAZO', supPrazo.length)}
-        <div class="radar-kpi-sub">Vendendo bem · entrega se aproximando</div>
-      </div>
-      <div class="radar-kpi kpi-transicao">
-        <div class="radar-kpi-label">🟡 Transição</div>
-        ${kpiBtn('KPI_TRA', tra.length)}
-        <div class="radar-kpi-sub">50% vendido · faixa intermediária</div>
-      </div>
-      <div class="radar-kpi kpi-resistencia">
-        <div class="radar-kpi-label">🔴 Resistência</div>
-        ${kpiBtn('KPI_RES', res.length)}
-        <div class="radar-kpi-sub">Pronto novo · &gt;50% vendido</div>
-      </div>
-      <div class="radar-kpi kpi-oport">
-        <div class="radar-kpi-label">⚡ Oportunidades</div>
-        ${kpiBtn('KPI_OPT', oport.length)}
-        <div class="radar-kpi-sub">Resistência com ≥ 20 unidades paradas</div>
+      <div style="overflow-x:auto">
+        <table class="radar-resumo-tabela">
+          <thead><tr><th class="num rr-total">Total</th><th class="rr-nome">Nome</th><th class="rr-conceito">Conceito</th><th>Regras</th><th>Briefing IA</th></tr></thead>
+          <tbody>${resumoLinhasHtml}</tbody>
+        </table>
       </div>
     </div>`;
 
@@ -3904,9 +4233,6 @@ function renderRadarMercado_() {
       : `<span style="color:var(--text2)">${fmt(r.areaMin)}m²</span>`;
   }
 
-  // Cores por padrão (usadas na coluna Padrão das tabelas do Radar)
-  const COR_PAD = { Popular:'#94a3b8', Médio:'#60a5fa', Alto:'#c084fc', Luxo:'#fbbf24' };
-
   // Colunas completas para todas as frentes do Radar
   const colsBase = (frente, showOport) => [
     { label:'ID',          col:'id',           render:r=>`<span style="color:var(--text3);font-size:10px">${r.idEmpreendimento||'—'}</span>` },
@@ -3917,8 +4243,8 @@ function renderRadarMercado_() {
     }},
     { label:'S%',          col:'simil',      num:true, render:r=>similCell(r) },
     { label:'Padrão',      col:'padrao',        render:r=>{
-        const p = r.padrao||'—'; const c = COR_PAD[p]||'var(--text3)';
-        return `<span style="font-size:10px;font-weight:700;color:${c};white-space:nowrap">${p}</span>`;
+        const COR_P={'Popular':'#94a3b8','Médio':'#60a5fa','Alto':'#c084fc','Luxo':'#fbbf24'};
+        const p=r.padrao||'—'; return `<span style="font-size:10px;font-weight:700;color:${COR_P[p]||'var(--text3)'};white-space:nowrap">${p}</span>`;
     }},
     { label:'Construtora', col:'construtora',   render:r=>`<span style="color:var(--text3)">${r.construtora||'—'}</span>` },
     { label:'Faixa m²',    col:'areaMin',       render:r=>faixaAreaCell(r) },
@@ -3933,13 +4259,16 @@ function renderRadarMercado_() {
     { label:'Total',       col:'totalUnidades',num:true, render:r=>`<span style="color:var(--text3)">${r.totalUnidades>0?r.totalUnidades:'—'}</span>` },
   ];
 
-  const brvCols  = colsBase('brv',  false);
-  const supFCols = colsBase('supF', false);
-  const supPCols = colsBase('supP', false);
-  const resCols  = colsBase('res',  true);
-  const traCols  = colsBase('tra',  false);
+  const brvCols = colsBase('brv', false);
+  const supCols = colsBase('sup', false);
+  const resCols = colsBase('res', true);
+  const traCols = colsBase('tra', false);
+  const extraCols = {};
+  FRENTES_PRAZO_.forEach(f => { extraCols[f.chave] = colsBase(f.frente, false); });
 
-  // Distribuição por padrão
+  // Distribuição por padrão -- só os 4 papéis originais, de propósito (ver
+  // comentário na CSS .radar-dist-header): as 6 frentes por prazo têm suas
+  // próprias seções abaixo, com contagem já visível no cabeçalho de cada uma.
   const PADS = ['Popular','Médio','Alto','Luxo'];
   const dist = {};
   PADS.forEach(p => { dist[p] = { brv:0, sup:0, tra:0, res:0, total:0 }; });
@@ -3965,7 +4294,20 @@ function renderRadarMercado_() {
       </div>`;
   }).join('');
 
-  el.innerHTML = filtrosHtml + kpiHtml +
+  // Seções das 6 frentes por prazo (FRENTES_PRAZO_) -- mesmo padrão visual
+  // das seções fixas abaixo, só que geradas em loop pra não repetir 6x o
+  // mesmo bloco de HTML.
+  const secoesExtraHtml = FRENTES_PRAZO_.map(f => `
+    <div class="radar-secao">
+      <div class="radar-secao-header">
+        <span class="radar-secao-titulo" style="color:${f.cor}">${f.emoji} ${f.nome}</span>
+        <span class="radar-secao-sub">${f.sub} · ordenado por prazo</span>
+        <span class="radar-secao-count" style="background:${f.cor}26;color:${f.cor}">${extra[f.chave].length}</span>
+      </div>
+      ${radarTable(extra[f.chave], f.frente, extraCols[f.chave], 15)}
+    </div>`).join('');
+
+  el.innerHTML = filtrosHtml + kpiHtml + secoesExtraHtml +
     `<div class="radar-secao rs-breve">
       <div class="radar-secao-header">
         <span class="radar-secao-titulo" style="color:#60a5fa">🔵 Breve Lançamento</span>
@@ -3976,23 +4318,15 @@ function renderRadarMercado_() {
     </div>` +
     `<div class="radar-secao rs-suporte">
       <div class="radar-secao-header">
-        <span class="radar-secao-titulo">🟢 Suporte | Força Compradora</span>
-        <span class="radar-secao-sub">Em obras/planta · <50% vendido · prazo &gt;12 meses · ordenado por prazo restante</span>
-        <span class="radar-secao-count">${supForca.length}</span>
+        <span class="radar-secao-titulo">🟢 Frente 1 — Suporte</span>
+        <span class="radar-secao-sub">Maior estoque + menor tempo desde lançamento/entrega · ordenado por estoque</span>
+        <span class="radar-secao-count">${sup.length}</span>
       </div>
-      ${radarTable(supForca, 'supF', supFCols, 15)}
-    </div>` +
-    `<div class="radar-secao rs-suporte">
-      <div class="radar-secao-header">
-        <span class="radar-secao-titulo">🟢 Suporte | Prazo Fechando</span>
-        <span class="radar-secao-sub">Em obras/planta · <50% vendido · prazo ≤12 meses · entrega se aproximando</span>
-        <span class="radar-secao-count">${supPrazo.length}</span>
-      </div>
-      ${radarTable(supPrazo, 'supP', supPCols, 15)}
+      ${radarTable(sup, 'sup', supCols, 15)}
     </div>` +
     `<div class="radar-secao rs-resistencia">
       <div class="radar-secao-header">
-        <span class="radar-secao-titulo">🔴 Frente 2 — Resistência</span>
+        <span class="radar-secao-titulo">🟢 Frente 2 — Resistência | Validada</span>
         <span class="radar-secao-sub">Maior estoque + maior tempo no mercado sem saída · ordenado por estoque</span>
         <span class="radar-secao-count">${res.length}</span>
       </div>
@@ -4013,14 +4347,14 @@ function renderRadarMercado_() {
       </div>
       <div class="radar-dist">
         <div class="radar-dist-header">
-          <div>Padrão</div><div>🔵 Breve</div><div>🟢 Suporte</div><div>🟡 Transição</div><div>🔴 Resistência</div>
+          <div>Padrão</div><div>🔵 Breve</div><div>🟢 Suporte</div><div>🟡 Transição</div><div>🟢 Resistência</div>
         </div>
         ${distRows}
       </div>
     </div>`;
 }
 
-// ── PÁGINA DE GRUPO — overlay full-screen ao clicar nos KPIs do Radar ──────
+// ── PÁGINA DE GRUPO — full-screen ao clicar nas quantidades do Resumo dos Grupos ──
 function abrirPaginaGrupo_(key) {
   const d = _listaEmpModalData_[key];
   if (!d || !d.rows || !d.rows.length) return;
@@ -4031,7 +4365,7 @@ function abrirPaginaGrupo_(key) {
   const ORDEM_PAD_GP = ['Popular','Médio','Alto','Luxo'];
   const COR_PAD_GP   = { Popular:'#94a3b8', Médio:'#60a5fa', Alto:'#c084fc', Luxo:'#fbbf24' };
 
-  // Agrupa por padrão na ordem canônica
+  // Agrupa por padrão em ordem canônica
   const porPad = {};
   d.rows.forEach(r => {
     const p = r.padrao || '—';
@@ -4043,7 +4377,7 @@ function abrirPaginaGrupo_(key) {
     ...Object.keys(porPad).filter(p => !ORDEM_PAD_GP.includes(p) && porPad[p]),
   ];
 
-  // Células (espelham as usadas no radarTable)
+  // ── Células (espelham as de renderRadarMercado_) ─────────────────────────
   function _prazoC(r) {
     const raw = prazoEntregaMeses_(r);
     if (raw === null) return '<span style="color:var(--text3)">—</span>';
@@ -4072,8 +4406,9 @@ function abrirPaginaGrupo_(key) {
   }
   function _similC(r) {
     if (!r.simil) return '<span style="color:var(--text3)">—</span>';
-    const cls = r.simil >= 90 ? 's-alta' : r.simil >= 80 ? 's-boa' : r.simil >= 70 ? 's-media' : '';
-    return `<span class="simil-badge${cls ? ' '+cls : ''}">${r.simil}%</span>`;
+    const s = r.simil;
+    const cls = s>=90?'s-alta':s>=80?'s-boa':s>=70?'s-media':'';
+    return `<span class="simil-badge${cls?' '+cls:''}">${s}%</span>`;
   }
   function _areaC(r) {
     if (!(r.areaMin > 0)) return '<span style="color:var(--text3)">—</span>';
@@ -4083,16 +4418,16 @@ function abrirPaginaGrupo_(key) {
       : `<span style="color:var(--text2)">${fmt(r.areaMin)}m²</span>`;
   }
   function _padC(r) {
-    const p = r.padrao||'—'; const c = COR_PAD_GP[p]||'var(--text3)';
-    return `<span style="font-size:10px;font-weight:700;color:${c}">${p}</span>`;
+    const p = r.padrao||'—';
+    return `<span style="font-size:10px;font-weight:700;color:${COR_PAD_GP[p]||'var(--text3)'};white-space:nowrap">${p}</span>`;
   }
 
-  // Tabela de um bloco de padrão
+  // ── Tabela por bloco de padrão ────────────────────────────────────────────
   function tabelaPad(rows) {
     const sorted = [...rows].sort((a, b) => {
       const pa = prazoEntregaMeses_(a) ?? -999;
       const pb = prazoEntregaMeses_(b) ?? -999;
-      return pb - pa;
+      return pb - pa;  // maior prazo restante primeiro
     });
     const trs = sorted.map(r => {
       const ri = _mapaRows.indexOf(r);
@@ -4115,7 +4450,6 @@ function abrirPaginaGrupo_(key) {
         <td class="num"><span style="color:var(--text3)">${r.totalUnidades>0?r.totalUnidades:'—'}</span></td>
       </tr>`;
     }).join('');
-
     return `<div style="overflow-x:auto">
       <table class="radar-tabela">
         <thead><tr>
