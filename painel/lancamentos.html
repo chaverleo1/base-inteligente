@@ -529,8 +529,11 @@ select.form-input option { background: var(--surface2); }
   border-radius: 7px; white-space: nowrap; z-index: 99;
   box-shadow: 0 4px 16px rgba(0,0,0,.5); transition: opacity .1s;
 }
-/* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ── */
-.mapa-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+/* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ──
+   max-height calibrado pra mostrar exatamente 15 linhas + cabeçalho (medido
+   ao vivo: header 27.5px + 15 × linha 29px ≈ 462.5px) — acima disso rola
+   verticalmente com o cabeçalho fixo (position:sticky no th, já existente). */
+.mapa-wrap { overflow-x: auto; overflow-y: auto; max-height: 463px; border: 1px solid var(--border); border-radius: var(--radius); }
 .mapa-tabela { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
 .mapa-tabela th, .mapa-tabela td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--border); }
 .mapa-tabela th { background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 10px;
@@ -1320,26 +1323,25 @@ select.form-input option { background: var(--surface2); }
           <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
           <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
           <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
-          <th onclick="ordenarMapaGeral_('faixa')" title="Faixa de estoque vendido: A(0–25%) B(26–50%) C(51–75%) D(76–99%)">Faixa<span class="mapa-seta" id="seta-mapa-faixa"></span></th>
+          <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Padrão<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
+          <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
+          <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
+          <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
           <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
           <th onclick="ordenarMapaGeral_('prazoEntrega')" title="Contagem regressiva até entrega (Em obras) ou progressiva desde entrega (Pronto novo)">Prazo<span class="mapa-seta" id="seta-mapa-prazoEntrega"></span></th>
           <th onclick="ordenarMapaGeral_('vendido')" title="Percentual de estoque vendido (%)">% ESTQ<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
           <th onclick="ordenarMapaGeral_('qtdestq')" title="Quantidade de unidades disponíveis em estoque">QTD ESTQ<span class="mapa-seta" id="seta-mapa-qtdestq"></span></th>
           <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
-          <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
           <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
-          <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Tipo<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
           <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
-          <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
           <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
-          <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
           <th onclick="ordenarMapaGeral_('prazo')" title="Prazo de Pagamento (meses)">PG<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
           <th onclick="ordenarMapaGeral_('pv')" title="Prazo de Venda — meses desde o lançamento">PV<span class="mapa-seta" id="seta-mapa-pv"></span></th>
           <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
         </tr>
       </thead>
       <tbody id="mapa-tbody">
-        <tr><td colspan="17" class="mapa-vazio">Carregando...</td></tr>
+        <tr><td colspan="18" class="mapa-vazio">Carregando...</td></tr>
       </tbody>
     </table>
   </div>
@@ -5919,7 +5921,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -5936,7 +5938,7 @@ function renderMapaGeral_() {
                     && (_mapaPapelFiltro == null  || papelMercado_(r) === _mapaPapelFiltro));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="18" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -5966,26 +5968,18 @@ function renderMapaGeral_() {
       <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
       <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}${oport}</td>
-      ${(() => {
-        const f = typeof fatiaEstoque_ === 'function' ? fatiaEstoque_(r.pctVendido) : '—';
-        const bg = f==='A' ? 'rgba(0,200,120,.16)'  : f==='B' ? 'rgba(50,150,255,.16)'
-                 : f==='C' ? 'rgba(255,152,0,.16)'  : f==='D' ? 'rgba(255,107,107,.18)' : '';
-        const cl = f==='A' ? '#00c878' : f==='B' ? '#3296ff'
-                 : f==='C' ? '#ff9800' : f==='D' ? '#ff6b6b' : 'var(--text3)';
-        return `<td style="text-align:center;font-weight:700;font-size:12px;background:${bg};color:${cl};letter-spacing:.04em">${f}</td>`;
-      })()}
+      <td>${r.padrao || '—'}</td>
+      <td>${r.construtora}</td>
+      <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
+      <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
       <td>${r.estagio}</td>
       <td class="mapa-num">${renderPrazoCelula_(r)}</td>
       <td class="mapa-num">${r.pctVendido > 0 ? r.pctVendido + '%' : '—'}</td>
       <td class="mapa-num">${r.estoque > 0 ? r.estoque : (r.estoque === 0 ? '0' : '—')}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
-      <td>${r.construtora}</td>
       <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
-      <td>${r.padrao || '—'}</td>
       <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge${similBadgeCls_(r.simil) ? ' '+similBadgeCls_(r.simil) : ''}" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>` : '—'}</td>
-      <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
-      <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
       <td class="mapa-num">${r.prazo > 0 ? r.prazo + 'm' : '—'}</td>
       <td class="mapa-num" style="white-space:nowrap;font-size:11px;${r.prazoLancEntrega !== null && r.prazoVenda > 0 ? `color:${r.prazoVenda > r.prazoLancEntrega ? 'var(--danger)' : 'var(--accent2)'}` : ''}">${(() => {
         if (!r.prazoVenda) return '—';
