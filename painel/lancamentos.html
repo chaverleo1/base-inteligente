@@ -1171,6 +1171,10 @@ select.form-input option { background: var(--surface2); }
           <input class="form-input" id="f-urlSite" placeholder="https://...">
         </div>
         <div class="form-group span2">
+          <div class="form-label">📍 Link Google Maps</div>
+          <input class="form-input" id="f-linkMaps" type="url" placeholder="https://maps.app.goo.gl/...">
+        </div>
+        <div class="form-group span2">
           <div class="form-label">Lazer / Infraestrutura</div>
           <textarea class="form-input" id="f-lazer" placeholder="Piscina, academia, salão de festas, espaço gourmet..."></textarea>
         </div>
@@ -1631,7 +1635,7 @@ function normalizarTexto_(s) {
 // calcularM2Medio agora mora em config.js (compartilhada com lancamentos-editar.html).
 
 function extrairBloco1(txt) {
-  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', tipoEmpreendimento:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'', urlSite:'' };
+  const b = { nomeEmpreendimento:'', construtora:'', endereco:'', bairro:'', cidade:'', estado:'', tipo:'', tipoEmpreendimento:'', padrao:'', status:'', previsaoEntrega:'', lazer:'', conceito:'', dataTabela:'', estoque:'', totalUnidades:'', dataLancamento:'', urlSite:'', linkMaps:'' };
   const linhas = txt.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
   // ── Localiza a linha de endereço em QUALQUER posição do texto ──
@@ -2542,7 +2546,7 @@ function parsearLinhasCampoValor_(linhas, mapa, alvo) {
 function _b1VazioOutros_() {
   return { nomeEmpreendimento:'', construtora:'', tipoEmpreendimento:'', status:'', endereco:'',
     bairro:'', cidade:'', estado:'', previsaoEntrega:'', estoque:'', totalUnidades:'', dataLancamento:'',
-    urlSite:'', foto:'', lazer:'', conceito:'', tipo:'', dataTabela:'' };
+    urlSite:'', foto:'', linkMaps:'', lazer:'', conceito:'', tipo:'', dataTabela:'' };
 }
 
 // Triangulação de preço (só um valor veio -> replica pros 3 campos), filtro
@@ -3030,7 +3034,7 @@ function limparMotor() {
   document.querySelectorAll('input[name="statusTabela"]').forEach(r => r.checked = false);
   ['f-nome','f-construtora','f-cidade','f-estado','f-bairro','f-endereco','f-entrega','f-dataTabela',
    'f-estoque','f-totalUnidades','f-dataLancamento','f-prazoMaximo','f-prazoDeVenda',
-   'f-urlSite','f-lazer','f-conceito',
+   'f-urlSite','f-linkMaps','f-lazer','f-conceito',
    'f-qtdAndares','f-aptoPorAndar','f-dataAtualizacaoOrulo','f-novoEstoque','f-obs'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.value = ''; el.className = 'form-input'; }
   });
@@ -3062,6 +3066,7 @@ function lerPreview() {
     statusTabela:       (document.querySelector('input[name="statusTabela"]:checked') || {}).value || '',
     padrao:             g('f-padrao'),
     urlSite:            g('f-urlSite'),
+    linkMaps:           g('f-linkMaps'),
     lazer:              g('f-lazer'),
     conceito:           g('f-conceito'),
     qtdAndares:         g('f-qtdAndares'),
@@ -4256,6 +4261,10 @@ function renderRadarMercado_() {
         const loc = [r.bairro, r.cidade].filter(v=>v&&v!=='—').join('/');
         return `<span style="color:var(--text2)">${loc||'—'}</span>`;
     }},
+    { label:'📍', render:r=>{
+        if (!r.linkMaps) return '<span style="color:var(--text3);opacity:.25;font-size:13px">📍</span>';
+        return `<a href="${r.linkMaps}" target="_blank" onclick="event.stopPropagation()" style="color:#60a5fa;font-size:15px;text-decoration:none" title="Ver no Google Maps">📍</a>`;
+    }},
     { label:'Prazo',       col:'prazoEntrega', num:true, render:r=>prazoCell(r) },
     { label:'Estoque',     col:'estoque',    num:true, render:r=>`<strong>${r.estoque!=null?r.estoque:'—'}</strong>` },
     { label:'% Vend.',     col:'pctVendido', num:true, render:r=>pctVendidoCell(r) },
@@ -4367,6 +4376,7 @@ const GP_COLS_ = [
   { label:'Faixa m²',       col:'areaMin',         num:false },
   { label:'R$/m²',          col:'m2Medio',         num:true  },
   { label:'Local',          col:'bairro',          num:false },
+  { label:'📍',             col:'linkMaps',        num:false, noprint:true },
   { label:'Prazo',          col:'prazoEntrega',    num:true  },
   { label:'Estoque',        col:'estoque',         num:true  },
   { label:'% Vend.',        col:'pctVendido',      num:true  },
@@ -4530,6 +4540,7 @@ function _gpRenderTable_() {
     if (col === 'areaMin')       return areaC(r);
     if (col === 'm2Medio')       return m2C(r);
     if (col === 'bairro')        { const loc=[r.bairro,r.cidade].filter(v=>v&&v!=='—').join('/'); return `<span style="color:var(--text2)">${loc||'—'}</span>`; }
+    if (col === 'linkMaps')      { if (!r.linkMaps) return '<span style="color:var(--text3);opacity:.25;font-size:13px">📍</span>'; return `<a href="${r.linkMaps}" target="_blank" onclick="event.stopPropagation()" style="color:#60a5fa;font-size:15px;text-decoration:none" title="Ver no Google Maps">📍</a>`; }
     if (col === 'prazoEntrega')  return prazoC(r);
     if (col === 'estoque')       return `<strong>${r.estoque!=null?r.estoque:'—'}</strong>`;
     if (col === 'pctVendido')    return pctC(r);
@@ -4596,8 +4607,9 @@ function _gpGerarPDF_() {
     return '—';
   }
 
+  const PRINT_COLS_ = GP_COLS_.filter(c => !c.noprint);
   const trs = toprint.map(r =>
-    `<tr>${GP_COLS_.map(c => `<td class="${c.num?'num':''}">${plain(r,c.col)}</td>`).join('')}</tr>`
+    `<tr>${PRINT_COLS_.map(c => `<td class="${c.num?'num':''}">${plain(r,c.col)}</td>`).join('')}</tr>`
   ).join('');
 
   const dataHora = new Date().toLocaleDateString('pt-BR',
@@ -4623,7 +4635,7 @@ function _gpGerarPDF_() {
   <h3>${d.titulo}</h3>
   <p class="meta">${toprint.length} empreendimento${toprint.length !== 1 ? 's' : ''} · ${dataHora}</p>
   <table>
-    <thead><tr>${GP_COLS_.map(c=>`<th class="${c.num?'num':''}">${c.label}</th>`).join('')}</tr></thead>
+    <thead><tr>${PRINT_COLS_.map(c=>`<th class="${c.num?'num':''}">${c.label}</th>`).join('')}</tr></thead>
     <tbody>${trs}</tbody>
   </table>
   </body></html>`;
