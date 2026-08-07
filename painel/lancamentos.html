@@ -215,7 +215,13 @@ a { text-decoration: none; color: inherit; }
   .emp-card, .emp-card * { color: #000 !important; }
   .mapa-tabela, .mapa-tabela th, .mapa-tabela td { color: #000 !important; background: #fff !important; }
   .mapa-tabela th { background: #eee !important; }
-  .mapa-wrap { border-color: #999 !important; overflow: visible; }
+  /* !important em overflow/max-height é obrigatório aqui: a regra de tela
+     .mapa-wrap (mais abaixo no arquivo, fora de @media) tem a MESMA
+     especificidade e vem DEPOIS no CSS -- em empate, quem vem por último
+     vence. Sem o !important, o max-height:463px/overflow-y:auto da rolagem
+     em tela "vazava" pra impressão e cortava do PDF tudo que estava abaixo
+     das ~15 linhas visíveis (mesmo linhas marcadas pra imprimir). */
+  .mapa-wrap { border-color: #999 !important; overflow: visible !important; max-height: none !important; }
   /* Marcação de seleção é só uma ferramenta de tela -- nunca aparece no
      papel. Com "imprimir-so-selecionados" ligado (algum item marcado na
      hora de clicar em Imprimir), some com as linhas não marcadas também. */
