@@ -1315,6 +1315,7 @@ select.form-input option { background: var(--surface2); }
     <div class="filtro-bar" id="mapa-estagio-filtros"></div>
     <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
     <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem) -- com itens marcados, imprime só eles">🖨️ PDF</button>
+    <button class="btn-imprimir-lista" onclick="exportarMapaSelecionadosCSV_()" title="Baixar em .csv os empreendimentos marcados na tabela (marque nas caixinhas antes)">⬇️ CSV</button>
   </div>
   <div class="mapa-papel-bar" id="mapa-papel-bar">
     <span class="mapa-papel-label">Papel:</span>
@@ -2518,6 +2519,49 @@ function imprimirListaAtiva_() {
   window.print();
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('imprimir-so-selecionados'));
+
+// Baixa em .csv os empreendimentos marcados na tabela Mapa Geral -- mesma
+// lista que o botão PDF imprime (_mapaSelecionados, independente de
+// rolagem/scroll), só que como arquivo pra planilha em vez de impressão.
+// Ordem segue _mapaIndicesVisiveis (respeita o filtro/ordenação atual da
+// tela), não a ordem bruta de _mapaRows.
+function exportarMapaSelecionadosCSV_() {
+  if (!_mapaSelecionados.size) {
+    mostrarToast('Marque pelo menos um empreendimento na tabela antes de baixar o CSV.', 'erro');
+    return;
+  }
+  const ordem = _mapaIndicesVisiveis.filter(i => _mapaSelecionados.has(i));
+  const CAMPOS_MAPA_CSV_ = ['ID', 'Empreendimento', 'Bairro', 'Padrão', 'Construtora',
+    'Área mín (m²)', 'Área máx (m²)', 'R$/m²', 'Estágio', 'Prazo entrega (meses)',
+    '% Vendido', 'Qtd estoque', 'Score Tração', 'Similaridade (%)', 'Menor preço', 'Alerta'];
+  const linhas = [CAMPOS_MAPA_CSV_.map(csvEscapar_).join(',')];
+  ordem.forEach(i => {
+    const r = _mapaRows[i];
+    if (!r) return;
+    const prazoM = prazoEntregaMeses_(r);
+    const alerta = r.isSobraSuspeita ? 'Sobra suspeita' : (r.alerta ? r.alerta.titulo : '');
+    linhas.push([
+      r.idEmpreendimento || '', r.nome || '', r.bairro || '', r.padrao || '', r.construtora || '',
+      r.areaMin > 0 ? r.areaMin : '', r.areaMax > 0 ? r.areaMax : '', r.m2Medio > 0 ? r.m2Medio : '',
+      r.estagio || '', prazoM !== null ? prazoM : '', r.pctVendido != null ? r.pctVendido : '',
+      r.estoque != null ? r.estoque : '', r.comp > 0 ? r.comp : '', r.simil > 0 ? r.simil : '',
+      r.menorPreco > 0 ? r.menorPreco : '', alerta,
+    ].map(csvEscapar_).join(','));
+  });
+  // BOM na frente -- sem isso o Excel abre acento/ç errado em CSV UTF-8
+  // (mesmo padrão de exportarPadroesVendedorCSV_).
+  const csv  = String.fromCharCode(0xFEFF) + linhas.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mapa_geral_selecionados_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast(`CSV baixado com ${ordem.length} empreendimento${ordem.length !== 1 ? 's' : ''}.`, 'ok');
+}
 
 function extrairDados() {
   const txtB1 = document.getElementById('txtBloco1').value.trim();
