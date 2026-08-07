@@ -718,6 +718,21 @@ select.form-input option { background: var(--surface2); }
 @keyframes buscaFlash {
   0%, 100% { box-shadow: none; }
   50% { box-shadow: 0 0 0 3px var(--accent); }
+/* ── BUSCA POR CONSTRUTORA ── */
+.busca-const-secao { margin-top:28px; padding-top:20px; border-top:1px solid var(--border); }
+.busca-const-titulo { font-size:13px; font-weight:700; color:var(--text2); margin-bottom:4px; }
+.busca-const-sub { font-size:11px; color:var(--text3); margin-bottom:14px; }
+.busca-const-lista { display:flex; flex-wrap:wrap; gap:8px; }
+.busca-const-chip {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:6px 14px; border:1px solid var(--border); border-radius:20px;
+  background:var(--surface); cursor:pointer; font-family:inherit; color:var(--text);
+  transition:border-color .15s, background .15s, color .15s;
+}
+.busca-const-chip:hover { border-color:var(--accent); background:rgba(79,124,255,.07); color:var(--accent); }
+.busca-const-nome { font-size:13px; font-weight:600; }
+.busca-const-count { font-size:10px; color:var(--text3); background:rgba(255,255,255,.07); padding:1px 7px; border-radius:10px; font-variant-numeric:tabular-nums; }
+.busca-const-chip:hover .busca-const-count { color:var(--accent); background:rgba(79,124,255,.12); }
 }
 
 /* ── TOAST ── */
@@ -1344,6 +1359,14 @@ select.form-input option { background: var(--surface2); }
   </div>
   <div id="busca-resultados" class="busca-resultados">
     <div class="vazio"><h3>Digite pra buscar</h3><p>Busque por nome do empreendimento ou código (ex: EMP-009).</p></div>
+  </div>
+
+  <div class="busca-const-secao">
+    <div class="busca-const-titulo">🏗️ Busca por Construtora</div>
+    <div class="busca-const-sub">Clique numa construtora para ver todos os seus empreendimentos — mesmas colunas do Radar</div>
+    <div id="busca-construtoras-lista" class="busca-const-lista">
+      <div style="color:var(--text3);font-size:12px">Acesse o Mapa Geral primeiro para carregar os dados.</div>
+    </div>
   </div>
   </div>
 
@@ -2151,7 +2174,7 @@ function mudarAbaLancamentos(nome) {
   document.getElementById('tabBtnLista').classList.toggle('active', nome === 'lista');
   document.getElementById('tabBtnOutros').classList.toggle('active', nome === 'outros');
   document.getElementById('tabBtnModelos').classList.toggle('active', nome === 'modelos');
-  if (nome === 'busca') document.getElementById('busca-input').focus();
+  if (nome === 'busca') { document.getElementById('busca-input').focus(); renderBuscaConstrutoras_(); }
   if (nome === 'estrategias') carregarEstrategiasLazy_();
   if (nome === 'inteligencia') carregarInteligenciaLazy_();
   if (nome === 'applancamentos') carregarComentariosAppLazy_();
@@ -5498,6 +5521,52 @@ function abrirResultadoBusca_(idx) {
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   card.classList.add('busca-destaque');
   setTimeout(() => card.classList.remove('busca-destaque'), 2200);
+}
+
+// ── BUSCA POR CONSTRUTORA ────────────────────────────────────────────────────
+function renderBuscaConstrutoras_() {
+  const cont = document.getElementById('busca-construtoras-lista');
+  if (!cont) return;
+  const rows = _mapaRows || [];
+
+  if (!rows.length) {
+    cont.innerHTML = '<div style="color:var(--text3);font-size:12px">Acesse o Mapa Geral primeiro para carregar os dados.</div>';
+    return;
+  }
+
+  // Agrupa por construtora
+  const mapa = {};
+  rows.forEach(r => {
+    const c = (r.construtora || '').trim();
+    if (!c || c === '—') return;
+    if (!mapa[c]) mapa[c] = [];
+    mapa[c].push(r);
+  });
+
+  const construtoras = Object.keys(mapa).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  if (!construtoras.length) {
+    cont.innerHTML = '<div style="color:var(--text3);font-size:12px">Nenhuma construtora identificada nos dados.</div>';
+    return;
+  }
+
+  // Registra no cache do grupo-página (reutiliza abrirPaginaGrupo_ / colsBase)
+  construtoras.forEach(c => {
+    const key = 'CONST_' + c.replace(/[^a-zA-Z0-9]/g, '_');
+    const list = mapa[c];
+    _listaEmpModalData_[key] = {
+      titulo: `🏗️ ${c} — ${list.length} empreendimento${list.length !== 1 ? 's' : ''}`,
+      rows: list
+    };
+  });
+
+  cont.innerHTML = construtoras.map(c => {
+    const key   = 'CONST_' + c.replace(/[^a-zA-Z0-9]/g, '_');
+    const count = mapa[c].length;
+    return `<button class="busca-const-chip" onclick="abrirPaginaGrupo_('${key}')">
+      <span class="busca-const-nome">${c}</span>
+      <span class="busca-const-count">${count}</span>
+    </button>`;
+  }).join('');
 }
 
 async function renderLista(lista, mapaScoreVendedorParam, listaPadroesParam, listaModelosParam) {
