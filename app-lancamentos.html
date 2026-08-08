@@ -1629,6 +1629,12 @@ function irParaStep(n) {
   _stepEntradaTs = agora;
   atualizarBotoes();
   window.scrollTo(0, 0);
+  // Conversão Google Ads: dispara quando a tela final (step-8) carrega,
+  // cobrindo todos os caminhos (horário comercial + fora do horário).
+  if (n === 8) {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: 'lead_confirmado' });
+  }
 }
 
 function avancarStep() {
@@ -2698,11 +2704,6 @@ function submeter() {
   // fluxo só termina depois que os telefones são cadastrados).
   const continuar = () => {
     if (btn) { btn.textContent = 'Confirmado'; btn.classList.add('confirmado'); }
-    // Dispara conversão no GTM (Google Ads / GA4) quando o lead é confirmado.
-    // O push acontece AQUI (antes do timeout) pra garantir que o GTM receba
-    // o evento mesmo que o usuário feche a aba imediatamente após confirmar.
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({ event: 'lead_confirmado' });
     setTimeout(() => { montarAgradecimento(); irParaStep(8); }, btn ? 700 : 300);
   };
 
