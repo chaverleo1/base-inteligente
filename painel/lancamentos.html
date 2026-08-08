@@ -64,14 +64,6 @@ a { text-decoration: none; color: inherit; }
 .lanc-tab:hover:not(.active) { color: var(--text); }
 @media (max-width: 560px) { .lanc-tabs { width: 100%; } .lanc-tab { flex: 1; text-align: center; padding: 10px 8px; } }
 
-/* ── SUB-ABAS do Mapa Geral (Lista / Dados) — mesmo padrão visual das abas
-   principais (.lanc-tab), só um pouco menor por ser um nível abaixo. ── */
-.mapa-subtabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; margin-bottom: 16px; width: fit-content; }
-.mapa-subtab { padding: 7px 16px; border-radius: 6px; border: none; background: transparent; color: var(--text2);
-  font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
-.mapa-subtab.active { background: var(--accent); color: #fff; }
-.mapa-subtab:hover:not(.active) { color: var(--text); }
-
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
    baixos que os padrões do resto da tela. */
@@ -215,13 +207,7 @@ a { text-decoration: none; color: inherit; }
   .emp-card, .emp-card * { color: #000 !important; }
   .mapa-tabela, .mapa-tabela th, .mapa-tabela td { color: #000 !important; background: #fff !important; }
   .mapa-tabela th { background: #eee !important; }
-  /* !important em overflow/max-height é obrigatório aqui: a regra de tela
-     .mapa-wrap (mais abaixo no arquivo, fora de @media) tem a MESMA
-     especificidade e vem DEPOIS no CSS -- em empate, quem vem por último
-     vence. Sem o !important, o max-height:463px/overflow-y:auto da rolagem
-     em tela "vazava" pra impressão e cortava do PDF tudo que estava abaixo
-     das ~15 linhas visíveis (mesmo linhas marcadas pra imprimir). */
-  .mapa-wrap { border-color: #999 !important; overflow: visible !important; max-height: none !important; }
+  .mapa-wrap { border-color: #999 !important; overflow: visible; }
   /* Marcação de seleção é só uma ferramenta de tela -- nunca aparece no
      papel. Com "imprimir-so-selecionados" ligado (algum item marcado na
      hora de clicar em Imprimir), some com as linhas não marcadas também. */
@@ -543,11 +529,8 @@ select.form-input option { background: var(--surface2); }
   border-radius: 7px; white-space: nowrap; z-index: 99;
   box-shadow: 0 4px 16px rgba(0,0,0,.5); transition: opacity .1s;
 }
-/* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ──
-   max-height calibrado pra mostrar exatamente 15 linhas + cabeçalho (medido
-   ao vivo: header 27.5px + 15 × linha 29px ≈ 462.5px) — acima disso rola
-   verticalmente com o cabeçalho fixo (position:sticky no th, já existente). */
-.mapa-wrap { overflow-x: auto; overflow-y: auto; max-height: 463px; border: 1px solid var(--border); border-radius: var(--radius); }
+/* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ── */
+.mapa-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
 .mapa-tabela { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
 .mapa-tabela th, .mapa-tabela td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--border); }
 .mapa-tabela th { background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 10px;
@@ -851,6 +834,75 @@ select.form-input option { background: var(--surface2); }
 .alvo-selecionado { background: rgba(0,212,170,.07); border: 1.5px solid var(--accent2); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .alvo-selecionado-nome { font-weight: 700; font-size: 14px; color: var(--text); }
 .alvo-selecionado-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+/* ── Situacao tab: MONTAR MIX destaque ───────────────────────────────────── */
+.situacao-tab-mix { border-color: rgba(251,191,36,.4) !important; }
+.situacao-tab-mix.active { background: rgba(251,191,36,.18) !important; color: #fbbf24 !important; border-color: #fbbf24 !important; }
+
+/* ── Montar Mix ──────────────────────────────────────────────────────────── */
+.mm-wrap { display:flex; flex-direction:column; gap:0; }
+.mm-search-wrap { position:relative; margin-bottom:4px; }
+.mm-tabela th, .mm-tabela td { font-size:12px; }
+.mm-papel-sel {
+  width:100%; padding:5px 8px; border:1px solid var(--border2);
+  border-radius:6px; background:var(--surface2); color:var(--text);
+  font-size:12px; font-family:inherit; cursor:pointer; outline:none;
+}
+.mm-papel-sel:focus { border-color:var(--accent); }
+.mm-remove-btn {
+  background:none; border:none; color:var(--text3); cursor:pointer;
+  font-size:13px; padding:2px 6px; border-radius:4px; line-height:1;
+}
+.mm-remove-btn:hover { background:rgba(255,80,80,.18); color:#ff6b6b; }
+.mm-obs-wrap { margin-top:20px; display:flex; flex-direction:column; gap:6px; }
+.mm-obs-label { font-size:12px; font-weight:700; color:var(--text2); letter-spacing:.02em; text-transform:uppercase; }
+.mm-obs-textarea {
+  width:100%; box-sizing:border-box; padding:10px 14px;
+  border:1.5px solid var(--border); border-radius:var(--radius);
+  background:var(--surface); color:var(--text); font-size:13px;
+  font-family:inherit; resize:vertical; outline:none; line-height:1.55;
+}
+.mm-obs-textarea:focus { border-color:var(--accent); }
+.mm-obs-textarea::placeholder { color:var(--text3); }
+.mm-actions-bar { margin-top:18px; display:flex; align-items:center; gap:14px; }
+.btn-briefing-mm {
+  padding:9px 20px; font-size:13px; font-weight:700;
+  background:rgba(251,191,36,.18); color:#fbbf24;
+  border:1.5px solid rgba(251,191,36,.5); border-radius:8px;
+  cursor:pointer; font-family:inherit; transition:background .15s, border-color .15s;
+}
+.btn-briefing-mm:hover { background:rgba(251,191,36,.3); border-color:#fbbf24; }
+.btn-briefing-mm:disabled { opacity:.4; cursor:default; }
+.mm-count-hint { font-size:12px; color:var(--text3); }
+
+/* ── Briefing IA Modal ───────────────────────────────────────────────────── */
+.brief-ia-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9300;
+  opacity:0; transition:opacity .25s; pointer-events:none;
+}
+.brief-ia-overlay.aberto { opacity:1; pointer-events:all; }
+.brief-ia-modal {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-60%) scale(.96);
+  width:min(820px, 96vw); max-height:88vh; display:flex; flex-direction:column;
+  background:var(--surface); border:1px solid var(--border2); border-radius:14px;
+  box-shadow:0 24px 64px rgba(0,0,0,.35); z-index:9301;
+  opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; overflow:hidden;
+}
+.brief-ia-modal.aberto { opacity:1; transform:translate(-50%,-50%) scale(1); pointer-events:all; }
+.brief-ia-header {
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  padding:18px 22px 14px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0;
+}
+.brief-ia-label { font-size:15px; font-weight:800; color:var(--text); }
+.brief-ia-sub { font-size:12px; color:var(--text3); margin-top:3px; }
+.brief-ia-body { overflow-y:auto; padding:20px 22px 28px; flex:1; }
+.brief-ia-pre {
+  margin:0; white-space:pre-wrap; word-break:break-word;
+  font-family:'Courier New', Courier, monospace; font-size:12.5px;
+  line-height:1.65; color:var(--text2);
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:8px; padding:16px 18px;
+}
 
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(15,17,23,.85); z-index: 9500;
@@ -1302,57 +1354,7 @@ select.form-input option { background: var(--surface2); }
       <div class="filtro-bar" id="mapa-bairro-filtros"></div>
     </div>
   </div>
-  <!-- Sub-abas do Mapa Geral: Lista (tabela principal) e Dados (gráfico +
-       tabelas de estoque geral) -- pedido do usuário, tira o gráfico/tabelas
-       resumo de cima da lista e organiza numa aba própria. -->
-  <div class="mapa-subtabs">
-    <button class="mapa-subtab active" id="mapaSubBtnLista" onclick="mudarSubAbaMapa_('lista')">Lista</button>
-    <button class="mapa-subtab" id="mapaSubBtnDados" onclick="mudarSubAbaMapa_('dados')">Dados</button>
-  </div>
-
-  <div id="mapaSubPainelLista" class="mapa-subpanel">
-  <div class="mapa-toolbar">
-    <div class="filtro-bar" id="mapa-estagio-filtros"></div>
-    <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
-    <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem) -- com itens marcados, imprime só eles">🖨️ PDF</button>
-    <button class="btn-imprimir-lista" onclick="exportarMapaSelecionadosCSV_()" title="Baixar em .csv os empreendimentos marcados na tabela (marque nas caixinhas antes)">⬇️ CSV</button>
-  </div>
-  <div class="mapa-papel-bar" id="mapa-papel-bar">
-    <span class="mapa-papel-label">Papel:</span>
-    <div id="mapa-papel-filtros"></div>
-  </div>
-
-  <div class="mapa-wrap">
-    <table class="mapa-tabela">
-      <thead>
-        <tr>
-          <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
-          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
-          <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
-          <th onclick="ordenarMapaGeral_('bairro')">Bairro<span class="mapa-seta" id="seta-mapa-bairro"></span></th>
-          <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Padrão<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
-          <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
-          <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
-          <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
-          <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
-          <th onclick="ordenarMapaGeral_('prazoEntrega')" title="Contagem regressiva até entrega (Em obras) ou progressiva desde entrega (Pronto novo)">Prazo<span class="mapa-seta" id="seta-mapa-prazoEntrega"></span></th>
-          <th onclick="ordenarMapaGeral_('vendido')" title="Percentual de estoque vendido (%)">% ESTQ<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
-          <th onclick="ordenarMapaGeral_('qtdestq')" title="Quantidade de unidades disponíveis em estoque">QTD ESTQ<span class="mapa-seta" id="seta-mapa-qtdestq"></span></th>
-          <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
-          <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
-          <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
-          <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
-        </tr>
-      </thead>
-      <tbody id="mapa-tbody">
-        <tr><td colspan="16" class="mapa-vazio">Carregando...</td></tr>
-      </tbody>
-    </table>
-  </div>
-  </div>
-
-  <div id="mapaSubPainelDados" class="mapa-subpanel" style="display:none">
-  <!-- GRÁFICO CARTESIANO DE ESTOQUE + tabelas ESTOQUE GERAL por %/QTD -->
+  <!-- GRÁFICO CARTESIANO DE ESTOQUE — acima da tabela Mapa Geral -->
   <div class="grafico-estoque-wrap" id="graficoEstoqueWrap">
     <div class="grafico-estoque-titulo">
       <span style="opacity:.55">Faixas de estoque vendido:</span>
@@ -1369,6 +1371,46 @@ select.form-input option { background: var(--surface2); }
       <div id="graficoEstoqueTooltip" class="grafico-tooltip" style="display:none;opacity:0"></div>
     </div>
   </div>
+
+  <div class="mapa-toolbar">
+    <div class="filtro-bar" id="mapa-estagio-filtros"></div>
+    <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
+    <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem) -- com itens marcados, imprime só eles">🖨️ PDF</button>
+  </div>
+  <div class="mapa-papel-bar" id="mapa-papel-bar">
+    <span class="mapa-papel-label">Papel:</span>
+    <div id="mapa-papel-filtros"></div>
+  </div>
+
+  <div class="mapa-wrap">
+    <table class="mapa-tabela">
+      <thead>
+        <tr>
+          <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
+          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
+          <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
+          <th onclick="ordenarMapaGeral_('faixa')" title="Faixa de estoque vendido: A(0–25%) B(26–50%) C(51–75%) D(76–99%)">Faixa<span class="mapa-seta" id="seta-mapa-faixa"></span></th>
+          <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
+          <th onclick="ordenarMapaGeral_('prazoEntrega')" title="Contagem regressiva até entrega (Em obras) ou progressiva desde entrega (Pronto novo)">Prazo<span class="mapa-seta" id="seta-mapa-prazoEntrega"></span></th>
+          <th onclick="ordenarMapaGeral_('vendido')" title="Percentual de estoque vendido (%)">% ESTQ<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
+          <th onclick="ordenarMapaGeral_('qtdestq')" title="Quantidade de unidades disponíveis em estoque">QTD ESTQ<span class="mapa-seta" id="seta-mapa-qtdestq"></span></th>
+          <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
+          <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
+          <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
+          <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Tipo<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
+          <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
+          <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
+          <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
+          <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
+          <th onclick="ordenarMapaGeral_('prazo')" title="Prazo de Pagamento (meses)">PG<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
+          <th onclick="ordenarMapaGeral_('pv')" title="Prazo de Venda — meses desde o lançamento">PV<span class="mapa-seta" id="seta-mapa-pv"></span></th>
+          <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
+        </tr>
+      </thead>
+      <tbody id="mapa-tbody">
+        <tr><td colspan="17" class="mapa-vazio">Carregando...</td></tr>
+      </tbody>
+    </table>
   </div>
   </div>
 
@@ -1405,6 +1447,7 @@ select.form-input option { background: var(--surface2); }
         <button class="situacao-tab active" id="tabAbaNovos" onclick="setSituacaoAba_('NOVOS')">NOVOS <span class="situacao-tab-count" id="countAbaNovos"></span></button>
         <button class="situacao-tab" id="tabAbaNaPlanta" onclick="setSituacaoAba_('NA_PLANTA')">NA PLANTA <span class="situacao-tab-count" id="countAbaNaPlanta"></span></button>
         <button class="situacao-tab" id="tabAbaProdutoAlvo" onclick="setSituacaoAba_('PRODUTO_ALVO')">PRODUTO ALVO <span class="situacao-tab-count" id="countAbaProdutoAlvo"></span></button>
+        <button class="situacao-tab situacao-tab-mix" id="tabAbaMontarMix" onclick="setSituacaoAba_('MONTAR_MIX')">MONTAR MIX</button>
       </div>
     </div>
     <div class="sec-sub" id="estrategiasSecSub">Mix estratégico de 7 ofertas por Padrão/Faixa de preço — calculado ao vivo a partir do Score de Tração e Similaridade já usados em Lançamentos. NOVOS (prontos/entregues) e NA PLANTA (em obras/lançamentos) nunca se misturam no mesmo mix.</div>
@@ -1416,6 +1459,7 @@ select.form-input option { background: var(--surface2); }
     <div class="vazio-segmento">Carregando...</div>
   </div>
   <div id="blocoProdutoAlvo" style="display:none"></div>
+  <div id="blocoMontarMix" style="display:none"></div>
   </div>
 
   <!-- INTELIGÊNCIA (fundida de dashboard.html) -- carregada sob demanda na
@@ -1613,6 +1657,25 @@ select.form-input option { background: var(--surface2); }
 <div id="copyBriefOverlay" class="brief-overlay" onclick="fecharCopyBrief_()"></div>
 <div id="copyBriefDrawer" class="brief-drawer">
   <div id="copyBriefContent"></div>
+</div>
+
+<!-- BRIEFING IA MODAL (Montar Mix) -->
+<div id="briefIaOverlay" class="brief-ia-overlay" onclick="fecharBriefIa_()"></div>
+<div id="briefIaModal" class="brief-ia-modal">
+  <div class="brief-ia-header">
+    <div>
+      <div class="brief-ia-label">🤖 Briefing para IA Editora</div>
+      <div class="brief-ia-sub" id="briefIaSub"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <button class="btn-mini" id="btnBriefIaCsv" onclick="downloadBriefIaCsv_()" title="Baixar como CSV">📥 CSV</button>
+      <button class="btn-mini" onclick="copiarBriefIa_()" title="Copiar texto">📋 Copiar</button>
+      <button class="btn-mini" onclick="fecharBriefIa_()">✕ Fechar</button>
+    </div>
+  </div>
+  <div class="brief-ia-body">
+    <pre id="briefIaTexto" class="brief-ia-pre"></pre>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -2203,26 +2266,10 @@ function mudarAbaLancamentos(nome) {
   if (nome === 'estrategias') carregarEstrategiasLazy_();
   if (nome === 'inteligencia') carregarInteligenciaLazy_();
   if (nome === 'applancamentos') carregarComentariosAppLazy_();
-  // Re-renderiza o gráfico ao voltar pra aba Mapa Geral -- só se a sub-aba
-  // Dados (onde o gráfico mora agora) estiver aberta, senão o canvas
-  // continua com offsetWidth=0 e renderGraficoEstoque_ ficaria reagendando
-  // via requestAnimationFrame pra sempre (ver guarda de offsetParent nela).
-  if (nome === 'mapa' && _mapaSubAbaAtual === 'dados') requestAnimationFrame(renderGraficoEstoque_);
+  // Re-renderiza o gráfico ao voltar pra aba Mapa Geral (canvas oculto tinha
+  // offsetWidth=0 quando os dados foram carregados pela primeira vez).
+  if (nome === 'mapa')  requestAnimationFrame(renderGraficoEstoque_);
   if (nome === 'radar') renderRadarMercado_();
-}
-
-// Sub-abas do Mapa Geral: "lista" (tabela principal, padrão) e "dados"
-// (gráfico de estoque + tabelas ESTOQUE GERAL por %/QTD). O gráfico só é
-// (re)desenhado quando a sub-aba Dados está de fato visível -- ver guarda
-// de offsetParent em renderGraficoEstoque_.
-let _mapaSubAbaAtual = 'lista';
-function mudarSubAbaMapa_(nome) {
-  _mapaSubAbaAtual = nome;
-  document.getElementById('mapaSubPainelLista').style.display = nome === 'lista' ? '' : 'none';
-  document.getElementById('mapaSubPainelDados').style.display = nome === 'dados' ? '' : 'none';
-  document.getElementById('mapaSubBtnLista').classList.toggle('active', nome === 'lista');
-  document.getElementById('mapaSubBtnDados').classList.toggle('active', nome === 'dados');
-  if (nome === 'dados') requestAnimationFrame(renderGraficoEstoque_);
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
@@ -2519,49 +2566,6 @@ function imprimirListaAtiva_() {
   window.print();
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('imprimir-so-selecionados'));
-
-// Baixa em .csv os empreendimentos marcados na tabela Mapa Geral -- mesma
-// lista que o botão PDF imprime (_mapaSelecionados, independente de
-// rolagem/scroll), só que como arquivo pra planilha em vez de impressão.
-// Ordem segue _mapaIndicesVisiveis (respeita o filtro/ordenação atual da
-// tela), não a ordem bruta de _mapaRows.
-function exportarMapaSelecionadosCSV_() {
-  if (!_mapaSelecionados.size) {
-    mostrarToast('Marque pelo menos um empreendimento na tabela antes de baixar o CSV.', 'erro');
-    return;
-  }
-  const ordem = _mapaIndicesVisiveis.filter(i => _mapaSelecionados.has(i));
-  const CAMPOS_MAPA_CSV_ = ['ID', 'Empreendimento', 'Bairro', 'Padrão', 'Construtora',
-    'Área mín (m²)', 'Área máx (m²)', 'R$/m²', 'Estágio', 'Prazo entrega (meses)',
-    '% Vendido', 'Qtd estoque', 'Score Tração', 'Similaridade (%)', 'Menor preço', 'Alerta'];
-  const linhas = [CAMPOS_MAPA_CSV_.map(csvEscapar_).join(',')];
-  ordem.forEach(i => {
-    const r = _mapaRows[i];
-    if (!r) return;
-    const prazoM = prazoEntregaMeses_(r);
-    const alerta = r.isSobraSuspeita ? 'Sobra suspeita' : (r.alerta ? r.alerta.titulo : '');
-    linhas.push([
-      r.idEmpreendimento || '', r.nome || '', r.bairro || '', r.padrao || '', r.construtora || '',
-      r.areaMin > 0 ? r.areaMin : '', r.areaMax > 0 ? r.areaMax : '', r.m2Medio > 0 ? r.m2Medio : '',
-      r.estagio || '', prazoM !== null ? prazoM : '', r.pctVendido != null ? r.pctVendido : '',
-      r.estoque != null ? r.estoque : '', r.comp > 0 ? r.comp : '', r.simil > 0 ? r.simil : '',
-      r.menorPreco > 0 ? r.menorPreco : '', alerta,
-    ].map(csvEscapar_).join(','));
-  });
-  // BOM na frente -- sem isso o Excel abre acento/ç errado em CSV UTF-8
-  // (mesmo padrão de exportarPadroesVendedorCSV_).
-  const csv  = String.fromCharCode(0xFEFF) + linhas.join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'mapa_geral_selecionados_' + new Date().toISOString().slice(0, 10) + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  mostrarToast(`CSV baixado com ${ordem.length} empreendimento${ordem.length !== 1 ? 's' : ''}.`, 'ok');
-}
 
 function extrairDados() {
   const txtB1 = document.getElementById('txtBloco1').value.trim();
@@ -5971,7 +5975,6 @@ function mapaCampoValor_(r, campo) {
   if (campo === 'construtora') return r.construtora.toLowerCase();
   if (campo === 'v')           return r.scoreVendedor;
   if (campo === 'tipo')        return (r.padrao || '').toLowerCase();
-  if (campo === 'bairro')      return (r.bairro || '').toLowerCase();
   if (campo === 's')           return r.simil;
   if (campo === 'area')        return r.areaMin;
   if (campo === 'preco')       return r.menorPreco;
@@ -6006,7 +6009,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -6023,7 +6026,7 @@ function renderMapaGeral_() {
                     && (_mapaPapelFiltro == null  || papelMercado_(r) === _mapaPapelFiltro));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -6053,18 +6056,33 @@ function renderMapaGeral_() {
       <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
       <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}${oport}</td>
-      <td>${r.bairro || '—'}</td>
-      <td>${r.padrao || '—'}</td>
-      <td>${r.construtora}</td>
-      <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
-      <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
+      ${(() => {
+        const f = typeof fatiaEstoque_ === 'function' ? fatiaEstoque_(r.pctVendido) : '—';
+        const bg = f==='A' ? 'rgba(0,200,120,.16)'  : f==='B' ? 'rgba(50,150,255,.16)'
+                 : f==='C' ? 'rgba(255,152,0,.16)'  : f==='D' ? 'rgba(255,107,107,.18)' : '';
+        const cl = f==='A' ? '#00c878' : f==='B' ? '#3296ff'
+                 : f==='C' ? '#ff9800' : f==='D' ? '#ff6b6b' : 'var(--text3)';
+        return `<td style="text-align:center;font-weight:700;font-size:12px;background:${bg};color:${cl};letter-spacing:.04em">${f}</td>`;
+      })()}
       <td>${r.estagio}</td>
       <td class="mapa-num">${renderPrazoCelula_(r)}</td>
       <td class="mapa-num">${r.pctVendido > 0 ? r.pctVendido + '%' : '—'}</td>
       <td class="mapa-num">${r.estoque > 0 ? r.estoque : (r.estoque === 0 ? '0' : '—')}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
+      <td>${r.construtora}</td>
+      <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
+      <td>${r.padrao || '—'}</td>
       <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge${similBadgeCls_(r.simil) ? ' '+similBadgeCls_(r.simil) : ''}" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>` : '—'}</td>
+      <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
+      <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
+      <td class="mapa-num">${r.prazo > 0 ? r.prazo + 'm' : '—'}</td>
+      <td class="mapa-num" style="white-space:nowrap;font-size:11px;${r.prazoLancEntrega !== null && r.prazoVenda > 0 ? `color:${r.prazoVenda > r.prazoLancEntrega ? 'var(--danger)' : 'var(--accent2)'}` : ''}">${(() => {
+        if (!r.prazoVenda) return '—';
+        if (r.prazoLancEntrega === null) return r.prazoVenda + 'm';
+        const apos = r.prazoVenda - r.prazoLancEntrega;
+        return `(${r.prazoLancEntrega}${apos >= 0 ? '+' : ''}${apos})=${r.prazoVenda}`;
+      })()}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
     </tr>`;
   }).join('');
@@ -6291,11 +6309,6 @@ function renderMapaGeral_() {
 
     const canvas = document.getElementById('graficoEstoqueCanvas');
     if (!canvas) return;
-
-    // Sub-aba "Dados" fechada (display:none) -- offsetParent é null nesse
-    // caso. Sai sem reagendar: senão o requestAnimationFrame logo abaixo
-    // ficaria se rechamando pra sempre enquanto a aba nunca é aberta.
-    if (canvas.offsetParent === null) return;
 
     const W = canvas.offsetWidth || canvas.parentElement.offsetWidth;
     if (!W) { requestAnimationFrame(window.renderGraficoEstoque_); return; }
@@ -7518,12 +7531,17 @@ function setSituacaoAba_(aba) {
   document.getElementById('tabAbaNovos').classList.toggle('active', aba === 'NOVOS');
   document.getElementById('tabAbaNaPlanta').classList.toggle('active', aba === 'NA_PLANTA');
   document.getElementById('tabAbaProdutoAlvo').classList.toggle('active', aba === 'PRODUTO_ALVO');
+  document.getElementById('tabAbaMontarMix').classList.toggle('active', aba === 'MONTAR_MIX');
   const isProdAlvo = aba === 'PRODUTO_ALVO';
-  document.getElementById('blocosSegmentos').style.display = isProdAlvo ? 'none' : '';
+  const isMix     = aba === 'MONTAR_MIX';
+  document.getElementById('blocosSegmentos').style.display  = (!isProdAlvo && !isMix) ? '' : 'none';
   document.getElementById('blocoProdutoAlvo').style.display = isProdAlvo ? '' : 'none';
-  document.getElementById('filtroPadrao').style.display = isProdAlvo ? 'none' : '';
+  document.getElementById('blocoMontarMix').style.display   = isMix ? '' : 'none';
+  document.getElementById('filtroPadrao').style.display     = (!isProdAlvo && !isMix) ? '' : 'none';
   if (isProdAlvo) {
     renderProdutoAlvoUI_();
+  } else if (isMix) {
+    renderMontarMixUI_();
   } else {
     recalcularSegmentos_();
     renderBlocosSegmentos_();
@@ -7741,6 +7759,250 @@ function limparProdutoAlvo_() {
   const bar = document.getElementById('alvoDropdown');
   if (bar) bar.innerHTML = '';
   renderAlvoMix_();
+}
+
+// ── MONTAR MIX MANUAL ───────────────────────────────────────────────────────
+// Mix livre de 7–9 empreendimentos escolhidos manualmente pelo corretor,
+// cada um com um "papel" definido a dedo (Isca, Alvo Primário, etc.).
+// Dados vêm de _itensScoredCache (carregado junto com carregarEstrategias).
+
+let _mmItens_  = [];   // [{ it: itensScoredItem, papel: 'ISCA' }, ...]
+let _mmObs_    = '';   // Obs Finais (persistido enquanto aba aberta)
+let _mmQuery_  = '';
+let _mmRes_    = [];   // resultados da busca
+
+const MM_PAPEIS_ = [
+  { key: '',            label: '— papel —'         },
+  { key: 'ISCA',        label: '🎣 Isca'           },
+  { key: 'ALVO_PRIM',   label: '⭐ Alvo Primário'  },
+  { key: 'ALVO_SEC',    label: '🔄 Alvo Secundário' },
+  { key: 'ANCORA_SUP',  label: '⬆ Âncora Superior' },
+  { key: 'ANCORA_INF',  label: '⬇ Âncora Inferior' },
+  { key: 'COMPLEMENTAR',label: '🔀 Complementar'   },
+  { key: 'SUPORTE',     label: '🛡 Suporte'        },
+];
+
+function renderMontarMixUI_() {
+  const cont = document.getElementById('blocoMontarMix');
+  if (!cont) return;
+  cont.innerHTML = `
+<div class="mm-wrap">
+
+  <div class="mm-search-wrap">
+    <input class="alvo-search-input" id="mmSearchInput" type="text"
+      placeholder="Buscar empreendimento para adicionar ao mix…" autocomplete="off">
+    <div id="mmDropdown"></div>
+  </div>
+
+  <div id="mmTabelaWrap"></div>
+
+  <div class="mm-obs-wrap">
+    <label class="mm-obs-label" for="mmObsInput">Obs Finais:</label>
+    <textarea id="mmObsInput" class="mm-obs-textarea"
+      placeholder="Instruções pessoais adicionais para a IA editora…" rows="4">${_escapeHtml_(_mmObs_)}</textarea>
+  </div>
+
+  <div class="mm-actions-bar">
+    <button class="btn-mini btn-briefing-mm" onclick="abrirBriefIa_()" ${_mmItens_.length < 1 ? 'disabled' : ''}>
+      🤖 Gerar Briefing IA
+    </button>
+    <span class="mm-count-hint" id="mmCountHint"></span>
+  </div>
+
+</div>`;
+
+  const inp = document.getElementById('mmSearchInput');
+  inp.value = _mmQuery_;
+  inp.addEventListener('input', () => onMmSearch_(inp.value));
+
+  const obs = document.getElementById('mmObsInput');
+  obs.addEventListener('input', () => { _mmObs_ = obs.value; });
+
+  _renderMmTabela_();
+  _renderMmDropdown_();
+  _renderMmHint_();
+}
+
+function onMmSearch_(val) {
+  _mmQuery_ = val;
+  _renderMmDropdown_();
+}
+
+function _renderMmDropdown_() {
+  const bar = document.getElementById('mmDropdown');
+  if (!bar) return;
+  if (_mmQuery_.length < 2) { bar.innerHTML = ''; return; }
+  const usados = new Set(_mmItens_.map(x => x.it.e.idLancamento || x.it.e.idEmpreendimento));
+  _mmRes_ = (_itensScoredCache || [])
+    .filter(it => !usados.has(it.e.idLancamento || it.e.idEmpreendimento) &&
+      (it.e.nomeEmpreendimento || '').toLowerCase().includes(_mmQuery_.toLowerCase()))
+    .slice(0, 14);
+  if (!_mmRes_.length) { bar.innerHTML = '<div class="alvo-results"><div class="alvo-result-item" style="color:var(--text3)">Nenhum resultado.</div></div>'; return; }
+  bar.innerHTML = `<div class="alvo-results">${_mmRes_.map((it, i) => `
+    <div class="alvo-result-item" data-mmi="${i}">
+      <div class="alvo-result-nome">${it.e.nomeEmpreendimento || '—'}</div>
+      <div class="alvo-result-sub">${it.e.construtora || ''} · ${PADRAO_LABEL_MIX_[it.padrao] || it.padrao || ''} · ${fmtR$_(it.menorPreco)} · ${situacaoTexto_(it.e.status)}</div>
+    </div>`).join('')}</div>`;
+  bar.querySelectorAll('[data-mmi]').forEach(el => {
+    el.onclick = () => _mmAdicionarItem_(+el.dataset.mmi);
+  });
+}
+
+function _mmAdicionarItem_(idx) {
+  const it = _mmRes_[idx];
+  if (!it) return;
+  if (_mmItens_.length >= 9) { mostrarToast('Máximo de 9 empreendimentos atingido.', 'warn'); return; }
+  _mmItens_.push({ it, papel: '' });
+  _mmQuery_ = '';
+  const inp = document.getElementById('mmSearchInput');
+  if (inp) inp.value = '';
+  const bar = document.getElementById('mmDropdown');
+  if (bar) bar.innerHTML = '';
+  _renderMmTabela_();
+  _renderMmHint_();
+  _atualizarBtnBriefIa_();
+}
+
+function _mmRemoverItem_(idx) {
+  _mmItens_.splice(idx, 1);
+  _renderMmTabela_();
+  _renderMmHint_();
+  _atualizarBtnBriefIa_();
+}
+
+function _mmSetPapel_(idx, papel) {
+  if (_mmItens_[idx]) _mmItens_[idx].papel = papel;
+}
+
+function _renderMmTabela_() {
+  const wrap = document.getElementById('mmTabelaWrap');
+  if (!wrap) return;
+  if (!_mmItens_.length) {
+    wrap.innerHTML = '<div class="vazio-segmento" style="margin:16px 0">Nenhum empreendimento adicionado ainda. Busque acima para compor o mix.</div>';
+    return;
+  }
+  const optHtml = MM_PAPEIS_.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
+  wrap.innerHTML = `<div class="mapa-wrap" style="margin:16px 0 0"><table class="mapa-tabela mm-tabela">
+    <thead><tr>
+      <th style="width:180px">Papel</th>
+      <th>Empreendimento</th>
+      <th>Construtora</th>
+      <th>Padrão</th>
+      <th>Preço mín.</th>
+      <th>Estoque</th>
+      <th>Situação</th>
+      <th style="width:32px"></th>
+    </tr></thead>
+    <tbody>${_mmItens_.map((x, i) => {
+      const e = x.it.e;
+      const pad = x.it.padrao || '';
+      const COR_P = {'Popular':'#94a3b8','Médio':'#60a5fa','Alto':'#c084fc','Luxo':'#fbbf24'};
+      return `<tr>
+        <td><select class="mm-papel-sel" onchange="_mmSetPapel_(${i},this.value)">
+          ${MM_PAPEIS_.map(p => `<option value="${p.key}"${x.papel===p.key?' selected':''}>${p.label}</option>`).join('')}
+        </select></td>
+        <td><strong>${e.nomeEmpreendimento || '—'}</strong></td>
+        <td style="color:var(--text3)">${e.construtora || '—'}</td>
+        <td><span style="font-size:10px;font-weight:700;color:${COR_P[pad]||'var(--text3)'}">${pad||'—'}</span></td>
+        <td>${fmtR$_(x.it.menorPreco)}</td>
+        <td><strong>${e.estoque != null && e.estoque !== '' ? e.estoque : '—'}</strong></td>
+        <td>${situacaoBadgeHtml_(e.status)}</td>
+        <td style="text-align:center"><button class="mm-remove-btn" onclick="_mmRemoverItem_(${i})" title="Remover">✕</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function _renderMmHint_() {
+  const el = document.getElementById('mmCountHint');
+  if (el) el.textContent = `${_mmItens_.length} / 9 empreendimentos`;
+}
+
+function _atualizarBtnBriefIa_() {
+  const btn = document.querySelector('.btn-briefing-mm');
+  if (btn) btn.disabled = _mmItens_.length < 1;
+}
+
+function _escapeHtml_(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Briefing IA ─────────────────────────────────────────────────────────────
+let _briefIaCsvData_ = null;
+
+function abrirBriefIa_() {
+  if (!_mmItens_.length) return;
+  const linhas = _mmItens_.map(x => {
+    const e = x.it.e;
+    const papelLabel = (MM_PAPEIS_.find(p => p.key === x.papel) || {}).label || '—';
+    return { papel: papelLabel, nome: e.nomeEmpreendimento || '—', construtora: e.construtora || '—',
+      padrao: x.it.padrao || '—', preco: fmtR$_(x.it.menorPreco), estoque: e.estoque != null && e.estoque !== '' ? String(e.estoque) : '—',
+      situacao: situacaoTexto_(e.status) || '—', tracao: x.it.comp != null ? x.it.comp.toFixed(1) : '—' };
+  });
+
+  const now = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const colW = [22, 38, 26, 10, 14, 9, 12, 8];
+  const pad  = (s, n) => (s || '').slice(0, n).padEnd(n);
+  const hr   = '─'.repeat(colW.reduce((a,b)=>a+b+3, -3));
+
+  const header = `${pad('PAPEL',colW[0])} │ ${pad('EMPREENDIMENTO',colW[1])} │ ${pad('CONSTRUTORA',colW[2])} │ ${pad('PADRÃO',colW[3])} │ ${pad('PREÇO MÍN.',colW[4])} │ ${pad('ESTOQUE',colW[5])} │ ${pad('SITUAÇÃO',colW[6])} │ ${pad('TRAÇÃO',colW[7])}`;
+  const rows   = linhas.map(l =>
+    `${pad(l.papel,colW[0])} │ ${pad(l.nome,colW[1])} │ ${pad(l.construtora,colW[2])} │ ${pad(l.padrao,colW[3])} │ ${pad(l.preco,colW[4])} │ ${pad(l.estoque,colW[5])} │ ${pad(l.situacao,colW[6])} │ ${pad(l.tracao,colW[7])}`
+  ).join('\n');
+
+  const texto = [
+    '════════════════════════════════════════════════════════════════',
+    '  BRIEFING ESTRATÉGICO — MIX DE TRÁFEGO PAGO',
+    `  Gerado em: ${now} · BASE INTELIGENTE / imoveisemgoiania.com`,
+    '════════════════════════════════════════════════════════════════',
+    '',
+    '▸ INSTRUÇÃO PARA A IA EDITORA',
+    '  Você receberá abaixo um mix de empreendimentos já classificados',
+    '  por papel estratégico. Use esses dados para criar o briefing de',
+    '  campanha de tráfego pago, respeitando a hierarquia de papéis:',
+    '  Isca gera volume, Alvo Primário fecha, Âncoras criam percepção',
+    '  de valor. Nunca revele os nomes nos anúncios sem autorização.',
+    '',
+    '▸ MIX DE EMPREENDIMENTOS',
+    hr, header, hr, rows, hr,
+    '',
+    ...((_mmObs_ || '').trim() ? ['▸ OBSERVAÇÕES FINAIS DO CORRETOR', (_mmObs_ || '').trim(), ''] : []),
+    '════════════════════════════════════════════════════════════════',
+  ].join('\n');
+
+  // CSV para download
+  const csvLinhas = [
+    ['Papel','Empreendimento','Construtora','Padrão','Preço Mín.','Estoque','Situação','Tração'].join(';'),
+    ...linhas.map(l => [l.papel,l.nome,l.construtora,l.padrao,l.preco,l.estoque,l.situacao,l.tracao].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(';')),
+    '',
+    ['Obs Finais', `"${(_mmObs_||'').replace(/"/g,'""')}"`].join(';'),
+  ].join('\n');
+  _briefIaCsvData_ = csvLinhas;
+
+  document.getElementById('briefIaSub').textContent = `${_mmItens_.length} empreendimento${_mmItens_.length!==1?'s':''} · ${now}`;
+  document.getElementById('briefIaTexto').textContent = texto;
+  document.getElementById('briefIaOverlay').classList.add('aberto');
+  document.getElementById('briefIaModal').classList.add('aberto');
+}
+
+function fecharBriefIa_() {
+  document.getElementById('briefIaOverlay').classList.remove('aberto');
+  document.getElementById('briefIaModal').classList.remove('aberto');
+}
+
+function copiarBriefIa_() {
+  const pre = document.getElementById('briefIaTexto');
+  if (!pre) return;
+  navigator.clipboard.writeText(pre.textContent).then(() => mostrarToast('Texto copiado!', 'ok')).catch(() => mostrarToast('Erro ao copiar.', 'warn'));
+}
+
+function downloadBriefIaCsv_() {
+  if (!_briefIaCsvData_) return;
+  const blob = new Blob(['﻿' + _briefIaCsvData_], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'mix-estrategico.csv'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 // Publica sozinho o mix de TODOS os segmentos completos, nas duas situações
