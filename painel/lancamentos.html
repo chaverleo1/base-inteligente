@@ -8109,15 +8109,488 @@ function renderMmBriefDrawerContent_(alvo1, loc, padrao) {
 
 // Abre o briefing do mix manual no copyBriefDrawer padrão do Radar.
 function abrirBriefIa_() {
-  if (!_mmItens_.length) return;
-  const papeis = _mmMapearPapeisParaAuto_();
-  const alvo1  = papeis.ALVO_1 || _mmItens_[0].it;
-  const loc    = [alvo1.e.bairro, alvo1.e.cidade].filter(Boolean).join(', ') || 'localização privilegiada';
-  const padrao = PADRAO_LABEL_MIX_[alvo1.padrao] || alvo1.padrao || '';
-  _gatilhosAtual_ = [...gerarEixosCampanha_(papeis, loc, padrao), gerarRelatorioMixManual_(loc, padrao)];
-  document.getElementById('copyBriefContent').innerHTML = renderMmBriefDrawerContent_(alvo1, loc, padrao);
-  document.getElementById('copyBriefOverlay').classList.add('aberto');
-  document.getElementById('copyBriefDrawer').classList.add('aberto');
+  baixarBriefingMixMd_();
+}
+
+// ── BRIEFING MIX MANUAL para IA Editora (Google Ads) — mesmo padrão do
+// baixarBriefingSuporte_(), adaptado pro mix montado manualmente pelo corretor.
+function baixarBriefingMixMd_() {
+  if (!_mmItens_.length) { mostrarToast('Adicione ao menos um empreendimento ao mix.', 'aviso'); return; }
+
+  const agora = new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' });
+  const hoje  = new Date().toISOString().slice(0, 10);
+
+  const fmtPreco = v => v > 0
+    ? 'R$ ' + (v >= 1000000 ? (v / 1000000).toFixed(1).replace('.', ',') + 'M' : Math.round(v / 1000) + 'k')
+    : 'N/D';
+  const fmtMeses = m => m == null ? 'N/D' : (m < 0 ? `${-m} meses atrás` : `em ${m} meses`);
+  const fmtArea  = it => {
+    const us = it.e.unidades || [];
+    const areas = us.map(u => Number(u.areaUtil || u.area || 0)).filter(v => v > 0);
+    if (!areas.length) return 'N/D';
+    const mn = Math.round(Math.min(...areas)), mx = Math.round(Math.max(...areas));
+    return mn === mx ? `${mn}m²` : `${mn}–${mx}m²`;
+  };
+  const papelLabel = k => (MM_PAPEIS_.find(p => p.key === k) || {}).label || k || '—';
+
+  // Classificação: grupoA = com preço, grupoB = sem preço
+  const grupoA = _mmItens_.filter(x => x.it.menorPreco > 0);
+  const grupoB = _mmItens_.filter(x => !(x.it.menorPreco > 0));
+
+  const padroes = [...new Set(grupoA.map(x => x.it.padrao).filter(Boolean))].sort();
+  const bairros = [...new Set(grupoA.map(x => x.it.e.bairro).filter(b => b && b !== '—'))].sort();
+  const cidades = [...new Set(grupoA.map(x => x.it.e.cidade).filter(Boolean))].sort();
+
+  function detalheEmpMix_(arr, comPreco) {
+    if (!arr.length) return '(nenhum produto neste grupo)';
+    return arr.map((x, i) => {
+      const it = x.it; const e = it.e;
+      const prazoMeses = prazoEntregaMeses_({ previsaoEntrega: e.previsaoEntrega });
+      const campos = [
+        `- **Papel no Mix:** ${papelLabel(x.papel)}`,
+        `- **Construtora:** ${e.construtora || 'N/D'}`,
+        `- **Padrão:** ${it.padrao || 'N/D'}`,
+        `- **Estágio:** ${e.status || 'N/D'}`,
+        `- **Localização:** ${e.bairro || '—'} / ${e.cidade || '—'}`,
+        `- **Previsão de entrega:** ${e.previsaoEntrega || 'N/D'} (${fmtMeses(prazoMeses)})`,
+        `- **Estoque disponível:** ${e.estoque != null && e.estoque !== '' ? e.estoque : 'N/D'} unidades`,
+        `- **Total de unidades:** ${e.totalUnidades || 'N/D'}`,
+      ];
+      if (comPreco) {
+        campos.push(`- **% Vendido:** ${e.pctVendido != null ? e.pctVendido + '%' : 'N/D'}`);
+        campos.push(`- **Faixa de área:** ${fmtArea(it)}`);
+        campos.push(`- **Ticket a partir de:** ${fmtPreco(it.menorPreco)}`);
+        if (it.comp != null) campos.push(`- **Tração (score):** ${it.comp.toFixed(1)}`);
+        if (it.simil)        campos.push(`- **Simil (modelo):** ${it.simil}`);
+      }
+      return `\n### ${i + 1}. ${e.nomeEmpreendimento || '—'}\n${campos.join('\n')}`;
+    }).join('\n');
+  }
+
+  // Palavras negativas data-driven
+  const ORDEM_PADRAO_BRIEF_MM_ = ['Popular', 'Médio', 'Alto', 'Luxo'];
+  const MAPA_NEG_PADRAO_MM_    = {
+    'Popular': ['popular', 'econômico', 'minha casa minha vida', 'baixo custo'],
+    'Alto':    ['alto padrão', 'premium'],
+    'Luxo':    ['luxo', 'cobertura duplex', 'mansão'],
+  };
+  const padroesAusentes    = ORDEM_PADRAO_BRIEF_MM_.filter(p => !padroes.includes(p));
+  const negativasSugeridas = padroesAusentes.flatMap(p => MAPA_NEG_PADRAO_MM_[p] || []);
+  const bairrosKw = bairros.map(b =>
+    `**${b}:** "lançamento ${b.toLowerCase()}", "apartamento novo ${b.toLowerCase()}", "imóvel ${b.toLowerCase()} na planta"`
+  ).join('\n- ');
+
+  // Copy data-driven por padrão (idêntico ao briefing de Suporte)
+  const COPY_POR_PADRAO_MM_ = {
+    Luxo: {
+      objetivo: 'investimento',
+      keywords: (cid, bai) => [`apartamento de luxo na planta ${cid}`, `lançamento premium investimento ${bai}`, `cobertura alto padrão em obras`],
+      titulo1: 'Exclusividade Antes da Entrega',
+      titulo2: n => `${n} unidade${n === 1 ? '' : 's'} de altíssimo padrão`,
+      titulo3: 'Consulta Gratuita · Sem Compromisso',
+      descricao1: cid => `Lançamentos de luxo em obras em ${cid}. Invista na planta com valorização projetada.`,
+      descricao2: 'Atendimento personalizado com especialista. Sem compromisso.',
+    },
+    Alto: {
+      objetivo: 'investimento',
+      keywords: (cid, bai) => [`apartamento alto padrão na planta ${cid}`, `lançamento alto padrão investimento ${bai}`, `apartamento valorização em obras`],
+      titulo1: 'Invista Antes da Entrega · Alto Padrão',
+      titulo2: n => `${n} opç${n === 1 ? 'ão' : 'ões'} em obras disponíve${n === 1 ? 'l' : 'is'}`,
+      titulo3: 'Consulta Gratuita · Sem Compromisso',
+      descricao1: cid => `Lançamentos alto padrão em obras em ${cid}. Compre na planta e valorize antes da entrega.`,
+      descricao2: 'Veja opções filtrando por bairro, área e orçamento. Atendimento gratuito com especialista.',
+    },
+    Médio: {
+      objetivo: 'moradia',
+      keywords: (cid, bai) => [`apartamento médio padrão ${bai}`, `2 quartos novo ${bai}`, `lançamento ${cid}`],
+      titulo1: bai => `Seu Apart. Novo em ${bai}`,
+      titulo2: 'Preço de Lançamento · Em Obras',
+      titulo3: 'Consulta Gratuita Hoje',
+      descricao1: cid => `Empreendimentos em obras com preço de planta em ${cid}. Consulte condições de pagamento.`,
+      descricao2: 'Configure seu perfil e veja quantas opções combinam com você. Atendimento gratuito com especialista.',
+    },
+    Popular: {
+      objetivo: 'moradia',
+      keywords: (cid, bai) => [`apartamento popular novo ${cid}`, `apartamento entrada ${cid}`, `1 quarto novo ${bai}`],
+      titulo1: 'Realize Seu Sonho na Planta',
+      titulo2: 'Consulte Condições de Pagamento',
+      titulo3: 'Veja Opções · Consulta Gratuita',
+      descricao1: cid => `Lançamentos populares em obras em ${cid}. Fale com um especialista sobre financiamento.`,
+      descricao2: 'Descubra quanto cabe no seu bolso. Acesse o app e configure em menos de 3 minutos.',
+    },
+  };
+  const NOME_PUBLICO_POR_PADRAO_MM_ = {
+    Luxo: 'Investidor de Alto Padrão (Luxo)', Alto: 'Investidor de Alto Padrão',
+    Médio: 'Morador de Padrão Médio', Popular: 'Comprador de Entrada (Popular)',
+  };
+  const ORDEM_PADRAO_MISSAO_MM_ = ['Luxo', 'Alto', 'Médio', 'Popular'];
+  const publicosHtml = ORDEM_PADRAO_MISSAO_MM_
+    .filter(p => padroes.includes(p))
+    .map((p, i) => {
+      const copy = COPY_POR_PADRAO_MM_[p];
+      const prodPadrao = grupoA.filter(x => x.it.padrao === p);
+      const cidade     = cidades[0] || 'Goiânia';
+      const baiPadrao  = bairros.find(b => prodPadrao.some(x => x.it.e.bairro === b)) || bairros[0] || '[bairro]';
+      const [kw1, kw2, kw3] = copy.keywords(cidade, baiPadrao);
+      const titulo1   = typeof copy.titulo1   === 'function' ? copy.titulo1(baiPadrao)       : copy.titulo1;
+      const titulo2   = typeof copy.titulo2   === 'function' ? copy.titulo2(prodPadrao.length) : copy.titulo2;
+      const descricao1 = typeof copy.descricao1 === 'function' ? copy.descricao1(cidade)      : copy.descricao1;
+      const tickets    = prodPadrao.map(x => x.it.menorPreco).filter(v => v > 0);
+      const dispersao  = (tickets.length >= 2 && Math.max(...tickets) > Math.min(...tickets) * 1.8)
+        ? `\n> ⚠️ **Ticket disperso dentro do padrão ${p}:** ${fmtPreco(Math.min(...tickets))} a ${fmtPreco(Math.max(...tickets))}. Considere segmentar por faixa de ticket dentro deste público.`
+        : '';
+      return `**PÚBLICO ${i + 1} — ${NOME_PUBLICO_POR_PADRAO_MM_[p]} (Mix Manual)**
+- Palavras-chave: \`${kw1}\`, \`${kw2}\`, \`${kw3}\`
+- Título 1: "${titulo1}"
+- Título 2: "${titulo2}"
+- Título 3: "${copy.titulo3}"
+- Descrição 1: "${descricao1}"
+- Descrição 2: "${copy.descricao2}"
+- Preset: \`?objetivo=${copy.objetivo}&padroes=${p}&situacoes=em_obras\`${dispersao}`;
+    }).join('\n\n');
+
+  // Produto isca (fundo de funil)
+  const iscaX   = _mmItens_.find(x => x.papel === 'ISCA') || grupoA[0] || _mmItens_[0];
+  const iscaNome = iscaX ? (iscaX.it.e.nomeEmpreendimento || '[Empreendimento]') : '[Empreendimento]';
+
+  // Tabela de papéis (seção 5)
+  const papeisSummary = _mmItens_.map(x =>
+    `| ${papelLabel(x.papel)} | ${x.it.e.nomeEmpreendimento || '—'} | ${x.it.padrao || '—'} | ${x.it.e.bairro || '—'} | ${fmtPreco(x.it.menorPreco)} | ${x.it.e.estoque != null && x.it.e.estoque !== '' ? x.it.e.estoque : 'N/D'} |`
+  ).join('\n');
+
+  // Obs finais (seção extra quando preenchida)
+  const obsSection = (_mmObs_ || '').trim()
+    ? `\n\n---\n\n## NOTA DO CORRETOR (Obs Finais)\n\n${_mmObs_.trim()}`
+    : '';
+
+  const txt = `# BRIEFING IA EDITORA — MIX MANUAL
+## BASE INTELIGENTE · Estratégia de Tráfego Pago
+*Gerado em: ${agora} · ${_mmItens_.length} produto${_mmItens_.length === 1 ? '' : 's'} no mix (${grupoA.length} com dado completo)*${obsSection}
+
+---
+
+## 1. CONTEXTO DO PROJETO
+
+**BASE INTELIGENTE** é o CRM interno de um corretor imobiliário especializado em lançamentos da Grande Goiânia. O sistema analisa continuamente o mercado e classifica cada empreendimento em categorias estratégicas, cruzando dois critérios:
+
+1. **Estágio da obra:** Em planta · Em obras · Pronto novo
+2. **Percentual de unidades vendidas** (= 1 − estoque ÷ total × 100)
+
+Este briefing refere-se a um **Mix Manual** — uma seleção personalizada de empreendimentos montada pelo corretor para uma campanha específica de Google Ads. Os produtos foram escolhidos e classificados por papéis estratégicos (Isca, Alvo Primário, Âncora, etc.) de forma deliberada, fora do algoritmo automático de Suporte/Resistência.
+
+---
+
+## 2. ORIENTAÇÕES OBRIGATÓRIAS DE CONFORMIDADE E MARCA (LEIA ANTES DE CRIAR QUALQUER PEÇA)
+
+Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landing page, e-mail) gerada a partir deste briefing:
+
+1. **Identificação da empresa:** toda peça que reproduzir a identificação da empresa deve usar exatamente **"CJ 27357 - Líder Empreendimentos Imobiliários LTDA."** — sem abreviar, sem trocar a ordem, sem omitir o CJ.
+
+2. **Nunca prometer nome de empreendimento, endereço exato ou "unidade específica" antes do contato.** A única exceção é o remarketing de fundo de funil (Etapa ③, seção 7) pra quem já viu aquele nome específico dentro do próprio funil (App Lançamentos). Nos anúncios de topo e meio de funil, usar sempre bairro/região/padrão — nunca o nome do produto.
+
+3. **Nunca usar claims de condição de pagamento sem dado real que sustente** (ex: "sem entrada", "documentação gratuita", "financiamento facilitado", "parcelamento direto"). Só usar esse tipo de chamada se houver confirmação de que a condição está disponível pros produtos do Grupo A ativo (seção 6). Sem essa confirmação, preferir chamadas neutras como "Consulte condições de pagamento" ou "Fale com um especialista sobre financiamento" — a "Consulta gratuita"/"Atendimento gratuito" em si pode ser usada normalmente, é sobre o atendimento, não sobre a condição de pagamento do imóvel.
+
+4. **Nunca usar "apartamento popular" nem preço abaixo do piso real da base (R$ 283 mil)** até haver estoque de verdade na categoria Popular. ${padroes.includes('Popular') ? 'O Mix ativo TEM produtos em Popular agora — ainda assim, confirme o preço mínimo real antes de anunciar qualquer valor específico.' : 'O Mix ativo NÃO tem nenhum produto em Popular agora (ver seção 6) — qualquer anúncio de "apartamento popular" ou preço de entrada abaixo de R$ 283 mil estaria prometendo produto que não existe no mix hoje.'}
+
+5. **Horário real de veiculação dos anúncios (ad schedule/dayparting):** configurar os anúncios pra rodar **seg–sex 10h–20h, sáb e dom 10h–18h**. Isso é DIFERENTE do horário de atendimento humano (seg–sex 8h–18h, sáb 8h–12h, ver seção 9/CONDICIONAIS IMPORTANTES) — o anúncio pode ficar no ar em uma janela mais ampla, é só a resposta humana em tempo real que fica restrita ao horário de atendimento.
+
+---
+
+## 3. O QUE É MIX MANUAL (contexto desta campanha)
+
+**Mix Manual** é uma seleção estratégica personalizada, montada pelo corretor para uma campanha específica. Diferente do algoritmo automático de Suporte/Resistência (que classifica toda a base), o Mix Manual permite:
+
+- **Combinar diferentes perfis de produto** numa única campanha coesa
+- **Definir papéis de atração** — isca para topo de funil, alvo primário para conversão, âncoras para posicionamento de preço
+- **Cruzar nichos** — ex: mix de padrão Alto com um Médio como isca de entrada, ou mistura de "Em obras" com "Pronto novo"
+
+**Quando usar:** o corretor monta o mix quando quer comunicar uma estratégia multi-produto em vez de anunciar apenas uma categoria homogênea (caso do briefing de Suporte padrão).
+
+---
+
+## 4. PAPÉIS ESTRATÉGICOS — O QUE CADA UM SIGNIFICA
+
+| Papel | Função na Campanha |
+|---|---|
+| 🎣 Isca | Produto de entrada: atraente, preço ou ticket "isca", usado no topo/meio de funil. Captura volume de atenção. |
+| ⭐ Alvo Primário | Produto principal da campanha. É esse que a IA deve conduzir o cliente a considerar. Fundo de funil foca aqui. |
+| 🔄 Alvo Secundário | Produto de suporte ao Alvo Primário — ativa quando o cliente quer ver mais opções antes de decidir. |
+| ⬆ Âncora Superior | Produto acima do ticket médio do mix. Faz o Alvo parecer mais acessível por comparação. |
+| ⬇ Âncora Inferior | Produto abaixo do ticket médio do mix. Amplia o leque sem sair do nicho. |
+| 🔀 Complementar | Produto com atributo diferente (bairro, tipologia, construtora) que agrega diversidade ao mix. |
+| 🛡 Suporte | Produto que sustenta o mix: valida o preço de mercado, serve como fallback se o Alvo Primário não encaixar. |
+
+---
+
+## 5. MIX MONTADO — VISÃO GERAL
+
+**${_mmItens_.length} produto${_mmItens_.length === 1 ? '' : 's'} no mix** · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}
+
+| Papel | Empreendimento | Padrão | Bairro | Ticket mín. | Estoque |
+|---|---|---|---|---|---|
+${papeisSummary}
+
+---
+
+## 6. EMPREENDIMENTOS — SEGMENTADOS POR GRUPO OPERACIONAL
+
+A estratégia de Ads (seção 7) e o orçamento (seção 8) são montados só com o Grupo A — único com dado completo o bastante pra virar anúncio agora.
+
+**GRUPO A — CAMPANHA ATIVA AGORA (dados completos)**
+> ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} com ticket definido — alimenta a estratégia de Google Ads (seção 7) e o orçamento (seção 8).
+${grupoA.length ? grupoA.map(x => x.it.e.nomeEmpreendimento || '—').join(' • ') : '(nenhum)'}
+
+**GRUPO B — SEM PREÇO DEFINIDO (monitorar, não anunciar ainda)**
+> ${grupoB.length} produto${grupoB.length === 1 ? '' : 's'} sem tabela de vendas definida — aguardar preço para incluir na campanha. NÃO usar nos grupos de anúncio da seção 7.
+${grupoB.length ? grupoB.map(x => x.it.e.nomeEmpreendimento || '—').join(' • ') : '(nenhum)'}
+
+---
+
+### Detalhamento — Grupo A (campanha ativa)
+${detalheEmpMix_(grupoA, true)}
+
+### Detalhamento — Grupo B (sem preço)
+${detalheEmpMix_(grupoB, false)}
+
+---
+
+## 7. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS
+
+### OBJETIVO GERAL
+Criar uma estratégia de tráfego pago no **Google Ads** para atrair leads altamente qualificados — pessoas com intenção real de comprar um imóvel de lançamento — que clicarão no anúncio e acessarão o **App Lançamentos** já com os filtros configurados conforme o nicho do anúncio.
+
+A **meta de conversão final** (configurada no Google Ads) é a conclusão da última etapa: a tela **"Confirmado! Sua consultoria está agendada."** (Step 8 do App), acionada quando o cliente confirma o WhatsApp.
+
+---
+
+> **Base de produtos desta seção: Grupo A apenas** (${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}). Grupo B fica de fora até ter preço definido — ver seção 6. Vale também a seção 2 (Orientações obrigatórias de conformidade e marca) em todas as peças criadas a partir daqui.
+
+### FUNIL EM 3 ETAPAS
+
+#### ① TOPO DE FUNIL — Reconhecimento e Volume
+**Objetivo:** Mapear a demanda real; identificar quais nichos, bairros e padrões geram mais interesse.
+
+- **Tipo:** Search ampla + Performance Max
+- **Segmentação:** In-market "Imóveis para comprar", "Financiamento imobiliário"
+- **Público:** 25–55 anos · Grande Goiânia · Renda acima da média
+- **Chamada isca:** "Veja os melhores lançamentos de [Bairro] antes de todos — Consulta gratuita"
+- **Destino:** App Lançamentos SEM preset (tela inicial, cliente faz os próprios filtros)
+- **URL:** \`https://imoveisemgoiania.com/?utm_source=google&utm_medium=cpc&utm_campaign=mix-topo\`
+- **Orçamento e CPC:** ver seção 8 (R$ 20/dia, CPC máximo R$ 6,00 nesta etapa)
+- **Meta:** Volume de cliques + identificação dos segmentos que mais convertem
+
+#### ② MEIO DE FUNIL — Consideração por Nicho
+**Objetivo:** Direcionar leads aquecidos para produtos específicos alinhados ao perfil detectado na Etapa 1.
+
+- **Tipo:** Search segmentada + Display Remarketing
+- **Segmentação:** Remarketing de visitantes que não converteram + lookalike de conversores
+
+${publicosHtml || '_Nenhum público gerado — Grupo A não tem padrão algum identificado neste mix._'}
+
+#### ③ FUNDO DE FUNIL — Decisão e Conversão
+**Objetivo:** Atingir usuários com altíssima intenção — visitaram o app, viram resultados, mas ainda não converteram.
+
+- **Tipo:** RLSA (Remarketing List for Search Ads) + Customer Match
+- **Segmentação:** Visitantes que chegaram ao Step 6 (resultados) mas não completaram o Step 8 (conversão)
+- **Anúncios:** Personalizados por empreendimento específico quando possível
+- **Chamada:** "Você viu ${iscaNome} · Ainda há unidades · Consulta gratuita"
+- **Preset:** Configurado com o padrão e situação do empreendimento específico
+- **Meta:** Maximizar conversão com custo mínimo por lead
+
+---
+
+### PALAVRAS-CHAVE POR LOCALIDADE (base dos empreendimentos identificados)
+
+${bairros.length ? '- ' + bairrosKw : '(bairros a definir conforme a base de dados)'}
+
+### EXTENSÕES RECOMENDADAS
+
+- **Sitelinks:** "Ver em obras" · "Ver prontos para morar" · "Calcular parcelas" · "Falar com especialista"
+- **Frases de destaque:** "Consulte condições de pagamento" · "Atendimento gratuito" · "Lançamento exclusivo" · "Alta valorização"
+- **Callout:** "${grupoA.length} lançamentos em ${cidades[0] || 'Goiânia'}" · "Consulta 100% gratuita" · "Atendimento em até 2h"
+- **Imagem:** Renderização do empreendimento + selo "${grupoA.length} opç${grupoA.length === 1 ? 'ão' : 'ões'} disponíve${grupoA.length === 1 ? 'l' : 'is'}"
+
+### PALAVRAS NEGATIVAS (OBRIGATÓRIO — adicionar em todas as campanhas)
+
+Sem negativação, o Google mostra o anúncio pra buscas irrelevantes e gasta orçamento sem retorno.
+
+**Fixas (todas as campanhas de lançamento):**
+aluguel • para alugar • locação • temporada • airbnb
+usado • segunda mão • revenda • particular
+terreno • rural • chácara • sítio
+emprego • vaga • trabalho • corretor de imóveis
+gratuito • grátis • de graça
+financiamento caixa (só quando fora de contexto de compra — não negativar a palavra isolada)
+
+**Sugeridas com base no mix atual do Grupo A${padroesAusentes.length ? ' (não inclui: ' + padroesAusentes.join(', ') + ')' : ''}:**
+${negativasSugeridas.length ? negativasSugeridas.join(' • ') : '(Mix cobre todos os padrões — nenhuma sugestão adicional)'}
+
+---
+
+## 8. ORÇAMENTO SUGERIDO — FASE DE VALIDAÇÃO (30 DIAS)
+
+**Grupo A ativo:** ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} em ${padroes.length} padr${padroes.length === 1 ? 'ão' : 'ões'}
+
+| Etapa do funil | Orçamento diário | Orçamento mensal |
+|---|---|---|
+| Topo de funil (sondagem) | R$ 20/dia | R$ 600/mês |
+| Meio de funil (por nicho) | R$ 50/dia | R$ 1.500/mês |
+| Fundo de funil (remarketing) | R$ 20/dia | R$ 600/mês |
+| **TOTAL** | **R$ 90/dia** | **R$ 2.700/mês** |
+
+**CPC máximo (topo de funil):** R$ 6,00 — lance manual ou meta de CPC no Google Ads, pra não deixar o algoritmo consumir o orçamento rápido demais numa etapa que ainda é só sondagem.
+
+**Horário de veiculação (ad schedule):** seg–sex 10h–20h, sáb e dom 10h–18h (ver regra 5 da seção 2 — diferente do horário de atendimento humano).
+
+**Após os 30 dias:** dobrar o orçamento no público (dos gerados na seção 7) com o menor CPL e pausar os que não converteram nenhum lead.
+
+---
+
+## 9. APP LANÇAMENTOS — RESUMO DO FUNIL
+
+**URL Base (produção):** \`https://imoveisemgoiania.com\` (a raiz do domínio redireciona pro App Lançamentos preservando todos os parâmetros da URL — não precisa do caminho /app-lancamentos.html)
+**URL Base (GitHub Pages, referência/repositório):** \`https://chaverleo1.github.io/base-inteligente/app-lancamentos.html\`
+**Google Analytics:** G-1XHJ44834Q
+
+### ETAPAS (STEPS) DO APP
+
+**Nota:** "Step" é o ID interno usado no código (não-sequencial, histórico) — "Ordem de exibição" é a ordem real que o cliente vê (1 a 10), é essa que importa pra configurar conversão/funil no Google Ads.
+
+| Step (ID interno) | Ordem de exibição | Nome | O que acontece | Dado capturado |
+|------|------|------|---------------|---------------|
+| 0 | 1 | Landing | Hero animado com contador de lançamentos ativos | — |
+| 5 | 2 | Passo 1/4 | Cliente escolhe padrão (Popular/Médio/Alto/Luxo) + objetivo (morar/investir) | \`D.padroes\`, \`D.objetivo\` |
+| 2 | 3 | Passo 2/4 | Sliders de orçamento máximo e área útil mínima | \`D.orcamento\`, \`D.area\` |
+| 3 | 4 | Confirmação | Resumo dos filtros + quantidade de empreendimentos compatíveis | — |
+| 1 | 5 | Passo 3/4 | Primeiro nome do cliente | \`D.nome\` |
+| 4 | 6 | Passo 4/4 | Motivação / tipo de imóvel mais adequado | \`D.motivacao\` |
+| 6 | 7 | Resultados | Cards dos empreendimentos compatíveis; cliente pode favoritar | \`D.favoritados\` |
+| 7 | 8 | Captura | Resumo + favoritos + campo de WhatsApp → botão "CONFIRMAR CONSULTORIA" | \`D.whatsapp\` |
+| 9 | 9 | Agendamento | Pergunta surpresa: deseja agendar atendimento? (opcional) | \`D.agendamento\` |
+| **8** | **10** | **CONFIRMADO ✅** | **"Confirmado, [Nome]! Sua consultoria está agendada."** | **🎯 META DE CONVERSÃO** |
+
+### VARIÁVEIS DO SISTEMA (coletadas ao longo do funil)
+
+\`\`\`
+D.nome          — Primeiro nome do cliente
+D.whatsapp      — WhatsApp com DDD (validado em dois campos para confirmar)
+D.objetivo      — "moradia" ou "investimento"
+D.padroes       — Set: Popular · Médio · Alto · Luxo (múltipla escolha)
+D.situacoes     — Set: "em_obras" · "pronto_novo" (múltipla escolha)
+D.orcamento     — Orçamento máximo em R$ (slider)
+D.area          — Área útil mínima em m² (slider)
+D.motivacao     — Perfil de necessidade específica
+D.favoritados   — IDs dos empreendimentos salvos como favorito pelo cliente
+D.agendamento   — { dia, hora, modo } se agendou atendimento (Step 9)
+D.sessionId     — ID único de sessão (rastreamento de funil por etapa)
+D.utmSource     — utm_source da URL (ex: "google")
+D.utmMedium     — utm_medium (ex: "cpc")
+D.utmCampaign   — utm_campaign (ex: "mix-manual-q3")
+D.origemAcesso  — Origem calculada (utm_source ou "direto")
+\`\`\`
+
+### CONDICIONAIS IMPORTANTES
+
+- **Preset de URL:** Ao chegar com \`?preset=\` ou \`?situacoes=em_obras\`, o app pré-marca os filtros e pula direto para os sliders (Step 2), reduzindo o atrito do funil
+- **Horário de atendimento:** Botão de WhatsApp na tela final SÓ aparece dentro do horário comercial (seg–sex 8h–18h, sáb 8h–12h). Fora dele: exibe contador de próxima abertura
+- **Validação de WhatsApp:** Step 7 exige que os dois campos coincidam antes de habilitar "Confirmar"
+- **Agendamento surpresa:** Step 9 fica entre "Confirmar" e a tela final — opcional; se aceito, modifica a tela final (mostra data/hora em vez de botão WhatsApp)
+
+---
+
+## 10. COMO USAR OS PRESETS NOS ANÚNCIOS (deep-link)
+
+O App Lançamentos aceita presets nomeados ou parâmetros raw na URL.
+
+### Presets pré-configurados
+
+**Implementado:** conferido direto contra \`PRESETS_URL_\` em app-lancamentos.html — todos os presets abaixo já estão publicados e funcionando.
+
+| Preset | Objetivo | Padrões | Situação | Implementado |
+|--------|----------|---------|----------|--------------|
+| \`investidor-alto\` | Investimento | Alto, Luxo | Pronto novo | ✅ Sim |
+| \`investidor-medio\` | Investimento | Médio, Alto | Qualquer | ✅ Sim |
+| \`investidor-todos\` | Investimento | Todos | Qualquer | ✅ Sim |
+| \`moradia-popular\` | Moradia | Popular, Médio | Pronto novo | ✅ Sim |
+| \`moradia-alto\` | Moradia | Alto | Pronto novo | ✅ Sim |
+| \`pronto-alto\` | Investimento | Alto, Luxo | Pronto novo | ✅ Sim |
+| \`obras-medio\` | Investimento | Médio | Em obras | ✅ Sim |
+
+### URL completa para Google Ads (com UTM)
+
+**Como deve ir ao ar (produção):**
+\`\`\`
+https://imoveisemgoiania.com/?preset=obras-medio&utm_source=google&utm_medium=cpc&utm_campaign=mix-manual-q3
+\`\`\`
+
+**Referência (GitHub Pages, mesmo conteúdo):**
+\`\`\`
+https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-medio&utm_source=google&utm_medium=cpc&utm_campaign=mix-manual-q3
+\`\`\`
+
+### Parâmetros raw (personalização total)
+
+\`\`\`
+https://imoveisemgoiania.com/?objetivo=[moradia|investimento]
+&padroes=[Popular,Médio,Alto,Luxo]   ← vírgula-separado, múltiplos possíveis
+&situacoes=[em_obras,pronto_novo]    ← filtra por estágio da obra
+&utm_source=google
+&utm_medium=cpc
+&utm_campaign=[nome-da-campanha]
+\`\`\`
+
+**Exemplos práticos (produção):**
+\`\`\`
+# Mix manual — padrão médio em obras
+https://imoveisemgoiania.com/?objetivo=moradia&padroes=Médio&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=mix-moradia-medio
+
+# Mix manual — investimento alto padrão
+https://imoveisemgoiania.com/?objetivo=investimento&padroes=Alto&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=mix-inv-alto
+
+# Mix manual — todos os padrões em obras (campanha ampla)
+https://imoveisemgoiania.com/?objetivo=investimento&padroes=Popular,Médio,Alto,Luxo&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=mix-obras-todos
+\`\`\`
+
+---
+
+## 11. META DE CONVERSÃO (Google Ads)
+
+**Evento principal:**
+- **Plataforma:** Google Analytics 4 · ID: G-1XHJ44834Q
+- **Tela de conversão:** Step 8 — "Confirmado, [Nome]! Sua consultoria está agendada."
+- **Gatilho:** Conclusão do preenchimento de WhatsApp + clique em "CONFIRMAR CONSULTORIA GRATUITA"
+- **Evento GA4 disparado:** \`registrarEventoFunil_\` com etapa = confirmado
+- **Valor de conversão sugerido:** R$ 200 (custo médio de lead qualificado no setor imobiliário)
+
+**Micro-conversões para otimização (opcional configurar):**
+1. Step 5 iniciado → interesse inicial (topo)
+2. Step 6 alcançado → alta intenção (viu os resultados)
+3. Step 7 alcançado → quase convertido (preencheu WhatsApp)
+4. **Step 8 concluído → ✅ MACRO-CONVERSÃO** ← configurar no Google Ads
+
+**STATUS DA CONVERSÃO — 3 estados:**
+- **(a) Instalada no GA4:** ✅ SIM — tag G-1XHJ44834Q confirmada no código do App Lançamentos
+- **(b) Configurada como evento no GA4:** ✅ SIM — \`registrarEventoFunil_\` dispara evento a cada etapa, incluindo a chegada no Step 8 (confirmado)
+- **(c) Importada como conversão no Google Ads:** ❓ **NÃO VERIFICÁVEL PELO CÓDIGO** — isso é uma configuração dentro da conta do Google Ads (Conversões → Importar do Google Analytics), fora do que o App Lançamentos consegue confirmar sozinho. **Checar direto no painel do Google Ads antes de assumir que já está configurada.**
+
+**Configuração recomendada (proposta, ainda a aplicar/validar no item c acima):**
+- Tipo: Importar do Google Analytics 4
+- Evento: Chegada ao Step 8
+- Modelo de atribuição: Data-driven (ou Último clique como fallback)
+- Janela de conversão: 30 dias (ciclo de decisão imobiliário médio)
+- Meta de ROAS sugerida: Fase inicial = Maximizar conversões (sem meta de ROAS); após 30+ conversões → mudar para ROAS alvo
+
+---
+
+*Documento gerado automaticamente pela BASE INTELIGENTE em ${agora}*
+*Para uso exclusivo de estratégia de tráfego pago — não distribuir publicamente*`;
+
+  const blob = new Blob([txt], { type: 'text/markdown;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `briefing-mix-${hoje}.md`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  mostrarToast('Briefing gerado e baixado!', 'sucesso');
 }
 
 // Download CSV do mix (acessível pelo botão no header do drawer).
