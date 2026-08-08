@@ -1378,7 +1378,7 @@ const PRESETS_URL_ = {
   'moradia-alto':      { objetivo: 'moradia',       padroes: ['Alto'],             situacoes: ['pronto_novo'] },
   'pronto-alto':       { objetivo: 'investimento', padroes: ['Alto', 'Luxo'],      situacoes: ['pronto_novo'] },
   'obras-medio':       { objetivo: 'investimento', padroes: ['Médio'],             situacoes: ['em_obras'] },
-  'moradia-medio':     { objetivo: 'moradia',       padroes: ['Médio'],             situacoes: ['pronto_novo'] },
+  'moradia-medio':     { objetivo: 'moradia',       padroes: ['Médio'],             situacoes: ['pronto_novo'], orcamento: 500000, area: 51 },
 };
 
 function aplicarPresetURL_() {
@@ -1398,6 +1398,8 @@ function aplicarPresetURL_() {
         objetivo:  obj || 'moradia',
         padroes:   pad ? pad.split(',').map(s => s.trim()) : [],
         situacoes: sit ? sit.split(',').map(s => s.trim()) : [],
+        orcamento: params.get('orcamento') ? Number(params.get('orcamento')) : null,
+        area:      params.get('area')      ? Number(params.get('area'))      : null,
       };
     }
   }
@@ -1437,6 +1439,20 @@ function aplicarPresetURL_() {
   // ── 4. Pula direto para os sliders (step 2) ────────────────────────────
   montarConfigIniciais_();
   irParaStep(2);
+
+  // ── 5. Pré-configura sliders com valores do preset (sobrepõe o ponto médio)
+  if (cfg.orcamento) {
+    const sP = document.getElementById('sliderPreco');
+    const vP = Math.min(Math.max(Number(cfg.orcamento), PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
+    sP.value = vP;
+    atualizarPreco(vP);
+  }
+  if (cfg.area) {
+    const sM = document.getElementById('sliderMetragem');
+    const vM = Math.min(Math.max(Number(cfg.area), AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+    sM.value = vM;
+    atualizarMetragem(vM);
+  }
 }
 
 // Anima um contador de 0 até o valor real (Tela 1, "Temos hoje X lançamentos") --
