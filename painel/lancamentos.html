@@ -64,6 +64,14 @@ a { text-decoration: none; color: inherit; }
 .lanc-tab:hover:not(.active) { color: var(--text); }
 @media (max-width: 560px) { .lanc-tabs { width: 100%; } .lanc-tab { flex: 1; text-align: center; padding: 10px 8px; } }
 
+/* ── SUB-ABAS do Mapa Geral (Lista / Dados) — mesmo padrão visual das abas
+   principais (.lanc-tab), só um pouco menor por ser um nível abaixo. ── */
+.mapa-subtabs { display: flex; gap: 2px; background: var(--surface2); border-radius: 8px; padding: 3px; margin-bottom: 16px; width: fit-content; }
+.mapa-subtab { padding: 7px 16px; border-radius: 6px; border: none; background: transparent; color: var(--text2);
+  font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all .18s; white-space: nowrap; }
+.mapa-subtab.active { background: var(--accent); color: #fff; }
+.mapa-subtab:hover:not(.active) { color: var(--text); }
+
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
    baixos que os padrões do resto da tela. */
@@ -207,7 +215,13 @@ a { text-decoration: none; color: inherit; }
   .emp-card, .emp-card * { color: #000 !important; }
   .mapa-tabela, .mapa-tabela th, .mapa-tabela td { color: #000 !important; background: #fff !important; }
   .mapa-tabela th { background: #eee !important; }
-  .mapa-wrap { border-color: #999 !important; overflow: visible; }
+  /* !important em overflow/max-height é obrigatório aqui: a regra de tela
+     .mapa-wrap (mais abaixo no arquivo, fora de @media) tem a MESMA
+     especificidade e vem DEPOIS no CSS -- em empate, quem vem por último
+     vence. Sem o !important, o max-height:463px/overflow-y:auto da rolagem
+     em tela "vazava" pra impressão e cortava do PDF tudo que estava abaixo
+     das ~15 linhas visíveis (mesmo linhas marcadas pra imprimir). */
+  .mapa-wrap { border-color: #999 !important; overflow: visible !important; max-height: none !important; }
   /* Marcação de seleção é só uma ferramenta de tela -- nunca aparece no
      papel. Com "imprimir-so-selecionados" ligado (algum item marcado na
      hora de clicar em Imprimir), some com as linhas não marcadas também. */
@@ -529,8 +543,11 @@ select.form-input option { background: var(--surface2); }
   border-radius: 7px; white-space: nowrap; z-index: 99;
   box-shadow: 0 4px 16px rgba(0,0,0,.5); transition: opacity .1s;
 }
-/* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ── */
-.mapa-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+/* ── MAPA GERAL (tabela compacta, todas as colunas com seta de ordenação) ──
+   max-height calibrado pra mostrar exatamente 15 linhas + cabeçalho (medido
+   ao vivo: header 27.5px + 15 × linha 29px ≈ 462.5px) — acima disso rola
+   verticalmente com o cabeçalho fixo (position:sticky no th, já existente). */
+.mapa-wrap { overflow-x: auto; overflow-y: auto; max-height: 463px; border: 1px solid var(--border); border-radius: var(--radius); }
 .mapa-tabela { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
 .mapa-tabela th, .mapa-tabela td { padding: 5px 7px; text-align: left; border-bottom: 1px solid var(--border); }
 .mapa-tabela th { background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 10px;
@@ -1354,7 +1371,57 @@ select.form-input option { background: var(--surface2); }
       <div class="filtro-bar" id="mapa-bairro-filtros"></div>
     </div>
   </div>
-  <!-- GRÁFICO CARTESIANO DE ESTOQUE — acima da tabela Mapa Geral -->
+  <!-- Sub-abas do Mapa Geral: Lista (tabela principal) e Dados (gráfico +
+       tabelas de estoque geral) -- pedido do usuário, tira o gráfico/tabelas
+       resumo de cima da lista e organiza numa aba própria. -->
+  <div class="mapa-subtabs">
+    <button class="mapa-subtab active" id="mapaSubBtnLista" onclick="mudarSubAbaMapa_('lista')">Lista</button>
+    <button class="mapa-subtab" id="mapaSubBtnDados" onclick="mudarSubAbaMapa_('dados')">Dados</button>
+  </div>
+
+  <div id="mapaSubPainelLista" class="mapa-subpanel">
+  <div class="mapa-toolbar">
+    <div class="filtro-bar" id="mapa-estagio-filtros"></div>
+    <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
+    <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem) -- com itens marcados, imprime só eles">🖨️ PDF</button>
+    <button class="btn-imprimir-lista" onclick="exportarMapaSelecionadosCSV_()" title="Baixar em .csv os empreendimentos marcados na tabela (marque nas caixinhas antes)">⬇️ CSV</button>
+  </div>
+  <div class="mapa-papel-bar" id="mapa-papel-bar">
+    <span class="mapa-papel-label">Papel:</span>
+    <div id="mapa-papel-filtros"></div>
+  </div>
+
+  <div class="mapa-wrap">
+    <table class="mapa-tabela">
+      <thead>
+        <tr>
+          <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
+          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
+          <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
+          <th onclick="ordenarMapaGeral_('bairro')">Bairro<span class="mapa-seta" id="seta-mapa-bairro"></span></th>
+          <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Padrão<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
+          <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
+          <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
+          <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
+          <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
+          <th onclick="ordenarMapaGeral_('prazoEntrega')" title="Contagem regressiva até entrega (Em obras) ou progressiva desde entrega (Pronto novo)">Prazo<span class="mapa-seta" id="seta-mapa-prazoEntrega"></span></th>
+          <th onclick="ordenarMapaGeral_('vendido')" title="Percentual de estoque vendido (%)">% ESTQ<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
+          <th onclick="ordenarMapaGeral_('qtdestq')" title="Quantidade de unidades disponíveis em estoque">QTD ESTQ<span class="mapa-seta" id="seta-mapa-qtdestq"></span></th>
+          <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
+          <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
+          <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
+          <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
+        </tr>
+      </thead>
+      <tbody id="mapa-tbody">
+        <tr><td colspan="16" class="mapa-vazio">Carregando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+  <div id="mapaSubPainelDados" class="mapa-subpanel" style="display:none">
+  <!-- GRÁFICO CARTESIANO DE ESTOQUE + tabelas ESTOQUE GERAL por %/QTD -->
   <div class="grafico-estoque-wrap" id="graficoEstoqueWrap">
     <div class="grafico-estoque-titulo">
       <span style="opacity:.55">Faixas de estoque vendido:</span>
@@ -1371,46 +1438,6 @@ select.form-input option { background: var(--surface2); }
       <div id="graficoEstoqueTooltip" class="grafico-tooltip" style="display:none;opacity:0"></div>
     </div>
   </div>
-
-  <div class="mapa-toolbar">
-    <div class="filtro-bar" id="mapa-estagio-filtros"></div>
-    <span class="mapa-selecao-count" id="mapa-selecao-count" style="display:none"></span>
-    <button class="btn-imprimir-lista" onclick="imprimirListaAtiva_()" title="Imprimir/gerar PDF da lista ativa (paisagem) -- com itens marcados, imprime só eles">🖨️ PDF</button>
-  </div>
-  <div class="mapa-papel-bar" id="mapa-papel-bar">
-    <span class="mapa-papel-label">Papel:</span>
-    <div id="mapa-papel-filtros"></div>
-  </div>
-
-  <div class="mapa-wrap">
-    <table class="mapa-tabela">
-      <thead>
-        <tr>
-          <th class="mapa-check-col"><input type="checkbox" id="mapaCheckTodos" onchange="toggleMapaSelecaoTodos_(this.checked)" title="Marcar/desmarcar todos os visíveis"></th>
-          <th onclick="ordenarMapaGeral_('id')" title="Código único por NOME+CONSTRUTORA">ID<span class="mapa-seta" id="seta-mapa-id"></span></th>
-          <th onclick="ordenarMapaGeral_('nome')">Empreendimento<span class="mapa-seta" id="seta-mapa-nome"></span></th>
-          <th onclick="ordenarMapaGeral_('faixa')" title="Faixa de estoque vendido: A(0–25%) B(26–50%) C(51–75%) D(76–99%)">Faixa<span class="mapa-seta" id="seta-mapa-faixa"></span></th>
-          <th onclick="ordenarMapaGeral_('estagio')">Estágio<span class="mapa-seta" id="seta-mapa-estagio"></span></th>
-          <th onclick="ordenarMapaGeral_('prazoEntrega')" title="Contagem regressiva até entrega (Em obras) ou progressiva desde entrega (Pronto novo)">Prazo<span class="mapa-seta" id="seta-mapa-prazoEntrega"></span></th>
-          <th onclick="ordenarMapaGeral_('vendido')" title="Percentual de estoque vendido (%)">% ESTQ<span class="mapa-seta" id="seta-mapa-vendido"></span></th>
-          <th onclick="ordenarMapaGeral_('qtdestq')" title="Quantidade de unidades disponíveis em estoque">QTD ESTQ<span class="mapa-seta" id="seta-mapa-qtdestq"></span></th>
-          <th onclick="ordenarMapaGeral_('t')">T<span class="mapa-seta" id="seta-mapa-t"></span></th>
-          <th onclick="ordenarMapaGeral_('construtora')">Construtora<span class="mapa-seta" id="seta-mapa-construtora"></span></th>
-          <th onclick="ordenarMapaGeral_('v')">V<span class="mapa-seta" id="seta-mapa-v"></span></th>
-          <th onclick="ordenarMapaGeral_('tipo')" title="Padrão de preço (Popular/Médio/Alto/Luxo)">Tipo<span class="mapa-seta" id="seta-mapa-tipo"></span></th>
-          <th onclick="ordenarMapaGeral_('s')" title="Similaridade com Padrão Vendedor (0–100%)">S%<span class="mapa-seta" id="seta-mapa-s"></span></th>
-          <th onclick="ordenarMapaGeral_('area')">Faixa de áreas<span class="mapa-seta" id="seta-mapa-area"></span></th>
-          <th onclick="ordenarMapaGeral_('preco')">Menor preço<span class="mapa-seta" id="seta-mapa-preco"></span></th>
-          <th onclick="ordenarMapaGeral_('m2')">R$/m²<span class="mapa-seta" id="seta-mapa-m2"></span></th>
-          <th onclick="ordenarMapaGeral_('prazo')" title="Prazo de Pagamento (meses)">PG<span class="mapa-seta" id="seta-mapa-prazo"></span></th>
-          <th onclick="ordenarMapaGeral_('pv')" title="Prazo de Venda — meses desde o lançamento">PV<span class="mapa-seta" id="seta-mapa-pv"></span></th>
-          <th onclick="ordenarMapaGeral_('alerta')">Alerta<span class="mapa-seta" id="seta-mapa-alerta"></span></th>
-        </tr>
-      </thead>
-      <tbody id="mapa-tbody">
-        <tr><td colspan="17" class="mapa-vazio">Carregando...</td></tr>
-      </tbody>
-    </table>
   </div>
   </div>
 
@@ -2266,10 +2293,26 @@ function mudarAbaLancamentos(nome) {
   if (nome === 'estrategias') carregarEstrategiasLazy_();
   if (nome === 'inteligencia') carregarInteligenciaLazy_();
   if (nome === 'applancamentos') carregarComentariosAppLazy_();
-  // Re-renderiza o gráfico ao voltar pra aba Mapa Geral (canvas oculto tinha
-  // offsetWidth=0 quando os dados foram carregados pela primeira vez).
-  if (nome === 'mapa')  requestAnimationFrame(renderGraficoEstoque_);
+  // Re-renderiza o gráfico ao voltar pra aba Mapa Geral -- só se a sub-aba
+  // Dados (onde o gráfico mora agora) estiver aberta, senão o canvas
+  // continua com offsetWidth=0 e renderGraficoEstoque_ ficaria reagendando
+  // via requestAnimationFrame pra sempre (ver guarda de offsetParent nela).
+  if (nome === 'mapa' && _mapaSubAbaAtual === 'dados') requestAnimationFrame(renderGraficoEstoque_);
   if (nome === 'radar') renderRadarMercado_();
+}
+
+// Sub-abas do Mapa Geral: "lista" (tabela principal, padrão) e "dados"
+// (gráfico de estoque + tabelas ESTOQUE GERAL por %/QTD). O gráfico só é
+// (re)desenhado quando a sub-aba Dados está de fato visível -- ver guarda
+// de offsetParent em renderGraficoEstoque_.
+let _mapaSubAbaAtual = 'lista';
+function mudarSubAbaMapa_(nome) {
+  _mapaSubAbaAtual = nome;
+  document.getElementById('mapaSubPainelLista').style.display = nome === 'lista' ? '' : 'none';
+  document.getElementById('mapaSubPainelDados').style.display = nome === 'dados' ? '' : 'none';
+  document.getElementById('mapaSubBtnLista').classList.toggle('active', nome === 'lista');
+  document.getElementById('mapaSubBtnDados').classList.toggle('active', nome === 'dados');
+  if (nome === 'dados') requestAnimationFrame(renderGraficoEstoque_);
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
@@ -2566,6 +2609,49 @@ function imprimirListaAtiva_() {
   window.print();
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('imprimir-so-selecionados'));
+
+// Baixa em .csv os empreendimentos marcados na tabela Mapa Geral -- mesma
+// lista que o botão PDF imprime (_mapaSelecionados, independente de
+// rolagem/scroll), só que como arquivo pra planilha em vez de impressão.
+// Ordem segue _mapaIndicesVisiveis (respeita o filtro/ordenação atual da
+// tela), não a ordem bruta de _mapaRows.
+function exportarMapaSelecionadosCSV_() {
+  if (!_mapaSelecionados.size) {
+    mostrarToast('Marque pelo menos um empreendimento na tabela antes de baixar o CSV.', 'erro');
+    return;
+  }
+  const ordem = _mapaIndicesVisiveis.filter(i => _mapaSelecionados.has(i));
+  const CAMPOS_MAPA_CSV_ = ['ID', 'Empreendimento', 'Bairro', 'Padrão', 'Construtora',
+    'Área mín (m²)', 'Área máx (m²)', 'R$/m²', 'Estágio', 'Prazo entrega (meses)',
+    '% Vendido', 'Qtd estoque', 'Score Tração', 'Similaridade (%)', 'Menor preço', 'Alerta'];
+  const linhas = [CAMPOS_MAPA_CSV_.map(csvEscapar_).join(',')];
+  ordem.forEach(i => {
+    const r = _mapaRows[i];
+    if (!r) return;
+    const prazoM = prazoEntregaMeses_(r);
+    const alerta = r.isSobraSuspeita ? 'Sobra suspeita' : (r.alerta ? r.alerta.titulo : '');
+    linhas.push([
+      r.idEmpreendimento || '', r.nome || '', r.bairro || '', r.padrao || '', r.construtora || '',
+      r.areaMin > 0 ? r.areaMin : '', r.areaMax > 0 ? r.areaMax : '', r.m2Medio > 0 ? r.m2Medio : '',
+      r.estagio || '', prazoM !== null ? prazoM : '', r.pctVendido != null ? r.pctVendido : '',
+      r.estoque != null ? r.estoque : '', r.comp > 0 ? r.comp : '', r.simil > 0 ? r.simil : '',
+      r.menorPreco > 0 ? r.menorPreco : '', alerta,
+    ].map(csvEscapar_).join(','));
+  });
+  // BOM na frente -- sem isso o Excel abre acento/ç errado em CSV UTF-8
+  // (mesmo padrão de exportarPadroesVendedorCSV_).
+  const csv  = String.fromCharCode(0xFEFF) + linhas.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mapa_geral_selecionados_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast(`CSV baixado com ${ordem.length} empreendimento${ordem.length !== 1 ? 's' : ''}.`, 'ok');
+}
 
 function extrairDados() {
   const txtB1 = document.getElementById('txtBloco1').value.trim();
@@ -5975,6 +6061,7 @@ function mapaCampoValor_(r, campo) {
   if (campo === 'construtora') return r.construtora.toLowerCase();
   if (campo === 'v')           return r.scoreVendedor;
   if (campo === 'tipo')        return (r.padrao || '').toLowerCase();
+  if (campo === 'bairro')      return (r.bairro || '').toLowerCase();
   if (campo === 's')           return r.simil;
   if (campo === 'area')        return r.areaMin;
   if (campo === 'preco')       return r.menorPreco;
@@ -6009,7 +6096,7 @@ function renderMapaGeral_() {
   if (!tbody) return;
 
   if (!_mapaRows.length) {
-    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento cadastrado.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -6026,7 +6113,7 @@ function renderMapaGeral_() {
                     && (_mapaPapelFiltro == null  || papelMercado_(r) === _mapaPapelFiltro));
 
   if (!linhas.length) {
-    tbody.innerHTML = '<tr><td colspan="17" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="16" class="mapa-vazio">Nenhum empreendimento com esse filtro.</td></tr>';
     _mapaIndicesVisiveis = [];
     atualizarSetasMapaGeral_();
     atualizarUiSelecaoMapa_();
@@ -6056,33 +6143,18 @@ function renderMapaGeral_() {
       <td class="mapa-check-col" onclick="event.stopPropagation()"><input type="checkbox" onchange="toggleMapaSelecao_(${i}, this.checked)" ${_mapaSelecionados.has(i) ? 'checked' : ''}></td>
       <td class="mapa-id">${r.idEmpreendimento || '—'}</td>
       <td>${r.nome}${oport}</td>
-      ${(() => {
-        const f = typeof fatiaEstoque_ === 'function' ? fatiaEstoque_(r.pctVendido) : '—';
-        const bg = f==='A' ? 'rgba(0,200,120,.16)'  : f==='B' ? 'rgba(50,150,255,.16)'
-                 : f==='C' ? 'rgba(255,152,0,.16)'  : f==='D' ? 'rgba(255,107,107,.18)' : '';
-        const cl = f==='A' ? '#00c878' : f==='B' ? '#3296ff'
-                 : f==='C' ? '#ff9800' : f==='D' ? '#ff6b6b' : 'var(--text3)';
-        return `<td style="text-align:center;font-weight:700;font-size:12px;background:${bg};color:${cl};letter-spacing:.04em">${f}</td>`;
-      })()}
+      <td>${r.bairro || '—'}</td>
+      <td>${r.padrao || '—'}</td>
+      <td>${r.construtora}</td>
+      <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
+      <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
       <td>${r.estagio}</td>
       <td class="mapa-num">${renderPrazoCelula_(r)}</td>
       <td class="mapa-num">${r.pctVendido > 0 ? r.pctVendido + '%' : '—'}</td>
       <td class="mapa-num">${r.estoque > 0 ? r.estoque : (r.estoque === 0 ? '0' : '—')}</td>
       <td>${r.comp > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score de Tração ${r.comp.toFixed(1)}">T ${r.comp.toFixed(1)}</span>` : '—'}</td>
-      <td>${r.construtora}</td>
-      <td>${r.scoreVendedor > 0 ? `<span class="tv-score-badge ${classeScoreTracao_(r.comp)}" title="Score do Vendedor ${r.scoreVendedor}">V ${r.scoreVendedor}</span>` : '—'}</td>
-      <td>${r.padrao || '—'}</td>
       <td class="mapa-simil">${r.simil > 0 ? `<span class="simil-badge${similBadgeCls_(r.simil) ? ' '+similBadgeCls_(r.simil) : ''}" title="Similaridade com Padrão Vendedor: ${r.simil}%">${r.simil}%</span>` : '—'}</td>
-      <td class="mapa-num">${r.areaMin > 0 ? (r.areaMax > r.areaMin ? `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})} a ${r.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²` : `${r.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}m²`) : '—'}</td>
       <td class="mapa-num">${r.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(r.menorPreco) : '—'}</td>
-      <td class="mapa-num">${r.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(r.m2Medio) : '—'}</td>
-      <td class="mapa-num">${r.prazo > 0 ? r.prazo + 'm' : '—'}</td>
-      <td class="mapa-num" style="white-space:nowrap;font-size:11px;${r.prazoLancEntrega !== null && r.prazoVenda > 0 ? `color:${r.prazoVenda > r.prazoLancEntrega ? 'var(--danger)' : 'var(--accent2)'}` : ''}">${(() => {
-        if (!r.prazoVenda) return '—';
-        if (r.prazoLancEntrega === null) return r.prazoVenda + 'm';
-        const apos = r.prazoVenda - r.prazoLancEntrega;
-        return `(${r.prazoLancEntrega}${apos >= 0 ? '+' : ''}${apos})=${r.prazoVenda}`;
-      })()}</td>
       <td>${r.isSobraSuspeita ? '<span class="mapa-alerta mapa-alerta-negativo">⚠ Sobra suspeita</span>' : r.alerta ? `<span class="mapa-alerta mapa-alerta-${r.alerta.tipo}">${r.alerta.titulo}</span>` : '—'}</td>
     </tr>`;
   }).join('');
@@ -6309,6 +6381,11 @@ function renderMapaGeral_() {
 
     const canvas = document.getElementById('graficoEstoqueCanvas');
     if (!canvas) return;
+
+    // Sub-aba "Dados" fechada (display:none) -- offsetParent é null nesse
+    // caso. Sai sem reagendar: senão o requestAnimationFrame logo abaixo
+    // ficaria se rechamando pra sempre enquanto a aba nunca é aberta.
+    if (canvas.offsetParent === null) return;
 
     const W = canvas.offsetWidth || canvas.parentElement.offsetWidth;
     if (!W) { requestAnimationFrame(window.renderGraficoEstoque_); return; }
