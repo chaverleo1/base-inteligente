@@ -7927,78 +7927,218 @@ function _escapeHtml_(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Briefing IA ─────────────────────────────────────────────────────────────
-let _briefIaCsvData_ = null;
+// ── MONTAR MIX — Briefing IA ────────────────────────────────────────────────
+// Mesmo padrão do Radar: abre o copyBriefDrawer (painel lateral direito),
+// preenche _gatilhosAtual_ com gerarEixosCampanha_ + bloco IA Editora completo.
+// Dados buscados direto de _mmItens_[i].it.e (itensScoredCache já carregado).
 
+// Mapeia papéis manuais (MM_PAPEIS_) para as chaves esperadas por
+// gerarEixosCampanha_ (ISCA / ALVO_1 / ALVO_2 / ALVO_3 / ANCORA_SUP /
+// ANCORA_INF / COMPLEMENTAR). Só o primeiro item de cada chave entra.
+function _mmMapearPapeisParaAuto_() {
+  const papeis = {};
+  let alvo2used = false;
+  _mmItens_.forEach(x => {
+    const k = x.papel;
+    if (!k) return;
+    if      (k === 'ALVO_PRIM'  && !papeis.ALVO_1)     { papeis.ALVO_1     = x.it; }
+    else if (k === 'ALVO_SEC') {
+      if      (!alvo2used)         { papeis.ALVO_2 = x.it; alvo2used = true; }
+      else if (!papeis.ALVO_3)     { papeis.ALVO_3 = x.it; }
+    }
+    else if (k === 'ISCA'       && !papeis.ISCA)        { papeis.ISCA       = x.it; }
+    else if (k === 'ANCORA_SUP' && !papeis.ANCORA_SUP)  { papeis.ANCORA_SUP = x.it; }
+    else if (k === 'ANCORA_INF' && !papeis.ANCORA_INF)  { papeis.ANCORA_INF = x.it; }
+    else if ((k === 'COMPLEMENTAR' || k === 'SUPORTE') && !papeis.COMPLEMENTAR) {
+      papeis.COMPLEMENTAR = x.it;
+    }
+  });
+  // Fallback: se nenhum ALVO_PRIM foi escolhido, usa o primeiro item
+  if (!papeis.ALVO_1 && _mmItens_.length) papeis.ALVO_1 = _mmItens_[0].it;
+  return papeis;
+}
+
+// Bloco "Instruções para IA Editora" do mix manual — análogo a
+// gerarRelatorioCampanhaCompleto_ mas para todos os produtos do mix de uma vez.
+function gerarRelatorioMixManual_(loc, padrao) {
+  const now = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const n   = _mmItens_.length;
+
+  const produtosTexto = _mmItens_.map((x, idx) => {
+    const e = x.it.e;
+    const papelLabel = (MM_PAPEIS_.find(p => p.key === x.papel) || {}).label || '—';
+    const nome       = e.nomeEmpreendimento || '—';
+    const construtora = e.construtora || '—';
+    const padraoLabel = PADRAO_LABEL_MIX_[x.it.padrao] || x.it.padrao || '—';
+    const preco      = fmtR$_(x.it.menorPreco);
+    const situacao   = situacaoTexto_(e.status) || '—';
+    const entrega    = e.previsaoEntrega || '';
+    const estoqueN   = (e.estoque != null && e.estoque !== '') ? Number(e.estoque) : null;
+    const total      = Number(e.totalUnidades) || 0;
+    const pctVend    = (total > 0 && estoqueN !== null) ? Math.round(((total - estoqueN) / total) * 100) : null;
+    const estoqueStr = estoqueN !== null ? `${estoqueN} unidade${estoqueN !== 1 ? 's' : ''} disponível` : 'não informado';
+    const pctStr     = pctVend !== null ? `${pctVend}% já vendido` : '';
+    const lazerList  = String(e.lazer || '').split(',').map(s => s.trim()).filter(Boolean);
+    const conceito   = String(e.conceito || '').trim();
+    const tracao     = x.it.comp != null ? x.it.comp.toFixed(1) : '—';
+    const simil      = x.it.simil != null ? `${x.it.simil}%` : '—';
+    const tipologias = listaTipologiasTexto_(x.it);
+    const condicoes  = condicoesPagamentoTexto_(x.it);
+
+    return `─── Produto ${idx + 1} de ${n} ── ${papelLabel}
+Nome: ${nome}
+Construtora: ${construtora}
+Padrão: ${padraoLabel} · Score de Tração: ${tracao} · Similaridade: ${simil}
+Situação: ${situacao}${entrega ? ` · Previsão de entrega: ${entrega}` : ''}
+Preço mínimo: ${preco} · ${pctStr ? pctStr + ' · ' : ''}${estoqueStr}
+Tipologias disponíveis:
+${tipologias}
+Lazer: ${lazerList.length ? lazerList.join(', ') : 'não informado na base'}
+Conceito: ${conceito || 'não informado na base'}
+Condições de pagamento: ${condicoes || 'não informadas na base'}`;
+  }).join('\n\n');
+
+  const obsText = (_mmObs_ || '').trim();
+
+  const instrucoes = `═══════════════════════════════════════════════════════
+BLOCO 1 DE 3 — PAPEL E REGRAS FIXAS (seu contrato como IA Editora)
+═══════════════════════════════════════════════════════
+Você é a IA Editora de uma campanha de comunicação imobiliária. Você recebe um MIX MANUAL de ${n} produto${n!==1?'s':''} montado pelo corretor, cada um com um papel estratégico definido por ele. Você recebe dois insumos: este bloco de regras e o BLOCO 2 (dados reais). Você não recebe nenhum exemplo pronto de copy, script ou arte — quem produz isso é você, seguindo o BLOCO 3.
+
+Regras que não podem ser quebradas:
+- Tom sempre EDUCACIONAL/consultivo, nunca vendedor ou de urgência. Linha editorial "Guia de Decisão": conteúdo que ensina a comparar/decidir, usando estes empreendimentos como exemplo real.
+- Nenhuma arte pode revelar o nome de nenhum dos empreendimentos nem seus endereços exatos.
+- Use exclusivamente os dados do BLOCO 2. Se um dado não estiver lá, não invente — trate como "não informado".
+- Respeite a hierarquia de papéis: Isca gera volume de leads, Alvo Primário fecha negócio, Âncoras criam percepção de valor, Alvo Secundário amplia opções, Complementar/Suporte reforça o argumento.
+- Todo conteúdo gerado (Tarefas 1 a 4) deve seguir exatamente o formato do BLOCO 3, sem pular campos e sem adicionar tarefas além das 4 listadas.
+
+═══════════════════════════════════════════════════════
+BLOCO 2 DE 3 — DADOS REAIS DO MIX MANUAL (${n} produto${n!==1?'s':''} · gerado em ${now})
+═══════════════════════════════════════════════════════
+Localização de referência: ${loc}
+Padrão de referência: ${padrao}
+
+${produtosTexto}
+${obsText ? `\n───────────────────────────────────────────────────────
+OBSERVAÇÕES FINAIS DO CORRETOR
+───────────────────────────────────────────────────────
+${obsText}
+` : ''}
+═══════════════════════════════════════════════════════
+BLOCO 3 DE 3 — TAREFAS A DESENVOLVER (formato de entrega obrigatório)
+═══════════════════════════════════════════════════════
+As 4 tarefas são sequenciais e amarradas: a Tarefa 1 define a lista de peças; as Tarefas 2 e 3 entregam, PARA CADA peça dessa lista, a arte e a copy correspondentes (mesma numeração, mesma ordem).
+
+TAREFA 1 — Estratégia de Feed e Stories
+Entregue uma lista numerada de peças para o mix completo (defina você a quantidade que faz sentido para estes ${n} produto${n!==1?'s':''}, sugestão: 3 a 5 posts de Feed + 1 a 2 Stories). Para cada peça: número, formato (Feed 4:5 ou Story 9:16), tema/ângulo do Guia de Decisão abordado, papel(is) do mix explorado(s), e objetivo (o que o público deve entender ou sentir depois de ver essa peça).
+
+TAREFA 2 — Instruções de geração de imagem para IA Designer
+Para CADA peça numerada na Tarefa 1: composição (o que aparece em cena), paleta de cores (nomes ou hex), tipografia (estilo, não fonte específica), formato/proporção exato, e elementos visuais permitidos — reforçando que nenhuma arte pode citar o nome dos empreendimentos.
+
+TAREFA 3 — Copy de cada postagem
+Para CADA peça numerada na Tarefa 1: legenda pronta para publicar (texto final, não instrução), no tom educacional definido no BLOCO 1, sem menção a preço, prazo ou urgência.
+
+TAREFA 4 — Scripts de oferta no WhatsApp
+Entregue uma sequência numerada de mensagens para usar depois que um lead entrar em contato através das postagens. Para cada mensagem: objetivo e texto final pronto para enviar, conduzindo progressivamente para um convite de agendamento.`;
+
+  return {
+    linha: 'Instruções para IA Editora — Mix Manual',
+    titulo: `Dados completos dos ${n} produto${n!==1?'s':''}: tipologias, lazer, conceito, pagamento + 4 tarefas`,
+    iconeUnico: true,
+    legenda: instrucoes,
+  };
+}
+
+// Constrói o HTML do copyBriefDrawer para o mix manual —
+// mesmo padrão visual de renderCopyBriefMixCompleto_.
+function renderMmBriefDrawerContent_(alvo1, loc, padrao) {
+  const n = _mmItens_.length;
+  const now = new Date().toLocaleDateString('pt-BR');
+  const linhas = _gatilhosAtual_.map((g, i) => g.iconeUnico ? `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy" colspan="3"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Copiar instruções completas">📋</button></td>
+    </tr>` : `
+    <tr>
+      <td class="td-num">${i + 1}</td>
+      <td class="td-gatilho">
+        <div style="font-weight:700;color:var(--text);font-size:12px">${g.linha}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;line-height:1.3">${g.titulo}</div>
+      </td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnV${i}" onclick="copiarEPreview_('v',${i})" title="Story / WhatsApp 9:16">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFI${i}" onclick="copiarEPreview_('fi',${i})" title="Feed 4:5 instrução">📋</button></td>
+      <td class="td-copy"><button class="btn-copy-cell" id="btnFL${i}" onclick="copiarEPreview_('fl',${i})" title="Feed 4:5 legenda">📋</button></td>
+    </tr>`).join('');
+
+  return `
+    <div class="brief-drawer-header">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">🤖 Briefing para IA Editora — Mix Manual</div>
+        <div style="font-size:15px;font-weight:700;color:var(--text)">${n} produto${n!==1?'s':''} selecionados · ${padrao}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:3px">${loc} · ${now}
+          <button class="btn-mini" style="margin-left:10px;font-size:10px" onclick="downloadMmCsv_()" title="Baixar CSV do mix">📥 CSV</button>
+        </div>
+      </div>
+      <button class="btn-mini" style="flex-shrink:0;margin-top:2px" onclick="fecharCopyBrief_()">✕ Fechar</button>
+    </div>
+    <div class="brief-drawer-body">
+      <div class="brief-regra">✏️ <strong>Mix manual:</strong> eixos de campanha gerados a partir dos ${n} produto${n!==1?'s':''} e papéis que você definiu. Nenhuma arte revela o nome dos empreendimentos.</div>
+      <div class="brief-gt-section">
+        <table class="brief-gt-table">
+          <thead>
+            <tr>
+              <th class="th-gatilho" colspan="2">Eixo de Campanha</th>
+              <th class="th-v">Vertical<br><span style="font-weight:400;font-size:9px;opacity:.8">9:16</span></th>
+              <th class="th-fi">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">instrução</span></th>
+              <th class="th-fl">Feed<br><span style="font-weight:400;font-size:9px;opacity:.8">legenda</span></th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </div>
+      <div class="brief-preview">
+        <div class="brief-preview-label">Prévia — clique em 📋 para visualizar e copiar</div>
+        <div class="brief-preview-body" id="briefPreviewBody" style="color:var(--text3);font-style:italic">— selecione um eixo acima —</div>
+      </div>
+    </div>`;
+}
+
+// Abre o briefing do mix manual no copyBriefDrawer padrão do Radar.
 function abrirBriefIa_() {
+  if (!_mmItens_.length) return;
+  const papeis = _mmMapearPapeisParaAuto_();
+  const alvo1  = papeis.ALVO_1 || _mmItens_[0].it;
+  const loc    = [alvo1.e.bairro, alvo1.e.cidade].filter(Boolean).join(', ') || 'localização privilegiada';
+  const padrao = PADRAO_LABEL_MIX_[alvo1.padrao] || alvo1.padrao || '';
+  _gatilhosAtual_ = [...gerarEixosCampanha_(papeis, loc, padrao), gerarRelatorioMixManual_(loc, padrao)];
+  document.getElementById('copyBriefContent').innerHTML = renderMmBriefDrawerContent_(alvo1, loc, padrao);
+  document.getElementById('copyBriefOverlay').classList.add('aberto');
+  document.getElementById('copyBriefDrawer').classList.add('aberto');
+}
+
+// Download CSV do mix (acessível pelo botão no header do drawer).
+function downloadMmCsv_() {
   if (!_mmItens_.length) return;
   const linhas = _mmItens_.map(x => {
     const e = x.it.e;
     const papelLabel = (MM_PAPEIS_.find(p => p.key === x.papel) || {}).label || '—';
-    return { papel: papelLabel, nome: e.nomeEmpreendimento || '—', construtora: e.construtora || '—',
-      padrao: x.it.padrao || '—', preco: fmtR$_(x.it.menorPreco), estoque: e.estoque != null && e.estoque !== '' ? String(e.estoque) : '—',
-      situacao: situacaoTexto_(e.status) || '—', tracao: x.it.comp != null ? x.it.comp.toFixed(1) : '—' };
+    return [papelLabel, e.nomeEmpreendimento||'—', e.construtora||'—',
+      PADRAO_LABEL_MIX_[x.it.padrao]||x.it.padrao||'—', fmtR$_(x.it.menorPreco),
+      e.estoque!=null&&e.estoque!==''?String(e.estoque):'—',
+      situacaoTexto_(e.status)||'—',
+      x.it.comp!=null?x.it.comp.toFixed(1):'—'];
   });
-
-  const now = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
-  const colW = [22, 38, 26, 10, 14, 9, 12, 8];
-  const pad  = (s, n) => (s || '').slice(0, n).padEnd(n);
-  const hr   = '─'.repeat(colW.reduce((a,b)=>a+b+3, -3));
-
-  const header = `${pad('PAPEL',colW[0])} │ ${pad('EMPREENDIMENTO',colW[1])} │ ${pad('CONSTRUTORA',colW[2])} │ ${pad('PADRÃO',colW[3])} │ ${pad('PREÇO MÍN.',colW[4])} │ ${pad('ESTOQUE',colW[5])} │ ${pad('SITUAÇÃO',colW[6])} │ ${pad('TRAÇÃO',colW[7])}`;
-  const rows   = linhas.map(l =>
-    `${pad(l.papel,colW[0])} │ ${pad(l.nome,colW[1])} │ ${pad(l.construtora,colW[2])} │ ${pad(l.padrao,colW[3])} │ ${pad(l.preco,colW[4])} │ ${pad(l.estoque,colW[5])} │ ${pad(l.situacao,colW[6])} │ ${pad(l.tracao,colW[7])}`
-  ).join('\n');
-
-  const texto = [
-    '════════════════════════════════════════════════════════════════',
-    '  BRIEFING ESTRATÉGICO — MIX DE TRÁFEGO PAGO',
-    `  Gerado em: ${now} · BASE INTELIGENTE / imoveisemgoiania.com`,
-    '════════════════════════════════════════════════════════════════',
-    '',
-    '▸ INSTRUÇÃO PARA A IA EDITORA',
-    '  Você receberá abaixo um mix de empreendimentos já classificados',
-    '  por papel estratégico. Use esses dados para criar o briefing de',
-    '  campanha de tráfego pago, respeitando a hierarquia de papéis:',
-    '  Isca gera volume, Alvo Primário fecha, Âncoras criam percepção',
-    '  de valor. Nunca revele os nomes nos anúncios sem autorização.',
-    '',
-    '▸ MIX DE EMPREENDIMENTOS',
-    hr, header, hr, rows, hr,
-    '',
-    ...((_mmObs_ || '').trim() ? ['▸ OBSERVAÇÕES FINAIS DO CORRETOR', (_mmObs_ || '').trim(), ''] : []),
-    '════════════════════════════════════════════════════════════════',
-  ].join('\n');
-
-  // CSV para download
-  const csvLinhas = [
+  const csv = [
     ['Papel','Empreendimento','Construtora','Padrão','Preço Mín.','Estoque','Situação','Tração'].join(';'),
-    ...linhas.map(l => [l.papel,l.nome,l.construtora,l.padrao,l.preco,l.estoque,l.situacao,l.tracao].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(';')),
+    ...linhas.map(r => r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(';')),
     '',
-    ['Obs Finais', `"${(_mmObs_||'').replace(/"/g,'""')}"`].join(';'),
+    `"Obs Finais";"${(_mmObs_||'').replace(/"/g,'""')}"`,
   ].join('\n');
-  _briefIaCsvData_ = csvLinhas;
-
-  document.getElementById('briefIaSub').textContent = `${_mmItens_.length} empreendimento${_mmItens_.length!==1?'s':''} · ${now}`;
-  document.getElementById('briefIaTexto').textContent = texto;
-  document.getElementById('briefIaOverlay').classList.add('aberto');
-  document.getElementById('briefIaModal').classList.add('aberto');
-}
-
-function fecharBriefIa_() {
-  document.getElementById('briefIaOverlay').classList.remove('aberto');
-  document.getElementById('briefIaModal').classList.remove('aberto');
-}
-
-function copiarBriefIa_() {
-  const pre = document.getElementById('briefIaTexto');
-  if (!pre) return;
-  navigator.clipboard.writeText(pre.textContent).then(() => mostrarToast('Texto copiado!', 'ok')).catch(() => mostrarToast('Erro ao copiar.', 'warn'));
-}
-
-function downloadBriefIaCsv_() {
-  if (!_briefIaCsvData_) return;
-  const blob = new Blob(['﻿' + _briefIaCsvData_], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href = url; a.download = 'mix-estrategico.csv'; a.click();
