@@ -332,6 +332,7 @@ function doGet(e) {
   // sessão (não são ações públicas do funil, são consumo interno do dashboard).
   if (acao === 'listar_estatisticas_funil') return ok(listarEstatisticasFunil_({ dias: e.parameter.dias }));
   if (acao === 'listar_segmentos_comportamentais') return ok(listarSegmentosComportamentais_());
+  if (acao === 'limpar_eventos_funil') return ok(limparEventosFunil_());
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
   if (acao === 'listar_todos_leads_imobzi') return ok(listarLeadsImobzi_({todos:true}));
   if (acao === 'listar_revenda_lista')      return ok(listarRevendaLista_());
@@ -5283,6 +5284,22 @@ function obterAbaFunilEventos_() {
        .setFontWeight('bold').setBackground('#3D5A80').setFontColor('#ffffff');
   }
   return aba;
+}
+
+// Apaga todos os dados de eventos do funil (mantém cabeçalho na linha 1).
+// Usado pela Central de Inteligência pra zerar dados de teste antes
+// de iniciar campanhas reais.
+function limparEventosFunil_() {
+  try {
+    var aba = obterAbaFunilEventos_();
+    var ultima = aba.getLastRow();
+    if (ultima > 1) {
+      aba.deleteRows(2, ultima - 1);
+    }
+    return { ok: true, removidos: Math.max(0, ultima - 1) };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
 }
 
 // Handler do beacon disparado pelo App Lançamentos a cada troca de step

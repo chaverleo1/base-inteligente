@@ -1500,12 +1500,15 @@ select.form-input option { background: var(--surface2); }
       <div class="sec-title">Central de Inteligência Comportamental</div>
       <div class="sec-sub">Padrões de comportamento capturados no App Lançamentos.</div>
     </div>
-    <select id="intPeriodo" onchange="carregarInteligencia_()" class="int-periodo-select">
-      <option value="7">Últimos 7 dias</option>
-      <option value="30" selected>Últimos 30 dias</option>
-      <option value="90">Últimos 90 dias</option>
-      <option value="36500">Histórico completo</option>
-    </select>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <select id="intPeriodo" onchange="carregarInteligencia_()" class="int-periodo-select">
+        <option value="7">Últimos 7 dias</option>
+        <option value="30" selected>Últimos 30 dias</option>
+        <option value="90">Últimos 90 dias</option>
+        <option value="36500">Histórico completo</option>
+      </select>
+      <button class="btn-extrair" style="padding:7px 12px;font-size:12px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)" onclick="limparDadosFunil_()" title="Apagar todos os eventos registrados (dados de teste)">🗑️ Limpar dados</button>
+    </div>
   </div>
 
   <div class="vg-panel" id="intKpis">
@@ -2474,6 +2477,21 @@ function carregarInteligenciaLazy_() {
   if (_inteligenciaCarregada_) return;
   _inteligenciaCarregada_ = true;
   carregarInteligencia_();
+}
+
+async function limparDadosFunil_() {
+  if (!confirm('Apagar TODOS os eventos registrados no funil?\n\nEssa ação é irreversível — os dados de teste serão deletados da planilha para dar lugar aos dados reais das campanhas.')) return;
+  mostrarToast('Limpando dados…', 'aviso');
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=limpar_eventos_funil&token=' + encodeURIComponent(tokenSessao()));
+    const data = await resp.json();
+    if (!data.ok) { mostrarToast('Erro: ' + (data.erro || 'falha desconhecida'), 'erro'); return; }
+    mostrarToast(`✅ ${data.removidos} evento(s) removido(s). Recarregando…`, 'sucesso');
+    _inteligenciaCarregada_ = false;
+    carregarInteligencia_();
+  } catch (e) {
+    mostrarToast('Erro ao limpar: ' + e.message, 'erro');
+  }
 }
 
 // ── COMENTÁRIOS DO APP LANÇAMENTOS (Lançamentos > App > Comentários) ────────
