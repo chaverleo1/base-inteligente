@@ -4497,6 +4497,10 @@ function renderLeadsBaseimob(leads) {
         ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬</a>` : ''}
         <button class="bi-btn" style="background:var(--surface2,var(--border));color:var(--text2);font-size:11px"
           onclick="abrirDetalheLeadBI('${l.idCliente}')">Ver ›</button>
+        ${l.qualificado === 'Sim'
+          ? `<span class="bi-btn" style="background:rgba(0,212,170,.15);color:var(--accent2);font-size:11px;cursor:default">✅ Qualificado</span>`
+          : `<button class="bi-btn" style="background:rgba(0,212,170,.12);color:var(--accent2);font-size:11px" title="Confirmar como lead qualificado -- manda a conversão pro Google Ads"
+              onclick="qualificarLeadBI('${l.idCliente}',this)">✅ Qualificar</button>`}
         <button class="bi-btn" style="background:#3a1a1a;color:#e05a3a;font-size:13px" title="Excluir lead"
           onclick="excluirLeadBI('${l.idCliente}',this)">🗑</button>
       </div>
@@ -4607,6 +4611,11 @@ function abrirDetalheLeadBI(idCliente) {
     ${wppTel ? `<a href="https://wa.me/55${wppTel}" target="_blank"
       style="flex:1;text-align:center;padding:10px;border-radius:10px;background:#25d366;color:#fff;font-size:13px;font-weight:600;text-decoration:none">
       💬 WhatsApp</a>` : ''}
+    ${l.qualificado === 'Sim'
+      ? `<span style="flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(0,212,170,.15);color:var(--accent2);font-size:13px;font-weight:600">✅ Qualificado</span>`
+      : `<button onclick="qualificarLeadBI('${idCliente}',this)"
+          style="flex:1;padding:10px;border-radius:10px;background:rgba(0,212,170,.15);color:var(--accent2);border:none;font-size:13px;font-weight:600;cursor:pointer">
+          ✅ Qualificar</button>`}
     <button onclick="migrarLeadBI('${idCliente}',this)" id="btnMigrarBI_${idCliente}"
       style="flex:1;padding:10px;border-radius:10px;background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer">
       Migrar → Contatos</button>`;
@@ -5340,6 +5349,47 @@ async function buscarAfinsNovoLead_(uid, l, safeUid) {
     }).join('')}</div>`;
   } catch(e) {
     el.innerHTML = '<div style="font-size:12px;color:var(--text3)">Erro ao buscar afins.</div>';
+  }
+}
+
+// Qualificar lead do BaseImob (Fase 4, pedido explícito do usuário) --
+// diferente de excluir/migrar: NÃO some o card, só troca o botão por um
+// selo fixo. Se o lead tiver gclid, isso também grava uma linha na aba
+// "Conversoes" da planilha separada de métricas do Ads (ver
+// qualificarLeadBaseimob_ em code.txt) -- avisa isso no confirm() antes de
+// mandar, já que é uma ação que sai do Base Inteligente pro Google Ads.
+async function qualificarLeadBI(idCliente, btn) {
+  const l = _biLeadsMap[idCliente];
+  const nome = l ? (l.nome || 'este lead') : 'este lead';
+  const temGclid = !!(l && l.gclid);
+  const aviso = temGclid
+    ? `Confirmar "${nome}" como lead qualificado?\n\nIsso vai mandar essa conversão de volta pro Google Ads (a campanha que trouxe esse clique vai saber que virou um lead bom).`
+    : `Confirmar "${nome}" como lead qualificado?\n\nEsse lead não veio de um clique de anúncio (sem gclid registrado) -- nada será enviado pro Google Ads, só fica marcado aqui dentro pra acompanhamento.`;
+  if (!confirm(aviso)) return;
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'qualificar_lead_baseimob', idCliente, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      if (l) l.qualificado = 'Sim';
+      // Botão aparece em 2 lugares com estilo diferente (card compacto na
+      // lista × botão de linha inteira no drawer) -- reaproveita o mesmo
+      // estilo de onde o clique veio, em vez de um selo fixo genérico.
+      if (btn.closest('#biDrawerAcoes')) {
+        btn.outerHTML = '<span style="flex:1;text-align:center;padding:10px;border-radius:10px;background:rgba(0,212,170,.15);color:var(--accent2);font-size:13px;font-weight:600">✅ Qualificado</span>';
+      } else {
+        btn.outerHTML = '<span class="bi-btn" style="background:rgba(0,212,170,.15);color:var(--accent2);font-size:11px;cursor:default">✅ Qualificado</span>';
+      }
+    } else {
+      alert('Erro ao qualificar: ' + (r.erro || JSON.stringify(r)));
+      btn.disabled = false; btn.textContent = '✅ Qualificar';
+    }
+  } catch (e) {
+    alert('Erro de conexão: ' + e.message);
+    btn.disabled = false; btn.textContent = '✅ Qualificar';
   }
 }
 

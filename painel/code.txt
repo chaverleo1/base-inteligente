@@ -889,6 +889,7 @@ function doPost(e) {
   if (d.acao === 'excluir_construtora_parceira')    return ok(excluirConstrutoraParceira_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
+  if (d.acao === 'qualificar_lead_baseimob') return ok(qualificarLeadBaseimob_(d));
   if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
   if (d.acao === 'listar_leads_imobzi')             return ok(listarLeadsImobzi_(d));
   if (d.acao === 'sincronizar_imobzi')              return ok(sincronizarLeadsImobzi_());
@@ -4752,6 +4753,12 @@ var CABECALHO_LEADS_LANCAMENTOS = [
   // salvarInteresse_) -- de propósito: gclid deve refletir o clique
   // ORIGINAL que trouxe o cliente, nunca uma visita de retorno depois.
   'gclid', 'utmCampaign',
+  // qualificado/dataQualificacao -- Fase 4 do projeto Google Ads (pedido
+  // explícito do usuário): marcado só quando o corretor clica "Qualificado"
+  // no card do lead (qualificarLeadBaseimob_), nunca automático. Ver
+  // também a aba "Conversoes" na planilha separada de métricas
+  // (SHEET_ID_ADS_METRICAS_), onde a conversão de fato sobe pro Ads.
+  'qualificado', 'dataQualificacao',
 ];
 
 var CABECALHO_INTERESSES = [
@@ -7653,6 +7660,75 @@ function excluirLeadBaseimob_(d) {
     }
   }
   return { ok: false, erro: 'lead nao encontrado' };
+}
+
+// Marca um lead do BaseImob como QUALIFICADO -- pedido explícito do
+// usuário (Fase 4 do projeto Google Ads): nem todo lead que entra pelo
+// funil deve virar sinal de conversão pro Google Ads otimizar em cima --
+// isso puxaria a campanha pra parecido com "clicou até o fim do funil",
+// não "virou cliente de verdade". Só quando o corretor confirma
+// MANUALMENTE que aquele lead é bom que a conversão sobe pro Ads -- e só
+// se o lead tiver gclid (veio de clique de anúncio; lead orgânico/direto
+// não tem o que subir, mas ainda fica marcado como qualificado aqui
+// dentro pra fins de acompanhamento interno).
+//
+// A conversão é gravada como LINHA na aba "Conversoes" da planilha
+// SEPARADA de métricas do Ads (SHEET_ID_ADS_METRICAS_) -- nunca na base
+// principal, mesmo motivo de sempre (conta do Ads não deve enxergar dado
+// de cliente). Formato de coluna = o que o Google Ads espera pra
+// "Importar conversões de clique" via Planilhas Google (dentro da conta
+// de Ads: Conversões > Uploads > + Novo upload > Google Sheets): Google
+// Click ID / Conversion Name / Conversion Time / Conversion Value /
+// Conversion Currency. O nome da conversão (NOME_CONVERSAO_ADS_) precisa
+// bater exatamente com uma Ação de conversão já criada lá.
+var NOME_CONVERSAO_ADS_ = 'Lead Qualificado - App Lançamentos';
+
+function qualificarLeadBaseimob_(d) {
+  var idCliente = String(d.idCliente || '').trim();
+  if (!idCliente) return { ok: false, erro: 'idCliente obrigatorio' };
+
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'lead nao encontrado' };
+
+  var idxId         = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+  var idxQualif     = CABECALHO_LEADS_LANCAMENTOS.indexOf('qualificado');
+  var idxDataQualif = CABECALHO_LEADS_LANCAMENTOS.indexOf('dataQualificacao');
+  var idxGclid      = CABECALHO_LEADS_LANCAMENTOS.indexOf('gclid');
+  var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+
+  var linhaLead = -1, gclid = '';
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][idxId]) === idCliente) {
+      linhaLead = i + 2;
+      gclid = String(dados[i][idxGclid] || '').trim();
+      break;
+    }
+  }
+  if (linhaLead < 0) return { ok: false, erro: 'lead nao encontrado' };
+
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  abaLeads.getRange(linhaLead, idxQualif + 1).setValue('Sim');
+  abaLeads.getRange(linhaLead, idxDataQualif + 1).setValue(agora);
+
+  if (!gclid) return { ok: true, enviouConversao: false, motivo: 'sem_gclid' };
+
+  try {
+    var ssMetricas = SpreadsheetApp.openById(SHEET_ID_ADS_METRICAS_);
+    var abaConv = ssMetricas.getSheetByName('Conversoes');
+    if (!abaConv) {
+      abaConv = ssMetricas.insertSheet('Conversoes');
+      abaConv.appendRow(['Google Click ID', 'Conversion Name', 'Conversion Time', 'Conversion Value', 'Conversion Currency']);
+    }
+    // Formato de data exigido pelo Google Ads: "yyyy-MM-dd HH:mm:ss+HH:MM".
+    var conversionTime = Utilities.formatDate(new Date(), 'America/Sao_Paulo', "yyyy-MM-dd HH:mm:ssXXX");
+    abaConv.appendRow([gclid, NOME_CONVERSAO_ADS_, conversionTime, '', 'BRL']);
+    return { ok: true, enviouConversao: true };
+  } catch (e) {
+    // Lead já ficou marcado qualificado mesmo se isso falhar -- só a parte
+    // de subir a conversão pro Ads que não completou.
+    return { ok: true, enviouConversao: false, motivo: 'erro_planilha', erro: e.message };
+  }
 }
 
 function migrarLeadBaseimob_(d) {
