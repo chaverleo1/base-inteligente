@@ -1232,15 +1232,18 @@ function fmt_(v) {
   return 'R$ ' + n.toLocaleString('pt-BR');
 }
 
-// Código MOSTRADO ao usuário: pra Lançamentos, prefere o idEmpreendimento
-// (EMP-XXX, mesmo código do Mapa Geral em lancamentos.html) em vez do
-// idLancamento (LAN-XXXXX, código por TIPOLOGIA/linha da planilha). Só de
-// exibição -- im.codigo continua sendo idLancamento por baixo dos panos,
-// porque é ele que o botão Excluir/Reativar (set_status_imovel) e o
-// favoritar usam pra achar a linha certa na planilha; trocar o valor de
-// im.codigo quebraria essas ações.
+// Código MOSTRADO ao usuário: pra Lançamentos, SEMPRE o idEmpreendimento
+// (EMP-XXX, mesmo código do Mapa Geral em lancamentos.html) -- nunca o
+// idLancamento (LAN-XXXXX, código por TIPOLOGIA/linha da planilha). Pedido
+// explícito do usuário: código LAN não pode aparecer na Busca de jeito
+// nenhum, nem como fallback -- se por acaso faltar idEmpreendimento numa
+// linha antiga, melhor mostrar vazio do que vazar o LAN. Só de exibição --
+// im.codigo continua sendo idLancamento por baixo dos panos, porque é ele
+// que o botão Excluir/Reativar (set_status_imovel) e o favoritar usam pra
+// achar a linha certa na planilha; trocar o valor de im.codigo quebraria
+// essas ações.
 function codDisplay_(im) {
-  if (im.fonte === 'LANCAMENTO' && im.idEmpreendimento) return im.idEmpreendimento;
+  if (im.fonte === 'LANCAMENTO') return im.idEmpreendimento || '';
   return im.codigo || '';
 }
 
