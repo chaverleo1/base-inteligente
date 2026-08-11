@@ -987,10 +987,21 @@
   </div>
 
   <div id="biPainelAds" style="display:none">
-    <div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text3)">
-      <span style="font-size:28px;display:block;margin-bottom:8px">📢</span>
-      Painel de campanhas do Google Ads — em construção.<br>
-      <span style="font-size:12px">Próxima fase: métricas de investimento/cliques/leads por campanha, importadas via Script do Google Ads.</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <span style="font-size:12px;color:var(--text3)">Dados de <span id="gadsAtualizadoEm">—</span> · último dia disponível na planilha de métricas</span>
+      <button class="refresh-btn" onclick="carregarMetricasGoogleAds_()">↻ Atualizar</button>
+    </div>
+    <div class="cards-row" id="gadsCardsResumo"></div>
+    <div id="gadsTabelaWrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <table class="adm-table" id="gadsTabela">
+        <thead>
+          <tr>
+            <th>Campanha</th><th>Status</th><th>Investimento</th><th>Cliques</th>
+            <th>Impressões</th><th>CTR</th><th>CPC médio</th><th>Conversões</th><th>Custo/conversão</th>
+          </tr>
+        </thead>
+        <tbody id="gadsTabelaBody"><tr><td colspan="9" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -3815,6 +3826,65 @@ function mostrarBaseImobSubtab(nome) {
   document.getElementById('biPainelAds').style.display   = nome === 'ads'   ? '' : 'none';
   document.getElementById('biSubtabLeads').classList.toggle('active', nome === 'leads');
   document.getElementById('biSubtabAds').classList.toggle('active', nome === 'ads');
+  if (nome === 'ads' && !_gadsCarregado_) carregarMetricasGoogleAds_();
+}
+
+// ── GOOGLE ADS (Fase 3) — lê listar_metricas_google_ads (code.txt), que por
+// sua vez lê a planilha SEPARADA de métricas (populada pelo Script rodando
+// dentro da conta do Google Ads). Carrega uma vez ao abrir a sub-aba;
+// "↻ Atualizar" força recarregar.
+let _gadsCarregado_ = false;
+const GADS_STATUS_LABEL_ = { ENABLED: 'Ativa', PAUSED: 'Pausada', REMOVED: 'Removida' };
+async function carregarMetricasGoogleAds_() {
+  _gadsCarregado_ = true;
+  const resumo = document.getElementById('gadsCardsResumo');
+  const corpo  = document.getElementById('gadsTabelaBody');
+  corpo.innerHTML = '<tr><td colspan="9" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_metricas_google_ads&dias=30&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+
+    const campanhas = json.campanhas || [];
+    document.getElementById('gadsAtualizadoEm').textContent =
+      json.atualizadoEm || 'ainda sem dado (aguardando o Script rodar no Google Ads)';
+
+    if (!campanhas.length) {
+      resumo.innerHTML = '';
+      corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">
+        Nenhum dado ainda. Confirme se o Script já rodou no Google Ads (Executar, não só Visualizar) e
+        se a planilha de métricas está compartilhada com Editor pra conta do Ads.</td></tr>`;
+      return;
+    }
+
+    const totalInvest = campanhas.reduce((s, c) => s + c.investimento, 0);
+    const totalCliques = campanhas.reduce((s, c) => s + c.cliques, 0);
+    const totalConv = campanhas.reduce((s, c) => s + c.conversoes, 0);
+    const custoConvMedio = totalConv > 0 ? totalInvest / totalConv : null;
+
+    resumo.innerHTML = `
+      <div class="card"><div class="card-label">Investimento (30d)</div><div class="card-value">${fmtBRL(totalInvest)}</div><div class="card-sub">${campanhas.length} campanha${campanhas.length !== 1 ? 's' : ''}</div></div>
+      <div class="card"><div class="card-label">Cliques</div><div class="card-value">${totalCliques.toLocaleString('pt-BR')}</div><div class="card-sub">todas as campanhas</div></div>
+      <div class="card"><div class="card-label">Conversões</div><div class="card-value green">${totalConv.toLocaleString('pt-BR')}</div><div class="card-sub">registradas no Google Ads</div></div>
+      <div class="card"><div class="card-label">Custo por conversão</div><div class="card-value${custoConvMedio ? '' : ' cold'}">${custoConvMedio ? fmtBRL(custoConvMedio) : '—'}</div><div class="card-sub">médio geral</div></div>`;
+
+    // Já vem ordenado por conversões (backend) -- a 1ª linha com conversão
+    // ganha um destaque visual simples de "melhor performance".
+    corpo.innerHTML = campanhas.map((c, i) => `
+      <tr${i === 0 && c.conversoes > 0 ? ' style="background:rgba(0,212,170,.06)"' : ''}>
+        <td style="font-weight:600">${i === 0 && c.conversoes > 0 ? '🏆 ' : ''}${c.campanha}</td>
+        <td>${GADS_STATUS_LABEL_[c.status] || c.status || '—'}</td>
+        <td>${fmtBRL(c.investimento)}</td>
+        <td>${c.cliques.toLocaleString('pt-BR')}</td>
+        <td>${c.impressoes.toLocaleString('pt-BR')}</td>
+        <td>${c.ctr.toFixed(2)}%</td>
+        <td>${fmtBRL(c.cpcMedio)}</td>
+        <td>${c.conversoes}</td>
+        <td>${c.custoPorConversao != null ? fmtBRL(c.custoPorConversao) : '—'}</td>
+      </tr>`).join('');
+  } catch (e) {
+    corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
+  }
 }
 
 // ── SUB-ABAS DA ADM (Funções manuais / Links Úteis / Landing Pages) ──────────
