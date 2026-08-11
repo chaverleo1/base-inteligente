@@ -1577,6 +1577,14 @@ const D = {
   utmSource: new URLSearchParams(location.search).get('utm_source') || '',
   utmMedium: new URLSearchParams(location.search).get('utm_medium') || '',
   utmCampaign: new URLSearchParams(location.search).get('utm_campaign') || '',
+  // gclid (Google Click ID) -- pedido explícito do usuário, base pra "mandar
+  // o lead qualificado de volta pro Google Ads" (fase futura do projeto de
+  // integração). O Google Ads anexa esse parâmetro sozinho na URL quando o
+  // clique vem de um anúncio (auto-tagging, ligado por padrão) -- sem
+  // interação nenhuma do cliente. Guardado junto com o lead em
+  // salvarInteresse_ (code.txt) pra o corretor conseguir "validar" a
+  // qualificação depois e subir a conversão pro Ads usando esse valor.
+  gclid: new URLSearchParams(location.search).get('gclid') || '',
   // Preenchido de forma assíncrona por geolocalizarPorIp_() -- IP, não GPS
   // (pedido tinha "IP/GPS com permissão"; GPS exige popup de permissão no
   // meio do funil, o que atrapalha conversão -- IP é silencioso e sem
@@ -2767,7 +2775,7 @@ function submeter() {
       // (montarBlocoDadosTecnicosEmail_, code.txt).
       sessionId: D.sessionId, tempoPorStep: D.tempoPorStep,
       dispositivo: D.dispositivo, horaAcesso: D.horaAcesso,
-      utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign,
+      utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign, gclid: D.gclid,
       geoAprox: D.geoAprox,
       // idEmpreendimento mostrado como "melhor match" -- se veio do motor
       // (selecionarIsca_) ou do cálculo local de sempre (fallback sem mix

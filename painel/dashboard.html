@@ -969,8 +969,30 @@
 
 <!-- BASEIMOB SECTION -->
 <div class="page" id="secao-baseimob" style="display:none">
-  <div class="section-title">Leads BaseImob — pendentes de qualificação</div>
-  <div id="bi-lista"><div class="loading dot-anim">Carregando leads</div></div>
+  <div class="section-title">BaseImob</div>
+
+  <!-- Sub-abas do BaseImob: Leads (padrão) e Google Ads (pedido explícito
+       do usuário -- fase 1 do projeto de integração com Google Ads,
+       começa como scaffold vazio e ganha ferramentas nas próximas fases:
+       painel de métricas por campanha, e botão de validar/qualificar lead
+       que manda a conversão de volta pro Ads via Script). -->
+  <div class="adm-subtabs">
+    <button class="adm-subtab active" id="biSubtabLeads" onclick="mostrarBaseImobSubtab('leads')">Leads</button>
+    <button class="adm-subtab" id="biSubtabAds" onclick="mostrarBaseImobSubtab('ads')">📢 Google Ads</button>
+  </div>
+
+  <div id="biPainelLeads">
+    <div class="section-title" style="font-size:13px;margin-bottom:10px">Leads BaseImob — pendentes de qualificação</div>
+    <div id="bi-lista"><div class="loading dot-anim">Carregando leads</div></div>
+  </div>
+
+  <div id="biPainelAds" style="display:none">
+    <div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text3)">
+      <span style="font-size:28px;display:block;margin-bottom:8px">📢</span>
+      Painel de campanhas do Google Ads — em construção.<br>
+      <span style="font-size:12px">Próxima fase: métricas de investimento/cliques/leads por campanha, importadas via Script do Google Ads.</span>
+    </div>
+  </div>
 </div>
 
 <!-- IMOBZI LEADS SECTION -->
@@ -3785,6 +3807,14 @@ function mostrarAdm() {
   _ocultarTodasSecoes();
   document.getElementById('secao-adm').style.display = '';
   document.getElementById('btnTabAdm').classList.add('active');
+}
+
+// ── SUB-ABAS DO BASEIMOB (Leads / Google Ads) ────────────────────────────────
+function mostrarBaseImobSubtab(nome) {
+  document.getElementById('biPainelLeads').style.display = nome === 'leads' ? '' : 'none';
+  document.getElementById('biPainelAds').style.display   = nome === 'ads'   ? '' : 'none';
+  document.getElementById('biSubtabLeads').classList.toggle('active', nome === 'leads');
+  document.getElementById('biSubtabAds').classList.toggle('active', nome === 'ads');
 }
 
 // ── SUB-ABAS DA ADM (Funções manuais / Links Úteis / Landing Pages) ──────────

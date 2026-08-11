@@ -4741,13 +4741,22 @@ var CABECALHO_LEADS_LANCAMENTOS = [
   'finalidade', 'quartos', 'precoLimite', 'margem',
   'pagamento', 'diferenciais', 'urgencia',
   'qtdEncontrados', 'canal', 'tipo_contato', 'score',
-  'tags', 'obs', 'idCliente'
+  'tags', 'obs', 'idCliente',
+  // gclid/utmCampaign -- adicionados pro projeto de integração com Google
+  // Ads (pedido explícito do usuário). Vão no FIM do array pelo motivo de
+  // sempre: essa aba não tem uma função de migração de cabeçalho própria
+  // ainda, então colunas novas precisam ficar no final pra não desalinhar
+  // dado já gravado. Só são preenchidos na CRIAÇÃO do lead (ver
+  // salvarInteresse_) -- de propósito: gclid deve refletir o clique
+  // ORIGINAL que trouxe o cliente, nunca uma visita de retorno depois.
+  'gclid', 'utmCampaign',
 ];
 
 var CABECALHO_INTERESSES = [
   'dataCadastro', 'idCliente', 'email', 'nome', 'telefone',
   'qtdInteresse', 'idsInteresse', 'tags',
-  'canal', 'tipo_contato', 'score'
+  'canal', 'tipo_contato', 'score',
+  'gclid', 'utmCampaign',
 ];
 
 // FUNIL_EVENTOS_APP — log de eventos de transição de etapa do App
@@ -6041,6 +6050,8 @@ function salvarInteresse_(d) {
       if (col === 'obs')            return d.rankingDetalhado || '';
       if (col === 'qtdEncontrados') return d.qtdInteresse || 0;
       if (col === 'idCliente')      return idCliente;
+      if (col === 'gclid')          return d.gclid || '';
+      if (col === 'utmCampaign')    return d.utmCampaign || '';
       return '';
     });
     abaLeads.appendRow(novaLinha);
