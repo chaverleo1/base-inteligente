@@ -5351,16 +5351,23 @@ function listarMetricasGoogleAds_(params) {
 
     var porCampanha = {};
     var ultimaData  = null;
+    // Só campanhas com "APPLAN" no nome -- pedido explícito do usuário, a
+    // conta do Google Ads tem outras campanhas sem relação com o App
+    // Lançamentos/Base Inteligente. Filtro aqui também (não só no Script)
+    // pra já limpar linhas antigas que ficaram gravadas antes desse ajuste,
+    // sem precisar apagar nada na mão na planilha.
+    var FILTRO_NOME_ = 'APPLAN';
 
     dados.forEach(function(r) {
+      var nome = String(r[1] || '');
+      if (!nome || nome.toUpperCase().indexOf(FILTRO_NOME_) === -1) return;
+
       var m = String(r[0] || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
       if (!m) return;
       var dataLinha = new Date(+m[3], +m[2] - 1, +m[1]);
       if (dataLinha < desde) return;
       if (!ultimaData || dataLinha > ultimaData) ultimaData = dataLinha;
 
-      var nome = String(r[1] || '');
-      if (!nome) return;
       if (!porCampanha[nome]) {
         porCampanha[nome] = { campanha: nome, status: '', investimento: 0, cliques: 0, impressoes: 0, conversoes: 0 };
       }
