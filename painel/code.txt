@@ -1714,6 +1714,7 @@ function lancamentoParaImovel_(row) {
     tipologiaLabel:tipologiaLabel,
     qtdUnidades:   row.unidade     || '',
     idLancamento:  row.idLancamento|| '',
+    idEmpreendimento: row.idEmpreendimento || '',
     idOferta:      row.idOferta    || '',
     dataTabela:    row.dataTabela  || '',
     statusTabela:  row.statusTabela|| '',
@@ -2310,7 +2311,11 @@ function buscaAberta_(d) {
     im.statusAtivo = statusMap[String(im.codigo || '')] || 'Ativo';
     return im;
   });
-  var lancamentos = lerAba_('LANCAMENTOS').map(lancamentoParaImovel_);
+  // Soft-delete (mesmo motivo de listarLancamentos_): sem esse filtro, um
+  // lançamento excluído no Mapa Geral continuava aparecendo na Busca Aberta
+  // -- as duas telas devem mostrar sempre a mesma base "atual" de LANCAMENTOS.
+  var lancamentos = lerAba_('LANCAMENTOS').map(lancamentoParaImovel_)
+    .filter(function(im) { return im.statusAtivo !== 'Excluído'; });
   var todos       = revenda.concat(construtora).concat(lancamentos);
 
   // Quartos/suítes/vagas — filtro rígido de múltipla escolha (ver imovelBateContagem_).

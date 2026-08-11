@@ -930,7 +930,7 @@ function gerarHtmlPDF(lista) {
     const isLancT = im.fonte === 'LANCAMENTO';
     const bg      = i % 2 === 1 ? 'background:#f9fafc' : '';
 
-    const localL1 = [im.codigo, im.condominio, im.bairro].filter(Boolean).join(' — ');
+    const localL1 = [codDisplay_(im), im.condominio, im.bairro].filter(Boolean).join(' — ');
     const localL2 = im.endereco || '';
 
     return `<tr style="${bg}">
@@ -1021,7 +1021,7 @@ function renderFavListaImoveis() {
   const itens = [...state.selecionados.values()];
   document.getElementById('favListaImoveis').innerHTML = itens.map(im => {
     const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
-    return `<div class="fav-imovel-item"><b>${im.codigo || im.tipo || 'Imóvel'}</b> · ${local || im.bairro || '—'}</div>`;
+    return `<div class="fav-imovel-item"><b>${codDisplay_(im) || im.tipo || 'Imóvel'}</b> · ${local || im.bairro || '—'}</div>`;
   }).join('');
 }
 
@@ -1232,6 +1232,18 @@ function fmt_(v) {
   return 'R$ ' + n.toLocaleString('pt-BR');
 }
 
+// Código MOSTRADO ao usuário: pra Lançamentos, prefere o idEmpreendimento
+// (EMP-XXX, mesmo código do Mapa Geral em lancamentos.html) em vez do
+// idLancamento (LAN-XXXXX, código por TIPOLOGIA/linha da planilha). Só de
+// exibição -- im.codigo continua sendo idLancamento por baixo dos panos,
+// porque é ele que o botão Excluir/Reativar (set_status_imovel) e o
+// favoritar usam pra achar a linha certa na planilha; trocar o valor de
+// im.codigo quebraria essas ações.
+function codDisplay_(im) {
+  if (im.fonte === 'LANCAMENTO' && im.idEmpreendimento) return im.idEmpreendimento;
+  return im.codigo || '';
+}
+
 // ─── BUSCA (chama o Apps Script de verdade) ───────────────────────────────────
 async function executarBusca() {
   const filtros = {
@@ -1413,7 +1425,7 @@ function renderResultados(resultados, filtros, interpretado) {
         <div class="card-body">
           <div class="card-top-row">
             <div>
-              <div class="card-titulo">${im.codigo ? im.codigo + ' · ' : ''}${local || im.bairro || '—'}</div>
+              <div class="card-titulo">${codDisplay_(im) ? codDisplay_(im) + ' · ' : ''}${local || im.bairro || '—'}</div>
               <div class="card-end">${im.endereco || ''}</div>
             </div>
             <div class="score-badge ${scoreCls}">${im.score}% match</div>
@@ -1485,7 +1497,7 @@ function abrirDetalhe(im) {
   state.imovelAtual = im;
   const local = [im.condominio, im.bairro].filter(Boolean).join(' — ');
 
-  document.getElementById('modal-titulo').textContent = `${im.codigo || im.tipo} — ${local || im.bairro || ''}`;
+  document.getElementById('modal-titulo').textContent = `${codDisplay_(im) || im.tipo} — ${local || im.bairro || ''}`;
   document.getElementById('modal-end').textContent = im.endereco || '';
   const isLancM = im.fonte === 'LANCAMENTO';
   document.getElementById('modal-preco').textContent = isLancM && im.precoMin && im.precoMax
