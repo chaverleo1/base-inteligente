@@ -317,6 +317,10 @@ input[type=range]::-webkit-slider-thumb {
 .tag-excluido    { background: rgba(255,90,90,.12);  color: var(--danger);  border-color: rgba(255,90,90,.25) !important; }
 .tag-tabela-ok   { background: rgba(0,212,170,.1);   color: var(--accent2); }
 .tag-tabela-desat{ background: rgba(245,158,11,.14); color: var(--amber); }
+/* Estágio em destaque no card (Pronto para Morar × Em obras) -- pedido
+   explícito do usuário. */
+.tag-obras  { background: rgba(245,158,11,.15); color: var(--amber);  font-weight: 700; }
+.tag-pronto { background: rgba(0,212,170,.15);  color: var(--accent2); font-weight: 700; }
 
 /* ── STATUS TOGGLE (detalhe do imóvel) ── */
 .status-toggle-wrap { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
@@ -730,11 +734,16 @@ input[type=range]::-webkit-slider-thumb {
       </div>
     </div>
 
-    <!-- Status do empreendimento -->
+    <!-- Status do empreendimento -- pedido explícito do usuário: só 2
+         botões fixos (era uma lista dinâmica com todos os valores da base).
+         "Em obras" e "Em planta" contam como a mesma informação -- data-valor
+         carrega os termos reais que o backend compara contra imo.estagio,
+         ver getChipsStatusExpandido_(). -->
     <div class="filtro-secao">
       <div class="filtro-label">Status do empreendimento</div>
       <div class="chips" id="chips-status">
-        <span style="font-size:12px;color:var(--text3)">Carregando...</span>
+        <div class="chip" data-group="status" data-valor="Pronto,Pronto novo,Entregue" onclick="toggleChip(this)">Pronto para Morar</div>
+        <div class="chip" data-group="status" data-valor="Em obras,Em planta" onclick="toggleChip(this)">Em obras</div>
       </div>
       <div class="hint" style="font-size:11px;color:var(--text3);margin-top:6px">Só existe pra Lançamentos e Construtora — Revenda é sempre pronto/usado.</div>
     </div>
@@ -1168,31 +1177,27 @@ async function salvarFavoritosSelecionados() {
 }
 
 // ─── OPÇÕES DINÂMICAS (tipos/bairros existentes na base) ──────────────────────
+// Status do empreendimento NÃO é mais dinâmico (pedido do usuário: só 2
+// botões fixos, ver HTML de #chips-status) -- só tipo e padrão continuam
+// vindo da base.
 async function carregarOpcoesFiltro() {
   const chipsTipo   = document.getElementById('chips-tipo');
-  const chipsStatus = document.getElementById('chips-status');
   const chipsPadrao = document.getElementById('chips-padrao');
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=opcoes_filtro&token=' + encodeURIComponent(tokenSessao()));
     const json = await resp.json();
     const tipos   = json.tipos   || [];
-    const status  = json.status  || [];
     const padroes = json.padroes || [];
 
     chipsTipo.innerHTML = tipos.length
       ? tipos.map(t => `<div class="chip" data-group="tipo" onclick="toggleChip(this)">${t}</div>`).join('')
       : '<span style="font-size:12px;color:var(--text3)">Nenhum tipo cadastrado ainda</span>';
 
-    chipsStatus.innerHTML = status.length
-      ? status.map(s => `<div class="chip" data-group="status" onclick="toggleChip(this)">${s}</div>`).join('')
-      : '<span style="font-size:12px;color:var(--text3)">Nenhum status cadastrado ainda</span>';
-
     chipsPadrao.innerHTML = padroes.length
       ? padroes.map(p => `<div class="chip" data-group="padrao" onclick="toggleChip(this)">${p}</div>`).join('')
       : '<span style="font-size:12px;color:var(--text3)">Nenhum padrão cadastrado ainda</span>';
   } catch (e) {
     chipsTipo.innerHTML   = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar tipos</span>';
-    chipsStatus.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar status</span>';
     chipsPadrao.innerHTML = '<span style="font-size:12px;color:var(--coral)">Erro ao carregar padrão</span>';
   }
 }
@@ -1208,6 +1213,20 @@ function toggleChip(el) {
 }
 function getChips(group) {
   return [...document.querySelectorAll(`.chip.on[data-group="${group}"]`)].map(c => c.textContent.trim());
+}
+
+// Status do empreendimento: os 2 botões (Pronto para Morar / Em obras) são
+// rótulos amigáveis que representam VÁRIOS valores reais de estagio
+// (data-valor, comma-separated) -- ex: "Em obras" cobre tanto "Em obras"
+// quanto "Em planta" (mesma informação, pedido explícito do usuário). O
+// backend compara exato contra imo.estagio, então manda os termos reais,
+// não o rótulo do botão.
+function getChipsStatusExpandido_() {
+  const termos = new Set();
+  document.querySelectorAll('.chip.on[data-group="status"]').forEach(c => {
+    (c.dataset.valor || c.textContent.trim()).split(',').forEach(t => { if (t.trim()) termos.add(t.trim()); });
+  });
+  return [...termos];
 }
 
 // ─── PREÇO (slider + caixa de texto, sincronizados) ───────────────────────────
@@ -1287,6 +1306,19 @@ function codDisplay_(im) {
   return im.codigo || '';
 }
 
+// Badge de estágio pro card -- pedido explícito do usuário: destacar se é
+// "Pronto para Morar" ou "Em obras". Em obras/Em planta contam como a
+// mesma informação (mesmo agrupamento usado no Radar/Mapa Geral, ver
+// normEstRadar em lancamentos.html). Revenda não tem estagio cadastrado,
+// mas é sempre pronto/usado por definição (mesma premissa já documentada
+// no hint do filtro de Status do empreendimento).
+function estagioBadge_(im) {
+  const e = (im.estagio || '').toLowerCase();
+  if (!e) return im.fonte === 'REVENDA' ? { label: 'Pronto para Morar', cls: 'tag-pronto' } : null;
+  if (e.includes('obra') || e.includes('planta')) return { label: 'Em obras', cls: 'tag-obras' };
+  return { label: 'Pronto para Morar', cls: 'tag-pronto' }; // Pronto, Pronto novo, Entregue
+}
+
 // ─── BUSCA (chama o Apps Script de verdade) ───────────────────────────────────
 async function executarBusca() {
   const filtros = {
@@ -1298,7 +1330,7 @@ async function executarBusca() {
     suites:       getChips('suites'),
     vagas:        getChips('vagas'),
     bairroCidade: document.getElementById('input-bairro-cidade').value.trim(),
-    status:       getChips('status'),
+    status:       getChipsStatusExpandido_(),
     precoMax:     precoAtual,
     areaMin:      areaMinAtual,
     areaTerrMin:  areaTerrAtual,
@@ -1455,6 +1487,7 @@ function renderResultados(resultados, filtros, interpretado) {
     // "nome" mesmo, pra sempre ter algo em destaque no título.
     const nomeDestaque = im.condominio || im.bairro || '—';
     const bairroExtra  = (im.condominio && im.bairro) ? im.bairro : '';
+    const estBadge = estagioBadge_(im);
 
     const isRevenda = im.fonte === 'REVENDA';
     const card = document.createElement('div');
@@ -1490,6 +1523,7 @@ function renderResultados(resultados, filtros, interpretado) {
           </div>
           <div class="tags-match">
             <span class="tag ${isLanc ? 'tag-fonte-lanc' : isConst ? 'tag-fonte-const' : 'tag-fonte-rev'}">${isLanc ? '🚀 Lanç.' : isConst ? '🏗️ Constr.' : '🔑 Revenda'}</span>
+            ${estBadge ? `<span class="tag ${estBadge.cls}">${estBadge.cls === 'tag-obras' ? '🏗️' : '✅'} ${estBadge.label}</span>` : ''}
             ${im.statusAtivo === 'Excluído' ? '<span class="tag tag-excluido">🚫 Excluído</span>' : ''}
             ${isLanc && im.dataTabela ? `<span class="tag ${im.statusTabela==='Desatualizada'?'tag-tabela-desat':'tag-tabela-ok'}">${im.statusTabela==='Desatualizada'?'⚠':'✓'} Tab. ${im.dataTabela}</span>` : ''}
             ${isRevenda ? `<div class="pv-card-badge" data-pv-badge="${im.codigo}"></div>` : ''}
