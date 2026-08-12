@@ -3866,9 +3866,18 @@ async function carregarMetricasGoogleAds_() {
 
     if (!campanhas.length) {
       resumo.innerHTML = '';
-      corpo.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:32px">
-        Nenhum dado ainda. Confirme se o Script já rodou no Google Ads (Executar, não só Visualizar) e
-        se a planilha de métricas está compartilhada com Editor pra conta do Ads.</td></tr>`;
+      // Antes essa mensagem era sempre a mesma genérica, mesmo quando o
+      // backend tinha capturado um ERRO de verdade (listarMetricasGoogleAds_
+      // sempre volta {campanhas:[]} em qualquer exceção, ver code.txt) --
+      // agora mostra o erro real quando existe, em vez de mascarar tudo
+      // como "ainda sem dado".
+      corpo.innerHTML = json.erro
+        ? `<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:32px">
+            Erro ao ler a planilha de métricas:<br><b>${json.erro}</b><br>
+            <span style="font-size:11px;color:var(--text3)">Confirme se o ID da planilha ainda está certo e se ela continua compartilhada.</span></td></tr>`
+        : `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:32px">
+            Nenhum dado ainda. Confirme se o Script já rodou no Google Ads (Executar, não só Visualizar) e
+            se a planilha de métricas está compartilhada com Editor pra conta do Ads.</td></tr>`;
       return;
     }
 
