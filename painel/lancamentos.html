@@ -81,14 +81,21 @@ a { text-decoration: none; color: inherit; }
 .faixas-padrao-total { font-size: 11px; font-weight: 500; color: var(--text3); }
 .faixas-subgrupos-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .faixas-subgrupo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; min-width: 220px; flex: 1 1 240px; max-width: 320px; }
-.faixas-subgrupo-nome { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
+.faixas-subgrupo-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.faixas-subgrupo-nome { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text2); }
+.faixas-briefing-btn { padding: 3px 9px; font-size: 10px; flex-shrink: 0; }
 .faixas-valor-ref { display: inline-block; background: rgba(255, 200, 0, .9); color: #1a1a1a; font-size: 17px; font-weight: 800; padding: 4px 10px; border-radius: 6px; margin-bottom: 8px; }
 .faixas-subgrupo-faixa { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
 .faixas-subgrupo-count { font-size: 11px; color: var(--text2); font-weight: 600; margin-bottom: 8px; }
 .faixas-subgrupo-itens { border-top: 1px solid var(--border); padding-top: 8px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-.faixas-item-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text2); }
+.faixas-item-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text2); padding: 1px 4px; border-radius: 4px; }
 .faixas-item-linha span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .faixas-item-linha span:last-child { color: var(--text3); white-space: nowrap; }
+/* Empreendimento no ponto central da faixa (pedido explícito do usuário):
+   fundo amarelo + letra preta, mesma leitura visual do valor de referência. */
+.faixas-item-central { background: rgba(255, 200, 0, .9); }
+.faixas-item-central span:first-child,
+.faixas-item-central span:last-child { color: #1a1a1a; font-weight: 700; }
 
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
@@ -2387,7 +2394,13 @@ function calcularFaixasPorPadrao_(rows) {
     const lista = [...porPadrao[padrao]].sort((a, b) => a.menorPreco - b.menorPreco);
     const n = lista.length;
     const k = n >= FAIXAS_MIN_P_3_GRUPOS_ ? 3 : n >= FAIXAS_MIN_P_2_GRUPOS_ ? 2 : 1;
-    const letras = ['A', 'B', 'C'];
+    // Letras na mesma convenção já usada em Estratégias (faixasOrdemPadrao_,
+    // mais abaixo neste arquivo): A = terço/metade mais CARO, C = mais
+    // BARATO, B = intermediário -- pedido explícito do usuário pra não ter
+    // 2 convenções diferentes de A/B/C no mesmo app. Como `lista` já está
+    // ordenada do mais barato pro mais caro, o índice 0 é sempre o mais
+    // barato -- por isso as letras vêm nessa mesma ordem (barato->caro).
+    const letrasOrdem = faixasOrdemPadrao_(k);
     const base = Math.floor(n / k), resto = n % k;
     const subgrupos = [];
     let cursor = 0;
@@ -2401,12 +2414,18 @@ function calcularFaixasPorPadrao_(rows) {
       const precos = fatia.map(r => r.menorPreco);
       const valorMedio = precos.reduce((a, b) => a + b, 0) / precos.length;
       subgrupos.push({
-        label: k === 1 ? (PADRAO_LABEL_MIX_[padrao] || padrao) : `${(PADRAO_LABEL_MIX_[padrao] || padrao)}-${letras[i]}`,
+        label: k === 1 ? (PADRAO_LABEL_MIX_[padrao] || padrao) : `${(PADRAO_LABEL_MIX_[padrao] || padrao)}-${letrasOrdem[i]}`,
         valorMedio,
         valorMin: precos[0],
         valorMax: precos[precos.length - 1],
         count: fatia.length,
         itens: fatia,
+        // Item no PONTO CENTRAL da lista (pedido explícito do usuário) --
+        // posição do meio da fatia já ordenada por preço, não o mais
+        // próximo da média (que pode nem existir na base) -- pra 8 itens
+        // (par) fica no de baixo do meio (índice 3 de 0-7), sem preferência
+        // especial por caro/barato.
+        centralIdx: Math.floor((fatia.length - 1) / 2),
       });
     }
     return { padrao, total: n, subgrupos };
@@ -2418,10 +2437,16 @@ function formatarPrecoCompacto_(v) {
     ? (v / 1000000).toFixed(1).replace('.', ',') + ' MI'
     : Math.round(v / 1000) + ' MIL';
 }
+// Cache achatado dos sub-grupos renderizados por último -- permite o botão
+// "Gerar Briefing IA" de cada card (embutido no HTML via onclick) achar de
+// volta os itens daquele sub-grupo específico sem precisar serializar a
+// lista inteira num atributo HTML. Repovoado a cada renderListaPorFaixas_.
+let _faixasFlatIndex_ = [];
 function renderListaPorFaixas_() {
   const cont = document.getElementById('mapaFaixasConteudo');
   if (!cont) return;
   const grupos = calcularFaixasPorPadrao_(_mapaRows);
+  _faixasFlatIndex_ = [];
   if (!grupos.length) {
     cont.innerHTML = '<div class="sec-sub">Nenhum empreendimento com Padrão e preço cadastrados ainda -- cadastre o Padrão e a tabela de valores em Lançamentos pra essa lista se formar.</div>';
     return;
@@ -2432,20 +2457,54 @@ function renderListaPorFaixas_() {
         <span class="faixas-padrao-total">${g.total} empreendimento${g.total === 1 ? '' : 's'}${g.subgrupos.length > 1 ? ` · ${g.subgrupos.length} sub-grupos` : ''}</span>
       </div>
       <div class="faixas-subgrupos-row">
-        ${g.subgrupos.map(sg => `
+        ${g.subgrupos.map(sg => {
+          const flatIdx = _faixasFlatIndex_.push(sg) - 1;
+          return `
           <div class="faixas-subgrupo-card">
-            <div class="faixas-subgrupo-nome">${sg.label}</div>
+            <div class="faixas-subgrupo-topo">
+              <div class="faixas-subgrupo-nome">${sg.label}</div>
+              <button class="btn-mini btn-briefing-mm faixas-briefing-btn" onclick="gerarBriefingFaixa_(${flatIdx})" title="Gerar Briefing IA (Estratégias de Tráfego Pago) com os ${sg.count} empreendimentos dessa faixa">🤖 Briefing IA</button>
+            </div>
             <div class="faixas-valor-ref" title="Valor médio de referência (menor preço) desse sub-grupo -- use pra nomear/dimensionar campanha">R$ ${formatarPrecoCompacto_(sg.valorMedio)}</div>
             <div class="faixas-subgrupo-faixa">R$ ${exibirPrecoBR(sg.valorMin)} — R$ ${exibirPrecoBR(sg.valorMax)}</div>
             <div class="faixas-subgrupo-count">${sg.count} empreendimento${sg.count === 1 ? '' : 's'}</div>
             <div class="faixas-subgrupo-itens">
-              ${sg.itens.map(it => `<div class="faixas-item-linha"><span>${it.nome || '—'}</span><span>R$ ${exibirPrecoBR(it.menorPreco)}</span></div>`).join('')}
+              ${sg.itens.map((it, idx) => `<div class="faixas-item-linha${idx === sg.centralIdx ? ' faixas-item-central' : ''}"${idx === sg.centralIdx ? ' title="Empreendimento no ponto central dessa faixa"' : ''}><span>${it.nome || '—'}</span><span>R$ ${exibirPrecoBR(it.menorPreco)}</span></div>`).join('')}
             </div>
           </div>
-        `).join('')}
+        `; }).join('')}
       </div>
     </div>
   `).join('');
+}
+
+// Botão "Gerar Briefing IA" de cada faixa (pedido explícito do usuário: a
+// mesma instrução já usada em Estratégias de Tráfego Pago → MONTAR MIX,
+// reaproveitada aqui). Monta um mix temporário só com os empreendimentos
+// dessa faixa (mesmo formato {it,papel} que _mmItens_ usa -- os itens de
+// _mapaRows já carregam .e/.comp/.simil/.scoreVendedor/.menorPreco/.padrao,
+// os mesmos campos que _itensScoredCache produz), gera e baixa o .md via
+// baixarBriefingMixMd_ (mesmíssima função/regras do botão de Montar Mix),
+// e devolve o mix manual do usuário ao estado que estava antes -- essa
+// geração é só um "empréstimo" rápido da engine de briefing, não deve
+// alterar o que o corretor já tinha montado manualmente na aba Estratégias.
+function gerarBriefingFaixa_(flatIdx) {
+  const sg = _faixasFlatIndex_[flatIdx];
+  if (!sg || !sg.itens.length) { mostrarToast('Faixa sem empreendimentos.', 'aviso'); return; }
+
+  const mmItensOriginal = _mmItens_;
+  const mmObsOriginal   = _mmObs_;
+  try {
+    _mmItens_ = sg.itens.map(r => ({
+      it: { e: r.e, comp: r.comp, simil: r.simil, scoreVendedor: r.scoreVendedor, menorPreco: r.menorPreco, padrao: r.padrao },
+      papel: '',
+    }));
+    _mmObs_ = `Mix automático gerado a partir da faixa de preço "${sg.label}" (Lista por Faixas) -- ${sg.count} empreendimentos entre R$ ${exibirPrecoBR(sg.valorMin)} e R$ ${exibirPrecoBR(sg.valorMax)}, valor médio de referência R$ ${formatarPrecoCompacto_(sg.valorMedio)}.`;
+    baixarBriefingMixMd_(sg.label.replace(/[^a-zA-Z0-9-]+/g, '_'));
+  } finally {
+    _mmItens_ = mmItensOriginal;
+    _mmObs_   = mmObsOriginal;
+  }
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
@@ -8339,7 +8398,12 @@ function abrirBriefIa_() {
 
 // ── BRIEFING MIX MANUAL para IA Editora (Google Ads) — mesmo padrão do
 // baixarBriefingSuporte_(), adaptado pro mix montado manualmente pelo corretor.
-function baixarBriefingMixMd_() {
+// sufixoArquivo (opcional): só muda o nome do arquivo baixado -- usado pelo
+// botão "Gerar Briefing IA" de cada faixa em Lista por Faixas
+// (gerarBriefingFaixa_), que reaproveita esta mesma função/instrução
+// (pedido explícito do usuário) trocando só QUAIS itens entram em _mmItens_
+// antes de chamar, sem duplicar nada do texto/regras do briefing.
+function baixarBriefingMixMd_(sufixoArquivo) {
   if (!_mmItens_.length) { mostrarToast('Adicione ao menos um empreendimento ao mix.', 'aviso'); return; }
 
   const agora = new Date().toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' });
@@ -8813,7 +8877,7 @@ https://imoveisemgoiania.com/?objetivo=investimento&padroes=Popular,Médio,Alto,
   const blob = new Blob([txt], { type: 'text/markdown;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = `briefing-mix-${hoje}.md`; a.click();
+  a.href = url; a.download = `briefing-mix${sufixoArquivo ? '-' + sufixoArquivo : ''}-${hoje}.md`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
   mostrarToast('Briefing gerado e baixado!', 'sucesso');
 }
