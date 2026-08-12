@@ -473,18 +473,28 @@
   .login-btn:hover{background:#3d6aee}
   .login-err{color:#ff5a5a;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
 
-  /* ── BASEIMOB LEAD CARDS ── */
-  .bi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;align-items:flex-start;gap:16px;transition:border-color .2s}
+  /* ── BASEIMOB LEAD CARDS ──
+     Compactado (pedido explícito do usuário): altura ~50% menor. Motivo
+     principal do card ter ficado alto: 5 botões (WhatsApp/Ver/Qualificar/
+     Convertido em Venda/Excluir) empilhados numa coluna só -- viraram
+     grid de 2 colunas (3 linhas em vez de 5). Também: avatar/fontes
+     menores, padding mais justo, e uma tag nova de UTM de origem. */
+  .bi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:flex-start;gap:10px;transition:border-color .2s}
   .bi-card:hover{border-color:var(--accent)}
-  .bi-card+.bi-card{margin-top:10px}
-  .bi-avatar{width:40px;height:40px;border-radius:50%;background:rgba(79,124,255,.2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--accent);flex-shrink:0}
+  .bi-card+.bi-card{margin-top:6px}
+  .bi-avatar{width:30px;height:30px;border-radius:50%;background:rgba(79,124,255,.2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--accent);flex-shrink:0}
   .bi-info{flex:1;min-width:0}
-  .bi-name{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--text)}
-  .bi-sub{font-size:12px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+  .bi-name{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--text)}
+  .bi-sub{font-size:11px;color:var(--text2);margin-top:1px;overflow:hidden;text-overflow:ellipsis}
   .bi-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
   .bi-ofertas{margin-top:6px;font-size:12px;color:var(--accent2);font-weight:600}
-  .bi-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
-  .bi-btn{padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .2s;text-decoration:none;display:inline-block;text-align:center}
+  /* UTM de origem -- pedido explícito do usuário: identificar no card se o
+     lead veio de anúncio (mostra a campanha) ou é orgânico/direto. */
+  .bi-utm{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:4px;margin-top:3px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .bi-utm-ads{background:rgba(0,212,170,.14);color:var(--accent2)}
+  .bi-utm-organico{background:var(--surface2);color:var(--text3)}
+  .bi-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;flex-shrink:0;width:150px}
+  .bi-btn{padding:4px 6px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .2s;text-decoration:none;display:inline-block;text-align:center}
   .bi-btn-migrar{background:var(--accent);color:#fff}
   .bi-btn-migrar:hover{background:#3d6aee}
   .bi-btn-migrar:disabled{background:var(--border);color:var(--text3);cursor:default}
@@ -4513,6 +4523,15 @@ function renderLeadsBaseimob(leads) {
     const nImoveis = l.qtdEncontrados || l.qtdInteresse || '';
     const canal   = l.canal ? `📡 ${l.canal}` : '';
     const subInfo = [canal, nImoveis ? `${nImoveis} imóveis compatíveis` : ''].filter(Boolean).join(' · ');
+    // Telefone + data numa linha só (era 2 linhas separadas) -- economiza
+    // altura sem perder informação.
+    const contatoLinha = [l.telefone ? `📞 ${l.telefone}` : '', `📅 ${l.dataCadastro || '—'}`].filter(Boolean).join(' · ');
+    // UTM de origem -- pedido explícito do usuário: identificar no card se
+    // o lead veio de clique de anúncio (mostra a campanha) ou é
+    // orgânico/direto (sem gclid).
+    const utmTag = l.gclid
+      ? `<div class="bi-utm bi-utm-ads" title="Veio de clique de anúncio${l.utmCampaign ? ' — campanha: ' + l.utmCampaign : ''}">📢 ${l.utmCampaign || 'Anúncio (sem campanha)'}</div>`
+      : `<div class="bi-utm bi-utm-organico" title="Sem gclid registrado -- acesso direto ou orgânico">🌱 Orgânico/Direto</div>`;
 
     return `
     <div class="bi-card" id="bicard_${l.idCliente}" onclick="abrirDetalheLeadBI('${l.idCliente}')">
@@ -4520,23 +4539,23 @@ function renderLeadsBaseimob(leads) {
       <div class="bi-info">
         <div class="bi-name">${l.nome || 'Sem nome'}</div>
         <div class="bi-sub">${subInfo || 'Clique para ver detalhes'}</div>
-        ${l.telefone ? `<div style="font-size:12px;color:var(--text3);margin-top:3px">📞 ${l.telefone}</div>` : ''}
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">📅 ${l.dataCadastro || '—'}</div>
+        <div style="font-size:10.5px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${contatoLinha}</div>
+        ${utmTag}
       </div>
       <div class="bi-actions" onclick="event.stopPropagation()">
-        ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬</a>` : ''}
-        <button class="bi-btn" style="background:var(--surface2,var(--border));color:var(--text2);font-size:11px"
+        ${wppTel ? `<a class="bi-btn" style="background:#25d366;color:#fff" href="https://wa.me/55${wppTel}" target="_blank">💬 Whats</a>` : '<span></span>'}
+        <button class="bi-btn" style="background:var(--surface2,var(--border));color:var(--text2)"
           onclick="abrirDetalheLeadBI('${l.idCliente}')">Ver ›</button>
         ${l.qualificado === 'Sim'
-          ? `<span class="bi-btn" style="background:#00d4aa;color:#04241c;font-weight:700;font-size:11px;cursor:default">✅ Qualificado</span>`
-          : `<button class="bi-btn" style="background:#f5a623;color:#2b1600;font-weight:700;font-size:11px" title="Confirmar como lead qualificado -- manda a conversão pro Google Ads"
+          ? `<span class="bi-btn" style="background:#00d4aa;color:#04241c;font-weight:700;cursor:default">✅ Qualificado</span>`
+          : `<button class="bi-btn" style="background:#f5a623;color:#2b1600;font-weight:700" title="Confirmar como lead qualificado -- manda a conversão pro Google Ads"
               onclick="qualificarLeadBI('${l.idCliente}',this)">✅ Qualificar</button>`}
         ${l.qualificado === 'Sim' ? (l.convertido === 'Sim'
-          ? `<span class="bi-btn" style="background:#e6ac00;color:#2b1d00;font-weight:700;font-size:11px;cursor:default">🏆 Convertido</span>`
-          : `<button class="bi-btn" style="background:#e6ac00;color:#2b1d00;font-weight:700;font-size:11px" title="Confirmar que virou venda -- manda essa conversão pro Google Ads também"
-              onclick="converterVendaLeadBI('${l.idCliente}',this)">🏆 Convertido em Venda</button>`) : ''}
-        <button class="bi-btn" style="background:#3a1a1a;color:#e05a3a;font-size:13px" title="Excluir lead"
-          onclick="excluirLeadBI('${l.idCliente}',this)">🗑</button>
+          ? `<span class="bi-btn" style="background:#e6ac00;color:#2b1d00;font-weight:700;cursor:default">🏆 Convertido</span>`
+          : `<button class="bi-btn" style="background:#e6ac00;color:#2b1d00;font-weight:700" title="Confirmar que virou venda -- manda essa conversão pro Google Ads também"
+              onclick="converterVendaLeadBI('${l.idCliente}',this)">🏆 Marcar Venda</button>`) : '<span></span>'}
+        <button class="bi-btn" style="background:#3a1a1a;color:#e05a3a" title="Excluir lead"
+          onclick="excluirLeadBI('${l.idCliente}',this)">🗑 Excluir</button>
       </div>
     </div>`;
   }).join('');
