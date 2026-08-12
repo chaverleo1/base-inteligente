@@ -1025,10 +1025,10 @@
           <tr>
             <th>Campanha</th><th>Status</th><th>Investimento</th><th>Cliques</th>
             <th>Impressões</th><th>CTR</th><th>CPC médio</th><th>Conversões (Ads)</th>
-            <th>Leads Qualif.</th><th>Custo/Lead Qualif.</th>
+            <th>Leads Qualif.</th><th>Custo/Lead Qualif.</th><th>Lead Venda</th>
           </tr>
         </thead>
-        <tbody id="gadsTabelaBody"><tr><td colspan="10" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
+        <tbody id="gadsTabelaBody"><tr><td colspan="11" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -3880,7 +3880,7 @@ async function carregarMetricasGoogleAds_() {
   _gadsCarregado_ = true;
   const resumo = document.getElementById('gadsCardsResumo');
   const corpo  = document.getElementById('gadsTabelaBody');
-  corpo.innerHTML = '<tr><td colspan="10" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
+  corpo.innerHTML = '<tr><td colspan="11" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
   try {
     const resp = await fetch(`${WEBHOOK_URL}?acao=listar_metricas_google_ads&dias=30&token=${encodeURIComponent(tokenSessao())}`);
     const json = await resp.json();
@@ -3898,10 +3898,10 @@ async function carregarMetricasGoogleAds_() {
       // agora mostra o erro real quando existe, em vez de mascarar tudo
       // como "ainda sem dado".
       corpo.innerHTML = json.erro
-        ? `<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:32px">
+        ? `<tr><td colspan="11" style="text-align:center;color:var(--danger);padding:32px">
             Erro ao ler a planilha de métricas:<br><b>${json.erro}</b><br>
             <span style="font-size:11px;color:var(--text3)">Confirme se o ID da planilha ainda está certo e se ela continua compartilhada.</span></td></tr>`
-        : `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:32px">
+        : `<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:32px">
             Nenhum dado ainda. Confirme se o Script já rodou no Google Ads (Executar, não só Visualizar) e
             se a planilha de métricas está compartilhada com Editor pra conta do Ads.</td></tr>`;
       return;
@@ -3937,9 +3937,10 @@ async function carregarMetricasGoogleAds_() {
         <td>${c.conversoes}</td>
         <td>${c.leadsQualificados || 0}</td>
         <td>${c.custoPorLeadQualificado != null ? fmtBRL(c.custoPorLeadQualificado) : '—'}</td>
+        <td style="font-weight:${c.leadsConvertidos > 0 ? '700' : '400'};color:${c.leadsConvertidos > 0 ? '#e6ac00' : 'inherit'}">${c.leadsConvertidos > 0 ? '🏆 ' : ''}${c.leadsConvertidos || 0}</td>
       </tr>`).join('');
   } catch (e) {
-    corpo.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
   }
 }
 
