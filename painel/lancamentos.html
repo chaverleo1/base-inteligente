@@ -111,10 +111,27 @@ a { text-decoration: none; color: inherit; }
 .faixas-resumo-tabela { width: 100%; border-collapse: collapse; }
 .faixas-resumo-tabela th { padding: 3px 8px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; }
 .faixas-resumo-tabela td { padding: 3px 8px; font-size: 11px; color: var(--text2); border-bottom: 1px solid rgba(255,255,255,.05); white-space: nowrap; line-height: 1.5; }
+.faixas-resumo-tabela td.frt-local-td { white-space: normal; } /* só a coluna Local pode quebrar linha (vários chips de bairro/cidade) */
 .faixas-resumo-tabela tbody tr:last-child td { border-bottom: none; }
 .frt-faixa { font-weight: 700; color: var(--text); }
 .frt-ref { font-weight: 700; color: #e6ac00; }
 .frt-qtd-badge { display: inline-block; min-width: 22px; text-align: center; padding: 2px 9px; border-radius: 99px; background: rgba(255, 200, 0, .9); color: #1a1a1a; font-weight: 800; font-size: 11px; }
+/* Faixa nível "A" (a mais cara de cada Padrão, pedido explícito do usuário):
+   fundo branco + letra escura, se destaca das demais linhas (tema escuro). */
+.faixas-resumo-tabela tr.frt-nivel-a { background: #fff; }
+.faixas-resumo-tabela tr.frt-nivel-a td { color: #1a1a1a; border-bottom-color: #eee; }
+.faixas-resumo-tabela tr.frt-nivel-a .frt-faixa { color: #1a1a1a; }
+.faixas-resumo-tabela tr.frt-nivel-a .frt-ref { color: #b8860b; }
+/* Coluna "Local" -- 1 botão por bairro/cidade dentro da faixa, com a
+   quantidade (pedido explícito do usuário: "bairro/cidade (04)"). Clicar
+   rola até o card correspondente em Lista por Faixas (focarFaixaResumo_). */
+.frt-local-cell { display: flex; flex-wrap: wrap; gap: 3px; }
+.frt-local-btn { padding: 1px 7px; font-size: 9px; border-radius: 99px; }
+.frt-nivel-a .frt-local-btn { background: rgba(0,0,0,.05); border-color: rgba(0,0,0,.18); color: #1a1a1a; }
+.frt-nivel-a .frt-local-btn:hover { border-color: rgba(0,0,0,.4); color: #000; }
+/* Flash de destaque no card ao clicar num botão de Local na tabela-resumo. */
+@keyframes faixasCardFlash { 0%,100% { box-shadow: none; } 30%,70% { box-shadow: 0 0 0 3px #ffc800; } }
+.faixas-card-flash { animation: faixasCardFlash 1.2s ease-in-out; }
 
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
@@ -284,6 +301,7 @@ a { text-decoration: none; color: inherit; }
   body.imprimir-resumo-faixas .faixas-resumo-tabela td { color: #000 !important; border-color: #ccc !important; }
   body.imprimir-resumo-faixas .frt-ref { color: #000 !important; }
   body.imprimir-resumo-faixas .frt-qtd-badge { background: #ffc800 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.imprimir-resumo-faixas .frt-local-btn { background: #f2f2f2 !important; border: 1px solid #ccc !important; color: #000 !important; }
 }
 
 /* ── SECTION HEADER ── */
@@ -2481,16 +2499,48 @@ let _faixasFlatIndex_ = [];
 // baixas (padding mínimo) pra caber tudo sem rolagem mesmo com vários
 // padrões x sub-grupos. Botão de PDF dedicado (imprimirResumoFaixas_) --
 // independente do "Imprimir Lista" do topo da página.
+// Agrupa os itens de um sub-grupo por bairro/cidade -- alimenta a coluna
+// "Local" da tabela-resumo (pedido explícito do usuário: um botão por
+// bairro/cidade dentro da faixa, com a contagem de cada um). Ordenado do
+// bairro/cidade com mais empreendimentos pro com menos (empate = alfabético).
+function faixasContarPorLocal_(itens) {
+  const contagem = {};
+  itens.forEach(it => {
+    const bairro = (it.bairro && it.bairro !== '—') ? it.bairro : '';
+    const cidade = it.cidade || '';
+    const chave = [bairro, cidade].filter(Boolean).join('/') || 'Local não informado';
+    contagem[chave] = (contagem[chave] || 0) + 1;
+  });
+  return Object.keys(contagem)
+    .map(chave => ({ label: chave, count: contagem[chave] }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+// flatIdx é o índice do sub-grupo (sg) dentro de _faixasFlatIndex_ -- mesmo
+// índice usado pelo botão "Gerar Briefing IA" de cada card (gerarBriefingFaixa_).
+// Aqui reaproveitado só pra rolar/focar até o card correspondente quando o
+// usuário clica num botão de bairro/cidade da tabela-resumo.
 function renderFaixasResumo_(grupos) {
   const wrap = document.getElementById('mapaFaixasResumoWrap');
   if (!wrap) return;
-  const linhas = grupos.flatMap(g => g.subgrupos).map(sg => `
-    <tr>
+  const linhas = _faixasFlatIndex_.map((sg, flatIdx) => {
+    // Pedido explícito do usuário: destacar em fundo branco/letra escura a
+    // faixa nível "A" (a mais cara de cada Padrão, quando existe mais de um
+    // sub-grupo -- ver faixasOrdemPadrao_/calcularFaixasPorPadrao_).
+    const nivelA = /-A$/.test(sg.label);
+    const locais = faixasContarPorLocal_(sg.itens);
+    const localHtml = locais.map(loc =>
+      `<button class="btn-mini frt-local-btn" onclick="focarFaixaResumo_(${flatIdx})" title="Ver os ${loc.count} empreendimento${loc.count === 1 ? '' : 's'} de ${loc.label} nessa faixa">${loc.label} (${String(loc.count).padStart(2, '0')})</button>`
+    ).join('');
+    return `
+    <tr${nivelA ? ' class="frt-nivel-a"' : ''}>
       <td class="frt-faixa">${sg.label}</td>
       <td class="frt-ref">R$ ${formatarPrecoCompacto_(sg.valorMedio)}</td>
       <td>R$ ${exibirPrecoBR(sg.valorMin)} — R$ ${exibirPrecoBR(sg.valorMax)}</td>
       <td><span class="frt-qtd-badge">${sg.count}</span></td>
-    </tr>`).join('');
+      <td class="frt-local-td"><div class="frt-local-cell">${localHtml}</div></td>
+    </tr>`;
+  }).join('');
   wrap.innerHTML = `
     <div class="faixas-resumo-wrap">
       <div class="faixas-resumo-header">
@@ -2498,10 +2548,20 @@ function renderFaixasResumo_(grupos) {
         <button class="btn-mini btn-resumo-pdf" onclick="imprimirResumoFaixas_()" title="Gerar PDF só da tabela resumo">🖨️ PDF</button>
       </div>
       <table class="faixas-resumo-tabela">
-        <thead><tr><th>Faixa</th><th>Valor de Referência</th><th>Faixa de Preço</th><th>Qtd</th></tr></thead>
+        <thead><tr><th>Faixa</th><th>Valor de Referência</th><th>Faixa de Preço</th><th>Qtd</th><th>Local</th></tr></thead>
         <tbody>${linhas}</tbody>
       </table>
     </div>`;
+}
+
+// Rola até o card da faixa (Lista por Faixas, mais abaixo) e dá um flash
+// amarelo nele -- ação dos botões de bairro/cidade da coluna Local.
+function focarFaixaResumo_(flatIdx) {
+  const card = document.getElementById('faixas-card-' + flatIdx);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.add('faixas-card-flash');
+  setTimeout(() => card.classList.remove('faixas-card-flash'), 1200);
 }
 
 // Imprime/gera PDF só da tabela-resumo de Lista por Faixas -- mesmo padrão
@@ -2518,7 +2578,11 @@ function renderListaPorFaixas_() {
   const cont = document.getElementById('mapaFaixasConteudo');
   if (!cont) return;
   const grupos = calcularFaixasPorPadrao_(_mapaRows);
-  _faixasFlatIndex_ = [];
+  // Fonte única do índice achatado -- tanto a tabela-resumo (Local, PDF)
+  // quanto as caixas de cada faixa (Briefing IA, id do card) usam o MESMO
+  // _faixasFlatIndex_/flatIdx, montado 1x aqui, pra nunca dessincronizar
+  // entre as duas renderizações (antes cada uma tinha sua própria contagem).
+  _faixasFlatIndex_ = grupos.flatMap(g => g.subgrupos);
   const resumoWrap = document.getElementById('mapaFaixasResumoWrap');
   if (!grupos.length) {
     if (resumoWrap) resumoWrap.innerHTML = '';
@@ -2533,9 +2597,9 @@ function renderListaPorFaixas_() {
       </div>
       <div class="faixas-subgrupos-row">
         ${g.subgrupos.map(sg => {
-          const flatIdx = _faixasFlatIndex_.push(sg) - 1;
+          const flatIdx = _faixasFlatIndex_.indexOf(sg);
           return `
-          <div class="faixas-subgrupo-card">
+          <div class="faixas-subgrupo-card" id="faixas-card-${flatIdx}">
             <div class="faixas-subgrupo-topo">
               <div class="faixas-subgrupo-nome">${sg.label}</div>
               <button class="btn-mini btn-briefing-mm faixas-briefing-btn" onclick="gerarBriefingFaixa_(${flatIdx})" title="Gerar Briefing IA (Estratégias de Tráfego Pago) com os ${sg.count} empreendimentos dessa faixa">🤖 IA</button>
