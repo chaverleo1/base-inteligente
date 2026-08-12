@@ -5390,15 +5390,14 @@ function listarMetricasGoogleAds_(params) {
     // que o usuário definiu desde o início como a que mais importa: não
     // "conversão" que o próprio Ads reporta (que só sabe que o funil foi
     // até o fim, não se o lead era bom), e sim leads que o corretor
-    // confirmou manualmente. Vínculo feito pelo utmCampaign gravado no
-    // lead (App Lançamentos) comparado ao nome da campanha, normalizado
-    // (sem acento/maiúscula/símbolo) -- depende do utm_campaign usado nos
-    // anúncios corresponder ao nome real da campanha no Ads (prática
-    // comum, mas não garantida; ver contarLeadsQualificadosPorCampanha_).
-    var qualifPorCampanha = contarLeadsQualificadosPorCampanha_(dias);
-    var norm_ads_ = function(s) {
-      return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
-    };
+    // confirmou manualmente. Vínculo feito por SOBREPOSIÇÃO DE PALAVRAS
+    // entre o utmCampaign gravado no lead e o nome da campanha -- não dá
+    // pra assumir que um contém o outro (caso real: campanha
+    // "C1-APPLAN-MORADIA-MEDIO-PRONTO-425K" × utm
+    // "moradia-medio-pronto-425k-an1" -- nenhum dos dois contém o outro
+    // inteiro, mas 4 das 5 palavras do utm aparecem na campanha). Ver
+    // tokenizarNomeCampanha_/contarLeadsQualificadosPorCampanha_.
+    var gruposQualif = contarLeadsQualificadosPorCampanha_(dias);
 
     var lista = Object.keys(porCampanha).map(function(k) {
       var c = porCampanha[k];
@@ -5406,21 +5405,21 @@ function listarMetricasGoogleAds_(params) {
       c.cpcMedio         = c.cliques > 0 ? (c.investimento / c.cliques) : 0;
       c.custoPorConversao = c.conversoes > 0 ? (c.investimento / c.conversoes) : null;
 
-      var nomeNorm = norm_ads_(c.campanha);
-      var qtdQualif = qualifPorCampanha[nomeNorm] || 0;
-      if (!qtdQualif) {
-        // Não achou match exato -- tenta contenção (um string dentro do
-        // outro), pra absorver pequena diferença de grafia entre o
-        // utm_campaign e o nome real da campanha no Ads.
-        for (var utmNorm in qualifPorCampanha) {
-          if (utmNorm && (nomeNorm.indexOf(utmNorm) >= 0 || utmNorm.indexOf(nomeNorm) >= 0)) {
-            qtdQualif = qualifPorCampanha[utmNorm];
-            break;
-          }
-        }
-      }
-      c.leadsQualificados = qtdQualif;
-      c.custoPorLeadQualificado = qtdQualif > 0 ? (c.investimento / qtdQualif) : null;
+      var tokensCampanha = tokenizarNomeCampanha_(c.campanha);
+      var melhorGrupo = null, melhorScore = 0;
+      gruposQualif.forEach(function(g) {
+        var comuns = g.tokens.filter(function(t) { return tokensCampanha.indexOf(t) >= 0; }).length;
+        // Score = fração das palavras do utm_campaign que aparecem no
+        // nome da campanha -- o utm costuma ser mais "enxuto" (sem
+        // prefixo de conta/anunciante tipo "C1-APPLAN-"), então bater a
+        // maioria das palavras DELE já é sinal forte. Exige pelo menos
+        // 2 palavras em comum (evita match só por uma palavra genérica
+        // tipo "pronto") e pelo menos metade do utm coberta.
+        var score = g.tokens.length ? comuns / g.tokens.length : 0;
+        if (comuns >= 2 && score >= 0.5 && score > melhorScore) { melhorScore = score; melhorGrupo = g; }
+      });
+      c.leadsQualificados = melhorGrupo ? melhorGrupo.count : 0;
+      c.custoPorLeadQualificado = c.leadsQualificados > 0 ? (c.investimento / c.leadsQualificados) : null;
       return c;
     });
 
@@ -5446,15 +5445,27 @@ function listarMetricasGoogleAds_(params) {
   }
 }
 
+// Quebra um nome de campanha/utm em palavras normalizadas (minúsculo, sem
+// acento, separadas por qualquer caractere não-alfanumérico -- hífen,
+// espaço, underscore). Usado pro matching por sobreposição de palavras em
+// listarMetricasGoogleAds_/contarLeadsQualificadosPorCampanha_. Palavras
+// de 1 caractere só (ruído) são descartadas.
+function tokenizarNomeCampanha_(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .split(/[^a-z0-9]+/).filter(function(t) { return t.length >= 2; });
+}
+
 // Conta leads QUALIFICADOS (LEADS_LANCAMENTOS) agrupados por utmCampaign
-// normalizado, só os qualificados dentro dos últimos `dias`. Usado por
-// listarMetricasGoogleAds_ pra calcular custo por lead qualificado.
+// (mantido cru + tokenizado, pra listarMetricasGoogleAds_ fazer o match
+// por sobreposição de palavras contra o nome real da campanha -- não dá
+// pra normalizar aqui e comparar string exata, ver comentário lá). Só os
+// qualificados dentro dos últimos `dias`.
 function contarLeadsQualificadosPorCampanha_(dias) {
-  var resultado = {};
+  var grupos = {}; // utmCampaign cru -> { utm, tokens, count }
   try {
     var abaLeads = obterAbaLeadsLancamentos_();
     var lr = abaLeads.getLastRow();
-    if (lr < 2) return resultado;
+    if (lr < 2) return [];
 
     var idxQualif = CABECALHO_LEADS_LANCAMENTOS.indexOf('qualificado');
     var idxUtm    = CABECALHO_LEADS_LANCAMENTOS.indexOf('utmCampaign');
@@ -5463,23 +5474,21 @@ function contarLeadsQualificadosPorCampanha_(dias) {
 
     var desde = new Date();
     desde.setDate(desde.getDate() - dias);
-    var norm_ads_ = function(s) {
-      return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
-    };
 
     dados.forEach(function(r) {
       if (String(r[idxQualif] || '') !== 'Sim') return;
-      var utm = norm_ads_(r[idxUtm]);
-      if (!utm) return;
+      var utmRaw = String(r[idxUtm] || '').trim();
+      if (!utmRaw) return;
       var m = String(r[idxDataQ] || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
       if (m) {
         var dataQ = new Date(+m[3], +m[2] - 1, +m[1]);
         if (dataQ < desde) return;
       }
-      resultado[utm] = (resultado[utm] || 0) + 1;
+      if (!grupos[utmRaw]) grupos[utmRaw] = { utm: utmRaw, tokens: tokenizarNomeCampanha_(utmRaw), count: 0 };
+      grupos[utmRaw].count++;
     });
   } catch (e) {}
-  return resultado;
+  return Object.keys(grupos).map(function(k) { return grupos[k]; });
 }
 
 // Handler do beacon disparado pelo App Lançamentos a cada troca de step
