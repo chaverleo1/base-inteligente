@@ -5339,6 +5339,21 @@ function limparEventosFunil_() {
 // Investimento (R$), Cliques, Impressões, CTR (%), CPC médio (R$), Conversões.
 var SHEET_ID_ADS_METRICAS_ = '15CpB8YINpwqgeBZP4n-c4yzpTIt9kL8G78MvvBzoZTg';
 
+// Lê uma data de célula da planilha de métricas -- o Google Sheets às
+// vezes converte sozinho um texto tipo "10/08/2026" (escrito pelo Script
+// do Ads) num valor de DATA de verdade da célula, mesmo continuando a
+// EXIBIR como texto normal -- getValues() nesse caso devolve um objeto
+// Date do Apps Script, não a string original. Sem tratar os dois casos,
+// linhas inteiras eram descartadas em silêncio (bug real encontrado a
+// partir do relato do usuário: planilha com dado válido, painel vazio,
+// sem nenhum erro reportado).
+function parseDataMetricaAds_(v) {
+  if (v instanceof Date) return v;
+  var m = String(v || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (!m) return null;
+  return new Date(+m[3], +m[2] - 1, +m[1]);
+}
+
 // Lê a planilha de métricas e agrega por campanha dentro do período pedido
 // (params.dias, default 30). CTR e CPC médio são RECALCULADOS a partir dos
 // totais agregados (cliques/impressões/investimento), não a média simples
@@ -5369,9 +5384,8 @@ function listarMetricasGoogleAds_(params) {
       var nome = String(r[1] || '');
       if (!nome || nome.toUpperCase().indexOf(FILTRO_NOME_) === -1) return;
 
-      var m = String(r[0] || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-      if (!m) return;
-      var dataLinha = new Date(+m[3], +m[2] - 1, +m[1]);
+      var dataLinha = parseDataMetricaAds_(r[0]);
+      if (!dataLinha) return;
       if (dataLinha < desde) return;
       if (!ultimaData || dataLinha > ultimaData) ultimaData = dataLinha;
 
@@ -5479,11 +5493,8 @@ function contarLeadsQualificadosPorCampanha_(dias) {
       if (String(r[idxQualif] || '') !== 'Sim') return;
       var utmRaw = String(r[idxUtm] || '').trim();
       if (!utmRaw) return;
-      var m = String(r[idxDataQ] || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-      if (m) {
-        var dataQ = new Date(+m[3], +m[2] - 1, +m[1]);
-        if (dataQ < desde) return;
-      }
+      var dataQ = parseDataMetricaAds_(r[idxDataQ]);
+      if (dataQ && dataQ < desde) return;
       if (!grupos[utmRaw]) grupos[utmRaw] = { utm: utmRaw, tokens: tokenizarNomeCampanha_(utmRaw), count: 0 };
       grupos[utmRaw].count++;
     });
