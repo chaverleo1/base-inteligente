@@ -3945,11 +3945,13 @@ async function carregarMetricasGoogleAds_() {
 }
 
 // Gráfico de evolução diária por campanha (Cliques × Impressões ×
-// Conversões) -- pedido explícito do usuário. Impressões usa eixo Y
-// separado (direita) das outras duas métricas -- em contas maiores,
-// impressão costuma ser uma ordem de grandeza maior que clique/conversão,
-// e misturar tudo no mesmo eixo deixaria clique/conversão "achatados" no
-// gráfico, quase invisíveis.
+// Conversões, + Lead Qualificado × Lead Venda -- pedido explícito do
+// usuário). Impressões usa eixo Y separado (direita) das demais métricas --
+// em contas maiores, impressão costuma ser uma ordem de grandeza maior que
+// clique/conversão/lead, e misturar tudo no mesmo eixo deixaria essas
+// "achatadas" no gráfico, quase invisíveis. Lead Qualificado/Lead Venda
+// ficam no mesmo eixo esquerdo de Cliques/Conversões -- mesma ordem de
+// grandeza (contagens pequenas), sem precisar de um 3º eixo.
 let _gadsSeriesCache_ = [];
 async function carregarSeriesGoogleAds_() {
   const select = document.getElementById('gadsCampanhaSelect');
@@ -3979,9 +3981,11 @@ function renderGraficoEvolucaoAds_(nomeCampanha) {
     data: {
       labels: dados.dias,
       datasets: [
-        { label: 'Cliques',     data: dados.cliques,    borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,.12)',  yAxisID: 'y',  tension: .3, pointRadius: 3 },
-        { label: 'Conversões',  data: dados.conversoes, borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,.12)',   yAxisID: 'y',  tension: .3, pointRadius: 3 },
-        { label: 'Impressões',  data: dados.impressoes, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.12)', yAxisID: 'y1', tension: .3, pointRadius: 3 },
+        { label: 'Cliques',          data: dados.cliques,           borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,.12)',  yAxisID: 'y',  tension: .3, pointRadius: 3 },
+        { label: 'Conversões',       data: dados.conversoes,        borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,.12)',   yAxisID: 'y',  tension: .3, pointRadius: 3 },
+        { label: 'Lead Qualificado', data: dados.leadsQualificados, borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,.12)',  yAxisID: 'y',  tension: .3, pointRadius: 3, borderDash: [4, 3] },
+        { label: 'Lead Venda',       data: dados.leadsConvertidos,  borderColor: '#e6ac00', backgroundColor: 'rgba(230,172,0,.15)',   yAxisID: 'y',  tension: .3, pointRadius: 3, borderDash: [4, 3] },
+        { label: 'Impressões',       data: dados.impressoes,        borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.12)', yAxisID: 'y1', tension: .3, pointRadius: 3 },
       ]
     },
     options: {
@@ -3990,7 +3994,7 @@ function renderGraficoEvolucaoAds_(nomeCampanha) {
       plugins: { legend: { labels: { color: '#e8ecf4', font: { size: 11 } } } },
       scales: {
         x:  { grid: { color: 'rgba(42,48,80,.5)' }, ticks: { color: '#8892aa', font: { size: 10 } } },
-        y:  { position: 'left',  grid: { color: 'rgba(42,48,80,.3)' }, ticks: { color: '#8892aa' }, title: { display: true, text: 'Cliques / Conversões', color: '#8892aa', font: { size: 10 } }, beginAtZero: true },
+        y:  { position: 'left',  grid: { color: 'rgba(42,48,80,.3)' }, ticks: { color: '#8892aa' }, title: { display: true, text: 'Cliques / Conversões / Leads', color: '#8892aa', font: { size: 10 } }, beginAtZero: true },
         y1: { position: 'right', grid: { display: false }, ticks: { color: '#8892aa' }, title: { display: true, text: 'Impressões', color: '#8892aa', font: { size: 10 } }, beginAtZero: true },
       }
     }

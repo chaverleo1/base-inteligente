@@ -5467,7 +5467,8 @@ function listarMetricasGoogleAds_(params) {
 }
 
 // Série DIÁRIA (não agregada) por campanha -- pedido explícito do usuário,
-// pro gráfico de evolução (Cliques × Impressões × Conversões) no painel.
+// pro gráfico de evolução (Cliques × Impressões × Conversões, depois
+// ampliado pra também trazer Lead Qualificado × Lead Venda) no painel.
 // Mesma fonte/filtro de listarMetricasGoogleAds_ (aba "Google Ads" da
 // planilha separada, só campanhas com APPLAN no nome), mas aqui devolve
 // ponto a ponto por dia em vez de somar tudo num total só.
@@ -5483,6 +5484,10 @@ function listarSeriesGoogleAds_(params) {
     var desde = new Date();
     desde.setDate(desde.getDate() - dias);
 
+    // porCampanha[nome][chaveDia] = { dataObj, cliques, impressoes, conversoes }
+    // (indexado por dia, não array -- precisa disso pra depois cruzar/unir
+    // com os dias de qualificação/conversão, que podem não bater 1:1 com os
+    // dias que têm linha de métrica do Ads).
     var porCampanha = {};
     var FILTRO_NOME_ = 'APPLAN';
 
@@ -5493,24 +5498,54 @@ function listarSeriesGoogleAds_(params) {
       var dataLinha = parseDataMetricaAds_(r[0]);
       if (!dataLinha || dataLinha < desde) return;
 
-      if (!porCampanha[nome]) porCampanha[nome] = [];
-      porCampanha[nome].push({
+      if (!porCampanha[nome]) porCampanha[nome] = {};
+      var chave = Utilities.formatDate(dataLinha, 'America/Sao_Paulo', 'dd/MM');
+      porCampanha[nome][chave] = {
         dataObj:    dataLinha,
-        data:       Utilities.formatDate(dataLinha, 'America/Sao_Paulo', 'dd/MM'),
         cliques:    parseInt(r[4], 10) || 0,
         impressoes: parseInt(r[5], 10) || 0,
         conversoes: parseFloat(r[8]) || 0,
-      });
+      };
     });
 
+    // Lead Qualificado × Lead Venda por dia -- pedido explícito do usuário,
+    // pra comparar no mesmo gráfico de evolução. Mesmo cruzamento por
+    // sobreposição de palavras (utmCampaign do lead × nome real da
+    // campanha) já usado no total agregado de listarMetricasGoogleAds_, só
+    // que aqui a contagem fica quebrada por dia em vez de somada num total.
+    var gruposQualifPorDia     = contarLeadsPorCampanhaPorFlagPorDia_(dias, 'qualificado', 'dataQualificacao');
+    var gruposConvertidoPorDia = contarLeadsPorCampanhaPorFlagPorDia_(dias, 'convertido', 'dataConversaoVenda');
+
     var lista = Object.keys(porCampanha).map(function(nome) {
-      var pontos = porCampanha[nome].sort(function(a, b) { return a.dataObj - b.dataObj; });
+      var grupoQualif     = melhorGrupoPorNomeCampanha_(nome, gruposQualifPorDia);
+      var grupoConvertido = melhorGrupoPorNomeCampanha_(nome, gruposConvertidoPorDia);
+
+      // Eixo de dias = união dos dias com métrica do Ads + dias com
+      // qualificação/conversão pra essa campanha -- garante que uma
+      // qualificação/venda registrada num dia sem linha de métrica do Ads
+      // (raro, mas possível) não some do gráfico, só fica com cliques/
+      // impressões/conversões do Ads zerados naquele ponto.
+      var porDiaMap = {};
+      Object.keys(porCampanha[nome]).forEach(function(chave) {
+        porDiaMap[chave] = porCampanha[nome][chave].dataObj;
+      });
+      if (grupoQualif) Object.keys(grupoQualif.porDia).forEach(function(chave) {
+        if (!porDiaMap[chave]) porDiaMap[chave] = grupoQualif.porDia[chave].dataObj;
+      });
+      if (grupoConvertido) Object.keys(grupoConvertido.porDia).forEach(function(chave) {
+        if (!porDiaMap[chave]) porDiaMap[chave] = grupoConvertido.porDia[chave].dataObj;
+      });
+
+      var chaves = Object.keys(porDiaMap).sort(function(a, b) { return porDiaMap[a] - porDiaMap[b]; });
+
       return {
-        campanha:   nome,
-        dias:       pontos.map(function(p) { return p.data; }),
-        cliques:    pontos.map(function(p) { return p.cliques; }),
-        impressoes: pontos.map(function(p) { return p.impressoes; }),
-        conversoes: pontos.map(function(p) { return p.conversoes; }),
+        campanha:          nome,
+        dias:              chaves,
+        cliques:           chaves.map(function(c) { return porCampanha[nome][c] ? porCampanha[nome][c].cliques : 0; }),
+        impressoes:        chaves.map(function(c) { return porCampanha[nome][c] ? porCampanha[nome][c].impressoes : 0; }),
+        conversoes:        chaves.map(function(c) { return porCampanha[nome][c] ? porCampanha[nome][c].conversoes : 0; }),
+        leadsQualificados: chaves.map(function(c) { return (grupoQualif && grupoQualif.porDia[c]) ? grupoQualif.porDia[c].count : 0; }),
+        leadsConvertidos:  chaves.map(function(c) { return (grupoConvertido && grupoConvertido.porDia[c]) ? grupoConvertido.porDia[c].count : 0; }),
       };
     });
     lista.sort(function(a, b) { return a.campanha.localeCompare(b.campanha); });
@@ -5568,10 +5603,49 @@ function contarLeadsPorCampanhaPorFlag_(dias, colFlag, colData) {
   return Object.keys(grupos).map(function(k) { return grupos[k]; });
 }
 
-// Acha, dentre os grupos (contarLeadsPorCampanhaPorFlag_), o que tem mais
-// sobreposição de palavras com o nome da campanha -- extraído de dentro de
-// listarMetricasGoogleAds_ pra ser reaproveitado tanto pra "qualificado"
-// quanto pra "convertido em venda" sem duplicar o algoritmo de match.
+// Mesma coisa que contarLeadsPorCampanhaPorFlag_, mas mantém a contagem
+// quebrada POR DIA (porDia: { 'dd/MM': { count, dataObj } }) em vez de somar
+// tudo num total só -- usada só pelo gráfico de evolução diária
+// (listarSeriesGoogleAds_), que precisa comparar Lead Qualificado × Lead
+// Venda dia a dia junto com Cliques/Impressões/Conversões. O total agregado
+// (painel "Google Ads" / listarMetricasGoogleAds_) continua usando a versão
+// sem quebra por dia, mais simples e mais barata.
+function contarLeadsPorCampanhaPorFlagPorDia_(dias, colFlag, colData) {
+  var grupos = {}; // utmCampaign cru -> { utm, tokens, porDia }
+  try {
+    var abaLeads = obterAbaLeadsLancamentos_();
+    var lr = abaLeads.getLastRow();
+    if (lr < 2) return [];
+
+    var idxFlag = CABECALHO_LEADS_LANCAMENTOS.indexOf(colFlag);
+    var idxUtm  = CABECALHO_LEADS_LANCAMENTOS.indexOf('utmCampaign');
+    var idxData = CABECALHO_LEADS_LANCAMENTOS.indexOf(colData);
+    var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+
+    var desde = new Date();
+    desde.setDate(desde.getDate() - dias);
+
+    dados.forEach(function(r) {
+      if (String(r[idxFlag] || '') !== 'Sim') return;
+      var utmRaw = String(r[idxUtm] || '').trim();
+      if (!utmRaw) return;
+      var dataFlag = parseDataMetricaAds_(r[idxData]);
+      if (!dataFlag || dataFlag < desde) return;
+      if (!grupos[utmRaw]) grupos[utmRaw] = { utm: utmRaw, tokens: tokenizarNomeCampanha_(utmRaw), porDia: {} };
+      var chave = Utilities.formatDate(dataFlag, 'America/Sao_Paulo', 'dd/MM');
+      if (!grupos[utmRaw].porDia[chave]) grupos[utmRaw].porDia[chave] = { count: 0, dataObj: dataFlag };
+      grupos[utmRaw].porDia[chave].count++;
+    });
+  } catch (e) {}
+  return Object.keys(grupos).map(function(k) { return grupos[k]; });
+}
+
+// Acha, dentre os grupos (contarLeadsPorCampanhaPorFlag_ ou
+// contarLeadsPorCampanhaPorFlagPorDia_ -- ambos têm o campo .tokens), o que
+// tem mais sobreposição de palavras com o nome da campanha -- extraído de
+// dentro de listarMetricasGoogleAds_ pra ser reaproveitado tanto pra
+// "qualificado" quanto pra "convertido em venda", tanto no total agregado
+// quanto na série diária, sem duplicar o algoritmo de match.
 function melhorGrupoPorNomeCampanha_(nomeCampanha, grupos) {
   var tokensCampanha = tokenizarNomeCampanha_(nomeCampanha);
   var melhorGrupo = null, melhorScore = 0;
