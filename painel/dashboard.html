@@ -1002,6 +1002,22 @@
       <button class="refresh-btn" onclick="carregarMetricasGoogleAds_()">↻ Atualizar</button>
     </div>
     <div class="cards-row" id="gadsCardsResumo"></div>
+
+    <!-- Gráfico de evolução diária por campanha (Cliques × Impressões ×
+         Conversões) -- pedido explícito do usuário. -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:700;color:var(--text2)">📈 Evolução diária por campanha</span>
+        <select id="gadsCampanhaSelect" onchange="renderGraficoEvolucaoAds_(this.value)"
+          style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;max-width:100%">
+          <option>Carregando...</option>
+        </select>
+      </div>
+      <div style="height:260px;position:relative">
+        <canvas id="gadsChartEvolucao"></canvas>
+      </div>
+    </div>
+
     <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Ordenado pela campanha mais eficiente (menor custo por lead qualificado) — cor de fundo vai de quente (melhor) a fria (pior/sem lead qualificado ainda).</div>
     <div id="gadsTabelaWrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto">
       <table class="adm-table" id="gadsTabela">
@@ -3838,7 +3854,7 @@ function mostrarBaseImobSubtab(nome) {
   document.getElementById('biPainelAds').style.display   = nome === 'ads'   ? '' : 'none';
   document.getElementById('biSubtabLeads').classList.toggle('active', nome === 'leads');
   document.getElementById('biSubtabAds').classList.toggle('active', nome === 'ads');
-  if (nome === 'ads' && !_gadsCarregado_) carregarMetricasGoogleAds_();
+  if (nome === 'ads' && !_gadsCarregado_) { carregarMetricasGoogleAds_(); carregarSeriesGoogleAds_(); }
 }
 
 // ── GOOGLE ADS (Fase 3) — lê listar_metricas_google_ads (code.txt), que por
@@ -3923,8 +3939,61 @@ async function carregarMetricasGoogleAds_() {
         <td>${c.custoPorLeadQualificado != null ? fmtBRL(c.custoPorLeadQualificado) : '—'}</td>
       </tr>`).join('');
   } catch (e) {
-    corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
   }
+}
+
+// Gráfico de evolução diária por campanha (Cliques × Impressões ×
+// Conversões) -- pedido explícito do usuário. Impressões usa eixo Y
+// separado (direita) das outras duas métricas -- em contas maiores,
+// impressão costuma ser uma ordem de grandeza maior que clique/conversão,
+// e misturar tudo no mesmo eixo deixaria clique/conversão "achatados" no
+// gráfico, quase invisíveis.
+let _gadsSeriesCache_ = [];
+async function carregarSeriesGoogleAds_() {
+  const select = document.getElementById('gadsCampanhaSelect');
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_series_google_ads&dias=30&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    _gadsSeriesCache_ = json.campanhas || [];
+    select.innerHTML = _gadsSeriesCache_.length
+      ? _gadsSeriesCache_.map(c => `<option value="${c.campanha.replace(/"/g,'&quot;')}">${c.campanha}</option>`).join('')
+      : '<option>Sem dado ainda</option>';
+    if (_gadsSeriesCache_.length) renderGraficoEvolucaoAds_(_gadsSeriesCache_[0].campanha);
+    else { const ex = Chart.getChart('gadsChartEvolucao'); if (ex) ex.destroy(); }
+  } catch (e) {
+    select.innerHTML = '<option>Erro ao carregar</option>';
+  }
+}
+
+function renderGraficoEvolucaoAds_(nomeCampanha) {
+  const existing = Chart.getChart('gadsChartEvolucao');
+  if (existing) existing.destroy();
+  const dados = _gadsSeriesCache_.find(c => c.campanha === nomeCampanha);
+  if (!dados || !dados.dias.length) return;
+  const ctx = document.getElementById('gadsChartEvolucao').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dados.dias,
+      datasets: [
+        { label: 'Cliques',     data: dados.cliques,    borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,.12)',  yAxisID: 'y',  tension: .3, pointRadius: 3 },
+        { label: 'Conversões',  data: dados.conversoes, borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,.12)',   yAxisID: 'y',  tension: .3, pointRadius: 3 },
+        { label: 'Impressões',  data: dados.impressoes, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.12)', yAxisID: 'y1', tension: .3, pointRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: '#e8ecf4', font: { size: 11 } } } },
+      scales: {
+        x:  { grid: { color: 'rgba(42,48,80,.5)' }, ticks: { color: '#8892aa', font: { size: 10 } } },
+        y:  { position: 'left',  grid: { color: 'rgba(42,48,80,.3)' }, ticks: { color: '#8892aa' }, title: { display: true, text: 'Cliques / Conversões', color: '#8892aa', font: { size: 10 } }, beginAtZero: true },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#8892aa' }, title: { display: true, text: 'Impressões', color: '#8892aa', font: { size: 10 } }, beginAtZero: true },
+      }
+    }
+  });
 }
 
 // ── SUB-ABAS DA ADM (Funções manuais / Links Úteis / Landing Pages) ──────────

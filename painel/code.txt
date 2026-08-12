@@ -335,6 +335,7 @@ function doGet(e) {
   if (acao === 'limpar_eventos_funil') return ok(limparEventosFunil_());
   // Integração Google Ads (Fase 3) -- protegida por sessão, mesmo motivo.
   if (acao === 'listar_metricas_google_ads') return ok(listarMetricasGoogleAds_({ dias: e.parameter.dias }));
+  if (acao === 'listar_series_google_ads') return ok(listarSeriesGoogleAds_({ dias: e.parameter.dias }));
   if (acao === 'listar_leads_imobzi')   return ok(listarLeadsImobzi_({}));
   if (acao === 'listar_todos_leads_imobzi') return ok(listarLeadsImobzi_({todos:true}));
   if (acao === 'listar_revenda_lista')      return ok(listarRevendaLista_());
@@ -5464,6 +5465,61 @@ function listarMetricasGoogleAds_(params) {
     };
   } catch (e) {
     return { campanhas: [], atualizadoEm: null, erro: e.message };
+  }
+}
+
+// Série DIÁRIA (não agregada) por campanha -- pedido explícito do usuário,
+// pro gráfico de evolução (Cliques × Impressões × Conversões) no painel.
+// Mesma fonte/filtro de listarMetricasGoogleAds_ (aba "Google Ads" da
+// planilha separada, só campanhas com APPLAN no nome), mas aqui devolve
+// ponto a ponto por dia em vez de somar tudo num total só.
+function listarSeriesGoogleAds_(params) {
+  params = params || {};
+  var dias = Number(params.dias) || 30;
+  try {
+    var ss  = SpreadsheetApp.openById(SHEET_ID_ADS_METRICAS_);
+    var aba = ss.getSheetByName('Google Ads');
+    if (!aba || aba.getLastRow() < 2) return { campanhas: [] };
+
+    var dados = aba.getRange(2, 1, aba.getLastRow() - 1, 9).getValues();
+    var desde = new Date();
+    desde.setDate(desde.getDate() - dias);
+
+    var porCampanha = {};
+    var FILTRO_NOME_ = 'APPLAN';
+
+    dados.forEach(function(r) {
+      var nome = String(r[1] || '');
+      if (!nome || nome.toUpperCase().indexOf(FILTRO_NOME_) === -1) return;
+
+      var dataLinha = parseDataMetricaAds_(r[0]);
+      if (!dataLinha || dataLinha < desde) return;
+
+      if (!porCampanha[nome]) porCampanha[nome] = [];
+      porCampanha[nome].push({
+        dataObj:    dataLinha,
+        data:       Utilities.formatDate(dataLinha, 'America/Sao_Paulo', 'dd/MM'),
+        cliques:    parseInt(r[4], 10) || 0,
+        impressoes: parseInt(r[5], 10) || 0,
+        conversoes: parseFloat(r[8]) || 0,
+      });
+    });
+
+    var lista = Object.keys(porCampanha).map(function(nome) {
+      var pontos = porCampanha[nome].sort(function(a, b) { return a.dataObj - b.dataObj; });
+      return {
+        campanha:   nome,
+        dias:       pontos.map(function(p) { return p.data; }),
+        cliques:    pontos.map(function(p) { return p.cliques; }),
+        impressoes: pontos.map(function(p) { return p.impressoes; }),
+        conversoes: pontos.map(function(p) { return p.conversoes; }),
+      };
+    });
+    lista.sort(function(a, b) { return a.campanha.localeCompare(b.campanha); });
+
+    return { campanhas: lista };
+  } catch (e) {
+    return { campanhas: [], erro: e.message };
   }
 }
 
