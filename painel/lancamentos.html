@@ -97,6 +97,21 @@ a { text-decoration: none; color: inherit; }
 .faixas-item-central span:first-child,
 .faixas-item-central span:last-child { color: #1a1a1a; font-weight: 700; }
 
+/* ── Resumo (tabela) de Lista por Faixas — vem ANTES das caixas de cada
+   faixa (pedido explícito do usuário). Linhas bem baixas de propósito (padding
+   reduzido) pra caber tudo sem precisar rolar, mesmo com Popular+Médio+Alto+
+   Luxo x até 3 sub-grupos cada (até ~12 linhas). ── */
+.faixas-resumo-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
+.faixas-resumo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.faixas-resumo-titulo { font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: .5px; }
+.faixas-resumo-tabela { width: 100%; border-collapse: collapse; }
+.faixas-resumo-tabela th { padding: 3px 8px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.faixas-resumo-tabela td { padding: 3px 8px; font-size: 11px; color: var(--text2); border-bottom: 1px solid rgba(255,255,255,.05); white-space: nowrap; line-height: 1.5; }
+.faixas-resumo-tabela tbody tr:last-child td { border-bottom: none; }
+.frt-faixa { font-weight: 700; color: var(--text); }
+.frt-ref { font-weight: 700; color: #e6ac00; }
+.frt-qtd-badge { display: inline-block; min-width: 22px; text-align: center; padding: 2px 9px; border-radius: 99px; background: rgba(255, 200, 0, .9); color: #1a1a1a; font-weight: 800; font-size: 11px; }
+
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
    baixos que os padrões do resto da tela. */
@@ -252,6 +267,19 @@ a { text-decoration: none; color: inherit; }
      hora de clicar em Imprimir), some com as linhas não marcadas também. */
   .mapa-check-col { display: none !important; }
   body.imprimir-so-selecionados .mapa-tabela tbody tr:not(.mapa-row-selecionada) { display: none !important; }
+
+  /* Resumo de Lista por Faixas -- botão de PDF dedicado (imprimirResumoFaixas_),
+     independente do "Imprimir Lista" de cima: só a tabela resumo aparece no
+     papel, nada mais da tela (subabas, caixas de faixa, descrição). */
+  body.imprimir-resumo-faixas .mapa-subtabs, body.imprimir-resumo-faixas .sec-header,
+  body.imprimir-resumo-faixas #mapaFaixasDescricao, body.imprimir-resumo-faixas #mapaFaixasConteudo,
+  body.imprimir-resumo-faixas .btn-resumo-pdf { display: none !important; }
+  body.imprimir-resumo-faixas .faixas-resumo-wrap { border: none !important; background: #fff !important; padding: 0 !important; }
+  body.imprimir-resumo-faixas .faixas-resumo-titulo { color: #000 !important; }
+  body.imprimir-resumo-faixas .faixas-resumo-tabela th,
+  body.imprimir-resumo-faixas .faixas-resumo-tabela td { color: #000 !important; border-color: #ccc !important; }
+  body.imprimir-resumo-faixas .frt-ref { color: #000 !important; }
+  body.imprimir-resumo-faixas .frt-qtd-badge { background: #ffc800 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* ── SECTION HEADER ── */
@@ -1474,11 +1502,12 @@ select.form-input option { background: var(--surface2); }
        100% dinâmico, recalculado a partir da base atual, sem valor fixo.
        Ver calcularFaixasPorPadrao_/renderListaPorFaixas_. -->
   <div id="mapaSubPainelFaixas" class="mapa-subpanel" style="display:none">
-    <div class="sec-sub" style="margin-bottom:14px">
+    <div class="sec-sub" id="mapaFaixasDescricao" style="margin-bottom:14px">
       Agrupamento automático por faixa de preço dentro de cada Padrão — grupos de ~7 a 9 empreendimentos
       (maiores quando a base tiver muitos no mesmo perfil, nunca exclui nada). O valor em destaque é a
       média do menor preço do sub-grupo — referência pra nomear/dimensionar campanha.
     </div>
+    <div id="mapaFaixasResumoWrap"></div>
     <div id="mapaFaixasConteudo"></div>
   </div>
   </div>
@@ -2442,15 +2471,57 @@ function formatarPrecoCompacto_(v) {
 // volta os itens daquele sub-grupo específico sem precisar serializar a
 // lista inteira num atributo HTML. Repovoado a cada renderListaPorFaixas_.
 let _faixasFlatIndex_ = [];
+// Tabela-resumo (pedido explícito do usuário) -- mostrada ANTES das caixas
+// de cada faixa, 1 linha por sub-grupo com Faixa/Valor de Referência/Faixa
+// de Preço/Qtd (quantidade destacada em badge). Linhas propositalmente
+// baixas (padding mínimo) pra caber tudo sem rolagem mesmo com vários
+// padrões x sub-grupos. Botão de PDF dedicado (imprimirResumoFaixas_) --
+// independente do "Imprimir Lista" do topo da página.
+function renderFaixasResumo_(grupos) {
+  const wrap = document.getElementById('mapaFaixasResumoWrap');
+  if (!wrap) return;
+  const linhas = grupos.flatMap(g => g.subgrupos).map(sg => `
+    <tr>
+      <td class="frt-faixa">${sg.label}</td>
+      <td class="frt-ref">R$ ${formatarPrecoCompacto_(sg.valorMedio)}</td>
+      <td>R$ ${exibirPrecoBR(sg.valorMin)} — R$ ${exibirPrecoBR(sg.valorMax)}</td>
+      <td><span class="frt-qtd-badge">${sg.count}</span></td>
+    </tr>`).join('');
+  wrap.innerHTML = `
+    <div class="faixas-resumo-wrap">
+      <div class="faixas-resumo-header">
+        <div class="faixas-resumo-titulo">Resumo por Faixa</div>
+        <button class="btn-mini btn-resumo-pdf" onclick="imprimirResumoFaixas_()" title="Gerar PDF só da tabela resumo">🖨️ PDF</button>
+      </div>
+      <table class="faixas-resumo-tabela">
+        <thead><tr><th>Faixa</th><th>Valor de Referência</th><th>Faixa de Preço</th><th>Qtd</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>
+    </div>`;
+}
+
+// Imprime/gera PDF só da tabela-resumo de Lista por Faixas -- mesmo padrão
+// window.print() + classe no <body> já usado por imprimirListaAtiva_, mas
+// escondendo tudo (subabas, caixas de faixa, descrição) exceto a tabela
+// (ver regras @media print escopadas em body.imprimir-resumo-faixas).
+function imprimirResumoFaixas_() {
+  document.body.classList.add('imprimir-resumo-faixas');
+  window.print();
+}
+window.addEventListener('afterprint', () => document.body.classList.remove('imprimir-resumo-faixas'));
+
 function renderListaPorFaixas_() {
   const cont = document.getElementById('mapaFaixasConteudo');
   if (!cont) return;
   const grupos = calcularFaixasPorPadrao_(_mapaRows);
   _faixasFlatIndex_ = [];
+  const resumoWrap = document.getElementById('mapaFaixasResumoWrap');
   if (!grupos.length) {
+    if (resumoWrap) resumoWrap.innerHTML = '';
     cont.innerHTML = '<div class="sec-sub">Nenhum empreendimento com Padrão e preço cadastrados ainda -- cadastre o Padrão e a tabela de valores em Lançamentos pra essa lista se formar.</div>';
     return;
   }
+  renderFaixasResumo_(grupos);
   cont.innerHTML = grupos.map(g => `
     <div class="faixas-padrao-bloco">
       <div class="faixas-padrao-titulo">${PADRAO_LABEL_MIX_[g.padrao] || g.padrao}
