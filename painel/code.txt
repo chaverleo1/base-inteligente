@@ -890,6 +890,7 @@ function doPost(e) {
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'qualificar_lead_baseimob') return ok(qualificarLeadBaseimob_(d));
+  if (d.acao === 'converter_lead_venda_baseimob') return ok(converterLeadVendaBaseimob_(d));
   if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
   if (d.acao === 'listar_leads_imobzi')             return ok(listarLeadsImobzi_(d));
   if (d.acao === 'sincronizar_imobzi')              return ok(sincronizarLeadsImobzi_());
@@ -4759,6 +4760,13 @@ var CABECALHO_LEADS_LANCAMENTOS = [
   // também a aba "Conversoes" na planilha separada de métricas
   // (SHEET_ID_ADS_METRICAS_), onde a conversão de fato sobe pro Ads.
   'qualificado', 'dataQualificacao',
+  // convertido/dataConversaoVenda -- Fase 6 do projeto Google Ads (pedido
+  // explícito do usuário, já deixado pronto): marcado só quando o
+  // corretor clica "Convertido em Venda" (converterLeadVendaBaseimob_),
+  // fase mais avançada que "qualificado" (venda de verdade, não só lead
+  // bom). Mesma aba "Conversoes" recebe essa conversão também, com nome
+  // diferente (NOME_CONVERSAO_VENDA_).
+  'convertido', 'dataConversaoVenda',
 ];
 
 var CABECALHO_INTERESSES = [
@@ -7821,6 +7829,64 @@ function qualificarLeadBaseimob_(d) {
   } catch (e) {
     // Lead já ficou marcado qualificado mesmo se isso falhar -- só a parte
     // de subir a conversão pro Ads que não completou.
+    return { ok: true, enviouConversao: false, motivo: 'erro_planilha', erro: e.message };
+  }
+}
+
+// Marca um lead do BaseImob como CONVERTIDO EM VENDA -- Fase 6 do projeto
+// Google Ads, pedido explícito do usuário (deixado pronto já nesta
+// rodada, mesmo padrão da qualificação): fase mais avançada que
+// "qualificado" -- não é só "lead bom", é venda de verdade fechada. Sobe
+// como uma conversão SEPARADA (nome próprio, NOME_CONVERSAO_VENDA_) na
+// MESMA aba "Conversoes" da planilha de métricas -- o Google Ads separa
+// pela coluna "Conversion Name", então uma aba só aceita várias Ações de
+// conversão diferentes sem precisar de outro upload configurado lá.
+// Precisa criar essa 2ª Ação de conversão na conta do Ads (mesmo processo
+// já feito pra "Lead Qualificado", categoria "Lead convertido") pra
+// completar o ciclo.
+var NOME_CONVERSAO_VENDA_ = 'Lead Convertido em Venda - App Lançamentos';
+
+function converterLeadVendaBaseimob_(d) {
+  var idCliente = String(d.idCliente || '').trim();
+  if (!idCliente) return { ok: false, erro: 'idCliente obrigatorio' };
+
+  var abaLeads = obterAbaLeadsLancamentos_();
+  var lr = abaLeads.getLastRow();
+  if (lr < 2) return { ok: false, erro: 'lead nao encontrado' };
+
+  var idxId          = CABECALHO_LEADS_LANCAMENTOS.indexOf('idCliente');
+  var idxConvertido   = CABECALHO_LEADS_LANCAMENTOS.indexOf('convertido');
+  var idxDataConversao = CABECALHO_LEADS_LANCAMENTOS.indexOf('dataConversaoVenda');
+  var idxGclid        = CABECALHO_LEADS_LANCAMENTOS.indexOf('gclid');
+  var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+
+  var linhaLead = -1, gclid = '';
+  for (var i = 0; i < dados.length; i++) {
+    if (String(dados[i][idxId]) === idCliente) {
+      linhaLead = i + 2;
+      gclid = String(dados[i][idxGclid] || '').trim();
+      break;
+    }
+  }
+  if (linhaLead < 0) return { ok: false, erro: 'lead nao encontrado' };
+
+  var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+  abaLeads.getRange(linhaLead, idxConvertido + 1).setValue('Sim');
+  abaLeads.getRange(linhaLead, idxDataConversao + 1).setValue(agora);
+
+  if (!gclid) return { ok: true, enviouConversao: false, motivo: 'sem_gclid' };
+
+  try {
+    var ssMetricas = SpreadsheetApp.openById(SHEET_ID_ADS_METRICAS_);
+    var abaConv = ssMetricas.getSheetByName('Conversoes');
+    if (!abaConv) {
+      abaConv = ssMetricas.insertSheet('Conversoes');
+      abaConv.appendRow(['Google Click ID', 'Conversion Name', 'Conversion Time', 'Conversion Value', 'Conversion Currency']);
+    }
+    var conversionTime = Utilities.formatDate(new Date(), 'America/Sao_Paulo', "yyyy-MM-dd HH:mm:ssXXX");
+    abaConv.appendRow([gclid, NOME_CONVERSAO_VENDA_, conversionTime, '', 'BRL']);
+    return { ok: true, enviouConversao: true };
+  } catch (e) {
     return { ok: true, enviouConversao: false, motivo: 'erro_planilha', erro: e.message };
   }
 }
