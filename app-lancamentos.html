@@ -2733,12 +2733,15 @@ function submeter() {
     chave: APP_KEY_LANCAMENTOS_,
     nome: D.nome,
     telefone: D.whatsapp,
-    // gclid TOPO do payload (não só dentro de "tags") -- é aqui que
-    // salvarInteresse_ (code.txt) de fato lê pra gravar em
+    // gclid/utmCampaign TOPO do payload (não só dentro de "tags") -- é
+    // aqui que salvarInteresse_ (code.txt) de fato lê pra gravar em
     // CABECALHO_LEADS_LANCAMENTOS. A cópia dentro de "tags" (mais abaixo)
-    // é só pra tabela de dados técnicos no e-mail -- ela sozinha NÃO
-    // chegava no lead salvo, bug encontrado ao testar com ?gclid= na URL.
+    // é só pra tabela de dados técnicos no e-mail -- sozinha ela NÃO
+    // chegava no lead salvo (mesmo bug do gclid, achado depois: painel de
+    // Google Ads não achava nenhum lead qualificado porque utmCampaign
+    // sempre gravava vazio).
     gclid: D.gclid,
+    utmCampaign: D.utmCampaign,
     qtdInteresse: filtrados().length,
     idsInteresse: top7.map(c => c.id).filter(Boolean).join(', '),
     rankingDetalhado: JSON.stringify(top7.map((c, i) => ({
