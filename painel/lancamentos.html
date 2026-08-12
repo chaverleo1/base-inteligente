@@ -8648,6 +8648,28 @@ function baixarBriefingMixMd_(sufixoArquivo) {
   const bairros = [...new Set(grupoA.map(x => x.it.e.bairro).filter(b => b && b !== '—'))].sort();
   const cidades = [...new Set(grupoA.map(x => x.it.e.cidade).filter(Boolean))].sort();
 
+  // Estágio real do Grupo A (relatório de ajustes 2026-08-12, itens 1.1/5.5:
+  // BUG RECORRENTE confirmado em 3 briefings -- o gerador assumia
+  // situacoes=em_obras fixo em todo lugar, mesmo quando 100% dos produtos
+  // eram Pronto novo). Mesmo bucket já usado no resto do app
+  // (SITUACAO_ABA_STATUS_): Pronto/Pronto novo/Entregue -> pronto_novo;
+  // Em planta/Em obras -> em_obras. Se o Grupo A tiver os 2 buckets
+  // misturados (não deveria, mas o Montar Mix manual não impede), avisa em
+  // vez de silenciosamente escolher um errado.
+  const ESTAGIO_BUCKET_MM_ = { 'Pronto': 'pronto_novo', 'Pronto novo': 'pronto_novo', 'Entregue': 'pronto_novo', 'Em planta': 'em_obras', 'Em obras': 'em_obras' };
+  const ESTAGIO_LABEL_MM_  = { pronto_novo: 'Pronto para Morar', em_obras: 'Em Obras' };
+  const ESTAGIO_TOKEN_MM_  = { pronto_novo: 'PRONTO', em_obras: 'OBRAS' };
+  const PADRAO_SLUG_MM_    = { Popular: 'POPULAR', 'Médio': 'MEDIO', Alto: 'ALTO', Luxo: 'LUXO' };
+  const estagiosGrupoA = [...new Set(grupoA.map(x => ESTAGIO_BUCKET_MM_[x.it.e.status]).filter(Boolean))];
+  const estagioUnico = estagiosGrupoA.length === 1 ? estagiosGrupoA[0] : null;
+  const estagioMistoAviso = estagiosGrupoA.length > 1
+    ? `\n> ⚠️ **Grupo A com estágios misturados** (${estagiosGrupoA.map(e => ESTAGIO_LABEL_MM_[e]).join(' + ')}) -- o projeto hoje só roda campanha "Pronto para Morar"/moradia; confirme com o corretor antes de publicar produto "Em Obras" neste mix (ver seção 2).`
+    : '';
+  function precoParaUtm_(v) {
+    if (!(v > 0)) return '0K';
+    return v >= 1000000 ? (v / 1000000).toFixed(1).replace('.', ',') + 'MI' : Math.round(v / 1000) + 'K';
+  }
+
   function detalheEmpMix_(arr, comPreco) {
     if (!arr.length) return '(nenhum produto neste grupo)';
     return arr.map((x, i) => {
@@ -8664,7 +8686,14 @@ function baixarBriefingMixMd_(sufixoArquivo) {
         `- **Total de unidades:** ${e.totalUnidades || 'N/D'}`,
       ];
       if (comPreco) {
-        campos.push(`- **% Vendido:** ${e.pctVendido != null ? e.pctVendido + '%' : 'N/D'}`);
+        // Bug real reportado (relatório de ajustes 2026-08-12, item 5.7): "e"
+        // aqui é o empreendimento CRU de _itensScoredCache, que nunca teve
+        // .pctVendido calculado nele (esse campo só existe nas linhas de
+        // _mapaRows) -- saía sempre "N/D" mesmo com estoque/total
+        // preenchidos na base. Corrigido calculando na hora, mesma fórmula
+        // usada no resto do app (calcularPercentualVendido, config.js).
+        const pctVendido = calcularPercentualVendido(e.estoque, e.totalUnidades);
+        campos.push(`- **% Vendido:** ${pctVendido != null ? pctVendido + '%' : 'N/D'}`);
         campos.push(`- **Faixa de área:** ${fmtArea(it)}`);
         campos.push(`- **Ticket a partir de:** ${fmtPreco(it.menorPreco)}`);
         if (it.comp != null) campos.push(`- **Tração (score):** ${it.comp.toFixed(1)}`);
@@ -8683,82 +8712,145 @@ function baixarBriefingMixMd_(sufixoArquivo) {
   };
   const padroesAusentes    = ORDEM_PADRAO_BRIEF_MM_.filter(p => !padroes.includes(p));
   const negativasSugeridas = padroesAusentes.flatMap(p => MAPA_NEG_PADRAO_MM_[p] || []);
-  const bairrosKw = bairros.map(b =>
-    `**${b}:** "lançamento ${b.toLowerCase()}", "apartamento novo ${b.toLowerCase()}", "imóvel ${b.toLowerCase()} na planta"`
-  ).join('\n- ');
-
-  // Copy data-driven por padrão (idêntico ao briefing de Suporte)
+  // Copy data-driven por PADRÃO × ESTÁGIO (relatório de ajustes 2026-08-12,
+  // item 5.2: eliminada a segmentação por bairro/região como eixo de
+  // público -- hoje é por PADRÃO + FAIXA DE PREÇO. Bairro nunca mais entra
+  // como cabeçalho de público, keyword ou nome de ad group -- só como campo
+  // informativo por produto (seção 6) e parâmetro técnico de geo-targeting
+  // no Google Ads em si, fora deste briefing). Cada padrão tem 1 branch por
+  // bucket de estágio (pronto_novo/em_obras, ver ESTAGIO_BUCKET_MM_ acima) --
+  // titulo3/descricao2/objetivo não mudam com estágio, só o resto do tom.
   const COPY_POR_PADRAO_MM_ = {
     Luxo: {
-      objetivo: 'investimento',
-      keywords: (cid, bai) => [`apartamento de luxo na planta ${cid}`, `lançamento premium investimento ${bai}`, `cobertura alto padrão em obras`],
-      titulo1: 'Exclusividade Antes da Entrega',
-      titulo2: n => `${n} unidade${n === 1 ? '' : 's'} de altíssimo padrão`,
-      titulo3: 'Consulta Gratuita · Sem Compromisso',
-      descricao1: cid => `Lançamentos de luxo em obras em ${cid}. Invista na planta com valorização projetada.`,
+      objetivo: 'investimento', titulo3: 'Consulta Gratuita · Sem Compromisso',
       descricao2: 'Atendimento personalizado com especialista. Sem compromisso.',
+      porEstagio: {
+        em_obras: {
+          keywords: (cid, teto, area) => [`apartamento de luxo em obras ${cid}`, `lançamento luxo até R$${teto}`, `cobertura alto padrão na planta${area ? ' ' + area : ''}`],
+          titulo1: 'Exclusividade Antes da Entrega',
+          titulo2: n => `${n} unidade${n === 1 ? '' : 's'} de altíssimo padrão em obras`,
+          descricao1: cid => `Lançamentos de luxo em obras em ${cid}. Invista na planta com valorização projetada.`,
+        },
+        pronto_novo: {
+          keywords: (cid, teto, area) => [`apartamento de luxo pronto para morar ${cid}`, `lançamento luxo pronto até R$${teto}`, `cobertura alto padrão pronta${area ? ' ' + area : ''}`],
+          titulo1: 'Exclusividade Pronta Para Morar',
+          titulo2: n => `${n} unidade${n === 1 ? '' : 's'} de altíssimo padrão pronta${n === 1 ? '' : 's'}`,
+          descricao1: cid => `Lançamentos de luxo prontos para morar em ${cid}. Invista já valorizado, sem esperar obra.`,
+        },
+      },
     },
     Alto: {
-      objetivo: 'investimento',
-      keywords: (cid, bai) => [`apartamento alto padrão na planta ${cid}`, `lançamento alto padrão investimento ${bai}`, `apartamento valorização em obras`],
-      titulo1: 'Invista Antes da Entrega · Alto Padrão',
-      titulo2: n => `${n} opç${n === 1 ? 'ão' : 'ões'} em obras disponíve${n === 1 ? 'l' : 'is'}`,
-      titulo3: 'Consulta Gratuita · Sem Compromisso',
-      descricao1: cid => `Lançamentos alto padrão em obras em ${cid}. Compre na planta e valorize antes da entrega.`,
-      descricao2: 'Veja opções filtrando por bairro, área e orçamento. Atendimento gratuito com especialista.',
+      objetivo: 'investimento', titulo3: 'Consulta Gratuita · Sem Compromisso',
+      descricao2: 'Veja opções filtrando por padrão, área e orçamento. Atendimento gratuito com especialista.',
+      porEstagio: {
+        em_obras: {
+          keywords: (cid, teto, area) => [`apartamento alto padrão em obras ${cid}`, `lançamento alto padrão até R$${teto}`, `apartamento na planta${area ? ' ' + area : ''} valorização`],
+          titulo1: 'Invista Antes da Entrega · Alto Padrão',
+          titulo2: n => `${n} opç${n === 1 ? 'ão' : 'ões'} em obras disponíve${n === 1 ? 'l' : 'is'}`,
+          descricao1: cid => `Lançamentos alto padrão em obras em ${cid}. Compre na planta e valorize antes da entrega.`,
+        },
+        pronto_novo: {
+          keywords: (cid, teto, area) => [`apartamento alto padrão pronto ${cid}`, `lançamento alto padrão pronto até R$${teto}`, `apartamento pronto${area ? ' ' + area : ''} mudança imediata`],
+          titulo1: 'Alto Padrão Pronto Para Morar',
+          titulo2: n => `${n} opç${n === 1 ? 'ão' : 'ões'} pronta${n === 1 ? '' : 's'} disponíve${n === 1 ? 'l' : 'is'}`,
+          descricao1: cid => `Lançamentos alto padrão prontos para morar em ${cid}. Mude já, sem esperar obra.`,
+        },
+      },
     },
-    Médio: {
-      objetivo: 'moradia',
-      keywords: (cid, bai) => [`apartamento médio padrão ${bai}`, `2 quartos novo ${bai}`, `lançamento ${cid}`],
-      titulo1: bai => `Seu Apart. Novo em ${bai}`,
-      titulo2: 'Preço de Lançamento · Em Obras',
-      titulo3: 'Consulta Gratuita Hoje',
-      descricao1: cid => `Empreendimentos em obras com preço de planta em ${cid}. Consulte condições de pagamento.`,
+    'Médio': {
+      objetivo: 'moradia', titulo3: 'Consulta Gratuita Hoje',
       descricao2: 'Configure seu perfil e veja quantas opções combinam com você. Atendimento gratuito com especialista.',
+      porEstagio: {
+        em_obras: {
+          keywords: (cid, teto, area) => [`apartamento médio padrão em obras ${cid}`, `lançamento até R$${teto}`, `apartamento na planta${area ? ' ' + area : ''}`],
+          titulo1: teto => `Seu Apart. Novo até R$${teto}`,
+          titulo2: 'Preço de Lançamento · Em Obras',
+          descricao1: cid => `Empreendimentos em obras com preço de planta em ${cid}. Consulte condições de pagamento.`,
+        },
+        pronto_novo: {
+          keywords: (cid, teto, area) => [`apartamento pronto para morar ${cid}`, `lançamento pronto até R$${teto}`, `apartamento${area ? ' ' + area : ''} pronto para mudar`],
+          titulo1: teto => `Seu Apart. Pronto até R$${teto}`,
+          titulo2: 'Pronto Para Morar · Mudança Já',
+          descricao1: cid => `Empreendimentos prontos para morar em ${cid}, dentro do seu orçamento. Consulte condições de pagamento.`,
+        },
+      },
     },
     Popular: {
-      objetivo: 'moradia',
-      keywords: (cid, bai) => [`apartamento popular novo ${cid}`, `apartamento entrada ${cid}`, `1 quarto novo ${bai}`],
-      titulo1: 'Realize Seu Sonho na Planta',
-      titulo2: 'Consulte Condições de Pagamento',
-      titulo3: 'Veja Opções · Consulta Gratuita',
-      descricao1: cid => `Lançamentos populares em obras em ${cid}. Fale com um especialista sobre financiamento.`,
+      objetivo: 'moradia', titulo3: 'Veja Opções · Consulta Gratuita',
       descricao2: 'Descubra quanto cabe no seu bolso. Acesse o app e configure em menos de 3 minutos.',
+      porEstagio: {
+        em_obras: {
+          keywords: (cid, teto, area) => [`apartamento popular em obras ${cid}`, `apartamento até R$${teto} entrada`, `financiamento apartamento na planta`],
+          titulo1: 'Realize Seu Sonho na Planta',
+          titulo2: 'Consulte Condições de Pagamento',
+          descricao1: cid => `Lançamentos populares em obras em ${cid}. Fale com um especialista sobre financiamento.`,
+        },
+        pronto_novo: {
+          keywords: (cid, teto, area) => [`apartamento popular pronto ${cid}`, `apartamento até R$${teto} pronto`, `financiamento apartamento pronto para morar`],
+          titulo1: 'Seu Imóvel Pronto Pra Morar',
+          titulo2: 'Consulte Condições de Pagamento',
+          descricao1: cid => `Imóveis populares prontos para morar em ${cid}. Fale com um especialista sobre financiamento.`,
+        },
+      },
     },
-  };
-  const NOME_PUBLICO_POR_PADRAO_MM_ = {
-    Luxo: 'Investidor de Alto Padrão (Luxo)', Alto: 'Investidor de Alto Padrão',
-    Médio: 'Morador de Padrão Médio', Popular: 'Comprador de Entrada (Popular)',
   };
   const ORDEM_PADRAO_MISSAO_MM_ = ['Luxo', 'Alto', 'Médio', 'Popular'];
   const publicosHtml = ORDEM_PADRAO_MISSAO_MM_
     .filter(p => padroes.includes(p))
     .map((p, i) => {
-      const copy = COPY_POR_PADRAO_MM_[p];
+      const copyBase   = COPY_POR_PADRAO_MM_[p];
       const prodPadrao = grupoA.filter(x => x.it.padrao === p);
       const cidade     = cidades[0] || 'Goiânia';
-      const baiPadrao  = bairros.find(b => prodPadrao.some(x => x.it.e.bairro === b)) || bairros[0] || '[bairro]';
-      const [kw1, kw2, kw3] = copy.keywords(cidade, baiPadrao);
-      const titulo1   = typeof copy.titulo1   === 'function' ? copy.titulo1(baiPadrao)       : copy.titulo1;
-      const titulo2   = typeof copy.titulo2   === 'function' ? copy.titulo2(prodPadrao.length) : copy.titulo2;
-      const descricao1 = typeof copy.descricao1 === 'function' ? copy.descricao1(cidade)      : copy.descricao1;
       const tickets    = prodPadrao.map(x => x.it.menorPreco).filter(v => v > 0);
-      const dispersao  = (tickets.length >= 2 && Math.max(...tickets) > Math.min(...tickets) * 1.8)
-        ? `\n> ⚠️ **Ticket disperso dentro do padrão ${p}:** ${fmtPreco(Math.min(...tickets))} a ${fmtPreco(Math.max(...tickets))}. Considere segmentar por faixa de ticket dentro deste público.`
+      const teto       = tickets.length ? Math.max(...tickets) : 0;
+      const tetoFmt    = formatarPrecoCompacto_(teto);
+      const areas      = prodPadrao.flatMap(x => (x.it.e.unidades || []).map(u => Number(u.areaUtil || u.area || 0)).filter(v => v > 0));
+      const areaFmt    = areas.length ? `${Math.round(Math.min(...areas))}m²` : '';
+      // Estágio real DESSE padrão dentro do mix -- pode divergir do
+      // estagioUnico geral se o mix tiver múltiplos padrões em estágios
+      // diferentes; cai no geral (ou pronto_novo, nunca em_obras por
+      // default) só se esse padrão específico também vier misto.
+      const estagiosPadrao = [...new Set(prodPadrao.map(x => ESTAGIO_BUCKET_MM_[x.it.e.status]).filter(Boolean))];
+      const estagioPadrao  = estagiosPadrao.length === 1 ? estagiosPadrao[0] : (estagioUnico || 'pronto_novo');
+      const avisoMistoPadrao = estagiosPadrao.length > 1
+        ? `\n> ⚠️ **Padrão ${p} com estágios misturados dentro do mix** (${estagiosPadrao.map(e => ESTAGIO_LABEL_MM_[e]).join(' + ')}) -- confirme antes de publicar.`
         : '';
-      return `**PÚBLICO ${i + 1} — ${NOME_PUBLICO_POR_PADRAO_MM_[p]} (Mix Manual)**
+      const copy = copyBase.porEstagio[estagioPadrao];
+      const [kw1, kw2, kw3] = copy.keywords(cidade, tetoFmt, areaFmt);
+      const titulo1    = typeof copy.titulo1    === 'function' ? copy.titulo1(tetoFmt)         : copy.titulo1;
+      const titulo2    = typeof copy.titulo2    === 'function' ? copy.titulo2(prodPadrao.length) : copy.titulo2;
+      const descricao1 = typeof copy.descricao1 === 'function' ? copy.descricao1(cidade)        : copy.descricao1;
+      const dispersao  = (tickets.length >= 2 && Math.max(...tickets) > Math.min(...tickets) * 1.8)
+        ? `\n> ⚠️ **Ticket disperso dentro do padrão ${p}:** ${fmtPreco(Math.min(...tickets))} a ${fmtPreco(Math.max(...tickets))}. Considere separar em sub-faixas (A/B) com ad groups próprios (ex: \`AG${i + 1}-${PADRAO_SLUG_MM_[p] || p}-A\`/\`-B\`).`
+        : '';
+      // Ad group nomeado por PADRÃO/faixa (relatório item 5.2), nunca por
+      // bairro -- subfaixa A/B só quando há dispersão de ticket real dentro
+      // do padrão (ver aviso acima), não inventada sem base nos dados.
+      const agNome = `AG${i + 1}-${PADRAO_SLUG_MM_[p] || p.toUpperCase()}`;
+      return `**PÚBLICO ${i + 1} — ${p} até R$${tetoFmt}**
+- Ad Group: \`${agNome}\`
+- Estágio: ${ESTAGIO_LABEL_MM_[estagioPadrao]}${avisoMistoPadrao}
 - Palavras-chave: \`${kw1}\`, \`${kw2}\`, \`${kw3}\`
 - Título 1: "${titulo1}"
 - Título 2: "${titulo2}"
-- Título 3: "${copy.titulo3}"
+- Título 3: "${copyBase.titulo3}"
 - Descrição 1: "${descricao1}"
-- Descrição 2: "${copy.descricao2}"
-- Preset: \`?objetivo=${copy.objetivo}&padroes=${p}&situacoes=em_obras\`${dispersao}`;
+- Descrição 2: "${copyBase.descricao2}"
+- Preset: \`?objetivo=${copyBase.objetivo}&padroes=${p}&situacoes=${estagioPadrao}\`${dispersao}`;
     }).join('\n\n');
 
-  // Produto isca (fundo de funil)
-  const iscaX   = _mmItens_.find(x => x.papel === 'ISCA') || grupoA[0] || _mmItens_[0];
-  const iscaNome = iscaX ? (iscaX.it.e.nomeEmpreendimento || '[Empreendimento]') : '[Empreendimento]';
+  // Exemplo REAL de utm_campaign pro mix atual, na convenção oficial
+  // (relatório de ajustes 2026-08-12, item 5.4): C[nº]-APPLAN-[OBJETIVO]-
+  // [PADRÃO]-[SUBFAIXA]-[ESTÁGIO]-[TETO]K -- substitui os exemplos genéricos
+  // antigos ("mix-manual-q3", "mix-topo" etc, que não seguiam convenção
+  // nenhuma). O "1" de "C1" é só ilustrativo -- a numeração real de campanha
+  // é definida na hora de criar no Google Ads, não dá pra saber daqui.
+  const padraoExemplo   = padroes[0] || 'Médio';
+  const objetivoExemplo = (COPY_POR_PADRAO_MM_[padraoExemplo] || {}).objetivo || 'moradia';
+  const ticketsExemplo  = grupoA.filter(x => x.it.padrao === padraoExemplo).map(x => x.it.menorPreco).filter(v => v > 0);
+  const tetoExemplo     = ticketsExemplo.length ? Math.max(...ticketsExemplo) : 0;
+  const estagioExemplo  = estagioUnico || 'pronto_novo';
+  const utmCampanhaExemplo = `c1-applan-${objetivoExemplo}-${(PADRAO_SLUG_MM_[padraoExemplo] || padraoExemplo).toLowerCase()}-${ESTAGIO_TOKEN_MM_[estagioExemplo].toLowerCase()}-${precoParaUtm_(tetoExemplo).toLowerCase()}`;
 
   // Tabela de papéis (seção 5)
   const papeisSummary = _mmItens_.map(x =>
@@ -8793,13 +8885,13 @@ Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landin
 
 1. **Identificação da empresa:** toda peça que reproduzir a identificação da empresa deve usar exatamente **"CJ 27357 - Líder Empreendimentos Imobiliários LTDA."** — sem abreviar, sem trocar a ordem, sem omitir o CJ.
 
-2. **Nunca prometer nome de empreendimento, endereço exato ou "unidade específica" antes do contato.** A única exceção é o remarketing de fundo de funil (Etapa ③, seção 7) pra quem já viu aquele nome específico dentro do próprio funil (App Lançamentos). Nos anúncios de topo e meio de funil, usar sempre bairro/região/padrão — nunca o nome do produto.
+2. **Nunca prometer nome de empreendimento, endereço exato ou "unidade específica" antes do contato.** O projeto hoje só roda **Meio de Funil** (ver seção 7) — usar sempre padrão + faixa de preço + estágio como eixo da copy, nunca o nome do produto nem o bairro exato (bairro só entra como parâmetro técnico de geo-targeting dentro do Google Ads, nunca em copy/keyword/nome de público — relatório de ajustes 2026-08-12, item 5.2).
 
 3. **Nunca usar claims de condição de pagamento sem dado real que sustente** (ex: "sem entrada", "documentação gratuita", "financiamento facilitado", "parcelamento direto"). Só usar esse tipo de chamada se houver confirmação de que a condição está disponível pros produtos do Grupo A ativo (seção 6). Sem essa confirmação, preferir chamadas neutras como "Consulte condições de pagamento" ou "Fale com um especialista sobre financiamento" — a "Consulta gratuita"/"Atendimento gratuito" em si pode ser usada normalmente, é sobre o atendimento, não sobre a condição de pagamento do imóvel.
 
 4. **Nunca usar "apartamento popular" nem preço abaixo do piso real da base (R$ 283 mil)** até haver estoque de verdade na categoria Popular. ${padroes.includes('Popular') ? 'O Mix ativo TEM produtos em Popular agora — ainda assim, confirme o preço mínimo real antes de anunciar qualquer valor específico.' : 'O Mix ativo NÃO tem nenhum produto em Popular agora (ver seção 6) — qualquer anúncio de "apartamento popular" ou preço de entrada abaixo de R$ 283 mil estaria prometendo produto que não existe no mix hoje.'}
 
-5. **Horário real de veiculação dos anúncios (ad schedule/dayparting):** configurar os anúncios pra rodar **seg–sex 10h–20h, sáb e dom 10h–18h**. Isso é DIFERENTE do horário de atendimento humano (seg–sex 8h–18h, sáb 8h–12h, ver seção 9/CONDICIONAIS IMPORTANTES) — o anúncio pode ficar no ar em uma janela mais ampla, é só a resposta humana em tempo real que fica restrita ao horário de atendimento.
+5. **Horário de veiculação dos anúncios (ad schedule/dayparting):** não existe mais janela fixa obrigatória (a antiga regra "seg–sex 10h–20h, sáb e dom 10h–18h" foi **descontinuada** — relatório de ajustes 2026-08-12, item 5.3). A IA Editora já define e mantém seu próprio dayparting (24h/todos os dias, com ajuste de lance por horário, sem pausa total), validado como aplicado de fato nas campanhas ativas. O que continua fixo é o horário de **atendimento humano** (seg–sex 8h–18h, sáb 8h–12h, ver seção 9/CONDICIONAIS IMPORTANTES) — fora dele, o botão de WhatsApp na tela final do App mostra o contador de próxima abertura em vez do link direto.
 
 ---
 
@@ -8808,8 +8900,8 @@ Regras que NUNCA podem ser violadas em nenhuma peça (anúncio, criativo, landin
 **Mix Manual** é uma seleção estratégica personalizada, montada pelo corretor para uma campanha específica. Diferente do algoritmo automático de Suporte/Resistência (que classifica toda a base), o Mix Manual permite:
 
 - **Combinar diferentes perfis de produto** numa única campanha coesa
-- **Definir papéis de atração** — isca para topo de funil, alvo primário para conversão, âncoras para posicionamento de preço
-- **Cruzar nichos** — ex: mix de padrão Alto com um Médio como isca de entrada, ou mistura de "Em obras" com "Pronto novo"
+- **Definir papéis de atração** — isca para captura inicial, alvo primário para conversão, âncoras para posicionamento de preço
+- **Cruzar nichos dentro do mesmo estágio** — ex: mix de padrão Alto com um Médio como isca de entrada (hoje só "Pronto para Morar"/moradia está ativo — "Em Obras"/investimento é frente futura ainda não autorizada, ver seção 2 e o aviso de estágio misto, se houver, na seção 7)
 
 **Quando usar:** o corretor monta o mix quando quer comunicar uma estratégia multi-produto em vez de anunciar apenas uma categoria homogênea (caso do briefing de Suporte padrão).
 
@@ -8861,54 +8953,26 @@ ${detalheEmpMix_(grupoB, false)}
 
 ---
 
-## 7. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS
+## 7. MISSÃO PARA A IA EDITORA — ESTRATÉGIA GOOGLE ADS (MEIO DE FUNIL)
 
 ### OBJETIVO GERAL
-Criar uma estratégia de tráfego pago no **Google Ads** para atrair leads altamente qualificados — pessoas com intenção real de comprar um imóvel de lançamento — que clicarão no anúncio e acessarão o **App Lançamentos** já com os filtros configurados conforme o nicho do anúncio.
+Criar uma estratégia de tráfego pago no **Google Ads** — hoje só **Meio de Funil** está em produção (Topo e Fundo não estão em desenvolvimento neste projeto, foram descontinuados — relatório de ajustes 2026-08-12, item 5.1) — para atrair leads altamente qualificados — pessoas com intenção real de comprar um imóvel de lançamento — que clicarão no anúncio e acessarão o **App Lançamentos** já com os filtros configurados conforme o nicho do anúncio.
 
 A **meta de conversão final** (configurada no Google Ads) é a conclusão da última etapa: a tela **"Confirmado! Sua consultoria está agendada."** (Step 8 do App), acionada quando o cliente confirma o WhatsApp.
 
 ---
 
-> **Base de produtos desta seção: Grupo A apenas** (${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}). Grupo B fica de fora até ter preço definido — ver seção 6. Vale também a seção 2 (Orientações obrigatórias de conformidade e marca) em todas as peças criadas a partir daqui.
+> **Base de produtos desta seção: Grupo A apenas** (${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} · Padrões: ${padroes.join(', ') || 'N/D'} · Cidades: ${cidades.join(', ') || 'N/D'}). Grupo B fica de fora até ter preço definido — ver seção 6. Vale também a seção 2 (Orientações obrigatórias de conformidade e marca) em todas as peças criadas a partir daqui.${estagioMistoAviso}
 
-### FUNIL EM 3 ETAPAS
-
-#### ① TOPO DE FUNIL — Reconhecimento e Volume
-**Objetivo:** Mapear a demanda real; identificar quais nichos, bairros e padrões geram mais interesse.
-
-- **Tipo:** Search ampla + Performance Max
-- **Segmentação:** In-market "Imóveis para comprar", "Financiamento imobiliário"
-- **Público:** 25–55 anos · Grande Goiânia · Renda acima da média
-- **Chamada isca:** "Veja os melhores lançamentos de [Bairro] antes de todos — Consulta gratuita"
-- **Destino:** App Lançamentos SEM preset (tela inicial, cliente faz os próprios filtros)
-- **URL:** \`https://imoveisemgoiania.com/?utm_source=google&utm_medium=cpc&utm_campaign=mix-topo\`
-- **Orçamento e CPC:** ver seção 8 (R$ 20/dia, CPC máximo R$ 6,00 nesta etapa)
-- **Meta:** Volume de cliques + identificação dos segmentos que mais convertem
-
-#### ② MEIO DE FUNIL — Consideração por Nicho
-**Objetivo:** Direcionar leads aquecidos para produtos específicos alinhados ao perfil detectado na Etapa 1.
+### MEIO DE FUNIL — ${estagioUnico ? ESTAGIO_LABEL_MM_[estagioUnico] : 'estágio misto, ver aviso acima'} · 100% do orçamento desta frente (seção 8)
+**Objetivo:** Direcionar leads pra produtos específicos alinhados ao padrão e à faixa de preço do mix.
 
 - **Tipo:** Search segmentada + Display Remarketing
 - **Segmentação:** Remarketing de visitantes que não converteram + lookalike de conversores
 
 ${publicosHtml || '_Nenhum público gerado — Grupo A não tem padrão algum identificado neste mix._'}
 
-#### ③ FUNDO DE FUNIL — Decisão e Conversão
-**Objetivo:** Atingir usuários com altíssima intenção — visitaram o app, viram resultados, mas ainda não converteram.
-
-- **Tipo:** RLSA (Remarketing List for Search Ads) + Customer Match
-- **Segmentação:** Visitantes que chegaram ao Step 6 (resultados) mas não completaram o Step 8 (conversão)
-- **Anúncios:** Personalizados por empreendimento específico quando possível
-- **Chamada:** "Você viu ${iscaNome} · Ainda há unidades · Consulta gratuita"
-- **Preset:** Configurado com o padrão e situação do empreendimento específico
-- **Meta:** Maximizar conversão com custo mínimo por lead
-
 ---
-
-### PALAVRAS-CHAVE POR LOCALIDADE (base dos empreendimentos identificados)
-
-${bairros.length ? '- ' + bairrosKw : '(bairros a definir conforme a base de dados)'}
 
 ### EXTENSÕES RECOMENDADAS
 
@@ -8938,16 +9002,12 @@ ${negativasSugeridas.length ? negativasSugeridas.join(' • ') : '(Mix cobre tod
 
 **Grupo A ativo:** ${grupoA.length} produto${grupoA.length === 1 ? '' : 's'} em ${padroes.length} padr${padroes.length === 1 ? 'ão' : 'ões'}
 
-| Etapa do funil | Orçamento diário | Orçamento mensal |
+| Frente | Orçamento diário | Orçamento mensal |
 |---|---|---|
-| Topo de funil (sondagem) | R$ 20/dia | R$ 600/mês |
-| Meio de funil (por nicho) | R$ 50/dia | R$ 1.500/mês |
-| Fundo de funil (remarketing) | R$ 20/dia | R$ 600/mês |
-| **TOTAL** | **R$ 90/dia** | **R$ 2.700/mês** |
+| Meio de funil (único funil ativo no projeto hoje — 100% do orçamento) | R$ 50/dia | R$ 1.500/mês |
+| **TOTAL** | **R$ 50/dia** | **R$ 1.500/mês** |
 
-**CPC máximo (topo de funil):** R$ 6,00 — lance manual ou meta de CPC no Google Ads, pra não deixar o algoritmo consumir o orçamento rápido demais numa etapa que ainda é só sondagem.
-
-**Horário de veiculação (ad schedule):** seg–sex 10h–20h, sáb e dom 10h–18h (ver regra 5 da seção 2 — diferente do horário de atendimento humano).
+**Dayparting:** sem janela fixa obrigatória (regra antiga descontinuada — ver regra 5 da seção 2). A IA Editora mantém seu próprio ajuste de lance por horário, 24h/todos os dias.
 
 **Após os 30 dias:** dobrar o orçamento no público (dos gerados na seção 7) com o menor CPL e pausar os que não converteram nenhum lead.
 
@@ -8992,7 +9052,7 @@ D.agendamento   — { dia, hora, modo } se agendou atendimento (Step 9)
 D.sessionId     — ID único de sessão (rastreamento de funil por etapa)
 D.utmSource     — utm_source da URL (ex: "google")
 D.utmMedium     — utm_medium (ex: "cpc")
-D.utmCampaign   — utm_campaign (ex: "mix-manual-q3")
+D.utmCampaign   — utm_campaign (ex: "${utmCampanhaExemplo}" — convenção C[nº]-APPLAN-[OBJETIVO]-[PADRÃO]-[SUBFAIXA]-[ESTÁGIO]-[TETO]K)
 D.origemAcesso  — Origem calculada (utm_source ou "direto")
 \`\`\`
 
@@ -9023,16 +9083,27 @@ O App Lançamentos aceita presets nomeados ou parâmetros raw na URL.
 | \`pronto-alto\` | Investimento | Alto, Luxo | Pronto novo | ✅ Sim |
 | \`obras-medio\` | Investimento | Médio | Em obras | ✅ Sim |
 
+### Nomenclatura oficial de campanha/utm_campaign
+
+Convenção do projeto (relatório de ajustes 2026-08-12, item 5.4) — substitui nomes genéricos tipo "mix-manual-q3"/"mix-topo":
+
+\`\`\`
+C[nº]-APPLAN-[OBJETIVO]-[PADRÃO]-[SUBFAIXA]-[ESTÁGIO]-[TETO]K
+\`\`\`
+SUBFAIXA (A/B) só entra quando o padrão tem mais de uma campanha por ticket (ver aviso de ticket disperso na seção 7, se houver). [nº] é a numeração sequencial de campanha, definida na hora de criar no Google Ads.
+
+**Exemplo real deste mix:** \`utm_campaign=${utmCampanhaExemplo}\`
+
 ### URL completa para Google Ads (com UTM)
 
 **Como deve ir ao ar (produção):**
 \`\`\`
-https://imoveisemgoiania.com/?preset=obras-medio&utm_source=google&utm_medium=cpc&utm_campaign=mix-manual-q3
+https://imoveisemgoiania.com/?objetivo=${padroes[0] ? ((COPY_POR_PADRAO_MM_[padroes[0]] || {}).objetivo || 'moradia') : 'moradia'}&padroes=${padroes[0] || 'Médio'}&situacoes=${estagioUnico || 'pronto_novo'}&utm_source=google&utm_medium=cpc&utm_campaign=${utmCampanhaExemplo}
 \`\`\`
 
 **Referência (GitHub Pages, mesmo conteúdo):**
 \`\`\`
-https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-medio&utm_source=google&utm_medium=cpc&utm_campaign=mix-manual-q3
+https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?objetivo=${padroes[0] ? ((COPY_POR_PADRAO_MM_[padroes[0]] || {}).objetivo || 'moradia') : 'moradia'}&padroes=${padroes[0] || 'Médio'}&situacoes=${estagioUnico || 'pronto_novo'}&utm_source=google&utm_medium=cpc&utm_campaign=${utmCampanhaExemplo}
 \`\`\`
 
 ### Parâmetros raw (personalização total)
@@ -9040,22 +9111,25 @@ https://chaverleo1.github.io/base-inteligente/app-lancamentos.html?preset=obras-
 \`\`\`
 https://imoveisemgoiania.com/?objetivo=[moradia|investimento]
 &padroes=[Popular,Médio,Alto,Luxo]   ← vírgula-separado, múltiplos possíveis
-&situacoes=[em_obras,pronto_novo]    ← filtra por estágio da obra
+&situacoes=[em_obras,pronto_novo]    ← filtra por estágio da obra -- usar o
+                                        estágio REAL do mix (seção 7), nunca
+                                        em_obras fixo por padrão
 &utm_source=google
 &utm_medium=cpc
-&utm_campaign=[nome-da-campanha]
+&utm_campaign=[C[nº]-APPLAN-OBJETIVO-PADRAO-SUBFAIXA-ESTAGIO-TETOK]
 \`\`\`
 
-**Exemplos práticos (produção):**
+**Exemplos práticos por padrão presente neste mix:**
 \`\`\`
-# Mix manual — padrão médio em obras
-https://imoveisemgoiania.com/?objetivo=moradia&padroes=Médio&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=mix-moradia-medio
-
-# Mix manual — investimento alto padrão
-https://imoveisemgoiania.com/?objetivo=investimento&padroes=Alto&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=mix-inv-alto
-
-# Mix manual — todos os padrões em obras (campanha ampla)
-https://imoveisemgoiania.com/?objetivo=investimento&padroes=Popular,Médio,Alto,Luxo&situacoes=em_obras&utm_source=google&utm_medium=cpc&utm_campaign=mix-obras-todos
+${padroes.map(p => {
+  const objetivoP = (COPY_POR_PADRAO_MM_[p] || {}).objetivo || 'moradia';
+  const ticketsP  = grupoA.filter(x => x.it.padrao === p).map(x => x.it.menorPreco).filter(v => v > 0);
+  const tetoP     = ticketsP.length ? Math.max(...ticketsP) : 0;
+  const estagiosP = [...new Set(grupoA.filter(x => x.it.padrao === p).map(x => ESTAGIO_BUCKET_MM_[x.it.e.status]).filter(Boolean))];
+  const estagioP  = estagiosP.length === 1 ? estagiosP[0] : (estagioUnico || 'pronto_novo');
+  const utmP      = `c1-applan-${objetivoP}-${(PADRAO_SLUG_MM_[p] || p).toLowerCase()}-${ESTAGIO_TOKEN_MM_[estagioP].toLowerCase()}-${precoParaUtm_(tetoP).toLowerCase()}`;
+  return `# ${p} · ${ESTAGIO_LABEL_MM_[estagioP]}\nhttps://imoveisemgoiania.com/?objetivo=${objetivoP}&padroes=${p}&situacoes=${estagioP}&utm_source=google&utm_medium=cpc&utm_campaign=${utmP}`;
+}).join('\n\n') || '(nenhum padrão com preço definido no mix ainda)'}
 \`\`\`
 
 ---
