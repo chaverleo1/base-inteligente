@@ -5386,18 +5386,56 @@ function listarMetricasGoogleAds_(params) {
       c.conversoes   += parseFloat(r[8]) || 0;
     });
 
+    // Cruza com leads QUALIFICADOS de verdade (Fase 4) -- essa é a métrica
+    // que o usuário definiu desde o início como a que mais importa: não
+    // "conversão" que o próprio Ads reporta (que só sabe que o funil foi
+    // até o fim, não se o lead era bom), e sim leads que o corretor
+    // confirmou manualmente. Vínculo feito pelo utmCampaign gravado no
+    // lead (App Lançamentos) comparado ao nome da campanha, normalizado
+    // (sem acento/maiúscula/símbolo) -- depende do utm_campaign usado nos
+    // anúncios corresponder ao nome real da campanha no Ads (prática
+    // comum, mas não garantida; ver contarLeadsQualificadosPorCampanha_).
+    var qualifPorCampanha = contarLeadsQualificadosPorCampanha_(dias);
+    var norm_ads_ = function(s) {
+      return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+    };
+
     var lista = Object.keys(porCampanha).map(function(k) {
       var c = porCampanha[k];
       c.ctr             = c.impressoes > 0 ? (c.cliques / c.impressoes * 100) : 0;
       c.cpcMedio         = c.cliques > 0 ? (c.investimento / c.cliques) : 0;
       c.custoPorConversao = c.conversoes > 0 ? (c.investimento / c.conversoes) : null;
+
+      var nomeNorm = norm_ads_(c.campanha);
+      var qtdQualif = qualifPorCampanha[nomeNorm] || 0;
+      if (!qtdQualif) {
+        // Não achou match exato -- tenta contenção (um string dentro do
+        // outro), pra absorver pequena diferença de grafia entre o
+        // utm_campaign e o nome real da campanha no Ads.
+        for (var utmNorm in qualifPorCampanha) {
+          if (utmNorm && (nomeNorm.indexOf(utmNorm) >= 0 || utmNorm.indexOf(nomeNorm) >= 0)) {
+            qtdQualif = qualifPorCampanha[utmNorm];
+            break;
+          }
+        }
+      }
+      c.leadsQualificados = qtdQualif;
+      c.custoPorLeadQualificado = qtdQualif > 0 ? (c.investimento / qtdQualif) : null;
       return c;
     });
-    // Ordena pela campanha com mais conversões primeiro (melhor performance
-    // real) -- desempata por cliques. Sem dado de qualificação de lead ainda
-    // (fase 4), essa é a melhor proxy disponível de "campanha que performa
-    // melhor" que dá pra calcular só com dado do próprio Google Ads.
-    lista.sort(function(a, b) { return (b.conversoes - a.conversoes) || (b.cliques - a.cliques); });
+
+    // Ordena pela campanha mais EFICIENTE primeiro: menor custo por lead
+    // qualificado (pedido explícito do usuário). Campanha sem nenhum lead
+    // qualificado ainda vai pro fim -- não dá pra provar eficiência sem
+    // pelo menos 1 -- desempatando pelas conversões que o próprio Ads
+    // reporta, depois cliques.
+    lista.sort(function(a, b) {
+      var aTem = a.custoPorLeadQualificado != null, bTem = b.custoPorLeadQualificado != null;
+      if (aTem && bTem) return a.custoPorLeadQualificado - b.custoPorLeadQualificado;
+      if (aTem) return -1;
+      if (bTem) return 1;
+      return (b.conversoes - a.conversoes) || (b.cliques - a.cliques);
+    });
 
     return {
       campanhas: lista,
@@ -5406,6 +5444,42 @@ function listarMetricasGoogleAds_(params) {
   } catch (e) {
     return { campanhas: [], atualizadoEm: null, erro: e.message };
   }
+}
+
+// Conta leads QUALIFICADOS (LEADS_LANCAMENTOS) agrupados por utmCampaign
+// normalizado, só os qualificados dentro dos últimos `dias`. Usado por
+// listarMetricasGoogleAds_ pra calcular custo por lead qualificado.
+function contarLeadsQualificadosPorCampanha_(dias) {
+  var resultado = {};
+  try {
+    var abaLeads = obterAbaLeadsLancamentos_();
+    var lr = abaLeads.getLastRow();
+    if (lr < 2) return resultado;
+
+    var idxQualif = CABECALHO_LEADS_LANCAMENTOS.indexOf('qualificado');
+    var idxUtm    = CABECALHO_LEADS_LANCAMENTOS.indexOf('utmCampaign');
+    var idxDataQ  = CABECALHO_LEADS_LANCAMENTOS.indexOf('dataQualificacao');
+    var dados = abaLeads.getRange(2, 1, lr - 1, CABECALHO_LEADS_LANCAMENTOS.length).getValues();
+
+    var desde = new Date();
+    desde.setDate(desde.getDate() - dias);
+    var norm_ads_ = function(s) {
+      return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+    };
+
+    dados.forEach(function(r) {
+      if (String(r[idxQualif] || '') !== 'Sim') return;
+      var utm = norm_ads_(r[idxUtm]);
+      if (!utm) return;
+      var m = String(r[idxDataQ] || '').match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if (m) {
+        var dataQ = new Date(+m[3], +m[2] - 1, +m[1]);
+        if (dataQ < desde) return;
+      }
+      resultado[utm] = (resultado[utm] || 0) + 1;
+    });
+  } catch (e) {}
+  return resultado;
 }
 
 // Handler do beacon disparado pelo App Lançamentos a cada troca de step

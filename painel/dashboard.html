@@ -992,15 +992,17 @@
       <button class="refresh-btn" onclick="carregarMetricasGoogleAds_()">↻ Atualizar</button>
     </div>
     <div class="cards-row" id="gadsCardsResumo"></div>
-    <div id="gadsTabelaWrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Ordenado pela campanha mais eficiente (menor custo por lead qualificado) — cor de fundo vai de quente (melhor) a fria (pior/sem lead qualificado ainda).</div>
+    <div id="gadsTabelaWrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto">
       <table class="adm-table" id="gadsTabela">
         <thead>
           <tr>
             <th>Campanha</th><th>Status</th><th>Investimento</th><th>Cliques</th>
-            <th>Impressões</th><th>CTR</th><th>CPC médio</th><th>Conversões</th><th>Custo/conversão</th>
+            <th>Impressões</th><th>CTR</th><th>CPC médio</th><th>Conversões (Ads)</th>
+            <th>Leads Qualif.</th><th>Custo/Lead Qualif.</th>
           </tr>
         </thead>
-        <tbody id="gadsTabelaBody"><tr><td colspan="9" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
+        <tbody id="gadsTabelaBody"><tr><td colspan="10" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -3835,11 +3837,24 @@ function mostrarBaseImobSubtab(nome) {
 // "↻ Atualizar" força recarregar.
 let _gadsCarregado_ = false;
 const GADS_STATUS_LABEL_ = { ENABLED: 'Ativa', PAUSED: 'Pausada', REMOVED: 'Removida' };
+// Gradiente fria→quente por eficiência (pedido explícito do usuário): a
+// campanha MAIS eficiente (menor custo por lead qualificado, topo da
+// lista) fica quente (vermelho/laranja); a menos eficiente (ou sem
+// nenhum lead qualificado ainda) fica fria (azul). Interpolação linear
+// simples entre as duas cores conforme a posição no ranking.
+function gadsCorEficiencia_(rank, total) {
+  if (total <= 1) return 'rgba(255,107,107,.14)';
+  const t = rank / (total - 1); // 0 = melhor (quente) .. 1 = pior (fria)
+  const quente = [255, 107, 107]; // --coral
+  const fria   = [79, 124, 255];  // --accent
+  const rgb = quente.map((q, i) => Math.round(q + (fria[i] - q) * t));
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},.14)`;
+}
 async function carregarMetricasGoogleAds_() {
   _gadsCarregado_ = true;
   const resumo = document.getElementById('gadsCardsResumo');
   const corpo  = document.getElementById('gadsTabelaBody');
-  corpo.innerHTML = '<tr><td colspan="9" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
+  corpo.innerHTML = '<tr><td colspan="10" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
   try {
     const resp = await fetch(`${WEBHOOK_URL}?acao=listar_metricas_google_ads&dias=30&token=${encodeURIComponent(tokenSessao())}`);
     const json = await resp.json();
@@ -3851,7 +3866,7 @@ async function carregarMetricasGoogleAds_() {
 
     if (!campanhas.length) {
       resumo.innerHTML = '';
-      corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">
+      corpo.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:32px">
         Nenhum dado ainda. Confirme se o Script já rodou no Google Ads (Executar, não só Visualizar) e
         se a planilha de métricas está compartilhada com Editor pra conta do Ads.</td></tr>`;
       return;
@@ -3860,19 +3875,24 @@ async function carregarMetricasGoogleAds_() {
     const totalInvest = campanhas.reduce((s, c) => s + c.investimento, 0);
     const totalCliques = campanhas.reduce((s, c) => s + c.cliques, 0);
     const totalConv = campanhas.reduce((s, c) => s + c.conversoes, 0);
-    const custoConvMedio = totalConv > 0 ? totalInvest / totalConv : null;
+    const totalQualif = campanhas.reduce((s, c) => s + (c.leadsQualificados || 0), 0);
+    const custoQualifMedio = totalQualif > 0 ? totalInvest / totalQualif : null;
 
     resumo.innerHTML = `
       <div class="card"><div class="card-label">Investimento (30d)</div><div class="card-value">${fmtBRL(totalInvest)}</div><div class="card-sub">${campanhas.length} campanha${campanhas.length !== 1 ? 's' : ''}</div></div>
       <div class="card"><div class="card-label">Cliques</div><div class="card-value">${totalCliques.toLocaleString('pt-BR')}</div><div class="card-sub">todas as campanhas</div></div>
-      <div class="card"><div class="card-label">Conversões</div><div class="card-value green">${totalConv.toLocaleString('pt-BR')}</div><div class="card-sub">registradas no Google Ads</div></div>
-      <div class="card"><div class="card-label">Custo por conversão</div><div class="card-value${custoConvMedio ? '' : ' cold'}">${custoConvMedio ? fmtBRL(custoConvMedio) : '—'}</div><div class="card-sub">médio geral</div></div>`;
+      <div class="card"><div class="card-label">Conversões (Ads)</div><div class="card-value">${totalConv.toLocaleString('pt-BR')}</div><div class="card-sub">reportadas pelo Google Ads</div></div>
+      <div class="card"><div class="card-label">Leads Qualificados</div><div class="card-value green">${totalQualif.toLocaleString('pt-BR')}</div><div class="card-sub">confirmados pelo corretor</div></div>
+      <div class="card"><div class="card-label">Custo por Lead Qualif.</div><div class="card-value${custoQualifMedio ? '' : ' cold'}">${custoQualifMedio ? fmtBRL(custoQualifMedio) : '—'}</div><div class="card-sub">médio geral</div></div>`;
 
-    // Já vem ordenado por conversões (backend) -- a 1ª linha com conversão
-    // ganha um destaque visual simples de "melhor performance".
+    // Já vem ordenado pelo backend (menor custo por lead qualificado
+    // primeiro). Cor de fundo por linha segue o mesmo ranking -- quente no
+    // topo (mais eficiente), fria no fim (menos eficiente / sem lead
+    // qualificado ainda). 🏆 só na 1ª linha se ela tiver lead qualificado
+    // de verdade (senão ninguém tem prova de eficiência ainda).
     corpo.innerHTML = campanhas.map((c, i) => `
-      <tr${i === 0 && c.conversoes > 0 ? ' style="background:rgba(0,212,170,.06)"' : ''}>
-        <td style="font-weight:600">${i === 0 && c.conversoes > 0 ? '🏆 ' : ''}${c.campanha}</td>
+      <tr style="background:${gadsCorEficiencia_(i, campanhas.length)}">
+        <td style="font-weight:600">${i === 0 && c.leadsQualificados > 0 ? '🏆 ' : ''}${c.campanha}</td>
         <td>${GADS_STATUS_LABEL_[c.status] || c.status || '—'}</td>
         <td>${fmtBRL(c.investimento)}</td>
         <td>${c.cliques.toLocaleString('pt-BR')}</td>
@@ -3880,7 +3900,8 @@ async function carregarMetricasGoogleAds_() {
         <td>${c.ctr.toFixed(2)}%</td>
         <td>${fmtBRL(c.cpcMedio)}</td>
         <td>${c.conversoes}</td>
-        <td>${c.custoPorConversao != null ? fmtBRL(c.custoPorConversao) : '—'}</td>
+        <td>${c.leadsQualificados || 0}</td>
+        <td>${c.custoPorLeadQualificado != null ? fmtBRL(c.custoPorLeadQualificado) : '—'}</td>
       </tr>`).join('');
   } catch (e) {
     corpo.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
