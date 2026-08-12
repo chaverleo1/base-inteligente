@@ -72,6 +72,24 @@ a { text-decoration: none; color: inherit; }
 .mapa-subtab.active { background: var(--accent); color: #fff; }
 .mapa-subtab:hover:not(.active) { color: var(--text); }
 
+/* ── Lista por Faixas — 1 bloco por Padrão, sub-grupos lado a lado em
+   cards; o valor médio de referência de cada sub-grupo fica destacado em
+   amarelo (pedido explícito do usuário), é a leitura mais importante do
+   card. ── */
+.faixas-padrao-bloco { margin-bottom: 22px; }
+.faixas-padrao-titulo { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; display: flex; align-items: baseline; gap: 10px; }
+.faixas-padrao-total { font-size: 11px; font-weight: 500; color: var(--text3); }
+.faixas-subgrupos-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.faixas-subgrupo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; min-width: 220px; flex: 1 1 240px; max-width: 320px; }
+.faixas-subgrupo-nome { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
+.faixas-valor-ref { display: inline-block; background: rgba(255, 200, 0, .9); color: #1a1a1a; font-size: 17px; font-weight: 800; padding: 4px 10px; border-radius: 6px; margin-bottom: 8px; }
+.faixas-subgrupo-faixa { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.faixas-subgrupo-count { font-size: 11px; color: var(--text2); font-weight: 600; margin-bottom: 8px; }
+.faixas-subgrupo-itens { border-top: 1px solid var(--border); padding-top: 8px; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.faixas-item-linha { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text2); }
+.faixas-item-linha span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.faixas-item-linha span:last-child { color: var(--text3); white-space: nowrap; }
+
 /* ── MAPA GERAL — barra de ferramentas (Estágio + PDF), só nessa aba ──────
    Altura reduzida de propósito (pedido do usuário) -- botões bem mais
    baixos que os padrões do resto da tela. */
@@ -1377,6 +1395,7 @@ select.form-input option { background: var(--surface2); }
   <div class="mapa-subtabs">
     <button class="mapa-subtab active" id="mapaSubBtnLista" onclick="mudarSubAbaMapa_('lista')">Lista</button>
     <button class="mapa-subtab" id="mapaSubBtnDados" onclick="mudarSubAbaMapa_('dados')">Dados</button>
+    <button class="mapa-subtab" id="mapaSubBtnFaixas" onclick="mudarSubAbaMapa_('faixas')">Lista por Faixas</button>
   </div>
 
   <div id="mapaSubPainelLista" class="mapa-subpanel">
@@ -1438,6 +1457,22 @@ select.form-input option { background: var(--surface2); }
       <div id="graficoEstoqueTooltip" class="grafico-tooltip" style="display:none;opacity:0"></div>
     </div>
   </div>
+  </div>
+
+  <!-- Lista por Faixas -- pedido explícito do usuário: agrupa os
+       empreendimentos por Padrão e, dentro de cada um, quebra
+       automaticamente em sub-grupos por faixa de preço (menor preço),
+       destacando o valor médio de referência de cada sub-grupo -- serve
+       de base pra nomear/dimensionar campanha (ex: "ALTO-A", "ALTO-B").
+       100% dinâmico, recalculado a partir da base atual, sem valor fixo.
+       Ver calcularFaixasPorPadrao_/renderListaPorFaixas_. -->
+  <div id="mapaSubPainelFaixas" class="mapa-subpanel" style="display:none">
+    <div class="sec-sub" style="margin-bottom:14px">
+      Agrupamento automático por faixa de preço dentro de cada Padrão — grupos de ~7 a 9 empreendimentos
+      (maiores quando a base tiver muitos no mesmo perfil, nunca exclui nada). O valor em destaque é a
+      média do menor preço do sub-grupo — referência pra nomear/dimensionar campanha.
+    </div>
+    <div id="mapaFaixasConteudo"></div>
   </div>
   </div>
 
@@ -2311,11 +2346,106 @@ function mudarAbaLancamentos(nome) {
 let _mapaSubAbaAtual = 'lista';
 function mudarSubAbaMapa_(nome) {
   _mapaSubAbaAtual = nome;
-  document.getElementById('mapaSubPainelLista').style.display = nome === 'lista' ? '' : 'none';
-  document.getElementById('mapaSubPainelDados').style.display = nome === 'dados' ? '' : 'none';
+  document.getElementById('mapaSubPainelLista').style.display  = nome === 'lista'  ? '' : 'none';
+  document.getElementById('mapaSubPainelDados').style.display  = nome === 'dados'  ? '' : 'none';
+  document.getElementById('mapaSubPainelFaixas').style.display = nome === 'faixas' ? '' : 'none';
   document.getElementById('mapaSubBtnLista').classList.toggle('active', nome === 'lista');
   document.getElementById('mapaSubBtnDados').classList.toggle('active', nome === 'dados');
+  document.getElementById('mapaSubBtnFaixas').classList.toggle('active', nome === 'faixas');
   if (nome === 'dados') requestAnimationFrame(renderGraficoEstoque_);
+  if (nome === 'faixas') renderListaPorFaixas_();
+}
+
+// ─── Lista por Faixas ────────────────────────────────────────────
+// Pedido explícito do usuário: dentro de cada Padrão, quebrar automaticamente
+// em sub-grupos por faixa de preço (menor preço), do mais barato pro mais
+// caro, com ~7 a 9 empreendimentos por sub-grupo -- nunca exclui nada, se
+// sobrar mais que isso o grupo cresce em vez de perder item. O valor médio
+// de cada sub-grupo é a REFERÊNCIA pra nomear/dimensionar campanha (o padrão
+// que já vínhamos usando manualmente: MÉDIO ~425MIL, ALTO-A ~800MIL,
+// ALTO-B ~1,6MI, LUXO ~2,5MI -- mas aqui 100% calculado a partir da base
+// atual, nunca fixo, e reagrupa sozinho conforme a base cresce/muda).
+// Mesma técnica de corte em fatias contíguas usada em organizarPorSegmento_
+// (mix de Estratégias, mais abaixo neste arquivo), mas com limiares próprios
+// porque o objetivo aqui é tamanho de grupo (7-9), não cobertura mínima de
+// Score de Tração.
+const FAIXAS_TAMANHO_ALVO_ = 8;     // ~8 por sub-grupo é o alvo
+const FAIXAS_MIN_P_2_GRUPOS_ = 14;  // abaixo disso, 1 grupo só (não fatia)
+const FAIXAS_MIN_P_3_GRUPOS_ = 22;  // >=22 já sustenta 3 grupos de ~7-9
+function calcularFaixasPorPadrao_(rows) {
+  const validos = (rows || []).filter(r => r.padrao && r.menorPreco > 0);
+  const porPadrao = {};
+  validos.forEach(r => { (porPadrao[r.padrao] = porPadrao[r.padrao] || []).push(r); });
+  // Ordem preferida (Popular→Luxo) primeiro; qualquer padrão fora dessa
+  // lista (não deveria existir, mas por segurança) entra no final, na ordem
+  // em que aparece na base -- assim nenhum empreendimento fica de fora da
+  // tela mesmo que o valor de padrão fuja do esperado.
+  const ordem = ORDEM_PADROES_MIX_.filter(p => porPadrao[p]).concat(
+    Object.keys(porPadrao).filter(p => !ORDEM_PADROES_MIX_.includes(p))
+  );
+  return ordem.map(padrao => {
+    const lista = [...porPadrao[padrao]].sort((a, b) => a.menorPreco - b.menorPreco);
+    const n = lista.length;
+    const k = n >= FAIXAS_MIN_P_3_GRUPOS_ ? 3 : n >= FAIXAS_MIN_P_2_GRUPOS_ ? 2 : 1;
+    const letras = ['A', 'B', 'C'];
+    const base = Math.floor(n / k), resto = n % k;
+    const subgrupos = [];
+    let cursor = 0;
+    for (let i = 0; i < k; i++) {
+      // sobra do resto distribuída nas fatias mais baratas (primeiras) --
+      // se um grupo tiver que ficar maior que o alvo, prefere ser o mais
+      // barato, não muda a leitura de referência dos grupos mais caros.
+      const tamanho = base + (i < resto ? 1 : 0);
+      const fatia = lista.slice(cursor, cursor + tamanho);
+      cursor += tamanho;
+      const precos = fatia.map(r => r.menorPreco);
+      const valorMedio = precos.reduce((a, b) => a + b, 0) / precos.length;
+      subgrupos.push({
+        label: k === 1 ? (PADRAO_LABEL_MIX_[padrao] || padrao) : `${(PADRAO_LABEL_MIX_[padrao] || padrao)}-${letras[i]}`,
+        valorMedio,
+        valorMin: precos[0],
+        valorMax: precos[precos.length - 1],
+        count: fatia.length,
+        itens: fatia,
+      });
+    }
+    return { padrao, total: n, subgrupos };
+  });
+}
+function formatarPrecoCompacto_(v) {
+  if (!(v > 0)) return '—';
+  return v >= 1000000
+    ? (v / 1000000).toFixed(1).replace('.', ',') + ' MI'
+    : Math.round(v / 1000) + ' MIL';
+}
+function renderListaPorFaixas_() {
+  const cont = document.getElementById('mapaFaixasConteudo');
+  if (!cont) return;
+  const grupos = calcularFaixasPorPadrao_(_mapaRows);
+  if (!grupos.length) {
+    cont.innerHTML = '<div class="sec-sub">Nenhum empreendimento com Padrão e preço cadastrados ainda -- cadastre o Padrão e a tabela de valores em Lançamentos pra essa lista se formar.</div>';
+    return;
+  }
+  cont.innerHTML = grupos.map(g => `
+    <div class="faixas-padrao-bloco">
+      <div class="faixas-padrao-titulo">${PADRAO_LABEL_MIX_[g.padrao] || g.padrao}
+        <span class="faixas-padrao-total">${g.total} empreendimento${g.total === 1 ? '' : 's'}${g.subgrupos.length > 1 ? ` · ${g.subgrupos.length} sub-grupos` : ''}</span>
+      </div>
+      <div class="faixas-subgrupos-row">
+        ${g.subgrupos.map(sg => `
+          <div class="faixas-subgrupo-card">
+            <div class="faixas-subgrupo-nome">${sg.label}</div>
+            <div class="faixas-valor-ref" title="Valor médio de referência (menor preço) desse sub-grupo -- use pra nomear/dimensionar campanha">R$ ${formatarPrecoCompacto_(sg.valorMedio)}</div>
+            <div class="faixas-subgrupo-faixa">R$ ${exibirPrecoBR(sg.valorMin)} — R$ ${exibirPrecoBR(sg.valorMax)}</div>
+            <div class="faixas-subgrupo-count">${sg.count} empreendimento${sg.count === 1 ? '' : 's'}</div>
+            <div class="faixas-subgrupo-itens">
+              ${sg.itens.map(it => `<div class="faixas-item-linha"><span>${it.nome || '—'}</span><span>R$ ${exibirPrecoBR(it.menorPreco)}</span></div>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 // Carrega os dados de Estratégias só na 1ª vez que a aba abre (fundida de
