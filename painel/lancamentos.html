@@ -293,7 +293,7 @@ a { text-decoration: none; color: inherit; }
      independente do "Imprimir Lista" de cima: só a tabela resumo aparece no
      papel, nada mais da tela (subabas, caixas de faixa, descrição). */
   body.imprimir-resumo-faixas .mapa-subtabs, body.imprimir-resumo-faixas .sec-header,
-  body.imprimir-resumo-faixas #mapaFaixasDescricao, body.imprimir-resumo-faixas #mapaFaixasConteudo,
+  body.imprimir-resumo-faixas .mapa-faixas-descricao, body.imprimir-resumo-faixas .mapa-faixas-conteudo,
   body.imprimir-resumo-faixas .btn-resumo-pdf { display: none !important; }
   body.imprimir-resumo-faixas .faixas-resumo-wrap { border: none !important; background: #fff !important; padding: 0 !important; }
   body.imprimir-resumo-faixas .faixas-resumo-titulo { color: #000 !important; }
@@ -1452,7 +1452,8 @@ select.form-input option { background: var(--surface2); }
   <div class="mapa-subtabs">
     <button class="mapa-subtab active" id="mapaSubBtnLista" onclick="mudarSubAbaMapa_('lista')">Lista</button>
     <button class="mapa-subtab" id="mapaSubBtnDados" onclick="mudarSubAbaMapa_('dados')">Dados</button>
-    <button class="mapa-subtab" id="mapaSubBtnFaixas" onclick="mudarSubAbaMapa_('faixas')">Lista por Faixas</button>
+    <button class="mapa-subtab" id="mapaSubBtnFaixasNovos" onclick="mudarSubAbaMapa_('faixasNovos')">Lista-PRONTO PARA MORAR</button>
+    <button class="mapa-subtab" id="mapaSubBtnFaixasObras" onclick="mudarSubAbaMapa_('faixasObras')">Lista-EM OBRAS</button>
   </div>
 
   <div id="mapaSubPainelLista" class="mapa-subpanel">
@@ -1522,15 +1523,31 @@ select.form-input option { background: var(--surface2); }
        destacando o valor médio de referência de cada sub-grupo -- serve
        de base pra nomear/dimensionar campanha (ex: "ALTO-A", "ALTO-B").
        100% dinâmico, recalculado a partir da base atual, sem valor fixo.
-       Ver calcularFaixasPorPadrao_/renderListaPorFaixas_. -->
-  <div id="mapaSubPainelFaixas" class="mapa-subpanel" style="display:none">
-    <div class="sec-sub" id="mapaFaixasDescricao" style="margin-bottom:14px">
-      Agrupamento automático por faixa de preço dentro de cada Padrão — grupos de ~7 a 9 empreendimentos
-      (maiores quando a base tiver muitos no mesmo perfil, nunca exclui nada). O valor em destaque é a
-      média do menor preço do sub-grupo — referência pra nomear/dimensionar campanha.
+       Replicado em 2 GRUPOS MACRO por estágio (pedido explícito do usuário,
+       2026-08): "PRONTO PARA MORAR" (Pronto/Pronto novo/Entregue) e
+       "EM OBRAS" (Em planta/Em obras) -- mesma divisão de estágios já usada
+       em Estratégias (SITUACAO_ABA_STATUS_), nunca mistura os dois. Ver
+       calcularFaixasPorPadrao_/renderListaPorFaixas_(situacao). -->
+  <div id="mapaSubPainelFaixasNovos" class="mapa-subpanel" style="display:none">
+    <div class="sec-sub mapa-faixas-descricao" style="margin-bottom:14px">
+      Só empreendimentos <strong>PRONTO PARA MORAR</strong> (Pronto/Pronto novo/Entregue). Agrupamento automático por
+      faixa de preço dentro de cada Padrão — grupos de ~7 a 9 empreendimentos (maiores quando a base tiver muitos no
+      mesmo perfil, nunca exclui nada). O valor em destaque é a média do menor preço do sub-grupo — referência pra
+      nomear/dimensionar campanha.
     </div>
-    <div id="mapaFaixasResumoWrap"></div>
-    <div id="mapaFaixasConteudo"></div>
+    <div id="mapaFaixasResumoWrap_NOVOS"></div>
+    <div id="mapaFaixasConteudo_NOVOS" class="mapa-faixas-conteudo"></div>
+  </div>
+
+  <div id="mapaSubPainelFaixasObras" class="mapa-subpanel" style="display:none">
+    <div class="sec-sub mapa-faixas-descricao" style="margin-bottom:14px">
+      Só empreendimentos <strong>EM OBRAS</strong> (Em planta/Em obras). Agrupamento automático por faixa de preço
+      dentro de cada Padrão — grupos de ~7 a 9 empreendimentos (maiores quando a base tiver muitos no mesmo perfil,
+      nunca exclui nada). O valor em destaque é a média do menor preço do sub-grupo — referência pra
+      nomear/dimensionar campanha.
+    </div>
+    <div id="mapaFaixasResumoWrap_NA_PLANTA"></div>
+    <div id="mapaFaixasConteudo_NA_PLANTA" class="mapa-faixas-conteudo"></div>
   </div>
   </div>
 
@@ -2404,14 +2421,22 @@ function mudarAbaLancamentos(nome) {
 let _mapaSubAbaAtual = 'lista';
 function mudarSubAbaMapa_(nome) {
   _mapaSubAbaAtual = nome;
-  document.getElementById('mapaSubPainelLista').style.display  = nome === 'lista'  ? '' : 'none';
-  document.getElementById('mapaSubPainelDados').style.display  = nome === 'dados'  ? '' : 'none';
-  document.getElementById('mapaSubPainelFaixas').style.display = nome === 'faixas' ? '' : 'none';
+  document.getElementById('mapaSubPainelLista').style.display       = nome === 'lista'       ? '' : 'none';
+  document.getElementById('mapaSubPainelDados').style.display       = nome === 'dados'       ? '' : 'none';
+  document.getElementById('mapaSubPainelFaixasNovos').style.display = nome === 'faixasNovos' ? '' : 'none';
+  document.getElementById('mapaSubPainelFaixasObras').style.display = nome === 'faixasObras' ? '' : 'none';
   document.getElementById('mapaSubBtnLista').classList.toggle('active', nome === 'lista');
   document.getElementById('mapaSubBtnDados').classList.toggle('active', nome === 'dados');
-  document.getElementById('mapaSubBtnFaixas').classList.toggle('active', nome === 'faixas');
+  document.getElementById('mapaSubBtnFaixasNovos').classList.toggle('active', nome === 'faixasNovos');
+  document.getElementById('mapaSubBtnFaixasObras').classList.toggle('active', nome === 'faixasObras');
   if (nome === 'dados') requestAnimationFrame(renderGraficoEstoque_);
-  if (nome === 'faixas') renderListaPorFaixas_();
+  // Grupos macro por estágio (pedido explícito do usuário, 2026-08): "Lista
+  // por Faixas" virou 2 sub-abas -- PRONTO PARA MORAR (situação NOVOS) e EM
+  // OBRAS (situação NA_PLANTA), mesma divisão de SITUACAO_ABA_STATUS_ já
+  // usada em Estratégias. Cada uma filtra _mapaRows pelo próprio grupo de
+  // estágios antes de calcular as faixas -- nunca mistura pronto com obra.
+  if (nome === 'faixasNovos') renderListaPorFaixas_('NOVOS');
+  if (nome === 'faixasObras') renderListaPorFaixas_('NA_PLANTA');
 }
 
 // ─── Lista por Faixas ────────────────────────────────────────────
@@ -2430,8 +2455,15 @@ function mudarSubAbaMapa_(nome) {
 const FAIXAS_TAMANHO_ALVO_ = 8;     // ~8 por sub-grupo é o alvo
 const FAIXAS_MIN_P_2_GRUPOS_ = 14;  // abaixo disso, 1 grupo só (não fatia)
 const FAIXAS_MIN_P_3_GRUPOS_ = 22;  // >=22 já sustenta 3 grupos de ~7-9
-function calcularFaixasPorPadrao_(rows) {
-  const validos = (rows || []).filter(r => r.padrao && r.menorPreco > 0);
+// 2 grupos macro por estágio (pedido explícito do usuário, 2026-08) --
+// mesma divisão de SITUACAO_ABA_STATUS_ (Estratégias, mais abaixo neste
+// arquivo): "NOVOS" = PRONTO PARA MORAR, "NA_PLANTA" = EM OBRAS. Nunca
+// mistura os dois -- reflete a mesma regra "imóvel pronto e imóvel em
+// obras NUNCA entram no mesmo mix" já aplicada em Estratégias.
+const FAIXAS_GRUPO_LABEL_ = { NOVOS: 'PRONTO PARA MORAR', NA_PLANTA: 'EM OBRAS' };
+function calcularFaixasPorPadrao_(rows, situacao) {
+  const statusPermitidos = new Set(SITUACAO_ABA_STATUS_[situacao] || []);
+  const validos = (rows || []).filter(r => r.padrao && r.menorPreco > 0 && statusPermitidos.has(r.estagio));
   const porPadrao = {};
   validos.forEach(r => { (porPadrao[r.padrao] = porPadrao[r.padrao] || []).push(r); });
   // Ordem preferida (Popular→Luxo) primeiro; qualquer padrão fora dessa
@@ -2488,11 +2520,14 @@ function formatarPrecoCompacto_(v) {
     ? (v / 1000000).toFixed(1).replace('.', ',') + ' MI'
     : Math.round(v / 1000) + ' MIL';
 }
-// Cache achatado dos sub-grupos renderizados por último -- permite o botão
-// "Gerar Briefing IA" de cada card (embutido no HTML via onclick) achar de
-// volta os itens daquele sub-grupo específico sem precisar serializar a
-// lista inteira num atributo HTML. Repovoado a cada renderListaPorFaixas_.
-let _faixasFlatIndex_ = [];
+// Cache achatado dos sub-grupos renderizados por último, 1 por GRUPO MACRO
+// (NOVOS/NA_PLANTA) -- permite o botão "Gerar Briefing IA"/"Local" de cada
+// card (embutido no HTML via onclick) achar de volta os itens daquele
+// sub-grupo específico sem precisar serializar a lista inteira num
+// atributo HTML. Repovoado a cada renderListaPorFaixas_(situacao) -- índice
+// SEPARADO por grupo, senão trocar de sub-aba invalidaria os onclick já
+// renderizados no grupo que ficou pra trás.
+let _faixasFlatIndex_ = { NOVOS: [], NA_PLANTA: [] };
 // Tabela-resumo (pedido explícito do usuário) -- mostrada ANTES das caixas
 // de cada faixa, 1 linha por sub-grupo com Faixa/Valor de Referência/Faixa
 // de Preço/Qtd (quantidade destacada em badge). Linhas propositalmente
@@ -2516,21 +2551,29 @@ function faixasContarPorLocal_(itens) {
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
-// flatIdx é o índice do sub-grupo (sg) dentro de _faixasFlatIndex_ -- mesmo
-// índice usado pelo botão "Gerar Briefing IA" de cada card (gerarBriefingFaixa_).
-// Aqui reaproveitado só pra rolar/focar até o card correspondente quando o
-// usuário clica num botão de bairro/cidade da tabela-resumo.
-function renderFaixasResumo_(grupos) {
-  const wrap = document.getElementById('mapaFaixasResumoWrap');
+// IDs de DOM (resumo/conteúdo) e do índice achatado variam por grupo macro
+// (situacao: 'NOVOS' ou 'NA_PLANTA') -- funções auxiliares pra não repetir
+// esse if/else em cada função abaixo.
+function faixasIdConteudo_(situacao) { return situacao === 'NOVOS' ? 'mapaFaixasConteudo_NOVOS' : 'mapaFaixasConteudo_NA_PLANTA'; }
+function faixasIdResumo_(situacao)   { return situacao === 'NOVOS' ? 'mapaFaixasResumoWrap_NOVOS' : 'mapaFaixasResumoWrap_NA_PLANTA'; }
+
+// flatIdx é o índice do sub-grupo (sg) dentro de _faixasFlatIndex_[situacao]
+// -- mesmo índice usado pelo botão "Gerar Briefing IA" de cada card
+// (gerarBriefingFaixa_). Aqui reaproveitado só pra rolar/focar até o card
+// correspondente quando o usuário clica num botão de bairro/cidade da
+// tabela-resumo.
+function renderFaixasResumo_(grupos, situacao) {
+  const wrap = document.getElementById(faixasIdResumo_(situacao));
   if (!wrap) return;
-  const linhas = _faixasFlatIndex_.map((sg, flatIdx) => {
+  const flat = _faixasFlatIndex_[situacao];
+  const linhas = flat.map((sg, flatIdx) => {
     // Pedido explícito do usuário: destacar em fundo branco/letra escura a
     // faixa nível "A" (a mais cara de cada Padrão, quando existe mais de um
     // sub-grupo -- ver faixasOrdemPadrao_/calcularFaixasPorPadrao_).
     const nivelA = /-A$/.test(sg.label);
     const locais = faixasContarPorLocal_(sg.itens);
     const localHtml = locais.map(loc =>
-      `<button class="btn-mini frt-local-btn" onclick="focarFaixaResumo_(${flatIdx})" title="Ver os ${loc.count} empreendimento${loc.count === 1 ? '' : 's'} de ${loc.label} nessa faixa">${loc.label} (${String(loc.count).padStart(2, '0')})</button>`
+      `<button class="btn-mini frt-local-btn" onclick="focarFaixaResumo_('${situacao}',${flatIdx})" title="Ver os ${loc.count} empreendimento${loc.count === 1 ? '' : 's'} de ${loc.label} nessa faixa">${loc.label} (${String(loc.count).padStart(2, '0')})</button>`
     ).join('');
     return `
     <tr${nivelA ? ' class="frt-nivel-a"' : ''}>
@@ -2544,7 +2587,7 @@ function renderFaixasResumo_(grupos) {
   wrap.innerHTML = `
     <div class="faixas-resumo-wrap">
       <div class="faixas-resumo-header">
-        <div class="faixas-resumo-titulo">Resumo por Faixa</div>
+        <div class="faixas-resumo-titulo">Resumo por Faixa - ${FAIXAS_GRUPO_LABEL_[situacao]}</div>
         <button class="btn-mini btn-resumo-pdf" onclick="imprimirResumoFaixas_()" title="Gerar PDF só da tabela resumo">🖨️ PDF</button>
       </div>
       <table class="faixas-resumo-tabela">
@@ -2556,8 +2599,8 @@ function renderFaixasResumo_(grupos) {
 
 // Rola até o card da faixa (Lista por Faixas, mais abaixo) e dá um flash
 // amarelo nele -- ação dos botões de bairro/cidade da coluna Local.
-function focarFaixaResumo_(flatIdx) {
-  const card = document.getElementById('faixas-card-' + flatIdx);
+function focarFaixaResumo_(situacao, flatIdx) {
+  const card = document.getElementById('faixas-card-' + situacao + '-' + flatIdx);
   if (!card) return;
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   card.classList.add('faixas-card-flash');
@@ -2567,29 +2610,34 @@ function focarFaixaResumo_(flatIdx) {
 // Imprime/gera PDF só da tabela-resumo de Lista por Faixas -- mesmo padrão
 // window.print() + classe no <body> já usado por imprimirListaAtiva_, mas
 // escondendo tudo (subabas, caixas de faixa, descrição) exceto a tabela
-// (ver regras @media print escopadas em body.imprimir-resumo-faixas).
+// (ver regras @media print escopadas em body.imprimir-resumo-faixas). Não
+// precisa saber QUAL dos 2 grupos macro está imprimindo -- só um dos dois
+// sub-painéis fica visível por vez (o outro já está com display:none via
+// mudarSubAbaMapa_), e as regras de impressão escondem tudo que não é a
+// tabela-resumo do painel visível.
 function imprimirResumoFaixas_() {
   document.body.classList.add('imprimir-resumo-faixas');
   window.print();
 }
 window.addEventListener('afterprint', () => document.body.classList.remove('imprimir-resumo-faixas'));
 
-function renderListaPorFaixas_() {
-  const cont = document.getElementById('mapaFaixasConteudo');
+function renderListaPorFaixas_(situacao) {
+  const cont = document.getElementById(faixasIdConteudo_(situacao));
   if (!cont) return;
-  const grupos = calcularFaixasPorPadrao_(_mapaRows);
-  // Fonte única do índice achatado -- tanto a tabela-resumo (Local, PDF)
-  // quanto as caixas de cada faixa (Briefing IA, id do card) usam o MESMO
-  // _faixasFlatIndex_/flatIdx, montado 1x aqui, pra nunca dessincronizar
-  // entre as duas renderizações (antes cada uma tinha sua própria contagem).
-  _faixasFlatIndex_ = grupos.flatMap(g => g.subgrupos);
-  const resumoWrap = document.getElementById('mapaFaixasResumoWrap');
+  const grupos = calcularFaixasPorPadrao_(_mapaRows, situacao);
+  // Fonte única do índice achatado (por grupo macro) -- tanto a
+  // tabela-resumo (Local, PDF) quanto as caixas de cada faixa (Briefing IA,
+  // id do card) usam o MESMO _faixasFlatIndex_[situacao]/flatIdx, montado 1x
+  // aqui, pra nunca dessincronizar entre as duas renderizações (antes cada
+  // uma tinha sua própria contagem).
+  _faixasFlatIndex_[situacao] = grupos.flatMap(g => g.subgrupos);
+  const resumoWrap = document.getElementById(faixasIdResumo_(situacao));
   if (!grupos.length) {
     if (resumoWrap) resumoWrap.innerHTML = '';
-    cont.innerHTML = '<div class="sec-sub">Nenhum empreendimento com Padrão e preço cadastrados ainda -- cadastre o Padrão e a tabela de valores em Lançamentos pra essa lista se formar.</div>';
+    cont.innerHTML = `<div class="sec-sub">Nenhum empreendimento em ${FAIXAS_GRUPO_LABEL_[situacao]} com Padrão e preço cadastrados ainda -- cadastre o Padrão, o Estágio e a tabela de valores em Lançamentos pra essa lista se formar.</div>`;
     return;
   }
-  renderFaixasResumo_(grupos);
+  renderFaixasResumo_(grupos, situacao);
   cont.innerHTML = grupos.map(g => `
     <div class="faixas-padrao-bloco">
       <div class="faixas-padrao-titulo">${PADRAO_LABEL_MIX_[g.padrao] || g.padrao}
@@ -2597,12 +2645,12 @@ function renderListaPorFaixas_() {
       </div>
       <div class="faixas-subgrupos-row">
         ${g.subgrupos.map(sg => {
-          const flatIdx = _faixasFlatIndex_.indexOf(sg);
+          const flatIdx = _faixasFlatIndex_[situacao].indexOf(sg);
           return `
-          <div class="faixas-subgrupo-card" id="faixas-card-${flatIdx}">
+          <div class="faixas-subgrupo-card" id="faixas-card-${situacao}-${flatIdx}">
             <div class="faixas-subgrupo-topo">
               <div class="faixas-subgrupo-nome">${sg.label}</div>
-              <button class="btn-mini btn-briefing-mm faixas-briefing-btn" onclick="gerarBriefingFaixa_(${flatIdx})" title="Gerar Briefing IA (Estratégias de Tráfego Pago) com os ${sg.count} empreendimentos dessa faixa">🤖 IA</button>
+              <button class="btn-mini btn-briefing-mm faixas-briefing-btn" onclick="gerarBriefingFaixa_('${situacao}',${flatIdx})" title="Gerar Briefing IA (Estratégias de Tráfego Pago) com os ${sg.count} empreendimentos dessa faixa">🤖 IA</button>
             </div>
             <div class="faixas-valor-ref" title="Valor médio de referência (menor preço) desse sub-grupo -- use pra nomear/dimensionar campanha">R$ ${formatarPrecoCompacto_(sg.valorMedio)}</div>
             <div class="faixas-subgrupo-faixa">R$ ${exibirPrecoBR(sg.valorMin)} — R$ ${exibirPrecoBR(sg.valorMax)}</div>
@@ -2624,7 +2672,10 @@ function renderListaPorFaixas_() {
   // ocasionalmente calculava com clientHeight/altura de linha desatualizados
   // e o scroll saía errado. document.fonts.ready reforça de novo depois que
   // a fonte web realmente carrega (1ª visita, cache frio), caso a altura das
-  // linhas mude depois desse 2º frame.
+  // linhas mude depois desse 2º frame. Roda em TODOS `.faixas-subgrupo-itens`
+  // da página (não escopado por situacao) -- inofensivo pro grupo escondido
+  // no momento (display:none, clientHeight 0), e ele é recalculado do zero
+  // quando essa sub-aba reabrir de qualquer forma.
   requestAnimationFrame(() => requestAnimationFrame(centralizarItensCentraisFaixas_));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(centralizarItensCentraisFaixas_);
 }
@@ -2655,8 +2706,8 @@ function centralizarItensCentraisFaixas_() {
 // e devolve o mix manual do usuário ao estado que estava antes -- essa
 // geração é só um "empréstimo" rápido da engine de briefing, não deve
 // alterar o que o corretor já tinha montado manualmente na aba Estratégias.
-function gerarBriefingFaixa_(flatIdx) {
-  const sg = _faixasFlatIndex_[flatIdx];
+function gerarBriefingFaixa_(situacao, flatIdx) {
+  const sg = (_faixasFlatIndex_[situacao] || [])[flatIdx];
   if (!sg || !sg.itens.length) { mostrarToast('Faixa sem empreendimentos.', 'aviso'); return; }
 
   const mmItensOriginal = _mmItens_;
@@ -2666,8 +2717,8 @@ function gerarBriefingFaixa_(flatIdx) {
       it: { e: r.e, comp: r.comp, simil: r.simil, scoreVendedor: r.scoreVendedor, menorPreco: r.menorPreco, padrao: r.padrao },
       papel: '',
     }));
-    _mmObs_ = `Mix automático gerado a partir da faixa de preço "${sg.label}" (Lista por Faixas) -- ${sg.count} empreendimentos entre R$ ${exibirPrecoBR(sg.valorMin)} e R$ ${exibirPrecoBR(sg.valorMax)}, valor médio de referência R$ ${formatarPrecoCompacto_(sg.valorMedio)}.`;
-    baixarBriefingMixMd_(sg.label.replace(/[^a-zA-Z0-9-]+/g, '_'));
+    _mmObs_ = `Mix automático gerado a partir da faixa de preço "${sg.label}" (Lista-${FAIXAS_GRUPO_LABEL_[situacao]}) -- ${sg.count} empreendimentos entre R$ ${exibirPrecoBR(sg.valorMin)} e R$ ${exibirPrecoBR(sg.valorMax)}, valor médio de referência R$ ${formatarPrecoCompacto_(sg.valorMedio)}.`;
+    baixarBriefingMixMd_(`${FAIXAS_GRUPO_LABEL_[situacao]}-${sg.label}`.replace(/[^a-zA-Z0-9-]+/g, '_'));
   } finally {
     _mmItens_ = mmItensOriginal;
     _mmObs_   = mmObsOriginal;
