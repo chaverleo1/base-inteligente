@@ -82,8 +82,12 @@ a { text-decoration: none; color: inherit; }
 .faixas-subgrupos-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .faixas-subgrupo-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; min-width: 220px; flex: 1 1 240px; max-width: 320px; }
 .faixas-subgrupo-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.faixas-subgrupo-nome { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text2); }
-.faixas-briefing-btn { padding: 3px 9px; font-size: 10px; flex-shrink: 0; }
+.faixas-subgrupo-nome { font-size: 15px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: #ffc800; }
+/* .btn-briefing-mm (definida mais abaixo, mesma especificidade de 1 classe)
+   tem padding/font-size maiores e vence no empate por vir depois no CSS --
+   por isso o seletor composto abaixo (2 classes), não só .faixas-briefing-btn
+   sozinho, senão o tamanho "reduzido em 50%" pedido pelo usuário não pegava. */
+.btn-briefing-mm.faixas-briefing-btn { padding: 1.5px 4.5px; font-size: 9px; flex-shrink: 0; }
 .faixas-valor-ref { display: inline-block; background: rgba(255, 200, 0, .9); color: #1a1a1a; font-size: 17px; font-weight: 800; padding: 4px 10px; border-radius: 6px; margin-bottom: 8px; }
 .faixas-subgrupo-faixa { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
 .faixas-subgrupo-count { font-size: 11px; color: var(--text2); font-weight: 600; margin-bottom: 8px; }
@@ -2534,7 +2538,7 @@ function renderListaPorFaixas_() {
           <div class="faixas-subgrupo-card">
             <div class="faixas-subgrupo-topo">
               <div class="faixas-subgrupo-nome">${sg.label}</div>
-              <button class="btn-mini btn-briefing-mm faixas-briefing-btn" onclick="gerarBriefingFaixa_(${flatIdx})" title="Gerar Briefing IA (Estratégias de Tráfego Pago) com os ${sg.count} empreendimentos dessa faixa">🤖 Briefing IA</button>
+              <button class="btn-mini btn-briefing-mm faixas-briefing-btn" onclick="gerarBriefingFaixa_(${flatIdx})" title="Gerar Briefing IA (Estratégias de Tráfego Pago) com os ${sg.count} empreendimentos dessa faixa">🤖 IA</button>
             </div>
             <div class="faixas-valor-ref" title="Valor médio de referência (menor preço) desse sub-grupo -- use pra nomear/dimensionar campanha">R$ ${formatarPrecoCompacto_(sg.valorMedio)}</div>
             <div class="faixas-subgrupo-faixa">R$ ${exibirPrecoBR(sg.valorMin)} — R$ ${exibirPrecoBR(sg.valorMax)}</div>
@@ -2547,6 +2551,34 @@ function renderListaPorFaixas_() {
       </div>
     </div>
   `).join('');
+  // Pedido explícito do usuário: o empreendimento destacado em amarelo
+  // (ponto central da faixa) sempre aparece CENTRALIZADO na área rolável do
+  // card, por padrão -- sem o usuário precisar rolar pra achar. 2x
+  // requestAnimationFrame (não só 1x) porque logo depois do innerHTML o
+  // layout pode ainda não ter assentado de verdade (ex: métricas de 1
+  // frame só, antes da fonte 'Inter' trocar/FOUT resolver) -- 1 frame só
+  // ocasionalmente calculava com clientHeight/altura de linha desatualizados
+  // e o scroll saía errado. document.fonts.ready reforça de novo depois que
+  // a fonte web realmente carrega (1ª visita, cache frio), caso a altura das
+  // linhas mude depois desse 2º frame.
+  requestAnimationFrame(() => requestAnimationFrame(centralizarItensCentraisFaixas_));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(centralizarItensCentraisFaixas_);
+}
+function centralizarItensCentraisFaixas_() {
+  document.querySelectorAll('.faixas-subgrupo-itens').forEach(caixa => {
+    const central = caixa.querySelector('.faixas-item-central');
+    if (!central) return;
+    // NÃO usar central.offsetTop direto -- ele é relativo ao ancestral
+    // POSICIONADO mais próximo (offsetParent), que normalmente não é a
+    // própria caixa (.faixas-subgrupo-itens não tem position), então dava
+    // um valor de scroll completamente errado. getBoundingClientRect + o
+    // scrollTop atual dá a posição real do item DENTRO da área rolável.
+    const caixaRect = caixa.getBoundingClientRect();
+    const centralRect = central.getBoundingClientRect();
+    const offsetDentroDaCaixa = (centralRect.top - caixaRect.top) + caixa.scrollTop;
+    const alvo = offsetDentroDaCaixa - (caixa.clientHeight / 2) + (central.clientHeight / 2);
+    caixa.scrollTop = Math.max(0, alvo);
+  });
 }
 
 // Botão "Gerar Briefing IA" de cada faixa (pedido explícito do usuário: a
