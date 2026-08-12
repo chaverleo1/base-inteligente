@@ -4597,10 +4597,14 @@ function renderLeadsBaseimob(leads) {
     // altura sem perder informação.
     const contatoLinha = [l.telefone ? `📞 ${l.telefone}` : '', `📅 ${l.dataCadastro || '—'}`].filter(Boolean).join(' · ');
     // UTM de origem -- pedido explícito do usuário: identificar no card se
-    // o lead veio de clique de anúncio (mostra a campanha) ou é
-    // orgânico/direto (sem gclid).
+    // o lead veio de clique de anúncio, mostrando TODAS as UTMs (source,
+    // medium, campaign), não só a campanha. Concatenadas numa linha só pra
+    // não voltar a inflar a altura do card -- o valor completo (rótulo por
+    // rótulo) fica no title, pra hover.
+    const utmPartes = [l.utmSource, l.utmMedium, l.utmCampaign].filter(Boolean);
+    const utmTitle = `Origem (utm_source): ${l.utmSource || '—'}\nMídia (utm_medium): ${l.utmMedium || '—'}\nCampanha (utm_campaign): ${l.utmCampaign || '—'}`;
     const utmTag = l.gclid
-      ? `<div class="bi-utm bi-utm-ads" title="Veio de clique de anúncio${l.utmCampaign ? ' — campanha: ' + l.utmCampaign : ''}">📢 ${l.utmCampaign || 'Anúncio (sem campanha)'}</div>`
+      ? `<div class="bi-utm bi-utm-ads" title="${utmTitle}">📢 ${utmPartes.join(' / ') || 'Anúncio (sem UTM)'}</div>`
       : `<div class="bi-utm bi-utm-organico" title="Sem gclid registrado -- acesso direto ou orgânico">🌱 Orgânico/Direto</div>`;
 
     return `

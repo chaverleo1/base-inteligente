@@ -4768,13 +4768,17 @@ var CABECALHO_LEADS_LANCAMENTOS = [
   // bom). Mesma aba "Conversoes" recebe essa conversão também, com nome
   // diferente (NOME_CONVERSAO_VENDA_).
   'convertido', 'dataConversaoVenda',
+  // utmSource/utmMedium -- pedido explícito do usuário: mostrar TODAS as
+  // UTMs de origem no card do lead (BaseImob), não só utmCampaign. Mesmo
+  // motivo/mesma ressalva do gclid: só gravado na CRIAÇÃO do lead.
+  'utmSource', 'utmMedium',
 ];
 
 var CABECALHO_INTERESSES = [
   'dataCadastro', 'idCliente', 'email', 'nome', 'telefone',
   'qtdInteresse', 'idsInteresse', 'tags',
   'canal', 'tipo_contato', 'score',
-  'gclid', 'utmCampaign',
+  'gclid', 'utmCampaign', 'utmSource', 'utmMedium',
 ];
 
 // FUNIL_EVENTOS_APP — log de eventos de transição de etapa do App
@@ -6320,6 +6324,8 @@ function salvarInteresse_(d) {
       if (col === 'idCliente')      return idCliente;
       if (col === 'gclid')          return d.gclid || '';
       if (col === 'utmCampaign')    return d.utmCampaign || '';
+      if (col === 'utmSource')      return d.utmSource || '';
+      if (col === 'utmMedium')      return d.utmMedium || '';
       return '';
     });
     abaLeads.appendRow(novaLinha);
