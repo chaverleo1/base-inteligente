@@ -5383,6 +5383,16 @@ async function qualificarLeadBI(idCliente, btn) {
       } else {
         btn.outerHTML = '<span class="bi-btn" style="background:rgba(0,212,170,.15);color:var(--accent2);font-size:11px;cursor:default">✅ Qualificado</span>';
       }
+      // Avisa o resultado de verdade -- antes disso o usuário não tinha
+      // como saber se a conversão foi enviada pro Ads ou não (o botão
+      // sempre virava "Qualificado" igual, mesmo quando nada era enviado).
+      if (r.enviouConversao) {
+        alert('Lead qualificado! Conversão registrada na aba "Conversoes" da planilha de métricas, pro Google Ads importar.');
+      } else if (r.motivo === 'sem_gclid') {
+        alert('Lead qualificado (sem gclid registrado -- não veio de clique de anúncio, então nada foi enviado pro Google Ads).');
+      } else if (r.motivo === 'erro_planilha') {
+        alert('Lead qualificado, mas houve um ERRO ao gravar a conversão na planilha de métricas:\n\n' + (r.erro || '(sem detalhe)') + '\n\nConfirme se a planilha ainda está compartilhada e acessível.');
+      }
     } else {
       alert('Erro ao qualificar: ' + (r.erro || JSON.stringify(r)));
       btn.disabled = false; btn.textContent = '✅ Qualificar';
