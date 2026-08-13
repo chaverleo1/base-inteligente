@@ -1726,26 +1726,27 @@ select.form-input option { background: var(--surface2); }
     <div class="sec-title" style="font-size:14px;text-transform:uppercase;letter-spacing:.8px">DEMANDAS</div>
     <div class="sec-sub">Orçamento (capa + simulador), bairros de interesse (selecionados na capa) e sub-métricas por sessão.</div>
   </div>
-  <!-- Gráfico principal: 3 séries -->
-  <div class="card" id="intDemandasWrap" style="padding:16px 14px 10px">
-    <!-- Legenda -->
-    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;align-items:center">
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="width:14px;height:14px;border-radius:3px;background:rgba(251,146,60,.88);flex-shrink:0;display:inline-block"></span>
-        <span style="color:var(--text2);font-weight:600">Orçamento Capa</span>
+  <!-- Orçamento + Bairros: 50/50 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="card" style="padding:14px 12px 10px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:6px">Orçamento</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;font-size:11px;align-items:center">
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="width:10px;height:10px;border-radius:2px;background:rgba(251,146,60,.88);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Capa</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="width:10px;height:10px;border-radius:2px;background:rgba(250,204,21,.90);flex-shrink:0;display:inline-block"></span>
+          <span style="color:var(--text2)">Simulador</span>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="width:14px;height:14px;border-radius:3px;background:rgba(59,130,246,.88);flex-shrink:0;display:inline-block"></span>
-        <span style="color:var(--text2);font-weight:600">Bairros</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="width:14px;height:14px;border-radius:3px;background:rgba(250,204,21,.90);flex-shrink:0;display:inline-block"></span>
-        <span style="color:var(--text2);font-weight:600">Orçamento Simulador</span>
-      </div>
+      <canvas id="canvasDemandasOrc" style="width:100%;display:block"></canvas>
+      <div id="demandasOrcEmpty" style="display:none;text-align:center;padding:28px 0;font-size:12px;color:var(--text3)">Nenhum acesso registrado ainda.</div>
     </div>
-    <canvas id="canvasDemandasPrincipal" style="width:100%;display:block;cursor:crosshair"></canvas>
-    <div id="demandasPrincipalEmpty" style="display:none;text-align:center;padding:28px 0;font-size:12px;color:var(--text3)">
-      Nenhum acesso registrado ainda — navegue pelo App e clique em Continuar na capa.
+    <div class="card" style="padding:14px 12px 10px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:12px">Bairros de Interesse</div>
+      <canvas id="canvasDemandasBairros" style="width:100%;display:block"></canvas>
+      <div id="demandasBairrosEmpty" style="display:none;text-align:center;padding:28px 0;font-size:12px;color:var(--text3)">Nenhum bairro registrado ainda.</div>
     </div>
   </div>
 
@@ -3165,12 +3166,13 @@ function _fdMatchEmps_(empsGrupados, sinais, rank) {
     // Preço incompatível = descarte duro
     if (pc === false) return;
 
-    // Critérios disponíveis e batidos
+    // Critérios disponíveis
     var disponivel = (rc !== null ? 1 : 0) + (pc !== null ? 1 : 0) + (ac !== null ? 1 : 0);
     if (disponivel === 0) return;
-    var bateu  = (rc === true ? 1 : 0) + (pc === true ? 1 : 0) + (ac === true ? 1 : 0);
-    var minNec = Math.min(2, disponivel);
-    if (bateu < minNec) return;
+
+    // Regra: bairro isolado não inclui na tabela.
+    // Se existem sinais de preço ou área, ao menos UM deles precisa bater.
+    if ((temP || temA) && pc !== true && ac !== true) return;
 
     // Guarda unidades compatíveis no objeto para a tabela usar
     emp._unidsMatch = unidsMatch || [];
@@ -3520,154 +3522,155 @@ function renderForcasDemanda_(stats) {
   _fdRenderGrupos_();
 }
 
-// ── DEMANDAS — gráfico principal (3 séries: capa / região / simulador) ──────
-
+// ── DEMANDAS — utilitário de tema ───────────────────────────────────────────
 function _dmTheme_() {
   const t = document.documentElement.getAttribute('data-theme');
   return t || (window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
 }
 
-function renderDemandas_(data) {
+// ── DEMANDAS Orçamento — barras horizontais duplas (capa + simulador) ───────
+function renderDemandasOrc_(data) {
   const histCapa = data.histogramaPreco     || [];
   const histSim  = data.histogramaSimulador || [];
-  const histReg  = (data.histogramaBairros  || []).slice(0, 5);
-
-  const canvas  = document.getElementById('canvasDemandasPrincipal');
-  const emptyEl = document.getElementById('demandasPrincipalEmpty');
+  const canvas   = document.getElementById('canvasDemandasOrc');
+  const emptyEl  = document.getElementById('demandasOrcEmpty');
   if (!canvas) return;
-
-  const hasData = histCapa.length || histSim.length || histReg.length;
-  if (!hasData) {
-    canvas.style.display = 'none';
-    if (emptyEl) emptyEl.style.display = '';
-    return;
+  if (!histCapa.length && !histSim.length) {
+    canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = ''; return;
   }
-  canvas.style.display = '';
-  if (emptyEl) emptyEl.style.display = 'none';
+  canvas.style.display = ''; if (emptyEl) emptyEl.style.display = 'none';
 
+  const isDark   = _dmTheme_() === 'dark';
   const faixaSet = new Set([...histCapa.map(h => h.faixa), ...histSim.map(h => h.faixa)]);
   const faixas   = [...faixaSet].sort((a, b) => parseInt(a) - parseInt(b));
   const capaMap  = Object.fromEntries(histCapa.map(h => [h.faixa, h.contagem || 0]));
   const simMap   = Object.fromEntries(histSim.map(h  => [h.faixa, h.contagem || 0]));
+  const totalCapa = Math.max(1, histCapa.reduce((s, h) => s + (h.contagem || 0), 0));
+  const totalSim  = Math.max(1, histSim.reduce((s, h) => s + (h.contagem || 0), 0));
+
+  const CLR_CAPA = 'rgba(251,146,60,.88)';
+  const CLR_SIM  = 'rgba(250,204,21,.90)';
+  const ROW_H   = 30;  // altura de cada barra
+  const GAP_SER = 4;   // gap entre capa e simulador de uma faixa
+  const GAP_GRP = 8;   // gap entre faixas
+  const PAD_T   = 6; const PAD_B = 8;
+  const PAD_L   = 8; const PCT_W = 44; const PAD_R = 4; const TXT_PAD = 8;
+
+  const dpr     = window.devicePixelRatio || 1;
+  const W       = canvas.parentElement.clientWidth || 300;
+  const nRows   = faixas.length;
+  const H       = PAD_T + nRows * (ROW_H * 2 + GAP_SER + GAP_GRP) + PAD_B;
+  const barMaxW = W - PAD_L - PCT_W - PAD_R;
+
+  canvas.width  = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
+
+  const maxPctCapa = Math.max(1, ...faixas.map(f => capaMap[f] || 0)) / totalCapa;
+  const maxPctSim  = Math.max(1, ...faixas.map(f => simMap[f]  || 0)) / totalSim;
+
+  function drawHBar(yB, clr, v, total, maxPct, serieLabel, faixaLabel) {
+    const pct  = Math.round(v / total * 100);
+    const bW   = ((v / total) / maxPct) * barMaxW;
+    const midY = yB + ROW_H / 2;
+    // trilha
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yB, barMaxW, ROW_H, 4); ctx.fill(); }
+    else ctx.fillRect(PAD_L, yB, barMaxW, ROW_H);
+    // barra
+    if (bW > 0) {
+      ctx.fillStyle = clr;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yB, bW, ROW_H, 4); ctx.fill(); }
+      else ctx.fillRect(PAD_L, yB, bW, ROW_H);
+    }
+    // texto clippado
+    ctx.save();
+    ctx.beginPath(); ctx.rect(PAD_L + TXT_PAD, yB + 1, barMaxW - TXT_PAD * 2, ROW_H - 2); ctx.clip();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 11px -apple-system,sans-serif';
+    ctx.fillText(faixaLabel, PAD_L + TXT_PAD, midY - 6);
+    ctx.fillStyle = 'rgba(0,0,0,.60)'; ctx.font = '10px -apple-system,sans-serif';
+    ctx.fillText(serieLabel + '  ·  ' + v + ' sess.', PAD_L + TXT_PAD, midY + 7);
+    ctx.restore();
+    // badge %
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = isDark ? '#ffffff' : '#111827';
+    ctx.font = 'bold 13px -apple-system,sans-serif';
+    ctx.fillText(pct + '%', W - PAD_R, midY);
+  }
+
+  faixas.forEach((f, i) => {
+    const vCapa = capaMap[f] || 0;
+    const vSim  = simMap[f]  || 0;
+    const mn    = parseInt(f);
+    const label = 'R$' + mn + '–' + (mn + 100) + 'k';
+    const yGrp  = PAD_T + i * (ROW_H * 2 + GAP_SER + GAP_GRP);
+    if (vCapa > 0) drawHBar(yGrp,                   CLR_CAPA, vCapa, totalCapa, maxPctCapa, 'Capa',      label);
+    if (vSim  > 0) drawHBar(yGrp + ROW_H + GAP_SER, CLR_SIM,  vSim,  totalSim,  maxPctSim,  'Simulador', label);
+  });
+}
+
+// ── DEMANDAS Bairros — barras horizontais simples (azul) ────────────────────
+function renderDemandasBairros_(data) {
+  const hist    = (data.histogramaBairros || []).slice().sort((a, b) => (b.contagem || 0) - (a.contagem || 0));
+  const canvas  = document.getElementById('canvasDemandasBairros');
+  const emptyEl = document.getElementById('demandasBairrosEmpty');
+  if (!canvas) return;
+  if (!hist.length) {
+    canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = ''; return;
+  }
+  canvas.style.display = ''; if (emptyEl) emptyEl.style.display = 'none';
 
   const isDark  = _dmTheme_() === 'dark';
-  const textClr = isDark ? '#c9d1d9' : '#374151';
-  const gridClr = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
+  const ROW_H   = 38; const GAP = 8;
+  const PAD_T   = 6; const PAD_B = 6;
+  const PAD_L   = 8; const PCT_W = 48; const PAD_R = 4; const TXT_PAD = 10;
 
-  const dpr = window.devicePixelRatio || 1;
-  const W   = canvas.parentElement.clientWidth || 500;
-  const H   = 300;
-  canvas.width  = W * dpr;  canvas.height = H * dpr;
-  canvas.style.width = W + 'px';  canvas.style.height = H + 'px';
+  const dpr     = window.devicePixelRatio || 1;
+  const W       = canvas.parentElement.clientWidth || 300;
+  const nRows   = hist.length;
+  const H       = PAD_T + nRows * ROW_H + Math.max(0, nRows - 1) * GAP + PAD_B;
+  const barZone = W - PAD_L - PCT_W - PAD_R;
+
+  canvas.width  = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, W, H);
+  ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
 
-  const PAD_L = 36, PAD_R = 12, PAD_T = 16, PAD_B = 64;
-  const chartH = H - PAD_T - PAD_B;
-  const chartW = W - PAD_L - PAD_R;
-  const hasPrices  = faixas.length > 0;
-  const hasRegions = histReg.length > 0;
-
-  let priceX = PAD_L, priceW = chartW, regX = 0, regW = 0, divX = 0;
-  if (hasPrices && hasRegions) {
-    priceW = Math.round(chartW * 0.60);
-    regW   = chartW - priceW - 22;
-    divX   = PAD_L + priceW + 11;
-    regX   = PAD_L + priceW + 22;
-  } else if (!hasPrices && hasRegions) {
-    priceW = 0; regX = PAD_L; regW = chartW;
-  }
-
-  const allVals = [
-    ...faixas.map(f => capaMap[f] || 0),
-    ...faixas.map(f => simMap[f]  || 0),
-    ...histReg.map(r => r.contagem || 0),
-  ];
-  const maxVal = Math.max(1, ...allVals);
-  const toY = v => PAD_T + chartH - (v / maxVal) * chartH;
-  const toH = v => (v / maxVal) * chartH;
-
-  // Grid + Y labels
-  const nGrid = Math.min(maxVal, 5);
-  for (let i = 0; i <= nGrid; i++) {
-    const v = Math.round(maxVal * i / nGrid);
-    const y = toY(v);
-    ctx.strokeStyle = gridClr; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
-    ctx.fillStyle = textClr; ctx.font = `10px -apple-system,sans-serif`;
-    ctx.textAlign = 'right'; ctx.fillText(v, PAD_L - 5, y + 3.5);
-  }
-
-  function drawBar(x, y, w, h, fill) {
-    if (h <= 0 || w <= 0) return;
-    ctx.fillStyle = fill;
-    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, [3, 3, 0, 0]); ctx.fill(); }
-    else ctx.fillRect(x, y, w, h);
-  }
-  function drawVal(cx, y, val, clr) {
-    ctx.fillStyle = clr; ctx.font = `bold 14px -apple-system,sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText(val, cx, Math.max(y - 7, PAD_T + 11));
-  }
-  function drawXLabel(cx, text, maxW) {
+  const total = Math.max(1, hist.reduce((s, h) => s + (h.contagem || 0), 0));
+  hist.forEach((h, i) => {
+    const v    = h.contagem || 0;
+    const pct  = Math.round(v / total * 100);
+    const bW   = (v / total) * barZone;
+    const y    = PAD_T + i * (ROW_H + GAP);
+    const midY = y + ROW_H / 2;
+    const lbl  = String(h.faixa || '');
+    // trilha
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, y, barZone, ROW_H, 5); ctx.fill(); }
+    else ctx.fillRect(PAD_L, y, barZone, ROW_H);
+    // barra
+    if (bW > 0) {
+      ctx.fillStyle = 'rgba(59,130,246,.88)';
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, y, bW, ROW_H, 5); ctx.fill(); }
+      else ctx.fillRect(PAD_L, y, bW, ROW_H);
+    }
+    // texto clippado
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = 5;
-    ctx.fillStyle = '#ffffff'; ctx.font = `bold 13px -apple-system,sans-serif`;
-    ctx.textAlign = 'center';
-    const lbl = text.length > 16 ? text.slice(0, 15) + '…' : text;
-    if (ctx.measureText(lbl).width > maxW) {
-      ctx.translate(cx, H - PAD_B + 14); ctx.rotate(-Math.PI / 6); ctx.fillText(lbl, 0, 0);
-    } else { ctx.fillText(lbl, cx, H - PAD_B + 18); }
+    ctx.beginPath(); ctx.rect(PAD_L + TXT_PAD, y + 1, barZone - TXT_PAD * 2, ROW_H - 2); ctx.clip();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 12px -apple-system,sans-serif';
+    ctx.fillText(lbl, PAD_L + TXT_PAD, midY - 7);
+    ctx.fillStyle = 'rgba(0,0,0,.60)'; ctx.font = '11px -apple-system,sans-serif';
+    ctx.fillText(v + ' sessões', PAD_L + TXT_PAD, midY + 8);
     ctx.restore();
-  }
-  function drawSecLabel(cx, text) {
-    ctx.fillStyle = isDark ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.2)';
-    ctx.font = `10px -apple-system,sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText(text, cx, H - PAD_B + 46);
-  }
-
-  // Barras de preço (laranja = capa, amarelo = simulador)
-  if (hasPrices) {
-    const grpW = priceW / faixas.length;
-    const bW   = Math.max(Math.min(grpW * 0.30, 24), 7);
-    const gap  = 3;
-    faixas.forEach((faixa, i) => {
-      const cv = capaMap[faixa] || 0, sv = simMap[faixa] || 0;
-      const cx = priceX + i * grpW + grpW / 2;
-      const ox = cx - bW - gap / 2, yx = cx + gap / 2;
-      const mn = parseInt(faixa);
-      drawBar(ox, toY(cv), bW, toH(cv), 'rgba(251,146,60,.88)');
-      if (cv > 0) drawVal(ox + bW/2, toY(cv), cv, '#c2410c');
-      drawBar(yx, toY(sv), bW, toH(sv), 'rgba(250,204,21,.90)');
-      if (sv > 0) drawVal(yx + bW/2, toY(sv), sv, '#92400e');
-      drawXLabel(cx, `R$${mn}–${mn+100}k`, grpW - 4);
-    });
-    if (hasRegions) drawSecLabel(priceX + priceW / 2, 'Orçamento');
-  }
-
-  // Divisor
-  if (hasPrices && hasRegions) {
-    ctx.save();
-    ctx.strokeStyle = isDark ? 'rgba(255,255,255,.15)' : 'rgba(0,0,0,.15)';
-    ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(divX, PAD_T); ctx.lineTo(divX, H - PAD_B);
-    ctx.stroke(); ctx.setLineDash([]); ctx.restore();
-  }
-
-  // Barras de bairros (azul)
-  if (hasRegions) {
-    const grpW = regW / histReg.length;
-    const bW   = Math.max(Math.min(grpW * 0.55, 30), 7);
-    histReg.forEach((r, i) => {
-      const cx = regX + i * grpW + grpW / 2;
-      const v  = r.contagem || 0;
-      drawBar(cx - bW/2, toY(v), bW, toH(v), 'rgba(59,130,246,.88)');
-      if (v > 0) drawVal(cx, toY(v), v, '#1d4ed8');
-      drawXLabel(cx, r.faixa, grpW - 4);
-    });
-    if (hasPrices) drawSecLabel(regX + regW / 2, 'Bairros');
-  }
+    // badge %
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = isDark ? '#ffffff' : '#111827';
+    ctx.font = 'bold 15px -apple-system,sans-serif';
+    ctx.fillText(pct + '%', W - PAD_R, midY);
+  });
 }
 
 // ── Sub-gráficos genéricos (estágio / objetivo) — barras HORIZONTAIS + % ──────
@@ -3926,7 +3929,8 @@ async function carregarInteligencia_() {
 
     renderIntKpis_(stats);
     renderIntFunil_(stats);
-    renderDemandas_(stats);
+    renderDemandasOrc_(stats);
+    renderDemandasBairros_(stats);
     renderDemandasEstagios_(stats.histogramaEstagios  || []);
     renderDemandasObjetivos_(stats.histogramaObjetivos || []);
     renderDemandasAreas_(stats.histogramaAreas || [], stats.histogramaAreasE2 || []);
