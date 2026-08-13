@@ -201,6 +201,19 @@ body {
   letter-spacing: 1px; color: var(--text); opacity: .5;
   margin-bottom: 16px;
 }
+/* Grid 2×2 para orçamento + área no step-2 */
+.s2-inputs-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  column-gap: 12px; row-gap: 6px; margin-top: 4px;
+}
+.s2-input-label {
+  font-size: clamp(11px, 2.8vw, 13px); font-weight: 700;
+  color: var(--text); line-height: 1.35;
+}
+.s2-grid-row { margin-bottom: 0; }
+.s2-grid-row .preco-input { font-size: 20px; }
+.s2-grid-row .preco-prefixo { font-size: 14px; }
+.s2-grid-row .preco-prefixo.prefixo-grande { font-size: 19px; }
 .s2-top-count-num {
   display: block;
   font-size: clamp(80px, 22vw, 120px); font-weight: 900;
@@ -980,21 +993,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <span class="s2-ajuste-label">Ajuste seu perfil de busca</span>
 
-    <!-- Orçamento Simulador — input sem slider (rastreado como precoAlvo) -->
-    <div class="step-title" style="margin:0 0 8px" id="tituloPreco">Seu <span style="color:var(--accent)">orçamento atual</span> é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
-    <div class="preco-input-row">
-      <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
-      <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
+    <!-- Orçamento + Área em grid 2×2 — economiza rolagem; labels na linha 1,
+         inputs na linha 2. montarTitulosStep2_ ainda usa #tituloPreco/prefixoPreco/
+         prefixoArea — ids preservados para compatibilidade. -->
+    <div class="s2-inputs-grid">
+      <div class="s2-input-label" id="tituloPreco">Seu <span style="color:var(--accent)">orçamento atual</span> é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
+      <div class="s2-input-label">Sua <span style="color:var(--accent)">área útil</span> ideal é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
+      <div class="preco-input-row s2-grid-row">
+        <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
+        <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
+      </div>
+      <div class="preco-input-row s2-grid-row">
+        <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+        <span class="preco-prefixo" id="prefixoArea">m²</span>
+      </div>
     </div>
+    <!-- sliders ocultos — mantidos para compatibilidade com atualizarPreco/atualizarMetragem -->
     <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)" style="display:none">
-
-    <!-- Área Útil Simulador — input sem slider (rastreado separadamente) -->
-    <div class="step-title" style="margin:20px 0 8px">Sua <span style="color:var(--accent)">área útil</span> ideal é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
-    <div class="preco-input-row">
-      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-      <span class="preco-prefixo" id="prefixoArea">m²</span>
-    </div>
-    <!-- sliderMetragem oculto — mantido para compatibilidade com atualizarMetragem/atualizarMetragemDigitado_ -->
     <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="display:none">
 
   </div>
@@ -3266,6 +3281,50 @@ function montarMatch() {
   }
 
   document.getElementById('opcoesTabela').innerHTML = ofertas.map((c, i) => cardOpcaoHTML_(c, i, 'principal')).join('');
+  // Restaura estado do preview (step-2): cards abertos/favoritados aparecem
+  // já nesse estado na tela de resultados, sem o cliente precisar refazer.
+  restaurarEstadoCards_();
+}
+
+// Restaura no step-6 o estado de interação (VER PREÇO aberto, Favorito)
+// dos cards com que o cliente interagiu durante o preview do step-2.
+// D.cardsPrecoVisto e D.cardsFavoritos já foram preenchidos pelo grupo
+// 'preview' — aqui só reflete o mesmo estado nos cards do grupo 'principal'.
+function restaurarEstadoCards_() {
+  const grupo = 'principal';
+  D.ofertasMostradas.forEach((c, i) => {
+    if (!c.id) return;
+
+    if (D.cardsPrecoVisto.has(c.id)) {
+      const el  = document.getElementById(`retraido-${grupo}-${i}`);
+      const btn = document.getElementById(`verPreco-${grupo}-${i}`);
+      if (el)  el.style.display  = '';
+      if (btn) btn.style.display = 'none';
+      // Anima barras exatamente como toggleVerPreco_ faz
+      setTimeout(() => {
+        const bv = document.getElementById(`bar-v-${grupo}-${i}`);
+        const bd = document.getElementById(`bar-d-${grupo}-${i}`);
+        if (bv) bv.style.width = (bv.dataset.pct || '0') + '%';
+        if (bd) bd.style.width = (bd.dataset.pct || '0') + '%';
+      }, 50);
+      setTimeout(() => {
+        const pv = document.getElementById(`pct-v-${grupo}-${i}`);
+        const pd = document.getElementById(`pct-d-${grupo}-${i}`);
+        const al = document.getElementById(`alerta-${grupo}-${i}`);
+        if (pv && pv.dataset.val) pv.textContent = pv.dataset.val;
+        if (pd && pd.dataset.val) pd.textContent = pd.dataset.val;
+        if (al) al.style.display = '';
+      }, 800);
+    }
+
+    if (D.cardsFavoritos.has(c.id)) {
+      const btn  = document.getElementById(`fav-${grupo}-${i}`);
+      const card = btn ? btn.closest('.opcao-top') : null;
+      if (btn)  { btn.textContent = '♥'; btn.classList.add('ativo'); }
+      if (card) card.classList.add('favorito-ativo');
+    }
+  });
+  atualizarStickyFavCount_();
 }
 
 // Card de opção reutilizado tanto na lista principal (grupo 'principal')
