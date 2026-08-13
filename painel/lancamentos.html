@@ -3348,7 +3348,49 @@ function _fdRenderGrupos_() {
                    _fdRenderTabela_(sinais, emps2, 2, tab);
 }
 
+// Garante que _mapaRows está populado mesmo sem o usuário ter aberto
+// a aba Mapa Geral. Usa os mesmos cálculos de atualizarMapaGeral_ mas
+// sem chamar nenhuma função de render (sem side-effects no DOM).
+function _garantirMapaRows_() {
+  if (_mapaRows.length > 0 || !_todos || !_todos.length) return;
+  try {
+    var empsBrutos = agruparPorEmpreendimento_(_todos);
+    var scored     = calcularScoreTracao(empsBrutos, {}, _listaPadroes, _listaModelos);
+    scored.forEach(function(s) { s.alerta = calcularAlertaTracao_(s); });
+    _mapaRows = scored.map(function(s) {
+      var e      = s.e;
+      var areas  = e.unidades.map(function(u) { return Number(u.areaUtil) || Number(u.areaTerr) || 0; }).filter(function(v) { return v > 0; });
+      var precos = e.unidades.map(function(u) { return Number(u.precoMin) || Number(u.precoMedio) || 0; }).filter(function(v) { return v > 0; });
+      return {
+        e: e,
+        nome:           e.nomeEmpreendimento || '—',
+        construtora:    e.construtora || '—',
+        bairro:         e.bairro || '—',
+        cidade:         e.cidade || '',
+        padrao:         e.padrao || '',
+        estagio:        e.status || '—',
+        areaMin:        areas.length  ? Math.min.apply(null, areas)  : 0,
+        areaMax:        areas.length  ? Math.max.apply(null, areas)  : 0,
+        menorPreco:     precos.length ? Math.min.apply(null, precos) : 0,
+        m2Medio:        calcularM2Medio(e.unidades) || 0,
+        pctVendido:     calcularPercentualVendido(e.estoque, e.totalUnidades),
+        estoque:        parseInt(e.estoque, 10) || 0,
+        comp:           s.comp  || 0,
+        simil:          s.simil || 0,
+        alerta:         s.alerta,
+        prazo:          parseInt(e.prazoMaximo, 10) || 0,
+        prazoVenda:     prazoDeVendaMeses_(e.dataLancamento),
+        prazoLancEntrega: calcularTempoObraEntreDatas_(e.dataLancamento, e.previsaoEntrega),
+        previsaoEntrega: e.previsaoEntrega || '',
+        totalUnidades:  parseInt(e.totalUnidades, 10) || 0,
+        linkMaps:       e.linkMaps || '',
+      };
+    });
+  } catch(e_) {}
+}
+
 function renderForcasDemanda_(stats) {
+  _garantirMapaRows_(); // popula _mapaRows se ainda não foi pelo Mapa Geral
   const wrap = document.getElementById('fdWrap');
   if (!wrap) return;
   if (!_todos || !_todos.length) {
