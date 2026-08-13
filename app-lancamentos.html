@@ -173,9 +173,33 @@ body {
   text-align: center;
   font-size: clamp(15px, 4vw, 19px); font-weight: 700;
   color: var(--text); line-height: 1.5;
-  padding: 24px 0 20px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 28px;
+  padding: 24px 0 14px;
+  margin-bottom: 14px;
+}
+.s2-subtxt {
+  display: block;
+  font-size: clamp(13px, 3.5vw, 15px); font-weight: 600;
+  color: var(--accent); margin-top: 6px;
+}
+/* Preview do 1º card de resultado no step-2 */
+.s2-preview-wrap { margin-bottom: 0; }
+.s2-preview-cta {
+  display: block; width: 100%;
+  padding: 15px 20px; margin: 14px 0 0;
+  text-align: center;
+  font-size: clamp(13px, 3.5vw, 15px); font-weight: 800; letter-spacing: .7px;
+  color: var(--orange);
+  background: rgba(255,149,0,.07); border: 1.5px solid var(--orange);
+  border-radius: var(--r); font-family: inherit; cursor: pointer;
+  transition: all .18s;
+}
+.s2-preview-cta:hover { background: rgba(255,149,0,.14); }
+.s2-ajuste-label {
+  display: block; margin-top: 28px; padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--text); opacity: .5;
+  margin-bottom: 16px;
 }
 .s2-top-count-num {
   display: block;
@@ -945,9 +969,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="s2-top-count">
       Encontramos
       <strong id="cntCombo" class="s2-top-count-num">—</strong>
-      opções com o perfil que procura
+      opções com o perfil que procura.
+      <span class="s2-subtxt">Essa é uma delas:</span>
     </div>
     <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
+
+    <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
+    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
+    <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
+
+    <span class="s2-ajuste-label">Ajuste seu perfil de busca</span>
 
     <!-- Orçamento Simulador — input sem slider (rastreado como precoAlvo) -->
     <div class="step-title" style="margin:0 0 8px" id="tituloPreco">Seu <span style="color:var(--accent)">orçamento atual</span> é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
@@ -2815,6 +2846,23 @@ function atualizarComboUI_() {
   animar('cntCombo', qtdOpcoesReais_());
   const nota = document.getElementById('toleranciaNota');
   if (nota) nota.style.display = (D.toleranciaExpandida && D.situacoes.size > 0) ? '' : 'none';
+  montarPreviewCard_();
+}
+
+// Renderiza o 1º resultado filtrado no container de preview do step-2.
+// Usa cardOpcaoHTML_ com grupo='preview' pra não colidir IDs com step-6
+// (principal/extra). Só re-renderiza se o 1º item mudou, evitando fechar
+// o card que o cliente já expandiu ao ajustar preço/área.
+function montarPreviewCard_() {
+  const container = document.getElementById('s2PreviewCard');
+  if (!container) return;
+  const lista = filtrados();
+  if (!lista.length) { container.innerHTML = ''; container.dataset.previewId = ''; return; }
+  const c = lista[0];
+  const cid = String(c.id || c.nome || '');
+  if (container.dataset.previewId === cid) return; // mesmo card — preserva estado aberto
+  container.dataset.previewId = cid;
+  container.innerHTML = cardOpcaoHTML_(c, 0, 'preview');
 }
 
 // ── SCORE DE COMPATIBILIDADE (perfil geral, enviado no payload do lead) ────
