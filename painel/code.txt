@@ -336,6 +336,7 @@ function doGet(e) {
   if (acao === 'listar_estatisticas_funil') return ok(listarEstatisticasFunil_({ dias: e.parameter.dias }));
   if (acao === 'listar_segmentos_comportamentais') return ok(listarSegmentosComportamentais_());
   if (acao === 'limpar_eventos_funil') return ok(limparEventosFunil_());
+  if (acao === 'limpar_acessos_app')  return ok(limparAcessosApp_());
   // Acessos da capa do app (Fase 4) -- dados de navegação capturados antes do lead finalizar.
   if (acao === 'listar_acessos_capa') return ok(listarAcessosCapa_({ dias: e.parameter.dias }));
   // Integração Google Ads (Fase 3) -- protegida por sessão, mesmo motivo.
@@ -5368,6 +5369,17 @@ function obterAbaAcessosApp_() {
        .setFontWeight('bold').setBackground('#1A73E8').setFontColor('#ffffff');
   }
   return aba;
+}
+
+function limparAcessosApp_() {
+  try {
+    var aba = obterAbaAcessosApp_();
+    var ultima = aba.getLastRow();
+    if (ultima > 1) aba.deleteRows(2, ultima - 1);
+    return { ok: true, removidos: Math.max(0, ultima - 1) };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
 }
 
 function registrarAcessoCapa_(d) {

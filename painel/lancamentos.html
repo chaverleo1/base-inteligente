@@ -1699,6 +1699,7 @@ select.form-input option { background: var(--surface2); }
           <option value="36500">Histórico completo</option>
         </select>
         <button class="btn-extrair" style="padding:7px 12px;font-size:12px" onclick="carregarAcessosCapa_()">↺ Atualizar</button>
+        <button class="btn-extrair" style="padding:7px 12px;font-size:12px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)" onclick="zerarAcessosCapa_()" title="Apagar todos os acessos registrados (dados de teste)">🗑️ Zerar acessos</button>
       </div>
     </div>
 
@@ -3019,6 +3020,20 @@ function pararAutoRefreshAcessos_() {
   const label = document.getElementById('acessosLiveLabel');
   if (dot)   dot.style.display   = 'none';
   if (label) label.textContent   = 'Atualização automática a cada 30s';
+}
+
+async function zerarAcessosCapa_() {
+  if (!confirm('Apagar TODOS os acessos registrados?\n\nUse antes de iniciar testes reais — os dados de teste serão deletados da planilha.')) return;
+  mostrarToast('Zerando acessos…', 'aviso');
+  try {
+    const resp = await fetch(WEBHOOK_URL + '?acao=limpar_acessos_app&token=' + encodeURIComponent(tokenSessao()));
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.erro || 'Erro');
+    mostrarToast(`✓ ${data.removidos} registro(s) apagado(s)`, 'ok');
+    carregarAcessosCapa_();
+  } catch (err) {
+    mostrarToast('Erro: ' + err.message, 'erro');
+  }
 }
 
 function carregarComentariosAppLazy_() {
