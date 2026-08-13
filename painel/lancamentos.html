@@ -1198,6 +1198,11 @@ select.form-input option { background: var(--surface2); }
 .fd-emps-table tbody tr:last-child td { border-bottom:none; }
 .fd-emps-table td strong { color:var(--text); }
 .fd-vazio { padding:18px; text-align:center; font-size:12px; color:var(--text3); }
+.fd-badges { display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
+.fd-badge { font-size:9px; font-weight:700; letter-spacing:.3px; padding:2px 6px; border-radius:99px; white-space:nowrap; }
+.fd-badge-r { background:rgba(79,124,255,.15); color:var(--accent); }
+.fd-badge-p { background:rgba(251,146,60,.15); color:#f97316; }
+.fd-badge-a { background:rgba(34,197,94,.15); color:#16a34a; }
 
 /* ── ABAS ESCURAS (Extrair Modelo 1/2, Modelos e Padrões Vendedores) --
    pedido explícito do usuário: distinguir visualmente as abas de
@@ -3089,11 +3094,19 @@ function _fdMatchEmps_(empsGrupados, sinais, rank) {
   const pSinal = rank === 1 ? sinais.p1 : sinais.p2;
   const rSinal = rank === 1 ? sinais.r1 : sinais.r2;
   const aSinal = rank === 1 ? sinais.a1 : sinais.a2;
-  return empsGrupados.filter(emp => {
-    const pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
+  // prioridade: região=4 > preço=2 > área=1
+  const scored = [];
+  empsGrupados.forEach(function(emp) {
     const rc = _fdRegiaoCompativel_(emp, rSinal);
+    const pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
     const ac = _fdAreaCompativel_(emp, aSinal && aSinal.faixa);
-    return (pc ? 1 : 0) + (rc ? 1 : 0) + (ac ? 1 : 0) >= 2;
+    if ((rc ? 1 : 0) + (pc ? 1 : 0) + (ac ? 1 : 0) < 2) return;
+    scored.push({ emp: emp, rc: rc, pc: pc, ac: ac,
+                  score: (rc ? 4 : 0) + (pc ? 2 : 0) + (ac ? 1 : 0) });
+  });
+  scored.sort(function(a, b) { return b.score - a.score; });
+  return scored.map(function(s) {
+    return Object.assign({}, s.emp, { _rc: s.rc, _pc: s.pc, _ac: s.ac });
   });
 }
 
@@ -3175,8 +3188,13 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
     const pMin   = _fdFmtBRL_(emp._pMin);
     const pMax   = _fdFmtBRL_(emp._pMax);
     const aRange = (emp._aMin || emp._aMax) ? ((emp._aMin || '?') + '–' + (emp._aMax || '?') + ' m²') : '—';
+    const badges = '<div class="fd-badges">' +
+      (emp._rc ? '<span class="fd-badge fd-badge-r">Região</span>' : '') +
+      (emp._pc ? '<span class="fd-badge fd-badge-p">Preço</span>'  : '') +
+      (emp._ac ? '<span class="fd-badge fd-badge-a">Área</span>'   : '') +
+    '</div>';
     return '<tr>' +
-      '<td><strong>' + (emp.nomeEmpreendimento || '—') + '</strong></td>' +
+      '<td><strong>' + (emp.nomeEmpreendimento || '—') + '</strong>' + badges + '</td>' +
       '<td>' + (emp.bairro || '—') + '</td>' +
       '<td style="white-space:nowrap">' + pMin + ' – ' + pMax + '</td>' +
       '<td style="white-space:nowrap">' + aRange + '</td>' +
