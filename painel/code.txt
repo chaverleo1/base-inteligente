@@ -5338,7 +5338,7 @@ function limparEventosFunil_() {
     var aba = obterAbaFunilEventos_();
     var ultima = aba.getLastRow();
     if (ultima > 1) {
-      aba.deleteRows(2, ultima - 1);
+      aba.getRange(2, 1, ultima - 1, CABECALHO_FUNIL_EVENTOS_.length).clearContent();
     }
     return { ok: true, removidos: Math.max(0, ultima - 1) };
   } catch (e) {
@@ -5375,11 +5375,15 @@ function limparAcessosApp_() {
   try {
     var abaAcessos = obterAbaAcessosApp_();
     var ultiAcessos = abaAcessos.getLastRow();
-    if (ultiAcessos > 1) abaAcessos.deleteRows(2, ultiAcessos - 1);
+    if (ultiAcessos > 1) {
+      abaAcessos.getRange(2, 1, ultiAcessos - 1, CABECALHO_ACESSOS_APP_.length).clearContent();
+    }
 
     var abaFunil = obterAbaFunilEventos_();
     var ultiFunil = abaFunil.getLastRow();
-    if (ultiFunil > 1) abaFunil.deleteRows(2, ultiFunil - 1);
+    if (ultiFunil > 1) {
+      abaFunil.getRange(2, 1, ultiFunil - 1, CABECALHO_FUNIL_EVENTOS_.length).clearContent();
+    }
 
     return { ok: true, removidos: Math.max(0, ultiAcessos - 1) + Math.max(0, ultiFunil - 1) };
   } catch (e) {
