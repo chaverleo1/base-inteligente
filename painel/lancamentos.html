@@ -3112,6 +3112,8 @@ function _fdMatchEmps_(empsGrupados, sinais, rank) {
     const ac = _fdAreaCompativel_(emp, aSinal && aSinal.faixa);
     // conta apenas critérios com sinal real (não-null)
     const disponivel = (rc !== null ? 1 : 0) + (pc !== null ? 1 : 0) + (ac !== null ? 1 : 0);
+    // sem nenhum sinal → sem dados → não exibir nada
+    if (disponivel === 0) return;
     const bateu      = (rc === true ? 1 : 0)  + (pc === true ? 1 : 0)  + (ac === true ? 1 : 0);
     // exige ao menos 2 critérios batidos; se só 1 disponível, exige que bata
     const minNec = Math.min(2, disponivel);
@@ -3253,8 +3255,8 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
     '<div class="fd-nivel-title">' + nivel + '</div>' +
     '<div class="fd-tabela-wrap">' +
       '<div class="fd-col-sinais">' +
-        '<div class="fd-sinais-label">Sinais de demanda</div>' +
-        '<div class="fd-sinal-row"><span class="fd-sinal-key">Bairro</span><span class="fd-sinal-val">' + (rSinal ? rSinal.faixa : '—') + '</span></div>' +
+        '<div class="fd-sinais-label" style="color:#f5c842">Sinais de demanda</div>' +
+        '<div class="fd-sinal-row"><span class="fd-sinal-key">Bairros</span><span class="fd-sinal-val">' + (rSinal ? rSinal.faixa : '—') + '</span></div>' +
         '<div class="fd-sinal-row" style="margin-bottom:8px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (rSinal ? rSinal.contagem : '—') + '</span></div>' +
         '<div class="fd-sinal-row"><span class="fd-sinal-key">Orçamento</span><span class="fd-sinal-val">' + (pSinal ? _fdFmtFaixaPreco_(pSinal.faixa) : '—') + '</span></div>' +
         '<div class="fd-sinal-row" style="margin-bottom:8px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (pSinal ? pSinal.contagem : '—') + '</span></div>' +
