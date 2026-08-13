@@ -3067,30 +3067,36 @@ function badgeStatusComentario_(status) {
 
 // ── ACESSOS DA CAPA (Lançamentos > App > Acessos) ───────────────────────────
 async function carregarAcessosCapa_() {
-  const kpisEl   = document.getElementById('acessosKpis');
-  const funilEl  = document.getElementById('acessosFunilWrap');
+  const kpisEl  = document.getElementById('acessosKpis');
+  const funilEl = document.getElementById('acessosFunilWrap');
   if (!kpisEl) return;
   const dias  = document.getElementById('acessosDias')?.value || 30;
   const token = encodeURIComponent(tokenSessao());
-  try {
-    // Busca acessos e funil em paralelo
-    const [respAcessos, respFunil] = await Promise.all([
-      fetch(WEBHOOK_URL + '?acao=listar_acessos_capa&dias=' + dias + '&token=' + token),
-      fetch(WEBHOOK_URL + '?acao=listar_estatisticas_funil&dias=' + dias + '&token=' + token),
-    ]);
-    const [dataAcessos, dataFunil] = await Promise.all([respAcessos.json(), respFunil.json()]);
 
-    if (!dataAcessos.ok) throw new Error(dataAcessos.erro || 'Erro acessos');
-    renderAcessosKpis_(dataAcessos);
-    renderAcessosPrecoChart_(dataAcessos.histograma || []);
-    renderAcessosUtmChart_(dataAcessos.utms || []);
+  // Busca os dois endpoints em paralelo e trata erros de forma independente
+  const [resAcessos, resFunil] = await Promise.allSettled([
+    fetch(WEBHOOK_URL + '?acao=listar_acessos_capa&dias='        + dias + '&token=' + token).then(r => r.json()),
+    fetch(WEBHOOK_URL + '?acao=listar_estatisticas_funil&dias='  + dias + '&token=' + token).then(r => r.json()),
+  ]);
 
-    if (funilEl) {
-      if (dataFunil.funil) renderAcessosFunil_(dataFunil.funil, dataFunil.kpis?.totalSessoes || 0);
-      else funilEl.innerHTML = '<span style="color:var(--text3);font-size:12px">Sem dados de funil ainda.</span>';
+  // ── Acessos (KPIs + gráficos) ──
+  if (resAcessos.status === 'fulfilled' && resAcessos.value.ok) {
+    const d = resAcessos.value;
+    renderAcessosKpis_(d);
+    renderAcessosPrecoChart_(d.histograma || []);
+    renderAcessosUtmChart_(d.utms || []);
+  } else {
+    const msg = resAcessos.reason?.message || resAcessos.value?.erro || 'Erro';
+    kpisEl.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:12px;font-size:13px">Acessos: ${msg}</div>`;
+  }
+
+  // ── Funil por etapa — sempre atualiza, independente do bloco acima ──
+  if (funilEl) {
+    if (resFunil.status === 'fulfilled' && resFunil.value?.funil) {
+      renderAcessosFunil_(resFunil.value.funil, resFunil.value.kpis?.totalSessoes || 0);
+    } else {
+      funilEl.innerHTML = '<span style="color:var(--text3);font-size:12px">Sem dados de funil ainda.</span>';
     }
-  } catch (err) {
-    if (kpisEl) kpisEl.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:12px;font-size:13px">Erro: ${err.message}</div>`;
   }
 }
 
