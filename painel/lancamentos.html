@@ -3037,17 +3037,14 @@ function _fdMergeHistograma_(h1, h2) {
 }
 
 function _fdExtrairSinais_(stats) {
-  // filtra apenas sinais com ao menos 1 sessão real
-  const precos  = _fdMergeHistograma_(stats.histogramaPreco, stats.histogramaSimulador)
-                    .filter(function(x) { return x.contagem > 0; });
-  const regioes = [...(stats.histogramaRegioes || [])]
-                    .filter(function(x) { return x.contagem > 0; })
-                    .sort(function(a, b) { return b.contagem - a.contagem; });
-  const areas   = _fdMergeHistograma_(stats.histogramaAreas, stats.histogramaAreasE2)
-                    .filter(function(x) { return x.contagem > 0; });
-  return { p1: precos[0] || null, p2: precos[1] || null,
-           r1: regioes[0] || null, r2: regioes[1] || null,
-           a1: areas[0]  || null, a2: areas[1]  || null };
+  const precos  = _fdMergeHistograma_(stats.histogramaPreco, stats.histogramaSimulador);
+  const regioes = [...(stats.histogramaRegioes || [])].sort(function(a, b) { return b.contagem - a.contagem; });
+  const areas   = _fdMergeHistograma_(stats.histogramaAreas, stats.histogramaAreasE2);
+  // sinal válido: precisa ter faixa preenchida
+  function valid(x) { return (x && x.faixa && String(x.faixa).trim()) ? x : null; }
+  return { p1: valid(precos[0]),  p2: valid(precos[1]),
+           r1: valid(regioes[0]), r2: valid(regioes[1]),
+           a1: valid(areas[0]),   a2: valid(areas[1]) };
 }
 
 function _fdGruparPorEmp_(rows) {
