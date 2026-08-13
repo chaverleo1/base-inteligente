@@ -3121,11 +3121,19 @@ function _fdMatchEmps_(empsGrupados, sinais, rank) {
     // exige ao menos 2 critérios batidos; se só 1 disponível, exige que bata
     const minNec = Math.min(2, disponivel);
     if (bateu < minNec) return;
-    // prioridade ponderada: região=4 > preço=2 > área=1
-    const score = (rc === true ? 4 : 0) + (pc === true ? 2 : 0) + (ac === true ? 1 : 0);
-    scored.push({ emp: emp, rc: rc === true, pc: pc === true, ac: ac === true, score: score });
+    scored.push({ emp: emp, rc: rc === true, pc: pc === true, ac: ac === true });
   });
-  scored.sort(function(a, b) { return b.score - a.score; });
+  // Ordem de prioridade:
+  //   1. BAIRRO compatível primeiro
+  //   2. MENOR PREÇO crescente (mais barato dentro da faixa aparece primeiro)
+  //   3. ÁREA compatível primeiro
+  scored.sort(function(a, b) {
+    if (a.rc !== b.rc) return a.rc ? -1 : 1;                  // 1. bairro match
+    var pa = a.emp._pMin || 0, pb = b.emp._pMin || 0;
+    if (pa !== pb) return pa - pb;                             // 2. menor preço ASC
+    if (a.ac !== b.ac) return a.ac ? -1 : 1;                  // 3. área match
+    return 0;
+  });
   return scored.map(function(s) {
     return Object.assign({}, s.emp, { _rc: s.rc, _pc: s.pc, _ac: s.ac });
   });
