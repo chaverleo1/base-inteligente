@@ -1203,6 +1203,7 @@ select.form-input option { background: var(--surface2); }
 .fd-badge-r { background:rgba(79,124,255,.15); color:var(--accent); }
 .fd-badge-p { background:rgba(251,146,60,.15); color:#f97316; }
 .fd-badge-a { background:rgba(34,197,94,.15); color:#16a34a; }
+.fd-emps-title { font-size:13px; font-weight:700; color:#fff; letter-spacing:.2px; margin-bottom:8px; }
 
 /* ── ABAS ESCURAS (Extrair Modelo 1/2, Modelos e Padrões Vendedores) --
    pedido explícito do usuário: distinguir visualmente as abas de
@@ -3036,9 +3037,14 @@ function _fdMergeHistograma_(h1, h2) {
 }
 
 function _fdExtrairSinais_(stats) {
-  const precos  = _fdMergeHistograma_(stats.histogramaPreco, stats.histogramaSimulador);
-  const regioes = [...(stats.histogramaRegioes || [])].sort((a, b) => b.contagem - a.contagem);
-  const areas   = _fdMergeHistograma_(stats.histogramaAreas, stats.histogramaAreasE2);
+  // filtra apenas sinais com ao menos 1 sessão real
+  const precos  = _fdMergeHistograma_(stats.histogramaPreco, stats.histogramaSimulador)
+                    .filter(function(x) { return x.contagem > 0; });
+  const regioes = [...(stats.histogramaRegioes || [])]
+                    .filter(function(x) { return x.contagem > 0; })
+                    .sort(function(a, b) { return b.contagem - a.contagem; });
+  const areas   = _fdMergeHistograma_(stats.histogramaAreas, stats.histogramaAreasE2)
+                    .filter(function(x) { return x.contagem > 0; });
   return { p1: precos[0] || null, p2: precos[1] || null,
            r1: regioes[0] || null, r2: regioes[1] || null,
            a1: areas[0]  || null, a2: areas[1]  || null };
@@ -3061,28 +3067,30 @@ function _fdGruparPorEmp_(rows) {
 }
 
 function _fdPrecoCompativel_(emp, faixa) {
-  if (!faixa) return true;
+  if (!faixa) return null; // sem sinal — não conta como critério
   const ini = parseInt(faixa) * 1000;
-  const fim = ini + 199999; // ±1 faixa de tolerância
+  const fim = ini + 199999; // tolerância de 1 faixa acima (200k total)
   const pMin = emp._pMin || 0;
   const pMax = emp._pMax || pMin;
+  if (!pMin && !pMax) return null; // emp sem dados de preço
   return pMin <= fim && pMax >= Math.max(0, ini - 100000);
 }
 
 function _fdAreaCompativel_(emp, faixa) {
-  if (!faixa) return true;
+  if (!faixa) return null; // sem sinal — não conta como critério
   const parts = String(faixa).split('-');
   const ini = parseInt(parts[0]) || 0;
   const fim = parseInt(parts[1]) || ini + 10;
-  if (!emp._aMin && !emp._aMax) return true;
+  if (!emp._aMin && !emp._aMax) return null; // emp sem dados de área
   return emp._aMax >= ini - 10 && emp._aMin <= fim + 15;
 }
 
 function _fdRegiaoCompativel_(emp, sinalRegiao) {
-  if (!sinalRegiao || !sinalRegiao.faixa) return true;
+  if (!sinalRegiao || !sinalRegiao.faixa) return null; // sem sinal — não conta
   const reg    = String(sinalRegiao.faixa).toLowerCase();
   const bairro = String(emp.bairro || '').toLowerCase();
   const cidade = String(emp.cidade || '').toLowerCase();
+  if (!bairro && !cidade) return null; // emp sem dados de localização
   return bairro.includes(reg) || reg.includes(bairro) ||
          cidade.includes(reg) || reg.includes(cidade);
 }
@@ -3094,15 +3102,21 @@ function _fdMatchEmps_(empsGrupados, sinais, rank) {
   const pSinal = rank === 1 ? sinais.p1 : sinais.p2;
   const rSinal = rank === 1 ? sinais.r1 : sinais.r2;
   const aSinal = rank === 1 ? sinais.a1 : sinais.a2;
-  // prioridade: região=4 > preço=2 > área=1
+  // null = sem sinal (não conta); true/false = sinal disponível e resultado
   const scored = [];
   empsGrupados.forEach(function(emp) {
     const rc = _fdRegiaoCompativel_(emp, rSinal);
     const pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
     const ac = _fdAreaCompativel_(emp, aSinal && aSinal.faixa);
-    if ((rc ? 1 : 0) + (pc ? 1 : 0) + (ac ? 1 : 0) < 2) return;
-    scored.push({ emp: emp, rc: rc, pc: pc, ac: ac,
-                  score: (rc ? 4 : 0) + (pc ? 2 : 0) + (ac ? 1 : 0) });
+    // conta apenas critérios com sinal real (não-null)
+    const disponivel = (rc !== null ? 1 : 0) + (pc !== null ? 1 : 0) + (ac !== null ? 1 : 0);
+    const bateu      = (rc === true ? 1 : 0)  + (pc === true ? 1 : 0)  + (ac === true ? 1 : 0);
+    // exige ao menos 2 critérios batidos; se só 1 disponível, exige que bata
+    const minNec = Math.min(2, disponivel);
+    if (bateu < minNec) return;
+    // prioridade ponderada: região=4 > preço=2 > área=1
+    const score = (rc === true ? 4 : 0) + (pc === true ? 2 : 0) + (ac === true ? 1 : 0);
+    scored.push({ emp: emp, rc: rc === true, pc: pc === true, ac: ac === true, score: score });
   });
   scored.sort(function(a, b) { return b.score - a.score; });
   return scored.map(function(s) {
@@ -3216,7 +3230,7 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
         '<button class="fd-btn-briefing" onclick="_fdCopiar_(\'' + keyD + '\', this)">📋 Gerar Briefing</button>' +
       '</div>' +
       '<div class="fd-col-emps">' +
-        '<div class="fd-sinais-label">Empreendimentos compatíveis (' + emps.length + ')</div>' +
+        '<div class="fd-emps-title">Empreendimentos compatíveis <span style="color:var(--accent)">(' + emps.length + ')</span></div>' +
         '<div class="fd-emps-scroll">' +
           '<table class="fd-emps-table">' +
             '<thead><tr><th>Empreendimento</th><th>Bairro</th><th>Preço</th><th>Área</th><th>Padrão</th></tr></thead>' +
