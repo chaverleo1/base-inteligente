@@ -3040,12 +3040,13 @@ function _fdMergeHistograma_(h1, h2) {
 
 function _fdExtrairSinais_(stats) {
   const precos  = _fdMergeHistograma_(stats.histogramaPreco, stats.histogramaSimulador);
-  const regioes = [...(stats.histogramaRegioes || [])].sort(function(a, b) { return b.contagem - a.contagem; });
+  // bairros vêm do histogramaBairros (captado na capa); já ordenados por contagem desc
+  const bairros = [...(stats.histogramaBairros || [])].sort(function(a, b) { return (b.contagem||0) - (a.contagem||0); });
   const areas   = _fdMergeHistograma_(stats.histogramaAreas, stats.histogramaAreasE2);
   // sinal válido: precisa ter faixa preenchida
   function valid(x) { return (x && x.faixa && String(x.faixa).trim()) ? x : null; }
   return { p1: valid(precos[0]),  p2: valid(precos[1]),
-           r1: valid(regioes[0]), r2: valid(regioes[1]),
+           r1: valid(bairros[0]), r2: valid(bairros[1]),
            a1: valid(areas[0]),   a2: valid(areas[1]) };
 }
 
@@ -3136,7 +3137,7 @@ function _fdTextoBriefingDemanda_(rank, sinais, tab) {
     'Data: ' + new Date().toLocaleDateString('pt-BR'),
     '',
     'SINAIS DE DEMANDA IDENTIFICADOS:',
-    '• Região de maior interesse: ' + (rSinal ? rSinal.faixa + ' (' + rSinal.contagem + ' sessões)' : 'sem dados'),
+    '• Bairro de maior interesse: ' + (rSinal ? rSinal.faixa + ' (' + rSinal.contagem + ' sessões)' : 'sem dados'),
     '• Faixa de orçamento (média capa+simulador): ' + (pSinal ? _fdFmtFaixaPreco_(pSinal.faixa) + ' (' + pSinal.contagem + ' sessões)' : 'sem dados'),
     '• Faixa de área útil (simulador+E2): ' + (aSinal ? aSinal.faixa + ' m² (' + aSinal.contagem + ' sessões)' : 'sem dados'),
     '',
@@ -3208,7 +3209,7 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
   const linhasEmps = emps.length ? emps.map(function(emp) {
     const mr = _mapaLookup_[emp.nomeEmpreendimento];
     const badges = '<div class="fd-badges" style="margin-top:2px">' +
-      (emp._rc ? '<span class="fd-badge fd-badge-r">Região</span>' : '') +
+      (emp._rc ? '<span class="fd-badge fd-badge-r">Bairro</span>' : '') +
       (emp._pc ? '<span class="fd-badge fd-badge-p">Preço</span>'  : '') +
       (emp._ac ? '<span class="fd-badge fd-badge-a">Área</span>'   : '') +
     '</div>';
@@ -3253,7 +3254,7 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
     '<div class="fd-tabela-wrap">' +
       '<div class="fd-col-sinais">' +
         '<div class="fd-sinais-label">Sinais de demanda</div>' +
-        '<div class="fd-sinal-row"><span class="fd-sinal-key">Região</span><span class="fd-sinal-val">' + (rSinal ? rSinal.faixa : '—') + '</span></div>' +
+        '<div class="fd-sinal-row"><span class="fd-sinal-key">Bairro</span><span class="fd-sinal-val">' + (rSinal ? rSinal.faixa : '—') + '</span></div>' +
         '<div class="fd-sinal-row" style="margin-bottom:8px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (rSinal ? rSinal.contagem : '—') + '</span></div>' +
         '<div class="fd-sinal-row"><span class="fd-sinal-key">Orçamento</span><span class="fd-sinal-val">' + (pSinal ? _fdFmtFaixaPreco_(pSinal.faixa) : '—') + '</span></div>' +
         '<div class="fd-sinal-row" style="margin-bottom:8px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (pSinal ? pSinal.contagem : '—') + '</span></div>' +

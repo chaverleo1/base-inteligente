@@ -5384,7 +5384,7 @@ function limparAcessosApp_() {
 // em cada clique em "CONTINUAR →" na step-0 do app-lancamentos.html.
 // ═══════════════════════════════════════════════════════════════
 var CABECALHO_ACESSOS_APP_ = [
-  'dataHora', 'sessionId', 'capaPreco',
+  'dataHora', 'sessionId', 'capaPreco', 'capaBairros',
   'utmSource', 'utmMedium', 'utmCampaign', 'gclid',
   'dispositivo', 'horaAcesso',
 ];
@@ -5408,14 +5408,15 @@ function registrarAcessoCapa_(d) {
     var aba = obterAbaAcessosApp_();
     aba.appendRow([
       Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss'),
-      d.sessionId   || '',
-      d.capaPreco   || 0,
-      d.utmSource   || '',
-      d.utmMedium   || '',
-      d.utmCampaign || '',
-      d.gclid       || '',
-      d.dispositivo || '',
-      d.horaAcesso  || '',
+      d.sessionId    || '',
+      d.capaPreco    || 0,
+      d.capaBairros  || '',
+      d.utmSource    || '',
+      d.utmMedium    || '',
+      d.utmCampaign  || '',
+      d.gclid        || '',
+      d.dispositivo  || '',
+      d.horaAcesso   || '',
     ]);
     return { ok: true };
   } catch (e) {
@@ -5992,7 +5993,7 @@ function listarEstatisticasFunil_(params) {
   });
   var histogramaPreco = Object.keys(faixasPreco).sort(function(a, b) {
     return parseInt(a) - parseInt(b);
-  }).map(function(k) { return { faixa: k, total: faixasPreco[k] }; });
+  }).map(function(k) { return { faixa: k, contagem: faixasPreco[k] }; });
 
   // Breakdown dispositivos e "voltou"
   var sessoesMobile = sessoes.filter(function(sid) {
@@ -6011,17 +6012,33 @@ function listarEstatisticasFunil_(params) {
   });
   var histogramaSimulador = Object.keys(faixasSimulador).sort(function(a,b) {
     return parseInt(a)-parseInt(b);
-  }).map(function(k) { return { faixa: k, total: faixasSimulador[k] }; });
+  }).map(function(k) { return { faixa: k, contagem: faixasSimulador[k] }; });
 
-  // Histograma Regiões (utmMedium) — top 6 por sessão
-  var contRegioes = {};
-  Object.keys(utmMediumMap).forEach(function(sid) {
-    var reg = utmMediumMap[sid] || '';
-    if (reg) contRegioes[reg] = (contRegioes[reg] || 0) + 1;
-  });
-  var histogramaRegioes = Object.keys(contRegioes).sort(function(a,b) {
-    return contRegioes[b] - contRegioes[a];
-  }).slice(0, 6).map(function(k) { return { regiao: k, total: contRegioes[k] }; });
+  // Histograma Bairros — lidos da aba ACESSOS_APP (capaBairros, múltipla escolha por sessão)
+  var contBairros = {};
+  var idxCapaBairros = CABECALHO_ACESSOS_APP_.indexOf('capaBairros');
+  var idxDataAcessos = CABECALHO_ACESSOS_APP_.indexOf('dataHora');
+  try {
+    var abaAcessos = obterAbaAcessosApp_();
+    var lrAc = abaAcessos.getLastRow();
+    if (lrAc > 1 && idxCapaBairros >= 0) {
+      var dadosAc = abaAcessos.getRange(2, 1, lrAc - 1, CABECALHO_ACESSOS_APP_.length).getValues();
+      dadosAc.forEach(function(row) {
+        var dtStr = String(row[idxDataAcessos] || '');
+        var dt = new Date(dtStr.split('/').reverse().join('-').replace(' ','T'));
+        if (isNaN(dt) || dt < limite) return;
+        var bStr = String(row[idxCapaBairros] || '').trim();
+        if (!bStr) return;
+        bStr.split(',').forEach(function(b) {
+          b = b.trim();
+          if (b) contBairros[b] = (contBairros[b] || 0) + 1;
+        });
+      });
+    }
+  } catch(e_) {}
+  var histogramaBairros = Object.keys(contBairros).sort(function(a,b) {
+    return contBairros[b] - contBairros[a];
+  }).map(function(k) { return { faixa: k, contagem: contBairros[k] }; });
 
   // Demanda por Estágio (situacoes)
   var contEstagios = { pronto: 0, obras: 0 };
@@ -6058,7 +6075,7 @@ function listarEstatisticasFunil_(params) {
   });
   var histogramaAreas = Object.keys(contAreas).sort(function(a,b) {
     return parseInt(a)-parseInt(b);
-  }).map(function(k) { return { faixa: k, total: contAreas[k] }; });
+  }).map(function(k) { return { faixa: k, contagem: contAreas[k] }; });
 
   // Demanda por Área E2 (areaE2 — escolha explícita no Passo 1, faixas de 10m²)
   var contAreasE2 = {};
@@ -6071,7 +6088,7 @@ function listarEstatisticasFunil_(params) {
   });
   var histogramaAreasE2 = Object.keys(contAreasE2).sort(function(a,b) {
     return parseInt(a)-parseInt(b);
-  }).map(function(k) { return { faixa: k, total: contAreasE2[k] }; });
+  }).map(function(k) { return { faixa: k, contagem: contAreasE2[k] }; });
 
   var etapasFunil = [];
   for (var _e = 1; _e <= TOTAL_ETAPAS_FUNIL_; _e++) etapasFunil.push(_e);
@@ -6156,7 +6173,7 @@ function listarEstatisticasFunil_(params) {
     origem: origem,
     histogramaPreco:     histogramaPreco,
     histogramaSimulador: histogramaSimulador,
-    histogramaRegioes:   histogramaRegioes,
+    histogramaBairros:   histogramaBairros,
     histogramaEstagios:  histogramaEstagios,
     histogramaObjetivos: histogramaObjetivos,
     histogramaAreas:     histogramaAreas,
