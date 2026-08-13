@@ -6024,9 +6024,11 @@ function listarEstatisticasFunil_(params) {
     if (lrAc > 1 && idxCapaBairros >= 0) {
       var dadosAc = abaAcessos.getRange(2, 1, lrAc - 1, CABECALHO_ACESSOS_APP_.length).getValues();
       dadosAc.forEach(function(row) {
-        var dtStr = String(row[idxDataAcessos] || '');
-        var dt = new Date(dtStr.split('/').reverse().join('-').replace(' ','T'));
-        if (isNaN(dt) || dt < limite) return;
+        // Usa parseDataHoraBR_ (igual ao funil); se retornar null (Date obj do Sheets),
+        // inclui a linha sem filtrar por data (mesmo comportamento do funil).
+        var dtRaw = row[idxDataAcessos];
+        var dt = (dtRaw instanceof Date) ? dtRaw : parseDataHoraBR_(dtRaw);
+        if (dt && dt < limite) return;
         var bStr = String(row[idxCapaBairros] || '').trim();
         if (!bStr) return;
         bStr.split(',').forEach(function(b) {

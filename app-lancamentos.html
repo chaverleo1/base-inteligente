@@ -1760,8 +1760,8 @@ function irParaStep(n) {
     // comportamental v2 — snapshot do estado no momento da transição
     capaPreco:  D.capaPreco  || '',
     precoAlvo:  D.precoAlvo  || '',
-    areaMin:    D.areaRange  ? D.areaRange[0] : '',
-    areaMax:    D.areaRange  ? D.areaRange[1] : '',
+    areaMin:    (D.areaRange && D.ajustesSlider > 0) ? D.areaRange[0] : '',
+    areaMax:    (D.areaRange && D.ajustesSlider > 0) ? D.areaRange[1] : '',
     areaE2:     D.areaE2     || '',
     objetivo:   D.objetivo   || '',
     padroes:    D.padroes    ? [...D.padroes].join(',')   : '',
@@ -2708,6 +2708,7 @@ function formatBRL_(v) {
 let slidersProntos_ = false;
 
 function inicializarSliders() {
+  slidersProntos_ = false; // previne que atualizarMetragem/atualizarPreco contabilizem como interação do usuário
   const sP = document.getElementById('sliderPreco');
   sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
   // Pre-preenche com o preço escolhido na capa (D.capaPreco), se disponível
