@@ -4803,7 +4803,7 @@ var CABECALHO_FUNIL_EVENTOS_ = [
   'dataHora', 'sessionId', 'etapaChegada', 'etapaSaida', 'tempoMsEtapaSaida',
   'abandonou', 'canal', 'utmSource', 'dispositivo',
   // comportamental v2 (rich por etapa) — preenchido a partir de 2026-08-13
-  'capaPreco', 'precoAlvo', 'areaMin', 'areaMax', 'objetivo', 'padroes', 'situacoes', 'voltou', 'numClique',
+  'capaPreco', 'precoAlvo', 'areaMin', 'areaMax', 'areaE2', 'objetivo', 'padroes', 'situacoes', 'voltou', 'numClique',
   // v2.1 — utm_medium como "região" (nome da região alvo da campanha)
   'utmMedium',
 ];
@@ -5827,6 +5827,7 @@ function registrarEventoFunil_(d) {
       Number(d.precoAlvo)  || 0,
       Number(d.areaMin)    || 0,
       Number(d.areaMax)    || 0,
+      Number(d.areaE2)     || 0,
       String(d.objetivo    || ''),
       String(d.padroes     || ''),
       String(d.situacoes   || ''),
@@ -5889,7 +5890,7 @@ function listarEstatisticasFunil_(params) {
   var maxPorSessao = {}, utmPorSessao = {}, dispositivoPorSessao = {};
   var tempoPorEtapaSoma = {}, tempoPorEtapaCont = {};
   var capaPrecoMap = {}, voltouSet = {}; // comportamental v2
-  var precoAlvoMap = {}, situacoesMap = {}, objetivoMap = {}, areaMap = {}, utmMediumMap = {};
+  var precoAlvoMap = {}, situacoesMap = {}, objetivoMap = {}, areaMap = {}, areaE2Map = {}, utmMediumMap = {};
 
   var abaFunil = obterAbaFunilEventos_();
   var lrF = abaFunil.getLastRow();
@@ -5907,6 +5908,7 @@ function listarEstatisticasFunil_(params) {
     var idxSituacoes  = CABECALHO_FUNIL_EVENTOS_.indexOf('situacoes');
     var idxObjetivo   = CABECALHO_FUNIL_EVENTOS_.indexOf('objetivo');
     var idxAreaMin    = CABECALHO_FUNIL_EVENTOS_.indexOf('areaMin');
+    var idxAreaE2     = CABECALHO_FUNIL_EVENTOS_.indexOf('areaE2');
     var idxUtmMedium  = CABECALHO_FUNIL_EVENTOS_.indexOf('utmMedium');
     var dadosF = abaFunil.getRange(2, 1, lrF - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
 
@@ -5962,6 +5964,11 @@ function listarEstatisticasFunil_(params) {
       if (idxAreaMin >= 0) {
         var am = Number(r[idxAreaMin]) || 0;
         if (am > 0) areaMap[sid] = am;
+      }
+      // areaE2 — área escolhida no step-5 (Etapa 2), último valor não-zero
+      if (idxAreaE2 >= 0) {
+        var ae2 = Number(r[idxAreaE2]) || 0;
+        if (ae2 > 0) areaE2Map[sid] = ae2;
       }
       // utmMedium (região) — primeiro valor não-vazio da sessão
       if (idxUtmMedium >= 0) {
@@ -6053,6 +6060,19 @@ function listarEstatisticasFunil_(params) {
     return parseInt(a)-parseInt(b);
   }).map(function(k) { return { faixa: k, total: contAreas[k] }; });
 
+  // Demanda por Área E2 (areaE2 — escolha explícita no Passo 1, faixas de 10m²)
+  var contAreasE2 = {};
+  Object.keys(areaE2Map).forEach(function(sid) {
+    var ae2 = areaE2Map[sid];
+    if (ae2 > 0) {
+      var fxa = (Math.floor(ae2 / 10) * 10).toString();
+      contAreasE2[fxa] = (contAreasE2[fxa] || 0) + 1;
+    }
+  });
+  var histogramaAreasE2 = Object.keys(contAreasE2).sort(function(a,b) {
+    return parseInt(a)-parseInt(b);
+  }).map(function(k) { return { faixa: k, total: contAreasE2[k] }; });
+
   var etapasFunil = [];
   for (var _e = 1; _e <= TOTAL_ETAPAS_FUNIL_; _e++) etapasFunil.push(_e);
   var funil = etapasFunil.map(function(etapa) {
@@ -6140,6 +6160,7 @@ function listarEstatisticasFunil_(params) {
     histogramaEstagios:  histogramaEstagios,
     histogramaObjetivos: histogramaObjetivos,
     histogramaAreas:     histogramaAreas,
+    histogramaAreasE2:   histogramaAreasE2,
   };
 }
 
