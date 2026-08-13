@@ -168,17 +168,20 @@ body {
   vertical-align: middle; margin: 0 5px;
 }
 
-/* Contador de opções no topo do step-2 */
+/* Contador de opções — destaque total no step-2 */
 .s2-top-count {
   text-align: center;
-  font-size: clamp(13px, 3vw, 16px); font-weight: 700;
-  color: var(--text2); line-height: 1.5;
-  margin: 0 0 22px;
+  font-size: clamp(15px, 4vw, 19px); font-weight: 700;
+  color: var(--text); line-height: 1.5;
+  padding: 24px 0 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 28px;
 }
 .s2-top-count-num {
   display: block;
-  font-size: clamp(56px, 15vw, 88px); font-weight: 900;
-  color: var(--orange); letter-spacing: -3px; line-height: 1;
+  font-size: clamp(80px, 22vw, 120px); font-weight: 900;
+  color: var(--orange); letter-spacing: -5px; line-height: .88;
+  margin: 8px 0 4px;
 }
 
 /* ── PULSO (feedback visual quando um contador muda de valor) ─────────── */
@@ -321,6 +324,9 @@ input[type=range]::-moz-range-track {
 .obj-tag-btn:hover { background: rgba(79,124,255,.10); }
 .obj-tag-btn.on { background: var(--accent); color: #fff; }
 #tagsObjetivo.obj-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
+#tagsEstagio.obj-erro .obj-tag-btn   { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
+.bloco-erro input[type="range"]      { accent-color: var(--danger); }
+.bloco-erro .preco-input             { border-color: var(--danger); }
 /* Padrão reaproveita a estrutura do botão-tag do objetivo, mas em laranja
    (pedido explícito) -- hover e selecionado (fundo chapado) trocam de azul
    pra laranja, texto escuro no selecionado (mesmo padrão de contraste já
@@ -894,6 +900,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button class="obj-tag-btn" onclick="selecionarEstagioStep5_(this,'em_obras')">Em Obras</button>
       </div>
     </div>
+
+    <!-- Área Útil E2 — aparece após marcar estágio; rastreada separadamente -->
+    <div id="blocoAreaE2Wrap" style="display:none;margin-top:40px">
+      <div class="step-title">Qual a <span style="color:var(--accent)">área útil</span> ideal (m²)?</div>
+      <div class="preco-input-row">
+        <input type="text" class="preco-input" id="areaE2Digitado" inputmode="numeric"
+               oninput="atualizarAreaE2Digitado_(this.value)" onblur="validarLimitesAreaE2_()">
+        <span class="preco-prefixo prefixo-grande">m²</span>
+      </div>
+      <input type="range" id="sliderAreaE2" oninput="atualizarAreaE2_(this.value)">
+      <div class="slider-label-row">
+        <span id="lblAreaE2Min">—</span><span id="lblAreaE2Max">—</span>
+      </div>
+    </div>
   </div>
 
   <!-- STEP 1 — NOME + OBJETIVO (2 perguntas na mesma tela, pedido explícito
@@ -916,17 +936,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
-  <!-- STEP 2 — SIMULADOR: contador de opções + área + orçamento.
-       Situação (pronto_novo/em_obras) já foi selecionada no step-5.
-       Sliders visíveis imediatamente, sem gate de situação. -->
+  <!-- STEP 2 — SIMULADOR: destaque total no contador + ajuste fino de
+       orçamento e área. Estágio e Área E2 já foram selecionados no step-5. -->
   <div class="step" id="step-2">
     <div class="step-tag">Passo 2 de 4</div>
 
-    <div class="s2-phrase" style="white-space:normal;line-height:1.4;margin-bottom:10px">
-      <span class="s2-phrase-sub">Temos disponíveis apartamentos, lofts,<br>gardens, coberturas ou studios — <span style="color:var(--accent);font-weight:900;font-size:1.45em;letter-spacing:-.5px">Imóveis Novos!</span></span>
-    </div>
-
-    <!-- Contador de opções em destaque — atualiza em tempo real -->
+    <!-- CONTADOR — foco visual absoluto da tela -->
     <div class="s2-top-count">
       Encontramos
       <strong id="cntCombo" class="s2-top-count-num">—</strong>
@@ -934,26 +949,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
 
-    <!-- Área útil — slider + input -->
-    <div class="step-title" style="margin:20px 0 8px">Qual a <span style="color:var(--accent)">área útil</span> ideal (m²)?</div>
-    <div class="preco-input-row">
-      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-      <span class="preco-prefixo" id="prefixoArea">m²</span>
-    </div>
-    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
-    <div class="slider-label-row">
-      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
-    </div>
-
-    <!-- Orçamento Simulador — só input (sem slider visível), rastreado
-         separadamente como precoAlvo no gráfico DEMANDAS -->
-    <div class="step-title" style="margin:24px 0 8px" id="tituloPreco">Seu <span style="color:var(--accent)">orçamento atual</span> é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
+    <!-- Orçamento Simulador — input sem slider (rastreado como precoAlvo) -->
+    <div class="step-title" style="margin:0 0 8px" id="tituloPreco">Seu <span style="color:var(--accent)">orçamento atual</span> é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
     <div class="preco-input-row">
       <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
       <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
     </div>
-    <!-- Slider mantido oculto para compatibilidade com inicializarSliders / atualizarPreco -->
     <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)" style="display:none">
+
+    <!-- Área Útil Simulador — input sem slider (rastreado separadamente) -->
+    <div class="step-title" style="margin:20px 0 8px">Sua <span style="color:var(--accent)">área útil</span> ideal é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
+    <div class="preco-input-row">
+      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+      <span class="preco-prefixo" id="prefixoArea">m²</span>
+    </div>
+    <!-- sliderMetragem oculto — mantido para compatibilidade com atualizarMetragem/atualizarMetragemDigitado_ -->
+    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="display:none">
 
   </div>
 
@@ -1467,10 +1478,10 @@ function aplicarPresetURL_() {
     atualizarPreco(vP);
   }
   if (cfg.area) {
-    const sM = document.getElementById('sliderMetragem');
     const vM = Math.min(Math.max(Number(cfg.area), AREA_BOUNDS[0]), AREA_BOUNDS[1]);
-    sM.value = vM;
-    atualizarMetragem(vM);
+    D.areaE2 = vM; // preset define ambos E2 e Simulador
+    const sM = document.getElementById('sliderMetragem');
+    if (sM) { sM.value = vM; atualizarMetragem(vM); }
   }
 }
 
@@ -1573,6 +1584,7 @@ const D = {
   extrasMostrados: [], extraPrecoVisto: new Set(), extraFavoritos: new Set(),
   verMaisOpcoesClicado: false,
   capaPreco: 425000, // preço escolhido no slider da capa (pré-preenche step-2)
+  areaE2: null,     // área selecionada no step-5 (Área Útil E2 — rastreada separadamente)
   precoAlvo: null, metragemAlvo: null, areaRange: null,
   nome: '', whatsapp: '',
   tsInicio: Date.now(), precoInicial: null, precoFinal: null,
@@ -1658,6 +1670,7 @@ function irParaStep(n) {
     precoAlvo:  D.precoAlvo  || '',
     areaMin:    D.areaRange  ? D.areaRange[0] : '',
     areaMax:    D.areaRange  ? D.areaRange[1] : '',
+    areaE2:     D.areaE2     || '',
     objetivo:   D.objetivo   || '',
     padroes:    D.padroes    ? [...D.padroes].join(',')   : '',
     situacoes:  D.situacoes  ? [...D.situacoes].join(',') : '',
@@ -1815,9 +1828,10 @@ function atualizarBotoes() {
 function validar() {
   if (stepAtual === 5) {
     let ok = true;
-    if (!D.objetivo)           { document.getElementById('tagsObjetivo').classList.add('obj-erro');  ok = false; }
-    if (D.situacoes.size === 0){ document.getElementById('tagsEstagio')?.classList.add('obj-erro');  ok = false; }
-    if (!ok) { toast('Selecione seu objetivo e o estágio do imóvel para continuar'); return false; }
+    if (!D.objetivo)           { document.getElementById('tagsObjetivo').classList.add('obj-erro'); ok = false; }
+    if (D.situacoes.size === 0){ document.getElementById('tagsEstagio')?.classList.add('obj-erro'); ok = false; }
+    if (!D.areaE2)             { document.getElementById('blocoAreaE2Wrap')?.classList.add('bloco-erro'); ok = false; }
+    if (!ok) { toast('Selecione objetivo, estágio e informe a área ideal para continuar'); return false; }
   }
   if (stepAtual === 1) {
     const nome = document.getElementById('fNome').value.trim();
@@ -1934,12 +1948,61 @@ function selecionarObjetivo_(el, val) {
 }
 
 // Seleção de estágio no step-5 (radio: só um por vez)
+// Após selecionar, revela o slider de Área Útil E2 em sequência.
 function selecionarEstagioStep5_(el, val) {
   document.getElementById('tagsEstagio').classList.remove('obj-erro');
   document.querySelectorAll('#tagsEstagio .obj-tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.situacoes.clear();
   D.situacoes.add(val);
+  const blocoArea = document.getElementById('blocoAreaE2Wrap');
+  if (blocoArea) { blocoArea.style.display = ''; inicializarAreaE2Slider_(); }
+}
+
+// ── ÁREA ÚTIL E2 (step-5) ─────────────────────────────────────────────────
+function inicializarAreaE2Slider_() {
+  const s = document.getElementById('sliderAreaE2');
+  if (!s) return;
+  s.min = AREA_BOUNDS[0]; s.max = AREA_BOUNDS[1]; s.step = 5;
+  const defArea = D.areaE2
+    ? Math.min(Math.max(D.areaE2, AREA_BOUNDS[0]), AREA_BOUNDS[1])
+    : Math.min(Math.max(50, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  s.value = defArea;
+  const elMin = document.getElementById('lblAreaE2Min');
+  const elMax = document.getElementById('lblAreaE2Max');
+  if (elMin) elMin.textContent = AREA_BOUNDS[0] + ' m²';
+  if (elMax) elMax.textContent = AREA_BOUNDS[1] + ' m²';
+  atualizarAreaE2_(defArea);
+}
+
+function atualizarAreaE2_(val) {
+  const v = parseInt(val);
+  D.areaE2 = v;
+  const inp = document.getElementById('areaE2Digitado');
+  if (inp) inp.value = v.toLocaleString('pt-BR');
+  const sl = document.getElementById('sliderAreaE2');
+  if (sl) sl.value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+}
+
+function atualizarAreaE2Digitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  const input = document.getElementById('areaE2Digitado');
+  const v = parseInt(digitos) || 0;
+  input.value = digitos ? v.toLocaleString('pt-BR') : '';
+  if (!v) return;
+  D.areaE2 = v;
+  const sl = document.getElementById('sliderAreaE2');
+  if (sl) sl.value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+}
+
+function validarLimitesAreaE2_() {
+  const input = document.getElementById('areaE2Digitado');
+  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
+  if (v && (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1])) {
+    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
+  }
+  v = Math.min(Math.max(v || 50, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  atualizarAreaE2_(v);
 }
 
 function selecionarPadrao_(el, val) {
@@ -2570,10 +2633,16 @@ function inicializarSliders() {
 
   const sM = document.getElementById('sliderMetragem');
   sM.min = AREA_BOUNDS[0]; sM.max = AREA_BOUNDS[1]; sM.step = 5;
-  const defArea = Math.min(Math.max(50, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  // Pré-preenche com Área E2 (selecionada no step-5); fallback 50m²
+  const defArea = D.areaE2
+    ? Math.min(Math.max(D.areaE2, AREA_BOUNDS[0]), AREA_BOUNDS[1])
+    : Math.min(Math.max(50, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
   sM.value = defArea;
-  document.getElementById('lblMetragemMin').textContent = AREA_BOUNDS[0] + ' m²';
-  document.getElementById('lblMetragemMax').textContent = AREA_BOUNDS[1] + ' m²';
+  // Labels do slider de metragem podem não existir (slider oculto no step-2)
+  const elMMin = document.getElementById('lblMetragemMin');
+  const elMMax = document.getElementById('lblMetragemMax');
+  if (elMMin) elMMin.textContent = AREA_BOUNDS[0] + ' m²';
+  if (elMMax) elMMax.textContent = AREA_BOUNDS[1] + ' m²';
   atualizarMetragem(sM.value);
 
   slidersProntos_ = true;
