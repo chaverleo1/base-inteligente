@@ -2560,8 +2560,12 @@ function inicializarSliders() {
     ? Math.min(Math.max(D.capaPreco, PRECO_BOUNDS[0]), PRECO_BOUNDS[1])
     : Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
   sP.value = defPreco;
-  document.getElementById('lblPrecoMin').textContent = formatBRL_(PRECO_BOUNDS[0]);
-  document.getElementById('lblPrecoMax').textContent = formatBRL_(PRECO_BOUNDS[1]);
+  // Bounds labels para o slider de preço — podem não existir se o slider
+  // estiver oculto (ex.: step-2 mostra só input; labels removidos do DOM).
+  const elPMin = document.getElementById('lblPrecoMin');
+  const elPMax = document.getElementById('lblPrecoMax');
+  if (elPMin) elPMin.textContent = formatBRL_(PRECO_BOUNDS[0]);
+  if (elPMax) elPMax.textContent = formatBRL_(PRECO_BOUNDS[1]);
   atualizarPreco(defPreco);
 
   const sM = document.getElementById('sliderMetragem');
