@@ -3200,23 +3200,53 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
   _fdBriefings_[keyD] = _fdTextoBriefingDemanda_(rank, sinais, tab);
   _fdBriefings_[keyE] = _fdTextoBriefingEmps_(emps, rank, sinais, tab);
 
+  // lookup em _mapaRows (dados completos já calculados pelo Mapa Geral)
+  const _mapaLookup_ = {};
+  (_mapaRows || []).forEach(function(r) { if (r.nome) _mapaLookup_[r.nome] = r; });
+  const FD_NCOLS = 12;
+
   const linhasEmps = emps.length ? emps.map(function(emp) {
-    const pMin   = _fdFmtBRL_(emp._pMin);
-    const pMax   = _fdFmtBRL_(emp._pMax);
-    const aRange = (emp._aMin || emp._aMax) ? ((emp._aMin || '?') + '–' + (emp._aMax || '?') + ' m²') : '—';
-    const badges = '<div class="fd-badges">' +
+    const mr = _mapaLookup_[emp.nomeEmpreendimento];
+    const badges = '<div class="fd-badges" style="margin-top:2px">' +
       (emp._rc ? '<span class="fd-badge fd-badge-r">Região</span>' : '') +
       (emp._pc ? '<span class="fd-badge fd-badge-p">Preço</span>'  : '') +
       (emp._ac ? '<span class="fd-badge fd-badge-a">Área</span>'   : '') +
     '</div>';
+    if (mr) {
+      const areaStr = mr.areaMin > 0
+        ? (mr.areaMax > mr.areaMin
+            ? mr.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' a ' + mr.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'm²'
+            : mr.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'm²')
+        : '—';
+      const trStr = mr.comp > 0
+        ? '<span class="tv-score-badge ' + classeScoreTracao_(mr.comp) + '" title="Tração ' + mr.comp.toFixed(1) + '">T ' + mr.comp.toFixed(1) + '</span>'
+        : '—';
+      const similStr = mr.simil > 0
+        ? '<span class="simil-badge' + (similBadgeCls_(mr.simil) ? ' ' + similBadgeCls_(mr.simil) : '') + '" title="Similaridade ' + mr.simil + '%">' + mr.simil + '%</span>'
+        : '—';
+      return '<tr>' +
+        '<td><strong>' + (mr.nome || emp.nomeEmpreendimento || '—') + '</strong>' + badges + '</td>' +
+        '<td>' + (mr.bairro || '—') + '</td>' +
+        '<td>' + (mr.padrao || '—') + '</td>' +
+        '<td>' + (mr.construtora || '—') + '</td>' +
+        '<td class="mapa-num">' + areaStr + '</td>' +
+        '<td class="mapa-num">' + (mr.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(mr.m2Medio) : '—') + '</td>' +
+        '<td class="mapa-num">' + (typeof renderPrazoCelula_ === 'function' ? renderPrazoCelula_(mr) : '—') + '</td>' +
+        '<td class="mapa-num">' + (mr.pctVendido > 0 ? mr.pctVendido + '%' : '—') + '</td>' +
+        '<td class="mapa-num">' + (mr.estoque > 0 ? mr.estoque : (mr.estoque === 0 ? '0' : '—')) + '</td>' +
+        '<td>' + trStr + '</td>' +
+        '<td class="mapa-simil">' + similStr + '</td>' +
+        '<td class="mapa-num">' + (mr.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(mr.menorPreco) : '—') + '</td>' +
+      '</tr>';
+    }
+    // fallback sem dados do mapa
     return '<tr>' +
-      '<td><strong>' + (emp.nomeEmpreendimento || '—') + '</strong>' + badges + '</td>' +
-      '<td>' + (emp.bairro || '—') + '</td>' +
-      '<td style="white-space:nowrap">' + pMin + ' – ' + pMax + '</td>' +
-      '<td style="white-space:nowrap">' + aRange + '</td>' +
-      '<td>' + (emp.padrao || '—') + '</td>' +
+      '<td colspan="4"><strong>' + (emp.nomeEmpreendimento || '—') + '</strong>' + badges + '</td>' +
+      '<td class="mapa-num">' + ((emp._aMin || emp._aMax) ? (emp._aMin||'?') + '–' + (emp._aMax||'?') + 'm²' : '—') + '</td>' +
+      '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>' +
+      '<td class="mapa-num">' + _fdFmtBRL_(emp._pMin) + '–' + _fdFmtBRL_(emp._pMax) + '</td>' +
     '</tr>';
-  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:14px">Nenhum empreendimento compatível</td></tr>';
+  }).join('') : '<tr><td colspan="' + FD_NCOLS + '" style="text-align:center;color:var(--text3);padding:14px">Nenhum empreendimento compatível</td></tr>';
 
   return '<div class="fd-tabela-container" style="margin-top:14px">' +
     '<div class="fd-nivel-title">' + nivel + '</div>' +
@@ -3237,9 +3267,13 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
       '</div>' +
       '<div class="fd-col-emps">' +
         '<div class="fd-emps-title">Empreendimentos compatíveis <span style="color:var(--accent)">(' + emps.length + ')</span></div>' +
-        '<div class="fd-emps-scroll">' +
-          '<table class="fd-emps-table">' +
-            '<thead><tr><th>Empreendimento</th><th>Bairro</th><th>Preço</th><th>Área</th><th>Padrão</th></tr></thead>' +
+        '<div class="mapa-wrap" style="max-height:218px">' +
+          '<table class="mapa-tabela" style="cursor:default">' +
+            '<thead><tr>' +
+              '<th>Empreendimento</th><th>Bairro</th><th>Padrão</th><th>Construtora</th>' +
+              '<th>Faixa de áreas</th><th>R$/m²</th><th>Prazo</th>' +
+              '<th>% ESTQ</th><th>QTD ESTQ</th><th>T</th><th>S%</th><th>Menor preço</th>' +
+            '</tr></thead>' +
             '<tbody>' + linhasEmps + '</tbody>' +
           '</table>' +
         '</div>' +
