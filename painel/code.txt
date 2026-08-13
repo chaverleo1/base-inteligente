@@ -5399,6 +5399,19 @@ function obterAbaAcessosApp_() {
     aba.setFrozenRows(1);
     aba.getRange(1, 1, 1, CABECALHO_ACESSOS_APP_.length)
        .setFontWeight('bold').setBackground('#1A73E8').setFontColor('#ffffff');
+  } else {
+    // Sincroniza cabeçalho se a aba já existia com uma versão anterior
+    // (ex: sem a coluna capaBairros, adicionada depois da criação inicial).
+    try {
+      var nCols = CABECALHO_ACESSOS_APP_.length;
+      var cabAtual = aba.getRange(1, 1, 1, nCols).getValues()[0];
+      var igual = CABECALHO_ACESSOS_APP_.every(function(col, i) { return String(cabAtual[i]) === col; });
+      if (!igual) {
+        aba.getRange(1, 1, 1, nCols).setValues([CABECALHO_ACESSOS_APP_]);
+        aba.getRange(1, 1, 1, nCols).setFontWeight('bold').setBackground('#1A73E8').setFontColor('#ffffff');
+        aba.setFrozenRows(1);
+      }
+    } catch(e_) {}
   }
   return aba;
 }
