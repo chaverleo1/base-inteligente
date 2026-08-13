@@ -1750,7 +1750,7 @@ select.form-input option { background: var(--surface2); }
   </div>
 
   <!-- Sub-gráficos: Estágio | Objetivo | Área -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">
+  <div style="display:grid;grid-template-columns:160px 160px 1fr;gap:12px;margin-top:12px">
     <div class="card" style="padding:14px 12px 8px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:8px">Demanda por Estágio</div>
       <canvas id="canvasDemandasEstagio" style="width:100%;display:block"></canvas>
@@ -3069,7 +3069,7 @@ function _fdGruparPorEmp_(rows) {
 function _fdPrecoCompativel_(emp, faixa) {
   if (!faixa) return null; // sem sinal — não conta como critério
   const ini = parseInt(faixa) * 1000;       // floor do sinal (ex: 500k)
-  const fim = ini + 299999;                  // teto: +3 faixas p/ cima (stretch)
+  const fim = ini + 149999;                  // teto: +1.5 faixa p/ cima (stretch suave)
   const pMin = emp._pMin || 0;
   const pMax = emp._pMax || pMin;
   if (!pMin && !pMax) return null; // emp sem dados de preço
@@ -3192,6 +3192,31 @@ function _fdCopiar_(key, btn) {
   }
 }
 
+// ── Ordenação das tabelas FD ──────────────────────────────────────────────────
+var _fdSort_ = { col: null, dir: 1 }; // dir 1=desc (maior→menor), -1=asc
+
+var _FD_SORT_VALS_ = {
+  menorPreco: function(mr) { return mr ? (mr.menorPreco || 0) : 0; },
+  m2:         function(mr) { return mr ? (mr.m2Medio    || 0) : 0; },
+  pct:        function(mr) { return mr ? (mr.pctVendido || 0) : 0; },
+  estoque:    function(mr) { return mr ? (mr.estoque    || 0) : 0; },
+  tracao:     function(mr) { return mr ? (mr.comp       || 0) : 0; },
+  simil:      function(mr) { return mr ? (mr.simil      || 0) : 0; },
+};
+
+function _fdSortBy_(col) {
+  if (_fdSort_.col === col) { _fdSort_.dir *= -1; }
+  else { _fdSort_.col = col; _fdSort_.dir = 1; } // novo: desc por padrão
+  _fdRenderGrupos_();
+}
+
+function _fdSortIcon_(col) {
+  if (_fdSort_.col !== col) return '<span style="opacity:.25;font-size:9px"> ⇅</span>';
+  return _fdSort_.dir === 1
+    ? '<span style="color:var(--accent);font-size:9px"> ▼</span>'
+    : '<span style="color:var(--accent);font-size:9px"> ▲</span>';
+}
+
 function _fdRenderTabela_(sinais, emps, rank, tab) {
   const nivel  = rank === 1 ? 'DEMANDA PRIMÁRIA' : 'DEMANDA SECUNDÁRIA';
   const pSinal = rank === 1 ? sinais.p1 : sinais.p2;
@@ -3208,7 +3233,18 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
   (_mapaRows || []).forEach(function(r) { if (r.nome) _mapaLookup_[r.nome] = r; });
   const FD_NCOLS = 12;
 
-  const linhasEmps = emps.length ? emps.map(function(emp) {
+  // Aplica ordenação se selecionada
+  const empsOrdenados = emps.slice();
+  if (_fdSort_.col && _FD_SORT_VALS_[_fdSort_.col]) {
+    const getV = _FD_SORT_VALS_[_fdSort_.col];
+    empsOrdenados.sort(function(a, b) {
+      const ma = _mapaLookup_[a.nomeEmpreendimento];
+      const mb = _mapaLookup_[b.nomeEmpreendimento];
+      return (getV(mb) - getV(ma)) * _fdSort_.dir;
+    });
+  }
+
+  const linhasEmps = empsOrdenados.length ? empsOrdenados.map(function(emp) {
     const mr = _mapaLookup_[emp.nomeEmpreendimento];
     const badges = '<div class="fd-badges" style="margin-top:2px">' +
       (emp._rc ? '<span class="fd-badge fd-badge-r">Bairro</span>' : '') +
@@ -3274,8 +3310,14 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
           '<table class="mapa-tabela" style="cursor:default">' +
             '<thead><tr>' +
               '<th>Empreendimento</th><th>Bairro</th><th>Padrão</th><th>Construtora</th>' +
-              '<th>Faixa de áreas</th><th>R$/m²</th><th>Prazo</th>' +
-              '<th>% ESTQ</th><th>QTD ESTQ</th><th>T</th><th>S%</th><th>Menor preço</th>' +
+              '<th>Faixa de áreas</th>' +
+              _fdThSort_('R$/m²',      'm2') +
+              '<th>Prazo</th>' +
+              _fdThSort_('% ESTQ',     'pct') +
+              _fdThSort_('QTD ESTQ',   'estoque') +
+              _fdThSort_('T',          'tracao') +
+              _fdThSort_('S%',         'simil') +
+              _fdThSort_('Menor preço','menorPreco') +
             '</tr></thead>' +
             '<tbody>' + linhasEmps + '</tbody>' +
           '</table>' +
@@ -3284,6 +3326,10 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
       '</div>' +
     '</div>' +
   '</div>';
+}
+
+function _fdThSort_(label, col) {
+  return '<th onclick="_fdSortBy_(\'' + col + '\')" style="cursor:pointer;user-select:none" title="Clique para ordenar">' + label + _fdSortIcon_(col) + '</th>';
 }
 
 function _fdRenderGrupos_() {
@@ -3538,7 +3584,7 @@ function renderDemandasObjetivos_(itens) {
   _renderSubDemanda_('canvasDemandasObjetivo', 'demandasObjetivoEmpty', itens,
     'rgba(168,85,247,.85)',  '#6b21a8');
 }
-// Gráfico de barras agrupadas: duas séries por faixa de 10m².
+// Gráfico de barras HORIZONTAIS: duas séries por faixa de 10m².
 // itensSim = histogramaAreas (Área Útil Simulador — areaMin do step-2)
 // itensE2  = histogramaAreasE2 (Área Útil E2 — escolha explícita no Passo 1)
 function renderDemandasAreas_(itensSim, itensE2) {
@@ -3554,89 +3600,84 @@ function renderDemandasAreas_(itensSim, itensE2) {
   canvas.style.display = '';
   if (emptyEl) emptyEl.style.display = 'none';
 
-  // Faixas unidas e ordenadas das duas séries
   const faixaSet = new Set([...itensSim.map(h => h.faixa), ...itensE2.map(h => h.faixa)]);
   const faixas   = [...faixaSet].sort((a, b) => parseInt(a) - parseInt(b));
   const simMap   = Object.fromEntries(itensSim.map(h => [h.faixa, h.contagem || 0]));
   const e2Map    = Object.fromEntries(itensE2.map(h  => [h.faixa, h.contagem || 0]));
 
-  const isDark  = _dmTheme_() === 'dark';
-  const textClr = isDark ? '#c9d1d9' : '#374151';
-  const gridClr = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
+  const CLR_SIM = 'rgba(245,200,0,.92)';
+  const CLR_E2  = 'rgba(236,72,153,.92)';
+  const ROW_H   = 24;   // altura de cada barra
+  const GAP_SER = 3;    // gap entre as duas barras de uma faixa
+  const GAP_GRP = 10;   // gap entre faixas diferentes
+  const PAD_T   = 8;
+  const PAD_B   = 32;   // espaço p/ legenda
+  const PAD_L   = 8;
+  const PAD_R   = 8;
+
   const dpr = window.devicePixelRatio || 1;
-  const W   = canvas.parentElement.clientWidth || 300;
-  const H   = 230;
+  const W   = canvas.parentElement.clientWidth || 400;
+  const nRows = faixas.length;
+  const H   = PAD_T + nRows * (ROW_H * 2 + GAP_SER + GAP_GRP) + PAD_B;
+
   canvas.width  = W * dpr; canvas.height = H * dpr;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
 
-  const PAD_L = 30, PAD_R = 8, PAD_T = 16, PAD_B = 58;
-  const cH = H - PAD_T - PAD_B, cW = W - PAD_L - PAD_R;
-  const allVals = [...faixas.map(f => simMap[f] || 0), ...faixas.map(f => e2Map[f] || 0)];
-  const maxVal  = Math.max(1, ...allVals);
-  const toY = v => PAD_T + cH - (v / maxVal) * cH;
-  const toH = v => (v / maxVal) * cH;
-
-  // Linhas de grade
-  [0, 0.5, 1].forEach(f => {
-    const v = Math.round(maxVal * f); const y = toY(v);
-    ctx.strokeStyle = gridClr; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
-    ctx.fillStyle = textClr; ctx.font = '10px -apple-system,sans-serif';
-    ctx.textAlign = 'right'; ctx.fillText(v, PAD_L - 4, y + 3.5);
-  });
-
-  const CLR_SIM = 'rgba(245,200,0,.85)';  const CLR_SIM_V = '#a07800'; // amarelo — Simulador
-  const CLR_E2  = 'rgba(236,72,153,.85)'; const CLR_E2_V  = '#9d174d'; // rosa   — E2
-  const grpW = cW / faixas.length;
-  const gap  = Math.max(grpW * 0.10, 2);
-  const bW   = Math.max((grpW - gap * 3) / 2, 4);
+  const maxVal   = Math.max(1, ...faixas.map(f => Math.max(simMap[f] || 0, e2Map[f] || 0)));
+  const barMaxW  = W - PAD_L - PAD_R;
+  const toW      = v => (v / maxVal) * barMaxW;
+  const MIN_BAR  = 80; // largura mínima para texto caber
 
   faixas.forEach((f, i) => {
-    const cx    = PAD_L + i * grpW + grpW / 2;
-    const bxSim = cx - bW - gap / 2;
-    const bxE2  = cx + gap / 2;
-    const vSim  = simMap[f] || 0;
-    const vE2   = e2Map[f]  || 0;
+    const vSim = simMap[f] || 0;
+    const vE2  = e2Map[f]  || 0;
+    const label = f + '–' + (parseInt(f) + 10) + 'm²';
+    const yGrp  = PAD_T + i * (ROW_H * 2 + GAP_SER + GAP_GRP);
 
+    // — Barra Simulador
     if (vSim > 0) {
-      const bh = toH(vSim); const by = toY(vSim);
+      const bw = Math.max(toW(vSim), MIN_BAR);
       ctx.fillStyle = CLR_SIM;
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bxSim, by, bW, bh, [2,2,0,0]); ctx.fill(); }
-      else ctx.fillRect(bxSim, by, bW, bh);
-      ctx.fillStyle = CLR_SIM_V; ctx.font = 'bold 11px -apple-system,sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(vSim, bxSim + bW / 2, Math.max(by - 4, PAD_T + 10));
-    }
-    if (vE2 > 0) {
-      const bh = toH(vE2); const by = toY(vE2);
-      ctx.fillStyle = CLR_E2;
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bxE2, by, bW, bh, [2,2,0,0]); ctx.fill(); }
-      else ctx.fillRect(bxE2, by, bW, bh);
-      ctx.fillStyle = CLR_E2_V; ctx.font = 'bold 11px -apple-system,sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(vE2, bxE2 + bW / 2, Math.max(by - 4, PAD_T + 10));
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yGrp, bw, ROW_H, 3); ctx.fill(); }
+      else ctx.fillRect(PAD_L, yGrp, bw, ROW_H);
+      // texto preto dentro da barra
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 11px -apple-system,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label + '   · ' + vSim + ' sess.', PAD_L + 7, yGrp + ROW_H / 2);
     }
 
-    // Label eixo X
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = 5;
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px -apple-system,sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(f + '–' + (parseInt(f) + 10) + 'm²', cx, H - PAD_B + 16);
-    ctx.restore();
+    // — Barra E2
+    if (vE2 > 0) {
+      const yE2 = yGrp + ROW_H + GAP_SER;
+      const bw  = Math.max(toW(vE2), MIN_BAR);
+      ctx.fillStyle = CLR_E2;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yE2, bw, ROW_H, 3); ctx.fill(); }
+      else ctx.fillRect(PAD_L, yE2, bw, ROW_H);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 11px -apple-system,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label + '   · ' + vE2 + ' sess.', PAD_L + 7, yE2 + ROW_H / 2);
+    }
   });
 
   // Legenda
-  const LY = H - 16; const BOX = 9;
+  const isDark = _dmTheme_() === 'dark';
+  const textClr = isDark ? '#c9d1d9' : '#374151';
+  const LY  = H - 12;
+  const BOX = 9;
   const mid = W / 2;
-  ctx.fillStyle = CLR_SIM; ctx.fillRect(mid - 100, LY - BOX + 1, BOX, BOX);
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = CLR_SIM; ctx.fillRect(mid - 110, LY - BOX + 1, BOX, BOX);
   ctx.fillStyle = textClr; ctx.font = '11px -apple-system,sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('Área Útil Simulador', mid - 88, LY);
-  ctx.fillStyle = CLR_E2;  ctx.fillRect(mid + 18, LY - BOX + 1, BOX, BOX);
-  ctx.fillStyle = textClr; ctx.textAlign = 'left';
-  ctx.fillText('Área Útil E2', mid + 30, LY);
+  ctx.fillText('Simulador (step 2)', mid - 98, LY);
+  ctx.fillStyle = CLR_E2; ctx.fillRect(mid + 30, LY - BOX + 1, BOX, BOX);
+  ctx.fillStyle = textClr;
+  ctx.fillText('E2 (Etapa 2)', mid + 42, LY);
 }
 
 function renderIntOrigemTabela_(json) {
