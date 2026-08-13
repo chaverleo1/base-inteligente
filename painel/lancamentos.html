@@ -1640,6 +1640,7 @@ select.form-input option { background: var(--surface2); }
         <option value="36500">Histórico completo</option>
       </select>
       <button class="btn-extrair" style="padding:7px 12px;font-size:12px" onclick="_inteligenciaCarregada_=false; carregarInteligencia_()">↺ Atualizar</button>
+      <button class="btn-extrair" style="padding:7px 12px;font-size:12px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)" onclick="limparDadosFunil_()" title="Apagar todos os dados de teste (funil + acessos + leads)">🗑️ Zerar dados</button>
     </div>
   </div>
 
@@ -1650,6 +1651,17 @@ select.form-input option { background: var(--surface2); }
   <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Funil de conversão por etapa</div></div>
   <div class="card int-funil-card" id="intFunil">
     <div class="loading dot-anim">Carregando funil</div>
+  </div>
+
+  <div class="sec-header" style="margin-top:8px">
+    <div class="sec-title" style="font-size:14px">Orçamento mais buscado</div>
+    <div class="sec-sub">Faixa de preço escolhida na capa do App — cada sessão conta 1 vez, agrupada por faixas de R$100k.</div>
+  </div>
+  <div class="card" id="intOrcamentoWrap" style="padding:16px 14px 12px">
+    <canvas id="canvasIntPreco" style="width:100%;display:block;cursor:crosshair;max-height:220px"></canvas>
+    <div id="intPrecoEmpty" style="display:none;text-align:center;padding:28px 0;font-size:12px;color:var(--text3)">
+      Nenhum acesso registrado ainda — navegue pelo App e clique em Continuar na capa.
+    </div>
   </div>
 
   <div class="sec-header" style="margin-top:8px">
@@ -1679,59 +1691,12 @@ select.form-input option { background: var(--surface2); }
 
   <!-- Sub-abas -->
   <div class="app-subtabs">
-    <button class="app-subtab active" id="appSubBtnAcessos"     onclick="mudarSubAbaApp_('acessos')">📊 Acessos</button>
-    <button class="app-subtab"        id="appSubBtnComentarios" onclick="mudarSubAbaApp_('comentarios')">💬 Comentários</button>
+    <button class="app-subtab active" id="appSubBtnComentarios" onclick="mudarSubAbaApp_('comentarios')">💬 Comentários</button>
     <button class="app-subtab"        id="appSubBtnLink"        onclick="mudarSubAbaApp_('link')">🔗 Link</button>
   </div>
 
-  <!-- ── SUB-ABA: ACESSOS ── -->
-  <div class="app-subpanel ativo" id="appSubPanelAcessos">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-      <div></div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <select id="acessosDias" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2)" onchange="carregarAcessosCapa_()">
-          <option value="7">Últimos 7 dias</option>
-          <option value="30" selected>Últimos 30 dias</option>
-          <option value="90">Últimos 90 dias</option>
-          <option value="36500">Histórico completo</option>
-        </select>
-        <button class="btn-extrair" style="padding:7px 12px;font-size:12px" onclick="carregarAcessosCapa_()">↺ Atualizar</button>
-        <button class="btn-extrair" style="padding:7px 12px;font-size:12px;background:var(--surface2);color:var(--text2);border:1px solid var(--border)" onclick="zerarAcessosCapa_()" title="Apagar todos os acessos registrados (dados de teste)">🗑️ Zerar acessos</button>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div id="acessosKpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:18px">
-      <div class="loading dot-anim" style="grid-column:1/-1;padding:16px">Carregando acessos…</div>
-    </div>
-
-    <!-- Funil de etapas + gráficos -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" id="acessosChartsWrap">
-      <!-- Histograma de orçamentos -->
-      <div class="card" style="padding:16px 14px 12px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Orçamento mais buscado</div>
-        <canvas id="canvasAcessosPreco" style="width:100%;display:block;cursor:crosshair"></canvas>
-        <div id="acessosPrecoEmpty" style="display:none;text-align:center;padding:24px 0;font-size:12px;color:var(--text3)">Sem dados ainda</div>
-      </div>
-      <!-- Origem UTM -->
-      <div class="card" style="padding:16px 14px 12px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Origem dos acessos</div>
-        <canvas id="canvasAcessosUtm" style="width:100%;display:block;cursor:crosshair"></canvas>
-        <div id="acessosUtmEmpty" style="display:none;text-align:center;padding:24px 0;font-size:12px;color:var(--text3)">Sem dados ainda</div>
-      </div>
-    </div>
-
-    <!-- Funil por etapa -->
-    <div class="card" style="padding:16px 14px 10px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:12px">Funil — clientes por etapa</div>
-      <div id="acessosFunilWrap">
-        <div class="loading dot-anim" style="padding:12px">Carregando funil…</div>
-      </div>
-    </div>
-  </div>
-
   <!-- ── SUB-ABA: COMENTÁRIOS ── -->
-  <div class="app-subpanel" id="appSubPanelComentarios">
+  <div class="app-subpanel ativo" id="appSubPanelComentarios">
     <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
       Avaliações (1–5 ★) enviadas por clientes. Só aparecem como prova social na tela final do App depois de aprovadas aqui.
     </div>
@@ -2480,9 +2445,7 @@ function mudarAbaLancamentos(nome) {
   if (nome === 'inteligencia') carregarInteligenciaLazy_();
   if (nome === 'applancamentos') {
     carregarComentariosAppLazy_();           // lazy init (roda só 1x)
-    if (_appSubAbaAtual_ === 'acessos') iniciarAutoRefreshAcessos_(); // reinicia ao voltar
-  } else {
-    pararAutoRefreshAcessos_();             // para ao sair da aba App
+    mudarSubAbaApp_(_appSubAbaAtual_);       // ativa o sub-painel correto
   }
   // Re-renderiza o gráfico ao voltar pra aba Mapa Geral -- só se a sub-aba
   // Dados (onde o gráfico mora agora) estiver aberta, senão o canvas
@@ -2843,16 +2806,38 @@ function _intFmtMs_(ms) { return _intFmtSegundos_(Math.round((Number(ms) || 0) /
 
 function renderIntKpis_(json) {
   const k = json.kpis || {};
+  const total = k.totalSessoes || 0;
+  const mob   = k.sessoesMobile  ?? null;
+  const desk  = k.sessoesDesktop ?? null;
+  const voltou = k.voltouSessoes ?? null;
+  const mobPct  = (mob  !== null && total) ? Math.round(mob  / total * 100) : null;
+  const deskPct = (desk !== null && total) ? Math.round(desk / total * 100) : null;
+  const voltouPct = (voltou !== null && total) ? Math.round(voltou / total * 100) : null;
   document.getElementById('intKpis').innerHTML = `
     <div class="vg-stat">
       <div class="vg-stat-top"><span class="vg-stat-icon">👥</span><span class="vg-stat-label">Sessões</span></div>
-      <div class="vg-stat-value">${k.totalSessoes ?? '—'}</div>
+      <div class="vg-stat-value">${total || '—'}</div>
       <div class="vg-stat-sub">no período selecionado</div>
     </div>
     <div class="vg-stat">
       <div class="vg-stat-top"><span class="vg-stat-icon">✅</span><span class="vg-stat-label">Taxa de conclusão</span></div>
       <div class="vg-stat-value" style="color:var(--accent2)">${k.taxaConclusao ?? '—'}%</div>
       <div class="vg-stat-sub">chegaram na Etapa 10</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">📱</span><span class="vg-stat-label">Mobile</span></div>
+      <div class="vg-stat-value">${mobPct !== null ? mobPct + '%' : '—'}</div>
+      <div class="vg-stat-sub">${mob !== null ? mob + ' sessões' : 'dados v2 pendentes'}</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">🖥️</span><span class="vg-stat-label">Desktop</span></div>
+      <div class="vg-stat-value">${deskPct !== null ? deskPct + '%' : '—'}</div>
+      <div class="vg-stat-sub">${desk !== null ? desk + ' sessões' : 'dados v2 pendentes'}</div>
+    </div>
+    <div class="vg-stat">
+      <div class="vg-stat-top"><span class="vg-stat-icon">↩️</span><span class="vg-stat-label">Usou Voltar</span></div>
+      <div class="vg-stat-value">${voltouPct !== null ? voltouPct + '%' : '—'}</div>
+      <div class="vg-stat-sub">${voltou !== null ? voltou + ' sessões' : 'dados v2 pendentes'}</div>
     </div>
     <div class="vg-stat">
       <div class="vg-stat-top"><span class="vg-stat-icon">🎯</span><span class="vg-stat-label">Score médio</span></div>
@@ -2903,6 +2888,23 @@ function renderIntTempoTabela_(json) {
   </tbody></table>`;
 }
 
+function renderIntOrcamentoChart_(histograma) {
+  // histograma = [{ faixa: '300', total: N }, ...] — faixas em R$k
+  if (!histograma || !histograma.length) {
+    const empty = document.getElementById('intPrecoEmpty');
+    const canvas = document.getElementById('canvasIntPreco');
+    if (empty)  empty.style.display  = '';
+    if (canvas) canvas.style.display = 'none';
+    return;
+  }
+  const labels = histograma.map(h => {
+    const min = parseInt(h.faixa);
+    return `R$${min}k–${min + 100}k`;
+  });
+  const values = histograma.map(h => h.total);
+  renderAcessosBarChart_('canvasIntPreco', 'intPrecoEmpty', labels, values, 'rgba(59,130,246,.85)');
+}
+
 function renderIntOrigemTabela_(json) {
   const el = document.getElementById('intOrigemWrap');
   const linhas = json.origem || [];
@@ -2949,6 +2951,7 @@ async function carregarInteligencia_() {
 
     renderIntKpis_(stats);
     renderIntFunil_(stats);
+    renderIntOrcamentoChart_(stats.histogramaPreco || []);
     renderIntTempoTabela_(stats);
     renderIntOrigemTabela_(stats);
     renderIntSegmentos_(segs);
@@ -2982,21 +2985,16 @@ async function limparDadosFunil_() {
 // ── COMENTÁRIOS DO APP LANÇAMENTOS (Lançamentos > App > Comentários) ────────
 let _comentariosAppCarregado_ = false;
 // ── SUB-ABAS da aba App ──────────────────────────────────────────────────────
-let _appSubAbaAtual_ = 'acessos';
+let _appSubAbaAtual_ = 'comentarios';
 function mudarSubAbaApp_(nome) {
   _appSubAbaAtual_ = nome;
-  ['acessos','comentarios','link'].forEach(n => {
+  ['comentarios','link'].forEach(n => {
     const cap = n.charAt(0).toUpperCase() + n.slice(1);
     const panel = document.getElementById('appSubPanel' + cap);
     const btn   = document.getElementById('appSubBtn'   + cap);
     if (panel) panel.classList.toggle('ativo', n === nome);
     if (btn)   btn.classList.toggle('active', n === nome);
   });
-  if (nome === 'acessos') {
-    iniciarAutoRefreshAcessos_();
-  } else {
-    pararAutoRefreshAcessos_();
-  }
 }
 
 // ── AUTO-REFRESH dos Acessos (a cada 30s enquanto sub-aba ACESSOS estiver aberta)

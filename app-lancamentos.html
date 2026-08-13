@@ -1615,6 +1615,7 @@ const D = {
   // meio do funil, o que atrapalha conversão -- IP é silencioso e sem
   // fricção). Fica null se a chamada externa falhar/bloquear.
   geoAprox: null,
+  cliquesEtapa: {}, // { stepId: Nº de cliques nesse step — "Voltar" conta como +1 igual a "Avançar" }
 };
 
 // ── NAV ───────────────────────────────────────────────────────────────
@@ -1627,6 +1628,7 @@ const D = {
 // documento de especificação (Tela 1..9).
 const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 3: 4, 1: 5, 4: 6, 6: 7, 7: 8, 9: 9, 8: 10 };
 let _stepEntradaTs = Date.now();
+let _voltandoStep_ = false; // true quando a navegação atual veio de voltarStep()
 
 // Beacon fire-and-forget: registra a transição de etapa (Fase 2 da Central
 // de Inteligência Comportamental -- pedido explícito do usuário de
@@ -1653,10 +1655,22 @@ function irParaStep(n) {
   const etapaSaindo = ETAPA_POR_STEP_[stepAtual] || null;
   const duracaoMs = agora - _stepEntradaTs;
   D.tempoPorStep[stepAtual] = (D.tempoPorStep[stepAtual] || 0) + duracaoMs;
+  D.cliquesEtapa[n] = (D.cliquesEtapa[n] || 0) + 1;
   registrarEventoFunil_({
     etapaSaida: etapaSaindo, tempoMsEtapaSaida: duracaoMs,
     etapaChegada: ETAPA_POR_STEP_[n] || n, abandonou: false,
+    // comportamental v2 — snapshot do estado no momento da transição
+    capaPreco:  D.capaPreco  || '',
+    precoAlvo:  D.precoAlvo  || '',
+    areaMin:    D.areaRange  ? D.areaRange[0] : '',
+    areaMax:    D.areaRange  ? D.areaRange[1] : '',
+    objetivo:   D.objetivo   || '',
+    padroes:    D.padroes    ? [...D.padroes].join(',')   : '',
+    situacoes:  D.situacoes  ? [...D.situacoes].join(',') : '',
+    voltou:     _voltandoStep_,
+    numClique:  D.cliquesEtapa[n],
   });
+  _voltandoStep_ = false;
   document.getElementById('step-' + stepAtual).classList.remove('ativo');
   stepAtual = n;
   document.getElementById('step-' + stepAtual).classList.add('ativo');
@@ -1754,12 +1768,14 @@ function refazerSliders() {
 }
 
 function voltarStep() {
+  _voltandoStep_ = true;
   if (stepAtual === 5) { irParaStep(0); return; } // objetivo+padrão → capa
   if (stepAtual === 2) { irParaStep(5); return; } // sliders → objetivo+padrão
   if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
   if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
   if (stepAtual === 9) { irParaStep(7); return; } // agendamento → captura
-  if (stepAtual > 2) irParaStep(stepAtual - 1);
+  if (stepAtual > 2) { irParaStep(stepAtual - 1); return; }
+  _voltandoStep_ = false; // fallback: nenhuma navegação aconteceu
 }
 
 function atualizarBotoes() {

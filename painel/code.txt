@@ -4802,6 +4802,8 @@ var CABECALHO_INTERESSES = [
 var CABECALHO_FUNIL_EVENTOS_ = [
   'dataHora', 'sessionId', 'etapaChegada', 'etapaSaida', 'tempoMsEtapaSaida',
   'abandonou', 'canal', 'utmSource', 'dispositivo',
+  // comportamental v2 (rich por etapa) — preenchido a partir de 2026-08-13
+  'capaPreco', 'precoAlvo', 'areaMin', 'areaMax', 'objetivo', 'padroes', 'situacoes', 'voltou', 'numClique',
 ];
 
 // MIX_SEGMENTOS_PUBLICADOS — snapshot do mix de 7 papéis (ISCA/ALVO_1-3/
@@ -5818,6 +5820,16 @@ function registrarEventoFunil_(d) {
       (d.etapaSaida   !== undefined && d.etapaSaida   !== null) ? Number(d.etapaSaida)   : '',
       Number(d.tempoMsEtapaSaida) || 0,
       !!d.abandonou, String(d.canal || ''), String(d.utmSource || ''), String(d.dispositivo || ''),
+      // campos comportamentais v2 — retrocompat: 0/'' quando ausentes (eventos antigos)
+      Number(d.capaPreco)  || 0,
+      Number(d.precoAlvo)  || 0,
+      Number(d.areaMin)    || 0,
+      Number(d.areaMax)    || 0,
+      String(d.objetivo    || ''),
+      String(d.padroes     || ''),
+      String(d.situacoes   || ''),
+      !!d.voltou,
+      Number(d.numClique)  || 1,
     ]);
     return { ok: true };
   } catch (e) {
@@ -5873,6 +5885,7 @@ function listarEstatisticasFunil_(params) {
 
   var maxPorSessao = {}, utmPorSessao = {}, dispositivoPorSessao = {};
   var tempoPorEtapaSoma = {}, tempoPorEtapaCont = {};
+  var capaPrecoMap = {}, voltouSet = {}; // comportamental v2
 
   var abaFunil = obterAbaFunilEventos_();
   var lrF = abaFunil.getLastRow();
@@ -5882,8 +5895,10 @@ function listarEstatisticasFunil_(params) {
     var idxChegada = CABECALHO_FUNIL_EVENTOS_.indexOf('etapaChegada');
     var idxSaida   = CABECALHO_FUNIL_EVENTOS_.indexOf('etapaSaida');
     var idxTempo   = CABECALHO_FUNIL_EVENTOS_.indexOf('tempoMsEtapaSaida');
-    var idxUtm     = CABECALHO_FUNIL_EVENTOS_.indexOf('utmSource');
-    var idxDisp    = CABECALHO_FUNIL_EVENTOS_.indexOf('dispositivo');
+    var idxUtm      = CABECALHO_FUNIL_EVENTOS_.indexOf('utmSource');
+    var idxDisp     = CABECALHO_FUNIL_EVENTOS_.indexOf('dispositivo');
+    var idxCapaPreco = CABECALHO_FUNIL_EVENTOS_.indexOf('capaPreco');
+    var idxVoltou    = CABECALHO_FUNIL_EVENTOS_.indexOf('voltou');
     var dadosF = abaFunil.getRange(2, 1, lrF - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
 
     dadosF.forEach(function(r) {
@@ -5908,11 +5923,41 @@ function listarEstatisticasFunil_(params) {
 
       if (r[idxUtm])  utmPorSessao[sid] = String(r[idxUtm]);
       if (r[idxDisp]) dispositivoPorSessao[sid] = String(r[idxDisp]);
+
+      // comportamental v2 — capaPreco: guarda o 1º valor não-zero da sessão
+      if (idxCapaPreco >= 0) {
+        var cp = Number(r[idxCapaPreco]) || 0;
+        if (cp > 0 && !capaPrecoMap[sid]) capaPrecoMap[sid] = cp;
+      }
+      // voltou: marca a sessão se QUALQUER evento tiver voltou=true
+      if (idxVoltou >= 0) {
+        var vv = r[idxVoltou];
+        if (vv === true || vv === 'TRUE' || vv === 'true') voltouSet[sid] = true;
+      }
     });
   }
 
   var sessoes = Object.keys(maxPorSessao);
   var totalSessoes = sessoes.length;
+
+  // Histograma de orçamento da capa por faixas de R$100k (comportamental v2)
+  var faixasPreco = {};
+  Object.keys(capaPrecoMap).forEach(function(sid) {
+    var preco = capaPrecoMap[sid];
+    if (preco > 0) {
+      var faixa = (Math.floor(preco / 100000) * 100).toString();
+      faixasPreco[faixa] = (faixasPreco[faixa] || 0) + 1;
+    }
+  });
+  var histogramaPreco = Object.keys(faixasPreco).sort(function(a, b) {
+    return parseInt(a) - parseInt(b);
+  }).map(function(k) { return { faixa: k, total: faixasPreco[k] }; });
+
+  // Breakdown dispositivos e "voltou"
+  var sessoesMobile = sessoes.filter(function(sid) {
+    return /mobi|android|iphone/i.test(dispositivoPorSessao[sid] || '');
+  }).length;
+  var voltouSessoes = Object.keys(voltouSet).length;
 
   var etapasFunil = [];
   for (var _e = 1; _e <= TOTAL_ETAPAS_FUNIL_; _e++) etapasFunil.push(_e);
@@ -5988,10 +6033,14 @@ function listarEstatisticasFunil_(params) {
       taxaConclusao: totalSessoes ? Math.round(totalConcluiram / totalSessoes * 100) : 0,
       scoreMedio: scoreCont ? Math.round(scoreSoma / scoreCont) : null,
       tempoMedioFunilSegundos: tempoFunilCont ? Math.round(tempoFunilSoma / tempoFunilCont) : null,
+      sessoesMobile: sessoesMobile,
+      sessoesDesktop: totalSessoes - sessoesMobile,
+      voltouSessoes: voltouSessoes,
     },
     funil: funil,
     tempoPorEtapa: tempoPorEtapa,
     origem: origem,
+    histogramaPreco: histogramaPreco,
   };
 }
 
