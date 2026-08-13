@@ -1687,10 +1687,7 @@ select.form-input option { background: var(--surface2); }
   <!-- ── SUB-ABA: ACESSOS ── -->
   <div class="app-subpanel ativo" id="appSubPanelAcessos">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-      <div style="font-size:12px;color:var(--text3)">
-        <span class="acessos-live-dot" id="acessosLiveDot" style="display:none"></span>
-        <span id="acessosLiveLabel">Atualização automática a cada 30s</span>
-      </div>
+      <div></div>
       <div style="display:flex;gap:8px;align-items:center">
         <select id="acessosDias" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2)" onchange="carregarAcessosCapa_()">
           <option value="7">Últimos 7 dias</option>
@@ -3003,24 +3000,10 @@ function mudarSubAbaApp_(nome) {
 }
 
 // ── AUTO-REFRESH dos Acessos (a cada 30s enquanto sub-aba ACESSOS estiver aberta)
-let _acessosRefreshId_  = null;
-let _acessosRefreshSeg_ = 30;
 function iniciarAutoRefreshAcessos_() {
-  if (_acessosRefreshId_) return;            // já rodando
-  const dot   = document.getElementById('acessosLiveDot');
-  const label = document.getElementById('acessosLiveLabel');
-  if (dot)   dot.style.display   = '';
-  if (label) label.textContent   = 'Ao vivo · atualiza a cada 30s';
-  carregarAcessosCapa_();                    // carrega imediatamente
-  _acessosRefreshId_ = setInterval(carregarAcessosCapa_, _acessosRefreshSeg_ * 1000);
+  carregarAcessosCapa_();
 }
-function pararAutoRefreshAcessos_() {
-  if (_acessosRefreshId_) { clearInterval(_acessosRefreshId_); _acessosRefreshId_ = null; }
-  const dot   = document.getElementById('acessosLiveDot');
-  const label = document.getElementById('acessosLiveLabel');
-  if (dot)   dot.style.display   = 'none';
-  if (label) label.textContent   = 'Atualização automática a cada 30s';
-}
+function pararAutoRefreshAcessos_() {}
 
 async function zerarAcessosCapa_() {
   if (!confirm('Apagar TODOS os acessos registrados?\n\nUse antes de iniciar testes reais — os dados de teste serão deletados da planilha.')) return;
