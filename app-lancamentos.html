@@ -154,11 +154,32 @@ body {
 
 /* CTA area hero */
 .hero-cta-area { padding-top: 0; }
-.hero-cta-count {
-  font-size: 14px; font-weight: 600; color: var(--text2);
-  margin: 6px 0 14px; line-height: 1.4;
+/* Contador integrado na hero-phrase */
+.hp-count {
+  display: block;
+  font-size: clamp(13px, 3.5vw, 17px); font-weight: 700;
+  color: var(--text); opacity: .85; line-height: 1.4;
+  margin-top: 10px;
 }
-.hero-cta-count strong { color: var(--orange); font-size: 4em; line-height: 1; vertical-align: middle; }
+.hp-count strong {
+  display: inline-block;
+  font-size: clamp(54px, 15vw, 82px); font-weight: 900;
+  color: var(--accent); line-height: .9; letter-spacing: -2px;
+  vertical-align: middle; margin: 0 5px;
+}
+
+/* Contador de opções no topo do step-2 */
+.s2-top-count {
+  text-align: center;
+  font-size: clamp(13px, 3vw, 16px); font-weight: 700;
+  color: var(--text2); line-height: 1.5;
+  margin: 0 0 22px;
+}
+.s2-top-count-num {
+  display: block;
+  font-size: clamp(56px, 15vw, 88px); font-weight: 900;
+  color: var(--accent); letter-spacing: -3px; line-height: 1;
+}
 
 /* ── PULSO (feedback visual quando um contador muda de valor) ─────────── */
 .pulso {
@@ -824,11 +845,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="hp-word2">garden<span style="color:#fff">,</span> cobertura</span>
       <span class="hp-tipos" style="opacity:1">ou <span style="font-size:clamp(22px,6.5vw,34px);font-weight:900;color:var(--accent);letter-spacing:-1px">studio</span> —</span>
       <span class="hp-city">na Grande Goiânia!</span>
-    </div>
-
-    <!-- Contador de lançamentos — movido pra cá, logo após o hero text -->
-    <div class="hero-cta-count">
-      Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!
+      <!-- Contador integrado — número gigante dinâmico, mesma tipografia -->
+      <span class="hp-count">Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!</span>
     </div>
 
     <!-- Slider de orçamento na capa (preço capa) — captura a intenção de
@@ -854,12 +872,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   </div>
 
-  <!-- STEP 5 — OBJETIVO + PADRÃO (bifurcação, v3.0) -- captura os dois dados
-       que definem o resto do fluxo. "Padrão" usa a MESMA classificação que
-       já existe no backend (classificarPadraoPorM2Medio_, por R$/m²) --
-       nenhuma regra nova (instrução explícita do usuário). Só padrões com
-       inventário real aparecem (montarBlocoPadrao_, chamado depois que
-       carregarBaseReal() traz os dados). -->
+  <!-- STEP 5 — OBJETIVO + ESTÁGIO (Passo 1 de 4) -- duas perguntas
+       sequenciais: primeiro objetivo (moradia/investimento), depois estágio
+       (pronto_novo/em_obras) que aparece só após objetivo ser marcado. -->
   <div class="step" id="step-5">
     <div class="step-tag">Passo 1 de 4</div>
     <div class="hero-phrase" style="margin-bottom:28px">
@@ -871,14 +886,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="obj-tag-btn" onclick="selecionarObjetivo_(this,'investimento')">INVESTIMENTO</button>
     </div>
 
-    <!-- Padrão volta a ser botões-tag destacados, igual objetivo (pedido
-         explícito: retirar o gráfico de barras) -- múltipla escolha, só
-         padrões com inventário real aparecem (montarBlocoPadrao_). -->
-    <div id="blocoPadraoWrap" style="display:none;margin-top:40px">
-      <div class="step-title">Como você define o <span style="color:var(--accent)">padrão do imóvel novo</span> que busca?</div>
-      <div class="step-sub">Pode marcar mais de um</div>
-      <div class="obj-tag-group" id="tagsPadrao"><!-- populado por JS, só padrões com inventário real --></div>
-      <div id="padraoPhraseWrap" class="padrao-phrase" style="display:none"></div>
+    <!-- Estágio — aparece após marcar objetivo -->
+    <div id="blocoEstagioWrap" style="display:none;margin-top:40px">
+      <div class="step-title">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
+      <div class="obj-tag-group" id="tagsEstagio">
+        <button class="obj-tag-btn" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">Pronto para Morar</button>
+        <button class="obj-tag-btn" onclick="selecionarEstagioStep5_(this,'em_obras')">Em Obras</button>
+      </div>
     </div>
   </div>
 
@@ -902,51 +916,44 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
-  <!-- STEP 2 — PREÇO TOTAL + METRAGEM + CONTADOR, tudo na mesma tela
-       (mesma estrutura de baseimob-funil.html/"tela-config": contador de
-       opções em destaque no topo, sliders de preço total e metragem logo
-       abaixo, tudo atualizando em tempo real junto). Vem ANTES do nome
-       agora -- pega o dado técnico primeiro, personalização vem depois. -->
+  <!-- STEP 2 — SIMULADOR: contador de opções + área + orçamento.
+       Situação (pronto_novo/em_obras) já foi selecionada no step-5.
+       Sliders visíveis imediatamente, sem gate de situação. -->
   <div class="step" id="step-2">
     <div class="step-tag">Passo 2 de 4</div>
 
     <div class="s2-phrase" style="white-space:normal;line-height:1.4;margin-bottom:10px">
       <span class="s2-phrase-sub">Temos disponíveis apartamentos, lofts,<br>gardens, coberturas ou studios — <span style="color:var(--accent);font-weight:900;font-size:1.45em;letter-spacing:-.5px">Imóveis Novos!</span></span>
     </div>
-    <div class="step-title">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
 
-    <div class="s2-sit-group" id="tagsSituacao">
-      <button class="s2-sit-btn" id="btnSitProntoNovo" onclick="selecionarSituacao_(this,'pronto_novo')">Pronto para Morar</button>
-      <button class="s2-sit-btn" onclick="selecionarSituacao_(this,'em_obras')">Em Obras</button>
-      <span class="s2-cnt-inline" id="cntInlineWrap" style="display:none"><strong id="cntCombo">—</strong> opções encontradas</span>
+    <!-- Contador de opções em destaque — atualiza em tempo real -->
+    <div class="s2-top-count">
+      Encontramos
+      <strong id="cntCombo" class="s2-top-count-num">—</strong>
+      opções com o perfil que procura
     </div>
     <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
 
-    <!-- Sliders só aparecem depois que o cliente marca Pronto para Morar/Em
-         Obras -- pedido explícito: não pode ficar mostrando contagem e
-         barras com as duas opções de situação desativadas. Visibilidade
-         controlada em atualizarVisibilidadeStep2_. -->
-    <div id="blocoSlidersWrap" style="display:none">
-      <div class="step-title" style="margin:20px 0 8px" id="tituloPreco">Qual seu <span style="color:var(--accent)">orçamento</span>?</div>
-      <div class="preco-input-row">
-        <span class="preco-prefixo" id="prefixoPreco">R$</span>
-        <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
-      </div>
-      <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)">
-      <div class="slider-label-row">
-        <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
-      </div>
-
-      <div class="step-title" style="margin:20px 0 8px">Qual a <span style="color:var(--accent)">área útil</span>?</div>
-      <div class="preco-input-row">
-        <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-        <span class="preco-prefixo" id="prefixoArea">m²</span>
-      </div>
-      <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
-      <div class="slider-label-row">
-        <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
-      </div>
+    <!-- Área útil — slider + input -->
+    <div class="step-title" style="margin:20px 0 8px">Qual a <span style="color:var(--accent)">área útil</span> ideal (m²)?</div>
+    <div class="preco-input-row">
+      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+      <span class="preco-prefixo" id="prefixoArea">m²</span>
     </div>
+    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
+    <div class="slider-label-row">
+      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+    </div>
+
+    <!-- Orçamento Simulador — só input (sem slider visível), rastreado
+         separadamente como precoAlvo no gráfico DEMANDAS -->
+    <div class="step-title" style="margin:24px 0 8px" id="tituloPreco">Seu <span style="color:var(--accent)">orçamento atual</span> é: <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span></div>
+    <div class="preco-input-row">
+      <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
+      <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
+    </div>
+    <!-- Slider mantido oculto para compatibilidade com inicializarSliders / atualizarPreco -->
+    <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)" style="display:none">
 
   </div>
 
@@ -961,20 +968,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="conf-item-val conf-item-val-sit" id="confObjetivo">—</div>
       </div>
       <div class="conf-item">
-        <div class="conf-item-label">Padrão buscado</div>
+        <div class="conf-item-label">Estágio</div>
         <div class="conf-item-val conf-item-val-sit" id="confPadrao">—</div>
       </div>
       <div class="conf-item">
         <div class="conf-item-label">Seu orçamento estimado</div>
         <div class="conf-item-val" id="confOrcamento">—</div>
       </div>
-      <div class="conf-item">
+      <div class="conf-item conf-item-last">
         <div class="conf-item-label">Área útil ideal do apartamento</div>
         <div class="conf-item-val" id="confArea">—</div>
-      </div>
-      <div class="conf-item conf-item-last conf-item-full">
-        <div class="conf-item-label">Ideal pra você é</div>
-        <div class="conf-item-val conf-item-val-sit" id="confSituacao">—</div>
       </div>
       <div class="conf-obs">
         Faixa de investimento (±20%): <strong id="confPrecoFaixa">—</strong><br>
@@ -1384,7 +1387,6 @@ async function carregarBaseReal() {
   inicializarCapaSlider_();
   montarStatsAbertura_();
   montarDadosAtualizadosTexto_();
-  montarBlocoPadrao_();
   aplicarPresetURL_(); // deep-link de anúncios — aplica se houver ?preset= ou ?padroes= na URL
 }
 
@@ -1432,34 +1434,26 @@ function aplicarPresetURL_() {
 
   // ── 1. Objetivo ─────────────────────────────────────────────────────────
   D.objetivo = cfg.objetivo;
-  // Marca o botão cujo onclick contém o valor do objetivo
   document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(btn => {
     const oc = btn.getAttribute('onclick') || '';
     btn.classList.toggle('on', oc.includes("'" + cfg.objetivo + "'"));
   });
-  const blocoPadrao = document.getElementById('blocoPadraoWrap');
-  if (blocoPadrao) blocoPadrao.style.display = '';
+  const blocoEstagio = document.getElementById('blocoEstagioWrap');
+  if (blocoEstagio) blocoEstagio.style.display = '';
 
-  // ── 2. Padrões ──────────────────────────────────────────────────────────
-  // Seta D.padroes com os padrões do preset (independe de botões existirem)
-  D.padroes.clear();
-  cfg.padroes.forEach(p => D.padroes.add(p));
-  // Marca botões gerados por montarBlocoPadrao_ usando texto visível do botão
-  document.querySelectorAll('#tagsPadrao .obj-tag-btn').forEach(btn => {
-    const nome = (btn.querySelector('.padrao-btn-nome') || btn).textContent.trim();
-    btn.classList.toggle('on', cfg.padroes.includes(nome));
-  });
-  atualizarPadraoPhrase_();
-
-  // ── 3. Situações (step 2 — "Pronto para Morar" / "Em Obras") ──────────
+  // ── 2. Estágio (step-5 — "Pronto para Morar" / "Em Obras") ─────────────
   D.situacoes.clear();
   if (cfg.situacoes && cfg.situacoes.length) {
-    cfg.situacoes.forEach(val => {
-      D.situacoes.add(val);
-      const btn = document.querySelector(`#tagsSituacao [onclick*="'${val}'"]`);
-      if (btn) btn.classList.add('on');
-    });
+    // Usa o primeiro valor (radio: seleção única)
+    const val = cfg.situacoes[0];
+    D.situacoes.add(val);
+    const btn = document.querySelector(`#tagsEstagio [onclick*="'${val}'"]`);
+    if (btn) btn.classList.add('on');
   }
+
+  // ── 3. Padrões (mantido para presets legados — não exibido no funil) ────
+  D.padroes.clear();
+  if (cfg.padroes) cfg.padroes.forEach(p => D.padroes.add(p));
 
   // ── 4. Pula direto para os sliders (step 2) ────────────────────────────
   montarConfigIniciais_();
@@ -1720,14 +1714,13 @@ function montarCapturaTitulo_() {
 
 function montarConfirmacao_() {
   document.getElementById('confObjetivo').textContent = D.objetivo === 'investimento' ? 'Investimento' : 'Moradia';
-  document.getElementById('confPadrao').textContent = [...D.padroes].join(' + ') || '—';
+  document.getElementById('confPadrao').textContent = situacaoEscolhidaLabel_() || '—';
   document.getElementById('confOrcamento').textContent = formatBRL_(D.precoAlvo);
   document.getElementById('confArea').textContent = D.metragemAlvo + ' m²';
   const min = formatBRL_(Math.round(D.precoAlvo * 0.80));
   const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
-  document.getElementById('confSituacao').textContent = situacaoEscolhidaLabel_() || '—';
   const qtd = qtdOpcoesReais_();
   document.getElementById('confResultadoBadge').innerHTML =
     `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
@@ -1805,9 +1798,9 @@ function atualizarBotoes() {
   if (funilHeader) funilHeader.style.display = mostrarHeader ? '' : 'none';
 
   if (objBadge && D.objetivo) {
-    const objTxt     = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
-    const padroesTxt = [...D.padroes].join(', ');
-    objBadge.textContent = padroesTxt ? `${objTxt} · ${padroesTxt}` : objTxt;
+    const objTxt    = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
+    const estagioTxt = situacaoEscolhidaLabel_();
+    objBadge.textContent = estagioTxt ? `${objTxt} · ${estagioTxt}` : objTxt;
   }
 
   // Botão Voltar no header: visível em todas as etapas intermediárias;
@@ -1822,16 +1815,9 @@ function atualizarBotoes() {
 function validar() {
   if (stepAtual === 5) {
     let ok = true;
-    if (!D.objetivo) { document.getElementById('tagsObjetivo').classList.add('obj-erro'); ok = false; }
-    if (D.padroes.size === 0) { document.getElementById('tagsPadrao').classList.add('tag-group-erro'); ok = false; }
-    if (!ok) { toast('Selecione seu objetivo e ao menos um padrão para continuar'); return false; }
-  }
-  if (stepAtual === 2) {
-    if (D.situacoes.size === 0) {
-      document.getElementById('tagsSituacao').classList.add('sit-erro');
-      toast(`Selecione ${termoProntoParaMorar_()} ou Em Obras para continuar`);
-      return false;
-    }
+    if (!D.objetivo)           { document.getElementById('tagsObjetivo').classList.add('obj-erro');  ok = false; }
+    if (D.situacoes.size === 0){ document.getElementById('tagsEstagio')?.classList.add('obj-erro');  ok = false; }
+    if (!ok) { toast('Selecione seu objetivo e o estágio do imóvel para continuar'); return false; }
   }
   if (stepAtual === 1) {
     const nome = document.getElementById('fNome').value.trim();
@@ -1940,16 +1926,28 @@ function selecionarObjetivo_(el, val) {
   document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.objetivo = val;
-  const blocoPadrao = document.getElementById('blocoPadraoWrap');
-  if (blocoPadrao) blocoPadrao.style.display = '';
+  // Atualiza rótulo do botão "Pronto para Morar" conforme objetivo
+  const btnProntoStep5 = document.getElementById('btnEstProntoNovo');
+  if (btnProntoStep5) btnProntoStep5.textContent = termoProntoParaMorar_();
+  const blocoEstagio = document.getElementById('blocoEstagioWrap');
+  if (blocoEstagio) blocoEstagio.style.display = '';
+}
+
+// Seleção de estágio no step-5 (radio: só um por vez)
+function selecionarEstagioStep5_(el, val) {
+  document.getElementById('tagsEstagio').classList.remove('obj-erro');
+  document.querySelectorAll('#tagsEstagio .obj-tag-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  D.situacoes.clear();
+  D.situacoes.add(val);
 }
 
 function selecionarPadrao_(el, val) {
-  document.getElementById('tagsPadrao').classList.remove('tag-group-erro');
+  // Mantido para compatibilidade com presets de URL — padrão não é mais
+  // perguntado no funil principal, mas presets ainda podem setar D.padroes.
   el.classList.toggle('on');
   if (el.classList.contains('on')) D.padroes.add(val);
   else D.padroes.delete(val);
-  atualizarPadraoPhrase_();
 }
 
 // Exibe abaixo dos botões de padrão uma frase com a quantidade real de
@@ -1989,8 +1987,14 @@ function atualizarPadraoPhrase_() {
 // define os limites do slider) e reinicializa os sliders com esses novos
 // limites, em vez dos limites globais calculados em carregarBaseReal().
 function montarConfigIniciais_() {
-  const emps = TODOS_LANC.filter(c => D.padroes.has(c.padrao));
-  const base = emps.length ? emps : TODOS_LANC; // defensivo -- não deveria acontecer, padrão é obrigatório e só mostra opção com inventário
+  // Filtra bounds pelo estágio selecionado no step-5 (pronto_novo/em_obras)
+  const s = D.situacoes;
+  const emps = TODOS_LANC.filter(c =>
+    s.size === 0 ||
+    (s.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
+    (s.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras'))
+  );
+  const base = emps.length ? emps : TODOS_LANC;
   const precos   = base.map(c => c.precoAPartir).filter(v => v > 0);
   const areasMin = base.map(c => c.areaMin).filter(v => v > 0);
   const areasMax = base.map(c => c.areaMax).filter(v => v > 0);
@@ -2002,23 +2006,12 @@ function montarConfigIniciais_() {
   }
   inicializarSliders();
   montarTitulosStep2_();
-  atualizarVisibilidadeStep2_();
 }
 
-// Sliders/contador só aparecem depois que pelo menos uma situação está
-// marcada -- pedido explícito do usuário. Chamada tanto ao entrar na Tela 3
-// (montarConfigIniciais_, cobre o caso de voltar já com situação marcada)
-// quanto a cada clique em selecionarSituacao_.
+// Situação é agora selecionada no step-5 — sliders no step-2 ficam
+// sempre visíveis. Função mantida para compatibilidade (chamada por preset).
 function atualizarVisibilidadeStep2_() {
-  const mostrar = D.situacoes.size > 0;
-  const bloco = document.getElementById('blocoSlidersWrap');
-  const cnt = document.getElementById('cntInlineWrap');
-  if (bloco) bloco.style.display = mostrar ? '' : 'none';
-  if (cnt) cnt.style.display = mostrar ? '' : 'none';
-  if (!mostrar) {
-    const nota = document.getElementById('toleranciaNota');
-    if (nota) nota.style.display = 'none';
-  }
+  // no-op: sliders são exibidos diretamente no HTML do step-2
 }
 
 // Pergunta 1 muda por objetivo (Moradia/Investir); pergunta 2 (área) é igual
@@ -2027,16 +2020,15 @@ function atualizarVisibilidadeStep2_() {
 function montarTitulosStep2_() {
   const tituloPreco = document.getElementById('tituloPreco');
   if (tituloPreco) {
-    tituloPreco.innerHTML = D.objetivo === 'investimento'
+    const labelOrç = D.objetivo === 'investimento'
       ? 'Quanto está disposto a <span style="color:var(--accent)">investir</span>?'
-      : 'Qual seu <span style="color:var(--accent)">orçamento</span>?';
+      : 'Seu <span style="color:var(--accent)">orçamento atual</span> é:';
+    tituloPreco.innerHTML = labelOrç + ' <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span>';
   }
   const prefixoPreco = document.getElementById('prefixoPreco');
   const prefixoArea = document.getElementById('prefixoArea');
   if (prefixoPreco) prefixoPreco.classList.toggle('prefixo-grande', D.objetivo !== 'investimento');
   if (prefixoArea) prefixoArea.classList.toggle('prefixo-grande', D.objetivo === 'investimento');
-  const btnPronto = document.getElementById('btnSitProntoNovo');
-  if (btnPronto) btnPronto.textContent = termoProntoParaMorar_();
 }
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
