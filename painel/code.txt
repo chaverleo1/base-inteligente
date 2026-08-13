@@ -4804,6 +4804,8 @@ var CABECALHO_FUNIL_EVENTOS_ = [
   'abandonou', 'canal', 'utmSource', 'dispositivo',
   // comportamental v2 (rich por etapa) — preenchido a partir de 2026-08-13
   'capaPreco', 'precoAlvo', 'areaMin', 'areaMax', 'objetivo', 'padroes', 'situacoes', 'voltou', 'numClique',
+  // v2.1 — utm_medium como "região" (nome da região alvo da campanha)
+  'utmMedium',
 ];
 
 // MIX_SEGMENTOS_PUBLICADOS — snapshot do mix de 7 papéis (ISCA/ALVO_1-3/
@@ -5830,6 +5832,7 @@ function registrarEventoFunil_(d) {
       String(d.situacoes   || ''),
       !!d.voltou,
       Number(d.numClique)  || 1,
+      String(d.utmMedium   || ''),
     ]);
     return { ok: true };
   } catch (e) {
@@ -5886,6 +5889,7 @@ function listarEstatisticasFunil_(params) {
   var maxPorSessao = {}, utmPorSessao = {}, dispositivoPorSessao = {};
   var tempoPorEtapaSoma = {}, tempoPorEtapaCont = {};
   var capaPrecoMap = {}, voltouSet = {}; // comportamental v2
+  var precoAlvoMap = {}, situacoesMap = {}, objetivoMap = {}, areaMap = {}, utmMediumMap = {};
 
   var abaFunil = obterAbaFunilEventos_();
   var lrF = abaFunil.getLastRow();
@@ -5897,8 +5901,13 @@ function listarEstatisticasFunil_(params) {
     var idxTempo   = CABECALHO_FUNIL_EVENTOS_.indexOf('tempoMsEtapaSaida');
     var idxUtm      = CABECALHO_FUNIL_EVENTOS_.indexOf('utmSource');
     var idxDisp     = CABECALHO_FUNIL_EVENTOS_.indexOf('dispositivo');
-    var idxCapaPreco = CABECALHO_FUNIL_EVENTOS_.indexOf('capaPreco');
-    var idxVoltou    = CABECALHO_FUNIL_EVENTOS_.indexOf('voltou');
+    var idxCapaPreco  = CABECALHO_FUNIL_EVENTOS_.indexOf('capaPreco');
+    var idxVoltou     = CABECALHO_FUNIL_EVENTOS_.indexOf('voltou');
+    var idxPrecoAlvo  = CABECALHO_FUNIL_EVENTOS_.indexOf('precoAlvo');
+    var idxSituacoes  = CABECALHO_FUNIL_EVENTOS_.indexOf('situacoes');
+    var idxObjetivo   = CABECALHO_FUNIL_EVENTOS_.indexOf('objetivo');
+    var idxAreaMin    = CABECALHO_FUNIL_EVENTOS_.indexOf('areaMin');
+    var idxUtmMedium  = CABECALHO_FUNIL_EVENTOS_.indexOf('utmMedium');
     var dadosF = abaFunil.getRange(2, 1, lrF - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
 
     dadosF.forEach(function(r) {
@@ -5934,6 +5943,31 @@ function listarEstatisticasFunil_(params) {
         var vv = r[idxVoltou];
         if (vv === true || vv === 'TRUE' || vv === 'true') voltouSet[sid] = true;
       }
+      // precoAlvo — guarda o ÚLTIMO valor não-zero (mais refinado = mais próximo do fim do funil)
+      if (idxPrecoAlvo >= 0) {
+        var pa = Number(r[idxPrecoAlvo]) || 0;
+        if (pa > 0) precoAlvoMap[sid] = pa;
+      }
+      // situacoes — última string não-vazia
+      if (idxSituacoes >= 0) {
+        var sit = String(r[idxSituacoes] || '');
+        if (sit) situacoesMap[sid] = sit;
+      }
+      // objetivo — último valor não-vazio
+      if (idxObjetivo >= 0) {
+        var objV = String(r[idxObjetivo] || '');
+        if (objV) objetivoMap[sid] = objV;
+      }
+      // areaMin — último valor não-zero
+      if (idxAreaMin >= 0) {
+        var am = Number(r[idxAreaMin]) || 0;
+        if (am > 0) areaMap[sid] = am;
+      }
+      // utmMedium (região) — primeiro valor não-vazio da sessão
+      if (idxUtmMedium >= 0) {
+        var um = String(r[idxUtmMedium] || '');
+        if (um && !utmMediumMap[sid]) utmMediumMap[sid] = um;
+      }
     });
   }
 
@@ -5958,6 +5992,66 @@ function listarEstatisticasFunil_(params) {
     return /mobi|android|iphone/i.test(dispositivoPorSessao[sid] || '');
   }).length;
   var voltouSessoes = Object.keys(voltouSet).length;
+
+  // Histograma Orçamento Simulador (precoAlvo) por faixas R$100k
+  var faixasSimulador = {};
+  Object.keys(precoAlvoMap).forEach(function(sid) {
+    var preco = precoAlvoMap[sid];
+    if (preco > 0) {
+      var fxs = (Math.floor(preco / 100000) * 100).toString();
+      faixasSimulador[fxs] = (faixasSimulador[fxs] || 0) + 1;
+    }
+  });
+  var histogramaSimulador = Object.keys(faixasSimulador).sort(function(a,b) {
+    return parseInt(a)-parseInt(b);
+  }).map(function(k) { return { faixa: k, total: faixasSimulador[k] }; });
+
+  // Histograma Regiões (utmMedium) — top 6 por sessão
+  var contRegioes = {};
+  Object.keys(utmMediumMap).forEach(function(sid) {
+    var reg = utmMediumMap[sid] || '';
+    if (reg) contRegioes[reg] = (contRegioes[reg] || 0) + 1;
+  });
+  var histogramaRegioes = Object.keys(contRegioes).sort(function(a,b) {
+    return contRegioes[b] - contRegioes[a];
+  }).slice(0, 6).map(function(k) { return { regiao: k, total: contRegioes[k] }; });
+
+  // Demanda por Estágio (situacoes)
+  var contEstagios = { pronto: 0, obras: 0 };
+  Object.keys(situacoesMap).forEach(function(sid) {
+    var s = situacoesMap[sid].toLowerCase();
+    if (/pront/.test(s)) contEstagios.pronto++;
+    if (/obr|plant/.test(s)) contEstagios.obras++;
+  });
+  var histogramaEstagios = [
+    { label: 'Pronto para Morar', total: contEstagios.pronto },
+    { label: 'Em Obras',          total: contEstagios.obras  },
+  ];
+
+  // Demanda por Objetivo
+  var contObjetivos = { moradia: 0, investimento: 0 };
+  Object.keys(objetivoMap).forEach(function(sid) {
+    var obj = objetivoMap[sid];
+    if (obj === 'moradia') contObjetivos.moradia++;
+    else if (obj === 'investimento') contObjetivos.investimento++;
+  });
+  var histogramaObjetivos = [
+    { label: 'Moradia',     total: contObjetivos.moradia     },
+    { label: 'Investimento',total: contObjetivos.investimento },
+  ];
+
+  // Demanda por Área (areaMin, faixas de 10m²)
+  var contAreas = {};
+  Object.keys(areaMap).forEach(function(sid) {
+    var am = areaMap[sid];
+    if (am > 0) {
+      var fxa = (Math.floor(am / 10) * 10).toString();
+      contAreas[fxa] = (contAreas[fxa] || 0) + 1;
+    }
+  });
+  var histogramaAreas = Object.keys(contAreas).sort(function(a,b) {
+    return parseInt(a)-parseInt(b);
+  }).map(function(k) { return { faixa: k, total: contAreas[k] }; });
 
   var etapasFunil = [];
   for (var _e = 1; _e <= TOTAL_ETAPAS_FUNIL_; _e++) etapasFunil.push(_e);
@@ -6040,7 +6134,12 @@ function listarEstatisticasFunil_(params) {
     funil: funil,
     tempoPorEtapa: tempoPorEtapa,
     origem: origem,
-    histogramaPreco: histogramaPreco,
+    histogramaPreco:     histogramaPreco,
+    histogramaSimulador: histogramaSimulador,
+    histogramaRegioes:   histogramaRegioes,
+    histogramaEstagios:  histogramaEstagios,
+    histogramaObjetivos: histogramaObjetivos,
+    histogramaAreas:     histogramaAreas,
   };
 }
 
