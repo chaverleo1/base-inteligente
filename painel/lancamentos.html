@@ -1204,6 +1204,7 @@ select.form-input option { background: var(--surface2); }
 .fd-badge-p { background:rgba(251,146,60,.15); color:#f97316; }
 .fd-badge-a { background:rgba(34,197,94,.15); color:#16a34a; }
 .fd-emps-title { font-size:13px; font-weight:700; color:#fff; letter-spacing:.2px; margin-bottom:8px; }
+.fd-nivel-title { font-size:13px; font-weight:800; color:#fff; letter-spacing:.8px; text-transform:uppercase; margin-bottom:10px; }
 
 /* ── ABAS ESCURAS (Extrair Modelo 1/2, Modelos e Padrões Vendedores) --
    pedido explícito do usuário: distinguir visualmente as abas de
@@ -3065,12 +3066,14 @@ function _fdGruparPorEmp_(rows) {
 
 function _fdPrecoCompativel_(emp, faixa) {
   if (!faixa) return null; // sem sinal — não conta como critério
-  const ini = parseInt(faixa) * 1000;
-  const fim = ini + 199999; // tolerância de 1 faixa acima (200k total)
+  const ini = parseInt(faixa) * 1000;       // floor do sinal (ex: 500k)
+  const fim = ini + 299999;                  // teto: +3 faixas p/ cima (stretch)
   const pMin = emp._pMin || 0;
   const pMax = emp._pMax || pMin;
   if (!pMin && !pMax) return null; // emp sem dados de preço
-  return pMin <= fim && pMax >= Math.max(0, ini - 100000);
+  // pMax deve atingir ao menos o floor do sinal — sem tolerância para baixo
+  // pMin deve ser acessível (dentro do teto)
+  return pMin <= fim && pMax >= ini;
 }
 
 function _fdAreaCompativel_(emp, faixa) {
@@ -3214,7 +3217,7 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
   }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:14px">Nenhum empreendimento compatível</td></tr>';
 
   return '<div class="fd-tabela-container" style="margin-top:14px">' +
-    '<div class="fd-nivel-label">' + nivel + '</div>' +
+    '<div class="fd-nivel-title">' + nivel + '</div>' +
     '<div class="fd-tabela-wrap">' +
       '<div class="fd-col-sinais">' +
         '<div class="fd-sinais-label">Sinais de demanda</div>' +
