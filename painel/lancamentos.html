@@ -1187,7 +1187,7 @@ select.form-input option { background: var(--surface2); }
 }
 .fd-btn-briefing:hover { opacity:.85; }
 .fd-btn-briefing.fd-btn-copiado { background:#16a34a; }
-.fd-emps-scroll { overflow-x:auto; flex:1; min-height:60px; }
+.fd-emps-scroll { overflow-x:auto; overflow-y:auto; flex:1; min-height:60px; max-height:218px; }
 .fd-emps-table { width:100%; border-collapse:collapse; font-size:11px; min-width:380px; }
 .fd-emps-table th {
   padding:4px 8px; text-align:left; font-size:9px; font-weight:700;
@@ -1205,6 +1205,7 @@ select.form-input option { background: var(--surface2); }
 .fd-badge-a { background:rgba(34,197,94,.15); color:#16a34a; }
 .fd-emps-title { font-size:13px; font-weight:700; color:#fff; letter-spacing:.2px; margin-bottom:8px; }
 .fd-nivel-title { font-size:13px; font-weight:800; color:#fff; letter-spacing:.8px; text-transform:uppercase; margin-bottom:10px; }
+.fd-estagio-badge { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--accent); background:rgba(79,124,255,.13); border:1px solid rgba(79,124,255,.3); border-radius:4px; padding:4px 10px; }
 
 /* ── ABAS ESCURAS (Extrair Modelo 1/2, Modelos e Padrões Vendedores) --
    pedido explícito do usuário: distinguir visualmente as abas de
@@ -3195,6 +3196,7 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
   const aSinal = rank === 1 ? sinais.a1 : sinais.a2;
   const keyD = 'd_' + tab + '_' + rank;
   const keyE = 'e_' + tab + '_' + rank;
+  const grupoLabel = tab === 0 ? 'PRONTOS PARA MORAR' : 'EM OBRAS';
   _fdBriefings_[keyD] = _fdTextoBriefingDemanda_(rank, sinais, tab);
   _fdBriefings_[keyE] = _fdTextoBriefingEmps_(emps, rank, sinais, tab);
 
@@ -3227,6 +3229,10 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
         '<div class="fd-sinal-row" style="margin-bottom:8px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (pSinal ? pSinal.contagem : '—') + '</span></div>' +
         '<div class="fd-sinal-row"><span class="fd-sinal-key">Área útil</span><span class="fd-sinal-val">' + (aSinal ? aSinal.faixa + ' m²' : '—') + '</span></div>' +
         '<div class="fd-sinal-row" style="margin-bottom:12px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (aSinal ? aSinal.contagem : '—') + '</span></div>' +
+        '<div style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px">' +
+          '<div class="fd-sinais-label" style="margin-bottom:5px">Estágio</div>' +
+          '<span class="fd-estagio-badge">' + grupoLabel + '</span>' +
+        '</div>' +
         '<button class="fd-btn-briefing" onclick="_fdCopiar_(\'' + keyD + '\', this)">📋 Gerar Briefing</button>' +
       '</div>' +
       '<div class="fd-col-emps">' +
