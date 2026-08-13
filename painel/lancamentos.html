@@ -3070,24 +3070,29 @@ async function carregarAcessosCapa_() {
   const kpisEl  = document.getElementById('acessosKpis');
   const funilEl = document.getElementById('acessosFunilWrap');
   if (!kpisEl) return;
+
+  // Mostra loading imediatamente pra dar feedback visual
+  kpisEl.innerHTML  = '<div class="loading dot-anim" style="grid-column:1/-1;padding:12px">Atualizando</div>';
+  if (funilEl) funilEl.innerHTML = '<div class="loading dot-anim" style="padding:10px">Atualizando</div>';
+
   const dias  = document.getElementById('acessosDias')?.value || 30;
   const token = encodeURIComponent(tokenSessao());
 
-  // Busca os dois endpoints em paralelo e trata erros de forma independente
+  // Busca os dois endpoints em paralelo — erros tratados de forma independente
   const [resAcessos, resFunil] = await Promise.allSettled([
     fetch(WEBHOOK_URL + '?acao=listar_acessos_capa&dias='        + dias + '&token=' + token).then(r => r.json()),
     fetch(WEBHOOK_URL + '?acao=listar_estatisticas_funil&dias='  + dias + '&token=' + token).then(r => r.json()),
   ]);
 
-  // ── Acessos (KPIs + gráficos) ──
-  if (resAcessos.status === 'fulfilled' && resAcessos.value.ok) {
+  // ── Acessos: KPIs + gráficos ──
+  if (resAcessos.status === 'fulfilled' && resAcessos.value?.ok) {
     const d = resAcessos.value;
     renderAcessosKpis_(d);
     renderAcessosPrecoChart_(d.histograma || []);
     renderAcessosUtmChart_(d.utms || []);
   } else {
-    const msg = resAcessos.reason?.message || resAcessos.value?.erro || 'Erro';
-    kpisEl.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:12px;font-size:13px">Acessos: ${msg}</div>`;
+    const msg = resAcessos.reason?.message || resAcessos.value?.erro || 'Sem dados';
+    kpisEl.innerHTML = `<div style="grid-column:1/-1;color:var(--text3);padding:12px;font-size:13px">${msg}</div>`;
   }
 
   // ── Funil por etapa — sempre atualiza, independente do bloco acima ──
