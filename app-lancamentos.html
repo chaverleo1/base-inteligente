@@ -943,7 +943,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <input type="text" class="preco-input" id="capaBairroInput"
                placeholder="Digite o bairro…" autocomplete="off"
                oninput="capaBairroFiltrar_(this.value)"
-               onblur="setTimeout(capaBairroFecharDropdown_,180)">
+               onfocus="capaBairroFiltrar_(this.value)"
+               onblur="setTimeout(capaBairroFecharDropdown_,300)">
         <div class="capa-bairro-dropdown" id="capaBairroDropdown"></div>
       </div>
       <div class="capa-bairro-erro" id="capaBairroErro">Selecione ao menos 1 bairro para continuar.</div>
@@ -2823,11 +2824,11 @@ function capaBairroFiltrar_(q) {
   if (!lista.length && !txt) { dd.style.display = 'none'; return; }
   let html = lista.slice(0, 8).map(function(b) {
     const esc = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<div class="capa-dd-item" onclick="capaBairroSelecionarItem_(\'' + esc + '\')">' + b + '</div>';
+    return '<div class="capa-dd-item" onpointerdown="event.preventDefault()" onclick="capaBairroSelecionarItem_(\'' + esc + '\')">' + b + '</div>';
   }).join('');
   if (txt && !lista.find(function(b) { return b.toLowerCase() === txt; })) {
     const qEsc = q.trim().replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    html += '<div class="capa-dd-item capa-dd-livre" onclick="capaBairroSelecionarItem_(\'' + qEsc + '\')">"' + q.trim() + '" — adicionar mesmo assim</div>';
+    html += '<div class="capa-dd-item capa-dd-livre" onpointerdown="event.preventDefault()" onclick="capaBairroSelecionarItem_(\'' + qEsc + '\')">"' + q.trim() + '" — adicionar mesmo assim</div>';
   }
   dd.innerHTML = html;
   dd.style.display = html ? '' : 'none';
@@ -2870,6 +2871,11 @@ function capaBairroLimparErro_() {
 }
 
 function capaBairroValidar_() {
+  // Aceita texto digitado livremente sem precisar clicar no dropdown
+  const inp = document.getElementById('capaBairroInput');
+  const digitado = inp ? inp.value.trim() : '';
+  if (digitado) capaBairroSelecionarItem_(digitado);
+
   if (D.capaBairros.length > 0) return true;
   const el = document.getElementById('capaBairroErro');
   if (el) el.style.display = '';
