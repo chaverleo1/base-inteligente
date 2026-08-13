@@ -3142,10 +3142,105 @@ function renderDemandasObjetivos_(itens) {
   _renderSubDemanda_('canvasDemandasObjetivo', 'demandasObjetivoEmpty', itens,
     'rgba(168,85,247,.85)',  '#6b21a8');
 }
-function renderDemandasAreas_(itens) {
-  _renderSubDemanda_('canvasDemandasArea', 'demandasAreaEmpty',
-    itens.map(it => ({ ...it, label: it.faixa + '–' + (parseInt(it.faixa)+10) + 'm²' })),
-    'rgba(236,72,153,.85)', '#9d174d');
+// Gráfico de barras agrupadas: duas séries por faixa de 10m².
+// itensSim = histogramaAreas (Área Útil Simulador — areaMin do step-2)
+// itensE2  = histogramaAreasE2 (Área Útil E2 — escolha explícita no Passo 1)
+function renderDemandasAreas_(itensSim, itensE2) {
+  itensSim = itensSim || []; itensE2 = itensE2 || [];
+  const canvas  = document.getElementById('canvasDemandasArea');
+  const emptyEl = document.getElementById('demandasAreaEmpty');
+  if (!canvas) return;
+  if (!itensSim.length && !itensE2.length) {
+    canvas.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+  canvas.style.display = '';
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  // Faixas unidas e ordenadas das duas séries
+  const faixaSet = new Set([...itensSim.map(h => h.faixa), ...itensE2.map(h => h.faixa)]);
+  const faixas   = [...faixaSet].sort((a, b) => parseInt(a) - parseInt(b));
+  const simMap   = Object.fromEntries(itensSim.map(h => [h.faixa, h.total]));
+  const e2Map    = Object.fromEntries(itensE2.map(h  => [h.faixa, h.total]));
+
+  const isDark  = _dmTheme_() === 'dark';
+  const textClr = isDark ? '#c9d1d9' : '#374151';
+  const gridClr = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.07)';
+  const dpr = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement.clientWidth || 300;
+  const H   = 230;
+  canvas.width  = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
+
+  const PAD_L = 30, PAD_R = 8, PAD_T = 16, PAD_B = 58;
+  const cH = H - PAD_T - PAD_B, cW = W - PAD_L - PAD_R;
+  const allVals = [...faixas.map(f => simMap[f] || 0), ...faixas.map(f => e2Map[f] || 0)];
+  const maxVal  = Math.max(1, ...allVals);
+  const toY = v => PAD_T + cH - (v / maxVal) * cH;
+  const toH = v => (v / maxVal) * cH;
+
+  // Linhas de grade
+  [0, 0.5, 1].forEach(f => {
+    const v = Math.round(maxVal * f); const y = toY(v);
+    ctx.strokeStyle = gridClr; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    ctx.fillStyle = textClr; ctx.font = '10px -apple-system,sans-serif';
+    ctx.textAlign = 'right'; ctx.fillText(v, PAD_L - 4, y + 3.5);
+  });
+
+  const CLR_SIM = 'rgba(236,72,153,.85)'; const CLR_SIM_V = '#ec4899';
+  const CLR_E2  = 'rgba(255,149,0,.85)';  const CLR_E2_V  = '#e07800';
+  const grpW = cW / faixas.length;
+  const gap  = Math.max(grpW * 0.10, 2);
+  const bW   = Math.max((grpW - gap * 3) / 2, 4);
+
+  faixas.forEach((f, i) => {
+    const cx    = PAD_L + i * grpW + grpW / 2;
+    const bxSim = cx - bW - gap / 2;
+    const bxE2  = cx + gap / 2;
+    const vSim  = simMap[f] || 0;
+    const vE2   = e2Map[f]  || 0;
+
+    if (vSim > 0) {
+      const bh = toH(vSim); const by = toY(vSim);
+      ctx.fillStyle = CLR_SIM;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bxSim, by, bW, bh, [2,2,0,0]); ctx.fill(); }
+      else ctx.fillRect(bxSim, by, bW, bh);
+      ctx.fillStyle = CLR_SIM_V; ctx.font = 'bold 11px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(vSim, bxSim + bW / 2, Math.max(by - 4, PAD_T + 10));
+    }
+    if (vE2 > 0) {
+      const bh = toH(vE2); const by = toY(vE2);
+      ctx.fillStyle = CLR_E2;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bxE2, by, bW, bh, [2,2,0,0]); ctx.fill(); }
+      else ctx.fillRect(bxE2, by, bW, bh);
+      ctx.fillStyle = CLR_E2_V; ctx.font = 'bold 11px -apple-system,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(vE2, bxE2 + bW / 2, Math.max(by - 4, PAD_T + 10));
+    }
+
+    // Label eixo X
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.75)'; ctx.shadowBlur = 5;
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(f + '–' + (parseInt(f) + 10) + 'm²', cx, H - PAD_B + 16);
+    ctx.restore();
+  });
+
+  // Legenda
+  const LY = H - 16; const BOX = 9;
+  const mid = W / 2;
+  ctx.fillStyle = CLR_SIM; ctx.fillRect(mid - 100, LY - BOX + 1, BOX, BOX);
+  ctx.fillStyle = textClr; ctx.font = '11px -apple-system,sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('Área Útil Simulador', mid - 88, LY);
+  ctx.fillStyle = CLR_E2;  ctx.fillRect(mid + 18, LY - BOX + 1, BOX, BOX);
+  ctx.fillStyle = textClr; ctx.textAlign = 'left';
+  ctx.fillText('Área Útil E2', mid + 30, LY);
 }
 
 function renderIntOrigemTabela_(json) {
@@ -3197,7 +3292,7 @@ async function carregarInteligencia_() {
     renderDemandas_(stats);
     renderDemandasEstagios_(stats.histogramaEstagios  || []);
     renderDemandasObjetivos_(stats.histogramaObjetivos || []);
-    renderDemandasAreas_(stats.histogramaAreas         || []);
+    renderDemandasAreas_(stats.histogramaAreas || [], stats.histogramaAreasE2 || []);
     renderIntTempoTabela_(stats);
     renderIntOrigemTabela_(stats);
     renderIntSegmentos_(segs);
