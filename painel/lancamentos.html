@@ -72,6 +72,28 @@ a { text-decoration: none; color: inherit; }
 .mapa-subtab.active { background: var(--accent); color: #fff; }
 .mapa-subtab:hover:not(.active) { color: var(--text); }
 
+/* ── SUB-ABAS da aba App (ACESSOS / COMENTÁRIOS / LINK) ── */
+.app-subtabs { display: flex; gap: 0; border-bottom: 1.5px solid var(--border); margin-bottom: 20px; }
+.app-subtab  { padding: 9px 18px; font-size: 12px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
+  cursor: pointer; border: none; background: none; color: var(--text3); border-bottom: 2.5px solid transparent;
+  margin-bottom: -1.5px; transition: color .15s, border-color .15s; font-family: 'Inter', sans-serif; white-space: nowrap; }
+.app-subtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.app-subtab:hover:not(.active) { color: var(--text); }
+.app-subpanel { display: none; }
+.app-subpanel.ativo { display: block; }
+
+/* ── Tabela funil de etapas (dentro de ACESSOS) ── */
+.funil-etapas-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.funil-etapas-table th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: var(--text3); padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.funil-etapas-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+.funil-etapas-table tr:last-child td { border-bottom: none; }
+.funil-barra-wrap { height: 6px; background: var(--surface2); border-radius: 3px; min-width: 60px; overflow: hidden; }
+.funil-barra-fill  { height: 100%; border-radius: 3px; background: var(--accent); transition: width .4s; }
+.acessos-live-dot  { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green, #00d4aa);
+  animation: pulseDot 1.5s ease-in-out infinite; margin-right: 5px; vertical-align: middle; }
+@keyframes pulseDot { 0%,100%{ opacity:1; transform:scale(1) } 50%{ opacity:.4; transform:scale(.75) } }
+
 /* ── Lista por Faixas — 1 bloco por Padrão, sub-grupos lado a lado em
    cards; o valor médio de referência de cada sub-grupo fica destacado em
    amarelo (pedido explícito do usuário), é a leitura mais importante do
@@ -1651,81 +1673,98 @@ select.form-input option { background: var(--surface2); }
 
   <!-- APP LANÇAMENTOS -->
   <div id="tabPainelAppLancamentos" class="tab-panel" style="display:none">
-  <div class="sec-header">
+  <div class="sec-header" style="margin-bottom:4px">
     <div class="sec-title">App Lançamentos</div>
-    <div class="sec-sub">O funil que o cliente usa pra configurar orçamento/área e receber um mix de opções — é a origem de todos os leads/dados que alimentam a aba "Inteligência".</div>
-  </div>
-  <div class="card" style="max-width:640px">
-    <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px">
-      Simulador público voltado pro cliente final: ele configura orçamento e metragem, escolhe entre
-      "Pronto para morar" ou "Em Obras", e recebe um mix de até 7 empreendimentos compatíveis,
-      ancorado no melhor match real (Score de Tração/Similaridade). Cada interação — card aberto,
-      favorito, tempo por etapa, origem de acesso — é capturada e alimenta a Central de Inteligência
-      Comportamental.
-    </p>
-    <a href="../app-lancamentos.html" target="_blank" rel="noopener" class="btn-extrair" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none">
-      🚀 Abrir App Lançamentos
-    </a>
   </div>
 
-  <!-- COMENTÁRIOS -- prova social do App Lançamentos: pré-atendimento vem
-       direto da Tela final do funil, pós-atendimento vem do link abaixo,
-       enviado manualmente pelo corretor depois do contato. Nenhum dos dois
-       aparece pro público sem passar por aqui primeiro. -->
-  <div class="sec-header" style="margin-top:28px">
-    <div class="sec-title" style="font-size:16px">Comentários</div>
-    <div class="sec-sub">Avaliações (1-5 estrelas + comentário) enviadas por clientes. Só aparecem como prova social na Tela final do App Lançamentos depois de aprovadas aqui.</div>
+  <!-- Sub-abas -->
+  <div class="app-subtabs">
+    <button class="app-subtab active" id="appSubBtnAcessos"     onclick="mudarSubAbaApp_('acessos')">📊 Acessos</button>
+    <button class="app-subtab"        id="appSubBtnComentarios" onclick="mudarSubAbaApp_('comentarios')">💬 Comentários</button>
+    <button class="app-subtab"        id="appSubBtnLink"        onclick="mudarSubAbaApp_('link')">🔗 Link</button>
   </div>
 
-  <div class="card" style="max-width:640px;margin-bottom:16px">
-    <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px">
-      Link de avaliação pós-atendimento — envie pro cliente pelo WhatsApp depois do contato:
-    </p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <code id="linkAvaliacaoPos" style="font-size:12px;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--border);word-break:break-all">carregando…</code>
-      <button class="btn-extrair" style="padding:8px 14px;font-size:12px" onclick="copiarLinkAvaliacaoPos_()">Copiar link</button>
+  <!-- ── SUB-ABA: ACESSOS ── -->
+  <div class="app-subpanel ativo" id="appSubPanelAcessos">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <div style="font-size:12px;color:var(--text3)">
+        <span class="acessos-live-dot" id="acessosLiveDot" style="display:none"></span>
+        <span id="acessosLiveLabel">Atualização automática a cada 30s</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="acessosDias" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2)" onchange="carregarAcessosCapa_()">
+          <option value="7">Últimos 7 dias</option>
+          <option value="30" selected>Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option>
+          <option value="36500">Histórico completo</option>
+        </select>
+        <button class="btn-extrair" style="padding:7px 12px;font-size:12px" onclick="carregarAcessosCapa_()">↺ Atualizar</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div id="acessosKpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:18px">
+      <div class="loading dot-anim" style="grid-column:1/-1;padding:16px">Carregando acessos…</div>
+    </div>
+
+    <!-- Funil de etapas + gráficos -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" id="acessosChartsWrap">
+      <!-- Histograma de orçamentos -->
+      <div class="card" style="padding:16px 14px 12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Orçamento mais buscado</div>
+        <canvas id="canvasAcessosPreco" style="width:100%;display:block;cursor:crosshair"></canvas>
+        <div id="acessosPrecoEmpty" style="display:none;text-align:center;padding:24px 0;font-size:12px;color:var(--text3)">Sem dados ainda</div>
+      </div>
+      <!-- Origem UTM -->
+      <div class="card" style="padding:16px 14px 12px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Origem dos acessos</div>
+        <canvas id="canvasAcessosUtm" style="width:100%;display:block;cursor:crosshair"></canvas>
+        <div id="acessosUtmEmpty" style="display:none;text-align:center;padding:24px 0;font-size:12px;color:var(--text3)">Sem dados ainda</div>
+      </div>
+    </div>
+
+    <!-- Funil por etapa -->
+    <div class="card" style="padding:16px 14px 10px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:12px">Funil — clientes por etapa</div>
+      <div id="acessosFunilWrap">
+        <div class="loading dot-anim" style="padding:12px">Carregando funil…</div>
+      </div>
     </div>
   </div>
 
-  <div class="card" id="comentariosAppWrap" style="padding:0;overflow:auto">
-    <div class="loading dot-anim" style="padding:24px">Carregando</div>
-  </div>
-
-  <!-- ACESSOS DA CAPA -->
-  <div class="sec-header" style="margin-top:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <div>
-      <div class="sec-title" style="font-size:16px">Acessos da Capa</div>
-      <div class="sec-sub">Orçamento escolhido, dispositivo e origem de cada visitante que clicou em "CONTINUAR →" — capturado antes mesmo de preencher dados pessoais.</div>
+  <!-- ── SUB-ABA: COMENTÁRIOS ── -->
+  <div class="app-subpanel" id="appSubPanelComentarios">
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+      Avaliações (1–5 ★) enviadas por clientes. Só aparecem como prova social na tela final do App depois de aprovadas aqui.
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <select id="acessosDias" style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text2)">
-        <option value="7">Últimos 7 dias</option>
-        <option value="30" selected>Últimos 30 dias</option>
-        <option value="90">Últimos 90 dias</option>
-        <option value="36500">Histórico completo</option>
-      </select>
-      <button class="btn-extrair" style="padding:7px 12px;font-size:12px" onclick="carregarAcessosCapa_()">↺ Atualizar</button>
+    <div class="card" id="comentariosAppWrap" style="padding:0;overflow:auto">
+      <div class="loading dot-anim" style="padding:24px">Carregando</div>
     </div>
   </div>
 
-  <!-- KPIs -->
-  <div id="acessosKpis" class="vg-panel" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px">
-    <div class="loading dot-anim" style="grid-column:1/-1;padding:16px">Carregando acessos…</div>
+  <!-- ── SUB-ABA: LINK ── -->
+  <div class="app-subpanel" id="appSubPanelLink">
+    <div class="card" style="max-width:580px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">🚀 App público</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">
+        Simulador voltado pro cliente final: configura orçamento e metragem, escolhe entre Pronto/Em Obras, e recebe um mix de até 7 empreendimentos compatíveis. Cada interação é capturada em tempo real.
+      </p>
+      <a href="../app-lancamentos.html" target="_blank" rel="noopener" class="btn-extrair" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none">
+        Abrir App Lançamentos ↗
+      </a>
+    </div>
+    <div class="card" style="max-width:580px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">📩 Link de avaliação pós-atendimento</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+        Envie pro cliente pelo WhatsApp depois do contato — o comentário entra em "Comentários" para aprovação:
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <code id="linkAvaliacaoPos" style="font-size:12px;background:var(--bg);padding:8px 12px;border-radius:6px;border:1px solid var(--border);word-break:break-all;flex:1;min-width:200px">carregando…</code>
+        <button class="btn-extrair" style="padding:8px 14px;font-size:12px" onclick="copiarLinkAvaliacaoPos_()">Copiar</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Gráficos lado a lado -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px" id="acessosChartsWrap">
-    <div class="card" style="padding:16px 14px 12px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Orçamento mais buscado (faixas R$100k)</div>
-      <canvas id="canvasAcessosPreco" style="width:100%;display:block;cursor:crosshair"></canvas>
-      <div id="acessosPrecoEmpty" style="display:none;text-align:center;padding:24px 0;font-size:12px;color:var(--text3)">Sem dados ainda</div>
-    </div>
-    <div class="card" style="padding:16px 14px 12px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Origem dos acessos (UTM Source)</div>
-      <canvas id="canvasAcessosUtm" style="width:100%;display:block;cursor:crosshair"></canvas>
-      <div id="acessosUtmEmpty" style="display:none;text-align:center;padding:24px 0;font-size:12px;color:var(--text3)">Sem dados ainda</div>
-    </div>
-  </div>
   </div>
 
   <!-- MODELOS E PADRÕES VENDEDORES (consolida Modelos Vendedores + Padrão
@@ -2441,7 +2480,12 @@ function mudarAbaLancamentos(nome) {
   if (nome === 'busca') { document.getElementById('busca-input').focus(); renderBuscaConstrutoras_(); }
   if (nome === 'estrategias') carregarEstrategiasLazy_();
   if (nome === 'inteligencia') carregarInteligenciaLazy_();
-  if (nome === 'applancamentos') carregarComentariosAppLazy_();
+  if (nome === 'applancamentos') {
+    carregarComentariosAppLazy_();           // lazy init (roda só 1x)
+    if (_appSubAbaAtual_ === 'acessos') iniciarAutoRefreshAcessos_(); // reinicia ao voltar
+  } else {
+    pararAutoRefreshAcessos_();             // para ao sair da aba App
+  }
   // Re-renderiza o gráfico ao voltar pra aba Mapa Geral -- só se a sub-aba
   // Dados (onde o gráfico mora agora) estiver aberta, senão o canvas
   // continua com offsetWidth=0 e renderGraficoEstoque_ ficaria reagendando
@@ -2939,6 +2983,44 @@ async function limparDadosFunil_() {
 
 // ── COMENTÁRIOS DO APP LANÇAMENTOS (Lançamentos > App > Comentários) ────────
 let _comentariosAppCarregado_ = false;
+// ── SUB-ABAS da aba App ──────────────────────────────────────────────────────
+let _appSubAbaAtual_ = 'acessos';
+function mudarSubAbaApp_(nome) {
+  _appSubAbaAtual_ = nome;
+  ['acessos','comentarios','link'].forEach(n => {
+    const cap = n.charAt(0).toUpperCase() + n.slice(1);
+    const panel = document.getElementById('appSubPanel' + cap);
+    const btn   = document.getElementById('appSubBtn'   + cap);
+    if (panel) panel.classList.toggle('ativo', n === nome);
+    if (btn)   btn.classList.toggle('active', n === nome);
+  });
+  if (nome === 'acessos') {
+    iniciarAutoRefreshAcessos_();
+  } else {
+    pararAutoRefreshAcessos_();
+  }
+}
+
+// ── AUTO-REFRESH dos Acessos (a cada 30s enquanto sub-aba ACESSOS estiver aberta)
+let _acessosRefreshId_  = null;
+let _acessosRefreshSeg_ = 30;
+function iniciarAutoRefreshAcessos_() {
+  if (_acessosRefreshId_) return;            // já rodando
+  const dot   = document.getElementById('acessosLiveDot');
+  const label = document.getElementById('acessosLiveLabel');
+  if (dot)   dot.style.display   = '';
+  if (label) label.textContent   = 'Ao vivo · atualiza a cada 30s';
+  carregarAcessosCapa_();                    // carrega imediatamente
+  _acessosRefreshId_ = setInterval(carregarAcessosCapa_, _acessosRefreshSeg_ * 1000);
+}
+function pararAutoRefreshAcessos_() {
+  if (_acessosRefreshId_) { clearInterval(_acessosRefreshId_); _acessosRefreshId_ = null; }
+  const dot   = document.getElementById('acessosLiveDot');
+  const label = document.getElementById('acessosLiveLabel');
+  if (dot)   dot.style.display   = 'none';
+  if (label) label.textContent   = 'Atualização automática a cada 30s';
+}
+
 function carregarComentariosAppLazy_() {
   if (_comentariosAppCarregado_) return;
   _comentariosAppCarregado_ = true;
@@ -2947,7 +3029,6 @@ function carregarComentariosAppLazy_() {
     ? location.origin + '/avaliacao.html'
     : 'https://imoveisemgoiania.com/avaliacao.html';
   carregarComentariosApp_();
-  carregarAcessosCapa_();   // carrega a seção Acessos junto com a aba App
 }
 
 function copiarLinkAvaliacaoPos_() {
@@ -2971,19 +3052,30 @@ function badgeStatusComentario_(status) {
 
 // ── ACESSOS DA CAPA (Lançamentos > App > Acessos) ───────────────────────────
 async function carregarAcessosCapa_() {
-  const kpisEl = document.getElementById('acessosKpis');
+  const kpisEl   = document.getElementById('acessosKpis');
+  const funilEl  = document.getElementById('acessosFunilWrap');
   if (!kpisEl) return;
-  kpisEl.innerHTML = '<div class="loading dot-anim" style="grid-column:1/-1;padding:16px">Carregando acessos…</div>';
-  const dias = document.getElementById('acessosDias')?.value || 30;
+  const dias  = document.getElementById('acessosDias')?.value || 30;
+  const token = encodeURIComponent(tokenSessao());
   try {
-    const resp = await fetch(WEBHOOK_URL + '?acao=listar_acessos_capa&dias=' + dias + '&token=' + encodeURIComponent(tokenSessao()));
-    const data = await resp.json();
-    if (!data.ok) throw new Error(data.erro || 'Erro desconhecido');
-    renderAcessosKpis_(data);
-    renderAcessosPrecoChart_(data.histograma || []);
-    renderAcessosUtmChart_(data.utms || []);
+    // Busca acessos e funil em paralelo
+    const [respAcessos, respFunil] = await Promise.all([
+      fetch(WEBHOOK_URL + '?acao=listar_acessos_capa&dias=' + dias + '&token=' + token),
+      fetch(WEBHOOK_URL + '?acao=listar_estatisticas_funil&dias=' + dias + '&token=' + token),
+    ]);
+    const [dataAcessos, dataFunil] = await Promise.all([respAcessos.json(), respFunil.json()]);
+
+    if (!dataAcessos.ok) throw new Error(dataAcessos.erro || 'Erro acessos');
+    renderAcessosKpis_(dataAcessos);
+    renderAcessosPrecoChart_(dataAcessos.histograma || []);
+    renderAcessosUtmChart_(dataAcessos.utms || []);
+
+    if (funilEl) {
+      if (dataFunil.funil) renderAcessosFunil_(dataFunil.funil, dataFunil.kpis?.totalSessoes || 0);
+      else funilEl.innerHTML = '<span style="color:var(--text3);font-size:12px">Sem dados de funil ainda.</span>';
+    }
   } catch (err) {
-    kpisEl.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:12px;font-size:13px">Erro: ${err.message}</div>`;
+    if (kpisEl) kpisEl.innerHTML = `<div style="grid-column:1/-1;color:var(--danger);padding:12px;font-size:13px">Erro: ${err.message}</div>`;
   }
 }
 
@@ -3116,6 +3208,50 @@ function renderAcessosUtmChart_(utms) {
   const COR_MAP = { google: 'rgba(251,146,60,.85)', facebook: 'rgba(99,102,241,.85)', instagram: 'rgba(236,72,153,.85)' };
   const cor = COR_MAP[labels[0]] || 'rgba(34,197,94,.80)';
   renderAcessosBarChart_('canvasAcessosUtm', 'acessosUtmEmpty', labels, values, cor);
+}
+
+function renderAcessosFunil_(funil, totalSessoes) {
+  const el = document.getElementById('acessosFunilWrap');
+  if (!el) return;
+  if (!funil || !funil.length) {
+    el.innerHTML = '<span style="color:var(--text3);font-size:12px">Sem dados de funil ainda.</span>';
+    return;
+  }
+  const max = funil[0] ? (funil[0].alcancaram || 1) : 1;
+  const rows = funil.map(e => {
+    const barPct = max > 0 ? Math.round(e.alcancaram / max * 100) : 0;
+    const pctTotal = e.pctTotal != null ? e.pctTotal : barPct;
+    const convEl = e.etapa === 1 ? '—'
+      : (funil[e.etapa - 2]?.alcancaram > 0
+          ? Math.round(e.alcancaram / funil[e.etapa - 2].alcancaram * 100) + '%'
+          : '—');
+    return `<tr>
+      <td style="font-size:11px;color:var(--text3);font-weight:600;width:28px">${e.etapa}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.nome || 'Etapa ' + e.etapa}</td>
+      <td style="text-align:right;font-weight:700;color:var(--accent);width:52px">${e.alcancaram}</td>
+      <td style="width:120px;padding:0 10px">
+        <div class="funil-barra-wrap"><div class="funil-barra-fill" style="width:${barPct}%"></div></div>
+      </td>
+      <td style="text-align:right;font-size:11px;color:var(--text3);width:48px">${pctTotal}%</td>
+      <td style="text-align:right;font-size:11px;width:56px;color:${convEl === '—' ? 'var(--text3)' : 'var(--text)'}">${convEl}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="funil-etapas-table">
+      <thead><tr>
+        <th>#</th><th>Etapa</th>
+        <th style="text-align:right">Chegaram</th>
+        <th></th>
+        <th style="text-align:right">% total</th>
+        <th style="text-align:right">↳ conv.</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      ${totalSessoes} sessão(ões) no período · conversão = % em relação à etapa anterior
+    </div>`;
 }
 
 async function carregarComentariosApp_() {
