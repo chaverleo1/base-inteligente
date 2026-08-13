@@ -1736,7 +1736,7 @@ select.form-input option { background: var(--surface2); }
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="width:14px;height:14px;border-radius:3px;background:rgba(59,130,246,.88);flex-shrink:0;display:inline-block"></span>
-        <span style="color:var(--text2);font-weight:600">Região</span>
+        <span style="color:var(--text2);font-weight:600">Bairros</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span style="width:14px;height:14px;border-radius:3px;background:rgba(250,204,21,.90);flex-shrink:0;display:inline-block"></span>
@@ -3326,7 +3326,7 @@ function _dmTheme_() {
 function renderDemandas_(data) {
   const histCapa = data.histogramaPreco     || [];
   const histSim  = data.histogramaSimulador || [];
-  const histReg  = (data.histogramaRegioes  || []).slice(0, 5);
+  const histReg  = (data.histogramaBairros  || []).slice(0, 5);
 
   const canvas  = document.getElementById('canvasDemandasPrincipal');
   const emptyEl = document.getElementById('demandasPrincipalEmpty');
@@ -3343,8 +3343,8 @@ function renderDemandas_(data) {
 
   const faixaSet = new Set([...histCapa.map(h => h.faixa), ...histSim.map(h => h.faixa)]);
   const faixas   = [...faixaSet].sort((a, b) => parseInt(a) - parseInt(b));
-  const capaMap  = Object.fromEntries(histCapa.map(h => [h.faixa, h.total]));
-  const simMap   = Object.fromEntries(histSim.map(h  => [h.faixa, h.total]));
+  const capaMap  = Object.fromEntries(histCapa.map(h => [h.faixa, h.contagem || 0]));
+  const simMap   = Object.fromEntries(histSim.map(h  => [h.faixa, h.contagem || 0]));
 
   const isDark  = _dmTheme_() === 'dark';
   const textClr = isDark ? '#c9d1d9' : '#374151';
@@ -3378,7 +3378,7 @@ function renderDemandas_(data) {
   const allVals = [
     ...faixas.map(f => capaMap[f] || 0),
     ...faixas.map(f => simMap[f]  || 0),
-    ...histReg.map(r => r.total),
+    ...histReg.map(r => r.contagem || 0),
   ];
   const maxVal = Math.max(1, ...allVals);
   const toY = v => PAD_T + chartH - (v / maxVal) * chartH;
@@ -3451,17 +3451,18 @@ function renderDemandas_(data) {
     ctx.stroke(); ctx.setLineDash([]); ctx.restore();
   }
 
-  // Barras de região (azul)
+  // Barras de bairros (azul)
   if (hasRegions) {
     const grpW = regW / histReg.length;
     const bW   = Math.max(Math.min(grpW * 0.55, 30), 7);
     histReg.forEach((r, i) => {
       const cx = regX + i * grpW + grpW / 2;
-      drawBar(cx - bW/2, toY(r.total), bW, toH(r.total), 'rgba(59,130,246,.88)');
-      if (r.total > 0) drawVal(cx, toY(r.total), r.total, '#1d4ed8');
-      drawXLabel(cx, r.regiao, grpW - 4);
+      const v  = r.contagem || 0;
+      drawBar(cx - bW/2, toY(v), bW, toH(v), 'rgba(59,130,246,.88)');
+      if (v > 0) drawVal(cx, toY(v), v, '#1d4ed8');
+      drawXLabel(cx, r.faixa, grpW - 4);
     });
-    if (hasPrices) drawSecLabel(regX + regW / 2, 'Região');
+    if (hasPrices) drawSecLabel(regX + regW / 2, 'Bairros');
   }
 }
 
@@ -3470,7 +3471,9 @@ function _renderSubDemanda_(canvasId, emptyId, itens, fillClr, valClr) {
   const canvas  = document.getElementById(canvasId);
   const emptyEl = document.getElementById(emptyId);
   if (!canvas) return;
-  const hasData = itens && itens.some(it => (it.total || 0) > 0);
+  // suporta tanto {total} (GAS legado) quanto {contagem} (GAS novo)
+  function _val_(it) { return it.contagem || it.total || 0; }
+  const hasData = itens && itens.some(it => _val_(it) > 0);
   if (!hasData) {
     canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = ''; return;
   }
@@ -3489,7 +3492,7 @@ function _renderSubDemanda_(canvasId, emptyId, itens, fillClr, valClr) {
 
   const PAD_L = 30, PAD_R = 8, PAD_T = 14, PAD_B = 46;
   const cH = H - PAD_T - PAD_B, cW = W - PAD_L - PAD_R;
-  const maxVal = Math.max(1, ...itens.map(it => it.total || 0));
+  const maxVal = Math.max(1, ...itens.map(_val_));
   const grpW = cW / itens.length;
   const bW   = Math.max(Math.min(grpW * 0.58, 44), 10);
   const toY  = v => PAD_T + cH - (v / maxVal) * cH;
@@ -3504,7 +3507,7 @@ function _renderSubDemanda_(canvasId, emptyId, itens, fillClr, valClr) {
   });
 
   itens.forEach((it, i) => {
-    const v = it.total || 0;
+    const v = _val_(it);
     const cx = PAD_L + i * grpW + grpW / 2;
     const bh = toH(v); const by = toY(v);
     if (bh > 0) {
@@ -3554,8 +3557,8 @@ function renderDemandasAreas_(itensSim, itensE2) {
   // Faixas unidas e ordenadas das duas séries
   const faixaSet = new Set([...itensSim.map(h => h.faixa), ...itensE2.map(h => h.faixa)]);
   const faixas   = [...faixaSet].sort((a, b) => parseInt(a) - parseInt(b));
-  const simMap   = Object.fromEntries(itensSim.map(h => [h.faixa, h.total]));
-  const e2Map    = Object.fromEntries(itensE2.map(h  => [h.faixa, h.total]));
+  const simMap   = Object.fromEntries(itensSim.map(h => [h.faixa, h.contagem || 0]));
+  const e2Map    = Object.fromEntries(itensE2.map(h  => [h.faixa, h.contagem || 0]));
 
   const isDark  = _dmTheme_() === 'dark';
   const textClr = isDark ? '#c9d1d9' : '#374151';
