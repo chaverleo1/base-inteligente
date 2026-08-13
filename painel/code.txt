@@ -5373,10 +5373,15 @@ function obterAbaAcessosApp_() {
 
 function limparAcessosApp_() {
   try {
-    var aba = obterAbaAcessosApp_();
-    var ultima = aba.getLastRow();
-    if (ultima > 1) aba.deleteRows(2, ultima - 1);
-    return { ok: true, removidos: Math.max(0, ultima - 1) };
+    var abaAcessos = obterAbaAcessosApp_();
+    var ultiAcessos = abaAcessos.getLastRow();
+    if (ultiAcessos > 1) abaAcessos.deleteRows(2, ultiAcessos - 1);
+
+    var abaFunil = obterAbaFunilEventos_();
+    var ultiFunil = abaFunil.getLastRow();
+    if (ultiFunil > 1) abaFunil.deleteRows(2, ultiFunil - 1);
+
+    return { ok: true, removidos: Math.max(0, ultiAcessos - 1) + Math.max(0, ultiFunil - 1) };
   } catch (e) {
     return { ok: false, erro: e.message };
   }
