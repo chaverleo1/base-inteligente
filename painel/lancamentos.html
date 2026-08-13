@@ -3068,9 +3068,10 @@ async function carregarAcessosCapa_() {
   ]);
 
   // ── Acessos: KPIs + gráficos ──
+  const totalSessoes = resFunil.status === 'fulfilled' ? (resFunil.value?.kpis?.totalSessoes || 0) : 0;
   if (resAcessos.status === 'fulfilled' && resAcessos.value?.ok) {
     const d = resAcessos.value;
-    renderAcessosKpis_(d);
+    renderAcessosKpis_(d, totalSessoes);
     renderAcessosPrecoChart_(d.histograma || []);
     renderAcessosUtmChart_(d.utms || []);
   } else {
@@ -3088,15 +3089,16 @@ async function carregarAcessosCapa_() {
   }
 }
 
-function renderAcessosKpis_(data) {
+function renderAcessosKpis_(data, totalSessoes) {
   const acessos = data.acessos || [];
-  const total = acessos.length;
+  const n = acessos.length; // base para mobile/desktop %
   const mobile = acessos.filter(a => /mobi|android|iphone/i.test(a.dispositivo || '')).length;
-  const desktop = total - mobile;
+  const desktop = n - mobile;
   const precos = acessos.map(a => a.capaPreco).filter(p => p > 0);
   const mediana = precos.length
     ? precos.slice().sort((a,b)=>a-b)[Math.floor(precos.length/2)]
     : 0;
+  const total = totalSessoes || n; // usa sessões do funil; fallback para contagem local
 
   const kpisEl = document.getElementById('acessosKpis');
   const chip = (label, val, sub) =>
@@ -3106,9 +3108,9 @@ function renderAcessosKpis_(data) {
        ${sub ? `<div style="font-size:11px;color:var(--text3);margin-top:2px">${sub}</div>` : ''}
      </div>`;
   kpisEl.innerHTML =
-    chip('Total acessos', total, '') +
-    chip('Mobile', mobile, total ? Math.round(mobile/total*100)+'%' : '—') +
-    chip('Desktop', desktop, total ? Math.round(desktop/total*100)+'%' : '—') +
+    chip('Sessões', total, 'mesmo que Inteligência') +
+    chip('Mobile', mobile, n ? Math.round(mobile/n*100)+'%' : '—') +
+    chip('Desktop', desktop, n ? Math.round(desktop/n*100)+'%' : '—') +
     chip('Mediana orçamento', mediana ? formatarBRL_(mediana) : '—', '');
 }
 
