@@ -1145,6 +1145,60 @@ select.form-input option { background: var(--surface2); }
 .int-seg-ids { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
 .int-seg-id-chip { font-size: 10.5px; font-weight: 600; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; font-family: inherit; }
 
+/* ── FORÇAS DE DEMANDA ──────────────────────────────────────────────── */
+.fd-tabs-bar { display:flex; gap:6px; margin-bottom:12px; }
+.fd-tab {
+  flex:1; padding:10px 14px; border-radius:var(--r-sm);
+  border:1.5px solid var(--border); background:var(--surface2);
+  color:var(--text2); font-size:12px; font-weight:700; letter-spacing:.5px;
+  cursor:pointer; font-family:inherit; transition:all .15s;
+}
+.fd-tab-ativo { border-color:var(--accent); background:rgba(79,124,255,.12); color:var(--accent); }
+.fd-nivel-label {
+  font-size:10px; font-weight:700; letter-spacing:.8px; text-transform:uppercase;
+  color:var(--text3); margin-bottom:8px;
+}
+.fd-tabela-container { margin-bottom:4px; }
+.fd-tabela-wrap {
+  display:grid; grid-template-columns:220px 1fr; gap:0;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden;
+}
+@media (max-width:640px) { .fd-tabela-wrap { grid-template-columns:1fr; } }
+.fd-col-sinais {
+  padding:14px; background:var(--surface2);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column; gap:6px; min-width:0;
+}
+.fd-col-emps { padding:14px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.fd-sinais-label {
+  font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text3); margin-bottom:4px;
+}
+.fd-sinal-row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.fd-sinal-meta { opacity:.55; }
+.fd-sinal-key { font-size:11px; color:var(--text3); flex-shrink:0; }
+.fd-sinal-val { font-size:12px; font-weight:700; color:var(--text); text-align:right; overflow-wrap:anywhere; }
+.fd-btn-briefing {
+  margin-top:auto; padding:8px 10px; background:var(--accent);
+  color:#fff; border:none; border-radius:var(--r-sm);
+  font-size:11px; font-weight:700; cursor:pointer; font-family:inherit;
+  text-align:center; transition:opacity .15s; width:100%;
+}
+.fd-btn-briefing:hover { opacity:.85; }
+.fd-btn-briefing.fd-btn-copiado { background:#16a34a; }
+.fd-emps-scroll { overflow-x:auto; flex:1; min-height:60px; }
+.fd-emps-table { width:100%; border-collapse:collapse; font-size:11px; min-width:380px; }
+.fd-emps-table th {
+  padding:4px 8px; text-align:left; font-size:9px; font-weight:700;
+  letter-spacing:.5px; text-transform:uppercase; color:var(--text3);
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.fd-emps-table td { padding:5px 8px; color:var(--text2); border-bottom:1px solid rgba(255,255,255,.04); }
+.fd-emps-table tbody tr:last-child td { border-bottom:none; }
+.fd-emps-table td strong { color:var(--text); }
+.fd-vazio { padding:18px; text-align:center; font-size:12px; color:var(--text3); }
+
 /* ── ABAS ESCURAS (Extrair Modelo 1/2, Modelos e Padrões Vendedores) --
    pedido explícito do usuário: distinguir visualmente as abas de
    cadastro/dados brutos das abas de análise (Mapa Geral, Busca,
@@ -1648,9 +1702,16 @@ select.form-input option { background: var(--surface2); }
     <div class="loading dot-anim" style="grid-column:1/-1">Carregando estatísticas</div>
   </div>
 
-  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Funil de conversão por etapa</div></div>
-  <div class="card int-funil-card" id="intFunil">
-    <div class="loading dot-anim">Carregando funil</div>
+  <div class="sec-header" style="margin-top:8px">
+    <div class="sec-title" style="font-size:14px;text-transform:uppercase;letter-spacing:.8px">FORÇAS DE DEMANDA</div>
+    <div class="sec-sub">Cruzamento de sinais: região × orçamento × área, agrupados por estágio dos empreendimentos.</div>
+  </div>
+  <div class="fd-tabs-bar">
+    <button class="fd-tab fd-tab-ativo" id="fdTab0" onclick="setFdTab_(0)">PRONTOS PARA MORAR</button>
+    <button class="fd-tab" id="fdTab1" onclick="setFdTab_(1)">EM OBRAS</button>
+  </div>
+  <div id="fdWrap">
+    <div class="loading dot-anim">Aguardando dados de inteligência…</div>
   </div>
 
   <div class="sec-header" style="margin-top:8px">
@@ -1705,6 +1766,11 @@ select.form-input option { background: var(--surface2); }
   </div>
   <div class="int-seg-grid" id="intSegmentos">
     <div class="loading dot-anim">Carregando segmentos</div>
+  </div>
+
+  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Funil de conversão por etapa</div></div>
+  <div class="card int-funil-card" id="intFunil">
+    <div class="loading dot-anim">Carregando funil</div>
   </div>
 
   <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Tempo médio por etapa</div></div>
@@ -2923,6 +2989,258 @@ function renderIntTempoTabela_(json) {
   </tbody></table>`;
 }
 
+// ── FORÇAS DE DEMANDA ────────────────────────────────────────────────────────
+var _fdEstado_ = { tabAtiva: 0, stats: null, sinais: null, grupos: null };
+var _fdBriefings_ = {};
+
+function setFdTab_(idx) {
+  _fdEstado_.tabAtiva = idx;
+  ['fdTab0','fdTab1'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('fd-tab-ativo', i === idx);
+  });
+  if (_fdEstado_.grupos) _fdRenderGrupos_();
+}
+
+function _fdParsePreco_(str) {
+  if (str === null || str === undefined || str === '') return 0;
+  const s = String(str).replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.').trim();
+  return parseFloat(s) || 0;
+}
+
+function _fdFmtBRL_(v) {
+  if (!v) return '—';
+  if (v >= 1000000) return 'R$ ' + (v / 1000000).toFixed(1).replace('.', ',') + 'M';
+  if (v >= 1000) return 'R$ ' + Math.round(v / 1000) + 'k';
+  return 'R$ ' + v;
+}
+
+function _fdFmtFaixaPreco_(faixa) {
+  if (!faixa) return '—';
+  const ini = parseInt(faixa) * 1000;
+  return _fdFmtBRL_(ini) + ' – ' + _fdFmtBRL_(ini + 100000);
+}
+
+function _fdMergeHistograma_(h1, h2) {
+  const map = {};
+  (h1 || []).forEach(x => { map[x.faixa] = (map[x.faixa] || 0) + (Number(x.contagem) || 0); });
+  (h2 || []).forEach(x => { map[x.faixa] = (map[x.faixa] || 0) + (Number(x.contagem) || 0); });
+  return Object.entries(map)
+    .map(([faixa, contagem]) => ({ faixa, contagem }))
+    .sort((a, b) => b.contagem - a.contagem);
+}
+
+function _fdExtrairSinais_(stats) {
+  const precos  = _fdMergeHistograma_(stats.histogramaPreco, stats.histogramaSimulador);
+  const regioes = [...(stats.histogramaRegioes || [])].sort((a, b) => b.contagem - a.contagem);
+  const areas   = _fdMergeHistograma_(stats.histogramaAreas, stats.histogramaAreasE2);
+  return { p1: precos[0] || null, p2: precos[1] || null,
+           r1: regioes[0] || null, r2: regioes[1] || null,
+           a1: areas[0]  || null, a2: areas[1]  || null };
+}
+
+function _fdGruparPorEmp_(rows) {
+  const map = {};
+  (rows || []).forEach(r => {
+    const k = r.nomeEmpreendimento || r.idLancamento || '?';
+    if (!map[k]) map[k] = { ...r, _pMin: 0, _pMax: 0, _aMin: 0, _aMax: 0 };
+    const pm = _fdParsePreco_(r.precoMin);
+    const px = _fdParsePreco_(r.precoMax) || pm;
+    const ae = parseFloat(r.areaUtil) || 0;
+    if (!map[k]._pMin || (pm && pm < map[k]._pMin)) map[k]._pMin = pm;
+    if (!map[k]._pMax || px > map[k]._pMax)          map[k]._pMax = px;
+    if (!map[k]._aMin || (ae && ae < map[k]._aMin))  map[k]._aMin = ae;
+    if (!map[k]._aMax || ae > map[k]._aMax)           map[k]._aMax = ae;
+  });
+  return Object.values(map);
+}
+
+function _fdPrecoCompativel_(emp, faixa) {
+  if (!faixa) return true;
+  const ini = parseInt(faixa) * 1000;
+  const fim = ini + 199999; // ±1 faixa de tolerância
+  const pMin = emp._pMin || 0;
+  const pMax = emp._pMax || pMin;
+  return pMin <= fim && pMax >= Math.max(0, ini - 100000);
+}
+
+function _fdAreaCompativel_(emp, faixa) {
+  if (!faixa) return true;
+  const parts = String(faixa).split('-');
+  const ini = parseInt(parts[0]) || 0;
+  const fim = parseInt(parts[1]) || ini + 10;
+  if (!emp._aMin && !emp._aMax) return true;
+  return emp._aMax >= ini - 10 && emp._aMin <= fim + 15;
+}
+
+function _fdRegiaoCompativel_(emp, sinalRegiao) {
+  if (!sinalRegiao || !sinalRegiao.faixa) return true;
+  const reg    = String(sinalRegiao.faixa).toLowerCase();
+  const bairro = String(emp.bairro || '').toLowerCase();
+  const cidade = String(emp.cidade || '').toLowerCase();
+  return bairro.includes(reg) || reg.includes(bairro) ||
+         cidade.includes(reg) || reg.includes(cidade);
+}
+
+var _FD_STATUS_PRONTO_ = ['pronto', 'pronto novo', 'entregue'];
+var _FD_STATUS_OBRAS_  = ['em obras', 'em planta', 'lançamento', 'lancamento'];
+
+function _fdMatchEmps_(empsGrupados, sinais, rank) {
+  const pSinal = rank === 1 ? sinais.p1 : sinais.p2;
+  const rSinal = rank === 1 ? sinais.r1 : sinais.r2;
+  const aSinal = rank === 1 ? sinais.a1 : sinais.a2;
+  return empsGrupados.filter(emp => {
+    const pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
+    const rc = _fdRegiaoCompativel_(emp, rSinal);
+    const ac = _fdAreaCompativel_(emp, aSinal && aSinal.faixa);
+    return (pc ? 1 : 0) + (rc ? 1 : 0) + (ac ? 1 : 0) >= 2;
+  });
+}
+
+function _fdTextoBriefingDemanda_(rank, sinais, tab) {
+  const grupo  = tab === 0 ? 'PRONTOS PARA MORAR' : 'EM OBRAS';
+  const nivel  = rank === 1 ? 'PRIMÁRIA' : 'SECUNDÁRIA';
+  const pSinal = rank === 1 ? sinais.p1 : sinais.p2;
+  const rSinal = rank === 1 ? sinais.r1 : sinais.r2;
+  const aSinal = rank === 1 ? sinais.a1 : sinais.a2;
+  return [
+    'BRIEFING — DEMANDA ' + nivel + ' | ' + grupo,
+    'Data: ' + new Date().toLocaleDateString('pt-BR'),
+    '',
+    'SINAIS DE DEMANDA IDENTIFICADOS:',
+    '• Região de maior interesse: ' + (rSinal ? rSinal.faixa + ' (' + rSinal.contagem + ' sessões)' : 'sem dados'),
+    '• Faixa de orçamento (média capa+simulador): ' + (pSinal ? _fdFmtFaixaPreco_(pSinal.faixa) + ' (' + pSinal.contagem + ' sessões)' : 'sem dados'),
+    '• Faixa de área útil (simulador+E2): ' + (aSinal ? aSinal.faixa + ' m² (' + aSinal.contagem + ' sessões)' : 'sem dados'),
+    '',
+    'Grupo de estágio: ' + grupo,
+  ].join('\n');
+}
+
+function _fdTextoBriefingEmps_(emps, rank, sinais, tab) {
+  const grupo = tab === 0 ? 'PRONTOS PARA MORAR' : 'EM OBRAS';
+  const nivel = rank === 1 ? 'PRIMÁRIA' : 'SECUNDÁRIA';
+  const linhas = emps.length ? emps.map((emp, i) => [
+    (i + 1) + '. ' + (emp.nomeEmpreendimento || '—'),
+    '   Construtora: ' + (emp.construtora || '—'),
+    '   Bairro: ' + (emp.bairro || '—') + ' | Cidade: ' + (emp.cidade || '—'),
+    '   Status: ' + (emp.status || '—'),
+    '   Preço: ' + _fdFmtBRL_(emp._pMin) + ' – ' + _fdFmtBRL_(emp._pMax),
+    '   Área útil: ' + (emp._aMin || '?') + 'm² – ' + (emp._aMax || '?') + 'm²',
+    '   Padrão: ' + (emp.padrao || '—'),
+  ].join('\n')).join('\n\n') : '(nenhum empreendimento compatível encontrado)';
+  return [
+    'BRIEFING — EMPREENDIMENTOS | DEMANDA ' + nivel + ' | ' + grupo,
+    'Data: ' + new Date().toLocaleDateString('pt-BR'),
+    '',
+    'EMPREENDIMENTOS COMPATÍVEIS (' + emps.length + '):',
+    '',
+    linhas,
+  ].join('\n');
+}
+
+function _fdCopiar_(key, btn) {
+  const texto = _fdBriefings_[key];
+  if (!texto) return;
+  const ok = function() {
+    btn.textContent = '✅ Copiado!';
+    btn.classList.add('fd-btn-copiado');
+    setTimeout(function() { btn.textContent = '📋 Gerar Briefing'; btn.classList.remove('fd-btn-copiado'); }, 2200);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto).then(ok).catch(function() {
+      const ta = document.createElement('textarea');
+      ta.value = texto; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); ok();
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); ok();
+  }
+}
+
+function _fdRenderTabela_(sinais, emps, rank, tab) {
+  const nivel  = rank === 1 ? 'DEMANDA PRIMÁRIA' : 'DEMANDA SECUNDÁRIA';
+  const pSinal = rank === 1 ? sinais.p1 : sinais.p2;
+  const rSinal = rank === 1 ? sinais.r1 : sinais.r2;
+  const aSinal = rank === 1 ? sinais.a1 : sinais.a2;
+  const keyD = 'd_' + tab + '_' + rank;
+  const keyE = 'e_' + tab + '_' + rank;
+  _fdBriefings_[keyD] = _fdTextoBriefingDemanda_(rank, sinais, tab);
+  _fdBriefings_[keyE] = _fdTextoBriefingEmps_(emps, rank, sinais, tab);
+
+  const linhasEmps = emps.length ? emps.map(function(emp) {
+    const pMin   = _fdFmtBRL_(emp._pMin);
+    const pMax   = _fdFmtBRL_(emp._pMax);
+    const aRange = (emp._aMin || emp._aMax) ? ((emp._aMin || '?') + '–' + (emp._aMax || '?') + ' m²') : '—';
+    return '<tr>' +
+      '<td><strong>' + (emp.nomeEmpreendimento || '—') + '</strong></td>' +
+      '<td>' + (emp.bairro || '—') + '</td>' +
+      '<td style="white-space:nowrap">' + pMin + ' – ' + pMax + '</td>' +
+      '<td style="white-space:nowrap">' + aRange + '</td>' +
+      '<td>' + (emp.padrao || '—') + '</td>' +
+    '</tr>';
+  }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:14px">Nenhum empreendimento compatível</td></tr>';
+
+  return '<div class="fd-tabela-container" style="margin-top:14px">' +
+    '<div class="fd-nivel-label">' + nivel + '</div>' +
+    '<div class="fd-tabela-wrap">' +
+      '<div class="fd-col-sinais">' +
+        '<div class="fd-sinais-label">Sinais de demanda</div>' +
+        '<div class="fd-sinal-row"><span class="fd-sinal-key">Região</span><span class="fd-sinal-val">' + (rSinal ? rSinal.faixa : '—') + '</span></div>' +
+        '<div class="fd-sinal-row" style="margin-bottom:8px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (rSinal ? rSinal.contagem : '—') + '</span></div>' +
+        '<div class="fd-sinal-row"><span class="fd-sinal-key">Orçamento</span><span class="fd-sinal-val">' + (pSinal ? _fdFmtFaixaPreco_(pSinal.faixa) : '—') + '</span></div>' +
+        '<div class="fd-sinal-row" style="margin-bottom:8px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (pSinal ? pSinal.contagem : '—') + '</span></div>' +
+        '<div class="fd-sinal-row"><span class="fd-sinal-key">Área útil</span><span class="fd-sinal-val">' + (aSinal ? aSinal.faixa + ' m²' : '—') + '</span></div>' +
+        '<div class="fd-sinal-row" style="margin-bottom:12px"><span class="fd-sinal-key" style="font-size:10px;opacity:.55">sessões</span><span class="fd-sinal-val" style="font-size:11px;opacity:.6">' + (aSinal ? aSinal.contagem : '—') + '</span></div>' +
+        '<button class="fd-btn-briefing" onclick="_fdCopiar_(\'' + keyD + '\', this)">📋 Gerar Briefing</button>' +
+      '</div>' +
+      '<div class="fd-col-emps">' +
+        '<div class="fd-sinais-label">Empreendimentos compatíveis (' + emps.length + ')</div>' +
+        '<div class="fd-emps-scroll">' +
+          '<table class="fd-emps-table">' +
+            '<thead><tr><th>Empreendimento</th><th>Bairro</th><th>Preço</th><th>Área</th><th>Padrão</th></tr></thead>' +
+            '<tbody>' + linhasEmps + '</tbody>' +
+          '</table>' +
+        '</div>' +
+        '<button class="fd-btn-briefing" style="margin-top:8px" onclick="_fdCopiar_(\'' + keyE + '\', this)">📋 Gerar Briefing dos Empreendimentos</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function _fdRenderGrupos_() {
+  const wrap = document.getElementById('fdWrap');
+  if (!wrap || !_fdEstado_.sinais) return;
+  const sinais    = _fdEstado_.sinais;
+  const tab       = _fdEstado_.tabAtiva;
+  const statusAlvo = tab === 0 ? _FD_STATUS_PRONTO_ : _FD_STATUS_OBRAS_;
+  const todos_agrupados = _fdGruparPorEmp_(_todos || []);
+  const empsGrupo = todos_agrupados.filter(function(emp) {
+    return statusAlvo.indexOf(String(emp.status || '').toLowerCase()) >= 0;
+  });
+  const emps1 = _fdMatchEmps_(empsGrupo, sinais, 1);
+  const emps2 = _fdMatchEmps_(empsGrupo, sinais, 2);
+  wrap.innerHTML = _fdRenderTabela_(sinais, emps1, 1, tab) +
+                   _fdRenderTabela_(sinais, emps2, 2, tab);
+}
+
+function renderForcasDemanda_(stats) {
+  const wrap = document.getElementById('fdWrap');
+  if (!wrap) return;
+  if (!_todos || !_todos.length) {
+    wrap.innerHTML = '<div class="fd-vazio">Sem empreendimentos cadastrados. Importe dados na aba Catálogo.</div>';
+    return;
+  }
+  const sinais = _fdExtrairSinais_(stats);
+  _fdEstado_.stats  = stats;
+  _fdEstado_.sinais = sinais;
+  _fdEstado_.grupos = true;
+  _fdRenderGrupos_();
+}
+
 // ── DEMANDAS — gráfico principal (3 séries: capa / região / simulador) ──────
 
 function _dmTheme_() {
@@ -3293,6 +3611,7 @@ async function carregarInteligencia_() {
     renderDemandasEstagios_(stats.histogramaEstagios  || []);
     renderDemandasObjetivos_(stats.histogramaObjetivos || []);
     renderDemandasAreas_(stats.histogramaAreas || [], stats.histogramaAreasE2 || []);
+    renderForcasDemanda_(stats);
     renderIntTempoTabela_(stats);
     renderIntOrigemTabela_(stats);
     renderIntSegmentos_(segs);
