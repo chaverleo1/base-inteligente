@@ -2965,13 +2965,13 @@ function carregarInteligenciaLazy_() {
 }
 
 async function limparDadosFunil_() {
-  if (!confirm('Apagar TODOS os eventos registrados no funil?\n\nEssa ação é irreversível — os dados de teste serão deletados da planilha para dar lugar aos dados reais das campanhas.')) return;
-  mostrarToast('Limpando dados…', 'aviso');
+  if (!confirm('Zerar TODOS os dados de teste?\n\n• Funil de eventos (FUNIL_EVENTOS_APP)\n• Acessos da capa (ACESSOS_APP)\n• Leads registrados (INTERESSES)\n\nEssa ação é irreversível.')) return;
+  mostrarToast('Zerando dados…', 'aviso');
   try {
     const resp = await fetch(WEBHOOK_URL + '?acao=limpar_eventos_funil&token=' + encodeURIComponent(tokenSessao()));
     const data = await resp.json();
     if (!data.ok) { mostrarToast('Erro: ' + (data.erro || 'falha desconhecida'), 'erro'); return; }
-    mostrarToast(`✅ ${data.removidos} evento(s) removido(s). Recarregando…`, 'sucesso');
+    mostrarToast(`✅ ${data.removidos} registro(s) apagado(s). Recarregando…`, 'ok');
     _inteligenciaCarregada_ = false;
     carregarInteligencia_();
   } catch (e) {
