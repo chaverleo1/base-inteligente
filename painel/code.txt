@@ -218,6 +218,9 @@ function doGet(e) {
       if (!chaveAppValida_(dadosGet.chave)) return ok({ status: 'nao_autorizado' });
       return ok(registrarEventoFunil_(dadosGet));
     }
+    if (dadosGet.acao === 'registrar_acesso_capa') {
+      return ok(registrarAcessoCapa_(dadosGet));
+    }
     if (dadosGet.acao === 'enviar_comentario_app') {
       if (!chaveAppValida_(dadosGet.chave)) return ok({ status: 'nao_autorizado' });
       return ok(salvarComentarioApp_(dadosGet));
@@ -333,6 +336,8 @@ function doGet(e) {
   if (acao === 'listar_estatisticas_funil') return ok(listarEstatisticasFunil_({ dias: e.parameter.dias }));
   if (acao === 'listar_segmentos_comportamentais') return ok(listarSegmentosComportamentais_());
   if (acao === 'limpar_eventos_funil') return ok(limparEventosFunil_());
+  // Acessos da capa do app (Fase 4) -- dados de navegação capturados antes do lead finalizar.
+  if (acao === 'listar_acessos_capa') return ok(listarAcessosCapa_({ dias: e.parameter.dias }));
   // Integração Google Ads (Fase 3) -- protegida por sessão, mesmo motivo.
   if (acao === 'listar_metricas_google_ads') return ok(listarMetricasGoogleAds_({ dias: e.parameter.dias }));
   if (acao === 'listar_series_google_ads') return ok(listarSeriesGoogleAds_({ dias: e.parameter.dias }));
@@ -861,6 +866,7 @@ function doPost(e) {
   // Beacon de abandono (navigator.sendBeacon, disparado no beforeunload) --
   // chega aqui via POST, corpo é o JSON puro (parseBody já trata isso).
   if (d.acao === 'registrar_evento_funil') return ok(registrarEventoFunil_(d));
+  if (d.acao === 'registrar_acesso_capa') return ok(registrarAcessoCapa_(d));
   // Imobzi webhook — público (vem do sistema externo sem sessão).
   // Negócio (Deal): Imobzi envia {event:"deal_created", deal:{...}}
   if (d.event === 'deal_created' || d.event === 'deal_updated' || (d.deal && d.deal.db_id)) {
@@ -5334,6 +5340,111 @@ function limparEventosFunil_() {
       aba.deleteRows(2, ultima - 1);
     }
     return { ok: true, removidos: Math.max(0, ultima - 1) };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACESSOS DA CAPA (Fase 4) — tracking antes do lead finalizar
+// Captura UTMs, dispositivo, preço escolhido na capa e hora de acesso
+// em cada clique em "CONTINUAR →" na step-0 do app-lancamentos.html.
+// ═══════════════════════════════════════════════════════════════
+var CABECALHO_ACESSOS_APP_ = [
+  'dataHora', 'sessionId', 'capaPreco',
+  'utmSource', 'utmMedium', 'utmCampaign', 'gclid',
+  'dispositivo', 'horaAcesso',
+];
+
+function obterAbaAcessosApp_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('ACESSOS_APP');
+  if (!aba) {
+    aba = ss.insertSheet('ACESSOS_APP');
+    aba.setTabColor('#1A73E8');
+    aba.appendRow(CABECALHO_ACESSOS_APP_);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_ACESSOS_APP_.length)
+       .setFontWeight('bold').setBackground('#1A73E8').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+function registrarAcessoCapa_(d) {
+  try {
+    var aba = obterAbaAcessosApp_();
+    aba.appendRow([
+      Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm:ss'),
+      d.sessionId   || '',
+      d.capaPreco   || 0,
+      d.utmSource   || '',
+      d.utmMedium   || '',
+      d.utmCampaign || '',
+      d.gclid       || '',
+      d.dispositivo || '',
+      d.horaAcesso  || '',
+    ]);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
+// Lista os acessos de capa para o dashboard — retorna linhas brutas
+// e um resumo de distribuição de preços por faixa de R$100k.
+function listarAcessosCapa_(params) {
+  try {
+    var aba = obterAbaAcessosApp_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return { ok: true, acessos: [], histograma: [] };
+
+    var dias   = parseInt(params.dias) || 30;
+    var agora  = new Date();
+    var limite = new Date(agora.getTime() - dias * 86400000);
+
+    var dados  = aba.getRange(2, 1, lr - 1, CABECALHO_ACESSOS_APP_.length).getValues();
+    var idxData = CABECALHO_ACESSOS_APP_.indexOf('dataHora');
+    var idxPreco = CABECALHO_ACESSOS_APP_.indexOf('capaPreco');
+    var idxUtm   = CABECALHO_ACESSOS_APP_.indexOf('utmSource');
+    var idxCamp  = CABECALHO_ACESSOS_APP_.indexOf('utmCampaign');
+    var idxDisp  = CABECALHO_ACESSOS_APP_.indexOf('dispositivo');
+
+    var acessos = [];
+    var faixas  = {}; // { '300k-400k': N, ... }
+    var utms    = {}; // { 'google': N, ... }
+
+    dados.forEach(function(r) {
+      var dt = new Date(String(r[idxData]).split('/').reverse().join('-').replace(' ', 'T'));
+      if (isNaN(dt) || dt < limite) return;
+      var preco = parseInt(r[idxPreco]) || 0;
+      var utm   = String(r[idxUtm] || 'organico').toLowerCase() || 'organico';
+      var camp  = String(r[idxCamp] || '');
+      var disp  = String(r[idxDisp] || '');
+
+      acessos.push({ dataHora: r[idxData], capaPreco: preco, utmSource: utm, utmCampaign: camp, dispositivo: disp });
+
+      // Histograma por faixas de R$100k
+      if (preco > 0) {
+        var faixaMin = Math.floor(preco / 100000) * 100;
+        var faixaMax = faixaMin + 100;
+        var chave    = faixaMin + 'k';
+        faixas[chave] = (faixas[chave] || 0) + 1;
+      }
+
+      utms[utm] = (utms[utm] || 0) + 1;
+    });
+
+    // Converter histograma em array ordenado
+    var histograma = Object.keys(faixas).sort(function(a, b) {
+      return parseInt(a) - parseInt(b);
+    }).map(function(k) { return { faixa: k, total: faixas[k] }; });
+
+    // Converter UTMs em array ordenado por total desc
+    var utmArr = Object.keys(utms).map(function(k) {
+      return { utm: k, total: utms[k] };
+    }).sort(function(a, b) { return b.total - a.total; });
+
+    return { ok: true, acessos: acessos, histograma: histograma, utms: utmArr };
   } catch (e) {
     return { ok: false, erro: e.message };
   }
