@@ -3566,8 +3566,11 @@ function renderDemandas_(data) {
 }
 
 // ── Sub-gráficos genéricos (estágio / objetivo) — barras HORIZONTAIS + % ──────
-// Barra proporcional ao % do total. Indicador % em destaque (badge no fim da
-// barra), label + contagem dentro (ou à direita quando a barra é curta).
+// Layout: [trilha fundo 100%] [badge % fixo à direita]
+//   • Barra colorida = proporção do total (% visual)
+//   • Texto SEMPRE dentro da trilha (clip, nunca vaza)
+//     linha 1 bold: label  |  linha 2 muted: N sessões
+//   • Badge % no canto direito, bold 14px
 function _renderSubDemanda_(canvasId, emptyId, itens, fillClr) {
   const canvas  = document.getElementById(canvasId);
   const emptyEl = document.getElementById(emptyId);
@@ -3579,18 +3582,16 @@ function _renderSubDemanda_(canvasId, emptyId, itens, fillClr) {
   }
   canvas.style.display = ''; if (emptyEl) emptyEl.style.display = 'none';
 
-  const isDark  = _dmTheme_() === 'dark';
-  const textOut = isDark ? '#c9d1d9' : '#374151';   // cor fora da barra
-  const mutedOut= isDark ? 'rgba(200,200,200,.5)' : 'rgba(80,80,80,.45)';
+  const isDark = _dmTheme_() === 'dark';
 
-  // Layout
-  const ROW_H   = 34;   // altura da barra
-  const GAP     = 8;    // espaço entre linhas
-  const PAD_T   = 6;
-  const PAD_B   = 6;
-  const PAD_L   = 8;
-  const PCT_W   = 46;   // reserva fixa à direita para o badge "%"
-  const PAD_R   = 6;
+  const ROW_H  = 38;
+  const GAP    = 8;
+  const PAD_T  = 6;
+  const PAD_B  = 6;
+  const PAD_L  = 8;
+  const PCT_W  = 48;   // reserva fixa para badge "%"
+  const PAD_R  = 4;
+  const TXT_PAD = 10;  // recuo interno do texto
 
   const dpr   = window.devicePixelRatio || 1;
   const W     = canvas.parentElement.clientWidth || 220;
@@ -3603,61 +3604,47 @@ function _renderSubDemanda_(canvasId, emptyId, itens, fillClr) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
 
-  // Total para calcular %. Barra ocupa % do espaço disponível (sem a área do badge).
   const total   = Math.max(1, itens.reduce((s, it) => s + _val_(it), 0));
-  const barZone = W - PAD_L - PCT_W - PAD_R; // largura disponível para as barras
-  const MIN_LBL = 72; // largura mínima para label dentro da barra
+  const barZone = W - PAD_L - PCT_W - PAD_R;
 
   itens.forEach((it, i) => {
-    const v   = _val_(it);
-    const pct = Math.round(v / total * 100);
-    const bW  = (v / total) * barZone;
-    const y   = PAD_T + i * (ROW_H + GAP);
+    const v    = _val_(it);
+    const pct  = Math.round(v / total * 100);
+    const bW   = (v / total) * barZone;
+    const y    = PAD_T + i * (ROW_H + GAP);
     const midY = y + ROW_H / 2;
-    const lbl = String(it.label || it.faixa || '');
+    const lbl  = String(it.label || it.faixa || '');
 
-    // Trilha de fundo (100% da zona de barras)
-    ctx.fillStyle = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)';
-    if (ctx.roundRect) {
-      ctx.beginPath(); ctx.roundRect(PAD_L, y, barZone, ROW_H, 4); ctx.fill();
-    } else {
-      ctx.fillRect(PAD_L, y, barZone, ROW_H);
-    }
+    // ① Trilha de fundo (100% da zona)
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, y, barZone, ROW_H, 5); ctx.fill(); }
+    else ctx.fillRect(PAD_L, y, barZone, ROW_H);
 
-    // Barra colorida proporcional ao %
+    // ② Barra colorida proporcional ao %
     if (bW > 0) {
       ctx.fillStyle = fillClr;
-      if (ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(PAD_L, y, bW, ROW_H, 4); ctx.fill();
-      } else {
-        ctx.fillRect(PAD_L, y, bW, ROW_H);
-      }
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, y, bW, ROW_H, 5); ctx.fill(); }
+      else ctx.fillRect(PAD_L, y, bW, ROW_H);
     }
 
-    // Label + sessões: dentro da barra se couber, senão à direita da trilha
-    ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-    if (bW >= MIN_LBL) {
-      // Dentro — preto
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 12px -apple-system,sans-serif';
-      ctx.fillText(lbl, PAD_L + 8, midY - 1);
-      ctx.font = '10px -apple-system,sans-serif';
-      ctx.fillStyle = 'rgba(0,0,0,.55)';
-      ctx.fillText(v + ' sess.', PAD_L + 8, midY + 9);
-    } else {
-      // Fora (à direita da trilha) — cor do tema
-      ctx.fillStyle = textOut;
-      ctx.font = 'bold 11px -apple-system,sans-serif';
-      ctx.fillText(lbl, PAD_L + barZone + 4, midY - 1);
-      ctx.font = '10px -apple-system,sans-serif';
-      ctx.fillStyle = mutedOut;
-      ctx.fillText(v + ' sess.', PAD_L + barZone + 4, midY + 9);
-    }
+    // ③ Texto SEMPRE dentro da trilha — clipping garante que não vaza
+    ctx.save();
+    ctx.beginPath(); ctx.rect(PAD_L + TXT_PAD, y + 1, barZone - TXT_PAD * 2, ROW_H - 2); ctx.clip();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    // linha 1 — label (preto bold)
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 12px -apple-system,sans-serif';
+    ctx.fillText(lbl, PAD_L + TXT_PAD, midY - 7);
+    // linha 2 — contagem (cinza escuro)
+    ctx.fillStyle = 'rgba(0,0,0,.60)';
+    ctx.font = '11px -apple-system,sans-serif';
+    ctx.fillText(v + ' sessões', PAD_L + TXT_PAD, midY + 8);
+    ctx.restore();
 
-    // Badge % — sempre no canto direito, destaque bold grande
+    // ④ Badge % — canto direito, sempre visível
     ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
     ctx.fillStyle = isDark ? '#ffffff' : '#111827';
-    ctx.font = 'bold 14px -apple-system,sans-serif';
+    ctx.font = 'bold 15px -apple-system,sans-serif';
     ctx.fillText(pct + '%', W - PAD_R, midY);
   });
 }
@@ -3670,9 +3657,11 @@ function renderDemandasObjetivos_(itens) {
   _renderSubDemanda_('canvasDemandasObjetivo', 'demandasObjetivoEmpty', itens,
     'rgba(168,85,247,.85)',  '#6b21a8');
 }
-// Gráfico de barras HORIZONTAIS: duas séries por faixa de 10m².
-// itensSim = histogramaAreas (Área Útil Simulador — areaMin do step-2)
-// itensE2  = histogramaAreasE2 (Área Útil E2 — escolha explícita no Passo 1)
+// Gráfico de barras HORIZONTAIS — Demanda por Área
+// Duas séries por faixa de 10m²: Simulador (amarelo) e E2 (rosa).
+// Layout idêntico ao _renderSubDemanda_:
+//   • Trilha de fundo 100%  •  Barra proporcional ao % da própria série
+//   • Texto SEMPRE dentro (clip)  •  Badge % fixo à direita
 function renderDemandasAreas_(itensSim, itensE2) {
   itensSim = itensSim || []; itensE2 = itensE2 || [];
   const canvas  = document.getElementById('canvasDemandasArea');
@@ -3686,77 +3675,97 @@ function renderDemandasAreas_(itensSim, itensE2) {
   canvas.style.display = '';
   if (emptyEl) emptyEl.style.display = 'none';
 
+  const isDark = _dmTheme_() === 'dark';
+
   const faixaSet = new Set([...itensSim.map(h => h.faixa), ...itensE2.map(h => h.faixa)]);
   const faixas   = [...faixaSet].sort((a, b) => parseInt(a) - parseInt(b));
   const simMap   = Object.fromEntries(itensSim.map(h => [h.faixa, h.contagem || 0]));
   const e2Map    = Object.fromEntries(itensE2.map(h  => [h.faixa, h.contagem || 0]));
 
-  const CLR_SIM = 'rgba(245,200,0,.92)';
-  const CLR_E2  = 'rgba(236,72,153,.92)';
-  const ROW_H   = 24;   // altura de cada barra
-  const GAP_SER = 3;    // gap entre as duas barras de uma faixa
-  const GAP_GRP = 10;   // gap entre faixas diferentes
-  const PAD_T   = 8;
-  const PAD_B   = 32;   // espaço p/ legenda
-  const PAD_L   = 8;
-  const PAD_R   = 8;
+  // totais por série para calcular %
+  const totalSim = Math.max(1, itensSim.reduce((s, h) => s + (h.contagem || 0), 0));
+  const totalE2  = Math.max(1, itensE2.reduce((s, h) => s + (h.contagem || 0), 0));
 
-  const dpr = window.devicePixelRatio || 1;
-  const W   = canvas.parentElement.clientWidth || 400;
-  const nRows = faixas.length;
-  const H   = PAD_T + nRows * (ROW_H * 2 + GAP_SER + GAP_GRP) + PAD_B;
+  const CLR_SIM  = 'rgba(245,200,0,.92)';
+  const CLR_E2   = 'rgba(236,72,153,.92)';
+  const ROW_H    = 32;   // altura de cada barra
+  const GAP_SER  = 4;    // gap entre as duas barras de uma faixa
+  const GAP_GRP  = 10;   // gap entre faixas diferentes
+  const PAD_T    = 8;
+  const PAD_B    = 32;   // legenda
+  const PAD_L    = 8;
+  const PCT_W    = 48;   // reserva para badge %
+  const PAD_R    = 4;
+  const TXT_PAD  = 9;    // recuo interno do texto
+
+  const dpr    = window.devicePixelRatio || 1;
+  const W      = canvas.parentElement.clientWidth || 400;
+  const nRows  = faixas.length;
+  const H      = PAD_T + nRows * (ROW_H * 2 + GAP_SER + GAP_GRP) + PAD_B;
+  const barMaxW = W - PAD_L - PCT_W - PAD_R;  // largura máxima das barras
 
   canvas.width  = W * dpr; canvas.height = H * dpr;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
 
-  const maxVal   = Math.max(1, ...faixas.map(f => Math.max(simMap[f] || 0, e2Map[f] || 0)));
-  const barMaxW  = W - PAD_L - PAD_R;
-  const toW      = v => (v / maxVal) * barMaxW;
-  const MIN_BAR  = 80; // largura mínima para texto caber
+  // Escala: barra mais longa = barra com maior % da sua série
+  const maxPctSim = Math.max(1, ...faixas.map(f => simMap[f] || 0)) / totalSim;
+  const maxPctE2  = Math.max(1, ...faixas.map(f => e2Map[f]  || 0)) / totalE2;
+
+  function drawHBar(xL, yB, clr, v, total, maxPct, serieLabel, faixaLabel) {
+    const pct  = Math.round(v / total * 100);
+    const bW   = ((v / total) / maxPct) * barMaxW;  // relativo ao maior % da série
+    const midY = yB + ROW_H / 2;
+
+    // ① Trilha de fundo
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(xL, yB, barMaxW, ROW_H, 4); ctx.fill(); }
+    else ctx.fillRect(xL, yB, barMaxW, ROW_H);
+
+    // ② Barra colorida
+    if (bW > 0) {
+      ctx.fillStyle = clr;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(xL, yB, bW, ROW_H, 4); ctx.fill(); }
+      else ctx.fillRect(xL, yB, bW, ROW_H);
+    }
+
+    // ③ Texto dentro — clipping impede vazamento
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(xL + TXT_PAD, yB + 1, barMaxW - TXT_PAD * 2, ROW_H - 2);
+    ctx.clip();
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    // linha 1: faixa (bold)
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 11px -apple-system,sans-serif';
+    ctx.fillText(faixaLabel, xL + TXT_PAD, midY - 7);
+    // linha 2: série + contagem
+    ctx.fillStyle = 'rgba(0,0,0,.60)';
+    ctx.font = '10px -apple-system,sans-serif';
+    ctx.fillText(serieLabel + '  ·  ' + v + ' sess.', xL + TXT_PAD, midY + 8);
+    ctx.restore();
+
+    // ④ Badge %
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = isDark ? '#ffffff' : '#111827';
+    ctx.font = 'bold 13px -apple-system,sans-serif';
+    ctx.fillText(pct + '%', W - PAD_R, midY);
+  }
 
   faixas.forEach((f, i) => {
-    const vSim = simMap[f] || 0;
-    const vE2  = e2Map[f]  || 0;
+    const vSim  = simMap[f] || 0;
+    const vE2   = e2Map[f]  || 0;
     const label = f + '–' + (parseInt(f) + 10) + 'm²';
     const yGrp  = PAD_T + i * (ROW_H * 2 + GAP_SER + GAP_GRP);
 
-    // — Barra Simulador
-    if (vSim > 0) {
-      const bw = Math.max(toW(vSim), MIN_BAR);
-      ctx.fillStyle = CLR_SIM;
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yGrp, bw, ROW_H, 3); ctx.fill(); }
-      else ctx.fillRect(PAD_L, yGrp, bw, ROW_H);
-      // texto preto dentro da barra
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 11px -apple-system,sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label + '   · ' + vSim + ' sess.', PAD_L + 7, yGrp + ROW_H / 2);
-    }
-
-    // — Barra E2
-    if (vE2 > 0) {
-      const yE2 = yGrp + ROW_H + GAP_SER;
-      const bw  = Math.max(toW(vE2), MIN_BAR);
-      ctx.fillStyle = CLR_E2;
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yE2, bw, ROW_H, 3); ctx.fill(); }
-      else ctx.fillRect(PAD_L, yE2, bw, ROW_H);
-      ctx.fillStyle = '#000';
-      ctx.font = 'bold 11px -apple-system,sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label + '   · ' + vE2 + ' sess.', PAD_L + 7, yE2 + ROW_H / 2);
-    }
+    if (vSim > 0) drawHBar(PAD_L, yGrp,              CLR_SIM, vSim, totalSim, maxPctSim, 'Simulador', label);
+    if (vE2  > 0) drawHBar(PAD_L, yGrp + ROW_H + GAP_SER, CLR_E2,  vE2,  totalE2,  maxPctE2,  'E2',        label);
   });
 
-  // Legenda
-  const isDark = _dmTheme_() === 'dark';
+  // ── Legenda ──
   const textClr = isDark ? '#c9d1d9' : '#374151';
-  const LY  = H - 12;
-  const BOX = 9;
-  const mid = W / 2;
+  const LY = H - 12, BOX = 9, mid = W / 2;
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = CLR_SIM; ctx.fillRect(mid - 110, LY - BOX + 1, BOX, BOX);
   ctx.fillStyle = textClr; ctx.font = '11px -apple-system,sans-serif'; ctx.textAlign = 'left';
