@@ -3110,6 +3110,9 @@ function _fdMatchEmps_(empsGrupados, sinais, rank) {
     const rc = _fdRegiaoCompativel_(emp, rSinal);
     const pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
     const ac = _fdAreaCompativel_(emp, aSinal && aSinal.faixa);
+    // Preço é critério duro: se há sinal de preço e não bate, descarta imediatamente.
+    // Bairro + área nunca compensam um preço incompatível.
+    if (pc === false) return;
     // conta apenas critérios com sinal real (não-null)
     const disponivel = (rc !== null ? 1 : 0) + (pc !== null ? 1 : 0) + (ac !== null ? 1 : 0);
     // sem nenhum sinal → sem dados → não exibir nada
