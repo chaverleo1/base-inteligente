@@ -3052,9 +3052,10 @@ function _fdExtrairSinais_(stats) {
 
 function _fdGruparPorEmp_(rows) {
   const map = {};
-  (rows || []).forEach(r => {
+  (rows || []).forEach(function(r) {
     const k = r.nomeEmpreendimento || r.idLancamento || '?';
-    if (!map[k]) map[k] = { ...r, _pMin: 0, _pMax: 0, _aMin: 0, _aMax: 0 };
+    if (!map[k]) map[k] = Object.assign({}, r, { _pMin: 0, _pMax: 0, _aMin: 0, _aMax: 0, _unidades: [] });
+    map[k]._unidades.push(r);  // guarda cada unidade individual
     const pm = _fdParsePreco_(r.precoMin);
     const px = _fdParsePreco_(r.precoMax) || pm;
     const ae = parseFloat(r.areaUtil) || 0;
@@ -3064,6 +3065,37 @@ function _fdGruparPorEmp_(rows) {
     if (!map[k]._aMax || ae > map[k]._aMax)           map[k]._aMax = ae;
   });
   return Object.values(map);
+}
+
+// Varre as unidades individuais de um empreendimento e retorna apenas as que
+// satisfazem CONJUNTAMENTE o sinal de preço (precoMedio dentro da faixa) e o
+// sinal de área (areaUtil dentro da faixa). Sinais ausentes (null) ignorados.
+function _fdFindUnidadesMatch_(emp, pFaixa, aFaixa) {
+  var unids = emp._unidades || [];
+  if (!unids.length) return [];
+
+  var pIni = null, pFim = null;
+  if (pFaixa) { pIni = parseInt(pFaixa) * 1000; pFim = pIni + 149999; }
+
+  var aIni = null, aFim = null;
+  if (aFaixa) {
+    var pts = String(aFaixa).split('-');
+    aIni = parseInt(pts[0]) || 0;
+    aFim = parseInt(pts[1]) || aIni + 10;
+    aIni -= 5; aFim += 15; // tolerância
+  }
+
+  return unids.filter(function(u) {
+    var pm = _fdParsePreco_(u.precoMedio) || _fdParsePreco_(u.precoMin) || _fdParsePreco_(u.preco) || 0;
+    var ae = parseFloat(u.areaUtil) || parseFloat(u.areaTerr) || 0;
+    // Unidade precisa ter ao menos um dado para entrar
+    if (!pm && !ae) return false;
+    // Se há sinal de preço e a unidade tem preço, deve caber na faixa
+    var okP = (pIni === null) || !pm || (pm >= pIni && pm <= pFim);
+    // Se há sinal de área e a unidade tem área, deve caber na faixa
+    var okA = (aIni === null) || !ae || (ae >= aIni && ae <= aFim);
+    return okP && okA;
+  });
 }
 
 function _fdPrecoCompativel_(emp, faixa) {
@@ -3101,39 +3133,73 @@ var _FD_STATUS_PRONTO_ = ['pronto', 'pronto novo', 'entregue'];
 var _FD_STATUS_OBRAS_  = ['em obras', 'em planta', 'lançamento', 'lancamento'];
 
 function _fdMatchEmps_(empsGrupados, sinais, rank) {
-  const pSinal = rank === 1 ? sinais.p1 : sinais.p2;
-  const rSinal = rank === 1 ? sinais.r1 : sinais.r2;
-  const aSinal = rank === 1 ? sinais.a1 : sinais.a2;
-  // null = sem sinal (não conta); true/false = sinal disponível e resultado
-  const scored = [];
+  var pSinal = rank === 1 ? sinais.p1 : sinais.p2;
+  var rSinal = rank === 1 ? sinais.r1 : sinais.r2;
+  var aSinal = rank === 1 ? sinais.a1 : sinais.a2;
+  var temP   = !!pSinal;
+  var temA   = !!aSinal;
+
+  var scored = [];
   empsGrupados.forEach(function(emp) {
-    const rc = _fdRegiaoCompativel_(emp, rSinal);
-    const pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
-    const ac = _fdAreaCompativel_(emp, aSinal && aSinal.faixa);
-    // Preço é critério duro: se há sinal de preço e não bate, descarta imediatamente.
-    // Bairro + área nunca compensam um preço incompatível.
+    // ── Bairro: validação no nível do empreendimento (como antes)
+    var rc = _fdRegiaoCompativel_(emp, rSinal);
+
+    // ── Preço × Área: validação no nível da UNIDADE
+    //    Varre cada unidade e retorna as que satisfazem AMBOS os sinais.
+    var unidsMatch = (emp._unidades && emp._unidades.length)
+      ? _fdFindUnidadesMatch_(emp, pSinal && pSinal.faixa, aSinal && aSinal.faixa)
+      : null; // null = sem dados de unidade → fallback agregado
+
+    var pc, ac;
+    if (unidsMatch !== null) {
+      // Modo unidade: há unidades cadastradas — usa matching cruzado
+      var ok = unidsMatch.length > 0;
+      pc = temP ? ok : null;
+      ac = temA ? ok : null;
+    } else {
+      // Fallback agregado (sem unidades individuais na base)
+      pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
+      ac = _fdAreaCompativel_(emp, aSinal && aSinal.faixa);
+    }
+
+    // Preço incompatível = descarte duro
     if (pc === false) return;
-    // conta apenas critérios com sinal real (não-null)
-    const disponivel = (rc !== null ? 1 : 0) + (pc !== null ? 1 : 0) + (ac !== null ? 1 : 0);
-    // sem nenhum sinal → sem dados → não exibir nada
+
+    // Critérios disponíveis e batidos
+    var disponivel = (rc !== null ? 1 : 0) + (pc !== null ? 1 : 0) + (ac !== null ? 1 : 0);
     if (disponivel === 0) return;
-    const bateu      = (rc === true ? 1 : 0)  + (pc === true ? 1 : 0)  + (ac === true ? 1 : 0);
-    // exige ao menos 2 critérios batidos; se só 1 disponível, exige que bata
-    const minNec = Math.min(2, disponivel);
+    var bateu  = (rc === true ? 1 : 0) + (pc === true ? 1 : 0) + (ac === true ? 1 : 0);
+    var minNec = Math.min(2, disponivel);
     if (bateu < minNec) return;
+
+    // Guarda unidades compatíveis no objeto para a tabela usar
+    emp._unidsMatch = unidsMatch || [];
     scored.push({ emp: emp, rc: rc === true, pc: pc === true, ac: ac === true });
   });
+
   // Ordem de prioridade:
   //   1. BAIRRO compatível primeiro
-  //   2. MENOR PREÇO crescente (mais barato dentro da faixa aparece primeiro)
+  //   2. MENOR PREÇO das unidades compatíveis (ASC)
   //   3. ÁREA compatível primeiro
   scored.sort(function(a, b) {
-    if (a.rc !== b.rc) return a.rc ? -1 : 1;                  // 1. bairro match
-    var pa = a.emp._pMin || 0, pb = b.emp._pMin || 0;
-    if (pa !== pb) return pa - pb;                             // 2. menor preço ASC
-    if (a.ac !== b.ac) return a.ac ? -1 : 1;                  // 3. área match
+    if (a.rc !== b.rc) return a.rc ? -1 : 1;
+    // preço mínimo das unidades compatíveis (ou agregado se sem unidades)
+    function minPEmp(s) {
+      var u = s.emp._unidsMatch;
+      if (u && u.length) {
+        var vals = u.map(function(x) {
+          return _fdParsePreco_(x.precoMedio) || _fdParsePreco_(x.precoMin) || 0;
+        }).filter(function(v) { return v > 0; });
+        return vals.length ? Math.min.apply(null, vals) : 0;
+      }
+      return s.emp._pMin || 0;
+    }
+    var pa = minPEmp(a), pb = minPEmp(b);
+    if (pa !== pb) return pa - pb;
+    if (a.ac !== b.ac) return a.ac ? -1 : 1;
     return 0;
   });
+
   return scored.map(function(s) {
     return Object.assign({}, s.emp, { _rc: s.rc, _pc: s.pc, _ac: s.ac });
   });
@@ -3239,62 +3305,101 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
   _fdBriefings_[keyD] = _fdTextoBriefingDemanda_(rank, sinais, tab);
   _fdBriefings_[keyE] = _fdTextoBriefingEmps_(emps, rank, sinais, tab);
 
-  // lookup em _mapaRows (dados completos já calculados pelo Mapa Geral)
-  const _mapaLookup_ = {};
+  // lookup em _mapaRows (dados de tração/similaridade já calculados)
+  var _mapaLookup_ = {};
   (_mapaRows || []).forEach(function(r) { if (r.nome) _mapaLookup_[r.nome] = r; });
-  const FD_NCOLS = 12;
+  var FD_NCOLS = 12;
 
-  // Aplica ordenação se selecionada
-  const empsOrdenados = emps.slice();
+  // helpers de formatação
+  function fmtArea_(mn, mx) {
+    if (!mn && !mx) return '—';
+    var s = function(v) { return v.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}); };
+    return mn === mx ? s(mn) + 'm²' : s(mn) + ' – ' + s(mx) + 'm²';
+  }
+  function fmtPrecoRange_(mn, mx) {
+    if (!mn) return '—';
+    return mn === mx ? _fdFmtBRL_(mn) : _fdFmtBRL_(mn) + ' – ' + _fdFmtBRL_(mx);
+  }
+
+  // Aplica ordenação de coluna (clique no cabeçalho)
+  var empsOrdenados = emps.slice();
   if (_fdSort_.col && _FD_SORT_VALS_[_fdSort_.col]) {
-    const getV = _FD_SORT_VALS_[_fdSort_.col];
+    var getV = _FD_SORT_VALS_[_fdSort_.col];
     empsOrdenados.sort(function(a, b) {
-      const ma = _mapaLookup_[a.nomeEmpreendimento];
-      const mb = _mapaLookup_[b.nomeEmpreendimento];
+      var ma = _mapaLookup_[a.nomeEmpreendimento];
+      var mb = _mapaLookup_[b.nomeEmpreendimento];
       return (getV(mb) - getV(ma)) * _fdSort_.dir;
     });
   }
 
-  const linhasEmps = empsOrdenados.length ? empsOrdenados.map(function(emp) {
-    const mr = _mapaLookup_[emp.nomeEmpreendimento];
-    const badges = '<div class="fd-badges" style="margin-top:2px">' +
+  var linhasEmps = empsOrdenados.length ? empsOrdenados.map(function(emp) {
+    var mr     = _mapaLookup_[emp.nomeEmpreendimento];
+    var unids  = emp._unidsMatch || [];
+
+    // ── Dados das UNIDADES COMPATÍVEIS ──────────────────────────────────
+    var areas  = unids.map(function(u) { return parseFloat(u.areaUtil) || parseFloat(u.areaTerr) || 0; }).filter(function(v) { return v > 0; });
+    var precos = unids.map(function(u) { return _fdParsePreco_(u.precoMedio) || _fdParsePreco_(u.precoMin) || 0; }).filter(function(v) { return v > 0; });
+    var aMinU  = areas.length  ? Math.min.apply(null, areas)  : 0;
+    var aMaxU  = areas.length  ? Math.max.apply(null, areas)  : 0;
+    var pMinU  = precos.length ? Math.min.apply(null, precos) : 0;
+    var pMaxU  = precos.length ? Math.max.apply(null, precos) : 0;
+
+    // Se não há unidades match, usa dados agregados do mapa como fallback
+    var areaStr  = unids.length ? fmtArea_(aMinU, aMaxU)         : (mr && mr.areaMin  > 0 ? fmtArea_(mr.areaMin, mr.areaMax)   : '—');
+    var precoStr = unids.length ? fmtPrecoRange_(pMinU, pMaxU)   : (mr && mr.menorPreco > 0 ? _fdFmtBRL_(mr.menorPreco)         : '—');
+    var unidStr  = unids.length ? '<strong>' + unids.length + '</strong> <span style="font-size:10px;opacity:.6">unid.</span>' : '—';
+
+    var badges = '<div class="fd-badges" style="margin-top:2px">' +
       (emp._rc ? '<span class="fd-badge fd-badge-r">Bairro</span>' : '') +
       (emp._pc ? '<span class="fd-badge fd-badge-p">Preço</span>'  : '') +
       (emp._ac ? '<span class="fd-badge fd-badge-a">Área</span>'   : '') +
     '</div>';
+
+    // ── Tração e Similaridade (do Mapa Geral) ───────────────────────────
+    var trStr    = '—';
+    var similStr = '—';
+    var prazoStr = '—';
+    var pctStr   = '—';
+    var estoqueStr = '—';
+    var nomeStr  = emp.nomeEmpreendimento || '—';
+    var bairroStr = emp.bairro || '—';
+    var padraoStr = emp.padrao || '—';
+    var constStr  = emp.construtora || '—';
+
     if (mr) {
-      const areaStr = mr.areaMin > 0
-        ? (mr.areaMax > mr.areaMin
-            ? mr.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + ' a ' + mr.areaMax.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'm²'
-            : mr.areaMin.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'm²')
-        : '—';
-      const trStr = mr.comp > 0
+      nomeStr    = mr.nome || nomeStr;
+      bairroStr  = mr.bairro || bairroStr;
+      padraoStr  = mr.padrao || padraoStr;
+      constStr   = mr.construtora || constStr;
+      prazoStr   = (typeof renderPrazoCelula_ === 'function') ? renderPrazoCelula_(mr) : '—';
+      pctStr     = mr.pctVendido > 0 ? mr.pctVendido + '%' : '—';
+      estoqueStr = mr.estoque >= 0 ? String(mr.estoque) : '—';
+      trStr      = mr.comp > 0
         ? '<span class="tv-score-badge ' + classeScoreTracao_(mr.comp) + '" title="Tração ' + mr.comp.toFixed(1) + '">T ' + mr.comp.toFixed(1) + '</span>'
         : '—';
-      const similStr = mr.simil > 0
+      similStr   = mr.simil > 0
         ? '<span class="simil-badge' + (similBadgeCls_(mr.simil) ? ' ' + similBadgeCls_(mr.simil) : '') + '" title="Similaridade ' + mr.simil + '%">' + mr.simil + '%</span>'
         : '—';
-      return '<tr>' +
-        '<td><strong>' + (mr.nome || emp.nomeEmpreendimento || '—') + '</strong>' + badges + '</td>' +
-        '<td>' + (mr.bairro || '—') + '</td>' +
-        '<td>' + (mr.padrao || '—') + '</td>' +
-        '<td>' + (mr.construtora || '—') + '</td>' +
-        '<td class="mapa-num">' + areaStr + '</td>' +
-        '<td class="mapa-num">' + (mr.m2Medio > 0 ? 'R$ ' + exibirPrecoBR(mr.m2Medio) : '—') + '</td>' +
-        '<td class="mapa-num">' + (typeof renderPrazoCelula_ === 'function' ? renderPrazoCelula_(mr) : '—') + '</td>' +
-        '<td class="mapa-num">' + (mr.pctVendido > 0 ? mr.pctVendido + '%' : '—') + '</td>' +
-        '<td class="mapa-num">' + (mr.estoque > 0 ? mr.estoque : (mr.estoque === 0 ? '0' : '—')) + '</td>' +
-        '<td>' + trStr + '</td>' +
-        '<td class="mapa-simil">' + similStr + '</td>' +
-        '<td class="mapa-num">' + (mr.menorPreco > 0 ? 'R$ ' + exibirPrecoBR(mr.menorPreco) : '—') + '</td>' +
-      '</tr>';
+      // Se mapa tem área/preço e ainda não temos das unidades, usa mapa
+      if (!unids.length) {
+        if (!areaStr || areaStr === '—') areaStr = mr.areaMin > 0 ? fmtArea_(mr.areaMin, mr.areaMax) : '—';
+        if (!precoStr || precoStr === '—') precoStr = mr.menorPreco > 0 ? _fdFmtBRL_(mr.menorPreco) : '—';
+      }
     }
-    // fallback sem dados do mapa
+
     return '<tr>' +
-      '<td colspan="4"><strong>' + (emp.nomeEmpreendimento || '—') + '</strong>' + badges + '</td>' +
-      '<td class="mapa-num">' + ((emp._aMin || emp._aMax) ? (emp._aMin||'?') + '–' + (emp._aMax||'?') + 'm²' : '—') + '</td>' +
-      '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>' +
-      '<td class="mapa-num">' + _fdFmtBRL_(emp._pMin) + '–' + _fdFmtBRL_(emp._pMax) + '</td>' +
+      '<td><strong>' + nomeStr + '</strong>' + badges + '</td>' +
+      '<td>' + bairroStr  + '</td>' +
+      '<td>' + padraoStr  + '</td>' +
+      '<td>' + constStr   + '</td>' +
+      '<td class="mapa-num">' + unidStr    + '</td>' +
+      '<td class="mapa-num">' + areaStr   + '</td>' +
+      '<td class="mapa-num">' + precoStr  + '</td>' +
+      '<td class="mapa-num">' + prazoStr  + '</td>' +
+      '<td class="mapa-num">' + pctStr    + '</td>' +
+      '<td class="mapa-num">' + estoqueStr + '</td>' +
+      '<td>' + trStr      + '</td>' +
+      '<td class="mapa-simil">' + similStr + '</td>' +
     '</tr>';
   }).join('') : '<tr><td colspan="' + FD_NCOLS + '" style="text-align:center;color:var(--text3);padding:14px">Nenhum empreendimento compatível</td></tr>';
 
@@ -3317,18 +3422,18 @@ function _fdRenderTabela_(sinais, emps, rank, tab) {
       '</div>' +
       '<div class="fd-col-emps">' +
         '<div class="fd-emps-title">Empreendimentos compatíveis <span style="color:var(--accent)">(' + emps.length + ')</span></div>' +
-        '<div class="mapa-wrap" style="max-height:218px">' +
+        '<div class="mapa-wrap" style="max-height:260px">' +
           '<table class="mapa-tabela" style="cursor:default">' +
             '<thead><tr>' +
               '<th>Empreendimento</th><th>Bairro</th><th>Padrão</th><th>Construtora</th>' +
-              '<th>Faixa de áreas</th>' +
-              _fdThSort_('R$/m²',      'm2') +
+              _fdThSort_('Unid.',        'estoque') +
+              '<th title="Área das unidades compatíveis">Área compat.</th>' +
+              '<th title="Preço médio das unidades compatíveis">Preço compat.</th>' +
               '<th>Prazo</th>' +
-              _fdThSort_('% ESTQ',     'pct') +
-              _fdThSort_('QTD ESTQ',   'estoque') +
-              _fdThSort_('T',          'tracao') +
-              _fdThSort_('S%',         'simil') +
-              _fdThSort_('Menor preço','menorPreco') +
+              _fdThSort_('% ESTQ',  'pct') +
+              _fdThSort_('QTD ESTQ','estoque') +
+              _fdThSort_('T',       'tracao') +
+              _fdThSort_('S%',      'simil') +
             '</tr></thead>' +
             '<tbody>' + linhasEmps + '</tbody>' +
           '</table>' +
