@@ -526,6 +526,16 @@
   .adm-table tr:hover td{background:rgba(255,255,255,.015)}
   .adm-td-btn{width:210px}
   .adm-td-desc{font-size:13px;color:var(--text2);line-height:1.55}
+  /* Tabela do painel Google Ads (BaseImob) -- 12 colunas, pedido explícito
+     do usuário pra caber sem precisar de rolagem horizontal: letra e
+     padding bem menores que o padrão de .adm-table (que é compartilhado
+     com outras tabelas do ADM, por isso escopado só em #gadsTabela em vez
+     de mudar a regra genérica). Nome da campanha trunca com "…" + tooltip
+     (title) em vez de empurrar a tabela pra largura da string inteira. */
+  #gadsTabela th{padding:6px 7px;font-size:9px;white-space:nowrap}
+  #gadsTabela td{padding:5px 7px;font-size:11px;white-space:nowrap}
+  #gadsTabela td:first-child{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #gadsTabela .bi-btn{padding:3px 6px;font-size:9px}
   .adm-td-desc b{color:var(--text)}
   .adm-td-desc code{font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;color:var(--accent2)}
   .adm-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;width:100%;text-align:left;white-space:nowrap}
@@ -1023,9 +1033,9 @@
       <table class="adm-table" id="gadsTabela">
         <thead>
           <tr>
-            <th>Campanha</th><th>Status</th><th>Investimento</th><th>Cliques</th>
-            <th>Impressões</th><th>CTR</th><th>CPC médio</th><th>Conversões (Ads)</th>
-            <th>Leads Qualif.</th><th>Custo/Lead Qualif.</th><th>Lead Venda</th><th></th>
+            <th>Campanha</th><th>Status</th><th>Invest.</th><th>Cliques</th>
+            <th>Impr.</th><th>CTR</th><th>CPC méd.</th><th>Conv. (Ads)</th>
+            <th>Leads Qualif.</th><th>Custo/Lead</th><th>Lead Venda</th><th></th>
           </tr>
         </thead>
         <tbody id="gadsTabelaBody"><tr><td colspan="12" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
@@ -3931,7 +3941,7 @@ async function carregarMetricasGoogleAds_() {
       const escNome = c.campanha.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       return `
       <tr style="background:${gadsCorEficiencia_(i, campanhas.length)}">
-        <td style="font-weight:600">${i === 0 && c.leadsQualificados > 0 ? '🏆 ' : ''}${c.campanha}</td>
+        <td style="font-weight:600" title="${c.campanha}">${i === 0 && c.leadsQualificados > 0 ? '🏆 ' : ''}${c.campanha}</td>
         <td>${GADS_STATUS_LABEL_[c.status] || c.status || '—'}</td>
         <td>${fmtBRL(c.investimento)}</td>
         <td>${c.cliques.toLocaleString('pt-BR')}</td>
