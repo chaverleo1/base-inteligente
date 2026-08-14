@@ -925,7 +925,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
          Alimenta analytics de ACESSOS e pré-preenche o slider do step-2. -->
     <div class="capa-preco-wrap">
       <div class="capa-preco-pergunta">Qual é o seu <span style="color:var(--accent)">orçamento</span> ideal?</div>
-      <div class="capa-preco-valor" id="capaPrecoFormatado">R$ 425.000</div>
+      <div class="capa-preco-valor" id="capaPrecoFormatado">R$ 875.000</div>
       <input type="range" id="capaSliderPreco" oninput="atualizarCapaPreco_(this.value)" style="width:100%">
       <div class="capa-slider-bounds">
         <span id="capaLblMin">—</span>
@@ -1597,10 +1597,32 @@ function contarAte_(el, alvo, duracaoMs) {
 // a primeira tela não ficar "fria": mostrar de cara que é uma consultoria
 // com dados de mercado reais e atuais, não só mais uma landing page comum.
 function montarStatsAbertura_() {
-  const count = TODOS_LANC.length;
-  document.querySelectorAll('.stats-total-emp').forEach(el => {
-    if (count) contarAte_(el, count); else el.textContent = '—';
-  });
+  atualizarContadorCapa_();
+}
+
+// Contador dinâmico da capa: mostra quantos empreendimentos têm precoAPartir
+// dentro do orçamento selecionado. Se bairros forem marcados, filtra também
+// por bairro. Debounce de 80ms para suavizar o drag do slider.
+var _contadorCapaTimer_ = null;
+function atualizarContadorCapa_() {
+  clearTimeout(_contadorCapaTimer_);
+  _contadorCapaTimer_ = setTimeout(function() {
+    var els = document.querySelectorAll('.stats-total-emp');
+    if (!els.length || !TODOS_LANC.length) return;
+    // Filtra por preço
+    var lista = TODOS_LANC.filter(function(c) { return c.precoAPartir <= D.capaPreco; });
+    // Filtra por bairro se algum estiver selecionado
+    if (D.capaBairros.length > 0) {
+      var bs = D.capaBairros.map(function(b) { return b.toLowerCase().trim(); });
+      lista = lista.filter(function(c) {
+        return bs.indexOf(String(c.bairro || '').toLowerCase().trim()) >= 0;
+      });
+    }
+    var n = lista.length;
+    els.forEach(function(el) {
+      if (n > 0) contarAte_(el, n, 350); else el.textContent = '0';
+    });
+  }, 80);
 }
 
 // Mensagem "Resultado rápido · Dados reais e atualizados em [Mês/Ano]" da
@@ -1675,7 +1697,7 @@ const D = {
   // Opções").
   extrasMostrados: [], extraPrecoVisto: new Set(), extraFavoritos: new Set(),
   verMaisOpcoesClicado: false,
-  capaPreco: 425000, // preço escolhido no slider da capa (pré-preenche step-2)
+  capaPreco: 875000, // preço escolhido no slider da capa (pré-preenche step-2)
   capaBairros: [],  // bairros selecionados na capa (múltipla escolha)
   areaE2: null,     // área selecionada no step-5 (Área Útil E2 — rastreada separadamente)
   precoAlvo: null, metragemAlvo: null, areaRange: null,
@@ -2747,7 +2769,7 @@ function inicializarCapaSlider_() {
   const slider = document.getElementById('capaSliderPreco');
   if (!slider) return;
   slider.min = PRECO_BOUNDS[0]; slider.max = PRECO_BOUNDS[1]; slider.step = 25000;
-  const defVal = Math.min(Math.max(D.capaPreco || 425000, PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
+  const defVal = Math.min(Math.max(D.capaPreco || 875000, PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
   slider.value = defVal;
   document.getElementById('capaLblMin').textContent = formatBRL_(PRECO_BOUNDS[0]);
   document.getElementById('capaLblMax').textContent = formatBRL_(PRECO_BOUNDS[1]);
@@ -2760,6 +2782,7 @@ function atualizarCapaPreco_(val) {
   if (el) el.textContent = formatBRL_(v);
   const slider = document.getElementById('capaSliderPreco');
   if (slider) slider.value = v;
+  atualizarContadorCapa_();
 }
 function avancarStepCapa_() {
   if (!capaBairroValidar_()) return;
@@ -2775,9 +2798,9 @@ function registrarAcessoCapa_() {
     utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign,
     gclid: D.gclid, dispositivo: D.dispositivo, horaAcesso: D.horaAcesso,
   };
-  const url = WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload));
-  if (navigator.sendBeacon) { navigator.sendBeacon(url); }
-  else { fetch(url).catch(() => {}); }
+  // Usa fetch GET (igual a registrarEventoFunil_) — sendBeacon às vezes
+  // não alcança o GAS em redirecionamentos POST→GET e falha silenciosamente.
+  fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
 }
 
 // ── CAPA: seletor de bairro ──────────────────────────────────────────────────
@@ -2805,6 +2828,7 @@ function capaBairroToggle_(btn, bairro) {
   if (idx >= 0) { D.capaBairros.splice(idx, 1); btn.classList.remove('ativo'); }
   else           { D.capaBairros.push(bairro);   btn.classList.add('ativo'); }
   capaBairroLimparErro_();
+  atualizarContadorCapa_();
 }
 
 function capaBairroAbrirOutro_() {
@@ -2857,6 +2881,7 @@ function capaBairroSelecionarItem_(bairro) {
   if (inp) inp.value = '';
   capaBairroFecharDropdown_();
   capaBairroLimparErro_();
+  atualizarContadorCapa_();
 }
 
 function capaBairroFecharDropdown_() {
@@ -2871,10 +2896,15 @@ function capaBairroLimparErro_() {
 }
 
 function capaBairroValidar_() {
-  // Aceita texto digitado livremente sem precisar clicar no dropdown
+  // Aceita texto digitado livremente (campo OUTRO) sem precisar clicar no dropdown
   const inp = document.getElementById('capaBairroInput');
   const digitado = inp ? inp.value.trim() : '';
-  if (digitado) capaBairroSelecionarItem_(digitado);
+  if (digitado) {
+    // Garante que o bairro entra em D mesmo se capaBairroSelecionarItem_ jogar exceção
+    try { capaBairroSelecionarItem_(digitado); } catch(e_) {}
+    if (!D.capaBairros.includes(digitado)) D.capaBairros.push(digitado);
+    if (inp) inp.value = '';
+  }
 
   if (D.capaBairros.length > 0) return true;
   const el = document.getElementById('capaBairroErro');
