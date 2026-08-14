@@ -1601,17 +1601,27 @@ function montarStatsAbertura_() {
 }
 
 // Contador dinâmico da capa: mostra quantos empreendimentos têm precoAPartir
-// dentro do orçamento selecionado. Se bairros forem marcados, filtra também
-// por bairro. Debounce de 80ms para suavizar o drag do slider.
+// PRÓXIMO do orçamento selecionado -- "orçamento ideal" é um ALVO, não um
+// teto, então usa a mesma tolerância ±20% (TOLERANCIA_PRECO_) já usada pelo
+// motor de match final (temApartamentoCompativel_) em vez de um corte seco
+// "<= capaPreco" (pedido explícito do usuário: "esse preço e uma variação
+// aproximada do mesmo" -- projeto acima do orçamento por pouco também deve
+// contar, não só os mais baratos). Critério 2 (bairro) continua sendo corte
+// seco -- bairro fora da seleção NUNCA conta, mesmo que o preço bata.
+// Debounce de 80ms para suavizar o drag do slider.
 var _contadorCapaTimer_ = null;
 function atualizarContadorCapa_() {
   clearTimeout(_contadorCapaTimer_);
   _contadorCapaTimer_ = setTimeout(function() {
     var els = document.querySelectorAll('.stats-total-emp');
     if (!els.length || !TODOS_LANC.length) return;
-    // Filtra por preço
-    var lista = TODOS_LANC.filter(function(c) { return c.precoAPartir <= D.capaPreco; });
-    // Filtra por bairro se algum estiver selecionado
+    // Critério 1: preço dentro de uma faixa aproximada do orçamento (±20%,
+    // mesma tolerância do motor de match final -- ver TOLERANCIA_PRECO_).
+    var faixaMin = D.capaPreco * (1 - TOLERANCIA_PRECO_);
+    var faixaMax = D.capaPreco * (1 + TOLERANCIA_PRECO_);
+    var lista = TODOS_LANC.filter(function(c) { return c.precoAPartir >= faixaMin && c.precoAPartir <= faixaMax; });
+    // Critério 2: bairro, se algum estiver selecionado -- corte seco, nunca
+    // mostra quantidade de outros bairros.
     if (D.capaBairros.length > 0) {
       var bs = D.capaBairros.map(function(b) { return b.toLowerCase().trim(); });
       lista = lista.filter(function(c) {
@@ -2610,6 +2620,14 @@ function selecionarQuartos_(el, val) {
 
 function refinarBusca_() { irParaStep(2); }
 
+// Link "RECOMEÇAR" do estado vazio (0 opções mesmo após tolerância
+// expandida, ver montarMatch) -- volta direto pra capa (step-0), mesmo
+// padrão de salto direto já usado por voltarStep() (ex: stepAtual 5 -> 0).
+// Não reseta D de propósito: se o cliente mudar orçamento/bairro na capa e
+// avançar de novo, o funil recalcula tudo do zero normalmente, igual a
+// qualquer "voltar" já existente.
+function recomecarBusca_() { irParaStep(0); }
+
 // ── FILTRO / MATCH ──────────────────────────────────────────────────────
 // scoreMatchPreferencia_ (distância relativa ao alvo do slider, mesma
 // metodologia de baseimob-funil.html) só ordena -- decide QUEM aparece
@@ -3470,9 +3488,21 @@ function montarMatch() {
     btnMais.style.display = 'none';
   }
 
+  // Pedido explícito do usuário: se mesmo depois da tolerância expandida
+  // (qtdOpcoesReais_ já rodou acima, ±30%) o resultado real continua ZERO,
+  // não fingir que "vamos buscar opções próximas" (mensagem antiga prometia
+  // algo que a tela não entregava) -- avisa direto e oferece as 2 saídas:
+  // ajustar orçamento/área (mesmo destino do botão "← Ajustar filtros" no
+  // topo, refinarBusca_ = volta pro step-2) ou recomeçar do zero (capa).
   if (!ofertas.length) {
     document.getElementById('opcoesTabela').innerHTML =
-      '<div style="padding:18px;font-size:13px;color:var(--text);text-align:center">Nenhum empreendimento com esse apartamento exato agora — vamos buscar opções próximas pra você.</div>';
+      '<div style="padding:24px 18px;text-align:center">' +
+        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Ops... não encontramos opções com todas as configurações que solicitou.</div>' +
+        '<div style="font-size:13px;color:var(--text2);line-height:1.6">' +
+          'Ajuste seu <a href="javascript:void(0)" onclick="refinarBusca_()" style="color:var(--accent);font-weight:700;text-decoration:underline">orçamento e área útil</a> abaixo, ' +
+          'ou <a href="javascript:void(0)" onclick="recomecarBusca_()" style="color:var(--accent);font-weight:700;text-decoration:underline">clique aqui para RECOMEÇAR</a>' +
+        '</div>' +
+      '</div>';
     return;
   }
 
