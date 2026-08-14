@@ -754,6 +754,27 @@ input[type=range]::-moz-range-track {
 .conf-item-val-sit {
   font-size: clamp(20px, 5.5vw, 28px); letter-spacing: -.5px;
 }
+/* Objetivo/Estágio editáveis no step-2 (pedido explícito do usuário) --
+   mesmo visual de .conf-item-val (peso/cor), só que <select> de verdade.
+   IMPORTANTE: appearance:none tira a seta NATIVA do navegador -- sem repor
+   uma seta própria a caixa fica com cara de texto fixo, não parece
+   clicável (mesmo bug real já corrigido em .tel-country-box, ver
+   comentário lá). Seta em SVG embutida via background-image resolve isso
+   de novo aqui. */
+.conf-item-select {
+  width: 100%; text-align: left; cursor: pointer; outline: none;
+  font-family: inherit; font-weight: 800; color: var(--orange);
+  font-size: clamp(15px, 4.2vw, 19px); letter-spacing: -.3px;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff8a00' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 2px center; background-size: 16px;
+  border: none; border-bottom: 1.5px solid var(--border);
+  padding: 2px 22px 4px 0;
+  transition: border-color .2s;
+  -webkit-appearance: none; appearance: none;
+}
+.conf-item-select:focus { border-color: var(--accent); }
+.conf-item-select option { background: var(--s2); color: var(--text); font-weight: 600; }
 .conf-obs {
   grid-column: 1 / -1;
   padding: 12px 16px; background: rgba(79,124,255,.07);
@@ -1049,11 +1070,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="conf-card" id="s2ResumoCard" style="margin-top:16px">
       <div class="conf-item">
         <div class="conf-item-label">Objetivo</div>
-        <div class="conf-item-val conf-item-val-sit" id="s2ResumoObjetivo">—</div>
+        <select class="conf-item-select" id="s2ResumoObjetivo" onchange="mudarObjetivoStep2_(this.value)">
+          <option value="moradia">Moradia</option>
+          <option value="investimento">Investimento</option>
+        </select>
       </div>
       <div class="conf-item">
         <div class="conf-item-label">Estágio</div>
-        <div class="conf-item-val conf-item-val-sit" id="s2ResumoEstagio">—</div>
+        <select class="conf-item-select" id="s2ResumoEstagio" onchange="mudarEstagioStep2_(this.value)">
+          <option value="pronto_novo" id="s2OptProntoNovo">Pronto para Morar</option>
+          <option value="em_obras">Em Obras</option>
+        </select>
       </div>
       <div class="conf-item conf-item-full conf-item-last">
         <div class="conf-item-label" id="tituloPreco">Orçamento simulador <span style="font-size:.9em;font-weight:600;opacity:.85;text-transform:none;letter-spacing:0">(pode ajustar)</span></div>
@@ -1847,7 +1874,7 @@ function irParaStep(n) {
 function avancarStep() {
   if (!validar()) return;
 
-  if (stepAtual === 0) { irParaStep(5); return; }                           // capa → objetivo+padrão
+  if (stepAtual === 0) { irParaStep(5); sincronizarStep5ComEstado_(); return; } // capa → objetivo+padrão
   if (stepAtual === 5) { montarConfigIniciais_(); irParaStep(2); return; }  // objetivo+padrão → sliders
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
   if (stepAtual === 3) { montarBlocoNecessidade_(); irParaStep(1); return; } // confirmação → nome
@@ -1933,7 +1960,7 @@ function refazerSliders() {
 function voltarStep() {
   _voltandoStep_ = true;
   if (stepAtual === 5) { irParaStep(0); return; } // objetivo+padrão → capa
-  if (stepAtual === 2) { irParaStep(5); return; } // sliders → objetivo+padrão
+  if (stepAtual === 2) { irParaStep(5); sincronizarStep5ComEstado_(); return; } // sliders → objetivo+padrão
   if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
   if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
   if (stepAtual === 9) { irParaStep(7); return; } // agendamento → captura
@@ -2091,6 +2118,29 @@ function montarBlocoPadrao_() {
   `).join('');
 }
 
+// Sincroniza os botões do step-5 com D.objetivo/D.situacoes -- necessário
+// desde que Objetivo/Estágio também podem ser trocados direto no <select>
+// do step-2 (pedido explícito do usuário, mudança 2026-08-14): sem isso,
+// voltar pro step-5 depois de mudar por lá mostraria o botão antigo
+// destacado, não o valor real de D. Chamada nos 2 pontos que levam pro
+// step-5 (avancarStep a partir da capa, voltarStep a partir do step-2).
+function sincronizarStep5ComEstado_() {
+  document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(btn => {
+    const oc = btn.getAttribute('onclick') || '';
+    btn.classList.toggle('on', !!D.objetivo && oc.includes("'" + D.objetivo + "'"));
+  });
+  const btnProntoStep5 = document.getElementById('btnEstProntoNovo');
+  if (btnProntoStep5) btnProntoStep5.textContent = termoProntoParaMorar_();
+  const blocoEstagio = document.getElementById('blocoEstagioWrap');
+  if (blocoEstagio) blocoEstagio.style.display = D.objetivo ? '' : 'none';
+  document.querySelectorAll('#tagsEstagio .obj-tag-btn').forEach(btn => {
+    const oc = btn.getAttribute('onclick') || '';
+    let match = false;
+    D.situacoes.forEach(s => { if (oc.includes("'" + s + "'")) match = true; });
+    btn.classList.toggle('on', match);
+  });
+}
+
 function selecionarObjetivo_(el, val) {
   document.getElementById('tagsObjetivo').classList.remove('obj-erro');
   document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(b => b.classList.remove('on'));
@@ -2211,20 +2261,57 @@ function montarTitulosStep2_() {
   }
 }
 
-// Preenche a tabela-resumo do step-2 (Objetivo/Estágio, só leitura -- já
-// definidos no step-5) -- 1x só ao entrar na tela, não muda com
-// área/orçamento. O rótulo do campo "Orçamento simulador" também é
-// atualizado aqui (mesmo texto usado antes em #tituloPreco).
+// Preenche a tabela-resumo do step-2 (Objetivo/Estágio, EDITÁVEIS -- pedido
+// explícito do usuário: já abre com o que foi definido no step-5, mas o
+// cliente pode mudar direto aqui, com a contagem de opções recalculando na
+// hora -- ver mudarObjetivoStep2_/mudarEstagioStep2_). Chamado 1x ao
+// entrar na tela; depois disso os <select> são a fonte de verdade (o
+// cliente pode reabrir o step-5 via "Voltar" e mudar de novo também, o que
+// re-popula os <select> do zero na próxima entrada no step-2).
 function montarResumoStep2_() {
   const elObj = document.getElementById('s2ResumoObjetivo');
-  if (elObj) elObj.textContent = D.objetivo === 'investimento' ? 'Investimento' : 'Moradia';
+  if (elObj) elObj.value = D.objetivo === 'investimento' ? 'investimento' : 'moradia';
   const elEst = document.getElementById('s2ResumoEstagio');
-  if (elEst) elEst.textContent = situacaoEscolhidaLabel_() || '—';
+  if (elEst) elEst.value = D.situacoes.has('em_obras') ? 'em_obras' : 'pronto_novo';
+  atualizarLabelProntoStep2_();
   const tituloPreco = document.getElementById('tituloPreco');
   if (tituloPreco) {
     const labelOrç = D.objetivo === 'investimento' ? 'Quanto está disposto a investir' : 'Orçamento simulador';
     tituloPreco.innerHTML = labelOrç + ' <span style="font-size:.9em;font-weight:600;opacity:.85;text-transform:none;letter-spacing:0">(pode ajustar)</span>';
   }
+}
+
+// "Pronto para Morar" (Moradia) vs "Pronto" (Investir) -- mesmo termo usado
+// no botão do step-5 (termoProntoParaMorar_), só que agora reaplicado
+// também na opção do <select> do step-2 toda vez que Objetivo muda por lá.
+function atualizarLabelProntoStep2_() {
+  const opt = document.getElementById('s2OptProntoNovo');
+  if (opt) opt.textContent = termoProntoParaMorar_();
+}
+
+// Objetivo mudado direto no <select> do step-2 (pedido explícito do
+// usuário) -- atualiza D.objetivo, os textos que dependem dele (título da
+// área, rótulo do orçamento, termo "Pronto..." do outro select) e
+// recalcula a contagem de opções na hora, igual mexer em área/orçamento.
+function mudarObjetivoStep2_(val) {
+  D.objetivo = val;
+  montarTitulosStep2_();
+  atualizarLabelProntoStep2_();
+  const tituloPreco = document.getElementById('tituloPreco');
+  if (tituloPreco) {
+    const labelOrç = D.objetivo === 'investimento' ? 'Quanto está disposto a investir' : 'Orçamento simulador';
+    tituloPreco.innerHTML = labelOrç + ' <span style="font-size:.9em;font-weight:600;opacity:.85;text-transform:none;letter-spacing:0">(pode ajustar)</span>';
+  }
+  atualizarComboUI_();
+}
+
+// Estágio mudado direto no <select> do step-2 (pedido explícito do
+// usuário) -- D.situacoes é radio (só 1 valor), igual o comportamento já
+// existente no step-5 (selecionarEstagioStep5_).
+function mudarEstagioStep2_(val) {
+  D.situacoes.clear();
+  D.situacoes.add(val);
+  atualizarComboUI_();
 }
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
