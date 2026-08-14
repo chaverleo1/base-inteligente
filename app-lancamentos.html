@@ -1625,6 +1625,18 @@ function atualizarContadorCapa_() {
   }, 80);
 }
 
+// Retorna TODOS_LANC restrito aos bairros que o lead selecionou na capa.
+// Se nenhum bairro foi selecionado, devolve tudo. Usado em rankeados(),
+// padroesDisponiveis_() e montarConfigIniciais_() para que as etapas
+// seguintes mostrem apenas opções dos bairros de interesse do lead.
+function lancBairroFiltrados_() {
+  if (!D.capaBairros || !D.capaBairros.length) return TODOS_LANC;
+  var bs = D.capaBairros.map(function(b) { return b.toLowerCase().trim(); });
+  return TODOS_LANC.filter(function(c) {
+    return bs.indexOf(String(c.bairro || '').toLowerCase().trim()) >= 0;
+  });
+}
+
 // Mensagem "Resultado rápido · Dados reais e atualizados em [Mês/Ano]" da
 // capa -- pedido explícito do usuário: mês/ano em negrito, vindo do dado
 // real mais recente da base (DATA_BASE_ATUALIZADA_). Sem dado (erro/base
@@ -2005,7 +2017,7 @@ function percentil_(arrOrdenado, p) {
 
 function padroesDisponiveis_() {
   const porPadrao = {};
-  TODOS_LANC.forEach(c => {
+  lancBairroFiltrados_().forEach(c => {
     const p = c.padrao;
     if (!p) return;
     if (!porPadrao[p]) porPadrao[p] = { padrao: p, precos: [], qtd: 0 };
@@ -2165,14 +2177,15 @@ function atualizarPadraoPhrase_() {
 // define os limites do slider) e reinicializa os sliders com esses novos
 // limites, em vez dos limites globais calculados em carregarBaseReal().
 function montarConfigIniciais_() {
-  // Filtra bounds pelo estágio selecionado no step-5 (pronto_novo/em_obras)
+  // Filtra bounds pelo bairro (capa) e pelo estágio selecionado no step-5
   const s = D.situacoes;
-  const emps = TODOS_LANC.filter(c =>
+  const baseBairro = lancBairroFiltrados_();
+  const emps = baseBairro.filter(c =>
     s.size === 0 ||
     (s.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
     (s.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras'))
   );
-  const base = emps.length ? emps : TODOS_LANC;
+  const base = emps.length ? emps : baseBairro;
   const precos   = base.map(c => c.precoAPartir).filter(v => v > 0);
   const areasMin = base.map(c => c.areaMin).filter(v => v > 0);
   const areasMax = base.map(c => c.areaMax).filter(v => v > 0);
@@ -2640,7 +2653,7 @@ function temApartamentoCompativel_(c, aRange, precoAlvo) {
 
 function rankeados() {
   if (!D.areaRange || !D.precoAlvo) return [];
-  return TODOS_LANC
+  return lancBairroFiltrados_()
     .map(c => ({
       ...c,
       matchPref: scoreMatchPreferencia_(c, D.areaRange, D.precoAlvo),
