@@ -775,6 +775,19 @@ input[type=range]::-moz-range-track {
 }
 .conf-item-select:focus { border-color: var(--accent); }
 .conf-item-select option { background: var(--s2); color: var(--text); font-weight: 600; }
+/* Linha "Bairros" + botão MUDAR (step-2) -- botão fica FORA de
+   .conf-item-label de propósito (não como filho dela): opacity em CSS
+   compõe com a da subárvore inteira, um <button> filho com opacity:1
+   ainda saía apagado (herdava os .55 do label). Como irmãos num flex row,
+   cada um mantém a própria opacidade. */
+.s2-bairro-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.s2-mudar-btn {
+  padding: 3px 12px; border-radius: 99px; background: transparent;
+  border: 1px solid var(--accent); color: var(--accent);
+  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  cursor: pointer; font-family: inherit; flex-shrink: 0;
+}
+.s2-mudar-btn:hover { background: rgba(79,124,255,.12); }
 .conf-obs {
   grid-column: 1 / -1;
   padding: 12px 16px; background: rgba(79,124,255,.07);
@@ -806,8 +819,9 @@ input[type=range]::-moz-range-track {
 /* Step-2 (simulador): texto "opções encontradas" também maior que o
    padrão do badge (pedido explícito do usuário) -- só o texto ao redor do
    número, que herda o font-size do badge (o número já tem o próprio
-   tamanho, acima). Mesmo escopo só pro step-2, step-3 sem mudança. */
-#s2ResultadoBadge { font-size: 20px; }
+   tamanho, acima). Mesmo escopo só pro step-2, step-3 sem mudança.
+   Pedido explícito do usuário (2ª rodada): dobrar de novo (20px -> 40px). */
+#s2ResultadoBadge { font-size: 40px; }
 /* Step-2 (simulador): tabela objetivo/estágio/orçamento sem contorno
    (pedido explícito do usuário) -- escopado só pra essa caixa
    (#s2ResumoCard), o .conf-card do step-3 continua com a borda normal. */
@@ -977,14 +991,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="capa-bairro-wrap">
       <div class="capa-preco-pergunta">Qual <span style="color:var(--accent)">bairro</span> você procura?</div>
       <div class="capa-bairro-tags" id="capaBairroTags">
-        <!-- populado por montarCapaBairroTags_() após carregarBaseReal() -->
+        <!-- populado por montarBairroTags_('capa') após carregarBaseReal() -->
       </div>
       <div class="capa-bairro-input-wrap" id="capaBairroInputWrap" style="display:none">
         <input type="text" class="preco-input" id="capaBairroInput"
                placeholder="Digite o bairro…" autocomplete="off"
-               oninput="capaBairroFiltrar_(this.value)"
-               onfocus="capaBairroFiltrar_(this.value)"
-               onblur="setTimeout(capaBairroFecharDropdown_,300)">
+               oninput="bairroFiltrar_('capa', this.value)"
+               onfocus="bairroFiltrar_('capa', this.value)"
+               onblur="setTimeout(function(){ bairroFecharDropdown_('capa'); },300)">
         <div class="capa-bairro-dropdown" id="capaBairroDropdown"></div>
       </div>
       <div class="capa-bairro-erro" id="capaBairroErro">Selecione ao menos 1 bairro para continuar.</div>
@@ -1095,6 +1109,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <option value="pronto_novo" id="s2OptProntoNovo">Pronto para Morar</option>
           <option value="em_obras">Em Obras</option>
         </select>
+      </div>
+      <!-- Bairros selecionados + "MUDAR" (pedido explícito do usuário,
+           acima do orçamento) -- revela o MESMO seletor de tags da capa
+           (top-7 + "+OUTRO"), reaproveitado via montarBairroTags_('s2')/
+           bairroToggle_ etc. (ver BAIRRO_CTX_). -->
+      <div class="conf-item conf-item-full">
+        <div class="s2-bairro-header">
+          <div class="conf-item-label" style="margin-bottom:0">Bairros</div>
+          <button class="s2-mudar-btn" id="s2BairroMudarBtn" onclick="toggleMudarBairroStep2_()">MUDAR</button>
+        </div>
+        <div class="conf-item-val conf-item-val-sit" id="s2ResumoBairros">—</div>
+        <div id="s2BairroSeletorWrap" style="display:none;margin-top:10px">
+          <div class="capa-bairro-tags" id="s2BairroTags"></div>
+          <div class="capa-bairro-input-wrap" id="s2BairroInputWrap" style="display:none">
+            <input type="text" class="preco-input" id="s2BairroInput"
+                   placeholder="Digite o bairro…" autocomplete="off"
+                   oninput="bairroFiltrar_('s2', this.value)"
+                   onfocus="bairroFiltrar_('s2', this.value)"
+                   onblur="setTimeout(function(){ bairroFecharDropdown_('s2'); },300)">
+            <div class="capa-bairro-dropdown" id="s2BairroDropdown"></div>
+          </div>
+        </div>
       </div>
       <div class="conf-item conf-item-full conf-item-last">
         <div class="conf-item-label" id="tituloPreco">Orçamento simulador <span style="font-size:.9em;font-weight:600;opacity:.85;text-transform:none;letter-spacing:0">(pode ajustar)</span></div>
@@ -1538,7 +1574,7 @@ async function carregarBaseReal() {
   inicializarCapaSlider_();
   montarStatsAbertura_();
   montarDadosAtualizadosTexto_();
-  montarCapaBairroTags_();
+  montarBairroTags_('capa');
   aplicarPresetURL_(); // deep-link de anúncios — aplica se houver ?preset= ou ?padroes= na URL
 }
 
@@ -2284,6 +2320,13 @@ function montarResumoStep2_() {
   const elEst = document.getElementById('s2ResumoEstagio');
   if (elEst) elEst.value = D.situacoes.has('em_obras') ? 'em_obras' : 'pronto_novo';
   atualizarLabelProntoStep2_();
+  atualizarResumoBairrosTexto_();
+  // Fecha o seletor de bairro (se tinha ficado aberto de uma visita
+  // anterior ao step-2) -- sempre reabre fechado/"MUDAR", nunca aberto.
+  const bairroWrap = document.getElementById('s2BairroSeletorWrap');
+  const bairroBtn  = document.getElementById('s2BairroMudarBtn');
+  if (bairroWrap) bairroWrap.style.display = 'none';
+  if (bairroBtn)  bairroBtn.textContent = 'MUDAR';
   const tituloPreco = document.getElementById('tituloPreco');
   if (tituloPreco) {
     const labelOrç = D.objetivo === 'investimento' ? 'Quanto está disposto a investir' : 'Orçamento simulador';
@@ -2926,9 +2969,22 @@ function registrarAcessoCapa_() {
   fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
 }
 
-// ── CAPA: seletor de bairro ──────────────────────────────────────────────────
-function montarCapaBairroTags_() {
-  const wrap = document.getElementById('capaBairroTags');
+// ── SELETOR DE BAIRRO (tags top-7 + "+OUTRO") ─────────────────────────────────
+// Usado em 2 lugares: a capa (step-0, sempre visível, com validação
+// obrigatória antes de continuar) e a caixa-resumo do step-2 ("MUDAR",
+// pedido explícito do usuário -- "igual na capa pra selecionar
+// novamente"). Generalizado com BAIRRO_CTX_ (ids + comportamento próprio de
+// cada contexto) pra reaproveitar a mesma lógica/UI nos 2 lugares sem
+// duplicar tudo -- só ctx.erro (capa exige, step-2 não bloqueia nada) e
+// ctx.aoMudar (step-2 recalcula a contagem em tempo real) mudam de fato.
+const BAIRRO_CTX_ = {
+  capa: { tags: 'capaBairroTags', inputWrap: 'capaBairroInputWrap', input: 'capaBairroInput', dropdown: 'capaBairroDropdown', outroBtn: 'capaBairroOutroBtn', erro: 'capaBairroErro', aoMudar: null },
+  s2:   { tags: 's2BairroTags',   inputWrap: 's2BairroInputWrap',   input: 's2BairroInput',   dropdown: 's2BairroDropdown',   outroBtn: 's2BairroOutroBtn',   erro: null,               aoMudar: function() { atualizarResumoBairrosTexto_(); atualizarComboUI_(); } },
+};
+
+function montarBairroTags_(ctxKey) {
+  const ctx  = BAIRRO_CTX_[ctxKey];
+  const wrap = document.getElementById(ctx.tags);
   if (!wrap) return;
   // Conta empreendimentos por bairro
   const cont = {};
@@ -2941,29 +2997,46 @@ function montarCapaBairroTags_() {
     .slice(0, 7).map(function(x) { return x[0]; });
 
   wrap.innerHTML = top7.map(function(b) {
-    const esc = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<button class="capa-tag-btn" data-bairro="' + b.replace(/"/g,'&quot;') + '" onclick="capaBairroToggle_(this,\'' + esc + '\')">' + b + '</button>';
-  }).join('') + '<button class="capa-tag-btn capa-tag-outro" id="capaBairroOutroBtn" onclick="capaBairroAbrirOutro_()">+ OUTRO</button>';
+    const esc   = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const ativo = D.capaBairros.includes(b) ? ' ativo' : '';
+    return '<button class="capa-tag-btn' + ativo + '" data-bairro="' + b.replace(/"/g,'&quot;') + '" onclick="bairroToggle_(\'' + ctxKey + '\',this,\'' + esc + '\')">' + b + '</button>';
+  }).join('') + '<button class="capa-tag-btn capa-tag-outro" id="' + ctx.outroBtn + '" onclick="bairroAbrirOutro_(\'' + ctxKey + '\')">+ OUTRO</button>';
+
+  // Bairros já selecionados fora do top-7 (ex.: adicionados via "+OUTRO"
+  // numa passagem anterior) também precisam entrar já ativos aqui.
+  const outroBtnEl = document.getElementById(ctx.outroBtn);
+  D.capaBairros.filter(function(b) { return !top7.includes(b); }).forEach(function(b) {
+    const btn = document.createElement('button');
+    btn.className = 'capa-tag-btn ativo';
+    btn.dataset.bairro = b;
+    btn.textContent = b;
+    btn.onclick = function() { bairroToggle_(ctxKey, btn, b); };
+    if (outroBtnEl) wrap.insertBefore(btn, outroBtnEl); else wrap.appendChild(btn);
+  });
 }
 
-function capaBairroToggle_(btn, bairro) {
+function bairroToggle_(ctxKey, btn, bairro) {
+  const ctx = BAIRRO_CTX_[ctxKey];
   const idx = D.capaBairros.indexOf(bairro);
   if (idx >= 0) { D.capaBairros.splice(idx, 1); btn.classList.remove('ativo'); }
   else           { D.capaBairros.push(bairro);   btn.classList.add('ativo'); }
-  capaBairroLimparErro_();
+  if (ctx.erro) bairroLimparErro_(ctxKey);
   atualizarContadorCapa_();
+  if (ctx.aoMudar) ctx.aoMudar();
 }
 
-function capaBairroAbrirOutro_() {
-  const w = document.getElementById('capaBairroInputWrap');
+function bairroAbrirOutro_(ctxKey) {
+  const ctx = BAIRRO_CTX_[ctxKey];
+  const w = document.getElementById(ctx.inputWrap);
   if (w) { w.style.display = ''; }
-  const inp = document.getElementById('capaBairroInput');
+  const inp = document.getElementById(ctx.input);
   if (inp) { inp.value = ''; inp.focus(); }
-  capaBairroFiltrar_('');
+  bairroFiltrar_(ctxKey, '');
 }
 
-function capaBairroFiltrar_(q) {
-  const dd = document.getElementById('capaBairroDropdown');
+function bairroFiltrar_(ctxKey, q) {
+  const ctx = BAIRRO_CTX_[ctxKey];
+  const dd = document.getElementById(ctx.dropdown);
   if (!dd) return;
   const txt = q.trim().toLowerCase();
   const todos = [...new Set(TODOS_LANC.map(function(c) { return String(c.bairro || '').trim(); }).filter(Boolean))];
@@ -2971,60 +3044,67 @@ function capaBairroFiltrar_(q) {
   if (!lista.length && !txt) { dd.style.display = 'none'; return; }
   let html = lista.slice(0, 8).map(function(b) {
     const esc = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<div class="capa-dd-item" onpointerdown="event.preventDefault()" onclick="capaBairroSelecionarItem_(\'' + esc + '\')">' + b + '</div>';
+    return '<div class="capa-dd-item" onpointerdown="event.preventDefault()" onclick="bairroSelecionarItem_(\'' + ctxKey + '\',\'' + esc + '\')">' + b + '</div>';
   }).join('');
   if (txt && !lista.find(function(b) { return b.toLowerCase() === txt; })) {
     const qEsc = q.trim().replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    html += '<div class="capa-dd-item capa-dd-livre" onpointerdown="event.preventDefault()" onclick="capaBairroSelecionarItem_(\'' + qEsc + '\')">"' + q.trim() + '" — adicionar mesmo assim</div>';
+    html += '<div class="capa-dd-item capa-dd-livre" onpointerdown="event.preventDefault()" onclick="bairroSelecionarItem_(\'' + ctxKey + '\',\'' + qEsc + '\')">"' + q.trim() + '" — adicionar mesmo assim</div>';
   }
   dd.innerHTML = html;
   dd.style.display = html ? '' : 'none';
 }
 
-function capaBairroSelecionarItem_(bairro) {
+function bairroSelecionarItem_(ctxKey, bairro) {
   if (!bairro) return;
+  const ctx = BAIRRO_CTX_[ctxKey];
   if (!D.capaBairros.includes(bairro)) {
     D.capaBairros.push(bairro);
     // Adiciona tag na UI se não existe entre as top-7
-    const existente = document.querySelector('.capa-tag-btn[data-bairro="' + bairro.replace(/"/g,'&quot;') + '"]');
+    const wrap      = document.getElementById(ctx.tags);
+    const existente = wrap && wrap.querySelector('.capa-tag-btn[data-bairro="' + bairro.replace(/"/g,'&quot;') + '"]');
     if (existente) { existente.classList.add('ativo'); }
-    else {
+    else if (wrap) {
       const btn = document.createElement('button');
       btn.className = 'capa-tag-btn ativo';
       btn.dataset.bairro = bairro;
       btn.textContent = bairro;
-      btn.onclick = function() { capaBairroToggle_(btn, bairro); };
-      const outro = document.getElementById('capaBairroOutroBtn');
-      const tags  = document.getElementById('capaBairroTags');
-      if (outro && tags) tags.insertBefore(btn, outro);
-      else if (tags) tags.appendChild(btn);
+      btn.onclick = function() { bairroToggle_(ctxKey, btn, bairro); };
+      const outro = document.getElementById(ctx.outroBtn);
+      if (outro) wrap.insertBefore(btn, outro);
+      else wrap.appendChild(btn);
     }
   }
-  const inp = document.getElementById('capaBairroInput');
+  const inp = document.getElementById(ctx.input);
   if (inp) inp.value = '';
-  capaBairroFecharDropdown_();
-  capaBairroLimparErro_();
+  bairroFecharDropdown_(ctxKey);
+  if (ctx.erro) bairroLimparErro_(ctxKey);
   atualizarContadorCapa_();
+  if (ctx.aoMudar) ctx.aoMudar();
 }
 
-function capaBairroFecharDropdown_() {
-  const dd = document.getElementById('capaBairroDropdown');
+function bairroFecharDropdown_(ctxKey) {
+  const ctx = BAIRRO_CTX_[ctxKey];
+  const dd = document.getElementById(ctx.dropdown);
   if (dd) dd.style.display = 'none';
 }
 
-function capaBairroLimparErro_() {
-  const el = document.getElementById('capaBairroErro');
+function bairroLimparErro_(ctxKey) {
+  const ctx = BAIRRO_CTX_[ctxKey];
+  if (!ctx.erro) return;
+  const el = document.getElementById(ctx.erro);
   if (el) el.style.display = 'none';
-  document.querySelectorAll('.capa-tag-btn').forEach(function(b) { b.classList.remove('erro'); });
+  document.querySelectorAll('#' + ctx.tags + ' .capa-tag-btn').forEach(function(b) { b.classList.remove('erro'); });
 }
 
+// Validação (só a capa exige pelo menos 1 bairro antes de continuar --
+// step-2 não tem gate nenhum, é só um ajuste livre via "MUDAR").
 function capaBairroValidar_() {
   // Aceita texto digitado livremente (campo OUTRO) sem precisar clicar no dropdown
   const inp = document.getElementById('capaBairroInput');
   const digitado = inp ? inp.value.trim() : '';
   if (digitado) {
-    // Garante que o bairro entra em D mesmo se capaBairroSelecionarItem_ jogar exceção
-    try { capaBairroSelecionarItem_(digitado); } catch(e_) {}
+    // Garante que o bairro entra em D mesmo se bairroSelecionarItem_ jogar exceção
+    try { bairroSelecionarItem_('capa', digitado); } catch(e_) {}
     if (!D.capaBairros.includes(digitado)) D.capaBairros.push(digitado);
     if (inp) inp.value = '';
   }
@@ -3034,6 +3114,22 @@ function capaBairroValidar_() {
   if (el) el.style.display = '';
   document.querySelectorAll('#capaBairroTags .capa-tag-btn:not(.capa-tag-outro)').forEach(function(b) { b.classList.add('erro'); });
   return false;
+}
+
+// ── STEP-2: "MUDAR" bairros dentro da caixa-resumo ────────────────────────────
+function atualizarResumoBairrosTexto_() {
+  const el = document.getElementById('s2ResumoBairros');
+  if (el) el.textContent = D.capaBairros.length ? D.capaBairros.join(', ') : 'Todos os bairros';
+}
+
+function toggleMudarBairroStep2_() {
+  const wrap = document.getElementById('s2BairroSeletorWrap');
+  const btn  = document.getElementById('s2BairroMudarBtn');
+  if (!wrap) return;
+  const abrindo = wrap.style.display === 'none';
+  wrap.style.display = abrindo ? '' : 'none';
+  if (btn) btn.textContent = abrindo ? 'FECHAR' : 'MUDAR';
+  if (abrindo) montarBairroTags_('s2'); // sempre remonta na abertura -- reflete D.capaBairros atual
 }
 
 function atualizarPreco(val) {
