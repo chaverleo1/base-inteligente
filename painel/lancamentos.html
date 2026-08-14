@@ -3099,6 +3099,40 @@ function _fdFindUnidadesMatch_(emp, pFaixa, aFaixa) {
   });
 }
 
+// Preço e área validados de forma INDEPENDENTE (uma unidade pode bater no
+// preço, OUTRA bater na área -- não precisa ser a MESMA unidade cobrindo
+// os dois ao mesmo tempo). Bug real reportado pelo usuário: "Empreendimentos
+// compatíveis" ficava vazio mesmo com sinais de demanda reais, porque
+// _fdFindUnidadesMatch_ (join dos dois critérios na MESMA unidade) era
+// usada tanto pra achar a "melhor unidade" (ok, isso faz sentido pra
+// exibição) quanto pra DECIDIR se o empreendimento entra na lista (não faz
+// sentido -- os 3 sinais de demanda costumam vir de sessões DIFERENTES,
+// não da mesma pessoa, então exigir 1 unidade só cobrindo preço E área
+// juntos é bem mais rígido do que o modo agregado usa pra quem não tem
+// unidades cadastradas -- ver _fdPrecoCompativel_/_fdAreaCompativel_, que
+// checam cada critério separado). Exige pm/ae > 0 de verdade (não deixa
+// unidade SEM aquele dado passar de graça, diferente do join acima -- lá
+// faz sentido pra não descartar a unidade só por faltar o outro dado).
+function _fdUnidadesComPreco_(emp, pFaixa) {
+  if (!pFaixa) return [];
+  var pIni = parseInt(pFaixa) * 1000, pFim = pIni + 149999;
+  return (emp._unidades || []).filter(function(u) {
+    var pm = _fdParsePreco_(u.precoMedio) || _fdParsePreco_(u.precoMin) || _fdParsePreco_(u.preco) || 0;
+    return pm > 0 && pm >= pIni && pm <= pFim;
+  });
+}
+function _fdUnidadesComArea_(emp, aFaixa) {
+  if (!aFaixa) return [];
+  var pts  = String(aFaixa).split('-');
+  var aIni = parseInt(pts[0]) || 0;
+  var aFim = parseInt(pts[1]) || aIni + 10;
+  aIni -= 5; aFim += 15; // tolerância
+  return (emp._unidades || []).filter(function(u) {
+    var ae = parseFloat(u.areaUtil) || parseFloat(u.areaTerr) || 0;
+    return ae > 0 && ae >= aIni && ae <= aFim;
+  });
+}
+
 function _fdPrecoCompativel_(emp, faixa) {
   if (!faixa) return null; // sem sinal — não conta como critério
   const ini = parseInt(faixa) * 1000;       // floor do sinal (ex: 500k)
@@ -3142,24 +3176,34 @@ function _fdMatchEmps_(empsGrupados, sinais, rank) {
 
   var scored = [];
   empsGrupados.forEach(function(emp) {
-    // Regra: sem preço cadastrado → não aparece na tabela
-    if (!emp.precoAPartir) return;
+    // Regra: sem preço cadastrado → não aparece na tabela.
+    // BUG REAL reportado pelo usuário (tabela sempre vazia mesmo com sinais
+    // de demanda reais): "precoAPartir" é campo do endpoint PÚBLICO
+    // (listarLancamentosResumoPublico_/app-lancamentos.html) -- nunca existiu
+    // nos dados admin (_todos) que alimentam esta tela, então TODO
+    // empreendimento era descartado aqui, sempre, antes de qualquer
+    // critério. O equivalente correto já calculado por _fdGruparPorEmp_ é
+    // emp._pMin (menor precoMin/precoMax entre as unidades do grupo).
+    if (!emp._pMin) return;
 
     // ── Bairro: validação no nível do empreendimento (como antes)
     var rc = _fdRegiaoCompativel_(emp, rSinal);
 
-    // ── Preço × Área: validação no nível da UNIDADE
-    //    Varre cada unidade e retorna as que satisfazem AMBOS os sinais.
-    var unidsMatch = (emp._unidades && emp._unidades.length)
+    var temUnidades = emp._unidades && emp._unidades.length;
+    // Guardada só pra exibição (tabela mostra a "melhor unidade" que cobre
+    // os 2 critérios juntos, quando existir) -- NÃO decide mais se o
+    // empreendimento entra na lista, ver comentário de
+    // _fdUnidadesComPreco_/_fdUnidadesComArea_ abaixo.
+    var unidsMatch = temUnidades
       ? _fdFindUnidadesMatch_(emp, pSinal && pSinal.faixa, aSinal && aSinal.faixa)
-      : null; // null = sem dados de unidade → fallback agregado
+      : [];
 
     var pc, ac;
-    if (unidsMatch !== null) {
-      // Modo unidade: há unidades cadastradas — usa matching cruzado
-      var ok = unidsMatch.length > 0;
-      pc = temP ? ok : null;
-      ac = temA ? ok : null;
+    if (temUnidades) {
+      // Modo unidade: preço e área validados INDEPENDENTEMENTE -- uma
+      // unidade pode bater no preço, outra na área.
+      pc = temP ? _fdUnidadesComPreco_(emp, pSinal.faixa).length > 0 : null;
+      ac = temA ? _fdUnidadesComArea_(emp, aSinal.faixa).length > 0 : null;
     } else {
       // Fallback agregado (sem unidades individuais na base)
       pc = _fdPrecoCompativel_(emp, pSinal && pSinal.faixa);
