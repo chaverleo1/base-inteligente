@@ -899,6 +899,7 @@ function doPost(e) {
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'qualificar_lead_baseimob') return ok(qualificarLeadBaseimob_(d));
   if (d.acao === 'converter_lead_venda_baseimob') return ok(converterLeadVendaBaseimob_(d));
+  if (d.acao === 'excluir_campanha_google_ads') return ok(excluirCampanhaGoogleAds_(d));
   if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
   if (d.acao === 'listar_leads_imobzi')             return ok(listarLeadsImobzi_(d));
   if (d.acao === 'sincronizar_imobzi')              return ok(sincronizarLeadsImobzi_());
@@ -5525,6 +5526,56 @@ function parseDataMetricaAds_(v) {
   return new Date(+m[3], +m[2] - 1, +m[1]);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Campanhas EXCLUÍDAS do painel Google Ads (pedido explícito do usuário:
+// botão "Excluir" em cada linha da tabela). Como o Script do Ads roda
+// sozinho a cada 3h e regrava a linha do dia de TODA campanha que bater
+// com "APPLAN" no nome, simplesmente apagar a linha na hora não resolve --
+// ela voltaria no próximo ciclo do Script. Por isso a exclusão é uma
+// LISTA PERSISTENTE (aba própria, mesma planilha de métricas
+// SHEET_ID_ADS_METRICAS_) que listarMetricasGoogleAds_/
+// listarSeriesGoogleAds_ consultam pra filtrar -- exclusão por NOME exato
+// da campanha, sem precisar mexer na aba "Google Ads" que o Script escreve.
+// ═══════════════════════════════════════════════════════════════
+function obterAbaCampanhasExcluidasAds_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID_ADS_METRICAS_);
+  var aba = ss.getSheetByName('Campanhas Excluidas');
+  if (!aba) {
+    aba = ss.insertSheet('Campanhas Excluidas');
+    aba.appendRow(['campanha']);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, 1).setFontWeight('bold');
+  }
+  return aba;
+}
+
+function listarCampanhasExcluidasAds_() {
+  try {
+    var aba = obterAbaCampanhasExcluidasAds_();
+    var lr  = aba.getLastRow();
+    if (lr < 2) return [];
+    return aba.getRange(2, 1, lr - 1, 1).getValues()
+      .map(function(r) { return String(r[0] || '').trim(); })
+      .filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
+function excluirCampanhaGoogleAds_(d) {
+  try {
+    var nome = String(d.campanha || '').trim();
+    if (!nome) return { ok: false, erro: 'Nome da campanha não informado.' };
+    var jaExcluidas = listarCampanhasExcluidasAds_();
+    if (jaExcluidas.indexOf(nome) === -1) {
+      obterAbaCampanhasExcluidasAds_().appendRow([nome]);
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
 // Lê a planilha de métricas e agrega por campanha dentro do período pedido
 // (params.dias, default 30). CTR e CPC médio são RECALCULADOS a partir dos
 // totais agregados (cliques/impressões/investimento), não a média simples
@@ -5550,10 +5601,15 @@ function listarMetricasGoogleAds_(params) {
     // pra já limpar linhas antigas que ficaram gravadas antes desse ajuste,
     // sem precisar apagar nada na mão na planilha.
     var FILTRO_NOME_ = 'APPLAN';
+    // Campanhas excluídas pelo botão "Excluir" (ver excluirCampanhaGoogleAds_
+    // acima) -- nunca aparecem aqui, mesmo que o Script continue gravando
+    // linhas novas pra elas a cada 3h.
+    var excluidas_ = listarCampanhasExcluidasAds_();
 
     dados.forEach(function(r) {
       var nome = String(r[1] || '');
       if (!nome || nome.toUpperCase().indexOf(FILTRO_NOME_) === -1) return;
+      if (excluidas_.indexOf(nome) !== -1) return;
 
       var dataLinha = parseDataMetricaAds_(r[0]);
       if (!dataLinha) return;
@@ -5648,10 +5704,14 @@ function listarSeriesGoogleAds_(params) {
     // dias que têm linha de métrica do Ads).
     var porCampanha = {};
     var FILTRO_NOME_ = 'APPLAN';
+    // Campanhas excluídas pelo botão "Excluir" -- somem do gráfico de
+    // evolução também, não só da tabela (ver listarMetricasGoogleAds_).
+    var excluidas_ = listarCampanhasExcluidasAds_();
 
     dados.forEach(function(r) {
       var nome = String(r[1] || '');
       if (!nome || nome.toUpperCase().indexOf(FILTRO_NOME_) === -1) return;
+      if (excluidas_.indexOf(nome) !== -1) return;
 
       var dataLinha = parseDataMetricaAds_(r[0]);
       if (!dataLinha || dataLinha < desde) return;

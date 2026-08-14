@@ -1025,10 +1025,10 @@
           <tr>
             <th>Campanha</th><th>Status</th><th>Investimento</th><th>Cliques</th>
             <th>Impressões</th><th>CTR</th><th>CPC médio</th><th>Conversões (Ads)</th>
-            <th>Leads Qualif.</th><th>Custo/Lead Qualif.</th><th>Lead Venda</th>
+            <th>Leads Qualif.</th><th>Custo/Lead Qualif.</th><th>Lead Venda</th><th></th>
           </tr>
         </thead>
-        <tbody id="gadsTabelaBody"><tr><td colspan="11" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
+        <tbody id="gadsTabelaBody"><tr><td colspan="12" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -3880,7 +3880,7 @@ async function carregarMetricasGoogleAds_() {
   _gadsCarregado_ = true;
   const resumo = document.getElementById('gadsCardsResumo');
   const corpo  = document.getElementById('gadsTabelaBody');
-  corpo.innerHTML = '<tr><td colspan="11" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
+  corpo.innerHTML = '<tr><td colspan="12" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
   try {
     const resp = await fetch(`${WEBHOOK_URL}?acao=listar_metricas_google_ads&dias=30&token=${encodeURIComponent(tokenSessao())}`);
     const json = await resp.json();
@@ -3898,10 +3898,10 @@ async function carregarMetricasGoogleAds_() {
       // agora mostra o erro real quando existe, em vez de mascarar tudo
       // como "ainda sem dado".
       corpo.innerHTML = json.erro
-        ? `<tr><td colspan="11" style="text-align:center;color:var(--danger);padding:32px">
+        ? `<tr><td colspan="12" style="text-align:center;color:var(--danger);padding:32px">
             Erro ao ler a planilha de métricas:<br><b>${json.erro}</b><br>
             <span style="font-size:11px;color:var(--text3)">Confirme se o ID da planilha ainda está certo e se ela continua compartilhada.</span></td></tr>`
-        : `<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:32px">
+        : `<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:32px">
             Nenhum dado ainda. Confirme se o Script já rodou no Google Ads (Executar, não só Visualizar) e
             se a planilha de métricas está compartilhada com Editor pra conta do Ads.</td></tr>`;
       return;
@@ -3925,7 +3925,11 @@ async function carregarMetricasGoogleAds_() {
     // topo (mais eficiente), fria no fim (menos eficiente / sem lead
     // qualificado ainda). 🏆 só na 1ª linha se ela tiver lead qualificado
     // de verdade (senão ninguém tem prova de eficiência ainda).
-    corpo.innerHTML = campanhas.map((c, i) => `
+    corpo.innerHTML = campanhas.map((c, i) => {
+      // Escapa aspas simples/barra pro nome caber dentro do onclick="..."
+      // sem quebrar a string (nome de campanha é texto livre no Ads).
+      const escNome = c.campanha.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return `
       <tr style="background:${gadsCorEficiencia_(i, campanhas.length)}">
         <td style="font-weight:600">${i === 0 && c.leadsQualificados > 0 ? '🏆 ' : ''}${c.campanha}</td>
         <td>${GADS_STATUS_LABEL_[c.status] || c.status || '—'}</td>
@@ -3938,9 +3942,40 @@ async function carregarMetricasGoogleAds_() {
         <td>${c.leadsQualificados || 0}</td>
         <td>${c.custoPorLeadQualificado != null ? fmtBRL(c.custoPorLeadQualificado) : '—'}</td>
         <td style="font-weight:${c.leadsConvertidos > 0 ? '700' : '400'};color:${c.leadsConvertidos > 0 ? '#e6ac00' : 'inherit'}">${c.leadsConvertidos > 0 ? '🏆 ' : ''}${c.leadsConvertidos || 0}</td>
-      </tr>`).join('');
+        <td><button class="bi-btn" style="background:#3a1a1a;color:#e05a3a" title="Excluir esta campanha do painel (permanente -- não aparece mais, mesmo que o Script continue rodando)"
+          onclick="excluirCampanhaAds_('${escNome}',this)">🗑 Excluir</button></td>
+      </tr>`;
+    }).join('');
   } catch (e) {
-    corpo.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
+  }
+}
+
+// Exclui uma campanha do painel Google Ads (pedido explícito do usuário) --
+// permanente: entra numa lista de exclusão persistida na planilha de
+// métricas (aba "Campanhas Excluidas", ver excluirCampanhaGoogleAds_/
+// code.txt), então some do painel mesmo que o Script continue gravando
+// linha nova pra ela a cada 3h. Recarrega a tabela E o gráfico de evolução
+// depois (a campanha some do <select> de campanhas também).
+async function excluirCampanhaAds_(nomeCampanha, btn) {
+  if (!confirm(`Excluir a campanha "${nomeCampanha}" deste painel?\n\nEla não vai mais aparecer aqui, mesmo que o Script do Google Ads continue rodando. Essa ação não mexe na campanha de verdade dentro do Google Ads, só esconde ela deste painel.`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'excluir_campanha_google_ads', campanha: nomeCampanha, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      carregarMetricasGoogleAds_();
+      carregarSeriesGoogleAds_();
+    } else {
+      alert('Erro ao excluir: ' + (r.erro || JSON.stringify(r)));
+      if (btn) { btn.disabled = false; btn.textContent = '🗑 Excluir'; }
+    }
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 Excluir'; }
   }
 }
 
