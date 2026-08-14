@@ -797,6 +797,11 @@ input[type=range]::-moz-range-track {
    (pedido explícito do usuário) -- escopado só pro badge dessa tela
    (#s2ResultadoBadge), não mexe no badge igual usado no step-3. */
 #s2ResultadoBadge strong { font-size: 48px; line-height: 1; }
+/* Step-2 (simulador): texto "opções encontradas" também maior que o
+   padrão do badge (pedido explícito do usuário) -- só o texto ao redor do
+   número, que herda o font-size do badge (o número já tem o próprio
+   tamanho, acima). Mesmo escopo só pro step-2, step-3 sem mudança. */
+#s2ResultadoBadge { font-size: 20px; }
 /* Step-2 (simulador): tabela objetivo/estágio/orçamento sem contorno
    (pedido explícito do usuário) -- escopado só pra essa caixa
    (#s2ResumoCard), o .conf-card do step-3 continua com a borda normal. */
@@ -1048,13 +1053,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="step-tag">Passo 2 de 4</div>
     <div class="step-title" style="margin-bottom:24px">Qual a <span style="color:var(--accent)">área útil</span> ideal (m²)?</div>
 
-    <div class="preco-input-row">
-      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-      <span class="preco-prefixo prefixo-grande" id="prefixoArea">m²</span>
-    </div>
-    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)">
-    <div class="slider-label-row">
-      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+    <!-- Slider destacado, mesmo padrão visual do orçamento na capa
+         (.capa-preco-wrap/.capa-preco-valor) -- pedido explícito do
+         usuário: só arrastar, sem caixa de digitar (a versão anterior
+         tinha um <input type="text"> junto, removido aqui). -->
+    <div class="capa-preco-wrap">
+      <div class="capa-preco-valor" id="metragemFormatado">— m²</div>
+      <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%">
+      <div class="capa-slider-bounds">
+        <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
+      </div>
     </div>
 
     <!-- Resultado ao vivo -- pedido explícito do usuário: fica ACIMA da
@@ -3093,40 +3101,13 @@ function atualizarMetragem(val) {
   const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
   const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
   D.areaRange = [lo, hi];
-  document.getElementById('metragemDigitado').value = v.toLocaleString('pt-BR');
+  // Só slider, sem caixa de digitar (pedido explícito do usuário, mudança
+  // 2026-08-14 -- mesmo padrão visual do orçamento na capa/#capaPrecoFormatado).
+  // atualizarMetragemDigitado_/validarLimitesMetragem_ foram removidas
+  // junto com o <input type="text"> que elas sincronizavam.
+  const elFormatado = document.getElementById('metragemFormatado');
+  if (elFormatado) elFormatado.textContent = v + ' m²';
   atualizarComboUI_();
-}
-
-// Idem atualizarPrecoDigitado_ -- só reformata/sincroniza, sem validar
-// contra AREA_BOUNDS a cada tecla (ver comentário lá do porquê).
-function atualizarMetragemDigitado_(val) {
-  const digitos = val.replace(/\D/g, '');
-  const input = document.getElementById('metragemDigitado');
-  const cursorNoFim = input.selectionStart === input.value.length;
-  const v = parseInt(digitos) || 0;
-
-  input.value = digitos ? v.toLocaleString('pt-BR') : '';
-  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
-  if (!v) return;
-
-  if (D.areaInicial === null) D.areaInicial = v;
-  if (slidersProntos_) D.ajustesSlider++;
-  D.metragemAlvo = v; D.areaFinal = v; D.areaE2 = v; // ver comentário em atualizarMetragem
-  D.areaRange = [Math.round(v * (1 - TOLERANCIA_METRAGEM_)), Math.round(v * (1 + TOLERANCIA_METRAGEM_))];
-  document.getElementById('sliderMetragem').value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
-  atualizarComboUI_();
-}
-
-// Só valida contra a faixa da base no blur (ver validarLimitesPreco_).
-function validarLimitesMetragem_() {
-  const input = document.getElementById('metragemDigitado');
-  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
-  if (v && (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1])) {
-    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
-  }
-  v = Math.min(Math.max(v || AREA_BOUNDS[0], AREA_BOUNDS[0]), AREA_BOUNDS[1]);
-  document.getElementById('sliderMetragem').value = v;
-  atualizarMetragem(v);
 }
 
 // Termo pra "pronto/entregue" muda por objetivo -- pedido explícito do
