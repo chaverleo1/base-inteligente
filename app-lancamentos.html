@@ -772,6 +772,14 @@ input[type=range]::-moz-range-track {
   font-size: 15px; font-weight: 700;
 }
 .conf-resultado-badge strong { font-size: 24px; font-weight: 800; }
+/* Step-2 (simulador): número da contagem bem maior que o padrão do badge
+   (pedido explícito do usuário) -- escopado só pro badge dessa tela
+   (#s2ResultadoBadge), não mexe no badge igual usado no step-3. */
+#s2ResultadoBadge strong { font-size: 48px; line-height: 1; }
+/* Step-2 (simulador): tabela objetivo/estágio/orçamento sem contorno
+   (pedido explícito do usuário) -- escopado só pra essa caixa
+   (#s2ResumoCard), o .conf-card do step-3 continua com a borda normal. */
+#s2ResumoCard { border: none; }
 
 /* ── TAG BUTTONS (filtros de seleção rápida) ─────────────────────────── */
 .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1028,10 +1036,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
     </div>
 
-    <!-- Resultado + configurações já definidas + orçamento editável --
-         mesmo componente visual de .conf-card (step-3), ids próprios
-         (s2ResumoX) pra não colidir com os de lá. -->
-    <div class="conf-card" id="s2ResumoCard" style="margin-top:28px">
+    <!-- Resultado ao vivo -- pedido explícito do usuário: fica ACIMA da
+         tabela de objetivo/estágio/orçamento, com o número bem maior que o
+         padrão (ver #s2ResultadoBadge no CSS, escopado só pra esta tela). -->
+    <div class="conf-resultado-badge" id="s2ResultadoBadge" style="margin-top:28px">— opções encontradas</div>
+    <div class="tolerancia-nota" id="toleranciaNota" style="display:none;text-align:center">Ampliamos sua busca um pouco pra não faltar opção.</div>
+
+    <!-- Configurações já definidas + orçamento editável -- mesmo
+         componente visual de .conf-card (step-3), ids próprios (s2ResumoX)
+         pra não colidir com os de lá. Sem contorno aqui (pedido explícito
+         do usuário) -- ver #s2ResumoCard no CSS. -->
+    <div class="conf-card" id="s2ResumoCard" style="margin-top:16px">
       <div class="conf-item">
         <div class="conf-item-label">Objetivo</div>
         <div class="conf-item-val conf-item-val-sit" id="s2ResumoObjetivo">—</div>
@@ -1049,9 +1064,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
     <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)" style="display:none">
-
-    <div class="conf-resultado-badge" id="s2ResultadoBadge">— opções encontradas</div>
-    <div class="tolerancia-nota" id="toleranciaNota" style="display:none;text-align:center">Ampliamos sua busca um pouco pra não faltar opção.</div>
   </div>
 
   <!-- STEP 3 — CONFIRMAÇÃO DOS DADOS -->
