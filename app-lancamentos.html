@@ -785,6 +785,12 @@ input[type=range]::-moz-range-track {
 .conf-btns { display: flex; gap: 8px; margin-top: 16px; }
 .conf-btn-ref { flex: 1; }
 .conf-btn-sim { flex: 2; }
+/* Botão "VER TODAS AS OPÇÕES →" da confirmação -- fundo laranja destacado
+   (pedido explícito do usuário), mesmo gradiente já usado no botão quente
+   da capa (.btn-final.btn-quente) pra manter consistência de cor "quente"
+   em todo o funil. */
+.btn-laranja-destaque { background: linear-gradient(135deg, #ff9d2e, #ff5252); color: #1a0a00; }
+.btn-laranja-destaque:hover { filter: brightness(1.08); }
 /* Badge de quantidade encontrada na confirmação -- fundo branco chapado,
    texto escuro pra contraste (pedido explícito do usuário). */
 .conf-resultado-badge {
@@ -1106,14 +1112,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="step-tag">Confirme seus dados</div>
     <div class="step-title">Antes de seguirmos, <span style="color:var(--accent)">confirme</span> o que você configurou!</div>
 
-    <!-- Preview do 1º resultado -- movido do step-2 pra cá (mudança
-         2026-08-14, pedido explícito do usuário: step-2 vira só a pergunta
-         de área + resumo/orçamento, o preview de "essa é uma delas" fica
-         pra etapa de confirmação). Populado por montarPreviewCard_(),
-         chamado dentro de montarConfirmacao_(). -->
-    <div class="s2-subtxt" style="text-align:center;margin-bottom:10px">Essa é uma das opções que encontramos:</div>
-    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
-
     <div class="conf-card">
       <div class="conf-item">
         <div class="conf-item-label">Objetivo</div>
@@ -1137,18 +1135,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
 
-    <!-- Quantidade encontrada, ao final da confirmação -- pedido explícito
-         do usuário, fundo branco chapado destacando o texto com contraste
-         (mesmo padrão já usado nos botões de padrão selecionados). Usa a
-         MESMA contagem (com expansão de tolerância) da Tela 3 -- antes
-         usava filtrados() puro, que podia mostrar "0" aqui mesmo depois da
-         Tela 3 ter mostrado um número > 0 (bug reportado pelo usuário). -->
-    <div class="conf-resultado-badge" id="confResultadoBadge">— opções encontradas</div>
     <div class="tolerancia-nota" id="toleranciaNotaConfirmacao" style="display:none;text-align:center"></div>
+
+    <!-- Preview do 1º resultado -- ABAIXO da tabela-resumo (pedido
+         explícito do usuário, mudança 2026-08-14; antes vinha acima).
+         Populado por montarPreviewCard_(), chamado dentro de
+         montarConfirmacao_(). A frase "N opções encontradas" que ficava
+         entre a tabela e o preview foi retirada (pedido explícito). -->
+    <div class="s2-subtxt" style="text-align:center;margin:20px 0 10px">Essa é uma das opções que encontramos:</div>
+    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
 
     <div class="conf-btns">
       <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Ajustar</button>
-      <button class="btn-nav btn-prim conf-btn-sim" onclick="avancarStep()">Confirmar</button>
+      <button class="btn-nav conf-btn-sim btn-laranja-destaque" onclick="avancarStep()">VER TODAS AS OPÇÕES →</button>
     </div>
   </div>
 
@@ -1921,9 +1920,12 @@ function montarConfirmacao_() {
   const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
-  const qtd = qtdOpcoesReais_();
-  document.getElementById('confResultadoBadge').innerHTML =
-    `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
+  // qtdOpcoesReais_ não fica mais exibido aqui (frase "N opções
+  // encontradas" retirada, pedido explícito do usuário) -- mas a chamada
+  // continua necessária: é ela que expande a tolerância (D.areaRange) se a
+  // busca estrita não achar nada, efeito colateral do qual filtrados()/
+  // montarPreviewCard_() (logo abaixo) dependem pra mostrar o preview certo.
+  qtdOpcoesReais_();
   const notaConf = document.getElementById('toleranciaNotaConfirmacao');
   if (notaConf) {
     notaConf.style.display = D.toleranciaExpandida ? '' : 'none';
