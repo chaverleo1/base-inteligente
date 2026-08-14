@@ -1092,6 +1092,28 @@ select.form-input option { background: var(--surface2); }
    por .score-*) não existem nas :root daqui -- cor hardcoded direto na
    regra em vez de criar variável nova só pra isso. ─────────────────────── */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 18px; }
+/* Ported junto com a sub-aba "Google Ads" da Inteligência (movida de
+   BaseImob, pedido explícito do usuário, 2026-08-14) -- mesmas regras de
+   dashboard.html (.cards-row/.card-label/.card-value/.card-sub, .bi-btn,
+   #gadsTabela). --hot/--warm/--cold de dashboard.html não existem aqui
+   (mesmo motivo do comentário acima) -- cor hardcoded direto na regra
+   .cold em vez de criar variável nova só pra isso. */
+.cards-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 18px; }
+@media (max-width: 700px) { .cards-row { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 420px) { .cards-row { grid-template-columns: 1fr; } .card-value { font-size: 26px; } }
+.card-label { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; padding-right: 56px; }
+.card-value { font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700; color: var(--text); line-height: 1; }
+.card-value.green { color: var(--accent2); }
+.card-value.cold { color: #4f7cff; }
+.card-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
+.bi-btn { padding: 4px 6px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer; border: none; font-family: 'Inter', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: all .2s; text-decoration: none; display: inline-block; text-align: center; }
+/* Tabela de campanhas Google Ads -- 12 colunas, letra/padding menores que
+   o padrão de .adm-table pra caber sem rolagem horizontal (pedido
+   explícito do usuário); nome da campanha trunca com "…" + tooltip. */
+#gadsTabela th { padding: 6px 7px; font-size: 9px; white-space: nowrap; }
+#gadsTabela td { padding: 5px 7px; font-size: 11px; white-space: nowrap; }
+#gadsTabela td:first-child { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#gadsTabela .bi-btn { padding: 3px 6px; font-size: 9px; }
 .vg-panel {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
   gap: 1px; background: var(--border); border: 1px solid var(--border);
@@ -1215,6 +1237,10 @@ select.form-input option { background: var(--surface2); }
   background: #0a0b10; border-radius: var(--radius); padding: 22px 20px;
 }
 </style>
+<!-- Chart.js -- usado pelo gráfico de evolução diária por campanha do
+     Google Ads (sub-aba Inteligência → Google Ads, movida de BaseImob em
+     2026-08-14). -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -1689,9 +1715,19 @@ select.form-input option { background: var(--surface2); }
        (abrirDetalheLeadBI/_biLeadsMap) é infra do BaseImob, que não existe
        aqui em Lançamentos (que é sobre empreendimentos, não leads). -->
   <div id="tabPainelInteligencia" class="tab-panel" style="display:none">
+  <!-- Sub-abas: Central de Inteligência Comportamental (conteúdo de
+       sempre) e Google Ads (movido de BaseImob pra cá, pedido explícito
+       do usuário, 2026-08-14 -- os dois já liam dado do App Lançamentos,
+       faz mais sentido ficarem juntos). Mesmo padrão visual/JS de
+       mudarSubAbaMapa_ (Mapa Geral). -->
+  <div class="mapa-subtabs">
+    <button class="mapa-subtab active" id="intSubBtnComport" onclick="mudarSubAbaInteligencia_('comportamental')">Central de Inteligência Comportamental</button>
+    <button class="mapa-subtab" id="intSubBtnAds" onclick="mudarSubAbaInteligencia_('ads')">📢 Google Ads</button>
+  </div>
+
+  <div id="intSubPainelComportamental" class="mapa-subpanel">
   <div class="sec-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <div>
-      <div class="sec-title">Central de Inteligência Comportamental</div>
       <div class="sec-sub">Padrões de comportamento capturados no App Lançamentos.</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1790,6 +1826,48 @@ select.form-input option { background: var(--surface2); }
   <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Performance por origem (UTM)</div></div>
   <div class="card" id="intOrigemWrap" style="padding:0;overflow:auto">
     <div class="loading dot-anim" style="padding:24px">Carregando</div>
+  </div>
+  </div>
+  <!-- fim #intSubPainelComportamental -->
+
+  <!-- Sub-aba Google Ads -- movida de BaseImob (pedido explícito do
+       usuário, 2026-08-14). Conteúdo/ids idênticos aos de dashboard.html,
+       só o container que muda (biPainelAds -> intSubPainelAds). -->
+  <div id="intSubPainelAds" class="mapa-subpanel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <span style="font-size:12px;color:var(--text3)">Dados de <span id="gadsAtualizadoEm">—</span> · último dia disponível na planilha de métricas</span>
+      <button class="refresh-btn" onclick="carregarMetricasGoogleAds_()">↻ Atualizar</button>
+    </div>
+    <div class="cards-row" id="gadsCardsResumo"></div>
+
+    <!-- Gráfico de evolução diária por campanha (Cliques × Impressões ×
+         Conversões + Lead Qualificado × Lead Venda). -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <span style="font-size:12px;font-weight:700;color:var(--text2)">📈 Evolução diária por campanha</span>
+        <select id="gadsCampanhaSelect" onchange="renderGraficoEvolucaoAds_(this.value)"
+          style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;max-width:100%">
+          <option>Carregando...</option>
+        </select>
+      </div>
+      <div style="height:260px;position:relative">
+        <canvas id="gadsChartEvolucao"></canvas>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Ordenado pela campanha mais eficiente (menor custo por lead qualificado) — cor de fundo vai de quente (melhor) a fria (pior/sem lead qualificado ainda).</div>
+    <div id="gadsTabelaWrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto">
+      <table class="adm-table" id="gadsTabela">
+        <thead>
+          <tr>
+            <th>Campanha</th><th>Status</th><th>Invest.</th><th>Cliques</th>
+            <th>Impr.</th><th>CTR</th><th>CPC méd.</th><th>Conv. (Ads)</th>
+            <th>Leads Qualif.</th><th>Custo/Lead</th><th>Lead Venda</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="gadsTabelaBody"><tr><td colspan="12" class="loading dot-anim" style="padding:24px">Carregando</td></tr></tbody>
+      </table>
+    </div>
   </div>
   </div>
 
@@ -3995,6 +4073,205 @@ function carregarInteligenciaLazy_() {
   if (_inteligenciaCarregada_) return;
   _inteligenciaCarregada_ = true;
   carregarInteligencia_();
+}
+
+// ── SUB-ABAS DA INTELIGÊNCIA (Central de Inteligência Comportamental /
+// Google Ads) -- pedido explícito do usuário, 2026-08-14: a sub-aba
+// Google Ads morava em BaseImob, movida pra cá porque os dois painéis já
+// liam dado do mesmo lugar (App Lançamentos). Mesmo padrão de
+// mudarSubAbaMapa_ (Mapa Geral). ──────────────────────────────────────────
+let _intSubAbaAtual_ = 'comportamental';
+function mudarSubAbaInteligencia_(nome) {
+  _intSubAbaAtual_ = nome;
+  document.getElementById('intSubPainelComportamental').style.display = nome === 'comportamental' ? '' : 'none';
+  document.getElementById('intSubPainelAds').style.display            = nome === 'ads'             ? '' : 'none';
+  document.getElementById('intSubBtnComport').classList.toggle('active', nome === 'comportamental');
+  document.getElementById('intSubBtnAds').classList.toggle('active', nome === 'ads');
+  if (nome === 'ads' && !_gadsCarregado_) { carregarMetricasGoogleAds_(); carregarSeriesGoogleAds_(); }
+}
+
+// ── GOOGLE ADS (movido de BaseImob/dashboard.html, pedido explícito do
+// usuário, 2026-08-14 -- código idêntico, só o container mudou). Lê
+// listar_metricas_google_ads (code.txt), que por sua vez lê a planilha
+// SEPARADA de métricas (populada pelo Script rodando dentro da conta do
+// Google Ads). Carrega uma vez ao abrir a sub-aba; "↻ Atualizar" força
+// recarregar. ──────────────────────────────────────────────────────────
+let _gadsCarregado_ = false;
+const GADS_STATUS_LABEL_ = { ENABLED: 'Ativa', PAUSED: 'Pausada', REMOVED: 'Removida' };
+function fmtBRL(v) {
+  return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+// Gradiente fria→quente por eficiência (pedido explícito do usuário): a
+// campanha MAIS eficiente (menor custo por lead qualificado, topo da
+// lista) fica quente (vermelho/laranja); a menos eficiente (ou sem
+// nenhum lead qualificado ainda) fica fria (azul). Interpolação linear
+// simples entre as duas cores conforme a posição no ranking.
+function gadsCorEficiencia_(rank, total) {
+  if (total <= 1) return 'rgba(255,107,107,.14)';
+  const t = rank / (total - 1); // 0 = melhor (quente) .. 1 = pior (fria)
+  const quente = [255, 107, 107]; // --coral
+  const fria   = [79, 124, 255];  // --accent
+  const rgb = quente.map((q, i) => Math.round(q + (fria[i] - q) * t));
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},.14)`;
+}
+async function carregarMetricasGoogleAds_() {
+  _gadsCarregado_ = true;
+  const resumo = document.getElementById('gadsCardsResumo');
+  const corpo  = document.getElementById('gadsTabelaBody');
+  corpo.innerHTML = '<tr><td colspan="12" class="loading dot-anim" style="padding:24px">Carregando</td></tr>';
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_metricas_google_ads&dias=30&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+
+    const campanhas = json.campanhas || [];
+    document.getElementById('gadsAtualizadoEm').textContent =
+      json.atualizadoEm || 'ainda sem dado (aguardando o Script rodar no Google Ads)';
+
+    if (!campanhas.length) {
+      resumo.innerHTML = '';
+      // Antes essa mensagem era sempre a mesma genérica, mesmo quando o
+      // backend tinha capturado um ERRO de verdade (listarMetricasGoogleAds_
+      // sempre volta {campanhas:[]} em qualquer exceção, ver code.txt) --
+      // agora mostra o erro real quando existe, em vez de mascarar tudo
+      // como "ainda sem dado".
+      corpo.innerHTML = json.erro
+        ? `<tr><td colspan="12" style="text-align:center;color:var(--danger);padding:32px">
+            Erro ao ler a planilha de métricas:<br><b>${json.erro}</b><br>
+            <span style="font-size:11px;color:var(--text3)">Confirme se o ID da planilha ainda está certo e se ela continua compartilhada.</span></td></tr>`
+        : `<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:32px">
+            Nenhum dado ainda. Confirme se o Script já rodou no Google Ads (Executar, não só Visualizar) e
+            se a planilha de métricas está compartilhada com Editor pra conta do Ads.</td></tr>`;
+      return;
+    }
+
+    const totalInvest = campanhas.reduce((s, c) => s + c.investimento, 0);
+    const totalCliques = campanhas.reduce((s, c) => s + c.cliques, 0);
+    const totalConv = campanhas.reduce((s, c) => s + c.conversoes, 0);
+    const totalQualif = campanhas.reduce((s, c) => s + (c.leadsQualificados || 0), 0);
+    const custoQualifMedio = totalQualif > 0 ? totalInvest / totalQualif : null;
+
+    resumo.innerHTML = `
+      <div class="card"><div class="card-label">Investimento (30d)</div><div class="card-value">${fmtBRL(totalInvest)}</div><div class="card-sub">${campanhas.length} campanha${campanhas.length !== 1 ? 's' : ''}</div></div>
+      <div class="card"><div class="card-label">Cliques</div><div class="card-value">${totalCliques.toLocaleString('pt-BR')}</div><div class="card-sub">todas as campanhas</div></div>
+      <div class="card"><div class="card-label">Conversões (Ads)</div><div class="card-value">${totalConv.toLocaleString('pt-BR')}</div><div class="card-sub">reportadas pelo Google Ads</div></div>
+      <div class="card"><div class="card-label">Leads Qualificados</div><div class="card-value green">${totalQualif.toLocaleString('pt-BR')}</div><div class="card-sub">confirmados pelo corretor</div></div>
+      <div class="card"><div class="card-label">Custo por Lead Qualif.</div><div class="card-value${custoQualifMedio ? '' : ' cold'}">${custoQualifMedio ? fmtBRL(custoQualifMedio) : '—'}</div><div class="card-sub">médio geral</div></div>`;
+
+    // Já vem ordenado pelo backend (menor custo por lead qualificado
+    // primeiro). Cor de fundo por linha segue o mesmo ranking -- quente no
+    // topo (mais eficiente), fria no fim (menos eficiente / sem lead
+    // qualificado ainda). 🏆 só na 1ª linha se ela tiver lead qualificado
+    // de verdade (senão ninguém tem prova de eficiência ainda).
+    corpo.innerHTML = campanhas.map((c, i) => {
+      // Escapa aspas simples/barra pro nome caber dentro do onclick="..."
+      // sem quebrar a string (nome de campanha é texto livre no Ads).
+      const escNome = c.campanha.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return `
+      <tr style="background:${gadsCorEficiencia_(i, campanhas.length)}">
+        <td style="font-weight:600" title="${c.campanha}">${i === 0 && c.leadsQualificados > 0 ? '🏆 ' : ''}${c.campanha}</td>
+        <td>${GADS_STATUS_LABEL_[c.status] || c.status || '—'}</td>
+        <td>${fmtBRL(c.investimento)}</td>
+        <td>${c.cliques.toLocaleString('pt-BR')}</td>
+        <td>${c.impressoes.toLocaleString('pt-BR')}</td>
+        <td>${c.ctr.toFixed(2)}%</td>
+        <td>${fmtBRL(c.cpcMedio)}</td>
+        <td>${c.conversoes}</td>
+        <td>${c.leadsQualificados || 0}</td>
+        <td>${c.custoPorLeadQualificado != null ? fmtBRL(c.custoPorLeadQualificado) : '—'}</td>
+        <td style="font-weight:${c.leadsConvertidos > 0 ? '700' : '400'};color:${c.leadsConvertidos > 0 ? '#e6ac00' : 'inherit'}">${c.leadsConvertidos > 0 ? '🏆 ' : ''}${c.leadsConvertidos || 0}</td>
+        <td><button class="bi-btn" style="background:#3a1a1a;color:#e05a3a" title="Excluir esta campanha do painel (permanente -- não aparece mais, mesmo que o Script continue rodando)"
+          onclick="excluirCampanhaAds_('${escNome}',this)">🗑 Excluir</button></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    corpo.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--danger)">Erro ao carregar: ${e.message}</td></tr>`;
+  }
+}
+
+// Exclui uma campanha do painel Google Ads (pedido explícito do usuário) --
+// permanente: entra numa lista de exclusão persistida na planilha de
+// métricas (aba "Campanhas Excluidas", ver excluirCampanhaGoogleAds_/
+// code.txt), então some do painel mesmo que o Script continue gravando
+// linha nova pra ela a cada 3h. Recarrega a tabela E o gráfico de evolução
+// depois (a campanha some do <select> de campanhas também).
+async function excluirCampanhaAds_(nomeCampanha, btn) {
+  if (!confirm(`Excluir a campanha "${nomeCampanha}" deste painel?\n\nEla não vai mais aparecer aqui, mesmo que o Script do Google Ads continue rodando. Essa ação não mexe na campanha de verdade dentro do Google Ads, só esconde ela deste painel.`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const fd = new FormData();
+    fd.append('dados', JSON.stringify({ acao: 'excluir_campanha_google_ads', campanha: nomeCampanha, token: tokenSessao() }));
+    const resp = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    const r    = await resp.json();
+    if (trataNaoAutenticado(r)) return;
+    if (r.ok) {
+      carregarMetricasGoogleAds_();
+      carregarSeriesGoogleAds_();
+    } else {
+      alert('Erro ao excluir: ' + (r.erro || JSON.stringify(r)));
+      if (btn) { btn.disabled = false; btn.textContent = '🗑 Excluir'; }
+    }
+  } catch (e) {
+    alert('Erro ao excluir: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 Excluir'; }
+  }
+}
+
+// Gráfico de evolução diária por campanha (Cliques × Impressões ×
+// Conversões, + Lead Qualificado × Lead Venda -- pedido explícito do
+// usuário). Impressões usa eixo Y separado (direita) das demais métricas --
+// em contas maiores, impressão costuma ser uma ordem de grandeza maior que
+// clique/conversão/lead, e misturar tudo no mesmo eixo deixaria essas
+// "achatadas" no gráfico, quase invisíveis. Lead Qualificado/Lead Venda
+// ficam no mesmo eixo esquerdo de Cliques/Conversões -- mesma ordem de
+// grandeza (contagens pequenas), sem precisar de um 3º eixo.
+let _gadsSeriesCache_ = [];
+async function carregarSeriesGoogleAds_() {
+  const select = document.getElementById('gadsCampanhaSelect');
+  try {
+    const resp = await fetch(`${WEBHOOK_URL}?acao=listar_series_google_ads&dias=30&token=${encodeURIComponent(tokenSessao())}`);
+    const json = await resp.json();
+    if (trataNaoAutenticado(json)) return;
+    _gadsSeriesCache_ = json.campanhas || [];
+    select.innerHTML = _gadsSeriesCache_.length
+      ? _gadsSeriesCache_.map(c => `<option value="${c.campanha.replace(/"/g,'&quot;')}">${c.campanha}</option>`).join('')
+      : '<option>Sem dado ainda</option>';
+    if (_gadsSeriesCache_.length) renderGraficoEvolucaoAds_(_gadsSeriesCache_[0].campanha);
+    else { const ex = Chart.getChart('gadsChartEvolucao'); if (ex) ex.destroy(); }
+  } catch (e) {
+    select.innerHTML = '<option>Erro ao carregar</option>';
+  }
+}
+
+function renderGraficoEvolucaoAds_(nomeCampanha) {
+  const existing = Chart.getChart('gadsChartEvolucao');
+  if (existing) existing.destroy();
+  const dados = _gadsSeriesCache_.find(c => c.campanha === nomeCampanha);
+  if (!dados || !dados.dias.length) return;
+  const ctx = document.getElementById('gadsChartEvolucao').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: dados.dias,
+      datasets: [
+        { label: 'Cliques',          data: dados.cliques,           borderColor: '#4f7cff', backgroundColor: 'rgba(79,124,255,.12)',  yAxisID: 'y',  tension: .3, pointRadius: 3 },
+        { label: 'Conversões',       data: dados.conversoes,        borderColor: '#00d4aa', backgroundColor: 'rgba(0,212,170,.12)',   yAxisID: 'y',  tension: .3, pointRadius: 3 },
+        { label: 'Lead Qualificado', data: dados.leadsQualificados, borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,.12)',  yAxisID: 'y',  tension: .3, pointRadius: 3, borderDash: [4, 3] },
+        { label: 'Lead Venda',       data: dados.leadsConvertidos,  borderColor: '#e6ac00', backgroundColor: 'rgba(230,172,0,.15)',   yAxisID: 'y',  tension: .3, pointRadius: 3, borderDash: [4, 3] },
+        { label: 'Impressões',       data: dados.impressoes,        borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,.12)', yAxisID: 'y1', tension: .3, pointRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: '#e8ecf4', font: { size: 11 } } } },
+      scales: {
+        x:  { grid: { color: 'rgba(42,48,80,.5)' }, ticks: { color: '#8892aa', font: { size: 10 } } },
+        y:  { position: 'left',  grid: { color: 'rgba(42,48,80,.3)' }, ticks: { color: '#8892aa' }, title: { display: true, text: 'Cliques / Conversões / Leads', color: '#8892aa', font: { size: 10 } }, beginAtZero: true },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#8892aa' }, title: { display: true, text: 'Impressões', color: '#8892aa', font: { size: 10 } }, beginAtZero: true },
+      }
+    }
+  });
 }
 
 async function limparDadosFunil_() {
