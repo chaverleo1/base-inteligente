@@ -156,11 +156,7 @@ body {
 .capa-bairro-wrap { margin: 22px 0 0; }
 .capa-bairro-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .capa-tag-btn {
-  /* Contorno laranja, espessura 2 (pedido explícito do usuário) -- destaca
-     os botões de bairro mesmo antes de qualquer seleção. .ativo/.erro
-     abaixo continuam sobrescrevendo a cor da borda (azul quando
-     selecionado, vermelho em erro), sem mudar a espessura. */
-  padding: 9px 16px; border-radius: var(--r); border: 2px solid var(--orange);
+  padding: 9px 16px; border-radius: var(--r); border: 1.5px solid var(--border);
   background: var(--surface2); color: var(--text2);
   font-size: clamp(12px, 3.2vw, 14px); font-weight: 700;
   cursor: pointer; font-family: inherit; transition: all .15s; line-height: 1.3;
@@ -186,18 +182,28 @@ body {
 
 /* CTA area hero */
 .hero-cta-area { padding-top: 0; }
-/* Contador integrado na hero-phrase */
-.hp-count {
-  display: block;
-  font-size: clamp(15px, 4vw, 20px); font-weight: 700;
-  color: #fff; line-height: 1.4;
-  margin-top: 10px;
+/* Bloco central da capa: contador em tamanho uniforme */
+.hp-count-bloco {
+  text-align: center;
+  font-size: clamp(20px, 5.5vw, 26px); font-weight: 700;
+  color: var(--text); line-height: 1.35;
+  margin: 18px 0; padding: 18px 16px;
+  background: rgba(79,124,255,.06);
+  border: 1.5px solid rgba(79,124,255,.18);
+  border-radius: 12px;
 }
-.hp-count strong {
-  display: inline-block;
-  font-size: clamp(54px, 15vw, 82px); font-weight: 900;
-  color: var(--orange); line-height: .9; letter-spacing: -2px;
-  vertical-align: middle; margin: 0 5px;
+.hp-count-bloco strong {
+  font-size: inherit; font-weight: 900; color: var(--accent);
+}
+/* Hero 2 linhas — capa reformulada */
+.hero-2l { margin: 0 0 0; }
+.hero-2l-body {
+  font-size: clamp(17px, 4.8vw, 22px); font-weight: 700;
+  color: var(--text); line-height: 1.3; margin: 0 0 4px;
+}
+.hero-2l-city {
+  font-size: clamp(26px, 7vw, 34px); font-weight: 900;
+  color: var(--orange); letter-spacing: -.5px; line-height: 1.1; margin: 0;
 }
 
 /* Contador de opções — destaque total no step-2 */
@@ -233,10 +239,11 @@ body {
   letter-spacing: 1px; color: var(--text); opacity: .5;
   margin-bottom: 16px;
 }
-/* Grid 2×2 para orçamento + área no step-2 */
+/* Grid 2 colunas para área (slider) + orçamento (input) no step-2 */
 .s2-inputs-grid {
   display: grid; grid-template-columns: 1fr 1fr;
-  column-gap: 12px; row-gap: 6px; margin-top: 4px;
+  column-gap: 14px; row-gap: 6px; margin-top: 4px;
+  align-items: start;
 }
 .s2-input-label {
   font-size: clamp(11px, 2.8vw, 13px); font-weight: 700;
@@ -758,40 +765,6 @@ input[type=range]::-moz-range-track {
 .conf-item-val-sit {
   font-size: clamp(20px, 5.5vw, 28px); letter-spacing: -.5px;
 }
-/* Objetivo/Estágio editáveis no step-2 (pedido explícito do usuário) --
-   mesmo visual de .conf-item-val (peso/cor), só que <select> de verdade.
-   IMPORTANTE: appearance:none tira a seta NATIVA do navegador -- sem repor
-   uma seta própria a caixa fica com cara de texto fixo, não parece
-   clicável (mesmo bug real já corrigido em .tel-country-box, ver
-   comentário lá). Seta em SVG embutida via background-image resolve isso
-   de novo aqui. */
-.conf-item-select {
-  width: 100%; text-align: left; cursor: pointer; outline: none;
-  font-family: inherit; font-weight: 800; color: var(--orange);
-  font-size: clamp(15px, 4.2vw, 19px); letter-spacing: -.3px;
-  background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff8a00' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 2px center; background-size: 16px;
-  border: none; border-bottom: 1.5px solid var(--border);
-  padding: 2px 22px 4px 0;
-  transition: border-color .2s;
-  -webkit-appearance: none; appearance: none;
-}
-.conf-item-select:focus { border-color: var(--accent); }
-.conf-item-select option { background: var(--s2); color: var(--text); font-weight: 600; }
-/* Linha "Bairros" + botão MUDAR (step-2) -- botão fica FORA de
-   .conf-item-label de propósito (não como filho dela): opacity em CSS
-   compõe com a da subárvore inteira, um <button> filho com opacity:1
-   ainda saía apagado (herdava os .55 do label). Como irmãos num flex row,
-   cada um mantém a própria opacidade. */
-.s2-bairro-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.s2-mudar-btn {
-  padding: 3px 12px; border-radius: 99px; background: transparent;
-  border: 1px solid var(--accent); color: var(--accent);
-  font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
-  cursor: pointer; font-family: inherit; flex-shrink: 0;
-}
-.s2-mudar-btn:hover { background: rgba(79,124,255,.12); }
 .conf-obs {
   grid-column: 1 / -1;
   padding: 12px 16px; background: rgba(79,124,255,.07);
@@ -802,12 +775,6 @@ input[type=range]::-moz-range-track {
 .conf-btns { display: flex; gap: 8px; margin-top: 16px; }
 .conf-btn-ref { flex: 1; }
 .conf-btn-sim { flex: 2; }
-/* Botão "VER TODAS AS OPÇÕES →" da confirmação -- fundo laranja destacado
-   (pedido explícito do usuário), mesmo gradiente já usado no botão quente
-   da capa (.btn-final.btn-quente) pra manter consistência de cor "quente"
-   em todo o funil. */
-.btn-laranja-destaque { background: linear-gradient(135deg, #ff9d2e, #ff5252); color: #1a0a00; }
-.btn-laranja-destaque:hover { filter: brightness(1.08); }
 /* Badge de quantidade encontrada na confirmação -- fundo branco chapado,
    texto escuro pra contraste (pedido explícito do usuário). */
 .conf-resultado-badge {
@@ -816,20 +783,6 @@ input[type=range]::-moz-range-track {
   font-size: 15px; font-weight: 700;
 }
 .conf-resultado-badge strong { font-size: 24px; font-weight: 800; }
-/* Step-2 (simulador): número da contagem bem maior que o padrão do badge
-   (pedido explícito do usuário) -- escopado só pro badge dessa tela
-   (#s2ResultadoBadge), não mexe no badge igual usado no step-3. */
-#s2ResultadoBadge strong { font-size: 48px; line-height: 1; }
-/* Step-2 (simulador): texto "opções encontradas" também maior que o
-   padrão do badge (pedido explícito do usuário) -- só o texto ao redor do
-   número, que herda o font-size do badge (o número já tem o próprio
-   tamanho, acima). Mesmo escopo só pro step-2, step-3 sem mudança.
-   Pedido explícito do usuário (2ª rodada): dobrar de novo (20px -> 40px). */
-#s2ResultadoBadge { font-size: 40px; }
-/* Step-2 (simulador): tabela objetivo/estágio/orçamento sem contorno
-   (pedido explícito do usuário) -- escopado só pra essa caixa
-   (#s2ResumoCard), o .conf-card do step-3 continua com a borda normal. */
-#s2ResumoCard { border: none; }
 
 /* ── TAG BUTTONS (filtros de seleção rápida) ─────────────────────────── */
 .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -961,48 +914,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- STEP 0 — ABERTURA -->
   <div class="step ativo" id="step-0">
 
-    <div class="step-tag">
-      App Lançamentos · Grande Goiânia
-      <a class="capa-mapa-link" href="https://maps.app.goo.gl/YPxF53jHYHUt7jaP6" target="_blank" rel="noopener noreferrer">
-        <svg width="11" height="11"><use href="#ico-pin"/></svg>(ver localização no mapa)
-      </a>
+    <div class="step-tag">APP LANÇAMENTOS · GRANDE GOIÂNIA · ETAPA 1/3 (Simulador)</div>
+
+    <!-- Hero 2 linhas + bloco contador central -->
+    <div class="hero-2l" style="margin-bottom:0">
+      <p class="hero-2l-body">Encontre seu apartamento novo, loft, garden, cobertura ou studio</p>
+      <p class="hero-2l-city">— na Grande Goiânia!</p>
     </div>
 
-    <div class="hero-phrase" style="margin-bottom:6px">
-      <span class="hp-eyebrow">Encontre seu</span>
-      <span class="hp-word1">apartamento novo<span style="color:#fff">, loft,</span></span>
-      <span class="hp-word2">garden<span style="color:#fff">,</span> cobertura</span>
-      <span class="hp-tipos" style="opacity:1">ou <span style="font-size:clamp(22px,6.5vw,34px);font-weight:900;color:var(--accent);letter-spacing:-1px">studio</span> —</span>
-      <span class="hp-city">na Grande Goiânia!</span>
-      <!-- Contador integrado — número gigante dinâmico, mesma tipografia -->
-      <span class="hp-count">Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!</span>
-    </div>
-
-    <!-- Slider de orçamento na capa (preço capa) — captura a intenção de
-         preço logo na abertura, antes do funil completo. Valor inicial 425k.
-         Alimenta analytics de ACESSOS e pré-preenche o slider do step-2. -->
-    <div class="capa-preco-wrap">
-      <div class="capa-preco-pergunta">Qual é o seu <span style="color:var(--accent)">orçamento</span> ideal?</div>
-      <div class="capa-preco-valor" id="capaPrecoFormatado">R$ 875.000</div>
-      <input type="range" id="capaSliderPreco" oninput="atualizarCapaPreco_(this.value)" style="width:100%">
-      <div class="capa-slider-bounds">
-        <span id="capaLblMin">—</span>
-        <span id="capaLblMax">—</span>
-      </div>
+    <!-- Bloco central: contador de empreendimentos (total geral; filtra por bairro) -->
+    <div class="hp-count-bloco">
+      Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!
     </div>
 
     <!-- Seletor de bairro -->
     <div class="capa-bairro-wrap">
       <div class="capa-preco-pergunta">Qual <span style="color:var(--accent)">bairro</span> você procura?</div>
       <div class="capa-bairro-tags" id="capaBairroTags">
-        <!-- populado por montarBairroTags_('capa') após carregarBaseReal() -->
+        <!-- populado por montarCapaBairroTags_() após carregarBaseReal() -->
       </div>
       <div class="capa-bairro-input-wrap" id="capaBairroInputWrap" style="display:none">
         <input type="text" class="preco-input" id="capaBairroInput"
                placeholder="Digite o bairro…" autocomplete="off"
-               oninput="bairroFiltrar_('capa', this.value)"
-               onfocus="bairroFiltrar_('capa', this.value)"
-               onblur="setTimeout(function(){ bairroFecharDropdown_('capa'); },300)">
+               oninput="capaBairroFiltrar_(this.value)"
+               onfocus="capaBairroFiltrar_(this.value)"
+               onblur="setTimeout(capaBairroFecharDropdown_,300)">
         <div class="capa-bairro-dropdown" id="capaBairroDropdown"></div>
       </div>
       <div class="capa-bairro-erro" id="capaBairroErro">Selecione ao menos 1 bairro para continuar.</div>
@@ -1022,7 +958,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
        sequenciais: primeiro objetivo (moradia/investimento), depois estágio
        (pronto_novo/em_obras) que aparece só após objetivo ser marcado. -->
   <div class="step" id="step-5">
-    <div class="step-tag">Passo 1 de 4</div>
+    <div class="step-tag">APP LANÇAMENTOS · GRANDE GOIÂNIA · ETAPA 2/3 (Simulador)</div>
     <div class="hero-phrase" style="margin-bottom:28px">
       <span class="hp-eyebrow">Você busca apartamento</span>
       <span class="hp-word1">para...</span>
@@ -1032,15 +968,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <button class="obj-tag-btn" onclick="selecionarObjetivo_(this,'investimento')">INVESTIMENTO</button>
     </div>
 
-    <!-- Estágio — aparece após marcar objetivo. Área útil saiu daqui
-         (mudança 2026-08-14, pedido explícito do usuário) -- agora é a
-         primeira pergunta do step-2/simulador, não mais uma 3ª pergunta
-         sequencial aqui. -->
+    <!-- Estágio — aparece após marcar objetivo -->
     <div id="blocoEstagioWrap" style="display:none;margin-top:40px">
       <div class="step-title">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
       <div class="obj-tag-group" id="tagsEstagio">
         <button class="obj-tag-btn" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">Pronto para Morar</button>
         <button class="obj-tag-btn" onclick="selecionarEstagioStep5_(this,'em_obras')">Em Obras</button>
+      </div>
+    </div>
+
+    <!-- Área Útil E2 — aparece após marcar estágio; rastreada separadamente -->
+    <div id="blocoAreaE2Wrap" style="display:none;margin-top:40px">
+      <div class="step-title">Qual a <span style="color:var(--accent)">área útil</span> ideal (m²)?</div>
+      <div class="preco-input-row">
+        <input type="text" class="preco-input" id="areaE2Digitado" inputmode="numeric"
+               oninput="atualizarAreaE2Digitado_(this.value)" onblur="validarLimitesAreaE2_()">
+        <span class="preco-prefixo prefixo-grande">m²</span>
+      </div>
+      <input type="range" id="sliderAreaE2" oninput="atualizarAreaE2_(this.value)">
+      <div class="slider-label-row">
+        <span id="lblAreaE2Min">—</span><span id="lblAreaE2Max">—</span>
       </div>
     </div>
   </div>
@@ -1065,86 +1012,54 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </div>
 
-  <!-- STEP 2 — SIMULADOR (redesenhado 2026-08-14, pedido explícito do
-       usuário): abre só com a pergunta de área útil (saiu do step-5, ver
-       comentário lá) em modo caixa+slider. Logo abaixo, uma "tabela"
-       (reaproveita o visual de .conf-card, mesmo de step-3) com o
-       resultado ao vivo + o que já foi definido antes (Objetivo/Estágio,
-       só leitura) + o orçamento ("orçamento simulador") ainda editável
-       aqui. O preview do 1º card de resultado SAIU desta tela -- foi pro
-       step-3 (Confirmação), ver montarConfirmacao_/#s2PreviewCard lá. -->
+  <!-- STEP 2 — SIMULADOR: destaque total no contador + ajuste fino de
+       orçamento e área. Estágio e Área E2 já foram selecionados no step-5. -->
   <div class="step" id="step-2">
-    <div class="step-tag">Passo 2 de 4</div>
-    <div class="step-title" style="margin-bottom:24px">Qual a <span style="color:var(--accent)">área útil</span> ideal (m²)?</div>
+    <div class="step-tag">APP LANÇAMENTOS · GRANDE GOIÂNIA · ETAPA 3/3 (Simulador)</div>
 
-    <!-- Slider destacado, mesmo padrão visual do orçamento na capa
-         (.capa-preco-wrap/.capa-preco-valor) -- pedido explícito do
-         usuário: só arrastar, sem caixa de digitar (a versão anterior
-         tinha um <input type="text"> junto, removido aqui). -->
-    <div class="capa-preco-wrap">
-      <div class="capa-preco-valor" id="metragemFormatado">— m²</div>
-      <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%">
-      <div class="capa-slider-bounds">
-        <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
-      </div>
+    <!-- CONTADOR — foco visual absoluto da tela -->
+    <div class="s2-top-count">
+      Encontramos
+      <strong id="cntCombo" class="s2-top-count-num">—</strong>
+      opções com o perfil que procura.
+      <span class="s2-subtxt">Essa é uma delas:</span>
     </div>
+    <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
 
-    <!-- Resultado ao vivo -- pedido explícito do usuário: fica ACIMA da
-         tabela de objetivo/estágio/orçamento, com o número bem maior que o
-         padrão (ver #s2ResultadoBadge no CSS, escopado só pra esta tela). -->
-    <div class="conf-resultado-badge" id="s2ResultadoBadge" style="margin-top:28px">— opções encontradas</div>
-    <div class="tolerancia-nota" id="toleranciaNota" style="display:none;text-align:center">Ampliamos sua busca um pouco pra não faltar opção.</div>
+    <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
+    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
+    <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
 
-    <!-- Configurações já definidas + orçamento editável -- mesmo
-         componente visual de .conf-card (step-3), ids próprios (s2ResumoX)
-         pra não colidir com os de lá. Sem contorno aqui (pedido explícito
-         do usuário) -- ver #s2ResumoCard no CSS. -->
-    <div class="conf-card" id="s2ResumoCard" style="margin-top:16px">
-      <div class="conf-item">
-        <div class="conf-item-label">Objetivo</div>
-        <select class="conf-item-select" id="s2ResumoObjetivo" onchange="mudarObjetivoStep2_(this.value)">
-          <option value="moradia">Moradia</option>
-          <option value="investimento">Investimento</option>
-        </select>
-      </div>
-      <div class="conf-item">
-        <div class="conf-item-label">Estágio</div>
-        <select class="conf-item-select" id="s2ResumoEstagio" onchange="mudarEstagioStep2_(this.value)">
-          <option value="pronto_novo" id="s2OptProntoNovo">Pronto para Morar</option>
-          <option value="em_obras">Em Obras</option>
-        </select>
-      </div>
-      <!-- Bairros selecionados + "MUDAR" (pedido explícito do usuário,
-           acima do orçamento) -- revela o MESMO seletor de tags da capa
-           (top-7 + "+OUTRO"), reaproveitado via montarBairroTags_('s2')/
-           bairroToggle_ etc. (ver BAIRRO_CTX_). -->
-      <div class="conf-item conf-item-full">
-        <div class="s2-bairro-header">
-          <div class="conf-item-label" style="margin-bottom:0">Bairros</div>
-          <button class="s2-mudar-btn" id="s2BairroMudarBtn" onclick="toggleMudarBairroStep2_()">MUDAR</button>
+    <span class="s2-ajuste-label">Ajuste seu perfil de busca</span>
+
+    <!-- Área (slider) | Orçamento (input) — 2 colunas independentes.
+         ids #tituloPreco / #prefixoPreco / #prefixoArea preservados para
+         compatibilidade com montarTitulosStep2_. -->
+    <div class="s2-inputs-grid">
+      <!-- COL 1: Área útil — slider visível + input de texto para ajuste fino -->
+      <div>
+        <div class="s2-input-label">Área <span style="color:var(--accent)">útil</span> ideal</div>
+        <div class="preco-input-row s2-grid-row">
+          <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+          <span class="preco-prefixo" id="prefixoArea">m²</span>
         </div>
-        <div class="conf-item-val conf-item-val-sit" id="s2ResumoBairros">—</div>
-        <div id="s2BairroSeletorWrap" style="display:none;margin-top:10px">
-          <div class="capa-bairro-tags" id="s2BairroTags"></div>
-          <div class="capa-bairro-input-wrap" id="s2BairroInputWrap" style="display:none">
-            <input type="text" class="preco-input" id="s2BairroInput"
-                   placeholder="Digite o bairro…" autocomplete="off"
-                   oninput="bairroFiltrar_('s2', this.value)"
-                   onfocus="bairroFiltrar_('s2', this.value)"
-                   onblur="setTimeout(function(){ bairroFecharDropdown_('s2'); },300)">
-            <div class="capa-bairro-dropdown" id="s2BairroDropdown"></div>
-          </div>
+        <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%;margin-top:8px">
+        <div class="slider-label-row" style="margin-top:4px">
+          <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
         </div>
       </div>
-      <div class="conf-item conf-item-full conf-item-last">
-        <div class="conf-item-label" id="tituloPreco">Orçamento simulador <span style="font-size:.9em;font-weight:600;opacity:.85;text-transform:none;letter-spacing:0">(pode ajustar)</span></div>
-        <div class="preco-input-row" style="margin-bottom:0">
-          <span class="preco-prefixo" id="prefixoPreco">R$</span>
+      <!-- COL 2: Orçamento — somente campo de texto para digitação -->
+      <div>
+        <div class="s2-input-label" id="tituloPreco">Qual seu <span style="color:var(--accent)">orçamento</span></div>
+        <div class="preco-input-row s2-grid-row">
+          <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
           <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
         </div>
+        <!-- slider de preço oculto — mantido para compatibilidade com atualizarPreco -->
+        <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)" style="display:none">
       </div>
     </div>
-    <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)" style="display:none">
+
   </div>
 
   <!-- STEP 3 — CONFIRMAÇÃO DOS DADOS -->
@@ -1175,19 +1090,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
 
+    <!-- Quantidade encontrada, ao final da confirmação -- pedido explícito
+         do usuário, fundo branco chapado destacando o texto com contraste
+         (mesmo padrão já usado nos botões de padrão selecionados). Usa a
+         MESMA contagem (com expansão de tolerância) da Tela 3 -- antes
+         usava filtrados() puro, que podia mostrar "0" aqui mesmo depois da
+         Tela 3 ter mostrado um número > 0 (bug reportado pelo usuário). -->
+    <div class="conf-resultado-badge" id="confResultadoBadge">— opções encontradas</div>
     <div class="tolerancia-nota" id="toleranciaNotaConfirmacao" style="display:none;text-align:center"></div>
-
-    <!-- Preview do 1º resultado -- ABAIXO da tabela-resumo (pedido
-         explícito do usuário, mudança 2026-08-14; antes vinha acima).
-         Populado por montarPreviewCard_(), chamado dentro de
-         montarConfirmacao_(). A frase "N opções encontradas" que ficava
-         entre a tabela e o preview foi retirada (pedido explícito). -->
-    <div class="s2-subtxt" style="text-align:center;margin:20px 0 10px">Essa é uma das opções que encontramos:</div>
-    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
 
     <div class="conf-btns">
       <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Ajustar</button>
-      <button class="btn-nav conf-btn-sim btn-laranja-destaque" onclick="avancarStep()">VER TODAS AS OPÇÕES →</button>
+      <button class="btn-nav btn-prim conf-btn-sim" onclick="avancarStep()">Confirmar</button>
     </div>
   </div>
 
@@ -1578,7 +1492,7 @@ async function carregarBaseReal() {
   inicializarCapaSlider_();
   montarStatsAbertura_();
   montarDadosAtualizadosTexto_();
-  montarBairroTags_('capa');
+  montarCapaBairroTags_();
   aplicarPresetURL_(); // deep-link de anúncios — aplica se houver ?preset= ou ?padroes= na URL
 }
 
@@ -1689,31 +1603,20 @@ function montarStatsAbertura_() {
   atualizarContadorCapa_();
 }
 
-// Contador dinâmico da capa: mostra quantos empreendimentos têm precoAPartir
-// PRÓXIMO do orçamento selecionado -- "orçamento ideal" é um ALVO, não um
-// teto, então usa a mesma tolerância ±20% (TOLERANCIA_PRECO_) já usada pelo
-// motor de match final (temApartamentoCompativel_) em vez de um corte seco
-// "<= capaPreco" (pedido explícito do usuário: "esse preço e uma variação
-// aproximada do mesmo" -- projeto acima do orçamento por pouco também deve
-// contar, não só os mais baratos). Critério 2 (bairro) continua sendo corte
-// seco -- bairro fora da seleção NUNCA conta, mesmo que o preço bata.
-// Debounce de 80ms para suavizar o drag do slider.
+// Contador dinâmico da capa: total geral de empreendimentos. Ao clicar em
+// bairros, filtra por bairro (sem filtro de preço — slider de preço removido).
+// Debounce de 80ms para suavizar múltiplos cliques rápidos.
 var _contadorCapaTimer_ = null;
 function atualizarContadorCapa_() {
   clearTimeout(_contadorCapaTimer_);
   _contadorCapaTimer_ = setTimeout(function() {
     var els = document.querySelectorAll('.stats-total-emp');
     if (!els.length || !TODOS_LANC.length) return;
-    // Critério 1: preço dentro de uma faixa aproximada do orçamento (±20%,
-    // mesma tolerância do motor de match final -- ver TOLERANCIA_PRECO_).
-    var faixaMin = D.capaPreco * (1 - TOLERANCIA_PRECO_);
-    var faixaMax = D.capaPreco * (1 + TOLERANCIA_PRECO_);
-    var lista = TODOS_LANC.filter(function(c) { return c.precoAPartir >= faixaMin && c.precoAPartir <= faixaMax; });
-    // Critério 2: bairro, se algum estiver selecionado -- corte seco, nunca
-    // mostra quantidade de outros bairros.
+    // Sem bairro selecionado → total geral; com bairros → filtra por bairro
+    var lista = TODOS_LANC;
     if (D.capaBairros.length > 0) {
       var bs = D.capaBairros.map(function(b) { return b.toLowerCase().trim(); });
-      lista = lista.filter(function(c) {
+      lista = TODOS_LANC.filter(function(c) {
         return bs.indexOf(String(c.bairro || '').toLowerCase().trim()) >= 0;
       });
     }
@@ -1921,7 +1824,7 @@ function irParaStep(n) {
 function avancarStep() {
   if (!validar()) return;
 
-  if (stepAtual === 0) { irParaStep(5); sincronizarStep5ComEstado_(); return; } // capa → objetivo+padrão
+  if (stepAtual === 0) { irParaStep(5); return; }                           // capa → objetivo+padrão
   if (stepAtual === 5) { montarConfigIniciais_(); irParaStep(2); return; }  // objetivo+padrão → sliders
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // sliders → confirmação
   if (stepAtual === 3) { montarBlocoNecessidade_(); irParaStep(1); return; } // confirmação → nome
@@ -1960,22 +1863,14 @@ function montarConfirmacao_() {
   const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
-  // qtdOpcoesReais_ não fica mais exibido aqui (frase "N opções
-  // encontradas" retirada, pedido explícito do usuário) -- mas a chamada
-  // continua necessária: é ela que expande a tolerância (D.areaRange) se a
-  // busca estrita não achar nada, efeito colateral do qual filtrados()/
-  // montarPreviewCard_() (logo abaixo) dependem pra mostrar o preview certo.
-  qtdOpcoesReais_();
+  const qtd = qtdOpcoesReais_();
+  document.getElementById('confResultadoBadge').innerHTML =
+    `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
   const notaConf = document.getElementById('toleranciaNotaConfirmacao');
   if (notaConf) {
     notaConf.style.display = D.toleranciaExpandida ? '' : 'none';
     notaConf.textContent = 'Ampliamos sua busca um pouco pra não faltar opção.';
   }
-  // Preview do 1º resultado -- movido do step-2 pra cá (mudança 2026-08-14,
-  // pedido explícito do usuário). #s2PreviewCard agora mora no HTML do
-  // step-3; montarPreviewCard_ só populava esse container, sem saber (nem
-  // precisar saber) em qual step ele está.
-  montarPreviewCard_();
 }
 
 function montarMotivacaoTitulo_() {
@@ -2010,7 +1905,7 @@ function refazerSliders() {
 function voltarStep() {
   _voltandoStep_ = true;
   if (stepAtual === 5) { irParaStep(0); return; } // objetivo+padrão → capa
-  if (stepAtual === 2) { irParaStep(5); sincronizarStep5ComEstado_(); return; } // sliders → objetivo+padrão
+  if (stepAtual === 2) { irParaStep(5); return; } // sliders → objetivo+padrão
   if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
   if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
   if (stepAtual === 9) { irParaStep(7); return; } // agendamento → captura
@@ -2041,7 +1936,8 @@ function atualizarBotoes() {
   if (bV) bV.classList.add('btn-hide');
 
   // ── Header de navegação ────────────────────────────────────────────────
-  const mostrarHeader = D.objetivo && stepAtual !== 0 && stepAtual !== 5;
+  // Oculto nas 3 etapas numeradas (0=capa, 5=obj+estágio, 2=simulador)
+  const mostrarHeader = D.objetivo && stepAtual !== 0 && stepAtual !== 5 && stepAtual !== 2;
   if (funilHeader) funilHeader.style.display = mostrarHeader ? '' : 'none';
 
   if (objBadge && D.objetivo) {
@@ -2064,7 +1960,8 @@ function validar() {
     let ok = true;
     if (!D.objetivo)           { document.getElementById('tagsObjetivo').classList.add('obj-erro'); ok = false; }
     if (D.situacoes.size === 0){ document.getElementById('tagsEstagio')?.classList.add('obj-erro'); ok = false; }
-    if (!ok) { toast('Selecione objetivo e estágio para continuar'); return false; }
+    if (!D.areaE2)             { document.getElementById('blocoAreaE2Wrap')?.classList.add('bloco-erro'); ok = false; }
+    if (!ok) { toast('Selecione objetivo, estágio e informe a área ideal para continuar'); return false; }
   }
   if (stepAtual === 1) {
     const nome = document.getElementById('fNome').value.trim();
@@ -2168,29 +2065,6 @@ function montarBlocoPadrao_() {
   `).join('');
 }
 
-// Sincroniza os botões do step-5 com D.objetivo/D.situacoes -- necessário
-// desde que Objetivo/Estágio também podem ser trocados direto no <select>
-// do step-2 (pedido explícito do usuário, mudança 2026-08-14): sem isso,
-// voltar pro step-5 depois de mudar por lá mostraria o botão antigo
-// destacado, não o valor real de D. Chamada nos 2 pontos que levam pro
-// step-5 (avancarStep a partir da capa, voltarStep a partir do step-2).
-function sincronizarStep5ComEstado_() {
-  document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(btn => {
-    const oc = btn.getAttribute('onclick') || '';
-    btn.classList.toggle('on', !!D.objetivo && oc.includes("'" + D.objetivo + "'"));
-  });
-  const btnProntoStep5 = document.getElementById('btnEstProntoNovo');
-  if (btnProntoStep5) btnProntoStep5.textContent = termoProntoParaMorar_();
-  const blocoEstagio = document.getElementById('blocoEstagioWrap');
-  if (blocoEstagio) blocoEstagio.style.display = D.objetivo ? '' : 'none';
-  document.querySelectorAll('#tagsEstagio .obj-tag-btn').forEach(btn => {
-    const oc = btn.getAttribute('onclick') || '';
-    let match = false;
-    D.situacoes.forEach(s => { if (oc.includes("'" + s + "'")) match = true; });
-    btn.classList.toggle('on', match);
-  });
-}
-
 function selecionarObjetivo_(el, val) {
   document.getElementById('tagsObjetivo').classList.remove('obj-erro');
   document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(b => b.classList.remove('on'));
@@ -2203,15 +2077,62 @@ function selecionarObjetivo_(el, val) {
   if (blocoEstagio) blocoEstagio.style.display = '';
 }
 
-// Seleção de estágio no step-5 (radio: só um por vez) -- última pergunta
-// desta tela (área útil saiu, ver comentário no HTML/step-2): quem avança
-// vai direto pro botão "Próximo" do rodapé, sem revelar mais nada aqui.
+// Seleção de estágio no step-5 (radio: só um por vez)
+// Após selecionar, revela o slider de Área Útil E2 em sequência.
 function selecionarEstagioStep5_(el, val) {
   document.getElementById('tagsEstagio').classList.remove('obj-erro');
   document.querySelectorAll('#tagsEstagio .obj-tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
   D.situacoes.clear();
   D.situacoes.add(val);
+  const blocoArea = document.getElementById('blocoAreaE2Wrap');
+  if (blocoArea) { blocoArea.style.display = ''; inicializarAreaE2Slider_(); }
+}
+
+// ── ÁREA ÚTIL E2 (step-5) ─────────────────────────────────────────────────
+function inicializarAreaE2Slider_() {
+  const s = document.getElementById('sliderAreaE2');
+  if (!s) return;
+  s.min = AREA_BOUNDS[0]; s.max = AREA_BOUNDS[1]; s.step = 5;
+  const defArea = D.areaE2
+    ? Math.min(Math.max(D.areaE2, AREA_BOUNDS[0]), AREA_BOUNDS[1])
+    : Math.min(Math.max(50, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  s.value = defArea;
+  const elMin = document.getElementById('lblAreaE2Min');
+  const elMax = document.getElementById('lblAreaE2Max');
+  if (elMin) elMin.textContent = AREA_BOUNDS[0] + ' m²';
+  if (elMax) elMax.textContent = AREA_BOUNDS[1] + ' m²';
+  atualizarAreaE2_(defArea);
+}
+
+function atualizarAreaE2_(val) {
+  const v = parseInt(val);
+  D.areaE2 = v;
+  const inp = document.getElementById('areaE2Digitado');
+  if (inp) inp.value = v.toLocaleString('pt-BR');
+  const sl = document.getElementById('sliderAreaE2');
+  if (sl) sl.value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+}
+
+function atualizarAreaE2Digitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  const input = document.getElementById('areaE2Digitado');
+  const v = parseInt(digitos) || 0;
+  input.value = digitos ? v.toLocaleString('pt-BR') : '';
+  if (!v) return;
+  D.areaE2 = v;
+  const sl = document.getElementById('sliderAreaE2');
+  if (sl) sl.value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+}
+
+function validarLimitesAreaE2_() {
+  const input = document.getElementById('areaE2Digitado');
+  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
+  if (v && (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1])) {
+    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
+  }
+  v = Math.min(Math.max(v || 50, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  atualizarAreaE2_(v);
 }
 
 function selecionarPadrao_(el, val) {
@@ -2273,24 +2194,12 @@ function montarConfigIniciais_() {
   const areasMax = base.map(c => c.areaMax).filter(v => v > 0);
   if (precos.length) {
     PRECO_BOUNDS = [Math.floor(Math.min(...precos) / 25000) * 25000, Math.ceil(Math.max(...precos) / 25000) * 25000];
-    // Garante que o orçamento JÁ escolhido na capa sempre cabe nos limites
-    // do slider/campo do simulador -- pedido explícito do usuário: o valor
-    // mostrado no simulador tem que ser sempre o MESMO da capa. Sem isso,
-    // um bairro/estágio com faixa de preço mais estreita que o valor da
-    // capa "sequestrava" silenciosamente o valor exibido pro limite mais
-    // próximo (ex.: capa=2M, mas o bairro escolhido só tem projetos até
-    // 900k -> sem esse ajuste, o simulador mostraria 900k, não 2M).
-    if (D.capaPreco) {
-      PRECO_BOUNDS[0] = Math.min(PRECO_BOUNDS[0], Math.floor(D.capaPreco / 25000) * 25000);
-      PRECO_BOUNDS[1] = Math.max(PRECO_BOUNDS[1], Math.ceil(D.capaPreco / 25000) * 25000);
-    }
   }
   if (areasMin.length && areasMax.length) {
     AREA_BOUNDS = [Math.floor(Math.min(...areasMin) / 5) * 5, Math.ceil(Math.max(...areasMax) / 5) * 5];
   }
   inicializarSliders();
   montarTitulosStep2_();
-  montarResumoStep2_();
 }
 
 // Situação é agora selecionada no step-5 — sliders no step-2 ficam
@@ -2299,76 +2208,21 @@ function atualizarVisibilidadeStep2_() {
   // no-op: sliders são exibidos diretamente no HTML do step-2
 }
 
-// Título da PERGUNTA de área (topo do step-2) muda por objetivo (Moradia/
-// Investir) -- igual antes, só que agora só sobra a área aqui (orçamento
-// virou campo dentro da tabela-resumo, ver montarResumoStep2_).
+// Pergunta 1 muda por objetivo (Moradia/Investir); pergunta 2 (área) é igual
+// nos dois. Letra do prefixo (R$/m²) fica maior no lado mais relevante pro
+// objetivo -- pedido explícito do usuário.
 function montarTitulosStep2_() {
-  const tituloArea = document.querySelector('#step-2 > .step-title');
-  if (tituloArea) {
-    tituloArea.innerHTML = D.objetivo === 'investimento'
-      ? 'Qual a <span style="color:var(--accent)">área útil</span> ideal pro seu investimento (m²)?'
-      : 'Qual a <span style="color:var(--accent)">área útil</span> ideal (m²)?';
-  }
-}
-
-// Preenche a tabela-resumo do step-2 (Objetivo/Estágio, EDITÁVEIS -- pedido
-// explícito do usuário: já abre com o que foi definido no step-5, mas o
-// cliente pode mudar direto aqui, com a contagem de opções recalculando na
-// hora -- ver mudarObjetivoStep2_/mudarEstagioStep2_). Chamado 1x ao
-// entrar na tela; depois disso os <select> são a fonte de verdade (o
-// cliente pode reabrir o step-5 via "Voltar" e mudar de novo também, o que
-// re-popula os <select> do zero na próxima entrada no step-2).
-function montarResumoStep2_() {
-  const elObj = document.getElementById('s2ResumoObjetivo');
-  if (elObj) elObj.value = D.objetivo === 'investimento' ? 'investimento' : 'moradia';
-  const elEst = document.getElementById('s2ResumoEstagio');
-  if (elEst) elEst.value = D.situacoes.has('em_obras') ? 'em_obras' : 'pronto_novo';
-  atualizarLabelProntoStep2_();
-  atualizarResumoBairrosTexto_();
-  // Fecha o seletor de bairro (se tinha ficado aberto de uma visita
-  // anterior ao step-2) -- sempre reabre fechado/"MUDAR", nunca aberto.
-  const bairroWrap = document.getElementById('s2BairroSeletorWrap');
-  const bairroBtn  = document.getElementById('s2BairroMudarBtn');
-  if (bairroWrap) bairroWrap.style.display = 'none';
-  if (bairroBtn)  bairroBtn.textContent = 'MUDAR';
   const tituloPreco = document.getElementById('tituloPreco');
   if (tituloPreco) {
-    const labelOrç = D.objetivo === 'investimento' ? 'Quanto está disposto a investir' : 'Orçamento simulador';
-    tituloPreco.innerHTML = labelOrç + ' <span style="font-size:.9em;font-weight:600;opacity:.85;text-transform:none;letter-spacing:0">(pode ajustar)</span>';
+    const labelOrç = D.objetivo === 'investimento'
+      ? 'Quanto está disposto a <span style="color:var(--accent)">investir</span>?'
+      : 'Seu <span style="color:var(--accent)">orçamento atual</span> é:';
+    tituloPreco.innerHTML = labelOrç + ' <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span>';
   }
-}
-
-// "Pronto para Morar" (Moradia) vs "Pronto" (Investir) -- mesmo termo usado
-// no botão do step-5 (termoProntoParaMorar_), só que agora reaplicado
-// também na opção do <select> do step-2 toda vez que Objetivo muda por lá.
-function atualizarLabelProntoStep2_() {
-  const opt = document.getElementById('s2OptProntoNovo');
-  if (opt) opt.textContent = termoProntoParaMorar_();
-}
-
-// Objetivo mudado direto no <select> do step-2 (pedido explícito do
-// usuário) -- atualiza D.objetivo, os textos que dependem dele (título da
-// área, rótulo do orçamento, termo "Pronto..." do outro select) e
-// recalcula a contagem de opções na hora, igual mexer em área/orçamento.
-function mudarObjetivoStep2_(val) {
-  D.objetivo = val;
-  montarTitulosStep2_();
-  atualizarLabelProntoStep2_();
-  const tituloPreco = document.getElementById('tituloPreco');
-  if (tituloPreco) {
-    const labelOrç = D.objetivo === 'investimento' ? 'Quanto está disposto a investir' : 'Orçamento simulador';
-    tituloPreco.innerHTML = labelOrç + ' <span style="font-size:.9em;font-weight:600;opacity:.85;text-transform:none;letter-spacing:0">(pode ajustar)</span>';
-  }
-  atualizarComboUI_();
-}
-
-// Estágio mudado direto no <select> do step-2 (pedido explícito do
-// usuário) -- D.situacoes é radio (só 1 valor), igual o comportamento já
-// existente no step-5 (selecionarEstagioStep5_).
-function mudarEstagioStep2_(val) {
-  D.situacoes.clear();
-  D.situacoes.add(val);
-  atualizarComboUI_();
+  const prefixoPreco = document.getElementById('prefixoPreco');
+  const prefixoArea = document.getElementById('prefixoArea');
+  if (prefixoPreco) prefixoPreco.classList.toggle('prefixo-grande', D.objetivo !== 'investimento');
+  if (prefixoArea) prefixoArea.classList.toggle('prefixo-grande', D.objetivo === 'investimento');
 }
 
 // ── SELEÇÃO ──────────────────────────────────────────────────────────────
@@ -2759,14 +2613,6 @@ function selecionarQuartos_(el, val) {
 
 function refinarBusca_() { irParaStep(2); }
 
-// Link "RECOMEÇAR" do estado vazio (0 opções mesmo após tolerância
-// expandida, ver montarMatch) -- volta direto pra capa (step-0), mesmo
-// padrão de salto direto já usado por voltarStep() (ex: stepAtual 5 -> 0).
-// Não reseta D de propósito: se o cliente mudar orçamento/bairro na capa e
-// avançar de novo, o funil recalcula tudo do zero normalmente, igual a
-// qualquer "voltar" já existente.
-function recomecarBusca_() { irParaStep(0); }
-
 // ── FILTRO / MATCH ──────────────────────────────────────────────────────
 // scoreMatchPreferencia_ (distância relativa ao alvo do slider, mesma
 // metodologia de baseimob-funil.html) só ordena -- decide QUEM aparece
@@ -2973,22 +2819,9 @@ function registrarAcessoCapa_() {
   fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
 }
 
-// ── SELETOR DE BAIRRO (tags top-7 + "+OUTRO") ─────────────────────────────────
-// Usado em 2 lugares: a capa (step-0, sempre visível, com validação
-// obrigatória antes de continuar) e a caixa-resumo do step-2 ("MUDAR",
-// pedido explícito do usuário -- "igual na capa pra selecionar
-// novamente"). Generalizado com BAIRRO_CTX_ (ids + comportamento próprio de
-// cada contexto) pra reaproveitar a mesma lógica/UI nos 2 lugares sem
-// duplicar tudo -- só ctx.erro (capa exige, step-2 não bloqueia nada) e
-// ctx.aoMudar (step-2 recalcula a contagem em tempo real) mudam de fato.
-const BAIRRO_CTX_ = {
-  capa: { tags: 'capaBairroTags', inputWrap: 'capaBairroInputWrap', input: 'capaBairroInput', dropdown: 'capaBairroDropdown', outroBtn: 'capaBairroOutroBtn', erro: 'capaBairroErro', aoMudar: null },
-  s2:   { tags: 's2BairroTags',   inputWrap: 's2BairroInputWrap',   input: 's2BairroInput',   dropdown: 's2BairroDropdown',   outroBtn: 's2BairroOutroBtn',   erro: null,               aoMudar: function() { atualizarResumoBairrosTexto_(); atualizarComboUI_(); } },
-};
-
-function montarBairroTags_(ctxKey) {
-  const ctx  = BAIRRO_CTX_[ctxKey];
-  const wrap = document.getElementById(ctx.tags);
+// ── CAPA: seletor de bairro ──────────────────────────────────────────────────
+function montarCapaBairroTags_() {
+  const wrap = document.getElementById('capaBairroTags');
   if (!wrap) return;
   // Conta empreendimentos por bairro
   const cont = {};
@@ -3001,46 +2834,29 @@ function montarBairroTags_(ctxKey) {
     .slice(0, 7).map(function(x) { return x[0]; });
 
   wrap.innerHTML = top7.map(function(b) {
-    const esc   = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const ativo = D.capaBairros.includes(b) ? ' ativo' : '';
-    return '<button class="capa-tag-btn' + ativo + '" data-bairro="' + b.replace(/"/g,'&quot;') + '" onclick="bairroToggle_(\'' + ctxKey + '\',this,\'' + esc + '\')">' + b + '</button>';
-  }).join('') + '<button class="capa-tag-btn capa-tag-outro" id="' + ctx.outroBtn + '" onclick="bairroAbrirOutro_(\'' + ctxKey + '\')">+ OUTRO</button>';
-
-  // Bairros já selecionados fora do top-7 (ex.: adicionados via "+OUTRO"
-  // numa passagem anterior) também precisam entrar já ativos aqui.
-  const outroBtnEl = document.getElementById(ctx.outroBtn);
-  D.capaBairros.filter(function(b) { return !top7.includes(b); }).forEach(function(b) {
-    const btn = document.createElement('button');
-    btn.className = 'capa-tag-btn ativo';
-    btn.dataset.bairro = b;
-    btn.textContent = b;
-    btn.onclick = function() { bairroToggle_(ctxKey, btn, b); };
-    if (outroBtnEl) wrap.insertBefore(btn, outroBtnEl); else wrap.appendChild(btn);
-  });
+    const esc = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<button class="capa-tag-btn" data-bairro="' + b.replace(/"/g,'&quot;') + '" onclick="capaBairroToggle_(this,\'' + esc + '\')">' + b + '</button>';
+  }).join('') + '<button class="capa-tag-btn capa-tag-outro" id="capaBairroOutroBtn" onclick="capaBairroAbrirOutro_()">+ OUTRO</button>';
 }
 
-function bairroToggle_(ctxKey, btn, bairro) {
-  const ctx = BAIRRO_CTX_[ctxKey];
+function capaBairroToggle_(btn, bairro) {
   const idx = D.capaBairros.indexOf(bairro);
   if (idx >= 0) { D.capaBairros.splice(idx, 1); btn.classList.remove('ativo'); }
   else           { D.capaBairros.push(bairro);   btn.classList.add('ativo'); }
-  if (ctx.erro) bairroLimparErro_(ctxKey);
+  capaBairroLimparErro_();
   atualizarContadorCapa_();
-  if (ctx.aoMudar) ctx.aoMudar();
 }
 
-function bairroAbrirOutro_(ctxKey) {
-  const ctx = BAIRRO_CTX_[ctxKey];
-  const w = document.getElementById(ctx.inputWrap);
+function capaBairroAbrirOutro_() {
+  const w = document.getElementById('capaBairroInputWrap');
   if (w) { w.style.display = ''; }
-  const inp = document.getElementById(ctx.input);
+  const inp = document.getElementById('capaBairroInput');
   if (inp) { inp.value = ''; inp.focus(); }
-  bairroFiltrar_(ctxKey, '');
+  capaBairroFiltrar_('');
 }
 
-function bairroFiltrar_(ctxKey, q) {
-  const ctx = BAIRRO_CTX_[ctxKey];
-  const dd = document.getElementById(ctx.dropdown);
+function capaBairroFiltrar_(q) {
+  const dd = document.getElementById('capaBairroDropdown');
   if (!dd) return;
   const txt = q.trim().toLowerCase();
   const todos = [...new Set(TODOS_LANC.map(function(c) { return String(c.bairro || '').trim(); }).filter(Boolean))];
@@ -3048,67 +2864,60 @@ function bairroFiltrar_(ctxKey, q) {
   if (!lista.length && !txt) { dd.style.display = 'none'; return; }
   let html = lista.slice(0, 8).map(function(b) {
     const esc = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return '<div class="capa-dd-item" onpointerdown="event.preventDefault()" onclick="bairroSelecionarItem_(\'' + ctxKey + '\',\'' + esc + '\')">' + b + '</div>';
+    return '<div class="capa-dd-item" onpointerdown="event.preventDefault()" onclick="capaBairroSelecionarItem_(\'' + esc + '\')">' + b + '</div>';
   }).join('');
   if (txt && !lista.find(function(b) { return b.toLowerCase() === txt; })) {
     const qEsc = q.trim().replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    html += '<div class="capa-dd-item capa-dd-livre" onpointerdown="event.preventDefault()" onclick="bairroSelecionarItem_(\'' + ctxKey + '\',\'' + qEsc + '\')">"' + q.trim() + '" — adicionar mesmo assim</div>';
+    html += '<div class="capa-dd-item capa-dd-livre" onpointerdown="event.preventDefault()" onclick="capaBairroSelecionarItem_(\'' + qEsc + '\')">"' + q.trim() + '" — adicionar mesmo assim</div>';
   }
   dd.innerHTML = html;
   dd.style.display = html ? '' : 'none';
 }
 
-function bairroSelecionarItem_(ctxKey, bairro) {
+function capaBairroSelecionarItem_(bairro) {
   if (!bairro) return;
-  const ctx = BAIRRO_CTX_[ctxKey];
   if (!D.capaBairros.includes(bairro)) {
     D.capaBairros.push(bairro);
     // Adiciona tag na UI se não existe entre as top-7
-    const wrap      = document.getElementById(ctx.tags);
-    const existente = wrap && wrap.querySelector('.capa-tag-btn[data-bairro="' + bairro.replace(/"/g,'&quot;') + '"]');
+    const existente = document.querySelector('.capa-tag-btn[data-bairro="' + bairro.replace(/"/g,'&quot;') + '"]');
     if (existente) { existente.classList.add('ativo'); }
-    else if (wrap) {
+    else {
       const btn = document.createElement('button');
       btn.className = 'capa-tag-btn ativo';
       btn.dataset.bairro = bairro;
       btn.textContent = bairro;
-      btn.onclick = function() { bairroToggle_(ctxKey, btn, bairro); };
-      const outro = document.getElementById(ctx.outroBtn);
-      if (outro) wrap.insertBefore(btn, outro);
-      else wrap.appendChild(btn);
+      btn.onclick = function() { capaBairroToggle_(btn, bairro); };
+      const outro = document.getElementById('capaBairroOutroBtn');
+      const tags  = document.getElementById('capaBairroTags');
+      if (outro && tags) tags.insertBefore(btn, outro);
+      else if (tags) tags.appendChild(btn);
     }
   }
-  const inp = document.getElementById(ctx.input);
+  const inp = document.getElementById('capaBairroInput');
   if (inp) inp.value = '';
-  bairroFecharDropdown_(ctxKey);
-  if (ctx.erro) bairroLimparErro_(ctxKey);
+  capaBairroFecharDropdown_();
+  capaBairroLimparErro_();
   atualizarContadorCapa_();
-  if (ctx.aoMudar) ctx.aoMudar();
 }
 
-function bairroFecharDropdown_(ctxKey) {
-  const ctx = BAIRRO_CTX_[ctxKey];
-  const dd = document.getElementById(ctx.dropdown);
+function capaBairroFecharDropdown_() {
+  const dd = document.getElementById('capaBairroDropdown');
   if (dd) dd.style.display = 'none';
 }
 
-function bairroLimparErro_(ctxKey) {
-  const ctx = BAIRRO_CTX_[ctxKey];
-  if (!ctx.erro) return;
-  const el = document.getElementById(ctx.erro);
+function capaBairroLimparErro_() {
+  const el = document.getElementById('capaBairroErro');
   if (el) el.style.display = 'none';
-  document.querySelectorAll('#' + ctx.tags + ' .capa-tag-btn').forEach(function(b) { b.classList.remove('erro'); });
+  document.querySelectorAll('.capa-tag-btn').forEach(function(b) { b.classList.remove('erro'); });
 }
 
-// Validação (só a capa exige pelo menos 1 bairro antes de continuar --
-// step-2 não tem gate nenhum, é só um ajuste livre via "MUDAR").
 function capaBairroValidar_() {
   // Aceita texto digitado livremente (campo OUTRO) sem precisar clicar no dropdown
   const inp = document.getElementById('capaBairroInput');
   const digitado = inp ? inp.value.trim() : '';
   if (digitado) {
-    // Garante que o bairro entra em D mesmo se bairroSelecionarItem_ jogar exceção
-    try { bairroSelecionarItem_('capa', digitado); } catch(e_) {}
+    // Garante que o bairro entra em D mesmo se capaBairroSelecionarItem_ jogar exceção
+    try { capaBairroSelecionarItem_(digitado); } catch(e_) {}
     if (!D.capaBairros.includes(digitado)) D.capaBairros.push(digitado);
     if (inp) inp.value = '';
   }
@@ -3118,22 +2927,6 @@ function capaBairroValidar_() {
   if (el) el.style.display = '';
   document.querySelectorAll('#capaBairroTags .capa-tag-btn:not(.capa-tag-outro)').forEach(function(b) { b.classList.add('erro'); });
   return false;
-}
-
-// ── STEP-2: "MUDAR" bairros dentro da caixa-resumo ────────────────────────────
-function atualizarResumoBairrosTexto_() {
-  const el = document.getElementById('s2ResumoBairros');
-  if (el) el.textContent = D.capaBairros.length ? D.capaBairros.join(', ') : 'Todos os bairros';
-}
-
-function toggleMudarBairroStep2_() {
-  const wrap = document.getElementById('s2BairroSeletorWrap');
-  const btn  = document.getElementById('s2BairroMudarBtn');
-  if (!wrap) return;
-  const abrindo = wrap.style.display === 'none';
-  wrap.style.display = abrindo ? '' : 'none';
-  if (btn) btn.textContent = abrindo ? 'FECHAR' : 'MUDAR';
-  if (abrindo) montarBairroTags_('s2'); // sempre remonta na abertura -- reflete D.capaBairros atual
 }
 
 function atualizarPreco(val) {
@@ -3193,23 +2986,43 @@ function atualizarMetragem(val) {
   if (D.areaInicial === null) D.areaInicial = v;
   if (slidersProntos_) D.ajustesSlider++;
   D.metragemAlvo = v; D.areaFinal = v;
-  // Área saiu do step-5 e virou pergunta única do step-2 (mudança
-  // 2026-08-14) -- D.areaE2 continua sendo preenchido aqui pra não quebrar
-  // o rastreio comportamental/dashboard de Inteligência que já lê essa
-  // coluna (CABECALHO_FUNIL_EVENTOS_/histogramaAreasE2, code.txt); os 2
-  // valores agora nascem sempre iguais, já que existe um único ponto de
-  // captura de área no funil.
-  D.areaE2 = v;
   const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
   const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
   D.areaRange = [lo, hi];
-  // Só slider, sem caixa de digitar (pedido explícito do usuário, mudança
-  // 2026-08-14 -- mesmo padrão visual do orçamento na capa/#capaPrecoFormatado).
-  // atualizarMetragemDigitado_/validarLimitesMetragem_ foram removidas
-  // junto com o <input type="text"> que elas sincronizavam.
-  const elFormatado = document.getElementById('metragemFormatado');
-  if (elFormatado) elFormatado.textContent = v + ' m²';
+  document.getElementById('metragemDigitado').value = v.toLocaleString('pt-BR');
   atualizarComboUI_();
+}
+
+// Idem atualizarPrecoDigitado_ -- só reformata/sincroniza, sem validar
+// contra AREA_BOUNDS a cada tecla (ver comentário lá do porquê).
+function atualizarMetragemDigitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  const input = document.getElementById('metragemDigitado');
+  const cursorNoFim = input.selectionStart === input.value.length;
+  const v = parseInt(digitos) || 0;
+
+  input.value = digitos ? v.toLocaleString('pt-BR') : '';
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
+  if (!v) return;
+
+  if (D.areaInicial === null) D.areaInicial = v;
+  if (slidersProntos_) D.ajustesSlider++;
+  D.metragemAlvo = v; D.areaFinal = v;
+  D.areaRange = [Math.round(v * (1 - TOLERANCIA_METRAGEM_)), Math.round(v * (1 + TOLERANCIA_METRAGEM_))];
+  document.getElementById('sliderMetragem').value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  atualizarComboUI_();
+}
+
+// Só valida contra a faixa da base no blur (ver validarLimitesPreco_).
+function validarLimitesMetragem_() {
+  const input = document.getElementById('metragemDigitado');
+  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
+  if (v && (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1])) {
+    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
+  }
+  v = Math.min(Math.max(v || AREA_BOUNDS[0], AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  document.getElementById('sliderMetragem').value = v;
+  atualizarMetragem(v);
 }
 
 // Termo pra "pronto/entregue" muda por objetivo -- pedido explícito do
@@ -3244,21 +3057,14 @@ function situacaoEscolhidaLabel_() {
 // perfil"/"com [situação]" nem a caixa grande que existia antes.
 function atualizarComboUI_() {
   if (!D.precoAlvo || !D.metragemAlvo) return;
-  const qtd = qtdOpcoesReais_();
-  const badge = document.getElementById('s2ResultadoBadge');
-  if (badge) {
-    badge.innerHTML = `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
-  }
+  animar('cntCombo', qtdOpcoesReais_());
   const nota = document.getElementById('toleranciaNota');
   if (nota) nota.style.display = (D.toleranciaExpandida && D.situacoes.size > 0) ? '' : 'none';
-  // montarPreviewCard_() NÃO roda mais aqui -- o preview saiu do step-2
-  // (mudança 2026-08-14). Ele é chamado 1x dentro de montarConfirmacao_,
-  // já com o valor final de área/orçamento, ao entrar no step-3.
+  montarPreviewCard_();
 }
 
-// Renderiza o 1º resultado filtrado no container de preview -- hoje mora
-// no step-3 (Confirmação), chamado por montarConfirmacao_. Usa
-// cardOpcaoHTML_ com grupo='preview' pra não colidir IDs com step-6
+// Renderiza o 1º resultado filtrado no container de preview do step-2.
+// Usa cardOpcaoHTML_ com grupo='preview' pra não colidir IDs com step-6
 // (principal/extra). Só re-renderiza se o 1º item mudou, evitando fechar
 // o card que o cliente já expandiu ao ajustar preço/área.
 function montarPreviewCard_() {
@@ -3667,21 +3473,9 @@ function montarMatch() {
     btnMais.style.display = 'none';
   }
 
-  // Pedido explícito do usuário: se mesmo depois da tolerância expandida
-  // (qtdOpcoesReais_ já rodou acima, ±30%) o resultado real continua ZERO,
-  // não fingir que "vamos buscar opções próximas" (mensagem antiga prometia
-  // algo que a tela não entregava) -- avisa direto e oferece as 2 saídas:
-  // ajustar orçamento/área (mesmo destino do botão "← Ajustar filtros" no
-  // topo, refinarBusca_ = volta pro step-2) ou recomeçar do zero (capa).
   if (!ofertas.length) {
     document.getElementById('opcoesTabela').innerHTML =
-      '<div style="padding:24px 18px;text-align:center">' +
-        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Ops... não encontramos opções com todas as configurações que solicitou.</div>' +
-        '<div style="font-size:13px;color:var(--text2);line-height:1.6">' +
-          'Ajuste seu <a href="javascript:void(0)" onclick="refinarBusca_()" style="color:var(--accent);font-weight:700;text-decoration:underline">orçamento e área útil</a> abaixo, ' +
-          'ou <a href="javascript:void(0)" onclick="recomecarBusca_()" style="color:var(--accent);font-weight:700;text-decoration:underline">clique aqui para RECOMEÇAR</a>' +
-        '</div>' +
-      '</div>';
+      '<div style="padding:18px;font-size:13px;color:var(--text);text-align:center">Nenhum empreendimento com esse apartamento exato agora — vamos buscar opções próximas pra você.</div>';
     return;
   }
 
