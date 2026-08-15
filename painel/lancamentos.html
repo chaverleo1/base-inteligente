@@ -94,6 +94,28 @@ a { text-decoration: none; color: inherit; }
   animation: pulseDot 1.5s ease-in-out infinite; margin-right: 5px; vertical-align: middle; }
 @keyframes pulseDot { 0%,100%{ opacity:1; transform:scale(1) } 50%{ opacity:.4; transform:scale(.75) } }
 
+/* ── Cards de Funil por Campanha (Google Ads) ── */
+.cfc-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px; margin-top:2px; }
+.cfc-card { padding:10px 12px 8px; min-width:0; }
+.cfc-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:6px; }
+.cfc-nome { font-size:10.5px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; max-width:75%; font-family:'Space Grotesk',sans-serif; }
+.cfc-meta { font-size:10px; color:var(--text3); white-space:nowrap; }
+.cfc-conv-ok  { color:#10b981 !important; font-weight:700; }
+.cfc-conv-med { color:#f59e0b !important; font-weight:700; }
+.cfc-conv-low { color:#ef4444 !important; font-weight:700; }
+/* Tabela resumo de campanhas */
+.cfc-resumo-table { width:100%; border-collapse:collapse; font-size:11px; }
+.cfc-resumo-table th { text-align:left; font-size:9.5px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.4px; color:var(--text3); padding:5px 10px; border-bottom:1px solid var(--border); }
+.cfc-resumo-table td { padding:6px 10px; border-bottom:1px solid var(--border);
+  color:var(--text); vertical-align:middle; }
+.cfc-resumo-table tr:last-child td { border-bottom:none; }
+.cfc-resumo-table td:nth-child(2) { text-align:right; font-variant-numeric:tabular-nums; color:var(--text2); }
+.cfc-resumo-table td:nth-child(3) { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+.cfc-conv-bar { height:4px; background:var(--surface2); border-radius:2px; min-width:50px; overflow:hidden; }
+.cfc-conv-bar-fill { height:100%; border-radius:2px; background:var(--accent); }
+
 /* ── Lista por Faixas — 1 bloco por Padrão, sub-grupos lado a lado em
    cards; o valor médio de referência de cada sub-grupo fica destacado em
    amarelo (pedido explícito do usuário), é a leitura mais importante do
@@ -1813,20 +1835,31 @@ select.form-input option { background: var(--surface2); }
     <div class="loading dot-anim">Carregando segmentos</div>
   </div>
 
-  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Funil de conversão por etapa</div></div>
-  <div class="card int-funil-card" id="intFunil">
-    <div class="loading dot-anim">Carregando funil</div>
+  <!-- Funil global + Tempo médio lado a lado → menos rolagem -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+    <div>
+      <div class="sec-header" style="margin-top:0;margin-bottom:8px"><div class="sec-title" style="font-size:13px">Funil de conversão por etapa</div></div>
+      <div class="card int-funil-card" id="intFunil" style="height:auto">
+        <div class="loading dot-anim">Carregando funil</div>
+      </div>
+    </div>
+    <div>
+      <div class="sec-header" style="margin-top:0;margin-bottom:8px"><div class="sec-title" style="font-size:13px">Tempo médio por etapa</div></div>
+      <div class="card" id="intTempoWrap" style="padding:0;overflow:auto">
+        <div class="loading dot-anim" style="padding:24px">Carregando</div>
+      </div>
+    </div>
   </div>
 
-  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Tempo médio por etapa</div></div>
-  <div class="card" id="intTempoWrap" style="padding:0;overflow:auto">
-    <div class="loading dot-anim" style="padding:24px">Carregando</div>
+  <!-- Google Ads: tabela resumo de campanhas + funil compacto por campanha -->
+  <div class="sec-header" style="margin-top:14px">
+    <div class="sec-title" style="font-size:14px">Google Ads — Funil por campanha</div>
+    <div class="sec-sub">UTM Campaign · comportamento de cada origem de acesso no período</div>
   </div>
-
-  <div class="sec-header" style="margin-top:8px"><div class="sec-title" style="font-size:14px">Performance por origem (UTM)</div></div>
-  <div class="card" id="intOrigemWrap" style="padding:0;overflow:auto">
-    <div class="loading dot-anim" style="padding:24px">Carregando</div>
+  <div class="card" id="intOrigemWrap" style="padding:0;overflow:auto;margin-bottom:10px">
+    <div class="loading dot-anim" style="padding:16px">Carregando</div>
   </div>
+  <div id="intFunilCampanhas"></div>
   </div>
   <!-- fim #intSubPainelComportamental -->
 
@@ -4008,13 +4041,85 @@ function renderDemandasAreas_(itensSim, itensE2) {
   ctx.fillText('E2 (Etapa 2)', mid + 42, LY);
 }
 
+// Tabela resumo de campanhas (substitui a origem por utm_source)
 function renderIntOrigemTabela_(json) {
   const el = document.getElementById('intOrigemWrap');
-  const linhas = json.origem || [];
-  if (!linhas.length) { el.innerHTML = '<div class="empty-state">Sem sessões nesse período.</div>'; return; }
-  el.innerHTML = `<table class="adm-table"><thead><tr><th>Origem</th><th style="text-align:right">Sessões</th><th style="text-align:right">Conclusão</th><th>Dispositivo predominante</th></tr></thead><tbody>
-    ${linhas.map(l => `<tr><td>${l.origem}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${l.sessoes}</td><td style="text-align:right;font-family:'Space Grotesk',sans-serif">${l.taxaConclusao}%</td><td>${l.dispositivoPredominante}</td></tr>`).join('')}
-  </tbody></table>`;
+  const camps = json.funilPorCampanha || json.origem || [];
+  if (!camps.length) { el.innerHTML = '<div class="empty-state" style="padding:14px">Nenhum acesso registrado nesse período.</div>'; return; }
+  const maxSess = Math.max(...camps.map(c => c.sessoes || c.total || 0), 1);
+  const rows = camps.map(c => {
+    const nome = escapeHtmlPainel_(c.campanha || c.origem || '—');
+    const sess = c.sessoes || 0;
+    const conv = c.taxaConclusao || 0;
+    const cls  = conv >= 15 ? 'cfc-conv-ok' : conv >= 8 ? 'cfc-conv-med' : 'cfc-conv-low';
+    const barW = Math.round(conv / 100 * 100);
+    return `<tr>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600">${nome}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--text2)">${sess}</td>
+      <td style="text-align:right"><span class="${cls}" style="font-size:12px">${conv}%</span></td>
+      <td style="min-width:70px;padding-right:14px"><div class="cfc-conv-bar"><div class="cfc-conv-bar-fill" style="width:${barW}%;background:${conv>=15?'#10b981':conv>=8?'#f59e0b':'#ef4444'}"></div></div></td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table class="cfc-resumo-table">
+    <thead><tr><th>Campanha / Origem</th><th style="text-align:right">Sessões</th><th style="text-align:right">Conclusão</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// Mini gráfico SVG de linha para um funil de campanha (10 etapas)
+function svgFunilCampanha_(funil) {
+  if (!funil || !funil.length) return '';
+  const n   = funil.length;
+  const W   = 600, H = 68;
+  const pL  = 26, pR = 26, pT = 16, pB = 18;
+  const aW  = W - pL - pR, aH = H - pT - pB;
+  const xs  = funil.map((_, i) => pL + (n > 1 ? i / (n - 1) : 0.5) * aW);
+  const ys  = funil.map(f  => pT + aH * (1 - f.pct / 100));
+  let lines = '', dots = '', lbls = '', pcts = '';
+
+  funil.forEach((f, i) => {
+    const x = xs[i], y = ys[i];
+    // Etapa label (topo)
+    lbls += `<text x="${x}" y="11" text-anchor="middle" font-size="8" fill="var(--text3)" font-weight="700">E${f.etapa}</text>`;
+    // % label (rodapé)
+    const pctClr = f.pct < 20 ? '#ef4444' : f.pct < 50 ? '#f59e0b' : 'var(--text2)';
+    pcts += `<text x="${x}" y="${H}" text-anchor="middle" font-size="9" fill="${pctClr}" font-weight="700">${f.pct}%</text>`;
+    // Linha para próxima etapa (colorida pelo drop)
+    if (i < n - 1) {
+      const drop = f.pct - funil[i + 1].pct;
+      const clr  = drop > 25 ? '#ef4444' : drop > 12 ? '#f59e0b' : 'rgba(99,102,241,.75)';
+      const dash = drop > 25 ? 'stroke-dasharray="4 2"' : '';
+      lines += `<line x1="${x}" y1="${y}" x2="${xs[i+1]}" y2="${ys[i+1]}" stroke="${clr}" stroke-width="1.8" ${dash}/>`;
+    }
+    // Ponto
+    const isLast = i === n - 1;
+    const fill   = isLast ? '#10b981' : f.pct < 20 ? '#ef4444' : 'rgb(99,102,241)';
+    dots += `<circle cx="${x}" cy="${y}" r="4" fill="${fill}" stroke="var(--bg)" stroke-width="1.5"><title>${f.nome}: ${f.alcancaram} (${f.pct}%)</title></circle>`;
+  });
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="overflow:visible;display:block;margin-top:2px">
+    ${lbls}${lines}${dots}${pcts}
+  </svg>`;
+}
+
+// Renderiza cards de funil compacto (linhas de progressão) para cada campanha
+function renderIntFunilCampanhas_(json) {
+  const wrap = document.getElementById('intFunilCampanhas');
+  if (!wrap) return;
+  const camps = json.funilPorCampanha || [];
+  if (!camps.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div class="cfc-grid">${camps.map(c => {
+    const nome = escapeHtmlPainel_(c.campanha || '—');
+    const conv = c.taxaConclusao || 0;
+    const clsMeta = conv >= 15 ? 'cfc-conv-ok' : conv >= 8 ? 'cfc-conv-med' : 'cfc-conv-low';
+    return `<div class="card cfc-card">
+      <div class="cfc-head">
+        <span class="cfc-nome" title="${nome}">${nome}</span>
+        <span class="cfc-meta ${clsMeta}">${c.sessoes} sess · ${conv}%⇒</span>
+      </div>
+      ${svgFunilCampanha_(c.funil)}
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function renderIntSegmentos_(json) {
@@ -4040,7 +4145,9 @@ async function carregarInteligencia_() {
   document.getElementById('intKpis').innerHTML = '<div class="loading dot-anim" style="grid-column:1/-1">Carregando estatísticas</div>';
   document.getElementById('intFunil').innerHTML = '<div class="loading dot-anim">Carregando funil</div>';
   document.getElementById('intTempoWrap').innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
-  document.getElementById('intOrigemWrap').innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
+  document.getElementById('intOrigemWrap').innerHTML = '<div class="loading dot-anim" style="padding:16px">Carregando</div>';
+  const cfcWrap = document.getElementById('intFunilCampanhas');
+  if (cfcWrap) cfcWrap.innerHTML = '';
   document.getElementById('intSegmentos').innerHTML = '<div class="loading dot-anim">Carregando segmentos</div>';
 
   try {
@@ -4062,6 +4169,7 @@ async function carregarInteligencia_() {
     renderForcasDemanda_(stats);
     renderIntTempoTabela_(stats);
     renderIntOrigemTabela_(stats);
+    renderIntFunilCampanhas_(stats);
     renderIntSegmentos_(segs);
   } catch (e) {
     document.getElementById('intFunil').innerHTML = `<div class="empty-state">Erro ao carregar: ${e.message}</div>`;

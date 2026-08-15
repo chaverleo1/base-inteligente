@@ -6208,6 +6208,47 @@ function listarEstatisticasFunil_(params) {
     };
   }).sort(function(a, b) { return b.sessoes - a.sessoes; });
 
+  // Funil por campanha -- mapeia sessionId→utmCampaign via ACESSOS_APP,
+  // depois computa a curva de alcance por etapa para cada UTM Campaign ativa
+  // no período. Usado pelo painel de Google Ads na aba Inteligência.
+  var campanhaPorSessao = {};
+  var abaAc = obterAbaAcessosApp_();
+  var lrAc  = abaAc.getLastRow();
+  if (lrAc >= 2) {
+    var idxAcSid  = CABECALHO_ACESSOS_APP_.indexOf('sessionId');
+    var idxAcCamp = CABECALHO_ACESSOS_APP_.indexOf('utmCampaign');
+    var idxAcDt   = CABECALHO_ACESSOS_APP_.indexOf('dataHora');
+    var dadosAc = abaAc.getRange(2, 1, lrAc - 1, CABECALHO_ACESSOS_APP_.length).getValues();
+    dadosAc.forEach(function(r) {
+      var dh = parseDataHoraBR_(r[idxAcDt]);
+      if (dh && dh < desde) return;
+      var sid  = String(r[idxAcSid] || '').trim();
+      var camp = String(r[idxAcCamp] || '').trim() || '(direto)';
+      if (sid && !campanhaPorSessao[sid]) campanhaPorSessao[sid] = camp;
+    });
+  }
+  var campanhasAgg = {};
+  sessoes.forEach(function(sid) {
+    var camp = campanhaPorSessao[sid] || '(direto)';
+    if (!campanhasAgg[camp]) campanhasAgg[camp] = { sids: [], concluiram: 0 };
+    campanhasAgg[camp].sids.push(sid);
+    if (maxPorSessao[sid] >= TOTAL_ETAPAS_FUNIL_) campanhasAgg[camp].concluiram++;
+  });
+  var _etapasArr_ = [];
+  for (var _ei = 1; _ei <= TOTAL_ETAPAS_FUNIL_; _ei++) _etapasArr_.push(_ei);
+  var funilPorCampanha = Object.keys(campanhasAgg).map(function(camp) {
+    var c = campanhasAgg[camp];
+    var total = c.sids.length;
+    var campFunil = _etapasArr_.map(function(et) {
+      var alc = c.sids.filter(function(sid) { return maxPorSessao[sid] >= et; }).length;
+      return { etapa: et, nome: NOME_ETAPA_FUNIL_[et], alcancaram: alc,
+               pct: total ? Math.round(alc / total * 100) : 0 };
+    });
+    return { campanha: camp, sessoes: total,
+             taxaConclusao: total ? Math.round(c.concluiram / total * 100) : 0,
+             funil: campFunil };
+  }).sort(function(a, b) { return b.sessoes - a.sessoes; });
+
   // KPIs de score/tempo total no funil -- só existem pra quem completou
   // (INTERESSES só ganha linha depois do WhatsApp confirmado).
   var scoreSoma = 0, scoreCont = 0, tempoFunilSoma = 0, tempoFunilCont = 0;
@@ -6253,6 +6294,7 @@ function listarEstatisticasFunil_(params) {
     histogramaObjetivos: histogramaObjetivos,
     histogramaAreas:     histogramaAreas,
     histogramaAreasE2:   histogramaAreasE2,
+    funilPorCampanha:    funilPorCampanha,
   };
 }
 
