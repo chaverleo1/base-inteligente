@@ -1293,9 +1293,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- Orçamento Capa -- pedido explícito do usuário: o campo permite
          editar o valor digitando também, não fica preso só ao slider.
          "ARRASTE AQUI" agora é placeholder nativo (vermelho) do próprio
-         campo -- some assim que a pessoa digita OU arrasta. -->
-    <div class="s2-input-label" id="tituloPreco" style="margin-top:20px">Seu <span style="color:var(--accent)">orçamento atual</span> é:</div>
-    <div class="preco-input-row">
+         campo -- some assim que a pessoa digita OU arrasta. Rótulo "Seu
+         orçamento atual é: (pode fazer alterações)" removido (pedido
+         explícito do usuário, redundante com o step-title acima). -->
+    <div class="preco-input-row" style="margin-top:20px">
       <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
       <input type="text" class="preco-input preco-input-arraste" id="capaPrecoValor" inputmode="numeric" placeholder="ARRASTE AQUI"
              oninput="atualizarOrcamentoCapaDigitado_(this.value)" onblur="validarLimitesOrcamentoCapa_()">
@@ -2233,8 +2234,18 @@ function avancarStep() {
   // Confirmação=revisão. Os ids de step (0/5/2/3) continuam os mesmos de
   // sempre -- só o CONTEÚDO de cada um mudou (ver
   // .claude/skills/webdesigner/references/mapeamento-app-lancamentos.md).
-  if (stepAtual === 0) { montarConfigPerfil_(); irParaStep(5); return; }    // capa (obj+estágio) → perfil (orçamento+bairro)
-  if (stepAtual === 5) { registrarAcessoCapa_(); montarConfigIniciais_(); irParaStep(2); return; } // perfil → simulador (área+resumo)
+  // registrarAcessoCapa_() dispara aqui (saindo da Capa, 1ª tela) e não
+  // mais na saída do Perfil -- bug reportado pelo usuário (2026-08-17):
+  // sessões que abandonavam no Perfil (sem completar bairro/orçamento)
+  // nunca ganhavam essa linha em ACESSOS_APP, então o cruzamento
+  // sessão→campanha em "Funil por campanha" (Inteligência) caía no
+  // fallback "(direto)" mesmo pra tráfego pago de verdade -- a maioria das
+  // sessões reais de anúncio abandona entre a Capa e o fim do Perfil, bem
+  // antes de completar bairro. Preferível capturar o UTM cedo (aqui,
+  // D.capaBairros ainda vazio -- ok, esse registro não é mais a fonte do
+  // "Histograma Bairros") do que perder a atribuição de campanha.
+  if (stepAtual === 0) { registrarAcessoCapa_(); montarConfigPerfil_(); irParaStep(5); return; }    // capa (obj+estágio) → perfil (orçamento+bairro)
+  if (stepAtual === 5) { montarConfigIniciais_(); irParaStep(2); return; } // perfil → simulador (área+resumo)
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // simulador → confirmação
   if (stepAtual === 3) { montarBlocoNecessidade_(); irParaStep(1); return; } // confirmação → nome
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
@@ -2681,13 +2692,10 @@ function atualizarVisibilidadeStep2_() {
 // nos dois. Letra do prefixo (R$/m²) fica maior no lado mais relevante pro
 // objetivo -- pedido explícito do usuário.
 function montarTitulosStep2_() {
-  const tituloPreco = document.getElementById('tituloPreco');
-  if (tituloPreco) {
-    const labelOrç = D.objetivo === 'investimento'
-      ? 'Quanto está disposto a <span style="color:var(--accent)">investir</span>?'
-      : 'Seu <span style="color:var(--accent)">orçamento atual</span> é:';
-    tituloPreco.innerHTML = labelOrç + ' <span style="font-size:.72em;font-weight:600;opacity:.7">(pode fazer alterações)</span>';
-  }
+  // Rótulo "Seu orçamento atual é: (pode fazer alterações)" removido
+  // (pedido explícito do usuário, redundante com o step-title "Qual seu
+  // orçamento ideal?" que já pergunta a mesma coisa acima). Só o toggle de
+  // tamanho do prefixo (R$/m²) continua.
   const prefixoPreco = document.getElementById('prefixoPreco');
   const prefixoArea = document.getElementById('prefixoArea');
   if (prefixoPreco) prefixoPreco.classList.toggle('prefixo-grande', D.objetivo !== 'investimento');
