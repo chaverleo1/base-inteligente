@@ -28,29 +28,65 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Simulador de Lançamentos</title>
+<!-- Fraunces (títulos/serifa editorial) + Manrope (corpo/UI) -- sistema de
+     design "webdesigner" adotado 2026-08-17 (ver .claude/skills/webdesigner). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:      #09090f;
-  --s1:      #0f1018;
-  --s2:      #13151f;
-  --s3:      #181b28;
-  --border:  #1e2232;
-  --border2: #252840;
-  --accent:  #4f7cff;
-  --green:   #00d4aa;
-  --danger:  #ff5252;
-  --orange:  #ff8a00;
-  --yellow:  #f5d000;
-  --text:    #eef0f6;
-  --r:       12px;
-  --r-sm:    8px;
+  /* ── Sistema de design "webdesigner" (ver .claude/skills/webdesigner) ──
+     Adotado 2026-08-17, pedido explícito do usuário: pivô de identidade
+     visual completo (tema escuro/azul tech → tema claro/creme, verde de
+     marca, laranja de CTA), a partir do estudo de um site de referência.
+     Mantidos os MESMOS NOMES de variável de sempre (--bg, --accent, --orange,
+     --text, --r etc.) pra não precisar tocar as ~250 referências var() já
+     espalhadas pelo arquivo -- só o VALOR muda. Tokens novos (sem
+     equivalente antes) ficam no bloco de baixo. */
+  --bg:      #FCFAF8;  /* creme quente (era #09090f) */
+  --s1:      #FCFAF8;  /* = --bg -- usado com opacidade+blur na barra fixa inferior */
+  --s2:      #F2EFE8;  /* bege claro -- chips, selects, cards internos (era #13151f) */
+  --s3:      #EDE8DE;  /* bege um pouco mais escuro -- botões secundários (era #181b28) */
+  --border:  #E7E1DA;  /* borda sutil padrão (era #1e2232) */
+  --border2: #D8D0C4;  /* borda mais visível -- divisores, inputs (era #252840) */
+  --accent:  #1B5540;  /* verde-floresta, cor de MARCA (era azul tech #4f7cff) */
+  --green:   #16A34A;  /* verde de SUCESSO/confirmação -- de propósito distinto do
+                           --accent de marca, pra não confundir "selecionado" com
+                           "confirmado" (era #00d4aa) */
+  --danger:  #E5342E;  /* erro/alerta (era #ff5252) */
+  --orange:  #F56E14;  /* laranja de AÇÃO/CTA -- mesmo papel de sempre, tom ajustado
+                           pro sistema novo (era #ff8a00) */
+  --yellow:  #BB8A1E;  /* dourado -- valor de referência/destaque secundário,
+                           reajustado pra harmonizar com o creme+verde (era #f5d000) */
+  --text:    #191D24;  /* quase preto, texto principal (era #eef0f6) */
+  --r:       16px;     /* era 12px */
+  --r-sm:    10px;     /* era 8px */
+
+  /* Corrige bug pré-existente: --surface/--surface2/--text2/--text3 eram
+     usadas (8 lugares) mas nunca declaradas em app-lancamentos.html
+     (provável resíduo de copy-paste do painel, que as declara à parte) --
+     ficavam com valor inválido/inerte. Agora servem de tom secundário/
+     terciário de superfície e texto, junto com os tokens novos abaixo. */
+  --surface:  #FFFFFF; /* card branco puro sobre o fundo creme */
+  --surface2: #F2EFE8; /* = --s2 */
+  --text2:    #40485A; /* texto secundário */
+  --text3:    #74809A; /* texto terciário/apagado (label, hint) */
+
+  --card-fg: #191D24;
+  --ring:    #257455;
+  --font-sans:    'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --gradient-brand: linear-gradient(135deg, #123d2e, #1f7a56);
+  --gradient-cta:   linear-gradient(135deg, #f7822a, #f24f1c);
+  --shadow-card: 0 1px 2px rgba(25,29,36,.05), 0 10px 30px -12px rgba(25,29,36,.12);
+  --shadow-glow: 0 12px 32px -12px rgba(245,110,20,.5);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { height: 100%; font-size: 15px; }
 body {
   background: var(--bg); color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   min-height: 100%; display: flex; flex-direction: column;
   -webkit-font-smoothing: antialiased;
 }
@@ -61,9 +97,24 @@ body {
 .app-footer { font-size: 10px; color: var(--text); text-align: center; margin-top: 28px; opacity: .5; }
 
 .step { display: none; }
-.step.ativo { display: block; animation: fadeSlide .28s cubic-bezier(.4,0,.2,1); }
+.step.ativo { display: block; animation: fadeSlide .38s cubic-bezier(.16,1,.3,1); }
 @keyframes fadeSlide {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Entrada escalonada dos filhos diretos de uma etapa -- ver
+   .claude/skills/webdesigner/references/animacoes.md § 1. Aplicar a classe
+   .stagger-entrada num container marcado quando fizer sentido dar esse
+   efeito de "cascata" (ex: cards de escolha, lista de opções). */
+.stagger-entrada > * { opacity: 0; animation: entradaStagger .45s cubic-bezier(.16,1,.3,1) forwards; }
+.stagger-entrada > *:nth-child(1) { animation-delay: .00s; }
+.stagger-entrada > *:nth-child(2) { animation-delay: .06s; }
+.stagger-entrada > *:nth-child(3) { animation-delay: .12s; }
+.stagger-entrada > *:nth-child(4) { animation-delay: .18s; }
+.stagger-entrada > *:nth-child(5) { animation-delay: .24s; }
+.stagger-entrada > *:nth-child(6) { animation-delay: .30s; }
+@keyframes entradaStagger {
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -73,9 +124,10 @@ body {
   color: var(--accent); margin-bottom: 10px;
 }
 .step-title {
-  font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: -.4px;
+  font-family: var(--font-display); font-size: 24px; font-weight: 600; line-height: 1.25; letter-spacing: -.4px;
   color: var(--text); margin-bottom: 8px;
 }
+.step-title em { font-style: italic; color: var(--accent); }
 .step-sub {
   font-size: 14px; color: var(--text); line-height: 1.5; margin-bottom: 16px;
 }
@@ -86,8 +138,8 @@ body {
   display: block; font-size: 15px; font-weight: 600; color: var(--text);
 }
 .hero-stat-num {
-  display: block; font-size: clamp(64px,20vw,96px); font-weight: 800;
-  color: var(--orange); letter-spacing: -3px; line-height: .95; margin: 2px 0;
+  display: block; font-family: var(--font-display); font-size: clamp(64px,20vw,96px); font-weight: 700;
+  color: var(--accent); letter-spacing: -3px; line-height: .95; margin: 2px 0;
 }
 .hero-stat-post {
   display: block; font-size: 15px; font-weight: 600; color: var(--text); max-width: 90%;
@@ -107,11 +159,11 @@ body {
 .hp-eyebrow { margin-bottom: 2px; }
 .hp-bridge  { margin: 10px 0 2px; }
 
-/* "apartamento," — destaque principal em azul accent (menor na capa) */
+/* "apartamento," — destaque principal em verde de marca (menor na capa) */
 .hp-word1 {
-  display: block;
-  font-size: clamp(28px, 8vw, 46px); font-weight: 900;
-  color: var(--accent); letter-spacing: -1.5px; line-height: .92;
+  display: block; font-family: var(--font-display); font-style: italic;
+  font-size: clamp(28px, 8vw, 46px); font-weight: 600;
+  color: var(--accent); letter-spacing: -1px; line-height: .95;
 }
 
 /* "loft, cobertura" */
@@ -161,14 +213,14 @@ body {
   font-size: clamp(12px, 3.2vw, 14px); font-weight: 700;
   cursor: pointer; font-family: inherit; transition: all .15s; line-height: 1.3;
 }
-.capa-tag-btn.ativo { border-color: var(--accent); background: rgba(79,124,255,.12); color: var(--accent); }
-.capa-tag-btn.erro { border-color: var(--danger) !important; color: var(--danger) !important; background: rgba(255,90,90,.06) !important; }
+.capa-tag-btn.ativo { border-color: var(--accent); background: rgba(27,85,64,.12); color: var(--accent); }
+.capa-tag-btn.erro { border-color: var(--danger) !important; color: var(--danger) !important; background: rgba(229,52,46,.06) !important; }
 .capa-tag-outro { border-style: dashed; font-size: clamp(11px, 2.8vw, 13px); }
 .capa-bairro-input-wrap { margin-top: 10px; position: relative; }
 .capa-bairro-dropdown {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-sm); box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  border-radius: var(--r-sm); box-shadow: 0 8px 24px rgba(25,29,36,.18);
   z-index: 50; max-height: 220px; overflow-y: auto; display: none;
 }
 .capa-dd-item {
@@ -188,22 +240,23 @@ body {
   font-size: clamp(20px, 5.5vw, 26px); font-weight: 700;
   color: var(--text); line-height: 1.35;
   margin: 18px 0; padding: 18px 16px;
-  background: rgba(79,124,255,.06);
-  border: 1.5px solid rgba(79,124,255,.18);
-  border-radius: 12px;
+  background: rgba(27,85,64,.05);
+  border: 1.5px solid rgba(27,85,64,.15);
+  border-radius: var(--r);
 }
 .hp-count-bloco strong {
-  font-size: inherit; font-weight: 900; color: var(--accent);
+  font-family: var(--font-display); font-size: inherit; font-weight: 700; color: var(--accent);
 }
 /* Hero 2 linhas — capa reformulada */
 .hero-2l { margin: 0 0 0; }
 .hero-2l-body {
-  font-size: clamp(17px, 4.8vw, 22px); font-weight: 700;
-  color: var(--text); line-height: 1.3; margin: 0 0 4px;
+  font-family: var(--font-display); font-size: clamp(19px, 5.2vw, 26px); font-weight: 600;
+  color: var(--text); line-height: 1.25; margin: 0 0 4px; letter-spacing: -.3px;
 }
 .hero-2l-city {
-  font-size: clamp(26px, 7vw, 34px); font-weight: 900;
-  color: var(--orange); letter-spacing: -.5px; line-height: 1.1; margin: 0;
+  font-family: var(--font-display); font-style: italic;
+  font-size: clamp(24px, 6.4vw, 32px); font-weight: 600;
+  color: var(--accent); letter-spacing: -.3px; line-height: 1.1; margin: 0;
 }
 
 /* Contador de opções — destaque total no step-2 */
@@ -227,11 +280,11 @@ body {
   text-align: center;
   font-size: clamp(13px, 3.5vw, 15px); font-weight: 800; letter-spacing: .7px;
   color: var(--orange);
-  background: rgba(255,149,0,.07); border: 1.5px solid var(--orange);
+  background: rgba(245,110,20,.07); border: 1.5px solid var(--orange);
   border-radius: var(--r); font-family: inherit; cursor: pointer;
   transition: all .18s;
 }
-.s2-preview-cta:hover { background: rgba(255,149,0,.14); }
+.s2-preview-cta:hover { background: rgba(245,110,20,.14); }
 .s2-ajuste-label {
   display: block; margin-top: 28px; padding-top: 20px;
   border-top: 1px solid var(--border);
@@ -254,9 +307,9 @@ body {
 .s2-grid-row .preco-prefixo { font-size: 14px; }
 .s2-grid-row .preco-prefixo.prefixo-grande { font-size: 19px; }
 .s2-top-count-num {
-  display: block;
-  font-size: clamp(80px, 22vw, 120px); font-weight: 900;
-  color: var(--orange); letter-spacing: -5px; line-height: .88;
+  display: block; font-family: var(--font-display);
+  font-size: clamp(80px, 22vw, 120px); font-weight: 700;
+  color: var(--accent); letter-spacing: -4px; line-height: .88;
   margin: 8px 0 4px;
 }
 
@@ -280,7 +333,7 @@ body {
    barra de arrastar logo abaixo. */
 .preco-input-row {
   display: flex; align-items: center; gap: 8px;
-  background: var(--bg); border: 1px solid #6b7280; border-radius: var(--r-sm);
+  background: var(--surface); border: 1.5px solid var(--border2); border-radius: var(--r-sm);
   padding: 6px 10px; margin-bottom: 14px; transition: border .2s;
 }
 .preco-input-row:focus-within { border-color: var(--accent); }
@@ -292,32 +345,38 @@ body {
   flex: 1; width: 100%; background: none; border: none; outline: none; color: var(--text);
   font-family: inherit; font-size: 24px; font-weight: 400; text-align: center;
 }
-.preco-input::placeholder { color: #6a7290; font-weight: 400; }
+.preco-input::placeholder { color: var(--text3); font-weight: 400; }
 
 /* Trilho/alça maiores que o padrão do navegador, mas mais finos do que a
    primeira versão (pedido explícito: diminuir espessura da linha e
    tamanho da bola). */
+/* Slider representa SELEÇÃO de valor (área/orçamento), não uma ação -- usa
+   --accent (verde de marca), não --orange (reservado pro CTA). */
 input[type=range] {
   -webkit-appearance: none; appearance: none;
-  width: 100%; height: 3px;
-  background: var(--orange); border-radius: 99px; outline: none; cursor: pointer;
+  width: 100%; height: 4px;
+  background: var(--border2); border-radius: 99px; outline: none; cursor: pointer;
+  accent-color: var(--accent);
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 22px; height: 22px; border-radius: 50%;
-  background: var(--text); border: 2px solid var(--orange);
-  cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  background: var(--surface); border: 3px solid var(--accent);
+  cursor: pointer; box-shadow: 0 2px 6px rgba(25,29,36,.2);
   transition: box-shadow .2s, transform .1s;
 }
 input[type=range]:active::-webkit-slider-thumb {
-  box-shadow: 0 0 0 5px rgba(255,138,0,.25); transform: scale(1.08);
+  box-shadow: 0 0 0 6px rgba(27,85,64,.15); transform: scale(1.08);
 }
 input[type=range]::-moz-range-thumb {
   width: 22px; height: 22px; border-radius: 50%;
-  background: var(--text); border: 2px solid var(--orange); cursor: pointer;
+  background: var(--surface); border: 3px solid var(--accent); cursor: pointer;
 }
 input[type=range]::-moz-range-track {
-  width: 100%; height: 3px; background: var(--orange); border-radius: 99px;
+  width: 100%; height: 4px; background: var(--border2); border-radius: 99px;
+}
+input[type=range]::-moz-range-progress {
+  height: 4px; background: var(--accent); border-radius: 99px;
 }
 
 /* ── STEP-2 TIPOGRAFIA + SITUAÇÃO ────────────────────────────────────────── */
@@ -345,8 +404,8 @@ input[type=range]::-moz-range-track {
   font-size: 14px; font-weight: 600; color: var(--text);
   background: var(--s2); cursor: pointer; transition: all .15s; font-family: inherit;
 }
-.s2-sit-btn:hover { background: rgba(255,138,0,.08); color: var(--orange); }
-.s2-sit-btn.on { background: var(--orange); color: #1a0a00; font-weight: 700; border-color: var(--orange); }
+.s2-sit-btn:hover { background: rgba(245,110,20,.08); color: var(--orange); }
+.s2-sit-btn.on { background: var(--orange); color: #fff; font-weight: 700; border-color: var(--orange); }
 /* Erro de validação — nenhum botão de situação selecionado */
 #tagsSituacao.sit-erro .s2-sit-btn {
   border-color: var(--danger); color: var(--danger);
@@ -370,22 +429,25 @@ input[type=range]::-moz-range-track {
 .funil-header {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; padding: 10px 4px; margin-bottom: 20px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  border-bottom: 1px solid var(--border);
 }
+/* Badge de objetivo (Moradia/Investimento) -- indicador de SELEÇÃO/contexto
+   persistente, não uma ação: usa --accent (verde de marca), não --orange
+   (reservado pro CTA). */
 .obj-badge {
-  font-size: 15px; font-weight: 800; letter-spacing: .06em;
-  color: var(--orange); border: 2px solid var(--orange); border-radius: 99px;
-  padding: 7px 18px; line-height: 1.2;
+  font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0;
+  color: var(--accent); border: 1.5px solid var(--accent); border-radius: 99px;
+  padding: 7px 18px; line-height: 1.2; background: rgba(27,85,64,.05);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;
 }
 .funil-voltar-btn {
   flex-shrink: 0;
   font-size: 14px; font-weight: 700; letter-spacing: .02em;
   padding: 7px 18px; border-radius: 10px;
-  background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.18);
+  background: var(--surface); border: 1.5px solid var(--border);
   color: var(--text2); cursor: pointer; transition: background .15s, color .15s;
 }
-.funil-voltar-btn:hover { background: rgba(255,255,255,.12); color: var(--text); }
+.funil-voltar-btn:hover { background: var(--s2); color: var(--text); }
 .funil-voltar-btn.hidden { visibility: hidden; pointer-events: none; }
 /* Botões-tag destacados (não cards) -- pedido explícito: sem ícone, sem
    descrição, só o rótulo em pílula grande e chapada, mesmo padrão visual
@@ -397,7 +459,7 @@ input[type=range]::-moz-range-track {
   font-size: 16px; font-weight: 800; letter-spacing: .3px; color: var(--accent);
   background: var(--s2); cursor: pointer; font-family: inherit; transition: all .15s;
 }
-.obj-tag-btn:hover { background: rgba(79,124,255,.10); }
+.obj-tag-btn:hover { background: rgba(27,85,64,.10); }
 .obj-tag-btn.on { background: var(--accent); color: #fff; }
 #tagsObjetivo.obj-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
 #tagsEstagio.obj-erro .obj-tag-btn   { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
@@ -408,8 +470,8 @@ input[type=range]::-moz-range-track {
    pra laranja, texto escuro no selecionado (mesmo padrão de contraste já
    usado em .btn-final.btn-quente pros botões quentes do app). */
 .obj-tag-btn-laranja { border-color: var(--orange); color: var(--orange); }
-.obj-tag-btn-laranja:hover { background: rgba(255,138,0,.10); border-color: var(--orange); color: var(--orange); }
-.obj-tag-btn-laranja.on { background: var(--orange); color: #1a0a00; border-color: var(--orange); }
+.obj-tag-btn-laranja:hover { background: rgba(245,110,20,.10); border-color: var(--orange); color: var(--orange); }
+.obj-tag-btn-laranja.on { background: var(--orange); color: #fff; border-color: var(--orange); }
 /* Estado de erro aqui é .tag-group-erro (padrão do resto do app), não
    .obj-erro -- regra própria, igual ao objetivo. */
 #tagsPadrao.tag-group-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
@@ -425,7 +487,7 @@ input[type=range]::-moz-range-track {
   color: var(--text); line-height: 1.5; margin-top: 20px;
 }
 .padrao-phrase .pq-num {
-  color: var(--orange); font-size: 2.4em; font-weight: 900;
+  font-family: var(--font-display); color: var(--accent); font-size: 2.4em; font-weight: 700;
   line-height: 1; vertical-align: middle; display: inline-block;
 }
 .padrao-phrase .pq-nome {
@@ -438,22 +500,22 @@ input[type=range]::-moz-range-track {
 .tolerancia-nota { font-size: 12px; color: var(--text); opacity: .65; margin-top: 8px; }
 /* Aviso de horário fora da janela de atendimento (agendamento). */
 .aviso-janela {
-  font-size: 12px; color: var(--danger); background: rgba(255,82,82,.1);
-  border: 1px solid rgba(255,82,82,.3); border-radius: var(--r-sm);
+  font-size: 12px; color: var(--danger); background: rgba(229,52,46,.1);
+  border: 1px solid rgba(229,52,46,.3); border-radius: var(--r-sm);
   padding: 10px 12px; margin-top: 10px; line-height: 1.5;
 }
 /* Variante laranja -- aviso de "vamos fechar em breve" (não é erro, é só um
    heads-up nos últimos 30min de expediente, pedido explícito do usuário). */
 .aviso-janela-warn {
   font-size: 12px; font-weight: 700; text-align: center; color: var(--orange);
-  background: rgba(255,138,0,.1); border: 1px solid rgba(255,138,0,.3);
+  background: rgba(245,110,20,.1); border: 1px solid rgba(245,110,20,.3);
   border-radius: var(--r-sm); padding: 10px 12px; margin-top: 10px; line-height: 1.5;
 }
 /* "Caixa destacada" -- pedido explícito do usuário pra Tela 10, envolve o
    bloco de WhatsApp/fora-do-horário na tela final. */
 .destaque-box {
-  background: var(--s2); border: 1.5px solid var(--border);
-  border-radius: var(--r); padding: 20px 18px; margin-top: 24px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px 18px; margin-top: 24px; box-shadow: var(--shadow-card);
 }
 
 /* ── CAPTURA ─────────────────────────────────────────────────────────── */
@@ -470,7 +532,7 @@ input[type=range]::-moz-range-track {
 }
 .form-field input:focus { border-color: var(--accent); }
 #fNome, #fNome:focus { border-color: var(--orange); }
-.form-field input::placeholder { color: #6a7290; }
+.form-field input::placeholder { color: var(--text3); }
 /* Ícone nativo de calendário/relógio (inputs date/time, Tela de
    agendamento) -- pedido explícito do usuário: por padrão o navegador
    desenha esse ícone em preto/escuro, quase invisível no fundo escuro do
@@ -509,7 +571,7 @@ input[type=range]::-moz-range-track {
 
 /* ── CAIXA DE CONFIRMAÇÃO DE WHATSAPP (2 campos, fundo destacado) ─────── */
 .whats-box {
-  background: rgba(79,124,255,.08); border: 1.5px solid var(--accent);
+  background: rgba(27,85,64,.08); border: 1.5px solid var(--accent);
   border-radius: var(--r); padding: 18px 18px 4px;
 }
 .whats-box .form-field label { color: var(--text); }
@@ -518,7 +580,7 @@ input[type=range]::-moz-range-track {
 .form-field input.input-erro { border-color: var(--danger); }
 .whats-mismatch-msg {
   display: flex; align-items: center; gap: 8px; margin: -6px 0 14px;
-  padding: 10px 12px; background: rgba(255,82,82,.1); border: 1px solid rgba(255,82,82,.35);
+  padding: 10px 12px; background: rgba(229,52,46,.1); border: 1px solid rgba(229,52,46,.35);
   border-radius: var(--r-sm); font-size: 13px; font-weight: 700; color: var(--danger);
 }
 
@@ -536,8 +598,8 @@ input[type=range]::-moz-range-track {
    nenhuma oferta pode parecer "a escolhida"/destacada sobre as outras). ── */
 .opcoes-tabela { display: flex; flex-direction: column; gap: 0; margin-bottom: 10px; }
 .opcao-top {
-  padding: 11px 12px; border-radius: var(--r); border: 1.5px solid var(--border2);
-  background: linear-gradient(135deg, rgba(79,124,255,.10), rgba(79,124,255,.02));
+  padding: 11px 12px; border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--surface); box-shadow: var(--shadow-card);
 }
 .opcao-top-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 7px; flex-wrap: wrap; }
 .opcao-codigo { font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: .3px; }
@@ -553,7 +615,7 @@ input[type=range]::-moz-range-track {
   font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .3px;
   cursor: pointer; font-family: inherit; transition: all .15s;
 }
-.btn-ver-mais-opcoes:hover { background: rgba(79,124,255,.08); }
+.btn-ver-mais-opcoes:hover { background: rgba(27,85,64,.08); }
 
 /* ── ÁREA ÚTIL EM DESTAQUE + RETRAIR/EXPANDIR PREÇO + FAVORITO (Etapa 6,
    pedido explícito do usuário) ─────────────────────────────────────────── */
@@ -580,11 +642,11 @@ input[type=range]::-moz-range-track {
   transition: all .2s; font-family: inherit; padding: 0;
   animation: pulsoCoracao 2.2s ease-in-out infinite;
 }
-.btn-favorito:hover { border-color: #f5c800; color: #f5c800; }
-.btn-favorito.ativo { border: 2px solid #f5c800; color: #f5c800; background: var(--s2); animation: none; }
-.btn-favorito.ativo:hover { border-color: #f5c800; color: #f5c800; }
+.btn-favorito:hover { border-color: var(--yellow); color: var(--yellow); }
+.btn-favorito.ativo { border: 2px solid var(--yellow); color: var(--yellow); background: var(--s2); animation: none; }
+.btn-favorito.ativo:hover { border-color: var(--yellow); color: var(--yellow); }
 .opcao-top.favorito-ativo {
-  border-color: #f5c800;
+  border-color: var(--yellow);
   background: linear-gradient(135deg, rgba(245,200,0,.10), rgba(245,200,0,.03));
 }
 
@@ -599,21 +661,25 @@ input[type=range]::-moz-range-track {
 /* ── BOTÃO FINAL ─────────────────────────────────────────────────────── */
 .btn-final-wrap {
   margin-top: 24px;
-  border: 1.5px solid var(--border2); border-radius: var(--r);
-  padding: 20px; background: var(--s2);
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 20px; background: var(--surface); box-shadow: var(--shadow-card);
 }
 .btn-final-wrap p { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 16px; text-align: center; }
+/* Botão de ação principal do funil -- CTA é sempre laranja/gradiente (cor de
+   AÇÃO), nunca verde (--accent é cor de MARCA/seleção, ver
+   .claude/skills/webdesigner/SKILL.md § princípio 1). */
 .btn-final {
   width: 100%; padding: 18px 20px;
-  background: var(--accent); color: #fff;
+  background-image: var(--gradient-cta); color: #fff;
   border: none; border-radius: var(--r-sm);
   font-size: 16px; font-weight: 700; font-family: inherit;
-  cursor: pointer; transition: all .2s;
+  cursor: pointer; transition: filter .2s, transform .1s;
+  box-shadow: var(--shadow-glow);
   display: flex; align-items: center; justify-content: center; gap: 10px;
 }
-.btn-final:hover { background: #3d6aee; }
+.btn-final:hover { filter: brightness(1.06); }
 .btn-final:active { transform: scale(.98); }
-.btn-final.confirmado { background: var(--green); cursor: default; }
+.btn-final.confirmado { background-image: none; background: var(--green); box-shadow: none; cursor: default; }
 .btn-final-sub { font-size: 12px; color: var(--text); text-align: center; margin-top: 10px; }
 /* Mensagem de "dados reais e atualizados" da capa -- pedido explícito do
    usuário: letra maior que o padrão de .btn-final-sub, e o mês/ano da
@@ -623,9 +689,9 @@ input[type=range]::-moz-range-track {
 
 /* ── BOTÃO QUENTE (confirmar atendimento humano — pedido: cores quentes,
    vermelho/amarelo/laranja, pra chamar mais atenção que o resto da tela) ── */
-.btn-final.btn-quente { background: linear-gradient(135deg, #ff9d2e, #ff5252); color: #1a0a00; }
+.btn-final.btn-quente { background: linear-gradient(135deg, #ff9d2e, #ff5252); color: #fff; }
 .btn-final.btn-quente:hover { filter: brightness(1.08); }
-.btn-final.btn-amarelo { background: #f5c800; color: #1a1200; transition: background .18s, transform .15s; }
+.btn-final.btn-amarelo { background: var(--yellow); color: #1a1200; transition: background .18s, transform .15s; }
 .btn-final.btn-amarelo:hover { background: var(--orange); transform: scale(0.96); }
 
 /* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
@@ -636,14 +702,14 @@ input[type=range]::-moz-range-track {
 }
 .check-circle {
   width: 64px; height: 64px; border-radius: 50%;
-  background: rgba(0,212,170,.12); border: 1.5px solid rgba(0,212,170,.3);
+  background: rgba(22,163,74,.12); border: 1.5px solid rgba(22,163,74,.3);
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 20px;
   animation: checkPop .5s cubic-bezier(.34,1.56,.64,1) both;
 }
 .perfil-resumo {
-  background: var(--s2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 18px; margin: 20px 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px; margin: 20px 0; box-shadow: var(--shadow-card);
 }
 .perfil-item {
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
@@ -652,14 +718,14 @@ input[type=range]::-moz-range-track {
 }
 .perfil-item:last-child { border-bottom: none; }
 .perfil-item-k { color: #fff; min-width: 0; overflow-wrap: break-word; }
-.perfil-item-v { color: #f5c800; font-weight: 600; text-align: right; min-width: 0; overflow-wrap: break-word; }
+.perfil-item-v { color: var(--yellow); font-weight: 600; text-align: right; min-width: 0; overflow-wrap: break-word; }
 
 /* Cards favoritados (Tela 7) -- mesmo padrão visual de .opcao-top (Tela de
    resultados), só espaçamento entre eles + destaque dourado na borda pra
    diferenciar visualmente que são os favoritos. */
 #favoritosResumoCards { display: flex; flex-direction: column; gap: 10px; }
 #favoritosResumoCards .opcao-top { border-color: rgba(245,200,0,.4); }
-#favoritosResumoCards .opcao-codigo { color: #f5c800; }
+#favoritosResumoCards .opcao-codigo { color: var(--yellow); }
 
 .whats-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -672,16 +738,18 @@ input[type=range]::-moz-range-track {
 /* ── RODAPÉ NAV ──────────────────────────────────────────────────────── */
 .nav-bar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
-  background: var(--s1); border-top: 1px solid var(--border);
-  padding: 14px 20px;
+  background: rgba(252,250,248,.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
 }
 .nav-inner { max-width: 520px; margin: 0 auto; display: flex; gap: 8px; }
 
 /* ── STICKY ATENDIMENTO (step-6: botão fixo enquanto o cliente lê os cards) */
 .sticky-atend {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
-  background: var(--s1); border-top: 1px solid var(--border);
-  padding: 12px 20px 20px;
+  background: rgba(252,250,248,.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 0px));
 }
 /* Espaço extra no fim da tela de resultados -- pedido explícito do
    usuário: sem isso, o botão fixo (.sticky-atend) fica em cima da imagem
@@ -692,11 +760,12 @@ input[type=range]::-moz-range-track {
   flex: 1; padding: 14px; border-radius: var(--r-sm); border: none;
   font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .18s;
 }
-.btn-prim { background: var(--accent); color: #fff; }
-.btn-prim:hover { background: #3d6aee; }
-.btn-prim:disabled { opacity: .35; cursor: default; }
+.btn-prim { background-image: var(--gradient-cta); color: #fff; box-shadow: var(--shadow-glow); transition: filter .2s, transform .1s; }
+.btn-prim:hover { filter: brightness(1.06); }
+.btn-prim:active { transform: scale(.98); }
+.btn-prim:disabled { opacity: .35; cursor: default; box-shadow: none; }
 .btn-sec { background: var(--s3); color: var(--text); }
-.btn-sec:hover { color: var(--text); }
+.btn-sec:hover { color: var(--text); background: var(--border); }
 .btn-hide { display: none; }
 
 /* ── TOAST ────────────────────────────────────────────────────────────── */
@@ -722,21 +791,21 @@ input[type=range]::-moz-range-track {
   color: var(--border2); transition: color .15s, transform .1s; padding: 4px;
 }
 .estrela-btn:active { transform: scale(1.15); }
-.estrela-btn.ativa { color: #f5c800; }
+.estrela-btn.ativa { color: var(--yellow); }
 .comentario-textarea {
   width: 100%; min-height: 76px; background: var(--s2); border: 1.5px solid var(--border);
   border-radius: var(--r-sm); color: var(--text); font-size: 14px; font-family: inherit;
   padding: 12px 14px; outline: none; resize: vertical; transition: border .2s;
 }
 .comentario-textarea:focus { border-color: var(--accent); }
-.comentario-textarea::placeholder { color: #6a7290; }
+.comentario-textarea::placeholder { color: var(--text3); }
 .comentario-card {
-  background: var(--s2); border: 1px solid var(--border); border-radius: var(--r-sm);
-  padding: 12px 14px; margin-bottom: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 12px 14px; margin-bottom: 10px; box-shadow: var(--shadow-card);
 }
 .comentario-card-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
 .comentario-card-nome { font-size: 13px; font-weight: 700; color: var(--text); min-width: 0; overflow-wrap: break-word; }
-.comentario-card-estrelas { color: #f5c800; font-size: 13px; letter-spacing: 1px; flex-shrink: 0; }
+.comentario-card-estrelas { color: var(--yellow); font-size: 13px; letter-spacing: 1px; flex-shrink: 0; }
 .comentario-card-texto { font-size: 13px; color: var(--text); opacity: .85; line-height: 1.5; overflow-wrap: break-word; }
 
 /* ── TELA DE CONFIRMAÇÃO DOS DADOS (entre sliders e motivação) ────────── */
@@ -759,15 +828,15 @@ input[type=range]::-moz-range-track {
   letter-spacing: 1px; color: var(--text); opacity: .55; margin-bottom: 6px;
 }
 .conf-item-val {
-  font-size: clamp(22px, 6vw, 30px); font-weight: 800; color: var(--orange);
-  letter-spacing: -1px; line-height: 1.05; overflow-wrap: break-word;
+  font-family: var(--font-display); font-size: clamp(22px, 6vw, 30px); font-weight: 700; color: var(--accent);
+  letter-spacing: -.5px; line-height: 1.05; overflow-wrap: break-word;
 }
 .conf-item-val-sit {
   font-size: clamp(20px, 5.5vw, 28px); letter-spacing: -.5px;
 }
 .conf-obs {
   grid-column: 1 / -1;
-  padding: 12px 16px; background: rgba(79,124,255,.07);
+  padding: 12px 16px; background: rgba(27,85,64,.07);
   font-size: 13px; color: var(--text); line-height: 1.6;
   border-top: 1px solid var(--border);
 }
@@ -777,12 +846,17 @@ input[type=range]::-moz-range-track {
 .conf-btn-sim { flex: 2; }
 /* Badge de quantidade encontrada na confirmação -- fundo branco chapado,
    texto escuro pra contraste (pedido explícito do usuário). */
+/* Antes era fundo branco chapado (destacava no tema escuro); no tema claro
+   isso ficaria invisível sobre o card branco -- vira pill verde de marca,
+   mesmo padrão do badge de contador ao vivo (ver
+   .claude/skills/webdesigner/references/componentes.md § 9). */
 .conf-resultado-badge {
-  margin-top: 16px; padding: 14px 18px; text-align: center;
-  background: #ffffff; color: #111; border-radius: var(--r);
-  font-size: 15px; font-weight: 700;
+  margin-top: 16px; padding: 12px 18px; text-align: center;
+  background: rgba(27,85,64,.06); border: 1px solid rgba(27,85,64,.18);
+  color: var(--accent); border-radius: 99px;
+  font-size: 14px; font-weight: 600;
 }
-.conf-resultado-badge strong { font-size: 24px; font-weight: 800; }
+.conf-resultado-badge strong { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
 
 /* ── TAG BUTTONS (filtros de seleção rápida) ─────────────────────────── */
 .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -797,7 +871,7 @@ input[type=range]::-moz-range-track {
 /* Destaque em laranja pra "Pronto para morar"/"Em Obras" (pedido explícito) --
    sobrescreve a cor accent padrão dos tag-btn, em qualquer estado. */
 .tag-btn-laranja, .tag-btn-laranja:hover { border-color: var(--orange); color: var(--orange); }
-.tag-btn-laranja.on { border-color: var(--orange); background: var(--orange); color: #1a0a00; }
+.tag-btn-laranja.on { border-color: var(--orange); background: var(--orange); color: #fff; }
 .ajustar-btn {
   display: inline-flex; align-items: center; gap: 6px; background: none;
   border: 1px solid var(--border2); border-radius: 99px; padding: 7px 14px;
@@ -1205,7 +1279,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <div class="perfil-resumo" id="perfilResumo" style="margin-top:20px"><!-- populado por JS --></div>
 
-    <div class="step-sub" style="color:#4caf7d;font-weight:700;display:flex;align-items:center;gap:6px;margin-top:20px">
+    <div class="step-sub" style="color:var(--green);font-weight:700;display:flex;align-items:center;gap:6px;margin-top:20px">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-whatsapp"/></svg>
       Digite abaixo seu melhor WhatsApp!
     </div>
@@ -1423,7 +1497,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- STICKY ATENDIMENTO — visível no step-6 enquanto o cliente lê os cards -->
 <div class="sticky-atend" id="stickyAtend" style="display:none">
   <div class="sticky-atend-inner">
-    <div id="stickyFavCount" style="display:none;text-align:center;font-size:14px;font-weight:700;color:#f5c800;margin-bottom:8px"></div>
+    <div id="stickyFavCount" style="display:none;text-align:center;font-size:14px;font-weight:700;color:var(--yellow);margin-bottom:8px"></div>
     <button class="btn-final btn-quente" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
       QUERO ATENDIMENTO EXCLUSIVO
@@ -3228,7 +3302,7 @@ function submeter() {
 // nunca mostrar "Na planta" como rótulo diferente de "Em Obras"). ────────
 function situacaoInfo_(estagio) {
   if (['Pronto', 'Pronto novo', 'Entregue'].includes(estagio)) {
-    return { texto: termoProntoParaMorar_(), bg: 'rgba(0,212,170,.15)', border: 'rgba(0,212,170,.4)', cor: 'var(--green)' };
+    return { texto: termoProntoParaMorar_(), bg: 'rgba(22,163,74,.15)', border: 'rgba(22,163,74,.4)', cor: 'var(--green)' };
   }
   return { texto: 'Em obras', bg: 'rgba(245,166,35,.15)', border: 'rgba(245,166,35,.4)', cor: '#f5a623' };
 }
@@ -3256,7 +3330,7 @@ function headlineImpacto_(qtd, primeiroNome) {
   const plural = qtd === 1
     ? 'a <span style="color:var(--accent)">melhor opção</span> de empreendimento, com o apartamento ideal'
     : `as <span style="color:var(--accent)">${qtd} melhores opções</span> de empreendimentos, com o apartamento ideal`;
-  return `${primeiroNome}, conheça ${plural} pra você! <span style="display:block;font-size:16px;font-weight:400;color:#f5c800;margin-top:6px">(Marque seus favoritos <span style="font-size:24px;line-height:1;vertical-align:middle">♥</span>)</span>`;
+  return `${primeiroNome}, conheça ${plural} pra você! <span style="display:block;font-size:16px;font-weight:400;color:var(--yellow);margin-top:6px">(Marque seus favoritos <span style="font-size:24px;line-height:1;vertical-align:middle">♥</span>)</span>`;
 }
 
 // ── MIX ANCORADO NO PRODUTO ALVO (portado de estrategias.html, aba
