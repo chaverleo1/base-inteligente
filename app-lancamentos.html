@@ -2708,9 +2708,17 @@ function selecionarObjetivo_(el, val) {
   el.classList.add('on');
   forcarRepaint_(el); // ver comentário na função -- garante que o navegador repinte o card recém-marcado na hora
   D.objetivo = val;
-  // Atualiza rótulo do botão "Pronto para Morar" conforme objetivo
+  // Atualiza rótulo do botão "Pronto para Morar" conforme objetivo -- BUG
+  // encontrado e corrigido (pedido explícito do usuário: "não mudou" +
+  // "tipografia diferente do botão Em Obras"): antes setava o textContent
+  // do BOTÃO INTEIRO, apagando junto o ícone <svg> (some no clique) e
+  // trocando o <span class="escolha-titulo"> por um nó de texto solto sem
+  // a fonte/tamanho certos (perdia font-family/font-size do
+  // .escolha-titulo). Agora atualiza só o texto do span, preservando
+  // ícone e tipografia -- mesmo padrão do "Em Obras".
   const btnProntoStep5 = document.getElementById('btnEstProntoNovo');
-  if (btnProntoStep5) btnProntoStep5.textContent = termoProntoParaMorar_();
+  const tituloProntoStep5 = btnProntoStep5 && btnProntoStep5.querySelector('.escolha-titulo');
+  if (tituloProntoStep5) tituloProntoStep5.textContent = termoProntoParaMorar_();
   const blocoEstagio = document.getElementById('blocoEstagioWrap');
   if (blocoEstagio) blocoEstagio.style.display = '';
 }
