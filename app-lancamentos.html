@@ -425,30 +425,87 @@ input[type=range]::-moz-range-progress {
   margin: 40px 0 10px; letter-spacing: -.1px;
 }
 
-/* ── HEADER DE NAVEGAÇÃO (badge + Voltar) ────────────────────────────── */
-.funil-header {
+/* ── HEADER (logo/marca + Voltar + contador) ───────────────────────────
+   Reestruturação 2026-08-17 (sistema "webdesigner", pedido explícito do
+   usuário: "mesmos padrões... mude os cabeçalhos") -- mesmo padrão do site
+   de referência: botão voltar circular (ghost) + badge com ícone em
+   gradiente + nome da marca (peso variável) à esquerda; contador/badge de
+   contexto à direita. SEMPRE visível (diferente do header antigo, que
+   sumia nas 4 primeiras etapas). */
+.funil-header-topo {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 10px 4px; margin-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  gap: 12px; padding: 4px 4px 14px; margin-bottom: 6px;
+}
+.fht-left { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.funil-back-btn {
+  display: flex; flex-shrink: 0; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  cursor: pointer; transition: background .15s, opacity .15s;
+}
+.funil-back-btn:hover { background: var(--s2); }
+/* Escondido via opacity (não display:none), pra não pular o layout quando
+   reaparece -- mesmo motivo documentado na skill (componentes.md § 1). */
+.funil-back-btn.hidden { opacity: 0; pointer-events: none; }
+.funil-logo-badge {
+  display: flex; flex-shrink: 0; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px;
+  background-image: var(--gradient-brand); color: #fff; box-shadow: 0 1px 2px rgba(25,29,36,.15);
+}
+.funil-brand {
+  font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: -.2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.funil-brand-lower { font-family: var(--font-sans); font-size: 11px; font-weight: 400; text-transform: lowercase; color: var(--text3); margin: 0 1px; }
+.funil-brand-city { color: var(--accent); }
+.funil-step-count {
+  flex-shrink: 0; border-radius: 999px; background: var(--secondary); padding: 5px 12px;
+  font-size: 12px; font-weight: 700; color: var(--text2); white-space: nowrap;
 }
 /* Badge de objetivo (Moradia/Investimento) -- indicador de SELEÇÃO/contexto
-   persistente, não uma ação: usa --accent (verde de marca), não --orange
-   (reservado pro CTA). */
+   persistente (etapas 5 em diante, no lugar do contador "N de 4"), não uma
+   ação: usa --accent (verde de marca), não --orange (reservado pro CTA). */
 .obj-badge {
-  font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0;
+  font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0;
   color: var(--accent); border: 1.5px solid var(--accent); border-radius: 99px;
-  padding: 7px 18px; line-height: 1.2; background: rgba(27,85,64,.05);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;
+  padding: 6px 14px; line-height: 1.2; background: rgba(27,85,64,.05);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 55%; flex-shrink: 0;
 }
-.funil-voltar-btn {
-  flex-shrink: 0;
-  font-size: 14px; font-weight: 700; letter-spacing: .02em;
-  padding: 7px 18px; border-radius: 10px;
-  background: var(--surface); border: 1.5px solid var(--border);
-  color: var(--text2); cursor: pointer; transition: background .15s, color .15s;
+
+/* ── STEPPER (Capa/Perfil/Simulador/Confirmação) ────────────────────────
+   Bolhas numeradas conectadas por linha de progresso -- mesmo padrão do
+   site de referência (componentes.md § 2). Visível só durante as 4
+   primeiras etapas (mostrarStepper_ em atualizarBotoes()). */
+.funil-stepper { display: flex; align-items: flex-start; gap: 0; margin-bottom: 22px; overflow-x: auto; }
+.fs-item { display: flex; min-width: 0; flex: 1; align-items: flex-start; }
+.fs-btn { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; gap: 6px; padding-top: 2px; background: none; border: none; cursor: pointer; font-family: inherit; }
+.fs-bubble {
+  display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  border-radius: 999px; border: 2px solid var(--border); font-size: 11px; font-weight: 700;
+  color: var(--text3); background: var(--surface); transition: all .2s;
 }
-.funil-voltar-btn:hover { background: var(--s2); color: var(--text); }
-.funil-voltar-btn.hidden { visibility: hidden; pointer-events: none; }
+.fs-btn.fs-current .fs-bubble { border-color: var(--accent); color: var(--accent); }
+.fs-btn.fs-done .fs-bubble { border-color: var(--accent); background: var(--accent); color: #fff; }
+.fs-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; color: var(--text3); }
+.fs-btn.fs-current .fs-label, .fs-btn.fs-done .fs-label { color: var(--accent); }
+.fs-line { margin-top: 11px; height: 2px; flex: 1; border-radius: 999px; background: var(--border); transition: background .2s; }
+.fs-line.fs-filled { background: var(--accent); }
+
+/* ── HERO DA CAPA (título + subtítulo + eyebrow) ────────────────────────
+   Conteúdo/copy adaptado do site de referência (pedido explícito do
+   usuário, 2026-08-17). */
+.capa-eyebrow-pill {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); padding: 5px 12px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text3);
+}
+.capa-eyebrow-pill svg { color: var(--accent); flex-shrink: 0; }
+.capa-titulo {
+  font-family: var(--font-display); font-weight: 600; letter-spacing: -.5px;
+  font-size: clamp(28px, 8vw, 38px); line-height: 1.12; margin: 12px 0 0;
+}
+.capa-titulo em { font-style: italic; color: var(--accent); }
+.capa-subtitulo { font-size: 14px; color: var(--text2); line-height: 1.5; margin: 10px 0 0; }
 /* Botões-tag destacados (não cards) -- pedido explícito: sem ícone, sem
    descrição, só o rótulo em pílula grande e chapada, mesmo padrão visual
    de destaque de .tag-btn-laranja/.s2-sit-btn usado no resto do app. */
@@ -458,9 +515,62 @@ input[type=range]::-moz-range-progress {
   padding: 18px 16px; border: 2px solid var(--accent); border-radius: 99px;
   font-size: 16px; font-weight: 800; letter-spacing: .3px; color: var(--accent);
   background: var(--s2); cursor: pointer; font-family: inherit; transition: all .15s;
+  /* appearance:none -- sem isso, o <button> com border-radius "normal" (não
+     pill) pode usar a aparência NATIVA do form control em vez do
+     background customizado em alguns navegadores (achado ao testar os
+     cards de escolha .escolha-card, que têm --radius 16px em vez de pill
+     99px -- o pill original nunca deu esse problema). */
+  -webkit-appearance: none; appearance: none;
 }
 .obj-tag-btn:hover { background: rgba(27,85,64,.10); }
 .obj-tag-btn.on { background: var(--accent); color: #fff; }
+
+/* Cards de escolha com ícone (Objetivo/Estágio na Capa) -- mesmo padrão do
+   site de referência estudado pra skill "webdesigner" (pedido explícito do
+   usuário, 2026-08-17: "usar os mesmos padrões de ícones... blocos
+   centrais"). Escopado só a #tagsObjetivo/#tagsEstagio (via .escolha-card
+   combinado com .obj-tag-btn) -- NÃO mexe no .obj-tag-btn base, que
+   continua sendo pílula simples em outros grupos (Padrão, Agendar etc). */
+#tagsObjetivo.escolha-group { flex-direction: column; gap: 12px; }
+.obj-tag-btn.escolha-card {
+  flex: none; width: 100%; justify-content: flex-start; gap: 14px;
+  padding: 16px; border-radius: var(--radius); border-width: 2px;
+  text-align: left; background: var(--surface);
+}
+.obj-tag-btn.escolha-card:hover { background: var(--surface); border-color: rgba(27,85,64,.4); }
+.obj-tag-btn.escolha-card.on {
+  background: rgba(27,85,64,.05); color: var(--text); box-shadow: var(--shadow-card);
+}
+.escolha-icon {
+  display: flex; flex-shrink: 0; align-items: center; justify-content: center;
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--secondary); color: var(--accent); transition: all .15s;
+}
+.obj-tag-btn.escolha-card.on .escolha-icon { background: var(--accent); color: #fff; }
+.escolha-texto { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.escolha-titulo { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--text); letter-spacing: 0; }
+.escolha-sub { font-size: 12px; font-weight: 500; color: var(--text3); letter-spacing: 0; }
+.escolha-check {
+  display: none; flex-shrink: 0; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 999px; background: var(--accent); color: #fff;
+}
+.obj-tag-btn.escolha-card.on .escolha-check { display: flex; }
+
+/* Estágio -- 2 colunas, cards verticais menores (ícone em cima, texto
+   embaixo), selecionado com glow em vez de tinta (pergunta mais decisiva/
+   final que objetivo, mesmo padrão do componentes.md § 3). */
+#tagsEstagio.escolha-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.obj-tag-btn.escolha-card-vert {
+  flex-direction: column; justify-content: center; text-align: center; gap: 8px;
+  padding: 18px 12px; border-radius: var(--radius); border-width: 2px; background: var(--surface);
+}
+.obj-tag-btn.escolha-card-vert .escolha-titulo { font-size: 14px; }
+.obj-tag-btn.escolha-card-vert.on {
+  background: var(--accent); color: #fff; box-shadow: var(--shadow-glow-verde, 0 12px 32px -12px rgba(27,85,64,.5));
+  border-color: var(--accent);
+}
+.obj-tag-btn.escolha-card-vert.on .escolha-titulo { color: #fff; }
+
 #tagsObjetivo.obj-erro .obj-tag-btn { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
 #tagsEstagio.obj-erro .obj-tag-btn   { border-color: var(--danger); color: var(--danger); animation: sitPulse .35s ease; }
 .bloco-erro input[type="range"]      { accent-color: var(--danger); }
@@ -984,6 +1094,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <symbol id="ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
   </symbol>
+  <symbol id="ico-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+  </symbol>
+  <symbol id="ico-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="3" width="10" height="18" rx="1"/><rect x="14" y="9" width="6" height="12" rx="1"/>
+    <line x1="7" y1="7" x2="7" y2="7.01"/><line x1="11" y1="7" x2="11" y2="7.01"/>
+    <line x1="7" y1="11" x2="7" y2="11.01"/><line x1="11" y1="11" x2="11" y2="11.01"/>
+    <line x1="7" y1="15" x2="7" y2="15.01"/><line x1="11" y1="15" x2="11" y2="15.01"/>
+  </symbol>
+  <symbol id="ico-construction" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/><line x1="4" y1="13" x2="20" y2="13"/>
+  </symbol>
   <symbol id="ico-whatsapp" viewBox="0 0 24 24">
     <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
   </symbol>
@@ -1012,13 +1134,44 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div class="main">
 <div class="step-wrap">
 
-  <!-- Header de navegação — aparece a partir da bifurcação (Tela 2).
-       Contém badge de contexto (esquerda) e botão Voltar (direita).
-       Visibilidade controlada em atualizarBotoes(). -->
-  <div class="funil-header" id="funilHeader" style="display:none">
-    <div class="obj-badge" id="objBadge"></div>
-    <button class="funil-voltar-btn" id="btnVoltarHeader" onclick="voltarStep()">← Voltar</button>
+  <!-- Header (logo/marca + Voltar + contador) -- SEMPRE visível, mesmo
+       padrão do site de referência (reestruturação 2026-08-17, sistema
+       "webdesigner", pedido explícito do usuário: "mesmos padrões de
+       ícones... mude os cabeçalhos"). Lado direito troca de conteúdo
+       (mostrarHeaderContador_ em atualizarBotoes()): "N de 4" durante as 4
+       primeiras etapas (Capa/Perfil/Simulador/Confirmação, acompanha o
+       Stepper abaixo), badge de Objetivo·Estágio da etapa 5 em diante. -->
+  <div class="funil-header-topo" id="funilHeaderTopo">
+    <div class="fht-left">
+      <button class="funil-back-btn" id="btnVoltarHeader" onclick="voltarStep()" aria-label="Voltar">
+        <svg width="16" height="16"><use href="#ico-arrow-left"/></svg>
+      </button>
+      <span class="funil-logo-badge"><svg width="16" height="16"><use href="#ico-building"/></svg></span>
+      <span class="funil-brand">IMÓVEIS<span class="funil-brand-lower">em</span><span class="funil-brand-city">GOIÂNIA</span></span>
+    </div>
+    <span class="funil-step-count" id="funilStepCount">1 de 4</span>
+    <div class="obj-badge" id="objBadge" style="display:none"></div>
   </div>
+
+  <!-- Stepper das 4 primeiras etapas -- visível só durante Capa/Perfil/
+       Simulador/Confirmação (mostrarStepper_ em atualizarBotoes()). -->
+  <nav class="funil-stepper" id="funilStepper" aria-label="Progresso do funil">
+    <div class="fs-item">
+      <button type="button" class="fs-btn" id="fsBtn0" onclick="irParaStepperStep_(0)"><span class="fs-bubble" id="fsBubble0">1</span><span class="fs-label">Capa</span></button>
+      <span class="fs-line" id="fsLine1"></span>
+    </div>
+    <div class="fs-item">
+      <button type="button" class="fs-btn" id="fsBtn5" onclick="irParaStepperStep_(5)"><span class="fs-bubble" id="fsBubble5">2</span><span class="fs-label">Perfil</span></button>
+      <span class="fs-line" id="fsLine2"></span>
+    </div>
+    <div class="fs-item">
+      <button type="button" class="fs-btn" id="fsBtn2" onclick="irParaStepperStep_(2)"><span class="fs-bubble" id="fsBubble2">3</span><span class="fs-label">Simulador</span></button>
+      <span class="fs-line" id="fsLine3"></span>
+    </div>
+    <div class="fs-item">
+      <button type="button" class="fs-btn" id="fsBtn3" onclick="irParaStepperStep_(3)"><span class="fs-bubble" id="fsBubble3">4</span><span class="fs-label">Confirmação</span></button>
+    </div>
+  </nav>
 
   <!-- STEP 0 — CAPA: objetivo + estágio (reestruturação 2026-08-17, sistema
        "webdesigner" -- pedido explícito do usuário, seguir a sequência do
@@ -1026,15 +1179,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
        daqui, foi pra tela Perfil (step-5) -- ver comentário lá. -->
   <div class="step ativo" id="step-0">
 
-    <div class="step-tag">APP LANÇAMENTOS · GRANDE GOIÂNIA · ETAPA 1/4 (Capa)</div>
+    <span class="capa-eyebrow-pill"><svg width="13" height="13"><use href="#ico-pin"/></svg>Goiânia · GO</span>
 
-    <!-- Hero 2 linhas + bloco contador central (total geral de lançamentos --
-         bairro não é mais escolhido nesta tela, então não há mais filtro
-         aqui; ver .claude/skills/webdesigner/references/mapeamento-app-lancamentos.md). -->
-    <div class="hero-2l" style="margin-bottom:0">
-      <p class="hero-2l-body">Encontre seu apartamento novo, loft, garden, cobertura ou studio</p>
-      <p class="hero-2l-city">— na Grande Goiânia!</p>
-    </div>
+    <!-- Título com palavra-chave em itálico (mesmo padrão do site de
+         referência) -- conteúdo adaptado, mantendo os tipos de imóvel
+         (loft/garden/cobertura/studio) que são diferencial real do
+         catálogo, pedido explícito do usuário: "mude o conteudo da capa e
+         textos também, como está nesse projeto novo". -->
+    <h1 class="capa-titulo">Encontre o <em>lançamento ideal</em> para o seu novo lar</h1>
+    <p class="capa-subtitulo">Apartamentos, lofts, gardens, coberturas e studios em lançamento na Grande Goiânia.</p>
 
     <div class="hp-count-bloco">
       Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!
@@ -1042,22 +1195,39 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- Objetivo -->
     <div class="stagger-entrada" style="margin-top:26px">
-      <div class="hero-phrase">
-        <span class="hp-eyebrow">Você busca apartamento</span>
-        <span class="hp-word1">para...</span>
-      </div>
-      <div class="obj-tag-group" id="tagsObjetivo">
-        <button class="obj-tag-btn" onclick="selecionarObjetivo_(this,'moradia')">MORADIA</button>
-        <button class="obj-tag-btn" onclick="selecionarObjetivo_(this,'investimento')">INVESTIMENTO</button>
+      <div class="step-title" style="margin-bottom:14px">Você busca apartamento <em style="color:var(--accent);font-style:italic">para...</em></div>
+      <div class="obj-tag-group escolha-group" id="tagsObjetivo">
+        <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'moradia')">
+          <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-home"/></svg></span>
+          <span class="escolha-texto">
+            <span class="escolha-titulo">Moradia</span>
+            <span class="escolha-sub">Para morar com quem você ama</span>
+          </span>
+          <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
+        </button>
+        <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'investimento')">
+          <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-wallet"/></svg></span>
+          <span class="escolha-texto">
+            <span class="escolha-titulo">Investimento</span>
+            <span class="escolha-sub">Para rentabilizar e valorizar</span>
+          </span>
+          <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
+        </button>
       </div>
     </div>
 
     <!-- Estágio — aparece após marcar objetivo -->
     <div id="blocoEstagioWrap" style="display:none;margin-top:36px">
       <div class="step-title">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
-      <div class="obj-tag-group" id="tagsEstagio">
-        <button class="obj-tag-btn" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">Pronto para Morar</button>
-        <button class="obj-tag-btn" onclick="selecionarEstagioStep5_(this,'em_obras')">Em Obras</button>
+      <div class="obj-tag-group escolha-group" id="tagsEstagio">
+        <button class="obj-tag-btn escolha-card escolha-card-vert" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">
+          <svg width="24" height="24"><use href="#ico-home"/></svg>
+          <span class="escolha-titulo">Pronto para Morar</span>
+        </button>
+        <button class="obj-tag-btn escolha-card escolha-card-vert" onclick="selecionarEstagioStep5_(this,'em_obras')">
+          <svg width="24" height="24"><use href="#ico-construction"/></svg>
+          <span class="escolha-titulo">Em Obras</span>
+        </button>
       </div>
     </div>
 
@@ -2066,14 +2236,35 @@ function voltarStep() {
   _voltandoStep_ = false; // fallback: nenhuma navegação aconteceu
 }
 
+// Ordem/posição das 4 primeiras etapas (Capa/Perfil/Simulador/Confirmação)
+// pro Stepper -- os ids de step continuam os de sempre (0/5/2/3), isso só
+// mapeia pra posição visual 0..3. Reestruturação 2026-08-17.
+const ORDINAL_STEP_   = [0, 5, 2, 3];
+const STEP_ORDINAL_   = { 0: 0, 5: 1, 2: 2, 3: 3 };
+
+// Clique numa bolha do Stepper -- só deixa voltar pra uma etapa já
+// visitada (ou a atual, vira no-op), nunca pular pra frente. Mesmo
+// comportamento do FunnelStepper do site de referência (componentes.md § 2).
+function irParaStepperStep_(n) {
+  if (n === stepAtual) return;
+  const ordAtual = STEP_ORDINAL_[stepAtual];
+  // Se já passou da fase das 4 primeiras etapas, todas as 4 já foram
+  // visitadas -- qualquer uma é clicável.
+  const podeIr = ordAtual === undefined ? true : STEP_ORDINAL_[n] <= ordAtual;
+  if (!podeIr) return;
+  _voltandoStep_ = true;
+  irParaStep(n);
+}
+
 function atualizarBotoes() {
   const bV      = document.getElementById('btnVoltar');       // nav-bar (mantido, escondido)
   const bA      = document.getElementById('btnAvancar');
   const navBar  = document.getElementById('navBar');
   const main    = document.querySelector('.main');
-  const funilHeader     = document.getElementById('funilHeader');
   const btnVoltarHeader = document.getElementById('btnVoltarHeader');
   const objBadge        = document.getElementById('objBadge');
+  const stepCount       = document.getElementById('funilStepCount');
+  const stepper         = document.getElementById('funilStepper');
 
   // Step 0 tem CTA inline — nav bar some e padding de fundo some junto
   if (navBar) navBar.style.display = (stepAtual === 0 || stepAtual === 6) ? 'none' : '';
@@ -2088,22 +2279,45 @@ function atualizarBotoes() {
   // btnVoltar do rodapé: sempre oculto — Voltar agora é só no header
   if (bV) bV.classList.add('btn-hide');
 
-  // ── Header de navegação ────────────────────────────────────────────────
-  // Oculto nas 3 etapas numeradas (0=capa/obj+estágio, 5=perfil/orçamento+
-  // bairro, 2=simulador/área+resumo) -- reestruturação 2026-08-17.
-  const mostrarHeader = D.objetivo && stepAtual !== 0 && stepAtual !== 5 && stepAtual !== 2;
-  if (funilHeader) funilHeader.style.display = mostrarHeader ? '' : 'none';
+  // ── Header (sempre visível, reestruturação 2026-08-17) ────────────────
+  // Botão Voltar: escondido só na 1ª etapa de todas (nada pra voltar) e
+  // nas etapas finais (match/captura/agendamento/obrigado, onde voltar não
+  // faz sentido) -- usa .hidden (opacity, não display) pra não pular layout.
+  const semVoltar = stepAtual === 0 || stepAtual === 8 || stepAtual >= 6;
+  if (btnVoltarHeader) btnVoltarHeader.classList.toggle('hidden', semVoltar);
 
-  if (objBadge && D.objetivo) {
-    const objTxt    = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
-    const estagioTxt = situacaoEscolhidaLabel_();
-    objBadge.textContent = estagioTxt ? `${objTxt} · ${estagioTxt}` : objTxt;
+  // Lado direito do header: "N de 4" durante as 4 primeiras etapas
+  // (acompanha o Stepper), badge de Objetivo·Estágio da etapa 5 em diante.
+  const ordAtual = STEP_ORDINAL_[stepAtual];
+  const nasQuatroPrimeiras = ordAtual !== undefined;
+  if (stepCount) {
+    stepCount.style.display = nasQuatroPrimeiras ? '' : 'none';
+    if (nasQuatroPrimeiras) stepCount.textContent = (ordAtual + 1) + ' de 4';
+  }
+  if (objBadge) {
+    objBadge.style.display = (!nasQuatroPrimeiras && D.objetivo) ? '' : 'none';
+    if (D.objetivo) {
+      const objTxt     = D.objetivo === 'investimento' ? 'INVESTIR' : 'MORADIA';
+      const estagioTxt = situacaoEscolhidaLabel_();
+      objBadge.textContent = estagioTxt ? `${objTxt} · ${estagioTxt}` : objTxt;
+    }
   }
 
-  // Botão Voltar no header: visível em todas as etapas intermediárias;
-  // usa .hidden (visibility:hidden) pra preservar o espaço no layout
-  const semVoltar = !mostrarHeader || stepAtual === 8 || stepAtual >= 6;
-  if (btnVoltarHeader) btnVoltarHeader.classList.toggle('hidden', semVoltar);
+  // ── Stepper ─────────────────────────────────────────────────────────────
+  if (stepper) {
+    stepper.style.display = nasQuatroPrimeiras ? '' : 'none';
+    if (nasQuatroPrimeiras) {
+      ORDINAL_STEP_.forEach((sid, i) => {
+        const btn = document.getElementById('fsBtn' + sid);
+        if (btn) btn.classList.toggle('fs-current', i === ordAtual);
+        if (btn) btn.classList.toggle('fs-done', i < ordAtual);
+        if (i < ORDINAL_STEP_.length - 1) {
+          const line = document.getElementById('fsLine' + (i + 1));
+          if (line) line.classList.toggle('fs-filled', i < ordAtual);
+        }
+      });
+    }
+  }
 
   bA.textContent = 'Próximo';
 }
@@ -2230,9 +2444,11 @@ function montarBlocoPadrao_() {
 }
 
 function selecionarObjetivo_(el, val) {
-  document.getElementById('tagsObjetivo').classList.remove('obj-erro');
-  document.querySelectorAll('#tagsObjetivo .obj-tag-btn').forEach(b => b.classList.remove('on'));
+  const grupo = document.getElementById('tagsObjetivo');
+  grupo.classList.remove('obj-erro');
+  grupo.querySelectorAll('.obj-tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
+  forcarRepaint_(el); // ver comentário na função -- garante que o navegador repinte o card recém-marcado na hora
   D.objetivo = val;
   // Atualiza rótulo do botão "Pronto para Morar" conforme objetivo
   const btnProntoStep5 = document.getElementById('btnEstProntoNovo');
@@ -2248,11 +2464,30 @@ function selecionarObjetivo_(el, val) {
 // comportamental/dashboard de Inteligência que já lê essa coluna
 // separadamente -- histogramaAreasE2/funilPorCampanha, code.txt).
 function selecionarEstagioStep5_(el, val) {
-  document.getElementById('tagsEstagio').classList.remove('obj-erro');
-  document.querySelectorAll('#tagsEstagio .obj-tag-btn').forEach(b => b.classList.remove('on'));
+  const grupo = document.getElementById('tagsEstagio');
+  grupo.classList.remove('obj-erro');
+  grupo.querySelectorAll('.obj-tag-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
+  forcarRepaint_(el);
   D.situacoes.clear();
   D.situacoes.add(val);
+}
+
+// Força o navegador a repintar um elemento na hora, em vez de possivelmente
+// reaproveitar um cálculo de estilo "compartilhado" antigo entre vários
+// elementos "irmãos" com a mesma estrutura de classe (achado ao testar os
+// cards de escolha .escolha-card: depois de trocar a classList via JS, o
+// background/ícone do card recém-marcado .on às vezes só atualizava
+// visualmente depois de alguma interação extra forçar um reflow). Um
+// simples `void el.offsetHeight` (reflow de leitura) não bastou nos testes
+// -- só o ciclo display:none → reflow → display:'' (reflow "forte") resolve
+// de forma confiável.
+function forcarRepaint_(el) {
+  if (!el) return;
+  const anterior = el.style.display;
+  el.style.display = 'none';
+  void el.offsetHeight;
+  el.style.display = anterior;
 }
 
 function selecionarPadrao_(el, val) {
