@@ -1043,7 +1043,10 @@ input[type=range]::-moz-range-progress {
    pra Confirmação, ver step-3). Escopado por #s2ResumoCard -- a
    especificidade de ID sobrescreve o `display:grid` base de .conf-card
    sem precisar duplicar a classe inteira. */
-#s2ResumoCard.resumo-2col { display: block; }
+/* Pedido explícito do usuário: retirar o contorno da caixa -- só do
+   resumo do Simulador (o .conf-card da Confirmação, que compartilha a
+   mesma classe base, continua com a borda de sempre). */
+#s2ResumoCard.resumo-2col { display: block; border: none; }
 .resumo-row {
   display: grid; grid-template-columns: 78px 1fr; gap: 12px; align-items: start;
   padding: 12px 14px; border-bottom: 1px solid var(--border);
@@ -1452,19 +1455,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
          continua campo+slider. Bairros mantido como estava (linha própria,
          full-width). Ver .resumo-row/.resumo-select-box no CSS. -->
     <div class="conf-card resumo-2col" id="s2ResumoCard" style="margin-top:24px">
+      <!-- Ordem das linhas: Área Útil / Orçamento / Objetivo / Estágio /
+           Bairros (pedido explícito do usuário, 2ª rodada -- era
+           Objetivo/Estágio/Orçamento/Área Útil/Bairros). Área Útil --
+           mesmos ids/funções de sempre (atualizarMetragem/
+           atualizarMetragemDigitado_/validarLimitesMetragem_), só mudou de
+           posição no HTML. -->
       <div class="resumo-row">
-        <div class="resumo-row-label">Objetivo</div>
-        <select class="resumo-select-box" id="s2ResumoObjetivo" onchange="mudarObjetivoStep2_(this.value)">
-          <option value="moradia">Moradia</option>
-          <option value="investimento">Investimento</option>
-        </select>
-      </div>
-      <div class="resumo-row">
-        <div class="resumo-row-label">Estágio</div>
-        <select class="resumo-select-box" id="s2ResumoEstagio" onchange="mudarEstagioStep2_(this.value)">
-          <option value="pronto_novo" id="s2OptProntoNovo">Pronto para Morar</option>
-          <option value="em_obras">Em Obras</option>
-        </select>
+        <div class="resumo-row-label">Área Útil</div>
+        <div>
+          <div class="preco-input-row" style="margin-bottom:0">
+            <input type="text" class="preco-input preco-input-arraste" id="areaSimuladorValor" inputmode="numeric" placeholder="ARRASTE AQUI" style="font-size:16px;text-align:left;padding:0"
+                   oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+            <span class="preco-prefixo" style="font-size:14px" id="prefixoArea">m²</span>
+          </div>
+          <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%;margin-top:6px">
+        </div>
       </div>
       <!-- Orçamento Simulador -- ÚNICO campo de orçamento digitável do funil
            (pedido explícito do usuário); pré-preenchido com o Orçamento
@@ -1484,20 +1490,19 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <div class="aviso-fora-faixa" id="avisoOrcamentoSimuladorFaixa" style="display:none"></div>
         </div>
       </div>
-      <!-- Área Útil -- migrou pra dentro do resumo (pedido explícito do
-           usuário; antes era uma seção própria acima do card). Mesmos
-           ids/funções de sempre (atualizarMetragem/atualizarMetragemDigitado_/
-           validarLimitesMetragem_), só mudou de posição no HTML. -->
       <div class="resumo-row">
-        <div class="resumo-row-label">Área Útil</div>
-        <div>
-          <div class="preco-input-row" style="margin-bottom:0">
-            <input type="text" class="preco-input preco-input-arraste" id="areaSimuladorValor" inputmode="numeric" placeholder="ARRASTE AQUI" style="font-size:16px;text-align:left;padding:0"
-                   oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-            <span class="preco-prefixo" style="font-size:14px" id="prefixoArea">m²</span>
-          </div>
-          <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%;margin-top:6px">
-        </div>
+        <div class="resumo-row-label">Objetivo</div>
+        <select class="resumo-select-box" id="s2ResumoObjetivo" onchange="mudarObjetivoStep2_(this.value)">
+          <option value="moradia">Moradia</option>
+          <option value="investimento">Investimento</option>
+        </select>
+      </div>
+      <div class="resumo-row">
+        <div class="resumo-row-label">Estágio</div>
+        <select class="resumo-select-box" id="s2ResumoEstagio" onchange="mudarEstagioStep2_(this.value)">
+          <option value="pronto_novo" id="s2OptProntoNovo">Pronto para Morar</option>
+          <option value="em_obras">Em Obras</option>
+        </select>
       </div>
       <!-- Bairros selecionados + "MUDAR" -- deixado como estava (pedido
            explícito do usuário) -- revela o MESMO seletor de tags da tela
