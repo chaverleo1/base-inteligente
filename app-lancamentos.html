@@ -371,17 +371,6 @@ body {
    destaque (pedido explícito do usuário: campo editável por digitação
    também, não só pelo slider -- ver atualizarOrcamentoCapaDigitado_). */
 .preco-input-arraste::placeholder { color: var(--danger); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
-/* Display só-leitura do valor arrastado (Orçamento Capa/Perfil e Área Útil
-   Simulador) -- mesma caixa visual de .preco-input, mas sem ser editável
-   por digitação: só o slider abaixo altera o valor. "ARRASTE AQUI" em
-   vermelho até o primeiro arraste real (pedido explícito do usuário). */
-.preco-display {
-  flex: 1; width: 100%; font-family: inherit; font-size: 24px; font-weight: 400;
-  text-align: center; color: var(--text);
-}
-.preco-display.slider-placeholder {
-  color: var(--danger); font-weight: 800; font-size: 14px; letter-spacing: .6px; text-transform: uppercase;
-}
 
 /* Trilho/alça maiores que o padrão do navegador, mas mais finos do que a
    primeira versão (pedido explícito: diminuir espessura da linha e
@@ -1367,12 +1356,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- step-tag e "Ajuste seu perfil de busca" removidos (pedido explícito
          do usuário) -- o Stepper no header já indica a etapa 3/4. -->
 
-    <!-- Área Útil Simulador -- só arrasta, não digita (pedido explícito do
-         usuário): abre em "ARRASTE AQUI" vermelho, só troca pro valor
-         formatado depois do 1º arraste real (atualizarMetragem). -->
+    <!-- Área Útil Simulador -- pedido explícito do usuário: o campo permite
+         editar o valor digitando também, não fica preso só ao slider
+         (mesmo padrão do Orçamento Capa). "ARRASTE AQUI" é placeholder
+         nativo (vermelho) do próprio campo -- some assim que a pessoa
+         digita OU arrasta. -->
     <div class="s2-input-label">Área <span style="color:var(--accent)">útil</span> ideal</div>
     <div class="preco-input-row">
-      <div class="preco-display slider-placeholder" id="areaSimuladorValor">ARRASTE AQUI</div>
+      <input type="text" class="preco-input preco-input-arraste" id="areaSimuladorValor" inputmode="numeric" placeholder="ARRASTE AQUI"
+             oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
       <span class="preco-prefixo prefixo-grande" id="prefixoArea">m²</span>
     </div>
     <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%">
@@ -3341,8 +3333,10 @@ function inicializarSliderArea_() {
   if (D.metragemAlvo) {
     atualizarMetragem(defArea);
   } else {
+    // Campo vazio -- o placeholder "ARRASTE AQUI" (vermelho, CSS
+    // .preco-input-arraste::placeholder) aparece sozinho, nativo do <input>.
     const el = document.getElementById('areaSimuladorValor');
-    if (el) { el.textContent = 'ARRASTE AQUI'; el.classList.add('slider-placeholder'); }
+    if (el) el.value = '';
   }
   slidersProntos_ = true;
 }
@@ -3627,13 +3621,17 @@ function validarLimitesOrcamentoCapa_() {
   atualizarAvisoOrcamentoCapa_(v);
 }
 
-// ── ÁREA ÚTIL SIMULADOR (tela Simulador, "arraste aqui") ──────────────────
+// ── ÁREA ÚTIL SIMULADOR (tela Simulador) ──────────────────────────────────
 // Metragem é um valor único (mesma metodologia do preço) -- o cliente
 // escolhe o tamanho que quer, e o motor de match já embute uma tolerância
 // de ±20% pra cima/baixo (ex.: escolheu 50m² -> entra no cálculo de 40m² a
-// 60m²), sem precisar de uma segunda alça pra isso. Só arrasta, não digita
-// (pedido explícito do usuário, mesmo padrão do Orçamento Capa).
+// 60m²), sem precisar de uma segunda alça pra isso. Pedido explícito do
+// usuário: o campo permite editar o valor digitando também, não fica preso
+// só ao slider (mesmo padrão do Orçamento Capa) -- arrastar e digitar
+// levam ao mesmo lugar, D.metragemAlvo/D.areaE2.
 let TOLERANCIA_METRAGEM_ = 0.20;
+
+// Arraste no slider.
 function atualizarMetragem(val) {
   const v = parseInt(val);
   if (D.areaInicial === null) D.areaInicial = v;
@@ -3649,8 +3647,44 @@ function atualizarMetragem(val) {
   const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
   D.areaRange = [lo, hi];
   const el = document.getElementById('areaSimuladorValor');
-  if (el) { el.textContent = v + ' m²'; el.classList.remove('slider-placeholder'); }
+  if (el) el.value = v.toLocaleString('pt-BR');
   atualizarComboUI_();
+}
+
+// Digitação (mesmo padrão de atualizarOrcamentoCapaDigitado_) -- só
+// reformata/sincroniza o slider aqui, sem validar contra AREA_BOUNDS a
+// cada tecla (apagar um dígito derrubaria o valor abaixo do mínimo
+// momentaneamente). Validação de verdade só no blur.
+function atualizarMetragemDigitado_(val) {
+  const digitos = val.replace(/\D/g, '');
+  const input = document.getElementById('areaSimuladorValor');
+  const cursorNoFim = input.selectionStart === input.value.length;
+  const v = parseInt(digitos) || 0;
+
+  input.value = digitos ? v.toLocaleString('pt-BR') : '';
+  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
+  if (!v) return; // campo vazio/incompleto -- não atualiza estado ainda
+
+  if (D.areaInicial === null) D.areaInicial = v;
+  D.ajustesSlider++;
+  D.metragemAlvo = v; D.areaFinal = v; D.areaE2 = v;
+  D.areaRange = [Math.round(v * (1 - TOLERANCIA_METRAGEM_)), Math.round(v * (1 + TOLERANCIA_METRAGEM_))];
+  document.getElementById('sliderMetragem').value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  atualizarComboUI_();
+}
+
+// Só valida contra a faixa da base quando a pessoa termina de digitar (sai
+// do campo) -- validar a cada tecla brigava com o próprio ato de apagar.
+function validarLimitesMetragem_() {
+  const input = document.getElementById('areaSimuladorValor');
+  if (!input.value.trim()) return; // vazio -- deixa o placeholder "ARRASTE AQUI"
+  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
+  if (v && (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1])) {
+    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
+  }
+  v = Math.min(Math.max(v || AREA_BOUNDS[0], AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  document.getElementById('sliderMetragem').value = v;
+  atualizarMetragem(v);
 }
 
 // ── ORÇAMENTO SIMULADOR (resumo editável, tela Simulador) ─────────────────
