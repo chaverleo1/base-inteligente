@@ -278,11 +278,14 @@ body {
    de texto corrido, número no MESMO tamanho/peso do resto da frase (era um
    número gigante destacado, quebrando em várias linhas) -- também reduz
    espaço em branco pra diminuir rolagem. */
+/* Pedido explícito do usuário: centralizado e mais distante do cabeçalho
+   (acima) e de "Área útil ideal" (abaixo), pra destacar mais essa
+   mensagem na página. */
 .s2-top-count {
-  text-align: left;
+  text-align: center;
   font-size: clamp(15px, 4.4vw, 17px); font-weight: 600;
   color: var(--text); line-height: 1.45;
-  padding: 0; margin: 14px 0 4px;
+  padding: 0; margin: 36px 0 32px;
 }
 .s2-subtxt {
   display: block;
@@ -1388,15 +1391,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
     </div>
 
-    <!-- "Essa é uma delas:" + preview -- continuam logo abaixo da faixa
-         min/max da área útil (mesmo lugar de sempre), só sem o "Encontramos
-         N opções..." que subiu pro topo. -->
-    <span class="s2-subtxt s2-subtxt-standalone">Essa é uma delas:</span>
-    <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
-
-    <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
-    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
-    <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
+    <!-- "Essa é uma delas:" + preview + CTA "CONTINUE..." movidos pra tela
+         Confirmação (pedido explícito do usuário) -- ver step-3, logo
+         abaixo do quadro-resumo. -->
 
     <!-- Resumo editável -- mesmo componente visual de .conf-card (Confirmação),
          ids próprios (s2ResumoX) pra não colidir com os de lá (confObjetivo etc). -->
@@ -1485,14 +1482,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
 
-    <!-- Quantidade encontrada, ao final da confirmação -- pedido explícito
-         do usuário, fundo branco chapado destacando o texto com contraste
-         (mesmo padrão já usado nos botões de padrão selecionados). Usa a
-         MESMA contagem (com expansão de tolerância) da Tela 3 -- antes
-         usava filtrados() puro, que podia mostrar "0" aqui mesmo depois da
-         Tela 3 ter mostrado um número > 0 (bug reportado pelo usuário). -->
-    <div class="conf-resultado-badge" id="confResultadoBadge">— opções encontradas</div>
+    <!-- "Essa é uma delas:" + preview + CTA "CONTINUE..." -- movidos pra cá
+         do Simulador (pedido explícito do usuário); substituem o badge "N
+         opções encontradas" que existia antes nesta posição. -->
+    <span class="s2-subtxt s2-subtxt-standalone">Essa é uma delas:</span>
     <div class="tolerancia-nota" id="toleranciaNotaConfirmacao" style="display:none;text-align:center"></div>
+
+    <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
+    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
+    <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
 
     <div class="conf-btns">
       <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Ajustar</button>
@@ -2297,14 +2295,20 @@ function montarConfirmacao_() {
   const max = formatBRL_(Math.round(D.precoAlvo * 1.20));
   document.getElementById('confPrecoFaixa').textContent = min + ' a ' + max;
   document.getElementById('confFaixa').textContent = D.areaRange[0] + 'm² a ' + D.areaRange[1] + 'm²';
-  const qtd = qtdOpcoesReais_();
-  document.getElementById('confResultadoBadge').innerHTML =
-    `<strong>${qtd}</strong> ${qtd === 1 ? 'opção encontrada' : 'opções encontradas'}`;
+  // qtdOpcoesReais_() continua precisando rodar aqui -- é ela que expande a
+  // tolerância (D.areaRange) se a busca estrita não achar nada, efeito
+  // colateral do qual montarPreviewCard_() (logo abaixo) depende pra
+  // mostrar o preview certo. O badge "N opções encontradas" que lia esse
+  // retorno foi removido (pedido explícito do usuário) -- o "Essa é uma
+  // delas:" + card de preview + CTA "CONTINUE..." (movidos do Simulador
+  // pra cá) cumprem esse papel agora.
+  qtdOpcoesReais_();
   const notaConf = document.getElementById('toleranciaNotaConfirmacao');
   if (notaConf) {
     notaConf.style.display = D.toleranciaExpandida ? '' : 'none';
     notaConf.textContent = 'Ampliamos sua busca um pouco pra não faltar opção.';
   }
+  montarPreviewCard_();
 }
 
 function montarMotivacaoTitulo_() {
