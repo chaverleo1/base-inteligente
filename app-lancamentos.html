@@ -355,6 +355,17 @@ body {
   font-family: inherit; font-size: 24px; font-weight: 400; text-align: center;
 }
 .preco-input::placeholder { color: var(--text3); font-weight: 400; }
+/* Display só-leitura do valor arrastado (Orçamento Capa/Perfil e Área Útil
+   Simulador) -- mesma caixa visual de .preco-input, mas sem ser editável
+   por digitação: só o slider abaixo altera o valor. "ARRASTE AQUI" em
+   vermelho até o primeiro arraste real (pedido explícito do usuário). */
+.preco-display {
+  flex: 1; width: 100%; font-family: inherit; font-size: 24px; font-weight: 400;
+  text-align: center; color: var(--text);
+}
+.preco-display.slider-placeholder {
+  color: var(--danger); font-weight: 800; font-size: 14px; letter-spacing: .6px; text-transform: uppercase;
+}
 
 /* Trilho/alça maiores que o padrão do navegador, mas mais finos do que a
    primeira versão (pedido explícito: diminuir espessura da linha e
@@ -1261,12 +1272,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="step-title">Qual seu <span style="color:var(--accent)">orçamento</span> e bairro preferido?</div>
     <div class="step-sub">Vamos refinar sua busca com esses dois filtros.</div>
 
+    <!-- Orçamento Capa -- só arrasta, não digita (pedido explícito do
+         usuário): abre em "ARRASTE AQUI" vermelho, só troca pro valor
+         formatado depois do 1º arraste real (atualizarOrcamentoCapa_). -->
     <div class="s2-input-label" id="tituloPreco" style="margin-top:20px">Seu <span style="color:var(--accent)">orçamento atual</span> é:</div>
     <div class="preco-input-row">
       <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
-      <input type="text" class="preco-input" id="precoDigitado" inputmode="numeric" oninput="atualizarPrecoDigitado_(this.value)" onblur="validarLimitesPreco_()">
+      <div class="preco-display slider-placeholder" id="capaPrecoValor">ARRASTE AQUI</div>
     </div>
-    <input type="range" id="sliderPreco" oninput="atualizarPreco(this.value)" style="width:100%">
+    <input type="range" id="sliderPreco" oninput="atualizarOrcamentoCapa_(this.value)" style="width:100%">
     <div class="slider-label-row">
       <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
     </div>
@@ -1333,9 +1347,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <span class="s2-ajuste-label">Ajuste seu perfil de busca</span>
 
+    <!-- Área Útil Simulador -- só arrasta, não digita (pedido explícito do
+         usuário): abre em "ARRASTE AQUI" vermelho, só troca pro valor
+         formatado depois do 1º arraste real (atualizarMetragem). -->
     <div class="s2-input-label">Área <span style="color:var(--accent)">útil</span> ideal</div>
     <div class="preco-input-row">
-      <input type="text" class="preco-input" id="metragemDigitado" inputmode="numeric" oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+      <div class="preco-display slider-placeholder" id="areaSimuladorValor">ARRASTE AQUI</div>
       <span class="preco-prefixo prefixo-grande" id="prefixoArea">m²</span>
     </div>
     <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%">
@@ -1360,9 +1377,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <option value="em_obras">Em Obras</option>
         </select>
       </div>
+      <!-- Orçamento Simulador -- ÚNICO campo de orçamento digitável do funil
+           (pedido explícito do usuário); pré-preenchido com o Orçamento
+           Capa arrastado na tela anterior, mas editável aqui pra refinar. -->
       <div class="conf-item">
         <div class="conf-item-label">Orçamento</div>
-        <div class="conf-item-val" id="s2ResumoOrcamento" style="font-size:16px">—</div>
+        <div class="preco-input-row" style="margin-bottom:0;background:transparent;border:none;padding:0">
+          <span class="preco-prefixo" style="font-size:14px">R$</span>
+          <input type="text" class="preco-input" id="s2ResumoOrcamentoInput" inputmode="numeric" style="font-size:16px;text-align:left;padding:0"
+                 oninput="atualizarOrcamentoSimuladorDigitado_(this.value)" onblur="validarLimitesOrcamentoSimulador_()">
+        </div>
       </div>
       <!-- Bairros selecionados + "MUDAR" -- revela o MESMO seletor de tags
            da tela Perfil, reaproveitado via montarBairroTags_('s2')/
@@ -1892,19 +1916,23 @@ function aplicarPresetURL_() {
   montarConfigIniciais_();
   irParaStep(2);
 
-  // ── 5. Pré-configura sliders com valores do preset (sobrepõe o ponto médio)
+  // ── 5. Pré-configura com valores do preset (sobrepõe o ponto médio) --
+  // preset pula direto pro Simulador (passo 4 acima), sem passar pela
+  // Capa/Perfil -- então cfg.orcamento vira Orçamento Capa E Simulador de
+  // uma vez (não tem uma 2ª tela pra refinar aqui), atualizando o campo
+  // editável do resumo direto.
   if (cfg.orcamento) {
-    const sP = document.getElementById('sliderPreco');
     const vP = Math.min(Math.max(Number(cfg.orcamento), PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
-    sP.value = vP;
-    atualizarPreco(vP);
+    D.capaPreco = vP; D.precoAlvo = vP; D.precoFinal = vP;
+    const elOrc = document.getElementById('s2ResumoOrcamentoInput');
+    if (elOrc) elOrc.value = vP.toLocaleString('pt-BR');
   }
   if (cfg.area) {
     const vM = Math.min(Math.max(Number(cfg.area), AREA_BOUNDS[0]), AREA_BOUNDS[1]);
-    D.areaE2 = vM; // preset define ambos E2 e Simulador
     const sM = document.getElementById('sliderMetragem');
-    if (sM) { sM.value = vM; atualizarMetragem(vM); }
+    if (sM) { sM.value = vM; atualizarMetragem(vM); } // já cobre D.areaE2 (ver atualizarMetragem)
   }
+  atualizarComboUI_();
 }
 
 // Anima um contador de 0 até o valor real (Tela 1, "Temos hoje X lançamentos") --
@@ -1930,21 +1958,28 @@ function montarStatsAbertura_() {
   atualizarContadorCapa_();
 }
 
-// Contador dinâmico da capa: total geral de empreendimentos. Ao clicar em
-// bairros, filtra por bairro (sem filtro de preço — slider de preço removido).
-// Debounce de 80ms para suavizar múltiplos cliques rápidos.
+// Contador dinâmico da capa: total geral de empreendimentos, filtrado por
+// bairro (quando já escolhido, tela Perfil) e por ESTÁGIO (pedido explícito
+// do usuário, 2026-08-XX: clicar "Pronto para Morar"/"Em Obras" na Capa já
+// atualiza a quantidade mostrada, na hora). Debounce de 80ms pra suavizar
+// múltiplos cliques rápidos.
 var _contadorCapaTimer_ = null;
 function atualizarContadorCapa_() {
   clearTimeout(_contadorCapaTimer_);
   _contadorCapaTimer_ = setTimeout(function() {
     var els = document.querySelectorAll('.stats-total-emp');
     if (!els.length || !TODOS_LANC.length) return;
-    // Sem bairro selecionado → total geral; com bairros → filtra por bairro
     var lista = TODOS_LANC;
     if (D.capaBairros.length > 0) {
       var bs = D.capaBairros.map(function(b) { return b.toLowerCase().trim(); });
-      lista = TODOS_LANC.filter(function(c) {
+      lista = lista.filter(function(c) {
         return bs.indexOf(String(c.bairro || '').toLowerCase().trim()) >= 0;
+      });
+    }
+    if (D.situacoes && D.situacoes.size > 0) {
+      lista = lista.filter(function(c) {
+        return (D.situacoes.has('pronto_novo') && matchSituacao_(c.estagio, 'pronto_novo')) ||
+               (D.situacoes.has('em_obras')   && matchSituacao_(c.estagio, 'em_obras'));
       });
     }
     var n = lista.length;
@@ -2038,7 +2073,12 @@ const D = {
   // Opções").
   extrasMostrados: [], extraPrecoVisto: new Set(), extraFavoritos: new Set(),
   verMaisOpcoesClicado: false,
-  capaPreco: 875000, // preço escolhido no slider da capa (pré-preenche step-2)
+  // "Orçamento Capa" -- arrastado na tela Perfil (step-5). null até a
+  // pessoa arrastar de verdade (pedido explícito do usuário: o campo abre
+  // mostrando "ARRASTE AQUI", não um valor pré-preenchido). Distinto de
+  // "Orçamento Simulador" (D.precoAlvo/D.precoFinal, editado no resumo do
+  // Simulador, step-2).
+  capaPreco: null,
   capaBairros: [],  // bairros selecionados na capa (múltipla escolha)
   areaE2: null,     // área selecionada no step-5 (Área Útil E2 — rastreada separadamente)
   precoAlvo: null, metragemAlvo: null, areaRange: null,
@@ -2481,6 +2521,9 @@ function selecionarEstagioStep5_(el, val) {
   forcarRepaint_(el);
   D.situacoes.clear();
   D.situacoes.add(val);
+  // Pedido explícito do usuário: clicar "Pronto para Morar"/"Em Obras" já
+  // atualiza a quantidade mostrada no contador da Capa, na hora.
+  atualizarContadorCapa_();
 }
 
 // Força o navegador a repintar um elemento na hora, em vez de possivelmente
@@ -2631,8 +2674,17 @@ function montarResumoStep2_() {
   if (elEst) elEst.value = D.situacoes.has('em_obras') ? 'em_obras' : 'pronto_novo';
   atualizarLabelProntoStep2_();
   atualizarResumoBairrosTexto_();
-  const elPreco = document.getElementById('s2ResumoOrcamento');
-  if (elPreco) elPreco.textContent = formatBRL_(D.precoAlvo);
+  // Orçamento Simulador -- pré-preenche com Orçamento Capa (arrastado na
+  // tela Perfil) na 1ª vez que entra aqui, só como ponto de partida; depois
+  // disso mantém o que a pessoa já editou por aqui mesmo (não sobrescreve
+  // em reentradas seguintes -- pedido implícito, mesmo padrão de "não
+  // resetar o que já foi ajustado" usado no restante do funil).
+  if (D.precoAlvo === null) {
+    D.precoAlvo = D.capaPreco || Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
+  }
+  D.precoFinal = D.precoAlvo;
+  const elOrcInput = document.getElementById('s2ResumoOrcamentoInput');
+  if (elOrcInput) elOrcInput.value = D.precoAlvo.toLocaleString('pt-BR');
   // Fecha o seletor de bairro (se tinha ficado aberto de uma visita
   // anterior ao Simulador) -- sempre reabre fechado/"MUDAR", nunca aberto.
   const bairroWrap = document.getElementById('s2BairroSeletorWrap');
@@ -3194,19 +3246,31 @@ let slidersProntos_ = false;
 // por isso viraram 2 funções independentes em vez de uma só. Mantido
 // inicializarSliders() como atalho que chama as duas, usado só na carga
 // inicial da página (antes de bairro/objetivo/estágio serem escolhidos).
+// Pedido explícito do usuário: os sliders de Orçamento Capa e Área Útil
+// Simulador não pré-preenchem o valor mostrado na 1ª vez que a tela abre --
+// a alça é posicionada num ponto neutro (silenciosamente, sem disparar
+// atualizarOrcamentoCapa_/atualizarMetragem), e o texto mostra "ARRASTE
+// AQUI" em vermelho até o primeiro arraste de verdade. Numa visita
+// seguinte à mesma tela (voltou e entrou de novo), se a pessoa já tinha
+// arrastado antes, mostra o valor já escolhido em vez do placeholder.
 function inicializarSliderPreco_() {
-  slidersProntos_ = false; // previne que atualizarPreco contabilize como interação do usuário
+  slidersProntos_ = false; // previne que atualizarOrcamentoCapa_ contabilize como interação do usuário
   const sP = document.getElementById('sliderPreco');
   sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
-  const defPreco = D.precoAlvo
-    ? Math.min(Math.max(D.precoAlvo, PRECO_BOUNDS[0]), PRECO_BOUNDS[1])
+  const defPreco = D.capaPreco
+    ? Math.min(Math.max(D.capaPreco, PRECO_BOUNDS[0]), PRECO_BOUNDS[1])
     : Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
   sP.value = defPreco;
   const elPMin = document.getElementById('lblPrecoMin');
   const elPMax = document.getElementById('lblPrecoMax');
   if (elPMin) elPMin.textContent = formatBRL_(PRECO_BOUNDS[0]);
   if (elPMax) elPMax.textContent = formatBRL_(PRECO_BOUNDS[1]);
-  atualizarPreco(defPreco);
+  if (D.capaPreco) {
+    atualizarOrcamentoCapa_(defPreco);
+  } else {
+    const el = document.getElementById('capaPrecoValor');
+    if (el) { el.textContent = 'ARRASTE AQUI'; el.classList.add('slider-placeholder'); }
+  }
   slidersProntos_ = true;
 }
 
@@ -3222,7 +3286,12 @@ function inicializarSliderArea_() {
   const elMMax = document.getElementById('lblMetragemMax');
   if (elMMin) elMMin.textContent = AREA_BOUNDS[0] + ' m²';
   if (elMMax) elMMax.textContent = AREA_BOUNDS[1] + ' m²';
-  atualizarMetragem(sM.value);
+  if (D.metragemAlvo) {
+    atualizarMetragem(defArea);
+  } else {
+    const el = document.getElementById('areaSimuladorValor');
+    if (el) { el.textContent = 'ARRASTE AQUI'; el.classList.add('slider-placeholder'); }
+  }
   slidersProntos_ = true;
 }
 
@@ -3440,57 +3509,25 @@ function toggleMudarBairroStep2_() {
   if (abrindo) montarBairroTags_('s2'); // sempre remonta na abertura -- reflete D.capaBairros atual
 }
 
-function atualizarPreco(val) {
+// ── ORÇAMENTO CAPA (tela Perfil, "arraste aqui") ──────────────────────────
+// Pedido explícito do usuário: só arrasta, não digita. D.capaPreco é o
+// sinal INICIAL do orçamento (distinto de "Orçamento Simulador",
+// D.precoAlvo/D.precoFinal, editado depois no resumo do Simulador).
+function atualizarOrcamentoCapa_(val) {
   const v = parseInt(val);
   if (D.precoInicial === null) D.precoInicial = v;
   if (slidersProntos_) D.ajustesSlider++;
-  D.precoAlvo = v; D.precoFinal = v;
-  document.getElementById('precoDigitado').value = v.toLocaleString('pt-BR');
-  atualizarComboUI_();
+  D.capaPreco = v;
+  const el = document.getElementById('capaPrecoValor');
+  if (el) { el.textContent = formatBRL_(v); el.classList.remove('slider-placeholder'); }
 }
 
-// Caixa de texto (mesmo padrão de busca.html: preco-input-row + slider
-// sincronizados). IMPORTANTE: só reformata/sincroniza o slider aqui -- NÃO
-// valida contra PRECO_BOUNDS a cada tecla. Validar em toda digitação
-// brigava com o próprio ato de apagar: apagar um dígito faz o número cair
-// abaixo do mínimo momentaneamente, e o ajuste automático reescrevia o
-// valor de volta, dando a impressão de que o campo não deixava apagar
-// nada. A validação de verdade (aviso + ajuste pro limite) só roda no
-// blur, ver validarLimitesPreco_.
-function atualizarPrecoDigitado_(val) {
-  const digitos = val.replace(/\D/g, '');
-  const input = document.getElementById('precoDigitado');
-  const cursorNoFim = input.selectionStart === input.value.length;
-  const v = parseInt(digitos) || 0;
-
-  input.value = digitos ? v.toLocaleString('pt-BR') : '';
-  if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
-  if (!v) return; // campo vazio/incompleto -- não atualiza estado ainda
-
-  if (D.precoInicial === null) D.precoInicial = v;
-  if (slidersProntos_) D.ajustesSlider++;
-  D.precoAlvo = v; D.precoFinal = v;
-  document.getElementById('sliderPreco').value = Math.min(Math.max(v, PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
-  atualizarComboUI_();
-}
-
-// Só valida contra a faixa da base quando a pessoa termina de digitar
-// (sai do campo) -- ver comentário acima do porquê não faz isso a cada tecla.
-function validarLimitesPreco_() {
-  const input = document.getElementById('precoDigitado');
-  let v = parseInt(input.value.replace(/\D/g, '')) || 0;
-  if (v && (v < PRECO_BOUNDS[0] || v > PRECO_BOUNDS[1])) {
-    toast(`Preço fora da faixa disponível: de ${formatBRL_(PRECO_BOUNDS[0])} a ${formatBRL_(PRECO_BOUNDS[1])}`);
-  }
-  v = Math.min(Math.max(v || PRECO_BOUNDS[0], PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
-  document.getElementById('sliderPreco').value = v;
-  atualizarPreco(v);
-}
-
-// Metragem é um valor único (mesma metodologia do preço total, uma alça só) --
-// o cliente escolhe o tamanho que quer, e o motor de match já embute uma
-// tolerância de ±20% pra cima/baixo (ex.: escolheu 50m² -> entra no cálculo
-// de 40m² a 60m²), sem precisar de uma segunda alça pra isso.
+// ── ÁREA ÚTIL SIMULADOR (tela Simulador, "arraste aqui") ──────────────────
+// Metragem é um valor único (mesma metodologia do preço) -- o cliente
+// escolhe o tamanho que quer, e o motor de match já embute uma tolerância
+// de ±20% pra cima/baixo (ex.: escolheu 50m² -> entra no cálculo de 40m² a
+// 60m²), sem precisar de uma segunda alça pra isso. Só arrasta, não digita
+// (pedido explícito do usuário, mesmo padrão do Orçamento Capa).
 let TOLERANCIA_METRAGEM_ = 0.20;
 function atualizarMetragem(val) {
   const v = parseInt(val);
@@ -3506,40 +3543,44 @@ function atualizarMetragem(val) {
   const lo = Math.round(v * (1 - TOLERANCIA_METRAGEM_));
   const hi = Math.round(v * (1 + TOLERANCIA_METRAGEM_));
   D.areaRange = [lo, hi];
-  document.getElementById('metragemDigitado').value = v.toLocaleString('pt-BR');
+  const el = document.getElementById('areaSimuladorValor');
+  if (el) { el.textContent = v + ' m²'; el.classList.remove('slider-placeholder'); }
   atualizarComboUI_();
 }
 
-// Idem atualizarPrecoDigitado_ -- só reformata/sincroniza, sem validar
-// contra AREA_BOUNDS a cada tecla (ver comentário lá do porquê).
-function atualizarMetragemDigitado_(val) {
+// ── ORÇAMENTO SIMULADOR (resumo editável, tela Simulador) ─────────────────
+// ÚNICO campo de orçamento digitável do funil (pedido explícito do
+// usuário) -- pré-preenchido com o Orçamento Capa (ver montarResumoStep2_),
+// mas editável aqui pra refinar. É o valor que de fato alimenta o motor de
+// match (D.precoAlvo/D.precoFinal), igual sempre foi.
+function atualizarOrcamentoSimuladorDigitado_(val) {
   const digitos = val.replace(/\D/g, '');
-  const input = document.getElementById('metragemDigitado');
+  const input = document.getElementById('s2ResumoOrcamentoInput');
   const cursorNoFim = input.selectionStart === input.value.length;
   const v = parseInt(digitos) || 0;
 
   input.value = digitos ? v.toLocaleString('pt-BR') : '';
   if (cursorNoFim) input.setSelectionRange(input.value.length, input.value.length);
-  if (!v) return;
+  if (!v) return; // campo vazio/incompleto -- não atualiza estado ainda
 
-  if (D.areaInicial === null) D.areaInicial = v;
-  if (slidersProntos_) D.ajustesSlider++;
-  D.metragemAlvo = v; D.areaFinal = v; D.areaE2 = v;
-  D.areaRange = [Math.round(v * (1 - TOLERANCIA_METRAGEM_)), Math.round(v * (1 + TOLERANCIA_METRAGEM_))];
-  document.getElementById('sliderMetragem').value = Math.min(Math.max(v, AREA_BOUNDS[0]), AREA_BOUNDS[1]);
+  if (D.precoInicial === null) D.precoInicial = v; // por garantia, se chegou aqui sem passar pelo Orçamento Capa
+  D.ajustesSlider++;
+  D.precoAlvo = v; D.precoFinal = v;
   atualizarComboUI_();
 }
 
-// Só valida contra a faixa da base no blur (ver validarLimitesPreco_).
-function validarLimitesMetragem_() {
-  const input = document.getElementById('metragemDigitado');
+// Só valida contra a faixa da base quando a pessoa termina de digitar (sai
+// do campo) -- validar a cada tecla brigava com o próprio ato de apagar.
+function validarLimitesOrcamentoSimulador_() {
+  const input = document.getElementById('s2ResumoOrcamentoInput');
   let v = parseInt(input.value.replace(/\D/g, '')) || 0;
-  if (v && (v < AREA_BOUNDS[0] || v > AREA_BOUNDS[1])) {
-    toast(`Área fora da faixa disponível: de ${AREA_BOUNDS[0]}m² a ${AREA_BOUNDS[1]}m²`);
+  if (v && (v < PRECO_BOUNDS[0] || v > PRECO_BOUNDS[1])) {
+    toast(`Orçamento fora da faixa disponível: de ${formatBRL_(PRECO_BOUNDS[0])} a ${formatBRL_(PRECO_BOUNDS[1])}`);
   }
-  v = Math.min(Math.max(v || AREA_BOUNDS[0], AREA_BOUNDS[0]), AREA_BOUNDS[1]);
-  document.getElementById('sliderMetragem').value = v;
-  atualizarMetragem(v);
+  v = Math.min(Math.max(v || PRECO_BOUNDS[0], PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
+  input.value = v.toLocaleString('pt-BR');
+  D.precoAlvo = v; D.precoFinal = v;
+  atualizarComboUI_();
 }
 
 // Termo pra "pronto/entregue" muda por objetivo -- pedido explícito do
