@@ -3924,16 +3924,23 @@ function renderDemandasObjetivos_(itens) {
     'rgba(168,85,247,.85)',  '#6b21a8');
 }
 // Gráfico de barras HORIZONTAIS — Demanda por Área
-// Duas séries por faixa de 10m²: Simulador (amarelo) e E2 (rosa).
+// Pedido explícito do usuário (2026-08-17): 1 série só, não mais 2
+// ("Simulador" + "E2"). Motivo: a reestruturação do funil (Capa/Perfil/
+// Simulador/Confirmação) deixou UMA única pergunta real de área no funil
+// inteiro (dentro do quadro resumo da tela Simulador) -- "E2 (Etapa 2)"
+// era resquício de quando existia uma 2ª pergunta de área, separada, na
+// antiga Etapa 2 (hoje a Etapa 2 é só Orçamento+Bairro, sem área nenhuma).
+// Os dois valores vinham do MESMO clique do usuário (um bruto, outro com
+// tolerância aplicada) -- não eram mais sinais independentes.
 // Layout idêntico ao _renderSubDemanda_:
-//   • Trilha de fundo 100%  •  Barra proporcional ao % da própria série
-//   • Texto SEMPRE dentro (clip)  •  Badge % fixo à direita
-function renderDemandasAreas_(itensSim, itensE2) {
-  itensSim = itensSim || []; itensE2 = itensE2 || [];
+//   • Trilha de fundo 100%  •  Barra proporcional ao % do total  •  Texto
+//     SEMPRE dentro (clip)  •  Badge % fixo à direita
+function renderDemandasAreas_(itens) {
+  itens = itens || [];
   const canvas  = document.getElementById('canvasDemandasArea');
   const emptyEl = document.getElementById('demandasAreaEmpty');
   if (!canvas) return;
-  if (!itensSim.length && !itensE2.length) {
+  if (!itens.length) {
     canvas.style.display = 'none';
     if (emptyEl) emptyEl.style.display = '';
     return;
@@ -3943,22 +3950,15 @@ function renderDemandasAreas_(itensSim, itensE2) {
 
   const isDark = _dmTheme_() === 'dark';
 
-  const faixaSet = new Set([...itensSim.map(h => h.faixa), ...itensE2.map(h => h.faixa)]);
-  const faixas   = [...faixaSet].sort((a, b) => parseInt(a) - parseInt(b));
-  const simMap   = Object.fromEntries(itensSim.map(h => [h.faixa, h.contagem || 0]));
-  const e2Map    = Object.fromEntries(itensE2.map(h  => [h.faixa, h.contagem || 0]));
+  const faixas = itens.map(h => h.faixa).sort((a, b) => parseInt(a) - parseInt(b));
+  const contMap = Object.fromEntries(itens.map(h => [h.faixa, h.contagem || 0]));
+  const total   = Math.max(1, itens.reduce((s, h) => s + (h.contagem || 0), 0));
 
-  // totais por série para calcular %
-  const totalSim = Math.max(1, itensSim.reduce((s, h) => s + (h.contagem || 0), 0));
-  const totalE2  = Math.max(1, itensE2.reduce((s, h) => s + (h.contagem || 0), 0));
-
-  const CLR_SIM  = 'rgba(245,200,0,.92)';
-  const CLR_E2   = 'rgba(236,72,153,.92)';
+  const CLR      = 'rgba(245,200,0,.92)';
   const ROW_H    = 32;   // altura de cada barra
-  const GAP_SER  = 4;    // gap entre as duas barras de uma faixa
-  const GAP_GRP  = 10;   // gap entre faixas diferentes
+  const GAP_GRP  = 8;    // gap entre faixas diferentes
   const PAD_T    = 8;
-  const PAD_B    = 32;   // legenda
+  const PAD_B    = 8;
   const PAD_L    = 8;
   const PCT_W    = 48;   // reserva para badge %
   const PAD_R    = 4;
@@ -3967,7 +3967,7 @@ function renderDemandasAreas_(itensSim, itensE2) {
   const dpr    = window.devicePixelRatio || 1;
   const W      = canvas.parentElement.clientWidth || 400;
   const nRows  = faixas.length;
-  const H      = PAD_T + nRows * (ROW_H * 2 + GAP_SER + GAP_GRP) + PAD_B;
+  const H      = PAD_T + nRows * (ROW_H + GAP_GRP) + PAD_B;
   const barMaxW = W - PAD_L - PCT_W - PAD_R;  // largura máxima das barras
 
   canvas.width  = W * dpr; canvas.height = H * dpr;
@@ -3975,41 +3975,40 @@ function renderDemandasAreas_(itensSim, itensE2) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr); ctx.clearRect(0, 0, W, H);
 
-  // Escala: barra mais longa = barra com maior % da sua série
-  const maxPctSim = Math.max(1, ...faixas.map(f => simMap[f] || 0)) / totalSim;
-  const maxPctE2  = Math.max(1, ...faixas.map(f => e2Map[f]  || 0)) / totalE2;
+  // Escala: barra mais longa = faixa com maior % do total
+  const maxPct = Math.max(1, ...faixas.map(f => contMap[f] || 0)) / total;
 
-  function drawHBar(xL, yB, clr, v, total, maxPct, serieLabel, faixaLabel) {
+  function drawHBar(yB, v, faixaLabel) {
     const pct  = Math.round(v / total * 100);
-    const bW   = ((v / total) / maxPct) * barMaxW;  // relativo ao maior % da série
+    const bW   = ((v / total) / maxPct) * barMaxW;
     const midY = yB + ROW_H / 2;
 
     // ① Trilha de fundo
     ctx.fillStyle = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)';
-    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(xL, yB, barMaxW, ROW_H, 4); ctx.fill(); }
-    else ctx.fillRect(xL, yB, barMaxW, ROW_H);
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yB, barMaxW, ROW_H, 4); ctx.fill(); }
+    else ctx.fillRect(PAD_L, yB, barMaxW, ROW_H);
 
     // ② Barra colorida
     if (bW > 0) {
-      ctx.fillStyle = clr;
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(xL, yB, bW, ROW_H, 4); ctx.fill(); }
-      else ctx.fillRect(xL, yB, bW, ROW_H);
+      ctx.fillStyle = CLR;
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(PAD_L, yB, bW, ROW_H, 4); ctx.fill(); }
+      else ctx.fillRect(PAD_L, yB, bW, ROW_H);
     }
 
     // ③ Texto dentro — clipping impede vazamento
     ctx.save();
     ctx.beginPath();
-    ctx.rect(xL + TXT_PAD, yB + 1, barMaxW - TXT_PAD * 2, ROW_H - 2);
+    ctx.rect(PAD_L + TXT_PAD, yB + 1, barMaxW - TXT_PAD * 2, ROW_H - 2);
     ctx.clip();
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     // linha 1: faixa (bold)
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 11px -apple-system,sans-serif';
-    ctx.fillText(faixaLabel, xL + TXT_PAD, midY - 7);
-    // linha 2: série + contagem
+    ctx.fillText(faixaLabel, PAD_L + TXT_PAD, midY - 7);
+    // linha 2: contagem
     ctx.fillStyle = 'rgba(0,0,0,.60)';
     ctx.font = '10px -apple-system,sans-serif';
-    ctx.fillText(serieLabel + '  ·  ' + v + ' sess.', xL + TXT_PAD, midY + 8);
+    ctx.fillText(v + ' sess.', PAD_L + TXT_PAD, midY + 8);
     ctx.restore();
 
     // ④ Badge %
@@ -4020,25 +4019,11 @@ function renderDemandasAreas_(itensSim, itensE2) {
   }
 
   faixas.forEach((f, i) => {
-    const vSim  = simMap[f] || 0;
-    const vE2   = e2Map[f]  || 0;
+    const v     = contMap[f] || 0;
     const label = f + '–' + (parseInt(f) + 10) + 'm²';
-    const yGrp  = PAD_T + i * (ROW_H * 2 + GAP_SER + GAP_GRP);
-
-    if (vSim > 0) drawHBar(PAD_L, yGrp,              CLR_SIM, vSim, totalSim, maxPctSim, 'Simulador', label);
-    if (vE2  > 0) drawHBar(PAD_L, yGrp + ROW_H + GAP_SER, CLR_E2,  vE2,  totalE2,  maxPctE2,  'E2',        label);
+    const yGrp  = PAD_T + i * (ROW_H + GAP_GRP);
+    if (v > 0) drawHBar(yGrp, v, label);
   });
-
-  // ── Legenda ──
-  const textClr = isDark ? '#c9d1d9' : '#374151';
-  const LY = H - 12, BOX = 9, mid = W / 2;
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = CLR_SIM; ctx.fillRect(mid - 110, LY - BOX + 1, BOX, BOX);
-  ctx.fillStyle = textClr; ctx.font = '11px -apple-system,sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('Simulador (step 2)', mid - 98, LY);
-  ctx.fillStyle = CLR_E2; ctx.fillRect(mid + 30, LY - BOX + 1, BOX, BOX);
-  ctx.fillStyle = textClr;
-  ctx.fillText('E2 (Etapa 2)', mid + 42, LY);
 }
 
 // Tabela resumo de campanhas (substitui a origem por utm_source)
@@ -4169,7 +4154,11 @@ async function carregarInteligencia_() {
     renderDemandasBairros_(stats);
     renderDemandasEstagios_(stats.histogramaEstagios  || []);
     renderDemandasObjetivos_(stats.histogramaObjetivos || []);
-    renderDemandasAreas_(stats.histogramaAreas || [], stats.histogramaAreasE2 || []);
+    // 1 série só (pedido explícito do usuário) -- usa histogramaAreas
+    // (a série que já vinha aparecendo populada de verdade no painel).
+    // histogramaAreasE2 continua vindo do backend (code.txt não foi
+    // tocado), só deixou de ser desenhado aqui.
+    renderDemandasAreas_(stats.histogramaAreas || []);
     renderForcasDemanda_(stats);
     renderIntTempoTabela_(stats);
     renderIntOrigemTabela_(stats);
