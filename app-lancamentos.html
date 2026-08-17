@@ -235,18 +235,27 @@ body {
 /* CTA area hero */
 .hero-cta-area { padding-top: 0; }
 /* Bloco central da capa: contador em tamanho uniforme */
+/* Contador "Temos hoje N lançamentos" -- pedido explícito do usuário
+   (2026-08-17): letra menor, mesmo estilo do site de referência (pill
+   pequena com dot pulsante, não a caixa grande de antes -- também ajuda a
+   reduzir rolagem, outro pedido explícito). Ver
+   .claude/skills/webdesigner/references/componentes.md § 9. */
 .hp-count-bloco {
-  text-align: center;
-  font-size: clamp(20px, 5.5vw, 26px); font-weight: 700;
-  color: var(--text); line-height: 1.35;
-  margin: 18px 0; padding: 18px 16px;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; color: var(--accent); line-height: 1.3;
+  margin: 10px 0 0; padding: 6px 14px;
   background: rgba(27,85,64,.05);
-  border: 1.5px solid rgba(27,85,64,.15);
-  border-radius: var(--r);
+  border: 1px solid rgba(27,85,64,.2);
+  border-radius: 999px;
 }
-.hp-count-bloco strong {
-  font-family: var(--font-display); font-size: inherit; font-weight: 700; color: var(--accent);
+.hp-count-bloco strong { font-weight: 800; }
+.hp-count-dot-wrap { position: relative; display: flex; flex-shrink: 0; width: 7px; height: 7px; }
+.hp-count-dot { position: relative; display: inline-flex; width: 7px; height: 7px; border-radius: 999px; background: var(--accent); }
+.hp-count-dot-ping {
+  position: absolute; inset: 0; border-radius: 999px; background: var(--accent); opacity: .6;
+  animation: contadorPing 1.6s cubic-bezier(0,0,.2,1) infinite;
 }
+@keyframes contadorPing { 75%, 100% { transform: scale(2.4); opacity: 0; } }
 /* Hero 2 linhas — capa reformulada */
 .hero-2l { margin: 0 0 0; }
 .hero-2l-body {
@@ -434,7 +443,7 @@ input[type=range]::-moz-range-progress {
    sumia nas 4 primeiras etapas). */
 .funil-header-topo {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; padding: 4px 4px 14px; margin-bottom: 6px;
+  gap: 12px; padding: 2px 4px 10px; margin-bottom: 2px;
 }
 .fht-left { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .funil-back-btn {
@@ -476,7 +485,7 @@ input[type=range]::-moz-range-progress {
    Bolhas numeradas conectadas por linha de progresso -- mesmo padrão do
    site de referência (componentes.md § 2). Visível só durante as 4
    primeiras etapas (mostrarStepper_ em atualizarBotoes()). */
-.funil-stepper { display: flex; align-items: flex-start; gap: 0; margin-bottom: 22px; overflow-x: auto; }
+.funil-stepper { display: flex; align-items: flex-start; gap: 0; margin-bottom: 16px; overflow-x: auto; }
 .fs-item { display: flex; min-width: 0; flex: 1; align-items: flex-start; }
 .fs-btn { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; gap: 6px; padding-top: 2px; background: none; border: none; cursor: pointer; font-family: inherit; }
 .fs-bubble {
@@ -502,10 +511,10 @@ input[type=range]::-moz-range-progress {
 .capa-eyebrow-pill svg { color: var(--accent); flex-shrink: 0; }
 .capa-titulo {
   font-family: var(--font-display); font-weight: 600; letter-spacing: -.5px;
-  font-size: clamp(28px, 8vw, 38px); line-height: 1.12; margin: 12px 0 0;
+  font-size: clamp(24px, 7vw, 32px); line-height: 1.14; margin: 10px 0 0;
 }
 .capa-titulo em { font-style: italic; color: var(--accent); }
-.capa-subtitulo { font-size: 14px; color: var(--text2); line-height: 1.5; margin: 10px 0 0; }
+.capa-subtitulo { font-size: 13px; color: var(--text2); line-height: 1.45; margin: 6px 0 0; }
 /* Botões-tag destacados (não cards) -- pedido explícito: sem ícone, sem
    descrição, só o rótulo em pílula grande e chapada, mesmo padrão visual
    de destaque de .tag-btn-laranja/.s2-sit-btn usado no resto do app. */
@@ -531,10 +540,10 @@ input[type=range]::-moz-range-progress {
    centrais"). Escopado só a #tagsObjetivo/#tagsEstagio (via .escolha-card
    combinado com .obj-tag-btn) -- NÃO mexe no .obj-tag-btn base, que
    continua sendo pílula simples em outros grupos (Padrão, Agendar etc). */
-#tagsObjetivo.escolha-group { flex-direction: column; gap: 12px; }
+#tagsObjetivo.escolha-group { flex-direction: column; gap: 10px; }
 .obj-tag-btn.escolha-card {
-  flex: none; width: 100%; justify-content: flex-start; gap: 14px;
-  padding: 16px; border-radius: var(--radius); border-width: 2px;
+  flex: none; width: 100%; justify-content: flex-start; gap: 12px;
+  padding: 13px 14px; border-radius: var(--radius); border-width: 2px;
   text-align: left; background: var(--surface);
 }
 .obj-tag-btn.escolha-card:hover { background: var(--surface); border-color: rgba(27,85,64,.4); }
@@ -543,7 +552,7 @@ input[type=range]::-moz-range-progress {
 }
 .escolha-icon {
   display: flex; flex-shrink: 0; align-items: center; justify-content: center;
-  width: 48px; height: 48px; border-radius: 12px;
+  width: 42px; height: 42px; border-radius: 11px;
   background: var(--secondary); color: var(--accent); transition: all .15s;
 }
 .obj-tag-btn.escolha-card.on .escolha-icon { background: var(--accent); color: #fff; }
@@ -561,8 +570,8 @@ input[type=range]::-moz-range-progress {
    final que objetivo, mesmo padrão do componentes.md § 3). */
 #tagsEstagio.escolha-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .obj-tag-btn.escolha-card-vert {
-  flex-direction: column; justify-content: center; text-align: center; gap: 8px;
-  padding: 18px 12px; border-radius: var(--radius); border-width: 2px; background: var(--surface);
+  flex-direction: column; justify-content: center; text-align: center; gap: 6px;
+  padding: 14px 12px; border-radius: var(--radius); border-width: 2px; background: var(--surface);
 }
 .obj-tag-btn.escolha-card-vert .escolha-titulo { font-size: 14px; }
 .obj-tag-btn.escolha-card-vert.on {
@@ -1190,12 +1199,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <p class="capa-subtitulo">Apartamentos, lofts, gardens, coberturas e studios em lançamento na Grande Goiânia.</p>
 
     <div class="hp-count-bloco">
+      <span class="hp-count-dot-wrap"><span class="hp-count-dot-ping"></span><span class="hp-count-dot"></span></span>
       Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!
     </div>
 
     <!-- Objetivo -->
-    <div class="stagger-entrada" style="margin-top:26px">
-      <div class="step-title" style="margin-bottom:14px">Você busca apartamento <em style="color:var(--accent);font-style:italic">para...</em></div>
+    <div class="stagger-entrada" style="margin-top:18px">
+      <div class="step-title" style="margin-bottom:10px">Você busca apartamento <em style="color:var(--accent);font-style:italic">para...</em></div>
       <div class="obj-tag-group escolha-group" id="tagsObjetivo">
         <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'moradia')">
           <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-home"/></svg></span>
@@ -1217,8 +1227,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
     <!-- Estágio — aparece após marcar objetivo -->
-    <div id="blocoEstagioWrap" style="display:none;margin-top:36px">
-      <div class="step-title">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
+    <div id="blocoEstagioWrap" style="display:none;margin-top:20px">
+      <div class="step-title" style="margin-bottom:10px">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
       <div class="obj-tag-group escolha-group" id="tagsEstagio">
         <button class="obj-tag-btn escolha-card escolha-card-vert" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">
           <svg width="24" height="24"><use href="#ico-home"/></svg>
@@ -1231,7 +1241,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
 
-    <div class="hero-cta-area" style="margin-top:22px">
+    <div class="hero-cta-area" style="margin-top:16px">
       <button class="btn-final btn-quente" onclick="avancarStep()">
         <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
         CONTINUAR →
