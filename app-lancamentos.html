@@ -1065,9 +1065,6 @@ input[type=range]::-moz-range-progress {
   border-top: 1px solid var(--border);
 }
 .conf-obs strong { color: var(--accent); font-weight: 700; }
-.conf-btns { display: flex; gap: 8px; margin-top: 16px; }
-.conf-btn-ref { flex: 1; }
-.conf-btn-sim { flex: 2; }
 /* Badge de quantidade encontrada na confirmação -- fundo branco chapado,
    texto escuro pra contraste (pedido explícito do usuário). */
 /* Antes era fundo branco chapado (destacava no tema escuro); no tema claro
@@ -1532,11 +1529,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
     <div id="s2PreviewCard" class="s2-preview-wrap"></div>
     <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
-
-    <div class="conf-btns">
-      <button class="btn-nav btn-sec conf-btn-ref" onclick="refazerSliders()">Ajustar</button>
-      <button class="btn-nav btn-prim conf-btn-sim" onclick="avancarStep()">Confirmar</button>
-    </div>
+    <!-- Botões "Ajustar"/"Confirmar" removidos (pedido explícito do usuário)
+         -- avançar já é feito pelo CTA acima, e voltar já existe no header
+         (btnVoltarHeader, ver atualizarBotoes()). -->
   </div>
 
   <!-- STEP 4 — TIPO DE APARTAMENTO: quartos + altura (personalizada com o
@@ -2345,7 +2340,10 @@ function montarConfirmacao_() {
   const qtd = qtdOpcoesReais_();
   const subtxtPreview = document.getElementById('confSubtxtPreview');
   if (subtxtPreview) {
-    subtxtPreview.textContent = `Encontramos ${qtd} ${qtd === 1 ? 'opção' : 'opções'}. Essa é uma delas:`;
+    // Pedido explícito do usuário: número "22" maior e destacado -- reaproveita
+    // a mesma classe (.s2-top-count-num) já usada pro número em "Encontramos N
+    // opções..." no topo do Simulador, mantendo o mesmo padrão visual.
+    subtxtPreview.innerHTML = `Encontramos <strong class="s2-top-count-num">${qtd}</strong> ${qtd === 1 ? 'opção' : 'opções'}. Essa é uma delas:`;
   }
   const notaConf = document.getElementById('toleranciaNotaConfirmacao');
   if (notaConf) {
@@ -2378,10 +2376,6 @@ function montarMotivacaoTitulo_() {
     _notaStep4.style.display = D.toleranciaExpandida ? '' : 'none';
     _notaStep4.textContent = 'Ampliamos sua busca um pouco pra não faltar opção.';
   }
-}
-
-function refazerSliders() {
-  irParaStep(2);
 }
 
 function voltarStep() {
