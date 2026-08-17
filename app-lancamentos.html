@@ -262,6 +262,23 @@ body {
   animation: contadorPing 1.6s cubic-bezier(0,0,.2,1) infinite;
 }
 @keyframes contadorPing { 75%, 100% { transform: scale(2.4); opacity: 0; } }
+/* Aviso "Estamos atualizando nossa base..." -- pedido explícito do
+   usuário: fica visível na Capa enquanto carregarBaseReal() busca os
+   dados reais, no lugar do Objetivo/Estágio/CTA (escondidos até lá em
+   #capaConteudoPrincipal, ver revelarConteudoCapa_()). */
+.capa-carregando {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 22px; padding: 14px 16px;
+  font-size: 13px; font-weight: 600; color: var(--text3); line-height: 1.4;
+  background: rgba(27,85,64,.04); border: 1px dashed var(--border2);
+  border-radius: var(--r);
+}
+.capa-carregando-dot {
+  flex-shrink: 0; width: 7px; height: 7px; border-radius: 999px;
+  background: var(--accent);
+  animation: capaCarregandoPulso 1s ease-in-out infinite;
+}
+@keyframes capaCarregandoPulso { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 /* Hero 2 linhas — capa reformulada */
 .hero-2l { margin: 0 0 0; }
 .hero-2l-body {
@@ -1270,50 +1287,62 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       Temos hoje <strong class="stats-total-emp">—</strong> lançamentos disponíveis!
     </div>
 
-    <!-- Objetivo -->
-    <div class="stagger-entrada" style="margin-top:18px">
-      <div class="step-title" style="margin-bottom:10px">Você busca apartamento <em style="color:var(--accent);font-style:italic">para...</em></div>
-      <div class="obj-tag-group escolha-group" id="tagsObjetivo">
-        <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'moradia')">
-          <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-home"/></svg></span>
-          <span class="escolha-texto">
-            <span class="escolha-titulo">Moradia</span>
-            <span class="escolha-sub">Para morar com quem você ama</span>
-          </span>
-          <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
-        </button>
-        <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'investimento')">
-          <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-wallet"/></svg></span>
-          <span class="escolha-texto">
-            <span class="escolha-titulo">Investimento</span>
-            <span class="escolha-sub">Para rentabilizar e valorizar</span>
-          </span>
-          <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
-        </button>
-      </div>
+    <!-- Aviso de carregamento -- pedido explícito do usuário: o resto da
+         página (Objetivo/Estágio/CTA, abaixo) só aparece depois que a base
+         real termina de carregar E a contagem é feita, em vez de mostrar
+         os botões antes dos dados reais chegarem. Escondido/mostrado por
+         revelarConteudoCapa_(), chamada no fim de carregarBaseReal(). -->
+    <div class="capa-carregando" id="capaCarregandoAviso">
+      <span class="capa-carregando-dot"></span>
+      Estamos atualizando nossa base... aguarde alguns segundos!
     </div>
 
-    <!-- Estágio — aparece após marcar objetivo -->
-    <div id="blocoEstagioWrap" style="display:none;margin-top:20px">
-      <div class="step-title" style="margin-bottom:10px">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
-      <div class="obj-tag-group escolha-group" id="tagsEstagio">
-        <button class="obj-tag-btn escolha-card escolha-card-vert" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">
-          <svg width="24" height="24"><use href="#ico-home"/></svg>
-          <span class="escolha-titulo">Pronto para Morar</span>
-        </button>
-        <button class="obj-tag-btn escolha-card escolha-card-vert" onclick="selecionarEstagioStep5_(this,'em_obras')">
-          <svg width="24" height="24"><use href="#ico-construction"/></svg>
-          <span class="escolha-titulo">Em Obras</span>
-        </button>
+    <div id="capaConteudoPrincipal" style="display:none">
+      <!-- Objetivo -->
+      <div class="stagger-entrada" style="margin-top:18px">
+        <div class="step-title" style="margin-bottom:10px">Você busca apartamento <em style="color:var(--accent);font-style:italic">para...</em></div>
+        <div class="obj-tag-group escolha-group" id="tagsObjetivo">
+          <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'moradia')">
+            <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-home"/></svg></span>
+            <span class="escolha-texto">
+              <span class="escolha-titulo">Moradia</span>
+              <span class="escolha-sub">Para morar com quem você ama</span>
+            </span>
+            <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
+          </button>
+          <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'investimento')">
+            <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-wallet"/></svg></span>
+            <span class="escolha-texto">
+              <span class="escolha-titulo">Investimento</span>
+              <span class="escolha-sub">Para rentabilizar e valorizar</span>
+            </span>
+            <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
+          </button>
+        </div>
       </div>
-    </div>
 
-    <div class="hero-cta-area" style="margin-top:16px">
-      <button class="btn-final btn-quente" onclick="avancarStep()">
-        <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-        CONTINUAR →
-      </button>
-      <div class="btn-final-sub capa-dados-sub" style="margin-top:10px" id="capaDadosAtualizados">Resultado rápido · Dados reais e atualizados</div>
+      <!-- Estágio — aparece após marcar objetivo -->
+      <div id="blocoEstagioWrap" style="display:none;margin-top:20px">
+        <div class="step-title" style="margin-bottom:10px">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
+        <div class="obj-tag-group escolha-group" id="tagsEstagio">
+          <button class="obj-tag-btn escolha-card escolha-card-vert" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">
+            <svg width="24" height="24"><use href="#ico-home"/></svg>
+            <span class="escolha-titulo">Pronto para Morar</span>
+          </button>
+          <button class="obj-tag-btn escolha-card escolha-card-vert" onclick="selecionarEstagioStep5_(this,'em_obras')">
+            <svg width="24" height="24"><use href="#ico-construction"/></svg>
+            <span class="escolha-titulo">Em Obras</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-cta-area" style="margin-top:16px">
+        <button class="btn-final btn-quente" onclick="avancarStep()">
+          <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
+          CONTINUAR →
+        </button>
+        <div class="btn-final-sub capa-dados-sub" style="margin-top:10px" id="capaDadosAtualizados">Resultado rápido · Dados reais e atualizados</div>
+      </div>
     </div>
 
   </div>
@@ -1930,6 +1959,28 @@ async function carregarBaseReal() {
   montarDadosAtualizadosTexto_();
   montarBairroTags_('capa');
   aplicarPresetURL_(); // deep-link de anúncios — aplica se houver ?preset= ou ?padroes= na URL
+  revelarConteudoCapa_(); // base carregada e contagem feita -- some o aviso, mostra Objetivo/Estágio/CTA
+}
+
+// Troca o aviso "Estamos atualizando nossa base..." pelo restante da Capa
+// (Objetivo/Estágio/CTA) -- pedido explícito do usuário: essa parte só
+// aparece depois que a base real termina de carregar (sucesso OU erro, o
+// catch de carregarBaseReal() também precisa liberar a tela pro usuário
+// não ficar travado). Roda sempre no fim de carregarBaseReal().
+function revelarConteudoCapa_() {
+  const aviso = document.getElementById('capaCarregandoAviso');
+  const conteudo = document.getElementById('capaConteudoPrincipal');
+  if (aviso) aviso.style.display = 'none';
+  if (!conteudo) return;
+  conteudo.style.display = '';
+  // Reinicia a animação de entrada (stagger-entrada só toca uma vez por
+  // padrão) -- mesma técnica de force-reflow de animacoes.md.
+  const stagger = conteudo.querySelector('.stagger-entrada');
+  if (stagger) {
+    stagger.classList.remove('stagger-entrada');
+    void stagger.offsetWidth;
+    stagger.classList.add('stagger-entrada');
+  }
 }
 
 // ── PRESETS DE URL (deep-link para anúncios Google/Meta) ─────────────────────
