@@ -289,6 +289,11 @@ body {
   font-size: 13px; font-weight: 600;
   color: var(--accent); margin-top: 2px;
 }
+/* "Essa é uma delas:" sozinha (pedido explícito do usuário: "Encontramos N
+   opções..." subiu pro topo da tela, separado) -- precisa do próprio
+   espaçamento de cima, já que não está mais colada embaixo do texto do
+   contador. */
+.s2-subtxt-standalone { margin-top: 16px; }
 /* Preview do 1º card de resultado no step-2 */
 .s2-preview-wrap { margin-bottom: 0; }
 .s2-preview-cta {
@@ -1357,6 +1362,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- step-tag e "Ajuste seu perfil de busca" removidos (pedido explícito
          do usuário) -- o Stepper no header já indica a etapa 3/4. -->
 
+    <!-- "Encontramos N opções..." -- pedido explícito do usuário: fica
+         separado, ACIMA de "Área útil ideal" (era junto de "Essa é uma
+         delas:", logo abaixo da área -- essa segunda frase e o preview
+         continuam no lugar de sempre, ver mais abaixo). -->
+    <div class="s2-top-count">
+      Encontramos
+      <strong id="cntCombo" class="s2-top-count-num">—</strong>
+      opções com o perfil que procura.
+    </div>
+
     <!-- Área Útil Simulador -- pedido explícito do usuário: o campo permite
          editar o valor digitando também, não fica preso só ao slider
          (mesmo padrão do Orçamento Capa). "ARRASTE AQUI" é placeholder
@@ -1373,14 +1388,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
     </div>
 
-    <!-- CONTADOR + preview -- pedido explícito do usuário: logo abaixo da
-         faixa min/max da área útil (antes vinha depois do resumo). -->
-    <div class="s2-top-count">
-      Encontramos
-      <strong id="cntCombo" class="s2-top-count-num">—</strong>
-      opções com o perfil que procura.
-      <span class="s2-subtxt">Essa é uma delas:</span>
-    </div>
+    <!-- "Essa é uma delas:" + preview -- continuam logo abaixo da faixa
+         min/max da área útil (mesmo lugar de sempre), só sem o "Encontramos
+         N opções..." que subiu pro topo. -->
+    <span class="s2-subtxt s2-subtxt-standalone">Essa é uma delas:</span>
     <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
 
     <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
@@ -1406,7 +1417,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
       <!-- Orçamento Simulador -- ÚNICO campo de orçamento digitável do funil
            (pedido explícito do usuário); pré-preenchido com o Orçamento
-           Capa arrastado na tela anterior, mas editável aqui pra refinar. -->
+           Capa arrastado na tela anterior, mas editável aqui pra refinar.
+           Slider acrescentado (pedido explícito do usuário) -- digita OU
+           arrasta, os dois sincronizados, mesmo padrão do Orçamento Capa. -->
       <div class="conf-item conf-item-full">
         <div class="conf-item-label">Orçamento</div>
         <div class="preco-input-row" style="margin-bottom:0;background:transparent;border:none;padding:0">
@@ -1414,6 +1427,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <input type="text" class="preco-input" id="s2ResumoOrcamentoInput" inputmode="numeric" style="font-size:16px;text-align:left;padding:0"
                  oninput="atualizarOrcamentoSimuladorDigitado_(this.value)" onblur="validarLimitesOrcamentoSimulador_()">
         </div>
+        <input type="range" id="s2ResumoOrcamentoSlider" oninput="atualizarOrcamentoSimulador_(this.value)" style="width:100%;margin-top:6px">
         <!-- Mesmo padrão de aviso (sem travar) do Orçamento Capa -- ver
              avisoCapaPrecoFaixa/atualizarOrcamentoCapa_. -->
         <div class="aviso-fora-faixa" id="avisoOrcamentoSimuladorFaixa" style="display:none"></div>
@@ -2729,6 +2743,11 @@ function montarResumoStep2_() {
   D.precoFinal = D.precoAlvo;
   const elOrcInput = document.getElementById('s2ResumoOrcamentoInput');
   if (elOrcInput) elOrcInput.value = D.precoAlvo.toLocaleString('pt-BR');
+  const elOrcSlider = document.getElementById('s2ResumoOrcamentoSlider');
+  if (elOrcSlider) {
+    elOrcSlider.min = ORCAMENTO_SLIDER_BOUNDS_[0]; elOrcSlider.max = ORCAMENTO_SLIDER_BOUNDS_[1]; elOrcSlider.step = 25000;
+    elOrcSlider.value = Math.min(Math.max(D.precoAlvo, ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1]);
+  }
   atualizarAvisoOrcamentoSimulador_(D.precoAlvo);
   // Fecha o seletor de bairro (se tinha ficado aberto de uma visita
   // anterior ao Simulador) -- sempre reabre fechado/"MUDAR", nunca aberto.
@@ -3698,8 +3717,27 @@ function validarLimitesMetragem_() {
 // ── ORÇAMENTO SIMULADOR (resumo editável, tela Simulador) ─────────────────
 // ÚNICO campo de orçamento digitável do funil (pedido explícito do
 // usuário) -- pré-preenchido com o Orçamento Capa (ver montarResumoStep2_),
-// mas editável aqui pra refinar. É o valor que de fato alimenta o motor de
-// match (D.precoAlvo/D.precoFinal), igual sempre foi.
+// mas editável aqui pra refinar (digitando OU arrastando o slider
+// acrescentado junto, pedido explícito do usuário -- mesmo padrão do
+// Orçamento Capa: os dois caminhos sincronizados, levam ao mesmo lugar).
+// É o valor que de fato alimenta o motor de match (D.precoAlvo/D.precoFinal),
+// igual sempre foi.
+
+// Arraste no slider.
+function atualizarOrcamentoSimulador_(val) {
+  const v = parseInt(val);
+  if (D.precoInicial === null) D.precoInicial = v;
+  D.ajustesSlider++;
+  D.precoAlvo = v; D.precoFinal = v;
+  const input = document.getElementById('s2ResumoOrcamentoInput');
+  if (input) input.value = v.toLocaleString('pt-BR');
+  atualizarAvisoOrcamentoSimulador_(v);
+  atualizarComboUI_();
+}
+
+// Digitação -- só reformata/sincroniza o slider aqui, sem validar contra
+// bounds a cada tecla (apagar um dígito derrubaria o valor abaixo do
+// mínimo momentaneamente). Validação de verdade só no blur.
 function atualizarOrcamentoSimuladorDigitado_(val) {
   const digitos = val.replace(/\D/g, '');
   const input = document.getElementById('s2ResumoOrcamentoInput');
@@ -3713,6 +3751,8 @@ function atualizarOrcamentoSimuladorDigitado_(val) {
   if (D.precoInicial === null) D.precoInicial = v; // por garantia, se chegou aqui sem passar pelo Orçamento Capa
   D.ajustesSlider++;
   D.precoAlvo = v; D.precoFinal = v;
+  const slider = document.getElementById('s2ResumoOrcamentoSlider');
+  if (slider) slider.value = Math.min(Math.max(v, ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1]);
   atualizarAvisoOrcamentoSimulador_(v);
   atualizarComboUI_();
 }
@@ -3741,6 +3781,8 @@ function validarLimitesOrcamentoSimulador_() {
   let v = parseInt(input.value.replace(/\D/g, '')) || 0;
   v = Math.min(Math.max(v || ORCAMENTO_SLIDER_BOUNDS_[0], ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1]);
   input.value = v.toLocaleString('pt-BR');
+  const slider = document.getElementById('s2ResumoOrcamentoSlider');
+  if (slider) slider.value = v;
   D.precoAlvo = v; D.precoFinal = v;
   atualizarAvisoOrcamentoSimulador_(v);
   atualizarComboUI_();
