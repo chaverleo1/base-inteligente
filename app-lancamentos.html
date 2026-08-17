@@ -281,10 +281,11 @@ body {
 /* Pedido explícito do usuário: centralizado e mais distante do cabeçalho
    (acima) e de "Área útil ideal" (abaixo), pra destacar mais essa
    mensagem na página. */
+/* Pedido explícito do usuário: letra 2x maior. */
 .s2-top-count {
   text-align: center;
-  font-size: clamp(15px, 4.4vw, 17px); font-weight: 600;
-  color: var(--text); line-height: 1.45;
+  font-size: clamp(30px, 8.8vw, 34px); font-weight: 600;
+  color: var(--text); line-height: 1.35;
   padding: 0; margin: 36px 0 32px;
 }
 .s2-subtxt {
@@ -1011,6 +1012,39 @@ input[type=range]::-moz-range-progress {
 }
 .conf-item-select:focus { border-color: var(--accent); }
 .conf-item-select option { background: var(--surface); color: var(--text); font-weight: 600; }
+
+/* ── RESUMO EM 2 COLUNAS (Simulador) ─────────────────────────────────────
+   Pedido explícito do usuário: reformula #s2ResumoCard pra uma lista de
+   linhas rótulo|controle (label à esquerda, controle à direita) em vez do
+   grid alternado de células do .conf-card original (que continua intocado
+   pra Confirmação, ver step-3). Escopado por #s2ResumoCard -- a
+   especificidade de ID sobrescreve o `display:grid` base de .conf-card
+   sem precisar duplicar a classe inteira. */
+#s2ResumoCard.resumo-2col { display: block; }
+.resumo-row {
+  display: grid; grid-template-columns: 78px 1fr; gap: 12px; align-items: start;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+}
+.resumo-row:last-child { border-bottom: none; }
+.resumo-row-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text3); padding-top: 8px;
+}
+/* "Caixa com lista" -- select de verdade (com borda/fundo), diferente do
+   .conf-item-select (só sublinhado) usado na Confirmação -- pedido
+   explícito do usuário. */
+.resumo-select-box {
+  width: 100%; padding: 9px 30px 9px 12px; text-align: left; cursor: pointer; outline: none;
+  font-family: var(--font-sans); font-weight: 600; color: var(--text);
+  font-size: 14px; border-radius: var(--r-sm);
+  border: 1.5px solid var(--border2); background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231B5540' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 15px;
+  transition: border-color .2s;
+  -webkit-appearance: none; appearance: none;
+}
+.resumo-select-box:focus { border-color: var(--accent); }
+.resumo-select-box option { background: var(--surface); color: var(--text); font-weight: 600; }
 /* Linha "Bairros" + botão MUDAR no resumo -- botão fica FORA de
    .conf-item-label de propósito (não como filho dela): opacity em CSS
    compõe com a da subárvore inteira, um <button> filho com opacity:1
@@ -1375,39 +1409,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       opções com o perfil que procura.
     </div>
 
-    <!-- Área Útil Simulador -- pedido explícito do usuário: o campo permite
-         editar o valor digitando também, não fica preso só ao slider
-         (mesmo padrão do Orçamento Capa). "ARRASTE AQUI" é placeholder
-         nativo (vermelho) do próprio campo -- some assim que a pessoa
-         digita OU arrasta. -->
-    <div class="s2-input-label">Área <span style="color:var(--accent)">útil</span> ideal</div>
-    <div class="preco-input-row">
-      <input type="text" class="preco-input preco-input-arraste" id="areaSimuladorValor" inputmode="numeric" placeholder="ARRASTE AQUI"
-             oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-      <span class="preco-prefixo prefixo-grande" id="prefixoArea">m²</span>
-    </div>
-    <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%">
-    <div class="slider-label-row">
-      <span id="lblMetragemMin">—</span><span id="lblMetragemMax">—</span>
-    </div>
-
     <!-- "Essa é uma delas:" + preview + CTA "CONTINUE..." movidos pra tela
          Confirmação (pedido explícito do usuário) -- ver step-3, logo
          abaixo do quadro-resumo. -->
 
-    <!-- Resumo editável -- mesmo componente visual de .conf-card (Confirmação),
-         ids próprios (s2ResumoX) pra não colidir com os de lá (confObjetivo etc). -->
-    <div class="conf-card" id="s2ResumoCard" style="margin-top:20px">
-      <div class="conf-item">
-        <div class="conf-item-label">Objetivo</div>
-        <select class="conf-item-select" id="s2ResumoObjetivo" onchange="mudarObjetivoStep2_(this.value)">
+    <!-- Resumo editável em 2 colunas (rótulo | controle) -- reestruturação
+         pedida explicitamente pelo usuário: Área Útil migrou pra dentro
+         daqui (era uma seção separada acima), Objetivo/Estágio viram
+         "caixa com lista" (select com borda, .resumo-select-box), Orçamento
+         continua campo+slider. Bairros mantido como estava (linha própria,
+         full-width). Ver .resumo-row/.resumo-select-box no CSS. -->
+    <div class="conf-card resumo-2col" id="s2ResumoCard" style="margin-top:24px">
+      <div class="resumo-row">
+        <div class="resumo-row-label">Objetivo</div>
+        <select class="resumo-select-box" id="s2ResumoObjetivo" onchange="mudarObjetivoStep2_(this.value)">
           <option value="moradia">Moradia</option>
           <option value="investimento">Investimento</option>
         </select>
       </div>
-      <div class="conf-item">
-        <div class="conf-item-label">Estágio</div>
-        <select class="conf-item-select" id="s2ResumoEstagio" onchange="mudarEstagioStep2_(this.value)">
+      <div class="resumo-row">
+        <div class="resumo-row-label">Estágio</div>
+        <select class="resumo-select-box" id="s2ResumoEstagio" onchange="mudarEstagioStep2_(this.value)">
           <option value="pronto_novo" id="s2OptProntoNovo">Pronto para Morar</option>
           <option value="em_obras">Em Obras</option>
         </select>
@@ -1415,23 +1437,40 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <!-- Orçamento Simulador -- ÚNICO campo de orçamento digitável do funil
            (pedido explícito do usuário); pré-preenchido com o Orçamento
            Capa arrastado na tela anterior, mas editável aqui pra refinar.
-           Slider acrescentado (pedido explícito do usuário) -- digita OU
-           arrasta, os dois sincronizados, mesmo padrão do Orçamento Capa. -->
-      <div class="conf-item conf-item-full">
-        <div class="conf-item-label">Orçamento</div>
-        <div class="preco-input-row" style="margin-bottom:0;background:transparent;border:none;padding:0">
-          <span class="preco-prefixo" style="font-size:14px">R$</span>
-          <input type="text" class="preco-input" id="s2ResumoOrcamentoInput" inputmode="numeric" style="font-size:16px;text-align:left;padding:0"
-                 oninput="atualizarOrcamentoSimuladorDigitado_(this.value)" onblur="validarLimitesOrcamentoSimulador_()">
+           Digita OU arrasta, os dois sincronizados. -->
+      <div class="resumo-row">
+        <div class="resumo-row-label">Orçamento</div>
+        <div>
+          <div class="preco-input-row" style="margin-bottom:0">
+            <span class="preco-prefixo" style="font-size:14px">R$</span>
+            <input type="text" class="preco-input" id="s2ResumoOrcamentoInput" inputmode="numeric" style="font-size:16px;text-align:left;padding:0"
+                   oninput="atualizarOrcamentoSimuladorDigitado_(this.value)" onblur="validarLimitesOrcamentoSimulador_()">
+          </div>
+          <input type="range" id="s2ResumoOrcamentoSlider" oninput="atualizarOrcamentoSimulador_(this.value)" style="width:100%;margin-top:6px">
+          <!-- Mesmo padrão de aviso (sem travar) do Orçamento Capa -- ver
+               avisoCapaPrecoFaixa/atualizarOrcamentoCapa_. -->
+          <div class="aviso-fora-faixa" id="avisoOrcamentoSimuladorFaixa" style="display:none"></div>
         </div>
-        <input type="range" id="s2ResumoOrcamentoSlider" oninput="atualizarOrcamentoSimulador_(this.value)" style="width:100%;margin-top:6px">
-        <!-- Mesmo padrão de aviso (sem travar) do Orçamento Capa -- ver
-             avisoCapaPrecoFaixa/atualizarOrcamentoCapa_. -->
-        <div class="aviso-fora-faixa" id="avisoOrcamentoSimuladorFaixa" style="display:none"></div>
       </div>
-      <!-- Bairros selecionados + "MUDAR" -- revela o MESMO seletor de tags
-           da tela Perfil, reaproveitado via montarBairroTags_('s2')/
-           bairroToggle_ etc. (ver BAIRRO_CTX_). -->
+      <!-- Área Útil -- migrou pra dentro do resumo (pedido explícito do
+           usuário; antes era uma seção própria acima do card). Mesmos
+           ids/funções de sempre (atualizarMetragem/atualizarMetragemDigitado_/
+           validarLimitesMetragem_), só mudou de posição no HTML. -->
+      <div class="resumo-row">
+        <div class="resumo-row-label">Área Útil</div>
+        <div>
+          <div class="preco-input-row" style="margin-bottom:0">
+            <input type="text" class="preco-input preco-input-arraste" id="areaSimuladorValor" inputmode="numeric" placeholder="ARRASTE AQUI" style="font-size:16px;text-align:left;padding:0"
+                   oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
+            <span class="preco-prefixo" style="font-size:14px" id="prefixoArea">m²</span>
+          </div>
+          <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%;margin-top:6px">
+        </div>
+      </div>
+      <!-- Bairros selecionados + "MUDAR" -- deixado como estava (pedido
+           explícito do usuário) -- revela o MESMO seletor de tags da tela
+           Perfil, reaproveitado via montarBairroTags_('s2')/bairroToggle_
+           etc. (ver BAIRRO_CTX_). -->
       <div class="conf-item conf-item-full conf-item-last">
         <div class="s2-bairro-header">
           <div class="conf-item-label" style="margin-bottom:0">Bairros</div>
@@ -1484,8 +1523,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     <!-- "Essa é uma delas:" + preview + CTA "CONTINUE..." -- movidos pra cá
          do Simulador (pedido explícito do usuário); substituem o badge "N
-         opções encontradas" que existia antes nesta posição. -->
-    <span class="s2-subtxt s2-subtxt-standalone">Essa é uma delas:</span>
+         opções encontradas" que existia antes nesta posição. Texto agora
+         inclui a contagem (pedido explícito do usuário): "Encontramos X
+         opções. Essa é uma delas:" -- preenchido em montarConfirmacao_(). -->
+    <span class="s2-subtxt s2-subtxt-standalone" id="confSubtxtPreview">Essa é uma delas:</span>
     <div class="tolerancia-nota" id="toleranciaNotaConfirmacao" style="display:none;text-align:center"></div>
 
     <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
@@ -2299,10 +2340,13 @@ function montarConfirmacao_() {
   // tolerância (D.areaRange) se a busca estrita não achar nada, efeito
   // colateral do qual montarPreviewCard_() (logo abaixo) depende pra
   // mostrar o preview certo. O badge "N opções encontradas" que lia esse
-  // retorno foi removido (pedido explícito do usuário) -- o "Essa é uma
-  // delas:" + card de preview + CTA "CONTINUE..." (movidos do Simulador
-  // pra cá) cumprem esse papel agora.
-  qtdOpcoesReais_();
+  // retorno foi removido (pedido explícito do usuário) -- o texto vira
+  // parte de "Essa é uma delas:" agora (ver confSubtxtPreview abaixo).
+  const qtd = qtdOpcoesReais_();
+  const subtxtPreview = document.getElementById('confSubtxtPreview');
+  if (subtxtPreview) {
+    subtxtPreview.textContent = `Encontramos ${qtd} ${qtd === 1 ? 'opção' : 'opções'}. Essa é uma delas:`;
+  }
   const notaConf = document.getElementById('toleranciaNotaConfirmacao');
   if (notaConf) {
     notaConf.style.display = D.toleranciaExpandida ? '' : 'none';
