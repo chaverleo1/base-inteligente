@@ -1379,13 +1379,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <!-- Orçamento Simulador -- ÚNICO campo de orçamento digitável do funil
            (pedido explícito do usuário); pré-preenchido com o Orçamento
            Capa arrastado na tela anterior, mas editável aqui pra refinar. -->
-      <div class="conf-item">
+      <div class="conf-item conf-item-full">
         <div class="conf-item-label">Orçamento</div>
         <div class="preco-input-row" style="margin-bottom:0;background:transparent;border:none;padding:0">
           <span class="preco-prefixo" style="font-size:14px">R$</span>
           <input type="text" class="preco-input" id="s2ResumoOrcamentoInput" inputmode="numeric" style="font-size:16px;text-align:left;padding:0"
                  oninput="atualizarOrcamentoSimuladorDigitado_(this.value)" onblur="validarLimitesOrcamentoSimulador_()">
         </div>
+        <!-- Mesmo padrão de aviso (sem travar) do Orçamento Capa -- ver
+             avisoCapaPrecoFaixa/atualizarOrcamentoCapa_. -->
+        <div class="aviso-fora-faixa" id="avisoOrcamentoSimuladorFaixa" style="display:none"></div>
       </div>
       <!-- Bairros selecionados + "MUDAR" -- revela o MESMO seletor de tags
            da tela Perfil, reaproveitado via montarBairroTags_('s2')/
@@ -1810,7 +1813,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 // Vertical" entra aqui -- lotes/Condomínio Horizontal já têm o funil próprio
 // em baseimob-funil.html (isso já é filtrado no backend agora).
 let TODOS_LANC = [];
-let PRECO_BOUNDS = [200000, 2000000];
+// Valores de partida ANTES da base real carregar (ou se falhar) --
+// recalculados pra valer de verdade em calcularBoundsFiltrados_() assim
+// que TODOS_LANC chega. Corrigido 2026-08-17 (bug reportado pelo usuário):
+// PRECO_BOUNDS estava com teto de 2 milhões (faltava um zero) -- enquanto
+// os dados reais não carregam (ou numa falha de rede), o aviso "fora da
+// faixa" do Orçamento (Capa e Simulador) mostrava esse teto errado em vez
+// do teto real do slider (20 milhões, ORCAMENTO_SLIDER_BOUNDS_).
+let PRECO_BOUNDS = [200000, 20000000];
 let AREA_BOUNDS = [40, 140];
 // Mês/Ano do registro mais recentemente atualizado em toda a base (qualquer
 // tipo de tabela), devolvido por listar_lancamentos_resumo (ver
@@ -2699,6 +2709,7 @@ function montarResumoStep2_() {
   D.precoFinal = D.precoAlvo;
   const elOrcInput = document.getElementById('s2ResumoOrcamentoInput');
   if (elOrcInput) elOrcInput.value = D.precoAlvo.toLocaleString('pt-BR');
+  atualizarAvisoOrcamentoSimulador_(D.precoAlvo);
   // Fecha o seletor de bairro (se tinha ficado aberto de uma visita
   // anterior ao Simulador) -- sempre reabre fechado/"MUDAR", nunca aberto.
   const bairroWrap = document.getElementById('s2BairroSeletorWrap');
@@ -3597,20 +3608,36 @@ function atualizarOrcamentoSimuladorDigitado_(val) {
   if (D.precoInicial === null) D.precoInicial = v; // por garantia, se chegou aqui sem passar pelo Orçamento Capa
   D.ajustesSlider++;
   D.precoAlvo = v; D.precoFinal = v;
+  atualizarAvisoOrcamentoSimulador_(v);
   atualizarComboUI_();
 }
 
-// Só valida contra a faixa da base quando a pessoa termina de digitar (sai
-// do campo) -- validar a cada tecla brigava com o próprio ato de apagar.
+// Mesmo padrão do Orçamento Capa (avisoCapaPrecoFaixa/atualizarOrcamentoCapa_)
+// -- não trava/clampa pra faixa REAL (PRECO_BOUNDS), só avisa em vermelho.
+// O único limite de verdade aqui é ORCAMENTO_SLIDER_BOUNDS_ (200mil-20mi,
+// mesma faixa aceita pelo slider da Capa), pra travar só valor
+// claramente inválido (ex: 1 real, ou um número absurdo de dígitos).
+function atualizarAvisoOrcamentoSimulador_(v) {
+  const aviso = document.getElementById('avisoOrcamentoSimuladorFaixa');
+  if (!aviso) return;
+  if (v < PRECO_BOUNDS[0] || v > PRECO_BOUNDS[1]) {
+    aviso.textContent = `Fora da faixa disponível hoje: de ${formatBRL_(PRECO_BOUNDS[0])} a ${formatBRL_(PRECO_BOUNDS[1])}`;
+    aviso.style.display = '';
+  } else {
+    aviso.style.display = 'none';
+  }
+}
+
+// Só ajusta pra faixa MECÂNICA (200mil-20mi) quando a pessoa termina de
+// digitar (sai do campo) -- validar a cada tecla brigava com o próprio ato
+// de apagar. Não clampa pra PRECO_BOUNDS (faixa real) -- isso é só aviso.
 function validarLimitesOrcamentoSimulador_() {
   const input = document.getElementById('s2ResumoOrcamentoInput');
   let v = parseInt(input.value.replace(/\D/g, '')) || 0;
-  if (v && (v < PRECO_BOUNDS[0] || v > PRECO_BOUNDS[1])) {
-    toast(`Orçamento fora da faixa disponível: de ${formatBRL_(PRECO_BOUNDS[0])} a ${formatBRL_(PRECO_BOUNDS[1])}`);
-  }
-  v = Math.min(Math.max(v || PRECO_BOUNDS[0], PRECO_BOUNDS[0]), PRECO_BOUNDS[1]);
+  v = Math.min(Math.max(v || ORCAMENTO_SLIDER_BOUNDS_[0], ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1]);
   input.value = v.toLocaleString('pt-BR');
   D.precoAlvo = v; D.precoFinal = v;
+  atualizarAvisoOrcamentoSimulador_(v);
   atualizarComboUI_();
 }
 
