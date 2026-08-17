@@ -315,11 +315,12 @@ body {
 .s2-grid-row .preco-input { font-size: 20px; }
 .s2-grid-row .preco-prefixo { font-size: 14px; }
 .s2-grid-row .preco-prefixo.prefixo-grande { font-size: 19px; }
+/* Pedido explícito do usuário: número gigante 50% menor. */
 .s2-top-count-num {
   display: block; font-family: var(--font-display);
-  font-size: clamp(80px, 22vw, 120px); font-weight: 700;
-  color: var(--accent); letter-spacing: -4px; line-height: .88;
-  margin: 8px 0 4px;
+  font-size: clamp(40px, 11vw, 60px); font-weight: 700;
+  color: var(--accent); letter-spacing: -2px; line-height: .9;
+  margin: 6px 0 4px;
 }
 
 /* ── PULSO (feedback visual quando um contador muda de valor) ─────────── */
@@ -633,6 +634,14 @@ input[type=range]::-moz-range-progress {
   font-size: 12px; color: var(--danger); background: rgba(229,52,46,.1);
   border: 1px solid rgba(229,52,46,.3); border-radius: var(--r-sm);
   padding: 10px 12px; margin-top: 10px; line-height: 1.5;
+}
+/* Aviso discreto de "valor fora da faixa REAL disponível hoje" -- pedido
+   explícito do usuário: o slider aceita uma faixa bem mais larga
+   (200mil-20mi) do que o que existe de fato na base, então avisa sem
+   travar/clampar o valor escolhido. */
+.aviso-fora-faixa {
+  font-size: 11.5px; font-weight: 600; color: var(--danger);
+  margin-top: 8px; line-height: 1.4;
 }
 /* Variante laranja -- aviso de "vamos fechar em breve" (não é erro, é só um
    heads-up nos últimos 30min de expediente, pedido explícito do usuário). */
@@ -1281,9 +1290,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="preco-display slider-placeholder" id="capaPrecoValor">ARRASTE AQUI</div>
     </div>
     <input type="range" id="sliderPreco" oninput="atualizarOrcamentoCapa_(this.value)" style="width:100%">
-    <div class="slider-label-row">
-      <span id="lblPrecoMin">—</span><span id="lblPrecoMax">—</span>
-    </div>
+    <!-- Sem legenda de min/max visível (pedido explícito do usuário) -- a
+         alça vai de 200mil a 20mi (ORCAMENTO_SLIDER_BOUNDS_, bem mais larga
+         que a faixa real disponível hoje), e só avisa em vermelho se o
+         valor escolhido cair fora da faixa REAL (PRECO_BOUNDS, calculada
+         da base filtrada) -- não trava, só avisa. -->
+    <div class="aviso-fora-faixa" id="avisoCapaPrecoFaixa" style="display:none"></div>
 
     <!-- Seletor de bairro (idêntico ao que já existia -- só mudou de tela) -->
     <div class="capa-bairro-wrap">
@@ -1332,20 +1344,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <div class="step" id="step-2">
     <div class="step-tag">APP LANÇAMENTOS · GRANDE GOIÂNIA · ETAPA 3/4 (Simulador)</div>
 
-    <!-- CONTADOR — foco visual absoluto da tela -->
-    <div class="s2-top-count">
-      Encontramos
-      <strong id="cntCombo" class="s2-top-count-num">—</strong>
-      opções com o perfil que procura.
-      <span class="s2-subtxt">Essa é uma delas:</span>
-    </div>
-    <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
-
-    <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
-    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
-    <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
-
-    <span class="s2-ajuste-label">Ajuste seu perfil de busca</span>
+    <span class="s2-ajuste-label" style="margin-top:0">Ajuste seu perfil de busca</span>
 
     <!-- Área Útil Simulador -- só arrasta, não digita (pedido explícito do
          usuário): abre em "ARRASTE AQUI" vermelho, só troca pro valor
@@ -1410,6 +1409,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
       </div>
     </div>
+
+    <!-- CONTADOR + preview -- pedido explícito do usuário (2026-08-XX):
+         movido pra DEPOIS do resumo editável (antes vinha no topo da
+         tela). Número gigante 50% menor (também pedido explícito). -->
+    <div class="s2-top-count" style="margin-top:20px">
+      Encontramos
+      <strong id="cntCombo" class="s2-top-count-num">—</strong>
+      opções com o perfil que procura.
+      <span class="s2-subtxt">Essa é uma delas:</span>
+    </div>
+    <div class="tolerancia-nota" id="toleranciaNota" style="display:none">Ampliamos sua busca um pouco pra não faltar opção.</div>
+
+    <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
+    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
+    <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
 
   </div>
 
@@ -3253,23 +3267,28 @@ let slidersProntos_ = false;
 // AQUI" em vermelho até o primeiro arraste de verdade. Numa visita
 // seguinte à mesma tela (voltou e entrou de novo), se a pessoa já tinha
 // arrastado antes, mostra o valor já escolhido em vez do placeholder.
+// Faixa FIXA do slider de Orçamento Capa -- pedido explícito do usuário:
+// bem mais larga que a faixa real disponível na base (PRECO_BOUNDS), pra
+// não limitar a pessoa a escolher só dentro do que já existe hoje. Quem
+// decide se o valor "faz sentido" é o aviso em vermelho (ver
+// atualizarOrcamentoCapa_), não o limite do próprio slider.
+const ORCAMENTO_SLIDER_BOUNDS_ = [200000, 20000000];
+
 function inicializarSliderPreco_() {
   slidersProntos_ = false; // previne que atualizarOrcamentoCapa_ contabilize como interação do usuário
   const sP = document.getElementById('sliderPreco');
-  sP.min = PRECO_BOUNDS[0]; sP.max = PRECO_BOUNDS[1]; sP.step = 25000;
+  sP.min = ORCAMENTO_SLIDER_BOUNDS_[0]; sP.max = ORCAMENTO_SLIDER_BOUNDS_[1]; sP.step = 25000;
   const defPreco = D.capaPreco
-    ? Math.min(Math.max(D.capaPreco, PRECO_BOUNDS[0]), PRECO_BOUNDS[1])
+    ? Math.min(Math.max(D.capaPreco, ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1])
     : Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
   sP.value = defPreco;
-  const elPMin = document.getElementById('lblPrecoMin');
-  const elPMax = document.getElementById('lblPrecoMax');
-  if (elPMin) elPMin.textContent = formatBRL_(PRECO_BOUNDS[0]);
-  if (elPMax) elPMax.textContent = formatBRL_(PRECO_BOUNDS[1]);
   if (D.capaPreco) {
     atualizarOrcamentoCapa_(defPreco);
   } else {
     const el = document.getElementById('capaPrecoValor');
     if (el) { el.textContent = 'ARRASTE AQUI'; el.classList.add('slider-placeholder'); }
+    const aviso = document.getElementById('avisoCapaPrecoFaixa');
+    if (aviso) aviso.style.display = 'none';
   }
   slidersProntos_ = true;
 }
@@ -3520,6 +3539,18 @@ function atualizarOrcamentoCapa_(val) {
   D.capaPreco = v;
   const el = document.getElementById('capaPrecoValor');
   if (el) { el.textContent = formatBRL_(v); el.classList.remove('slider-placeholder'); }
+  // Não trava/clampa -- só avisa em vermelho quando o valor escolhido foge
+  // da faixa REAL disponível hoje (PRECO_BOUNDS, calculada da base
+  // filtrada por objetivo+estágio). Pedido explícito do usuário.
+  const aviso = document.getElementById('avisoCapaPrecoFaixa');
+  if (aviso) {
+    if (v < PRECO_BOUNDS[0] || v > PRECO_BOUNDS[1]) {
+      aviso.textContent = `Fora da faixa disponível hoje: de ${formatBRL_(PRECO_BOUNDS[0])} a ${formatBRL_(PRECO_BOUNDS[1])}`;
+      aviso.style.display = '';
+    } else {
+      aviso.style.display = 'none';
+    }
+  }
 }
 
 // ── ÁREA ÚTIL SIMULADOR (tela Simulador, "arraste aqui") ──────────────────
