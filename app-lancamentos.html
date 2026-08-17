@@ -3656,14 +3656,24 @@ function bairroAbrirOutro_(ctxKey) {
   bairroMostrarListaCompleta_(ctxKey);
 }
 
-// Lista completa (todos os bairros da base, ordem alfabética pt-BR) +
-// item final "Digitar" -- estado inicial do "+OUTRO", antes de qualquer
-// digitação.
+// Lista completa (todos os bairros da base, ordem alfabética pt-BR,
+// MENOS os que já aparecem como botão/chip na tela -- pedido explícito
+// do usuário, evita mostrar duplicado algo que a pessoa já pode clicar
+// direto ali em cima) + item final "Digitar" -- estado inicial do
+// "+OUTRO", antes de qualquer digitação.
 function bairroMostrarListaCompleta_(ctxKey) {
   const ctx = BAIRRO_CTX_[ctxKey];
   const dd = document.getElementById(ctx.dropdown);
   if (!dd) return;
+  // Bairros que já são um botão/chip na tela (top-7 + já adicionados via
+  // "+OUTRO" em passagens anteriores) -- lidos direto do DOM, sempre o
+  // estado mais atual (recalculado toda vez que "+OUTRO" é clicado).
+  const wrap = document.getElementById(ctx.tags);
+  const jaVisiveis = new Set(
+    wrap ? [...wrap.querySelectorAll('.capa-tag-btn:not(.capa-tag-outro)')].map(function(b) { return b.dataset.bairro; }) : []
+  );
   const todos = [...new Set(TODOS_LANC.map(function(c) { return String(c.bairro || '').trim(); }).filter(Boolean))]
+    .filter(function(b) { return !jaVisiveis.has(b); })
     .sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
   let html = todos.map(function(b) {
     const esc = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
