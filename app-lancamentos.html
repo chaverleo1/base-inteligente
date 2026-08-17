@@ -2094,16 +2094,24 @@ function contarAte_(el, alvo, duracaoMs) {
 // a primeira tela não ficar "fria": mostrar de cara que é uma consultoria
 // com dados de mercado reais e atuais, não só mais uma landing page comum.
 function montarStatsAbertura_() {
-  atualizarContadorCapa_();
+  // Pedido explícito do usuário: logo depois do aviso "Estamos atualizando
+  // nossa base...", a contagem inicial de "Temos hoje N lançamentos" roda
+  // mais devagar (1400ms, em vez do padrão rápido de 350ms usado nas
+  // atualizações por clique em objetivo/estágio/bairro) -- dá mais
+  // sensação de movimento/dado carregando na tela, já que é o primeiro
+  // número real que a pessoa vê.
+  atualizarContadorCapa_(1400);
 }
 
 // Contador dinâmico da capa: total geral de empreendimentos, filtrado por
 // bairro (quando já escolhido, tela Perfil) e por ESTÁGIO (pedido explícito
 // do usuário, 2026-08-XX: clicar "Pronto para Morar"/"Em Obras" na Capa já
 // atualiza a quantidade mostrada, na hora). Debounce de 80ms pra suavizar
-// múltiplos cliques rápidos.
+// múltiplos cliques rápidos. `duracaoMs` opcional -- default 350 (rápido,
+// pras atualizações por clique); montarStatsAbertura_() passa 1400 pra
+// contagem inicial, mais devagar (pedido explícito do usuário).
 var _contadorCapaTimer_ = null;
-function atualizarContadorCapa_() {
+function atualizarContadorCapa_(duracaoMs) {
   clearTimeout(_contadorCapaTimer_);
   _contadorCapaTimer_ = setTimeout(function() {
     var els = document.querySelectorAll('.stats-total-emp');
@@ -2123,7 +2131,7 @@ function atualizarContadorCapa_() {
     }
     var n = lista.length;
     els.forEach(function(el) {
-      if (n > 0) contarAte_(el, n, 350); else el.textContent = '0';
+      if (n > 0) contarAte_(el, n, duracaoMs || 350); else el.textContent = '0';
     });
   }, 80);
 }
