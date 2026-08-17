@@ -4067,11 +4067,15 @@ function renderIntOrigemTabela_(json) {
 }
 
 // Mini gráfico SVG de linha para um funil de campanha (10 etapas)
+// Fonte (E1..E10 e %) e espessura das linhas 2x maiores -- pedido explícito
+// do usuário. Escala TODA a geometria do gráfico junto (altura/paddings
+// verticais/raio dos pontos), não só o texto -- senão a letra maior ficaria
+// espremida contra o topo/rodapé de um SVG que continuaria minúsculo.
 function svgFunilCampanha_(funil) {
   if (!funil || !funil.length) return '';
   const n   = funil.length;
-  const W   = 600, H = 68;
-  const pL  = 26, pR = 26, pT = 16, pB = 18;
+  const W   = 600, H = 136;
+  const pL  = 26, pR = 26, pT = 32, pB = 36;
   const aW  = W - pL - pR, aH = H - pT - pB;
   const xs  = funil.map((_, i) => pL + (n > 1 ? i / (n - 1) : 0.5) * aW);
   const ys  = funil.map(f  => pT + aH * (1 - f.pct / 100));
@@ -4080,21 +4084,21 @@ function svgFunilCampanha_(funil) {
   funil.forEach((f, i) => {
     const x = xs[i], y = ys[i];
     // Etapa label (topo)
-    lbls += `<text x="${x}" y="11" text-anchor="middle" font-size="8" fill="var(--text3)" font-weight="700">E${f.etapa}</text>`;
+    lbls += `<text x="${x}" y="22" text-anchor="middle" font-size="16" fill="var(--text3)" font-weight="700">E${f.etapa}</text>`;
     // % label (rodapé)
     const pctClr = f.pct < 20 ? '#ef4444' : f.pct < 50 ? '#f59e0b' : 'var(--text2)';
-    pcts += `<text x="${x}" y="${H}" text-anchor="middle" font-size="9" fill="${pctClr}" font-weight="700">${f.pct}%</text>`;
+    pcts += `<text x="${x}" y="${H}" text-anchor="middle" font-size="18" fill="${pctClr}" font-weight="700">${f.pct}%</text>`;
     // Linha para próxima etapa (colorida pelo drop)
     if (i < n - 1) {
       const drop = f.pct - funil[i + 1].pct;
       const clr  = drop > 25 ? '#ef4444' : drop > 12 ? '#f59e0b' : 'rgba(99,102,241,.75)';
-      const dash = drop > 25 ? 'stroke-dasharray="4 2"' : '';
-      lines += `<line x1="${x}" y1="${y}" x2="${xs[i+1]}" y2="${ys[i+1]}" stroke="${clr}" stroke-width="1.8" ${dash}/>`;
+      const dash = drop > 25 ? 'stroke-dasharray="8 4"' : '';
+      lines += `<line x1="${x}" y1="${y}" x2="${xs[i+1]}" y2="${ys[i+1]}" stroke="${clr}" stroke-width="3.6" ${dash}/>`;
     }
     // Ponto
     const isLast = i === n - 1;
     const fill   = isLast ? '#10b981' : f.pct < 20 ? '#ef4444' : 'rgb(99,102,241)';
-    dots += `<circle cx="${x}" cy="${y}" r="4" fill="${fill}" stroke="var(--bg)" stroke-width="1.5"><title>${f.nome}: ${f.alcancaram} (${f.pct}%)</title></circle>`;
+    dots += `<circle cx="${x}" cy="${y}" r="8" fill="${fill}" stroke="var(--bg)" stroke-width="3"><title>${f.nome}: ${f.alcancaram} (${f.pct}%)</title></circle>`;
   });
 
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="overflow:visible;display:block;margin-top:2px">
