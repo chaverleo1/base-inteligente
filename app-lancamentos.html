@@ -232,6 +232,10 @@ body {
 .capa-dd-item:last-child { border-bottom: none; }
 .capa-dd-item:hover { background: var(--surface2); color: var(--text); }
 .capa-dd-livre { font-style: italic; opacity: .8; }
+/* Item "Digitar", sempre por último na lista completa de bairros (pedido
+   explícito do usuário) -- destacado (cor de marca + negrito) pra
+   diferenciar visualmente dos nomes de bairro comuns acima dele. */
+.capa-dd-digitar { color: var(--accent); font-weight: 700; position: sticky; bottom: 0; background: var(--surface); }
 .capa-bairro-erro { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--danger); display: none; }
 
 /* CTA area hero */
@@ -3635,12 +3639,52 @@ function bairroToggle_(ctxKey, btn, bairro) {
   if (ctx.aoMudar) ctx.aoMudar();
 }
 
+// Pedido explícito do usuário: "+OUTRO" agora abre em 2 passos --
+// primeiro uma CAIXA DE LISTA com TODOS os bairros cadastrados na base,
+// em ordem alfabética (bairroMostrarListaCompleta_ abaixo); só no FIM
+// dessa lista aparece uma opção "Digitar", que aí sim revela o campo de
+// texto livre (bairroAbrirDigitar_). Antes, "+OUTRO" já abria direto o
+// campo de texto com um dropdown parcial (8 itens, sem ordenação
+// alfabética) -- o campo em si fica escondido (input.style.display) até
+// o clique em "Digitar".
 function bairroAbrirOutro_(ctxKey) {
   const ctx = BAIRRO_CTX_[ctxKey];
   const w = document.getElementById(ctx.inputWrap);
-  if (w) { w.style.display = ''; }
+  if (w) { w.style.display = ''; } // mostra o container (âncora de posição do dropdown)
   const inp = document.getElementById(ctx.input);
-  if (inp) { inp.value = ''; inp.focus(); }
+  if (inp) { inp.value = ''; inp.style.display = 'none'; } // campo de texto some até "Digitar"
+  bairroMostrarListaCompleta_(ctxKey);
+}
+
+// Lista completa (todos os bairros da base, ordem alfabética pt-BR) +
+// item final "Digitar" -- estado inicial do "+OUTRO", antes de qualquer
+// digitação.
+function bairroMostrarListaCompleta_(ctxKey) {
+  const ctx = BAIRRO_CTX_[ctxKey];
+  const dd = document.getElementById(ctx.dropdown);
+  if (!dd) return;
+  const todos = [...new Set(TODOS_LANC.map(function(c) { return String(c.bairro || '').trim(); }).filter(Boolean))]
+    .sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
+  let html = todos.map(function(b) {
+    const esc = b.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div class="capa-dd-item" onpointerdown="event.preventDefault()" onclick="bairroSelecionarItem_(\'' + ctxKey + '\',\'' + esc + '\')">' + b + '</div>';
+  }).join('');
+  html += '<div class="capa-dd-item capa-dd-digitar" onpointerdown="event.preventDefault()" onclick="bairroAbrirDigitar_(\'' + ctxKey + '\')">✏️ Digitar o nome do bairro</div>';
+  dd.innerHTML = html;
+  // BUG pré-existente encontrado e corrigido aqui de raiz (afetava esta
+  // função nova E bairroFiltrar_ abaixo, ver comentário lá): .capa-bairro-
+  // dropdown tem display:none como padrão no CSS -- setar style.display=''
+  // só remove o inline e cai de volta nesse "none" da classe, o dropdown
+  // NUNCA aparecia de verdade. Precisa de um valor explícito ('block').
+  dd.style.display = 'block';
+}
+
+// Clique em "Digitar" na lista -- revela o campo de texto livre e volta
+// pro comportamento de busca-enquanto-digita de sempre (bairroFiltrar_).
+function bairroAbrirDigitar_(ctxKey) {
+  const ctx = BAIRRO_CTX_[ctxKey];
+  const inp = document.getElementById(ctx.input);
+  if (inp) { inp.style.display = ''; inp.value = ''; inp.focus(); }
   bairroFiltrar_(ctxKey, '');
 }
 
@@ -3661,7 +3705,11 @@ function bairroFiltrar_(ctxKey, q) {
     html += '<div class="capa-dd-item capa-dd-livre" onpointerdown="event.preventDefault()" onclick="bairroSelecionarItem_(\'' + ctxKey + '\',\'' + qEsc + '\')">"' + q.trim() + '" — adicionar mesmo assim</div>';
   }
   dd.innerHTML = html;
-  dd.style.display = html ? '' : 'none';
+  // Mesmo BUG pré-existente de .capa-bairro-dropdown (display:none padrão
+  // no CSS) corrigido aqui -- ver comentário em bairroMostrarListaCompleta_.
+  // Antes ('' em vez de 'block'), o dropdown de busca-enquanto-digita
+  // nunca aparecia de verdade, mesmo com resultados.
+  dd.style.display = html ? 'block' : 'none';
 }
 
 function bairroSelecionarItem_(ctxKey, bairro) {
