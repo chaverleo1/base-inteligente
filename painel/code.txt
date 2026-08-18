@@ -899,7 +899,6 @@ function doPost(e) {
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'qualificar_lead_baseimob') return ok(qualificarLeadBaseimob_(d));
   if (d.acao === 'converter_lead_venda_baseimob') return ok(converterLeadVendaBaseimob_(d));
-  if (d.acao === 'excluir_campanha_google_ads') return ok(excluirCampanhaGoogleAds_(d));
   if (d.acao === 'excluir_lead_baseimob') return ok(excluirLeadBaseimob_(d));
   if (d.acao === 'listar_leads_imobzi')             return ok(listarLeadsImobzi_(d));
   if (d.acao === 'sincronizar_imobzi')              return ok(sincronizarLeadsImobzi_());
@@ -4807,6 +4806,10 @@ var CABECALHO_FUNIL_EVENTOS_ = [
   'capaPreco', 'precoAlvo', 'areaMin', 'areaMax', 'areaE2', 'objetivo', 'padroes', 'situacoes', 'voltou', 'numClique',
   // v2.1 — utm_medium como "região" (nome da região alvo da campanha)
   'utmMedium',
+  // v2.2 — utm_campaign adicionado aqui pra ser fonte secundária de atribuição
+  // de campanha: quando a sessão não tem entrada em ACESSOS_APP (usuário abandonou
+  // antes de clicar em Continuar na capa), esse campo evita o fallback '(direto)'.
+  'utmCampaign',
 ];
 
 // MIX_SEGMENTOS_PUBLICADOS — snapshot do mix de 7 papéis (ISCA/ALVO_1-3/
@@ -5526,56 +5529,6 @@ function parseDataMetricaAds_(v) {
   return new Date(+m[3], +m[2] - 1, +m[1]);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Campanhas EXCLUÍDAS do painel Google Ads (pedido explícito do usuário:
-// botão "Excluir" em cada linha da tabela). Como o Script do Ads roda
-// sozinho a cada 3h e regrava a linha do dia de TODA campanha que bater
-// com "APPLAN" no nome, simplesmente apagar a linha na hora não resolve --
-// ela voltaria no próximo ciclo do Script. Por isso a exclusão é uma
-// LISTA PERSISTENTE (aba própria, mesma planilha de métricas
-// SHEET_ID_ADS_METRICAS_) que listarMetricasGoogleAds_/
-// listarSeriesGoogleAds_ consultam pra filtrar -- exclusão por NOME exato
-// da campanha, sem precisar mexer na aba "Google Ads" que o Script escreve.
-// ═══════════════════════════════════════════════════════════════
-function obterAbaCampanhasExcluidasAds_() {
-  var ss  = SpreadsheetApp.openById(SHEET_ID_ADS_METRICAS_);
-  var aba = ss.getSheetByName('Campanhas Excluidas');
-  if (!aba) {
-    aba = ss.insertSheet('Campanhas Excluidas');
-    aba.appendRow(['campanha']);
-    aba.setFrozenRows(1);
-    aba.getRange(1, 1, 1, 1).setFontWeight('bold');
-  }
-  return aba;
-}
-
-function listarCampanhasExcluidasAds_() {
-  try {
-    var aba = obterAbaCampanhasExcluidasAds_();
-    var lr  = aba.getLastRow();
-    if (lr < 2) return [];
-    return aba.getRange(2, 1, lr - 1, 1).getValues()
-      .map(function(r) { return String(r[0] || '').trim(); })
-      .filter(Boolean);
-  } catch (e) {
-    return [];
-  }
-}
-
-function excluirCampanhaGoogleAds_(d) {
-  try {
-    var nome = String(d.campanha || '').trim();
-    if (!nome) return { ok: false, erro: 'Nome da campanha não informado.' };
-    var jaExcluidas = listarCampanhasExcluidasAds_();
-    if (jaExcluidas.indexOf(nome) === -1) {
-      obterAbaCampanhasExcluidasAds_().appendRow([nome]);
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, erro: e.message };
-  }
-}
-
 // Lê a planilha de métricas e agrega por campanha dentro do período pedido
 // (params.dias, default 30). CTR e CPC médio são RECALCULADOS a partir dos
 // totais agregados (cliques/impressões/investimento), não a média simples
@@ -5601,15 +5554,10 @@ function listarMetricasGoogleAds_(params) {
     // pra já limpar linhas antigas que ficaram gravadas antes desse ajuste,
     // sem precisar apagar nada na mão na planilha.
     var FILTRO_NOME_ = 'APPLAN';
-    // Campanhas excluídas pelo botão "Excluir" (ver excluirCampanhaGoogleAds_
-    // acima) -- nunca aparecem aqui, mesmo que o Script continue gravando
-    // linhas novas pra elas a cada 3h.
-    var excluidas_ = listarCampanhasExcluidasAds_();
 
     dados.forEach(function(r) {
       var nome = String(r[1] || '');
       if (!nome || nome.toUpperCase().indexOf(FILTRO_NOME_) === -1) return;
-      if (excluidas_.indexOf(nome) !== -1) return;
 
       var dataLinha = parseDataMetricaAds_(r[0]);
       if (!dataLinha) return;
@@ -5704,14 +5652,10 @@ function listarSeriesGoogleAds_(params) {
     // dias que têm linha de métrica do Ads).
     var porCampanha = {};
     var FILTRO_NOME_ = 'APPLAN';
-    // Campanhas excluídas pelo botão "Excluir" -- somem do gráfico de
-    // evolução também, não só da tabela (ver listarMetricasGoogleAds_).
-    var excluidas_ = listarCampanhasExcluidasAds_();
 
     dados.forEach(function(r) {
       var nome = String(r[1] || '');
       if (!nome || nome.toUpperCase().indexOf(FILTRO_NOME_) === -1) return;
-      if (excluidas_.indexOf(nome) !== -1) return;
 
       var dataLinha = parseDataMetricaAds_(r[0]);
       if (!dataLinha || dataLinha < desde) return;
@@ -5922,9 +5866,12 @@ function registrarEventoFunil_(d) {
 // Agendamento entrou como etapa 9, empurrando "Concluiu" pra 10. Mesma
 // ordem de ETAPA_POR_STEP_ em app-lancamentos.html.
 var TOTAL_ETAPAS_FUNIL_ = 10;
+// Ordem real de navegação pós-reorganização (2026-08-17):
+// 0→5→2→3→6→1→4→7→9→8 (ver ETAPA_POR_STEP_ em app-lancamentos.html)
+// Etapa 5 = Resultados (subiu, antes era 7); 6 = Nome (era 5); 7 = Mais Infos (era 6 "Perfil").
 var NOME_ETAPA_FUNIL_ = {
-  1: 'Capa', 2: 'Objetivo/Padrão', 3: 'Orçamento/Área', 4: 'Confirmação',
-  5: 'Nome/Necessidade', 6: 'Perfil', 7: 'Resultados', 8: 'WhatsApp',
+  1: 'Capa', 2: 'Perfil', 3: 'Simulador', 4: 'Confirmação',
+  5: 'Resultados', 6: 'Nome', 7: 'Mais Infos', 8: 'WhatsApp',
   9: 'Agendamento', 10: 'Concluiu',
 };
 
@@ -5965,6 +5912,9 @@ function listarEstatisticasFunil_(params) {
   var tempoPorEtapaSoma = {}, tempoPorEtapaCont = {};
   var capaPrecoMap = {}, voltouSet = {}; // comportamental v2
   var precoAlvoMap = {}, situacoesMap = {}, objetivoMap = {}, areaMap = {}, areaE2Map = {}, utmMediumMap = {};
+  // v2.2 — fallback de utmCampaign direto do FUNIL_EVENTOS (para sessões que
+  // nunca chegaram a registrar em ACESSOS_APP por abandonar na capa)
+  var utmCampaignFunilMap = {};
 
   var abaFunil = obterAbaFunilEventos_();
   var lrF = abaFunil.getLastRow();
@@ -5983,7 +5933,8 @@ function listarEstatisticasFunil_(params) {
     var idxObjetivo   = CABECALHO_FUNIL_EVENTOS_.indexOf('objetivo');
     var idxAreaMin    = CABECALHO_FUNIL_EVENTOS_.indexOf('areaMin');
     var idxAreaE2     = CABECALHO_FUNIL_EVENTOS_.indexOf('areaE2');
-    var idxUtmMedium  = CABECALHO_FUNIL_EVENTOS_.indexOf('utmMedium');
+    var idxUtmMedium    = CABECALHO_FUNIL_EVENTOS_.indexOf('utmMedium');
+    var idxUtmCampaignF = CABECALHO_FUNIL_EVENTOS_.indexOf('utmCampaign');
     var dadosF = abaFunil.getRange(2, 1, lrF - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
 
     dadosF.forEach(function(r) {
@@ -6048,6 +5999,12 @@ function listarEstatisticasFunil_(params) {
       if (idxUtmMedium >= 0) {
         var um = String(r[idxUtmMedium] || '');
         if (um && !utmMediumMap[sid]) utmMediumMap[sid] = um;
+      }
+      // utmCampaign — primeiro valor não-vazio da sessão (fonte secundária de
+      // atribuição: cobre quem abandonou antes de registrarAcessoCapa_)
+      if (idxUtmCampaignF >= 0) {
+        var ucf = String(r[idxUtmCampaignF] || '');
+        if (ucf && !utmCampaignFunilMap[sid]) utmCampaignFunilMap[sid] = ucf;
       }
     });
   }
@@ -6229,7 +6186,10 @@ function listarEstatisticasFunil_(params) {
   }
   var campanhasAgg = {};
   sessoes.forEach(function(sid) {
-    var camp = campanhaPorSessao[sid] || '(direto)';
+    // Hierarquia: ACESSOS_APP (fonte primária, só existe se o usuário clicou
+    // em Continuar na capa) → FUNIL_EVENTOS utmCampaign (fonte secundária,
+    // capturada desde o 1º beacon, cobre quem abandonou antes) → '(direto)'.
+    var camp = campanhaPorSessao[sid] || utmCampaignFunilMap[sid] || '(direto)';
     if (!campanhasAgg[camp]) campanhasAgg[camp] = { sids: [], concluiram: 0 };
     campanhasAgg[camp].sids.push(sid);
     if (maxPorSessao[sid] >= TOTAL_ETAPAS_FUNIL_) campanhasAgg[camp].concluiram++;
@@ -7126,9 +7086,9 @@ function segundosParaTextoEmail_(ms) {
 // ETAPA_POR_STEP_ em app-lancamentos.html) -- chave aqui é o step-id CRU
 // que chega em tags.tempoPorStep (objeto {stepId: ms}).
 var NOME_ETAPA_POR_STEP_EMAIL_ = {
-  0: 'Etapa 1 — Capa', 5: 'Etapa 2 — Objetivo/Padrão', 2: 'Etapa 3 — Orçamento/Área',
-  3: 'Etapa 4 — Confirmação', 1: 'Etapa 5 — Nome/Necessidade', 4: 'Etapa 6 — Perfil',
-  6: 'Etapa 7 — Resultados', 7: 'Etapa 8 — WhatsApp', 9: 'Etapa 9 — Agendamento',
+  0: 'Etapa 1 — Capa', 5: 'Etapa 2 — Perfil', 2: 'Etapa 3 — Simulador',
+  3: 'Etapa 4 — Confirmação', 6: 'Etapa 5 — Resultados', 1: 'Etapa 6 — Nome',
+  4: 'Etapa 7 — Mais Infos', 7: 'Etapa 8 — WhatsApp', 9: 'Etapa 9 — Agendamento',
 };
 
 // Dados técnicos capturados sem perguntar nada ao cliente (pedido explícito
@@ -7157,7 +7117,7 @@ function montarBlocoDadosTecnicosEmail_(d) {
     // Ordem de navegação real do cliente, não a ordem crescente dos
     // step-ids crus (que pula: confirmação é step-3 mas vem antes de nome,
     // que é step-1) -- mesma ordem de ETAPA_POR_STEP_ em app-lancamentos.html.
-    var ORDEM_STEP_IDS_ = [0, 5, 2, 3, 1, 4, 6, 7, 9];
+    var ORDEM_STEP_IDS_ = [0, 5, 2, 3, 6, 1, 4, 7, 9];
     var linhasTempo = ORDEM_STEP_IDS_
       .filter(function(k) { return tempoPorStep[k] !== undefined; })
       .map(function(k) { return { etapa: NOME_ETAPA_POR_STEP_EMAIL_[k], tempo: segundosParaTextoEmail_(tempoPorStep[k]) }; });

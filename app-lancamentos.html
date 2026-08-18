@@ -2348,7 +2348,7 @@ function registrarEventoFunil_(opts) {
   try {
     const payload = Object.assign({
       acao: 'registrar_evento_funil', chave: APP_KEY_LANCAMENTOS_, sessionId: D.sessionId, canal: 'App Lançamentos',
-      utmSource: D.utmSource || D.origemAcesso, utmMedium: D.utmMedium, dispositivo: D.dispositivo,
+      utmSource: D.utmSource || D.origemAcesso, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign, dispositivo: D.dispositivo,
     }, opts);
     fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
   } catch (e) {}
@@ -4938,7 +4938,7 @@ window.addEventListener('beforeunload', () => {
           acao: 'registrar_evento_funil', chave: APP_KEY_LANCAMENTOS_, sessionId: D.sessionId,
           etapaSaida: ETAPA_POR_STEP_[stepAtual] || stepAtual, tempoMsEtapaSaida: duracaoMs,
           etapaChegada: null, abandonou: true, canal: 'App Lançamentos',
-          utmSource: D.utmSource || D.origemAcesso, dispositivo: D.dispositivo,
+          utmSource: D.utmSource || D.origemAcesso, utmCampaign: D.utmCampaign, dispositivo: D.dispositivo,
         });
         navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
       } catch (e) {}
