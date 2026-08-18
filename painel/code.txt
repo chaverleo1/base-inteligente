@@ -6209,6 +6209,28 @@ function listarEstatisticasFunil_(params) {
              funil: campFunil };
   }).sort(function(a, b) { return b.sessoes - a.sessoes; });
 
+  // Tabela de acessos por UTM completo (source + medium + campaign) --
+  // cruza TODOS os sessionIds com suas UTMs resolvidas pela mesma hierarquia
+  // do funilPorCampanha. Permite ver no painel de qual combinação de
+  // origem/mídia/campanha cada sessão veio, independente de ter chegado na
+  // capa ou não (cobre bounces via utmCampaignFunilMap).
+  var utmAgg = {};
+  sessoes.forEach(function(sid) {
+    var src  = utmPorSessao[sid]                                    || '(direto)';
+    var med  = utmMediumMap[sid]                                    || '—';
+    var camp = campanhaPorSessao[sid] || utmCampaignFunilMap[sid]  || '—';
+    var key  = src + '\t' + med + '\t' + camp;
+    if (!utmAgg[key]) utmAgg[key] = { source: src, medium: med, campaign: camp, sessoes: 0, concluiram: 0 };
+    utmAgg[key].sessoes++;
+    if (maxPorSessao[sid] >= TOTAL_ETAPAS_FUNIL_) utmAgg[key].concluiram++;
+  });
+  var acessosPorUTM = Object.keys(utmAgg).map(function(k) {
+    var u = utmAgg[k];
+    return { source: u.source, medium: u.medium, campaign: u.campaign,
+             sessoes: u.sessoes,
+             taxaConclusao: u.sessoes ? Math.round(u.concluiram / u.sessoes * 100) : 0 };
+  }).sort(function(a, b) { return b.sessoes - a.sessoes; });
+
   // KPIs de score/tempo total no funil -- só existem pra quem completou
   // (INTERESSES só ganha linha depois do WhatsApp confirmado).
   var scoreSoma = 0, scoreCont = 0, tempoFunilSoma = 0, tempoFunilCont = 0;
@@ -6255,6 +6277,7 @@ function listarEstatisticasFunil_(params) {
     histogramaAreas:     histogramaAreas,
     histogramaAreasE2:   histogramaAreasE2,
     funilPorCampanha:    funilPorCampanha,
+    acessosPorUTM:       acessosPorUTM,
   };
 }
 

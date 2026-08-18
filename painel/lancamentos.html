@@ -1851,6 +1851,15 @@ select.form-input option { background: var(--surface2); }
     </div>
   </div>
 
+  <!-- Acessos por UTM: tabela com source + medium + campaign de todas as sessões -->
+  <div class="sec-header" style="margin-top:14px">
+    <div class="sec-title" style="font-size:14px">Acessos por Origem UTM</div>
+    <div class="sec-sub">Todas as sessões no período · origem identificada pela URL (utm_source / utm_medium / utm_campaign)</div>
+  </div>
+  <div class="card" id="intAcessosUTMWrap" style="padding:0;overflow:auto;margin-bottom:10px">
+    <div class="loading dot-anim" style="padding:16px">Carregando</div>
+  </div>
+
   <!-- Google Ads: tabela resumo de campanhas + funil compacto por campanha -->
   <div class="sec-header" style="margin-top:14px">
     <div class="sec-title" style="font-size:14px">Google Ads — Funil por campanha</div>
@@ -4129,12 +4138,66 @@ function renderIntSegmentos_(json) {
   }).join('');
 }
 
+// Tabela: todas as sessões do período agrupadas por (source × medium × campaign).
+// Permite auditar qual URL/campanha gerou cada acesso, inclusive testes diretos
+// (ex.: colar o link do anúncio no navegador) que chegam com UTM mas sem gclid.
+function renderAcessosUTM_(json) {
+  const el = document.getElementById('intAcessosUTMWrap');
+  if (!el) return;
+  const rows = json.acessosPorUTM || [];
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:14px">Nenhum acesso registrado nesse período.</div>';
+    return;
+  }
+  const maxSess = Math.max(...rows.map(r => r.sessoes || 0), 1);
+  el.innerHTML = `<table class="adm-table">
+    <thead>
+      <tr>
+        <th>Origem</th>
+        <th>Mídia</th>
+        <th>Campanha</th>
+        <th style="text-align:right">Sessões</th>
+        <th style="text-align:right">Conversão</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map(r => {
+        const isDireto = r.source === '(direto)';
+        const convClr  = r.taxaConclusao >= 15 ? '#22c55e' : r.taxaConclusao >= 8 ? '#f59e0b' : (r.taxaConclusao > 0 ? '#f59e0b' : 'var(--text3)');
+        const barPct   = Math.round(r.sessoes / maxSess * 100);
+        const srcLbl   = escapeHtmlPainel_(r.source);
+        const medLbl   = escapeHtmlPainel_(r.medium);
+        const campLbl  = (r.campaign === '—' || !r.campaign) ? '<span style="color:var(--text3)">—</span>' : `<span title="${escapeHtmlPainel_(r.campaign)}">${escapeHtmlPainel_(r.campaign)}</span>`;
+        return `<tr>
+          <td style="font-weight:${isDireto?'400':'700'};font-size:12px;color:${isDireto?'var(--text3)':'var(--text)'}">
+            ${srcLbl}
+          </td>
+          <td style="font-size:12px;color:var(--text3)">${medLbl}</td>
+          <td style="font-size:12px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Space Grotesk',sans-serif">
+            ${campLbl}
+          </td>
+          <td style="text-align:right;white-space:nowrap">
+            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
+              <div style="width:52px;height:4px;background:var(--border);border-radius:2px;flex-shrink:0">
+                <div style="width:${barPct}%;height:100%;background:var(--accent);border-radius:2px"></div>
+              </div>
+              <span style="font-size:13px;font-weight:700;min-width:18px;text-align:right">${r.sessoes}</span>
+            </div>
+          </td>
+          <td style="text-align:right;font-size:13px;font-weight:700;color:${convClr}">${r.taxaConclusao}%</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
+
 async function carregarInteligencia_() {
   const dias = document.getElementById('intPeriodo').value;
   document.getElementById('intKpis').innerHTML = '<div class="loading dot-anim" style="grid-column:1/-1">Carregando estatísticas</div>';
   document.getElementById('intFunil').innerHTML = '<div class="loading dot-anim">Carregando funil</div>';
   document.getElementById('intTempoWrap').innerHTML = '<div class="loading dot-anim" style="padding:24px">Carregando</div>';
   document.getElementById('intOrigemWrap').innerHTML = '<div class="loading dot-anim" style="padding:16px">Carregando</div>';
+  document.getElementById('intAcessosUTMWrap').innerHTML = '<div class="loading dot-anim" style="padding:16px">Carregando</div>';
   const cfcWrap = document.getElementById('intFunilCampanhas');
   if (cfcWrap) cfcWrap.innerHTML = '';
   document.getElementById('intSegmentos').innerHTML = '<div class="loading dot-anim">Carregando segmentos</div>';
@@ -4161,6 +4224,7 @@ async function carregarInteligencia_() {
     renderDemandasAreas_(stats.histogramaAreas || []);
     renderForcasDemanda_(stats);
     renderIntTempoTabela_(stats);
+    renderAcessosUTM_(stats);
     renderIntOrigemTabela_(stats);
     renderIntFunilCampanhas_(stats);
     renderIntSegmentos_(segs);
