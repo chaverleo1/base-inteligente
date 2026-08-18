@@ -4810,6 +4810,8 @@ var CABECALHO_FUNIL_EVENTOS_ = [
   // de campanha: quando a sessão não tem entrada em ACESSOS_APP (usuário abandonou
   // antes de clicar em Continuar na capa), esse campo evita o fallback '(direto)'.
   'utmCampaign',
+  // v2.3 — utm_content (criativo/variante do anúncio, {creative} no Google Ads)
+  'utmContent',
 ];
 
 // MIX_SEGMENTOS_PUBLICADOS — snapshot do mix de 7 papéis (ISCA/ALVO_1-3/
@@ -5389,7 +5391,7 @@ function limparAcessosApp_() {
 // ═══════════════════════════════════════════════════════════════
 var CABECALHO_ACESSOS_APP_ = [
   'dataHora', 'sessionId', 'capaPreco', 'capaBairros',
-  'utmSource', 'utmMedium', 'utmCampaign', 'gclid',
+  'utmSource', 'utmMedium', 'utmCampaign', 'utmContent', 'gclid',
   'dispositivo', 'horaAcesso',
 ];
 
@@ -5431,6 +5433,7 @@ function registrarAcessoCapa_(d) {
       d.utmSource    || '',
       d.utmMedium    || '',
       d.utmCampaign  || '',
+      d.utmContent   || '',
       d.gclid        || '',
       d.dispositivo  || '',
       d.horaAcesso   || '',
@@ -5915,6 +5918,9 @@ function listarEstatisticasFunil_(params) {
   // v2.2 — fallback de utmCampaign direto do FUNIL_EVENTOS (para sessões que
   // nunca chegaram a registrar em ACESSOS_APP por abandonar na capa)
   var utmCampaignFunilMap = {};
+  // v2.3 — utmContent (criativo/variante do anúncio) da mesma fonte
+  var utmContentFunilMap  = {};
+  var utmContentAcessosMap = {}; // fonte primária: ACESSOS_APP
 
   var abaFunil = obterAbaFunilEventos_();
   var lrF = abaFunil.getLastRow();
@@ -5935,6 +5941,7 @@ function listarEstatisticasFunil_(params) {
     var idxAreaE2     = CABECALHO_FUNIL_EVENTOS_.indexOf('areaE2');
     var idxUtmMedium    = CABECALHO_FUNIL_EVENTOS_.indexOf('utmMedium');
     var idxUtmCampaignF = CABECALHO_FUNIL_EVENTOS_.indexOf('utmCampaign');
+    var idxUtmContentF  = CABECALHO_FUNIL_EVENTOS_.indexOf('utmContent');
     var dadosF = abaFunil.getRange(2, 1, lrF - 1, CABECALHO_FUNIL_EVENTOS_.length).getValues();
 
     dadosF.forEach(function(r) {
@@ -6005,6 +6012,11 @@ function listarEstatisticasFunil_(params) {
       if (idxUtmCampaignF >= 0) {
         var ucf = String(r[idxUtmCampaignF] || '');
         if (ucf && !utmCampaignFunilMap[sid]) utmCampaignFunilMap[sid] = ucf;
+      }
+      // utmContent — criativo/variante do anúncio, primeiro valor não-vazio
+      if (idxUtmContentF >= 0) {
+        var uctf = String(r[idxUtmContentF] || '');
+        if (uctf && !utmContentFunilMap[sid]) utmContentFunilMap[sid] = uctf;
       }
     });
   }
@@ -6172,9 +6184,10 @@ function listarEstatisticasFunil_(params) {
   var abaAc = obterAbaAcessosApp_();
   var lrAc  = abaAc.getLastRow();
   if (lrAc >= 2) {
-    var idxAcSid  = CABECALHO_ACESSOS_APP_.indexOf('sessionId');
-    var idxAcCamp = CABECALHO_ACESSOS_APP_.indexOf('utmCampaign');
-    var idxAcDt   = CABECALHO_ACESSOS_APP_.indexOf('dataHora');
+    var idxAcSid     = CABECALHO_ACESSOS_APP_.indexOf('sessionId');
+    var idxAcCamp    = CABECALHO_ACESSOS_APP_.indexOf('utmCampaign');
+    var idxAcContent = CABECALHO_ACESSOS_APP_.indexOf('utmContent');
+    var idxAcDt      = CABECALHO_ACESSOS_APP_.indexOf('dataHora');
     var dadosAc = abaAc.getRange(2, 1, lrAc - 1, CABECALHO_ACESSOS_APP_.length).getValues();
     dadosAc.forEach(function(r) {
       var dh = parseDataHoraBR_(r[idxAcDt]);
@@ -6182,6 +6195,11 @@ function listarEstatisticasFunil_(params) {
       var sid  = String(r[idxAcSid] || '').trim();
       var camp = String(r[idxAcCamp] || '').trim() || '(direto)';
       if (sid && !campanhaPorSessao[sid]) campanhaPorSessao[sid] = camp;
+      // utmContent via ACESSOS_APP (fonte primária)
+      if (idxAcContent >= 0) {
+        var cnt = String(r[idxAcContent] || '').trim();
+        if (sid && cnt && !utmContentAcessosMap[sid]) utmContentAcessosMap[sid] = cnt;
+      }
     });
   }
   var campanhasAgg = {};
@@ -6216,17 +6234,18 @@ function listarEstatisticasFunil_(params) {
   // capa ou não (cobre bounces via utmCampaignFunilMap).
   var utmAgg = {};
   sessoes.forEach(function(sid) {
-    var src  = utmPorSessao[sid]                                    || '(direto)';
-    var med  = utmMediumMap[sid]                                    || '—';
-    var camp = campanhaPorSessao[sid] || utmCampaignFunilMap[sid]  || '—';
-    var key  = src + '\t' + med + '\t' + camp;
-    if (!utmAgg[key]) utmAgg[key] = { source: src, medium: med, campaign: camp, sessoes: 0, concluiram: 0 };
+    var src  = utmPorSessao[sid]                                           || '(direto)';
+    var med  = utmMediumMap[sid]                                           || '—';
+    var camp = campanhaPorSessao[sid]    || utmCampaignFunilMap[sid]       || '—';
+    var cont = utmContentAcessosMap[sid] || utmContentFunilMap[sid]        || '—';
+    var key  = src + '\t' + med + '\t' + camp + '\t' + cont;
+    if (!utmAgg[key]) utmAgg[key] = { source: src, medium: med, campaign: camp, content: cont, sessoes: 0, concluiram: 0 };
     utmAgg[key].sessoes++;
     if (maxPorSessao[sid] >= TOTAL_ETAPAS_FUNIL_) utmAgg[key].concluiram++;
   });
   var acessosPorUTM = Object.keys(utmAgg).map(function(k) {
     var u = utmAgg[k];
-    return { source: u.source, medium: u.medium, campaign: u.campaign,
+    return { source: u.source, medium: u.medium, campaign: u.campaign, content: u.content,
              sessoes: u.sessoes,
              taxaConclusao: u.sessoes ? Math.round(u.concluiram / u.sessoes * 100) : 0 };
   }).sort(function(a, b) { return b.sessoes - a.sessoes; });

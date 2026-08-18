@@ -2306,6 +2306,7 @@ const D = {
   utmSource: new URLSearchParams(location.search).get('utm_source') || '',
   utmMedium: new URLSearchParams(location.search).get('utm_medium') || '',
   utmCampaign: new URLSearchParams(location.search).get('utm_campaign') || '',
+  utmContent: new URLSearchParams(location.search).get('utm_content') || '',
   // gclid (Google Click ID) -- pedido explícito do usuário, base pra "mandar
   // o lead qualificado de volta pro Google Ads" (fase futura do projeto de
   // integração). O Google Ads anexa esse parâmetro sozinho na URL quando o
@@ -2348,7 +2349,7 @@ function registrarEventoFunil_(opts) {
   try {
     const payload = Object.assign({
       acao: 'registrar_evento_funil', chave: APP_KEY_LANCAMENTOS_, sessionId: D.sessionId, canal: 'App Lançamentos',
-      utmSource: D.utmSource || D.origemAcesso, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign, dispositivo: D.dispositivo,
+      utmSource: D.utmSource || D.origemAcesso, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign, utmContent: D.utmContent, dispositivo: D.dispositivo,
     }, opts);
     fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload))).catch(() => {});
   } catch (e) {}
@@ -3578,7 +3579,7 @@ function registrarAcessoCapa_() {
     acao: 'registrar_acesso_capa',
     sessionId: D.sessionId, capaPreco: D.capaPreco,
     capaBairros: D.capaBairros.join(','),
-    utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign,
+    utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign, utmContent: D.utmContent,
     gclid: D.gclid, dispositivo: D.dispositivo, horaAcesso: D.horaAcesso,
   };
   // Usa fetch GET (igual a registrarEventoFunil_) — sendBeacon às vezes
@@ -4188,7 +4189,7 @@ function submeter() {
       // (montarBlocoDadosTecnicosEmail_, code.txt).
       sessionId: D.sessionId, tempoPorStep: D.tempoPorStep,
       dispositivo: D.dispositivo, horaAcesso: D.horaAcesso,
-      utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign, gclid: D.gclid,
+      utmSource: D.utmSource, utmMedium: D.utmMedium, utmCampaign: D.utmCampaign, utmContent: D.utmContent, gclid: D.gclid,
       geoAprox: D.geoAprox,
       // idEmpreendimento mostrado como "melhor match" -- se veio do motor
       // (selecionarIsca_) ou do cálculo local de sempre (fallback sem mix
@@ -4943,7 +4944,7 @@ window.addEventListener('beforeunload', () => {
           acao: 'registrar_evento_funil', chave: APP_KEY_LANCAMENTOS_, sessionId: D.sessionId,
           etapaSaida: ETAPA_POR_STEP_[stepAtual] || stepAtual, tempoMsEtapaSaida: duracaoMs,
           etapaChegada: null, abandonou: true, canal: 'App Lançamentos',
-          utmSource: D.utmSource || D.origemAcesso, utmCampaign: D.utmCampaign, dispositivo: D.dispositivo,
+          utmSource: D.utmSource || D.origemAcesso, utmCampaign: D.utmCampaign, utmContent: D.utmContent, dispositivo: D.dispositivo,
         });
         navigator.sendBeacon(WEBHOOK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
       } catch (e) {}
