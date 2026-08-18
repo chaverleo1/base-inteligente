@@ -2409,8 +2409,13 @@ function avancarStep() {
   // antes de completar bairro. Preferível capturar o UTM cedo (aqui,
   // D.capaBairros ainda vazio -- ok, esse registro não é mais a fonte do
   // "Histograma Bairros") do que perder a atribuição de campanha.
-  if (stepAtual === 0) { registrarAcessoCapa_(); montarConfigPerfil_(); irParaStep(5); return; }    // capa (obj+estágio) → perfil (orçamento+bairro)
-  if (stepAtual === 5) { montarConfigIniciais_(); irParaStep(2); return; } // perfil → simulador (área+resumo)
+  if (stepAtual === 0) { montarConfigPerfil_(); irParaStep(5); return; }    // capa (obj+estágio) → perfil (orçamento+bairro)
+  // registrarAcessoCapa_() movida aqui (step-5→2): D.capaBairros e D.capaPreco
+  // só ficam preenchidos APÓS o usuário configurar o Perfil — na transição
+  // step-0→5 ambos ainda eram vazios, então histogramaBairros nunca recebia dados.
+  // UTMs de sessões que abandonam antes do Perfil continuam capturados via
+  // utmCampaignFunilMap (FUNIL_EVENTOS, fix 2026-08-18).
+  if (stepAtual === 5) { registrarAcessoCapa_(); montarConfigIniciais_(); irParaStep(2); return; } // perfil → simulador (área+resumo)
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // simulador → confirmação
   if (stepAtual === 3) { montarMatch(); irParaStep(6); return; }             // confirmação → resultados
   if (stepAtual === 6) { montarBlocoNecessidade_(); irParaStep(1); return; } // resultados → nome (btn "Quero Atendimento")
