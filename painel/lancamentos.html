@@ -4138,42 +4138,96 @@ function renderIntSegmentos_(json) {
   }).join('');
 }
 
-// Tabela: todas as sessões do período agrupadas por (source × medium × campaign).
-// Permite auditar qual URL/campanha gerou cada acesso, inclusive testes diretos
-// (ex.: colar o link do anúncio no navegador) que chegam com UTM mas sem gclid.
+// Tabela: sessões agrupadas por (source × medium × campaign).
+// Fontes de dados em ordem de prioridade:
+//   1. json.acessosPorUTM  — agregação completa (source+medium+campaign),
+//      disponível apenas depois de reimplantar o code.txt atualizado.
+//   2. Fallback sem reimplantação — constrói a tabela a partir de
+//      json.funilPorCampanha (campaign via ACESSOS_APP) mesclado com
+//      json.origem (source via FUNIL_EVENTOS.utmSource). O cruzamento
+//      é feito tentando inferir o source de cada campanha: se há apenas
+//      uma origem não-direto em origem[], usa essa como source das
+//      campanhas pagas; caso contrário, deixa '—'.
 function renderAcessosUTM_(json) {
   const el = document.getElementById('intAcessosUTMWrap');
   if (!el) return;
-  const rows = json.acessosPorUTM || [];
+
+  let rows;
+  let isFallback = false;
+
+  if (json.acessosPorUTM && json.acessosPorUTM.length) {
+    // Fonte completa: disponível após reimplantação do code.txt
+    rows = json.acessosPorUTM;
+  } else {
+    // Fallback: monta a partir dos dados já disponíveis
+    isFallback = true;
+    // Origens não-direto (para tentar inferir source das campanhas)
+    const origNaoDireto = (json.origem || []).filter(o => o.origem && o.origem !== 'direto');
+    const srcInferido = origNaoDireto.length === 1 ? origNaoDireto[0].origem : null;
+
+    // Agrega: cada campanha vira uma linha
+    const campRows = (json.funilPorCampanha || []).map(c => ({
+      source: c.campanha && c.campanha !== '(direto)' ? (srcInferido || '—') : '(direto)',
+      medium: '—',
+      campaign: c.campanha || '(direto)',
+      sessoes: c.sessoes || 0,
+      taxaConclusao: c.taxaConclusao || 0,
+    }));
+
+    // Origens sem campanha identificada (estão em origem[] mas não em funilPorCampanha)
+    // — mostra no mínimo as origens conhecidas que ficaram de fora
+    const campsComSessoes = new Set(campRows.map(r => r.sessoes));
+    const sessoesCampanha = campRows.reduce((s, r) => s + r.sessoes, 0);
+    const totalOrigem = (json.origem || []).reduce((s, o) => s + (o.sessoes || 0), 0);
+    if (totalOrigem > sessoesCampanha) {
+      // Há sessões em origem[] não representadas em funilPorCampanha: adiciona linha de "outros"
+      (json.origem || []).forEach(o => {
+        if (!campRows.find(r => r.source === o.origem)) {
+          campRows.push({ source: o.origem || '(direto)', medium: '—', campaign: '—', sessoes: o.sessoes || 0, taxaConclusao: o.taxaConclusao || 0 });
+        }
+      });
+    }
+    rows = campRows.sort((a, b) => b.sessoes - a.sessoes);
+  }
+
   if (!rows.length) {
     el.innerHTML = '<div class="empty-state" style="padding:14px">Nenhum acesso registrado nesse período.</div>';
     return;
   }
+
   const maxSess = Math.max(...rows.map(r => r.sessoes || 0), 1);
-  el.innerHTML = `<table class="adm-table">
+  const aviso = isFallback
+    ? `<div style="font-size:11px;color:#92400e;background:rgba(245,158,11,.1);padding:8px 14px;border-bottom:1px solid rgba(245,158,11,.25);display:flex;gap:6px;align-items:center">
+        <span>⚠</span>
+        <span>Visão parcial — reimplante o <strong>code.txt</strong> no Apps Script para ver Origem e Mídia separadas por Campanha.</span>
+       </div>`
+    : '';
+
+  el.innerHTML = aviso + `<table class="adm-table">
     <thead>
       <tr>
         <th>Origem</th>
         <th>Mídia</th>
-        <th>Campanha</th>
+        <th>Campanha / UTM</th>
         <th style="text-align:right">Sessões</th>
         <th style="text-align:right">Conversão</th>
       </tr>
     </thead>
     <tbody>
       ${rows.map(r => {
-        const isDireto = r.source === '(direto)';
+        const isDireto = r.source === '(direto)' && (r.campaign === '(direto)' || r.campaign === '—');
         const convClr  = r.taxaConclusao >= 15 ? '#22c55e' : r.taxaConclusao >= 8 ? '#f59e0b' : (r.taxaConclusao > 0 ? '#f59e0b' : 'var(--text3)');
         const barPct   = Math.round(r.sessoes / maxSess * 100);
         const srcLbl   = escapeHtmlPainel_(r.source);
         const medLbl   = escapeHtmlPainel_(r.medium);
-        const campLbl  = (r.campaign === '—' || !r.campaign) ? '<span style="color:var(--text3)">—</span>' : `<span title="${escapeHtmlPainel_(r.campaign)}">${escapeHtmlPainel_(r.campaign)}</span>`;
+        const rawCamp  = r.campaign;
+        const campLbl  = (!rawCamp || rawCamp === '—') ? '<span style="color:var(--text3)">—</span>' : `<span title="${escapeHtmlPainel_(rawCamp)}">${escapeHtmlPainel_(rawCamp)}</span>`;
         return `<tr>
           <td style="font-weight:${isDireto?'400':'700'};font-size:12px;color:${isDireto?'var(--text3)':'var(--text)'}">
             ${srcLbl}
           </td>
           <td style="font-size:12px;color:var(--text3)">${medLbl}</td>
-          <td style="font-size:12px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Space Grotesk',sans-serif">
+          <td style="font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'Space Grotesk',sans-serif">
             ${campLbl}
           </td>
           <td style="text-align:right;white-space:nowrap">
