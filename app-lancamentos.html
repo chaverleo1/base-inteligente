@@ -215,7 +215,7 @@ body {
   font-size: clamp(12px, 3.2vw, 14px); font-weight: 700;
   cursor: pointer; font-family: inherit; transition: all .15s; line-height: 1.3;
 }
-.capa-tag-btn.ativo { border-color: var(--orange); background: rgba(245,110,20,.1); color: var(--orange); }
+.capa-tag-btn.ativo { border-color: var(--accent); background: rgba(27,85,64,.12); color: var(--accent); }
 .capa-tag-btn.erro { border-color: var(--danger) !important; color: var(--danger) !important; background: rgba(229,52,46,.06) !important; }
 .capa-tag-outro { border-style: dashed; font-size: clamp(11px, 2.8vw, 13px); }
 .capa-bairro-input-wrap { margin-top: 10px; position: relative; }
@@ -246,19 +246,20 @@ body {
    pequena com dot pulsante, não a caixa grande de antes -- também ajuda a
    reduzir rolagem, outro pedido explícito). Ver
    .claude/skills/webdesigner/references/componentes.md § 9. */
-/* Contador da capa — texto grande centralizado, número gigante laranja */
+/* Pedido explícito do usuário: letra maior de novo (tinha sido reduzida
+   antes) + número ainda mais destacado que o resto do texto. */
 .hp-count-bloco {
-  display: block; text-align: center;
-  font-size: clamp(16px, 4.5vw, 20px); font-weight: 700;
-  color: var(--text); line-height: 1.4;
-  margin: 16px 0 0; padding: 0;
-  background: none; border: none; border-radius: 0;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3;
+  margin: 10px 0 0; padding: 8px 16px;
+  background: rgba(27,85,64,.05);
+  border: 1px solid rgba(27,85,64,.2);
+  border-radius: 999px;
 }
 .hp-count-bloco strong {
-  display: block; font-family: var(--font-display);
-  font-size: clamp(68px, 20vw, 96px); font-weight: 700;
-  color: var(--orange); letter-spacing: -3px; line-height: .88;
-  margin: 2px 0 4px;
+  display: inline-block; font-family: var(--font-display);
+  font-size: 1.6em; font-weight: 700; color: var(--accent);
+  letter-spacing: -.5px; line-height: 1; margin: 0 2px; vertical-align: -3px;
 }
 .hp-count-dot-wrap { position: relative; display: flex; flex-shrink: 0; width: 7px; height: 7px; }
 .hp-count-dot { position: relative; display: inline-flex; width: 7px; height: 7px; border-radius: 999px; background: var(--accent); }
@@ -1331,9 +1332,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <p class="capa-subtitulo">Apartamentos, lofts, gardens, coberturas e studios em lançamento na Grande Goiânia.</p>
 
     <div class="hp-count-bloco">
-      Temos hoje
-      <strong class="stats-total-emp">—</strong>
-      empreendimentos disponíveis!
+      <span class="hp-count-dot-wrap"><span class="hp-count-dot-ping"></span><span class="hp-count-dot"></span></span>
+      Temos hoje <strong class="stats-total-emp">—</strong> empreendimentos disponíveis!
     </div>
 
     <!-- Aviso de carregamento -- pedido explícito do usuário: o resto da
@@ -1478,8 +1478,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- step-tag e "Ajuste seu perfil de busca" removidos (pedido explícito
          do usuário) -- o Stepper no header já indica a etapa 3/4. -->
 
-    <!-- cntCombo oculto — mantido para compatibilidade com atualizarComboUI_() -->
-    <span id="cntCombo" style="display:none">—</span>
+    <!-- "Encontramos N opções..." -- pedido explícito do usuário: fica
+         separado, ACIMA de "Área útil ideal" (era junto de "Essa é uma
+         delas:", logo abaixo da área -- essa segunda frase e o preview
+         continuam no lugar de sempre, ver mais abaixo). -->
+    <div class="s2-top-count">
+      Encontramos
+      <strong id="cntCombo" class="s2-top-count-num">—</strong>
+      opções com o perfil que procura.
+    </div>
 
     <!-- "Essa é uma delas:" + preview + CTA "CONTINUE..." movidos pra tela
          Confirmação (pedido explícito do usuário) -- ver step-3, logo
@@ -3447,7 +3454,6 @@ function qtdOpcoesReais_() {
 // ── SLIDERS ──────────────────────────────────────────────────────────────
 function animar(id, novoVal) {
   const el = document.getElementById(id);
-  if (!el) return;
   const txt = String(novoVal);
   if (el.textContent === txt) return;
   el.textContent = txt;
