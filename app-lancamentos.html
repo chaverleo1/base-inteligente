@@ -1682,7 +1682,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="tolerancia-nota" id="toleranciaNotaStep4" style="display:none;text-align:center;margin-top:-6px;margin-bottom:12px"></div>
     <button class="btn-final btn-quente" id="btnVerOpcoes" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-      <span id="btnVerOpcoesTxt">QUERO VER MINHAS OPÇÕES</span>
+      <span id="btnVerOpcoesTxt">CONTINUAR</span>
     </button>
   </div>
 
@@ -2323,10 +2323,10 @@ const D = {
 // step-3 mas vem ANTES de nome, que é step-1) pra "Etapa N" na ordem real
 // de navegação do cliente. Usado só pro rastreio comportamental (tempo por
 // etapa, taxa de abandono agregada) -- não afeta a navegação em si.
-// v3.0: Tela 2 (objetivo+padrão, step-5) entra como etapa 2, empurrando as
-// demais uma casa pra baixo -- alinhado 1:1 com a numeração de Telas do
-// documento de especificação (Tela 1..9).
-const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 3: 4, 1: 5, 4: 6, 6: 7, 7: 8, 9: 9, 8: 10 };
+// Novo fluxo: 0→5→2→3→6→1→4→7→9→8
+// Capa=1, Perfil=2, Simulador=3, Confirmação=4, Resultados=5,
+// Nome=6, MaisInfos=7, WhatsApp=8, Agendamento=9, Obrigado=10
+const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 3: 4, 6: 5, 1: 6, 4: 7, 7: 8, 9: 9, 8: 10 };
 let _stepEntradaTs = Date.now();
 let _voltandoStep_ = false; // true quando a navegação atual veio de voltarStep()
 
@@ -2408,10 +2408,10 @@ function avancarStep() {
   if (stepAtual === 0) { registrarAcessoCapa_(); montarConfigPerfil_(); irParaStep(5); return; }    // capa (obj+estágio) → perfil (orçamento+bairro)
   if (stepAtual === 5) { montarConfigIniciais_(); irParaStep(2); return; } // perfil → simulador (área+resumo)
   if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // simulador → confirmação
-  if (stepAtual === 3) { montarBlocoNecessidade_(); irParaStep(1); return; } // confirmação → nome
-  if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → motivação
-  if (stepAtual === 4) { montarMatch(); irParaStep(6); return; }           // motivação → match (teaser retirado)
-  if (stepAtual === 6) { montarCapturaTitulo_(); irParaStep(7); return; }
+  if (stepAtual === 3) { montarMatch(); irParaStep(6); return; }             // confirmação → resultados
+  if (stepAtual === 6) { montarBlocoNecessidade_(); irParaStep(1); return; } // resultados → nome (btn "Quero Atendimento")
+  if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → mais infos (quartos/vagas)
+  if (stepAtual === 4) { montarCapturaTitulo_(); irParaStep(7); return; }   // mais infos → WhatsApp/captura
   if (stepAtual === 7) {                                                                           // captura → agendamento ou tela final
     if (!dentroJanelaAtendimento_(agoraBrasilia_())) {
       // Fora do horário comercial: pula step 9 e vai direto à tela final.
@@ -2493,12 +2493,14 @@ function montarMotivacaoTitulo_() {
 
 function voltarStep() {
   _voltandoStep_ = true;
-  if (stepAtual === 5) { irParaStep(0); return; } // perfil (orçamento+bairro) → capa (obj+estágio)
-  if (stepAtual === 2) { irParaStep(5); return; } // simulador (área+resumo) → perfil
-  if (stepAtual === 1) { irParaStep(3); return; } // nome → confirmação
-  if (stepAtual === 4) { irParaStep(1); return; } // quartos/altura → nome+objetivo
-  if (stepAtual === 9) { irParaStep(7); return; } // agendamento → captura
-  if (stepAtual > 2) { irParaStep(stepAtual - 1); return; }
+  if (stepAtual === 5) { irParaStep(0); return; } // perfil → capa
+  if (stepAtual === 2) { irParaStep(5); return; } // simulador → perfil
+  if (stepAtual === 3) { irParaStep(2); return; } // confirmação → simulador
+  if (stepAtual === 6) { irParaStep(3); return; } // resultados → confirmação
+  if (stepAtual === 1) { irParaStep(6); return; } // nome → resultados
+  if (stepAtual === 4) { irParaStep(1); return; } // mais infos → nome
+  if (stepAtual === 7) { irParaStep(4); return; } // WhatsApp → mais infos
+  if (stepAtual === 9) { irParaStep(7); return; } // agendamento → WhatsApp
   _voltandoStep_ = false; // fallback: nenhuma navegação aconteceu
 }
 
@@ -2549,7 +2551,7 @@ function atualizarBotoes() {
   // Botão Voltar: escondido só na 1ª etapa de todas (nada pra voltar) e
   // nas etapas finais (match/captura/agendamento/obrigado, onde voltar não
   // faz sentido) -- usa .hidden (opacity, não display) pra não pular layout.
-  const semVoltar = stepAtual === 0 || stepAtual === 8 || stepAtual >= 6;
+  const semVoltar = stepAtual === 0 || stepAtual === 8; // mostra Voltar em todos os steps intermediários
   if (btnVoltarHeader) btnVoltarHeader.classList.toggle('hidden', semVoltar);
 
   // Lado direito do header: "N de 4" durante as 4 primeiras etapas
@@ -4233,11 +4235,11 @@ function situacaoBadgeHTML_(estagio) {
 // "melhor" ganhava. Headline é genérica de propósito (sem menção à
 // motivação declarada) -- pedido explícito do usuário, evita soar
 // invasivo/robótico repetindo de volta o que a pessoa acabou de escolher.
-function headlineImpacto_(qtd, primeiroNome) {
+function headlineImpacto_(qtd) {
   const plural = qtd === 1
     ? 'a <span style="color:var(--accent)">melhor opção</span> de empreendimento, com o apartamento ideal'
     : `as <span style="color:var(--accent)">${qtd} melhores opções</span> de empreendimentos, com o apartamento ideal`;
-  return `${primeiroNome}, conheça ${plural} pra você! <span style="display:block;font-size:16px;font-weight:400;color:var(--yellow);margin-top:6px">(Marque seus favoritos <span style="font-size:24px;line-height:1;vertical-align:middle">♥</span>)</span>`;
+  return `Conheça ${plural} para você! <span style="display:block;font-size:16px;font-weight:400;color:var(--yellow);margin-top:6px">(Marque seus favoritos <span style="font-size:24px;line-height:1;vertical-align:middle">♥</span>)</span>`;
 }
 
 // ── MIX ANCORADO NO PRODUTO ALVO (portado de estrategias.html, aba
@@ -4436,11 +4438,10 @@ function montarMatch() {
   D.extraPrecoVisto = new Set();
   D.extraFavoritos = new Set();
 
-  const primeiroNome = D.nome.split(' ')[0];
-
+  // Nome ainda não foi coletado (resultados vêm antes do cadastro)
   document.getElementById('matchTitulo').innerHTML = ofertas.length
-    ? headlineImpacto_(ofertas.length, primeiroNome)
-    : `Quase lá, ${primeiroNome}! Não achamos um empreendimento com esse perfil exato, mas devemos ter opções bem próximas.`;
+    ? headlineImpacto_(ofertas.length)
+    : `Não encontramos um empreendimento com esse perfil exato, mas devemos ter opções bem próximas.`;
 
   const btnMais = document.getElementById('btnVerMaisOpcoes');
   const extraContainer = document.getElementById('opcoesExtraTabela');
