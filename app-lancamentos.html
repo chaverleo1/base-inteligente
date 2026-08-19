@@ -209,8 +209,12 @@ body {
 /* ── CAPA: seletor de bairro ── */
 .capa-bairro-wrap { margin: 22px 0 0; }
 .capa-bairro-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+/* Pedido explícito do usuário: contorno verde padrão (--accent),
+   espessura 1px -- era 1.5px cinza-neutro (var(--border)). ".ativo"
+   (selecionado) continua se diferenciando pelo fundo/texto verde-tintado
+   abaixo, já que a borda agora é verde nos dois estados. */
 .capa-tag-btn {
-  padding: 9px 16px; border-radius: var(--r); border: 1.5px solid var(--border);
+  padding: 9px 16px; border-radius: var(--r); border: 1px solid var(--accent);
   background: var(--surface2); color: var(--text2);
   font-size: clamp(12px, 3.2vw, 14px); font-weight: 700;
   cursor: pointer; font-family: inherit; transition: all .15s; line-height: 1.3;
@@ -352,17 +356,26 @@ body {
 .s2-subtxt-standalone { margin-top: 16px; }
 /* Preview do 1º card de resultado no step-2 */
 .s2-preview-wrap { margin-bottom: 0; }
+/* Pedido explícito do usuário: espessura 2px na borda (era 1.5px). */
 .s2-preview-cta {
   display: block; width: 100%;
   padding: 15px 20px; margin: 14px 0 0;
   text-align: center;
   font-size: clamp(13px, 3.5vw, 15px); font-weight: 800; letter-spacing: .7px;
   color: var(--orange);
-  background: rgba(245,110,20,.07); border: 1.5px solid var(--orange);
+  background: rgba(245,110,20,.07); border: 2px solid var(--orange);
   border-radius: var(--r); font-family: inherit; cursor: pointer;
   transition: all .18s;
 }
 .s2-preview-cta:hover { background: rgba(245,110,20,.14); }
+/* Pedido explícito do usuário: aviso vermelho quando a contagem de
+   opções está em 0 e o cliente tenta avançar pelo CTA acima -- ver
+   avancarSimulador_(). */
+.s2-zero-opcoes-aviso {
+  margin-top: 12px; padding: 12px 14px; border-radius: var(--r);
+  background: rgba(229,52,46,.08); border: 1.5px solid var(--danger);
+  color: var(--danger); font-size: 13px; font-weight: 700; text-align: center; line-height: 1.4;
+}
 .s2-ajuste-label {
   display: block; margin-top: 28px; padding-top: 20px;
   border-top: 1px solid var(--border);
@@ -428,10 +441,16 @@ body {
   font-family: inherit; font-size: 24px; font-weight: 400; text-align: center;
 }
 .preco-input::placeholder { color: var(--text3); font-weight: 400; }
-/* Orçamento Capa -- "ARRASTE AQUI" como placeholder nativo, vermelho e em
-   destaque (pedido explícito do usuário: campo editável por digitação
-   também, não só pelo slider -- ver atualizarOrcamentoCapaDigitado_). */
+/* Orçamento Capa/Área Útil -- "ARRASTE AQUI"/"Digite Aqui" como placeholder
+   nativo, vermelho e em destaque (pedido explícito do usuário: campo
+   editável por digitação também, não só pelo slider -- ver
+   atualizarOrcamentoCapaDigitado_). */
 .preco-input-arraste::placeholder { color: var(--danger); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+/* Pedido explícito do usuário: no Orçamento Capa (sem slider agora, só a
+   caixa), o placeholder "Digite Aqui" fica com letra menor que o padrão
+   herdado (24px do .preco-input) -- escopado só a este campo, não mexe
+   no placeholder "ARRASTE AQUI" da Área Útil (que continua com slider). */
+#capaPrecoValor::placeholder { font-size: 16px; }
 
 /* Trilho/alça maiores que o padrão do navegador, mas mais finos do que a
    primeira versão (pedido explícito: diminuir espessura da linha e
@@ -444,6 +463,11 @@ input[type=range] {
   background: var(--border2); border-radius: 99px; outline: none; cursor: pointer;
   accent-color: var(--accent);
 }
+/* Pedido explícito do usuário: linha do slider da Área Útil (Simulador)
+   verde-escuro padrão (--accent) e espessura 3px -- só este slider, os
+   demais (Orçamento Capa/Simulador) continuam com o trilho neutro
+   padrão acima. */
+#sliderMetragem { height: 3px; background: var(--accent); }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 22px; height: 22px; border-radius: 50%;
@@ -860,8 +884,11 @@ input[type=range]::-moz-range-progress {
   animation: pulsoCoracao 2.2s ease-in-out infinite;
 }
 .btn-favorito:hover { border-color: var(--yellow); color: var(--yellow); }
-.btn-favorito.ativo { border: 2px solid var(--yellow); color: var(--yellow); background: var(--s2); animation: none; }
-.btn-favorito.ativo:hover { border-color: var(--yellow); color: var(--yellow); }
+/* Pedido explícito do usuário: contorno e coração vermelhos quando o
+   favorito está ATIVO (era amarelo) -- o hover do estado ocioso (linha
+   acima) continua amarelo, só o estado ativado muda. */
+.btn-favorito.ativo { border: 2px solid var(--danger); color: var(--danger); background: var(--s2); animation: none; }
+.btn-favorito.ativo:hover { border-color: var(--danger); color: var(--danger); }
 .opcao-top.favorito-ativo {
   border-color: var(--yellow);
   background: linear-gradient(135deg, rgba(245,200,0,.10), rgba(245,200,0,.03));
@@ -1110,6 +1137,10 @@ input[type=range]::-moz-range-progress {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
   color: var(--text3); padding-top: 8px;
 }
+/* Pedido explícito do usuário: label "Área Útil" maior e destacado (cor
+   de marca) -- as outras linhas (Orçamento/Objetivo/Estágio) continuam
+   com o .resumo-row-label padrão acima, pequeno/neutro. */
+#resumoLabelAreaUtil { font-size: 15px; color: var(--accent); font-weight: 800; }
 /* "Caixa com lista" -- select de verdade (com borda/fundo), diferente do
    .conf-item-select (só sublinhado) usado na Confirmação -- pedido
    explícito do usuário. */
@@ -1300,8 +1331,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
        "webdesigner", pedido explícito do usuário: "mesmos padrões de
        ícones... mude os cabeçalhos"). Lado direito troca de conteúdo
        (mostrarHeaderContador_ em atualizarBotoes()): "N de 4" durante as 4
-       primeiras etapas (Capa/Perfil/Simulador/Confirmação, acompanha o
-       Stepper abaixo), badge de Objetivo·Estágio da etapa 5 em diante. -->
+       primeiras etapas (Capa/Perfil/Simulador/Resultados, acompanha o
+       Stepper abaixo -- pedido explícito do usuário: ícones de etapa até
+       os Resultados), badge de Objetivo·Estágio da etapa 5 em diante. -->
   <div class="funil-header-topo" id="funilHeaderTopo">
     <div class="fht-left">
       <button class="funil-back-btn" id="btnVoltarHeader" onclick="voltarStep()" aria-label="Voltar">
@@ -1314,19 +1346,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="obj-badge" id="objBadge" style="display:none"></div>
   </div>
 
-  <!-- Stepper das 3 primeiras etapas (reestruturação 2026-08: Confirmação
-       removida, o funil vai direto do Simulador para os Resultados). -->
+  <!-- Stepper das 4 primeiras etapas (pedido explícito do usuário: ícones
+       de etapa da Capa até os Resultados -- Resultados voltou a fazer
+       parte do Stepper, que antes ia só até o Simulador). Cada bolha usa
+       um ícone (não mais o número) representando o conteúdo daquela
+       etapa -- cor/estado (atual/concluída) continua vindo do CSS
+       existente (.fs-current/.fs-done), o ícone herda a cor via
+       currentColor, mesma técnica já usada nos outros ícones do app. -->
   <nav class="funil-stepper" id="funilStepper" aria-label="Progresso do funil">
     <div class="fs-item">
-      <button type="button" class="fs-btn" id="fsBtn0" onclick="irParaStepperStep_(0)"><span class="fs-bubble" id="fsBubble0">1</span><span class="fs-label">Capa</span></button>
+      <button type="button" class="fs-btn" id="fsBtn0" onclick="irParaStepperStep_(0)"><span class="fs-bubble" id="fsBubble0"><svg width="13" height="13"><use href="#ico-home"/></svg></span><span class="fs-label">Capa</span></button>
       <span class="fs-line" id="fsLine1"></span>
     </div>
     <div class="fs-item">
-      <button type="button" class="fs-btn" id="fsBtn5" onclick="irParaStepperStep_(5)"><span class="fs-bubble" id="fsBubble5">2</span><span class="fs-label">Perfil</span></button>
+      <button type="button" class="fs-btn" id="fsBtn5" onclick="irParaStepperStep_(5)"><span class="fs-bubble" id="fsBubble5"><svg width="13" height="13"><use href="#ico-wallet"/></svg></span><span class="fs-label">Perfil</span></button>
       <span class="fs-line" id="fsLine2"></span>
     </div>
     <div class="fs-item">
-      <button type="button" class="fs-btn" id="fsBtn2" onclick="irParaStepperStep_(2)"><span class="fs-bubble" id="fsBubble2">3</span><span class="fs-label">Simulador</span></button>
+      <button type="button" class="fs-btn" id="fsBtn2" onclick="irParaStepperStep_(2)"><span class="fs-bubble" id="fsBubble2"><svg width="13" height="13"><use href="#ico-swap"/></svg></span><span class="fs-label">Simulador</span></button>
+      <span class="fs-line" id="fsLine3"></span>
+    </div>
+    <div class="fs-item">
+      <button type="button" class="fs-btn" id="fsBtn6" onclick="irParaStepperStep_(6)"><span class="fs-bubble" id="fsBubble6"><svg width="13" height="13"><use href="#ico-check"/></svg></span><span class="fs-label">Resultados</span></button>
     </div>
   </nav>
 
@@ -1401,31 +1442,29 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- STEP 5 — PERFIL: orçamento + bairro (reestruturação 2026-08-17).
        Bairro é o MESMO seletor de sempre, só mudou de tela (ids/funções
        idênticos -- capaBairro*/ctx 'capa', ver BAIRRO_CTX_). Orçamento
-       virou slider (pedido explícito do usuário, mesmo padrão visual da
-       área útil no Simulador), com campo de texto junto pra ajuste fino. -->
+       -- pedido explícito do usuário (2ª rodada): removido o slider,
+       fica só a caixa de texto destacada (placeholder "Digite Aqui",
+       ver #capaPrecoValor::placeholder no CSS). Texto de sub-legenda
+       "Vamos refinar sua busca com esses dois filtros." também removido. -->
   <div class="step" id="step-5">
     <!-- step-tag removido (pedido explícito do usuário) -- o Stepper no
          header já indica a etapa 2/4. -->
     <div class="step-title">Qual seu <span style="color:var(--accent)">orçamento</span> ideal?</div>
-    <div class="step-sub">Vamos refinar sua busca com esses dois filtros.</div>
 
-    <!-- Orçamento Capa -- pedido explícito do usuário: o campo permite
-         editar o valor digitando também, não fica preso só ao slider.
-         "ARRASTE AQUI" agora é placeholder nativo (vermelho) do próprio
-         campo -- some assim que a pessoa digita OU arrasta. Rótulo "Seu
-         orçamento atual é: (pode fazer alterações)" removido (pedido
-         explícito do usuário, redundante com o step-title acima). -->
+    <!-- Orçamento Capa -- o campo permite editar o valor digitando
+         (pedido explícito do usuário: sem slider, só a caixa). "Digite
+         Aqui" é placeholder nativo (vermelho, letra menor) do próprio
+         campo -- some assim que a pessoa digita. Rótulo "Seu orçamento
+         atual é: (pode fazer alterações)" removido antes (redundante com
+         o step-title acima). -->
     <div class="preco-input-row" style="margin-top:20px">
       <span class="preco-prefixo prefixo-grande" id="prefixoPreco">R$</span>
-      <input type="text" class="preco-input preco-input-arraste" id="capaPrecoValor" inputmode="numeric" placeholder="ARRASTE AQUI"
+      <input type="text" class="preco-input preco-input-arraste" id="capaPrecoValor" inputmode="numeric" placeholder="Digite Aqui"
              oninput="atualizarOrcamentoCapaDigitado_(this.value)" onblur="validarLimitesOrcamentoCapa_()">
     </div>
-    <input type="range" id="sliderPreco" oninput="atualizarOrcamentoCapa_(this.value)" style="width:100%">
-    <!-- Sem legenda de min/max visível (pedido explícito do usuário) -- a
-         alça vai de 200mil a 20mi (ORCAMENTO_SLIDER_BOUNDS_, bem mais larga
-         que a faixa real disponível hoje), e só avisa em vermelho se o
-         valor escolhido cair fora da faixa REAL (PRECO_BOUNDS, calculada
-         da base filtrada) -- não trava, só avisa. -->
+    <!-- Sem legenda de min/max visível (pedido explícito do usuário) -- só
+         avisa em vermelho se o valor digitado cair fora da faixa REAL
+         (PRECO_BOUNDS, calculada da base filtrada) -- não trava, só avisa. -->
     <div class="aviso-fora-faixa" id="avisoCapaPrecoFaixa" style="display:none"></div>
 
     <!-- Seletor de bairro (idêntico ao que já existia -- só mudou de tela) -->
@@ -1504,7 +1543,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
            atualizarMetragemDigitado_/validarLimitesMetragem_), só mudou de
            posição no HTML. -->
       <div class="resumo-row">
-        <div class="resumo-row-label">Área Útil</div>
+        <!-- Pedido explícito do usuário: label "Área Útil" maior e
+             destacado (ver #resumoLabelAreaUtil no CSS) -- as outras
+             linhas continuam com .resumo-row-label padrão. -->
+        <div class="resumo-row-label" id="resumoLabelAreaUtil">Área Útil</div>
         <div>
           <div class="preco-input-row" style="margin-bottom:0">
             <!-- Pedido explícito do usuário: número maior e destacado
@@ -1514,8 +1556,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                  tocado). -->
             <input type="text" class="preco-input preco-input-arraste" id="areaSimuladorValor" inputmode="numeric" placeholder="ARRASTE AQUI" style="font-size:24px;font-weight:800;color:var(--accent);text-align:left;padding:0"
                    oninput="atualizarMetragemDigitado_(this.value)" onblur="validarLimitesMetragem_()">
-            <span class="preco-prefixo" style="font-size:14px" id="prefixoArea">m²</span>
+            <!-- Pedido explícito do usuário: "m²" 2x maior (era 14px) --
+                 fixo em 28px, sobrepõe o toggle .prefixo-grande (26px,
+                 compartilhado com #prefixoPreco) que existia pro objetivo
+                 Investimento. -->
+            <span class="preco-prefixo" style="font-size:28px" id="prefixoArea">m²</span>
           </div>
+          <!-- Pedido explícito do usuário: linha do slider verde-escuro
+               padrão + espessura 3 (só este slider, ver #sliderMetragem
+               no CSS -- os outros continuam com o trilho neutro padrão). -->
           <input type="range" id="sliderMetragem" oninput="atualizarMetragem(this.value)" style="width:100%;margin-top:6px">
         </div>
       </div>
@@ -1576,8 +1625,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
     <!-- CTA do Simulador: avança direto para os Resultados (step-3 Confirmação
-         foi removido — reestruturação 2026-08). -->
-    <button class="s2-preview-cta" onclick="avancarStep()" style="margin-top:28px">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
+         foi removido — reestruturação 2026-08). Pedido explícito do
+         usuário: se a contagem estiver em 0, não avança -- mostra aviso
+         vermelho pedindo pra ajustar os filtros (ver avancarSimulador_). -->
+    <button class="s2-preview-cta" onclick="avancarSimulador_()" style="margin-top:28px">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
+    <div class="s2-zero-opcoes-aviso" id="s2ZeroOpcoesAviso" style="display:none"></div>
 
   </div>
 
@@ -1896,7 +1948,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- STICKY ATENDIMENTO — visível no step-6 enquanto o cliente lê os cards -->
 <div class="sticky-atend" id="stickyAtend" style="display:none">
   <div class="sticky-atend-inner">
-    <div id="stickyFavCount" style="display:none;text-align:center;font-size:14px;font-weight:700;color:var(--yellow);margin-bottom:8px"></div>
+    <!-- Pedido explícito do usuário: texto "♥ N apartamento(s) favoritado(s)"
+         vermelho (era amarelo) -- coração herda a mesma cor do texto. -->
+    <div id="stickyFavCount" style="display:none;text-align:center;font-size:14px;font-weight:700;color:var(--danger);margin-bottom:8px"></div>
     <button class="btn-final btn-quente" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
       QUERO MAIS INFORMAÇÕES
@@ -2471,11 +2525,14 @@ function voltarStep() {
   _voltandoStep_ = false; // fallback: nenhuma navegação aconteceu
 }
 
-// Ordem/posição das 3 primeiras etapas (Capa/Perfil/Simulador) pro Stepper.
-// Confirmação removida — reestruturação 2026-08. Os ids de step continuam
-// os de sempre (0/5/2), isso só mapeia pra posição visual 0..2.
-const ORDINAL_STEP_   = [0, 5, 2];
-const STEP_ORDINAL_   = { 0: 0, 5: 1, 2: 2 };
+// Ordem/posição das 4 primeiras etapas (Capa/Perfil/Simulador/Resultados)
+// pro Stepper. Pedido explícito do usuário: ícones de etapa "da Capa até
+// os Resultados" -- Resultados (step-6) voltou a fazer parte do Stepper
+// (antes ia só até o Simulador). Confirmação continua removida
+// (reestruturação 2026-08). Os ids de step continuam os de sempre
+// (0/5/2/6), isso só mapeia pra posição visual 0..3.
+const ORDINAL_STEP_   = [0, 5, 2, 6];
+const STEP_ORDINAL_   = { 0: 0, 5: 1, 2: 2, 6: 3 };
 
 // Clique numa bolha do Stepper -- só deixa voltar pra uma etapa já
 // visitada (ou a atual, vira no-op), nunca pular pra frente. Mesmo
@@ -2521,13 +2578,14 @@ function atualizarBotoes() {
   const semVoltar = stepAtual === 0 || stepAtual === 8; // mostra Voltar em todos os steps intermediários
   if (btnVoltarHeader) btnVoltarHeader.classList.toggle('hidden', semVoltar);
 
-  // Lado direito do header: "N de 3" durante as 3 primeiras etapas
-  // (acompanha o Stepper), badge de Objetivo·Estágio da etapa 4 em diante.
+  // Lado direito do header: "N de 4" durante as 4 primeiras etapas
+  // (acompanha o Stepper, agora incluindo Resultados -- pedido explícito
+  // do usuário), badge de Objetivo·Estágio da etapa 5 em diante.
   const ordAtual = STEP_ORDINAL_[stepAtual];
   const nasQuatroPrimeiras = ordAtual !== undefined;
   if (stepCount) {
     stepCount.style.display = nasQuatroPrimeiras ? '' : 'none';
-    if (nasQuatroPrimeiras) stepCount.textContent = (ordAtual + 1) + ' de 3';
+    if (nasQuatroPrimeiras) stepCount.textContent = (ordAtual + 1) + ' de 4';
   }
   if (objBadge) {
     objBadge.style.display = (!nasQuatroPrimeiras && D.objetivo) ? '' : 'none';
@@ -3471,18 +3529,19 @@ let slidersProntos_ = false;
 // atualizarOrcamentoCapa_), não o limite do próprio slider.
 const ORCAMENTO_SLIDER_BOUNDS_ = [200000, 20000000];
 
+// Pedido explícito do usuário: slider removido do Orçamento Capa (só a
+// caixa de texto continua) -- função mantida (nome/chamadas inalterados
+// em inicializarSliders()) só pra calcular/aplicar o valor padrão
+// inicial de D.capaPreco, sem mais referenciar nenhum <input type=range>.
 function inicializarSliderPreco_() {
   slidersProntos_ = false; // previne que atualizarOrcamentoCapa_ contabilize como interação do usuário
-  const sP = document.getElementById('sliderPreco');
-  sP.min = ORCAMENTO_SLIDER_BOUNDS_[0]; sP.max = ORCAMENTO_SLIDER_BOUNDS_[1]; sP.step = 25000;
   const defPreco = D.capaPreco
     ? Math.min(Math.max(D.capaPreco, ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1])
     : Math.round((PRECO_BOUNDS[0] + PRECO_BOUNDS[1]) / 2 / 25000) * 25000;
-  sP.value = defPreco;
   if (D.capaPreco) {
     atualizarOrcamentoCapa_(defPreco);
   } else {
-    // Campo vazio -- o placeholder "ARRASTE AQUI" (vermelho, CSS
+    // Campo vazio -- o placeholder "Digite Aqui" (vermelho, CSS
     // .preco-input-arraste::placeholder) aparece sozinho, nativo do <input>.
     const el = document.getElementById('capaPrecoValor');
     if (el) el.value = '';
@@ -3803,7 +3862,9 @@ function atualizarAvisoOrcamentoCapa_(v) {
   }
 }
 
-// Arraste no slider.
+// Define o valor programaticamente (chamada pela inicialização, quando já
+// existe um D.capaPreco de uma visita anterior). Pedido explícito do
+// usuário: slider removido -- não mexe mais em nenhum <input type=range>.
 function atualizarOrcamentoCapa_(val) {
   const v = parseInt(val);
   if (D.precoInicial === null) D.precoInicial = v;
@@ -3814,10 +3875,9 @@ function atualizarOrcamentoCapa_(val) {
   atualizarAvisoOrcamentoCapa_(v);
 }
 
-// Digitação (mesmo padrão de atualizarOrcamentoSimuladorDigitado_) -- só
-// reformata/sincroniza o slider aqui, sem validar contra bounds a cada
-// tecla (apagar um dígito derrubaria o valor abaixo do mínimo
-// momentaneamente). Validação de verdade só no blur.
+// Digitação (mesmo padrão de atualizarOrcamentoSimuladorDigitado_) -- sem
+// validar contra bounds a cada tecla (apagar um dígito derrubaria o valor
+// abaixo do mínimo momentaneamente). Validação de verdade só no blur.
 function atualizarOrcamentoCapaDigitado_(val) {
   const digitos = val.replace(/\D/g, '');
   const input = document.getElementById('capaPrecoValor');
@@ -3831,7 +3891,6 @@ function atualizarOrcamentoCapaDigitado_(val) {
   if (D.precoInicial === null) D.precoInicial = v;
   D.ajustesSlider++;
   D.capaPreco = v;
-  document.getElementById('sliderPreco').value = Math.min(Math.max(v, ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1]);
   atualizarAvisoOrcamentoCapa_(v);
 }
 
@@ -3840,11 +3899,10 @@ function atualizarOrcamentoCapaDigitado_(val) {
 // é só aviso (ver atualizarAvisoOrcamentoCapa_).
 function validarLimitesOrcamentoCapa_() {
   const input = document.getElementById('capaPrecoValor');
-  if (!input.value.trim()) return; // vazio -- deixa o placeholder "ARRASTE AQUI"
+  if (!input.value.trim()) return; // vazio -- deixa o placeholder "Digite Aqui"
   let v = parseInt(input.value.replace(/\D/g, '')) || 0;
   v = Math.min(Math.max(v || ORCAMENTO_SLIDER_BOUNDS_[0], ORCAMENTO_SLIDER_BOUNDS_[0]), ORCAMENTO_SLIDER_BOUNDS_[1]);
   input.value = v.toLocaleString('pt-BR');
-  document.getElementById('sliderPreco').value = v;
   D.capaPreco = v;
   atualizarAvisoOrcamentoCapa_(v);
 }
@@ -4025,6 +4083,29 @@ function atualizarComboUI_() {
   const nota = document.getElementById('toleranciaNota');
   if (nota) nota.style.display = (D.toleranciaExpandida && D.situacoes.size > 0) ? '' : 'none';
   montarPreviewCard_();
+  // Qualquer ajuste feito depois do aviso de "0 opções" (ver
+  // avancarSimulador_) já esconde o aviso -- não precisa esperar um novo
+  // clique no CTA pra sumir.
+  const avisoZero = document.getElementById('s2ZeroOpcoesAviso');
+  if (avisoZero) avisoZero.style.display = 'none';
+}
+
+// CTA "CONTINUE PARA VER TODAS AS OPÇÕES" do Simulador -- pedido
+// explícito do usuário: se a contagem estiver em 0, não avança pros
+// Resultados (ficaria uma tela vazia) -- mostra aviso vermelho pedindo
+// pra ajustar os filtros aqui mesmo.
+function avancarSimulador_() {
+  const qtd = qtdOpcoesReais_();
+  const aviso = document.getElementById('s2ZeroOpcoesAviso');
+  if (qtd === 0) {
+    if (aviso) {
+      aviso.textContent = 'Até o momento 0 opções foram encontradas. Ajuste suas configurações no simulador!';
+      aviso.style.display = '';
+    }
+    return;
+  }
+  if (aviso) aviso.style.display = 'none';
+  avancarStep();
 }
 
 // Renderiza o 1º resultado filtrado no container de preview do step-2.
