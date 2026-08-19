@@ -946,6 +946,16 @@ input[type=range]::-moz-range-progress {
    cor verde padrão do WhatsApp (#25D366, mesma usada em .whats-btn). */
 #btnConfirmarFinal.btn-amarelo { background: #25D366; color: #fff; }
 #btnConfirmarFinal.btn-amarelo:hover { background: #1ebe5a; }
+/* Pedido explícito do usuário: só o botão "Confirmar Finalizar
+   Atendimento!" (penúltima etapa, Agendamento) com fundo vermelho (era
+   amarelo) -- escopado só a este por ID, os outros .btn-amarelo
+   continuam amarelos. */
+#btnFinalizarAtendimento.btn-amarelo { background: var(--danger); color: #fff; }
+#btnFinalizarAtendimento.btn-amarelo:hover { background: #c92923; }
+/* Preserva o estado "Confirmado" (verde de sucesso, ver submeter() em
+   code.txt/JS) por cima do vermelho acima -- sem isso, o botão ficaria
+   vermelho pra sempre mesmo depois de confirmado com sucesso. */
+#btnFinalizarAtendimento.confirmado { background: var(--green); }
 
 /* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
 @keyframes checkPop {
@@ -1851,9 +1861,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="conf-card">
         <div class="conf-item conf-item-last" id="confAgendamentoResumo"><!-- populado por JS --></div>
       </div>
+      <!-- Pedido explícito do usuário: fundo vermelho (era amarelo, igual
+           os outros .btn-amarelo -- escopado só a este por ID) + texto
+           "Confirmar Finalizar Atendimento!" (era "Finalizar
+           Atendimento"). O toggle "Enviando.../Confirmado" (submeter(),
+           code.txt) continua trocando o textContent temporariamente
+           durante o envio, sem mudar aqui. -->
       <button class="btn-final btn-amarelo" id="btnFinalizarAtendimento" style="margin-top:20px" onclick="finalizarAgendamentoEEnviar_()">
         <svg width="20" height="20" style="flex-shrink:0"><use href="#ico-handshake"/></svg>
-        Finalizar Atendimento
+        Confirmar Finalizar Atendimento!
       </button>
     </div>
   </div>
