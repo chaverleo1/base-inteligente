@@ -941,6 +941,11 @@ input[type=range]::-moz-range-progress {
 .btn-final.btn-quente:hover { filter: brightness(1.08); }
 .btn-final.btn-amarelo { background: var(--yellow); color: #1a1200; transition: background .18s, transform .15s; }
 .btn-final.btn-amarelo:hover { background: var(--orange); transform: scale(0.96); }
+/* Pedido explícito do usuário: só o botão "CONFIRMAR CONSULTORIA
+   GRATUITA" (não os outros .btn-amarelo, ex. Agendamento) com fundo na
+   cor verde padrão do WhatsApp (#25D366, mesma usada em .whats-btn). */
+#btnConfirmarFinal.btn-amarelo { background: #25D366; color: #fff; }
+#btnConfirmarFinal.btn-amarelo:hover { background: #1ebe5a; }
 
 /* ── AGRADECIMENTO ────────────────────────────────────────────────────── */
 @keyframes checkPop {
@@ -969,11 +974,12 @@ input[type=range]::-moz-range-progress {
 .perfil-item-v { color: var(--yellow); font-weight: 600; text-align: right; min-width: 0; overflow-wrap: break-word; }
 
 /* Cards favoritados (Tela 7) -- mesmo padrão visual de .opcao-top (Tela de
-   resultados), só espaçamento entre eles + destaque dourado na borda pra
-   diferenciar visualmente que são os favoritos. */
+   resultados), só espaçamento entre eles + destaque vermelho na borda
+   (era dourado, pedido explícito do usuário) pra diferenciar visualmente
+   que são os favoritos, mesma cor usada no botão/coração de favorito. */
 #favoritosResumoCards { display: flex; flex-direction: column; gap: 10px; }
-#favoritosResumoCards .opcao-top { border-color: rgba(245,200,0,.4); }
-#favoritosResumoCards .opcao-codigo { color: var(--yellow); }
+#favoritosResumoCards .opcao-top { border-color: rgba(229,52,46,.4); }
+#favoritosResumoCards .opcao-codigo { color: var(--danger); }
 
 .whats-btn {
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -4301,7 +4307,9 @@ function headlineImpacto_(qtd) {
   const plural = qtd === 1
     ? 'a <span style="color:var(--accent)">melhor opção</span> de empreendimento, com o apartamento ideal'
     : `as <span style="color:var(--accent)">${qtd} melhores opções</span> de empreendimentos, com o apartamento ideal`;
-  return `Conheça ${plural} para você! <span style="display:block;font-size:16px;font-weight:400;color:var(--yellow);margin-top:6px">(Marque seus favoritos <span style="font-size:24px;line-height:1;vertical-align:middle">♥</span>)</span>`;
+  // Pedido explícito do usuário: "(Marque seus favoritos ♥)" vermelho
+  // (era amarelo) -- coração herda a mesma cor do texto.
+  return `Conheça ${plural} para você! <span style="display:block;font-size:16px;font-weight:400;color:var(--danger);margin-top:6px">(Marque seus favoritos <span style="font-size:24px;line-height:1;vertical-align:middle">♥</span>)</span>`;
 }
 
 // ── MIX ANCORADO NO PRODUTO ALVO (portado de estrategias.html, aba
