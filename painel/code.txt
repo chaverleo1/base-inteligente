@@ -5869,17 +5869,15 @@ function registrarEventoFunil_(d) {
 // "Etapa N — Nome" na ordem real de navegação do cliente (ver
 // ETAPA_POR_STEP_ em app-lancamentos.html). Usado por listarEstatisticasFunil_
 // e por montarBlocoAbandonoEmail_/montarBlocoDadosTecnicosEmail_.
-// v3.0: 10 etapas (era 8) -- Objetivo/Padrão virou etapa própria (2) e
-// Agendamento entrou como etapa 9, empurrando "Concluiu" pra 10. Mesma
-// ordem de ETAPA_POR_STEP_ em app-lancamentos.html.
-var TOTAL_ETAPAS_FUNIL_ = 10;
-// Ordem real de navegação pós-reorganização (2026-08-17):
-// 0→5→2→3→6→1→4→7→9→8 (ver ETAPA_POR_STEP_ em app-lancamentos.html)
-// Etapa 5 = Resultados (subiu, antes era 7); 6 = Nome (era 5); 7 = Mais Infos (era 6 "Perfil").
+// v3.1 (2026-08): 9 etapas — Confirmação (antiga etapa 4) removida.
+// Ordem: 0→5→2→6→1→4→7→9→8 (ver ETAPA_POR_STEP_ em app-lancamentos.html)
+var TOTAL_ETAPAS_FUNIL_ = 9;
+// Etapa 4 = Resultados (era 5); 5 = Nome (era 6); 6 = Mais Infos (era 7);
+// 7 = WhatsApp (era 8); 8 = Agendamento (era 9); 9 = Concluiu (era 10).
 var NOME_ETAPA_FUNIL_ = {
-  1: 'Capa', 2: 'Perfil', 3: 'Simulador', 4: 'Confirmação',
-  5: 'Resultados', 6: 'Nome', 7: 'Mais Infos', 8: 'WhatsApp',
-  9: 'Agendamento', 10: 'Concluiu',
+  1: 'Capa', 2: 'Perfil', 3: 'Simulador',
+  4: 'Resultados', 5: 'Nome', 6: 'Mais Infos', 7: 'WhatsApp',
+  8: 'Agendamento', 9: 'Concluiu',
 };
 
 // Reconstrói um Date a partir do formato 'dd/MM/yyyy HH:mm:ss' usado em
@@ -7133,8 +7131,8 @@ function segundosParaTextoEmail_(ms) {
 // que chega em tags.tempoPorStep (objeto {stepId: ms}).
 var NOME_ETAPA_POR_STEP_EMAIL_ = {
   0: 'Etapa 1 — Capa', 5: 'Etapa 2 — Perfil', 2: 'Etapa 3 — Simulador',
-  3: 'Etapa 4 — Confirmação', 6: 'Etapa 5 — Resultados', 1: 'Etapa 6 — Nome',
-  4: 'Etapa 7 — Mais Infos', 7: 'Etapa 8 — WhatsApp', 9: 'Etapa 9 — Agendamento',
+  6: 'Etapa 4 — Resultados', 1: 'Etapa 5 — Nome',
+  4: 'Etapa 6 — Mais Infos', 7: 'Etapa 7 — WhatsApp', 9: 'Etapa 8 — Agendamento',
 };
 
 // Dados técnicos capturados sem perguntar nada ao cliente (pedido explícito
@@ -7163,7 +7161,7 @@ function montarBlocoDadosTecnicosEmail_(d) {
     // Ordem de navegação real do cliente, não a ordem crescente dos
     // step-ids crus (que pula: confirmação é step-3 mas vem antes de nome,
     // que é step-1) -- mesma ordem de ETAPA_POR_STEP_ em app-lancamentos.html.
-    var ORDEM_STEP_IDS_ = [0, 5, 2, 3, 6, 1, 4, 7, 9];
+    var ORDEM_STEP_IDS_ = [0, 5, 2, 6, 1, 4, 7, 9]; // Confirmação (step-3) removida
     var linhasTempo = ORDEM_STEP_IDS_
       .filter(function(k) { return tempoPorStep[k] !== undefined; })
       .map(function(k) { return { etapa: NOME_ETAPA_POR_STEP_EMAIL_[k], tempo: segundosParaTextoEmail_(tempoPorStep[k]) }; });

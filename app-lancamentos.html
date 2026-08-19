@@ -288,6 +288,25 @@ body {
   animation: capaCarregandoPulso 1s ease-in-out infinite;
 }
 @keyframes capaCarregandoPulso { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+
+/* ── SUB-ETAPAS DA CAPA (reestruturação 2026-08) ────────────────────────
+   Sub-etapa 1/2: título + contador + objetivo — ocupa a tela inteira para
+   que a pergunta fique centrada verticalmente antes de rolar pra sub-etapa 2.
+   Sub-etapa 2/2: bloco de estágio — revelado por scroll após clicar no
+   objetivo; ao clicar já avança para a Etapa 2 (step-5 Perfil). */
+.capa-sub1 {
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: calc(100dvh - 140px); /* 140px ≈ header + stepper */
+  padding-bottom: 28px;
+}
+.capa-sub2 {
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: 85dvh;
+  padding: 32px 0 48px;
+  border-top: 1px solid rgba(27,85,64,.08);
+  scroll-margin-top: 16px;
+}
+
 /* Hero 2 linhas — capa reformulada */
 .hero-2l { margin: 0 0 0; }
 .hero-2l-body {
@@ -1295,8 +1314,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="obj-badge" id="objBadge" style="display:none"></div>
   </div>
 
-  <!-- Stepper das 4 primeiras etapas -- visível só durante Capa/Perfil/
-       Simulador/Confirmação (mostrarStepper_ em atualizarBotoes()). -->
+  <!-- Stepper das 3 primeiras etapas (reestruturação 2026-08: Confirmação
+       removida, o funil vai direto do Simulador para os Resultados). -->
   <nav class="funil-stepper" id="funilStepper" aria-label="Progresso do funil">
     <div class="fs-item">
       <button type="button" class="fs-btn" id="fsBtn0" onclick="irParaStepperStep_(0)"><span class="fs-bubble" id="fsBubble0">1</span><span class="fs-label">Capa</span></button>
@@ -1308,93 +1327,72 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <div class="fs-item">
       <button type="button" class="fs-btn" id="fsBtn2" onclick="irParaStepperStep_(2)"><span class="fs-bubble" id="fsBubble2">3</span><span class="fs-label">Simulador</span></button>
-      <span class="fs-line" id="fsLine3"></span>
-    </div>
-    <div class="fs-item">
-      <button type="button" class="fs-btn" id="fsBtn3" onclick="irParaStepperStep_(3)"><span class="fs-bubble" id="fsBubble3">4</span><span class="fs-label">Confirmação</span></button>
     </div>
   </nav>
 
-  <!-- STEP 0 — CAPA: objetivo + estágio (reestruturação 2026-08-17, sistema
-       "webdesigner" -- pedido explícito do usuário, seguir a sequência do
-       site de referência: Capa/Perfil/Simulador/Confirmação). Bairro SAIU
-       daqui, foi pra tela Perfil (step-5) -- ver comentário lá. -->
+  <!-- STEP 0 — CAPA: duas sub-etapas (reestruturação 2026-08).
+       Sub-etapa 1/2: título + objetivo, centralizado na tela — clique em
+       Objetivo revela a sub-etapa 2 via scroll suave.
+       Sub-etapa 2/2: estágio — clique já avança para step-5 (Perfil).
+       Bairro continua na tela Perfil (step-5). -->
   <div class="step ativo" id="step-0">
 
-    <span class="capa-eyebrow-pill"><svg width="13" height="13"><use href="#ico-pin"/></svg>Goiânia · GO</span>
+    <!-- Sub-etapa 1/2: Título + contador + Objetivo (centralizado no viewport) -->
+    <div class="capa-sub1">
+      <span class="capa-eyebrow-pill"><svg width="13" height="13"><use href="#ico-pin"/></svg>Goiânia · GO</span>
 
-    <!-- Título com palavra-chave em itálico (mesmo padrão do site de
-         referência) -- conteúdo adaptado, mantendo os tipos de imóvel
-         (loft/garden/cobertura/studio) que são diferencial real do
-         catálogo, pedido explícito do usuário: "mude o conteudo da capa e
-         textos também, como está nesse projeto novo". -->
-    <h1 class="capa-titulo">Encontre o <em>apartamento ideal</em> para o seu novo lar</h1>
-    <p class="capa-subtitulo">Apartamentos, lofts, gardens, coberturas e studios em lançamento na Grande Goiânia.</p>
+      <!-- Título com palavra-chave em itálico -->
+      <h1 class="capa-titulo">Encontre o <em>apartamento ideal</em> para o seu novo lar</h1>
+      <p class="capa-subtitulo">Apartamentos, lofts, gardens, coberturas e studios em lançamento na Grande Goiânia.</p>
 
-    <div class="hp-count-bloco">
-      <span class="hp-count-dot-wrap"><span class="hp-count-dot-ping"></span><span class="hp-count-dot"></span></span>
-      Temos hoje <strong class="stats-total-emp">—</strong> empreendimentos disponíveis!
-    </div>
+      <!-- Elemento de carregamento mantido no DOM (sem texto); revelarConteudoCapa_()
+           o oculta e exibe capaConteudoPrincipal assim que a base carrega. -->
+      <div class="capa-carregando" id="capaCarregandoAviso" style="display:none"></div>
 
-    <!-- Aviso de carregamento -- pedido explícito do usuário: o resto da
-         página (Objetivo/Estágio/CTA, abaixo) só aparece depois que a base
-         real termina de carregar E a contagem é feita, em vez de mostrar
-         os botões antes dos dados reais chegarem. Escondido/mostrado por
-         revelarConteudoCapa_(), chamada no fim de carregarBaseReal(). -->
-    <div class="capa-carregando" id="capaCarregandoAviso">
-      <span class="capa-carregando-dot"></span>
-      Estamos atualizando nossa base... aguarde alguns segundos!
-    </div>
+      <!-- Contador + pergunta Objetivo: revelados após os dados carregarem -->
+      <div id="capaConteudoPrincipal" style="display:none">
+        <div class="hp-count-bloco" style="margin-top:12px">
+          <span class="hp-count-dot-wrap"><span class="hp-count-dot-ping"></span><span class="hp-count-dot"></span></span>
+          Temos hoje <strong class="stats-total-emp">—</strong> empreendimentos disponíveis!
+        </div>
 
-    <div id="capaConteudoPrincipal" style="display:none">
-      <!-- Objetivo -->
-      <div class="stagger-entrada" style="margin-top:18px">
-        <div class="step-title" style="margin-bottom:10px">Você busca <em style="color:var(--accent);font-style:italic">para...</em></div>
-        <div class="obj-tag-group escolha-group" id="tagsObjetivo">
-          <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'moradia')">
-            <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-home"/></svg></span>
-            <span class="escolha-texto">
-              <span class="escolha-titulo">Moradia</span>
-              <span class="escolha-sub">Para morar com quem você ama</span>
-            </span>
-            <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
-          </button>
-          <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'investimento')">
-            <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-trending"/></svg></span>
-            <span class="escolha-texto">
-              <span class="escolha-titulo">Investimento</span>
-              <span class="escolha-sub">Para rentabilizar e valorizar</span>
-            </span>
-            <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
-          </button>
+        <div class="stagger-entrada" style="margin-top:24px">
+          <div class="step-title" style="margin-bottom:10px">Você busca <em style="color:var(--accent);font-style:italic">para...</em></div>
+          <div class="obj-tag-group escolha-group" id="tagsObjetivo">
+            <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'moradia')">
+              <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-home"/></svg></span>
+              <span class="escolha-texto">
+                <span class="escolha-titulo">Moradia</span>
+                <span class="escolha-sub">Para morar com quem você ama</span>
+              </span>
+              <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
+            </button>
+            <button class="obj-tag-btn escolha-card" onclick="selecionarObjetivo_(this,'investimento')">
+              <span class="escolha-icon"><svg width="22" height="22"><use href="#ico-trending"/></svg></span>
+              <span class="escolha-texto">
+                <span class="escolha-titulo">Investimento</span>
+                <span class="escolha-sub">Para rentabilizar e valorizar</span>
+              </span>
+              <span class="escolha-check"><svg width="13" height="13"><use href="#ico-check"/></svg></span>
+            </button>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Estágio — aparece após marcar objetivo -->
-      <div id="blocoEstagioWrap" style="display:none;margin-top:20px">
-        <div class="step-title" style="margin-bottom:10px">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
-        <div class="obj-tag-group escolha-group" id="tagsEstagio">
-          <button class="obj-tag-btn escolha-card escolha-card-vert" id="btnEstProntoNovo" onclick="selecionarEstagioStep5_(this,'pronto_novo')">
-            <!-- Ícone de tick/confirmado (pedido explícito do usuário) --
-                 reaproveita o mesmo #ico-check já usado no resto do app
-                 (badge de seleção, tela de agradecimento etc), no lugar da
-                 casinha genérica -- comunica "pronto/confirmado" melhor. -->
-            <svg width="24" height="24"><use href="#ico-check"/></svg>
-            <span class="escolha-titulo">Pronto para Morar</span>
-          </button>
-          <button class="obj-tag-btn escolha-card escolha-card-vert" onclick="selecionarEstagioStep5_(this,'em_obras')">
-            <svg width="24" height="24"><use href="#ico-construction"/></svg>
-            <span class="escolha-titulo">Em Obras</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="hero-cta-area" style="margin-top:16px">
-        <button class="btn-final btn-quente" onclick="avancarStep()">
-          <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-          CONTINUAR
+    <!-- Sub-etapa 2/2: Estágio — revelada via scroll ao clicar em Objetivo.
+         Clicar em qualquer botão de estágio avança direto para step-5 (Perfil). -->
+    <div class="capa-sub2" id="blocoEstagioWrap" style="display:none">
+      <div class="step-title" style="margin-bottom:10px">Qual <span style="color:var(--accent)">estágio</span> é o ideal pra você?</div>
+      <div class="obj-tag-group escolha-group" id="tagsEstagio">
+        <button class="obj-tag-btn escolha-card escolha-card-vert" id="btnEstProntoNovo" onclick="selecionarEstagioEAvancar_(this,'pronto_novo')">
+          <svg width="24" height="24"><use href="#ico-check"/></svg>
+          <span class="escolha-titulo">Pronto para Morar</span>
         </button>
-        <div class="btn-final-sub capa-dados-sub" style="margin-top:10px" id="capaDadosAtualizados">Resultado rápido · Dados reais e atualizados</div>
+        <button class="obj-tag-btn escolha-card escolha-card-vert" onclick="selecionarEstagioEAvancar_(this,'em_obras')">
+          <svg width="24" height="24"><use href="#ico-construction"/></svg>
+          <span class="escolha-titulo">Em Obras</span>
+        </button>
       </div>
     </div>
 
@@ -1577,50 +1575,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
     </div>
 
-  </div>
+    <!-- CTA do Simulador: avança direto para os Resultados (step-3 Confirmação
+         foi removido — reestruturação 2026-08). -->
+    <button class="s2-preview-cta" onclick="avancarStep()" style="margin-top:28px">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
 
-  <!-- STEP 3 — CONFIRMAÇÃO DOS DADOS -->
-  <div class="step" id="step-3">
-    <div class="step-tag">Confirme seus dados</div>
-    <div class="step-title">Antes de seguirmos, <span style="color:var(--accent)">confirme</span> o que você configurou!</div>
-
-    <div class="conf-card">
-      <div class="conf-item">
-        <div class="conf-item-label">Objetivo</div>
-        <div class="conf-item-val conf-item-val-sit" id="confObjetivo">—</div>
-      </div>
-      <div class="conf-item">
-        <div class="conf-item-label">Estágio</div>
-        <div class="conf-item-val conf-item-val-sit" id="confPadrao">—</div>
-      </div>
-      <div class="conf-item">
-        <div class="conf-item-label">Seu orçamento estimado</div>
-        <div class="conf-item-val" id="confOrcamento">—</div>
-      </div>
-      <div class="conf-item conf-item-last">
-        <div class="conf-item-label">Área útil ideal do apartamento</div>
-        <div class="conf-item-val" id="confArea">—</div>
-      </div>
-      <div class="conf-obs">
-        Faixa de investimento (±20%): <strong id="confPrecoFaixa">—</strong><br>
-        Intervalo de área compatível: <strong id="confFaixa">—</strong>
-      </div>
-    </div>
-
-    <!-- "Essa é uma delas:" + preview + CTA "CONTINUE..." -- movidos pra cá
-         do Simulador (pedido explícito do usuário); substituem o badge "N
-         opções encontradas" que existia antes nesta posição. Texto agora
-         inclui a contagem (pedido explícito do usuário): "Encontramos X
-         opções. Essa é uma delas:" -- preenchido em montarConfirmacao_(). -->
-    <span class="s2-subtxt s2-subtxt-standalone" id="confSubtxtPreview">Essa é uma delas:</span>
-    <div class="tolerancia-nota" id="toleranciaNotaConfirmacao" style="display:none;text-align:center"></div>
-
-    <!-- Preview do 1º resultado — populado por montarPreviewCard_() -->
-    <div id="s2PreviewCard" class="s2-preview-wrap"></div>
-    <button class="s2-preview-cta" onclick="avancarStep()">CONTINUE PARA VER TODAS AS OPÇÕES ›</button>
-    <!-- Botões "Ajustar"/"Confirmar" removidos (pedido explícito do usuário)
-         -- avançar já é feito pelo CTA acima, e voltar já existe no header
-         (btnVoltarHeader, ver atualizarBotoes()). -->
   </div>
 
   <!-- STEP 4 — TIPO DE APARTAMENTO: quartos + altura (personalizada com o
@@ -1941,7 +1899,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div id="stickyFavCount" style="display:none;text-align:center;font-size:14px;font-weight:700;color:var(--yellow);margin-bottom:8px"></div>
     <button class="btn-final btn-quente" onclick="avancarStep()">
       <svg width="18" height="18" style="flex-shrink:0"><use href="#ico-arrow"/></svg>
-      QUERO ATENDIMENTO EXCLUSIVO
+      QUERO MAIS INFORMAÇÕES
     </button>
     <div class="btn-final-sub">Sem compromisso · Atendimento personalizado</div>
   </div>
@@ -2329,9 +2287,10 @@ const D = {
 // de navegação do cliente. Usado só pro rastreio comportamental (tempo por
 // etapa, taxa de abandono agregada) -- não afeta a navegação em si.
 // Novo fluxo: 0→5→2→3→6→1→4→7→9→8
-// Capa=1, Perfil=2, Simulador=3, Confirmação=4, Resultados=5,
-// Nome=6, MaisInfos=7, WhatsApp=8, Agendamento=9, Obrigado=10
-const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 3: 4, 6: 5, 1: 6, 4: 7, 7: 8, 9: 9, 8: 10 };
+// Capa=1, Perfil=2, Simulador=3, Resultados=4,
+// Nome=5, MaisInfos=6, WhatsApp=7, Agendamento=8, Obrigado=9
+// (Confirmação removida — reestruturação 2026-08)
+const ETAPA_POR_STEP_ = { 0: 1, 5: 2, 2: 3, 6: 4, 1: 5, 4: 6, 7: 7, 9: 8, 8: 9 };
 let _stepEntradaTs = Date.now();
 let _voltandoStep_ = false; // true quando a navegação atual veio de voltarStep()
 
@@ -2417,9 +2376,8 @@ function avancarStep() {
   // UTMs de sessões que abandonam antes do Perfil continuam capturados via
   // utmCampaignFunilMap (FUNIL_EVENTOS, fix 2026-08-18).
   if (stepAtual === 5) { registrarAcessoCapa_(); montarConfigIniciais_(); irParaStep(2); return; } // perfil → simulador (área+resumo)
-  if (stepAtual === 2) { montarConfirmacao_(); irParaStep(3); return; }     // simulador → confirmação
-  if (stepAtual === 3) { montarMatch(); irParaStep(6); return; }             // confirmação → resultados
-  if (stepAtual === 6) { montarBlocoNecessidade_(); irParaStep(1); return; } // resultados → nome (btn "Quero Atendimento")
+  if (stepAtual === 2) { montarMatch(); irParaStep(6); return; }             // simulador → resultados (confirmação removida)
+  if (stepAtual === 6) { montarBlocoNecessidade_(); irParaStep(1); return; } // resultados → nome (btn "Quero Mais Informações")
   if (stepAtual === 1) { montarMotivacaoTitulo_(); irParaStep(4); return; } // nome → mais infos (quartos/vagas)
   if (stepAtual === 4) { montarCapturaTitulo_(); irParaStep(7); return; }   // mais infos → WhatsApp/captura
   if (stepAtual === 7) {                                                                           // captura → agendamento ou tela final
@@ -2505,8 +2463,7 @@ function voltarStep() {
   _voltandoStep_ = true;
   if (stepAtual === 5) { irParaStep(0); return; } // perfil → capa
   if (stepAtual === 2) { irParaStep(5); return; } // simulador → perfil
-  if (stepAtual === 3) { irParaStep(2); return; } // confirmação → simulador
-  if (stepAtual === 6) { irParaStep(3); return; } // resultados → confirmação
+  if (stepAtual === 6) { irParaStep(2); return; } // resultados → simulador (confirmação removida)
   if (stepAtual === 1) { irParaStep(6); return; } // nome → resultados
   if (stepAtual === 4) { irParaStep(1); return; } // mais infos → nome
   if (stepAtual === 7) { irParaStep(4); return; } // WhatsApp → mais infos
@@ -2514,11 +2471,11 @@ function voltarStep() {
   _voltandoStep_ = false; // fallback: nenhuma navegação aconteceu
 }
 
-// Ordem/posição das 4 primeiras etapas (Capa/Perfil/Simulador/Confirmação)
-// pro Stepper -- os ids de step continuam os de sempre (0/5/2/3), isso só
-// mapeia pra posição visual 0..3. Reestruturação 2026-08-17.
-const ORDINAL_STEP_   = [0, 5, 2, 3];
-const STEP_ORDINAL_   = { 0: 0, 5: 1, 2: 2, 3: 3 };
+// Ordem/posição das 3 primeiras etapas (Capa/Perfil/Simulador) pro Stepper.
+// Confirmação removida — reestruturação 2026-08. Os ids de step continuam
+// os de sempre (0/5/2), isso só mapeia pra posição visual 0..2.
+const ORDINAL_STEP_   = [0, 5, 2];
+const STEP_ORDINAL_   = { 0: 0, 5: 1, 2: 2 };
 
 // Clique numa bolha do Stepper -- só deixa voltar pra uma etapa já
 // visitada (ou a atual, vira no-op), nunca pular pra frente. Mesmo
@@ -2544,14 +2501,14 @@ function atualizarBotoes() {
   const stepCount       = document.getElementById('funilStepCount');
   const stepper         = document.getElementById('funilStepper');
 
-  // Step 0 tem CTA inline — nav bar some e padding de fundo some junto
-  if (navBar) navBar.style.display = (stepAtual === 0 || stepAtual === 6) ? 'none' : '';
-  if (main)   main.style.paddingBottom = stepAtual === 0 ? '24px' : '';
+  // Steps 0 e 2 têm CTA inline; step 6 tem sticky CTA — nav bar some nesses casos
+  if (navBar) navBar.style.display = (stepAtual === 0 || stepAtual === 2 || stepAtual === 6) ? 'none' : '';
+  if (main)   main.style.paddingBottom = (stepAtual === 0 || stepAtual === 2) ? '24px' : '';
   const stickyAtend = document.getElementById('stickyAtend');
   if (stickyAtend) stickyAtend.style.display = stepAtual === 6 ? 'block' : 'none';
 
-  // Botão avançar no rodapé
-  const semBotaoAvancarFooter = stepAtual === 3 || stepAtual === 4 || stepAtual >= 6;
+  // Botão avançar no rodapé (oculto nos steps com CTA próprio)
+  const semBotaoAvancarFooter = stepAtual === 2 || stepAtual === 3 || stepAtual === 4 || stepAtual >= 6;
   bA.classList.toggle('btn-hide', semBotaoAvancarFooter);
 
   // btnVoltar do rodapé: sempre oculto — Voltar agora é só no header
@@ -2564,13 +2521,13 @@ function atualizarBotoes() {
   const semVoltar = stepAtual === 0 || stepAtual === 8; // mostra Voltar em todos os steps intermediários
   if (btnVoltarHeader) btnVoltarHeader.classList.toggle('hidden', semVoltar);
 
-  // Lado direito do header: "N de 4" durante as 4 primeiras etapas
-  // (acompanha o Stepper), badge de Objetivo·Estágio da etapa 5 em diante.
+  // Lado direito do header: "N de 3" durante as 3 primeiras etapas
+  // (acompanha o Stepper), badge de Objetivo·Estágio da etapa 4 em diante.
   const ordAtual = STEP_ORDINAL_[stepAtual];
   const nasQuatroPrimeiras = ordAtual !== undefined;
   if (stepCount) {
     stepCount.style.display = nasQuatroPrimeiras ? '' : 'none';
-    if (nasQuatroPrimeiras) stepCount.textContent = (ordAtual + 1) + ' de 4';
+    if (nasQuatroPrimeiras) stepCount.textContent = (ordAtual + 1) + ' de 3';
   }
   if (objBadge) {
     objBadge.style.display = (!nasQuatroPrimeiras && D.objetivo) ? '' : 'none';
@@ -2740,7 +2697,13 @@ function selecionarObjetivo_(el, val) {
   const tituloProntoStep5 = btnProntoStep5 && btnProntoStep5.querySelector('.escolha-titulo');
   if (tituloProntoStep5) tituloProntoStep5.textContent = termoProntoParaMorar_();
   const blocoEstagio = document.getElementById('blocoEstagioWrap');
-  if (blocoEstagio) blocoEstagio.style.display = '';
+  if (blocoEstagio) {
+    blocoEstagio.style.display = '';
+    // Aguarda o reflow após display:'' antes de rolar — sub-etapa 2/2
+    setTimeout(function() {
+      blocoEstagio.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  }
 }
 
 // Seleção de estágio na Capa (radio: só um por vez).
@@ -2760,6 +2723,15 @@ function selecionarEstagioStep5_(el, val) {
   // Pedido explícito do usuário: clicar "Pronto para Morar"/"Em Obras" já
   // atualiza a quantidade mostrada no contador da Capa, na hora.
   atualizarContadorCapa_();
+}
+
+// Seleção de estágio na sub-etapa 2/2 da Capa (reestruturação 2026-08):
+// seleciona o estágio e avança direto para step-5 (Perfil), sem precisar
+// do botão "Continuar" — o clique no card já é a confirmação.
+function selecionarEstagioEAvancar_(el, val) {
+  selecionarEstagioStep5_(el, val);
+  // Pequena pausa pra o usuário ver o estado "selecionado" antes de avançar
+  setTimeout(avancarStep, 220);
 }
 
 // Força o navegador a repintar um elemento na hora, em vez de possivelmente
