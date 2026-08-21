@@ -463,12 +463,13 @@ function renderHero(im) {
   let interior = '';
   if (im.youtube) {
     // Thumbnail clicável — iframe só carrega ao clicar (sem título/canal do YouTube)
-    const ytThumb = `https://img.youtube.com/vi/${im.youtube}/maxresdefault.jpg`;
-    const ytThumbFallback = `https://img.youtube.com/vi/${im.youtube}/hqdefault.jpg`;
+    // Prioridade: foto de capa personalizada > thumbnail do YouTube
+    const posterUrl   = im.img || `https://img.youtube.com/vi/${im.youtube}/maxresdefault.jpg`;
+    const posterFallback = im.img || `https://img.youtube.com/vi/${im.youtube}/hqdefault.jpg`;
     interior = `
       <div class="vsim" id="ytPoster" onclick="ativarYt_('${im.youtube}')" style="cursor:pointer">
-        <img class="vsim-foto" src="${ytThumb}"
-             onerror="this.src='${ytThumbFallback}'"
+        <img class="vsim-foto" src="${posterUrl}"
+             onerror="this.src='${posterFallback}'"
              alt="${im.titulo}">
         <div class="vsim-overlay"></div>
         <div class="vsim-play" style="pointer-events:none">
