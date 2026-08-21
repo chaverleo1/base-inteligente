@@ -59,8 +59,6 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); min-
   display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .hdr-logo-name { font-size: 13px; font-weight: 800; line-height: 1.2; }
 .hdr-logo-sub  { font-size: 10px; color: var(--text3); font-weight: 600; }
-
-/* ── TABS ── */
 .tabs { display: flex; gap: 2px; }
 .tab-btn { padding: 0 18px; height: 58px; font-size: 13px; font-weight: 700;
   color: var(--text3); border-bottom: 2px solid transparent;
@@ -68,31 +66,44 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); min-
 .tab-btn:hover { color: var(--text); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 .hdr-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+/* publish status pill */
+.pub-status { display: none; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+  padding: 5px 12px; border-radius: 99px; white-space: nowrap; }
+.pub-status.idle    { display: none; }
+.pub-status.saving  { display: flex; background: rgba(0,0,0,.06); color: var(--text3); }
+.pub-status.ok      { display: flex; background: rgba(34,164,82,.1); color: var(--green); }
+.pub-status.erro    { display: flex; background: rgba(229,52,46,.1); color: var(--danger); }
+.pub-spin { width: 12px; height: 12px; border: 2px solid rgba(0,0,0,.12); border-top-color: var(--text3);
+  border-radius: 50%; animation: rot .8s linear infinite; }
+@keyframes rot { to { transform: rotate(360deg); } }
+
 .btn-xs { padding: 7px 12px; border-radius: 7px; font-size: 12px; font-weight: 700; }
 .btn-xs-outline { border: 1.5px solid var(--border); color: var(--text2);
   transition: border-color .15s, color .15s; }
 .btn-xs-outline:hover { border-color: var(--accent); color: var(--accent); }
 .btn-xs-green { background: var(--accent); color: #fff; transition: background .15s; }
 .btn-xs-green:hover { background: #154430; }
+.btn-pub { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 800;
+  background: var(--accent); color: #fff; display: none; align-items: center; gap: 7px;
+  transition: background .15s; }
+.btn-pub:hover:not(:disabled) { background: #154430; }
+.btn-pub:disabled { opacity: .55; cursor: not-allowed; }
+.btn-pub.vis { display: flex; }
 
 /* ── WRAP ── */
 .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 80px; }
-
-/* ── SECTION DISPLAY ── */
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ABA ENVIAR VÍDEO
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .enviar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
 @media (max-width: 700px) { .enviar-grid { grid-template-columns: 1fr; } }
-
-.card { background: #fff; border-radius: 14px; padding: 28px 24px;
-  border: 1px solid var(--border); }
+.card { background: #fff; border-radius: 14px; padding: 28px 24px; border: 1px solid var(--border); }
 .card-title { font-size: 17px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 4px; }
 .card-sub { font-size: 13px; color: var(--text3); font-weight: 500; margin-bottom: 22px; }
-
 .fg { margin-bottom: 16px; }
 .flabel { display: block; font-size: 11px; font-weight: 800; color: var(--text2);
   letter-spacing: .5px; text-transform: uppercase; margin-bottom: 6px; }
@@ -101,16 +112,12 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); min-
   background: var(--bg); outline: none; transition: border-color .2s; }
 .finput:focus { border-color: var(--accent); background: #fff; }
 .finput::placeholder { color: var(--text3); font-weight: 400; }
-.finput.err { border-color: var(--danger); }
 textarea.finput { resize: vertical; min-height: 90px; line-height: 1.5; }
-
 .btn-submit { width: 100%; padding: 14px; background: var(--orange); color: #fff;
   font-size: 14px; font-weight: 800; letter-spacing: .5px; border-radius: 10px;
   transition: background .15s; margin-top: 4px; }
 .btn-submit:hover:not(:disabled) { background: #d95e0f; }
 .btn-submit:disabled { opacity: .55; cursor: not-allowed; }
-
-/* preview YT */
 .yt-preview-wrap { position: relative; padding-top: 177.78%; border-radius: 12px;
   overflow: hidden; background: #111; }
 .yt-preview-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
@@ -118,8 +125,6 @@ textarea.finput { resize: vertical; min-height: 90px; line-height: 1.5; }
   align-items: center; justify-content: center; gap: 10px; color: rgba(255,255,255,.35); }
 .yt-preview-placeholder svg { opacity: .4; }
 .yt-preview-placeholder span { font-size: 13px; font-weight: 600; }
-
-/* success */
 .enviar-success { display: none; text-align: center; padding: 24px 0; }
 .success-icon { font-size: 52px; margin-bottom: 14px; }
 .success-title { font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 8px; }
@@ -128,35 +133,46 @@ textarea.finput { resize: vertical; min-height: 90px; line-height: 1.5; }
   background: var(--wa); color: #fff; font-size: 14px; font-weight: 800;
   border-radius: 10px; transition: background .15s; }
 .btn-wa:hover { background: #1ebe5a; }
+.spin { display: inline-block; width: 16px; height: 16px;
+  border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff;
+  border-radius: 50%; animation: rot .8s linear infinite; vertical-align: middle; margin-right: 6px; }
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ABA GERENCIAR
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-/* Stats */
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-.stat { background: #fff; border: 1px solid var(--border); border-radius: 10px;
-  padding: 12px 18px; min-width: 110px; }
+.stat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; }
 .stat-val { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
 .stat-val.ok   { color: var(--green); }
 .stat-val.warn { color: var(--orange); }
 .stat-lbl { font-size: 11px; color: var(--text3); font-weight: 600; margin-top: 1px; }
 
 /* Config box */
-.cfg-box { background: #fff3e0; border: 1.5px solid var(--orange);
-  border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; }
-.cfg-title { font-size: 12px; font-weight: 800; color: #b94800; margin-bottom: 12px; }
-.cfg-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-.cfg-lbl { font-size: 11.5px; font-weight: 700; color: var(--text2); min-width: 170px; flex-shrink: 0; }
-.cfg-inp { flex: 1; min-width: 180px; padding: 8px 12px; border: 1.5px solid var(--border);
-  border-radius: 7px; font-size: 13px; font-weight: 600; outline: none; background: var(--bg); }
-.cfg-inp:focus { border-color: var(--orange); background: #fff; }
-.cfg-hint { font-size: 11px; color: var(--text3); margin-top: 10px; line-height: 1.5; }
-.cfg-hint code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; font-size: 10.5px; }
+.cfg-box { border-radius: 12px; padding: 18px 20px; margin-bottom: 20px;
+  background: #fff; border: 1px solid var(--border); }
+.cfg-title { font-size: 12px; font-weight: 800; color: var(--text2); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 6px; }
+.cfg-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 700px) { .cfg-rows { grid-template-columns: 1fr; } }
+.cfg-fg { display: flex; flex-direction: column; gap: 5px; }
+.cfg-lbl { font-size: 10.5px; font-weight: 800; color: var(--text3);
+  letter-spacing: .5px; text-transform: uppercase; }
+.cfg-inp { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+  font-size: 13px; font-weight: 600; outline: none; background: var(--bg); width: 100%; }
+.cfg-inp:focus { border-color: var(--accent); background: #fff; }
+.cfg-inp.token { font-family: monospace; font-size: 12px; letter-spacing: .5px; }
+.cfg-inp.ok { border-color: var(--green); }
+
+/* GitHub setup notice */
+.gh-setup { background: #fffbe6; border: 1.5px solid #f0c000; border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 16px; font-size: 12.5px; line-height: 1.7; color: #5c4400; }
+.gh-setup strong { font-weight: 800; }
+.gh-setup a { color: var(--accent); font-weight: 700; text-decoration: underline; }
+.gh-setup code { background: rgba(0,0,0,.08); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+.gh-setup.hidden { display: none; }
 
 /* Toolbar */
-.toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-.toolbar-left { display: flex; gap: 8px; flex: 1; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
 .search-inp { padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 9px;
   font-size: 13px; font-weight: 600; outline: none; background: #fff; min-width: 180px; flex: 1; }
 .search-inp:focus { border-color: var(--accent); }
@@ -170,8 +186,8 @@ textarea.finput { resize: vertical; min-height: 90px; line-height: 1.5; }
 .im-card:hover { box-shadow: 0 3px 16px rgba(0,0,0,.09); }
 .im-card.ok   { border-left: 3px solid var(--green); }
 .im-card.warn { border-left: 3px solid #ddd; }
+.im-card.dirty { border-left: 3px solid var(--orange); }
 
-/* Card summary row */
 .im-summary { display: flex; align-items: center; gap: 14px; padding: 13px 16px;
   cursor: pointer; user-select: none; }
 .im-thumb { width: 52px; height: 52px; border-radius: 7px; object-fit: cover;
@@ -186,14 +202,14 @@ textarea.finput { resize: vertical; min-height: 90px; line-height: 1.5; }
   font-weight: 800; padding: 3px 9px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
 .im-badge.ok   { background: rgba(34,164,82,.12); color: var(--green); }
 .im-badge.warn { background: rgba(0,0,0,.06); color: var(--text3); }
+.im-badge.dirty { background: rgba(245,110,20,.12); color: var(--orange); }
 .im-chevron { font-size: 14px; color: var(--text3); transition: transform .2s; flex-shrink: 0; }
 .im-card.open .im-chevron { transform: rotate(180deg); }
 
-/* Card body (editor) */
 .im-body { display: none; padding: 0 16px 22px; border-top: 1px solid var(--border); }
 .im-card.open .im-body { display: block; }
-.im-body-grid { display: grid; grid-template-columns: 220px 1fr; gap: 20px;
-  margin-top: 18px; align-items: start; }
+.im-body-grid { display: grid; grid-template-columns: 200px 1fr; gap: 20px;
+  margin-top: 16px; align-items: start; }
 @media (max-width: 680px) { .im-body-grid { grid-template-columns: 1fr; } }
 
 /* Foto preview */
@@ -203,12 +219,10 @@ textarea.finput { resize: vertical; min-height: 90px; line-height: 1.5; }
   display: flex; align-items: center; justify-content: center; font-size: 44px; }
 
 /* Editor fields */
-.ed-section { margin-bottom: 16px; }
+.ed-section { margin-bottom: 14px; }
 .ed-title { font-size: 10px; font-weight: 800; color: var(--text3); letter-spacing: 1px;
-  text-transform: uppercase; margin-bottom: 8px; padding-bottom: 6px;
-  border-bottom: 1px solid var(--border); }
+  text-transform: uppercase; margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
 .ed-row { display: flex; gap: 8px; margin-bottom: 8px; }
-.ed-row .efg { margin-bottom: 0; }
 .efg { margin-bottom: 8px; flex: 1; }
 .ed-lbl { font-size: 10.5px; font-weight: 800; color: var(--text2); letter-spacing: .4px;
   text-transform: uppercase; display: block; margin-bottom: 5px; }
@@ -223,13 +237,23 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
   border-radius: 8px; font-size: 13px; font-weight: 600; background: var(--bg);
   outline: none; cursor: pointer; }
 .ed-sel:focus { border-color: var(--accent); }
-
 .yt-row { display: flex; gap: 6px; align-items: stretch; }
 .yt-row .ed-inp { flex: 1; }
 .btn-yt-ver { padding: 0 12px; background: var(--accent2); color: var(--accent);
   border: 1.5px solid var(--accent); border-radius: 8px; font-size: 12px;
   font-weight: 800; white-space: nowrap; transition: background .15s; }
 .btn-yt-ver:hover { background: rgba(27,85,64,.16); }
+
+/* Salvar card footer */
+.im-footer { display: flex; justify-content: flex-end; gap: 8px;
+  padding-top: 12px; border-top: 1px solid var(--border); margin-top: 4px; }
+.btn-salvar-card { padding: 9px 20px; background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 800; border-radius: 8px;
+  display: flex; align-items: center; gap: 7px; transition: background .15s; }
+.btn-salvar-card:hover:not(:disabled) { background: #154430; }
+.btn-salvar-card:disabled { opacity: .55; cursor: not-allowed; }
+.save-note { font-size: 12px; color: var(--text3); font-weight: 600;
+  display: flex; align-items: center; gap: 5px; }
 
 /* Modal YT */
 .modal-yt { display: none; position: fixed; inset: 0; z-index: 500;
@@ -242,41 +266,25 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
 .modal-close { color: #fff; font-size: 28px; opacity: .7; cursor: pointer; }
 .modal-close:hover { opacity: 1; }
 
-/* Gerar código */
-.gerar-panel { background: #fff; border: 1px solid var(--border); border-radius: 12px;
-  padding: 22px; margin-top: 24px; }
-.gerar-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
-.gerar-sub { font-size: 13px; color: var(--text3); margin-bottom: 14px; }
-.code-ta { width: 100%; height: 180px; padding: 12px; font-size: 11.5px;
-  border: 1.5px solid var(--border); border-radius: 8px; resize: vertical;
-  background: #1e1e2e; color: #a6e3a1; line-height: 1.55; }
-.gerar-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-.btn-copiar { padding: 10px 18px; background: var(--accent); color: #fff;
-  font-size: 13px; font-weight: 800; border-radius: 8px; transition: background .15s; }
-.btn-copiar:hover { background: #154430; }
-.btn-copiar.done { background: var(--green); }
-.instrucoes { background: var(--accent2); border-radius: 8px; padding: 12px 14px;
-  margin-top: 12px; font-size: 12.5px; color: var(--accent); font-weight: 600; line-height: 1.65; }
-.instrucoes ol { padding-left: 18px; }
-.instrucoes li { margin-bottom: 3px; }
-.instrucoes code { background: rgba(27,85,64,.15); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
-
-/* Spinner */
-.spin { display: inline-block; width: 16px; height: 16px;
-  border: 2.5px solid rgba(255,255,255,.3); border-top-color: #fff;
-  border-radius: 50%; animation: rot .8s linear infinite; vertical-align: middle; margin-right: 6px; }
-@keyframes rot { to { transform: rotate(360deg); } }
+/* Toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: #222; color: #fff; font-size: 13.5px; font-weight: 700;
+  padding: 12px 22px; border-radius: 10px; z-index: 800;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; }
+.toast.vis { transform: translateX(-50%) translateY(0); }
+.toast.ok  { background: var(--green); }
+.toast.err { background: var(--danger); }
 
 @media (max-width: 600px) {
   .hdr-logo-sub { display: none; }
   .tab-btn { padding: 0 12px; font-size: 12px; }
-  .wrap { padding: 16px 14px 60px; }
+  .wrap { padding: 16px 14px 80px; }
 }
 </style>
 </head>
 <body>
 
-<!-- ── LOCK ─────────────────────────────────── -->
+<!-- ── LOCK ─────────────────────────── -->
 <div class="lock off" id="lock">
   <div class="lock-box">
     <div class="lock-icon">🔐</div>
@@ -289,7 +297,7 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
   </div>
 </div>
 
-<!-- ── MODAL YT ──────────────────────────────── -->
+<!-- ── MODAL YT ──────────────────────── -->
 <div class="modal-yt" id="modalYt" onclick="fecharModalYt_()">
   <button class="modal-close">✕</button>
   <div class="modal-yt-box">
@@ -298,7 +306,10 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
   </div>
 </div>
 
-<!-- ── HEADER ────────────────────────────────── -->
+<!-- ── TOAST ─────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── HEADER ────────────────────────── -->
 <header class="hdr">
   <div class="hdr-inner">
     <div class="hdr-logo">
@@ -319,26 +330,22 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
     </nav>
 
     <div class="hdr-right">
+      <div class="pub-status idle" id="pubStatus"></div>
       <a class="btn-xs btn-xs-outline" href="index.html" target="_blank">↗ Ver site</a>
-      <button class="btn-xs btn-xs-green" id="btnGerarHeader"
-              onclick="gerarCodigo_()" style="display:none">⬇ Gerar data.js</button>
     </div>
   </div>
 </header>
 
-<!-- ── CONTEÚDO ──────────────────────────────── -->
+<!-- ── CONTEÚDO ──────────────────────── -->
 <div class="wrap">
 
   <!-- ═══ ABA ENVIAR VÍDEO ═══ -->
   <div class="tab-panel active" id="panel-enviar">
     <div class="enviar-grid">
-
-      <!-- Formulário -->
       <div>
         <div class="card">
           <div class="card-title">Enviar vídeo para publicação</div>
           <div class="card-sub">Preencha os dados e nossa equipe publica em breve.</div>
-
           <form id="formEnviar" onsubmit="enviarVideo_(event)">
             <div class="fg">
               <label class="flabel" for="eNome">Seu nome</label>
@@ -346,7 +353,7 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
             </div>
             <div class="fg">
               <label class="flabel" for="eImovel">Nome do imóvel / empreendimento</label>
-              <input class="finput" id="eImovel" type="text" placeholder="Ex: Lake House, Nobile Bueno..." required>
+              <input class="finput" id="eImovel" type="text" placeholder="Ex: Lake House..." required>
             </div>
             <div class="fg">
               <label class="flabel" for="eYt">URL do vídeo no YouTube</label>
@@ -356,16 +363,15 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
             </div>
             <div class="fg">
               <label class="flabel" for="eBairro">Bairro / região</label>
-              <input class="finput" id="eBairro" type="text" placeholder="Ex: Setor Bueno, Marista...">
+              <input class="finput" id="eBairro" type="text" placeholder="Ex: Setor Bueno...">
             </div>
             <div class="fg">
               <label class="flabel" for="eObs">Observações (opcional)</label>
               <textarea class="finput" id="eObs" rows="3"
-                        placeholder="Área, quartos, preço, destaques do imóvel..."></textarea>
+                        placeholder="Área, quartos, preço, destaques..."></textarea>
             </div>
             <button class="btn-submit" type="submit" id="btnEnviar">ENVIAR VÍDEO</button>
           </form>
-
           <div class="enviar-success" id="enviarSuccess">
             <div class="success-icon">🎉</div>
             <div class="success-title" id="successTitle"></div>
@@ -383,8 +389,6 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
           </div>
         </div>
       </div>
-
-      <!-- Preview -->
       <div>
         <div class="card" style="padding-bottom:20px">
           <div class="card-title" style="margin-bottom:14px">Pré-visualização</div>
@@ -400,11 +404,10 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
               style="display:none;position:absolute;inset:0;width:100%;height:100%;border:none"></iframe>
           </div>
           <p style="font-size:12px;color:var(--text3);margin-top:10px;text-align:center;font-weight:500">
-            O vídeo deve estar <strong>Não listado</strong> ou <strong>Público</strong> no YouTube
+            Vídeo deve estar <strong>Não listado</strong> ou <strong>Público</strong> no YouTube
           </p>
         </div>
       </div>
-
     </div>
   </div><!-- /panel-enviar -->
 
@@ -415,62 +418,63 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
 
     <!-- Config -->
     <div class="cfg-box">
-      <div class="cfg-title">⚙️ Configurações <span style="font-weight:500;color:#c45200">(salvas localmente neste navegador)</span></div>
-      <div class="cfg-row">
-        <span class="cfg-lbl">WhatsApp do corretor</span>
-        <input class="cfg-inp" id="cfgWhats" type="tel" placeholder="5562999999999" oninput="salvarCfg_()">
+      <div class="cfg-title">⚙️ Configurações <span style="font-weight:500;color:var(--text3)">(salvas localmente neste navegador)</span></div>
+      <div class="cfg-rows">
+        <div class="cfg-fg">
+          <label class="cfg-lbl">WhatsApp do corretor</label>
+          <input class="cfg-inp" id="cfgWhats" type="tel" placeholder="5562999999999" oninput="salvarCfg_()">
+        </div>
+        <div class="cfg-fg">
+          <label class="cfg-lbl">PIN de acesso</label>
+          <input class="cfg-inp" id="cfgPin" type="password" placeholder="123456" maxlength="8" oninput="salvarCfg_()">
+        </div>
+        <div class="cfg-fg">
+          <label class="cfg-lbl">Repositório GitHub
+            <span style="color:var(--text3);font-weight:500"> (usuario/repo)</span>
+          </label>
+          <input class="cfg-inp" id="cfgRepo" type="text" placeholder="chaverleo1/base-inteligente"
+                 oninput="salvarCfg_(); verificarToken_()">
+        </div>
+        <div class="cfg-fg">
+          <label class="cfg-lbl">GitHub Token
+            <a href="https://github.com/settings/tokens/new?scopes=repo&description=PPM+Admin"
+               target="_blank" style="color:var(--accent);font-weight:700;font-size:10px;margin-left:4px">
+              ↗ Criar token
+            </a>
+          </label>
+          <input class="cfg-inp token" id="cfgToken" type="password"
+                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                 oninput="salvarCfg_(); verificarToken_()">
+        </div>
+        <div class="cfg-fg">
+          <label class="cfg-lbl">URL Google Apps Script <span style="font-weight:500">(opcional)</span></label>
+          <input class="cfg-inp" id="cfgGas" type="url"
+                 placeholder="https://script.google.com/macros/s/…/exec" oninput="salvarCfg_()">
+        </div>
       </div>
-      <div class="cfg-row">
-        <span class="cfg-lbl">URL Google Apps Script</span>
-        <input class="cfg-inp" id="cfgGas" type="url"
-               placeholder="https://script.google.com/macros/s/…/exec" oninput="salvarCfg_()">
-      </div>
-      <div class="cfg-row">
-        <span class="cfg-lbl">PIN de acesso ao Gerenciar</span>
-        <input class="cfg-inp" id="cfgPin" type="password" placeholder="123456" maxlength="8" oninput="salvarCfg_()">
-      </div>
-      <div class="cfg-hint">
-        <strong>O que é a URL do GAS?</strong> É o endereço do seu Google Apps Script configurado como "web app" —
-        ele salva leads e envios numa planilha Google. Se já usa o painel BASE INTELIGENTE, copie o valor de
-        <code>painel/config.js</code> → campo <code>gUrl</code>. Se não tiver, <strong>deixe em branco</strong> —
-        os dados chegam pelo WhatsApp normalmente.
-      </div>
+    </div>
+
+    <!-- Aviso de setup do GitHub -->
+    <div class="gh-setup" id="ghSetup">
+      <strong>⚡ Para publicar automaticamente, configure o GitHub Token acima:</strong><br>
+      1. Clique em <strong>"↗ Criar token"</strong> ao lado do campo — abre o GitHub já com as permissões corretas<br>
+      2. Clique em <strong>"Generate token"</strong> e copie o token gerado<br>
+      3. Cole no campo <strong>GitHub Token</strong> acima<br>
+      4. Coloque também o nome do repositório: <code>chaverleo1/base-inteligente</code><br>
+      Depois disso, cada "Salvar" faz o commit e publica o site automaticamente em ~1 min.
     </div>
 
     <!-- Toolbar -->
     <div class="toolbar">
-      <div class="toolbar-left">
-        <input class="search-inp" id="searchInp" placeholder="🔍  Buscar imóvel..." oninput="filtrarCards_()">
-        <select class="filter-sel" id="filterSel" onchange="filtrarCards_()">
-          <option value="">Todos</option>
-          <option value="ok">Com vídeo ✓</option>
-          <option value="warn">Sem vídeo</option>
-        </select>
-      </div>
-      <button class="btn-xs btn-xs-green" onclick="gerarCodigo_()">⬇ Gerar data.js</button>
+      <input class="search-inp" id="searchInp" placeholder="🔍  Buscar imóvel..." oninput="filtrarCards_()">
+      <select class="filter-sel" id="filterSel" onchange="filtrarCards_()">
+        <option value="">Todos</option>
+        <option value="ok">Com vídeo ✓</option>
+        <option value="warn">Sem vídeo</option>
+      </select>
     </div>
 
     <div class="im-grid" id="imGrid"></div>
-
-    <!-- Gerar código -->
-    <div class="gerar-panel" id="gerarPanel" style="display:none">
-      <div class="gerar-title">📋 data.js atualizado — pronto para copiar</div>
-      <div class="gerar-sub">Cole este conteúdo no arquivo <code style="background:rgba(0,0,0,.07);padding:1px 5px;border-radius:4px;font-size:12px">prontos-para-morar/data.js</code> e faça o push.</div>
-      <textarea class="code-ta" id="codeTa" readonly></textarea>
-      <div class="gerar-actions">
-        <button class="btn-copiar" id="btnCopiar" onclick="copiarCodigo_()">📋 Copiar tudo</button>
-        <button class="btn-xs btn-xs-outline" onclick="document.getElementById('gerarPanel').style.display='none'">Fechar</button>
-      </div>
-      <div class="instrucoes">
-        <strong>Como aplicar:</strong>
-        <ol>
-          <li>Clique em <strong>Copiar tudo</strong></li>
-          <li>Abra <code>prontos-para-morar/data.js</code> no editor</li>
-          <li><code>Ctrl+A</code> → <code>Ctrl+V</code> → Salvar</li>
-          <li>Push para o GitHub — o site atualiza em ~1 min</li>
-        </ol>
-      </div>
-    </div>
 
   </div><!-- /panel-gerenciar -->
 
@@ -478,10 +482,10 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
 
 <script src="data.js"></script>
 <script>
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CONFIG + PIN
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const STORE = 'ppm_v2';
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const STORE = 'ppm_v3';
 let cfg = {};
 try { cfg = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch(_) {}
 let autenticado = false;
@@ -491,31 +495,47 @@ function salvarCfg_() {
   cfg.whats = document.getElementById('cfgWhats').value.trim();
   cfg.gas   = document.getElementById('cfgGas').value.trim();
   cfg.pin   = document.getElementById('cfgPin').value.trim();
+  cfg.repo  = document.getElementById('cfgRepo').value.trim();
+  cfg.token = document.getElementById('cfgToken').value.trim();
   localStorage.setItem(STORE, JSON.stringify(cfg));
 }
 function carregarCfg_() {
   document.getElementById('cfgWhats').value = cfg.whats || CONFIG.corretorWhats || '';
   document.getElementById('cfgGas').value   = cfg.gas   || CONFIG.gUrl || '';
   document.getElementById('cfgPin').value   = cfg.pin   || '';
+  document.getElementById('cfgRepo').value  = cfg.repo  || 'chaverleo1/base-inteligente';
+  document.getElementById('cfgToken').value = cfg.token || '';
+  verificarToken_();
 }
 function pinCorreto_() { return cfg.pin || PIN_PADRAO; }
+function temGitHub_() {
+  return !!(cfg.token && cfg.repo);
+}
+function verificarToken_() {
+  const setup = document.getElementById('ghSetup');
+  const tokenEl = document.getElementById('cfgToken');
+  if (temGitHub_()) {
+    setup.classList.add('hidden');
+    tokenEl.classList.add('ok');
+  } else {
+    setup.classList.remove('hidden');
+    tokenEl.classList.remove('ok');
+  }
+}
 
-// ── Abas ────────────────────────────────────────────
+// ── Abas ────────────────────────────────────────
 function trocarAba_(aba) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + aba).classList.add('active');
   document.getElementById('panel-' + aba).classList.add('active');
-  document.getElementById('btnGerarHeader').style.display = (aba === 'gerenciar') ? '' : 'none';
 }
-
 function clicarGerenciar_() {
   if (autenticado) { trocarAba_('gerenciar'); return; }
   document.getElementById('lock').classList.remove('off');
   document.getElementById('lockPin').value = '';
   setTimeout(() => document.getElementById('lockPin').focus(), 80);
 }
-
 function verificarPin_() {
   const v = document.getElementById('lockPin').value.trim();
   if (v === pinCorreto_()) {
@@ -528,8 +548,7 @@ function verificarPin_() {
     const el = document.getElementById('lockPin');
     el.classList.add('err');
     setTimeout(() => el.classList.remove('err'), 500);
-    el.value = '';
-    el.focus();
+    el.value = ''; el.focus();
   }
 }
 document.getElementById('lockPin').addEventListener('keydown', e => {
@@ -542,21 +561,20 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ABA ENVIAR VÍDEO
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function ytId_(url) {
   if (!url) return '';
   const s = url.trim();
   if (/^[A-Za-z0-9_\-]{11}$/.test(s)) return s;
   let m;
-  m = s.match(/youtu\.be\/([A-Za-z0-9_\-]{11})/);   if (m) return m[1];
-  m = s.match(/[?&]v=([A-Za-z0-9_\-]{11})/);        if (m) return m[1];
-  m = s.match(/shorts\/([A-Za-z0-9_\-]{11})/);      if (m) return m[1];
-  m = s.match(/embed\/([A-Za-z0-9_\-]{11})/);       if (m) return m[1];
+  m = s.match(/youtu\.be\/([A-Za-z0-9_\-]{11})/);  if (m) return m[1];
+  m = s.match(/[?&]v=([A-Za-z0-9_\-]{11})/);       if (m) return m[1];
+  m = s.match(/shorts\/([A-Za-z0-9_\-]{11})/);     if (m) return m[1];
+  m = s.match(/embed\/([A-Za-z0-9_\-]{11})/);      if (m) return m[1];
   return '';
 }
-
 let ytTimer = null;
 function previewYt_(url) {
   clearTimeout(ytTimer);
@@ -564,16 +582,10 @@ function previewYt_(url) {
     const id = ytId_(url);
     const ph = document.getElementById('ytPlaceholder');
     const fr = document.getElementById('ytPreviewIframe');
-    if (id) {
-      fr.src = `https://www.youtube.com/embed/${id}?rel=0`;
-      fr.style.display = '';
-      ph.style.display = 'none';
-    } else {
-      fr.src = ''; fr.style.display = 'none'; ph.style.display = '';
-    }
+    if (id) { fr.src = `https://www.youtube.com/embed/${id}?rel=0`; fr.style.display = ''; ph.style.display = 'none'; }
+    else    { fr.src = ''; fr.style.display = 'none'; ph.style.display = ''; }
   }, 600);
 }
-
 async function enviarVideo_(ev) {
   ev.preventDefault();
   const nome   = document.getElementById('eNome').value.trim();
@@ -582,34 +594,25 @@ async function enviarVideo_(ev) {
   const bairro = document.getElementById('eBairro').value.trim();
   const obs    = document.getElementById('eObs').value.trim();
   const ytid   = ytId_(ytUrl);
-
-  const btn = document.getElementById('btnEnviar');
+  const btn    = document.getElementById('btnEnviar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Enviando...';
-
   const whatsNum = cfg.whats || CONFIG.corretorWhats;
   const msg = encodeURIComponent(
-    `🎬 *Novo vídeo enviado!*\n\n` +
-    `👤 Nome: *${nome}*\n` +
-    `🏠 Imóvel: *${imovel}*\n` +
+    `🎬 *Novo vídeo enviado!*\n\n👤 Nome: *${nome}*\n🏠 Imóvel: *${imovel}*\n` +
     (bairro ? `📍 Bairro: ${bairro}\n` : '') +
     (ytid   ? `▶️ YouTube ID: \`${ytid}\`\nhttps://youtu.be/${ytid}\n` : `🔗 URL: ${ytUrl}\n`) +
-    (obs    ? `📝 Obs: ${obs}\n` : '') +
-    `\n_Enviado via gerenciar.html_`
+    (obs    ? `📝 Obs: ${obs}\n` : '') + `\n_Enviado via gerenciar.html_`
   );
   const waLink = `https://wa.me/${whatsNum}?text=${msg}`;
-
   const gasUrl = cfg.gas || CONFIG.gUrl;
   if (gasUrl) {
     try {
-      await fetch(gasUrl, {
-        method: 'POST', mode: 'no-cors',
+      await fetch(gasUrl, { method: 'POST', mode: 'no-cors',
         body: JSON.stringify({ acao: 'envio_video', nome, imovel, bairro, ytUrl, ytid, obs }),
-        headers: { 'Content-Type': 'text/plain' },
-      });
+        headers: { 'Content-Type': 'text/plain' } });
     } catch(_) {}
   }
-
   document.getElementById('formEnviar').style.display = 'none';
   document.getElementById('successTitle').textContent = `${nome}, vídeo recebido! 🎉`;
   document.getElementById('successSub').textContent =
@@ -618,26 +621,20 @@ async function enviarVideo_(ev) {
   document.getElementById('enviarSuccess').style.display = '';
   setTimeout(() => window.open(waLink, '_blank'), 800);
 }
-
 function resetEnviar_(ev) {
   ev.preventDefault();
   document.getElementById('formEnviar').reset();
   document.getElementById('formEnviar').style.display = '';
   document.getElementById('enviarSuccess').style.display = 'none';
-  document.getElementById('ytPreviewIframe').src = '';
-  document.getElementById('ytPreviewIframe').style.display = 'none';
+  document.getElementById('ytPreviewIframe').src = ''; document.getElementById('ytPreviewIframe').style.display = 'none';
   document.getElementById('ytPlaceholder').style.display = '';
-  const btn = document.getElementById('btnEnviar');
-  btn.disabled = false; btn.textContent = 'ENVIAR VÍDEO';
+  const btn = document.getElementById('btnEnviar'); btn.disabled = false; btn.textContent = 'ENVIAR VÍDEO';
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ABA GERENCIAR
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function renderGerenciar_() {
-  atualizarStats_();
-  renderCards_();
-}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderGerenciar_() { atualizarStats_(); renderCards_(); }
 
 function atualizarStats_() {
   const total = IMOVEIS.length;
@@ -650,22 +647,17 @@ function atualizarStats_() {
     <div class="stat"><div class="stat-val ok">${comYt}</div><div class="stat-lbl">Com vídeo ✓</div></div>
     <div class="stat"><div class="stat-val warn">${total - comYt}</div><div class="stat-lbl">Sem vídeo</div></div>`;
 }
-
 function renderCards_() {
   document.getElementById('imGrid').innerHTML = IMOVEIS.map(im => cardHtml_(im)).join('');
 }
-
 function cardHtml_(im) {
   const thumb  = thumbUrl(im);
   const temYt  = !!im.youtube;
   const gs     = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
-  const ytClass = im.youtube ? 'yt-ok' : '';
   return `
 <div class="im-card ${temYt ? 'ok' : 'warn'}" id="card_${im.id}" data-status="${temYt ? 'ok' : 'warn'}">
   <div class="im-summary" onclick="toggleCard_(${im.id})">
-    ${thumb
-      ? `<img class="im-thumb" id="thumb_${im.id}" src="${thumb}" onerror="this.style.display='none'">`
-      : `<div class="im-thumb-grad" style="${gs}">🏠</div>`}
+    ${thumb ? `<img class="im-thumb" id="thumb_${im.id}" src="${thumb}" onerror="this.style.display='none'">` : `<div class="im-thumb-grad" style="${gs}">🏠</div>`}
     <div class="im-summary-info">
       <div class="im-num">ID #${im.id}</div>
       <div class="im-name">${im.titulo}</div>
@@ -679,37 +671,33 @@ function cardHtml_(im) {
 
   <div class="im-body">
     <div class="im-body-grid">
-
       <!-- Foto -->
       <div>
         <div class="ed-title" style="margin-bottom:10px">Foto de capa</div>
         <div class="foto-preview" id="fotoPreview_${im.id}">
-          ${thumb
-            ? `<img class="foto-preview-img" id="fotoImg_${im.id}" src="${thumb}">`
-            : `<div class="foto-preview-grad" style="${gs}">🏠</div>`}
+          ${thumb ? `<img class="foto-preview-img" id="fotoImg_${im.id}" src="${thumb}">` : `<div class="foto-preview-grad" style="${gs}">🏠</div>`}
         </div>
         <div class="efg">
-          <label class="ed-lbl">URL da foto de capa</label>
+          <label class="ed-lbl">URL da foto</label>
           <input class="ed-inp" id="img_${im.id}" type="url"
-                 placeholder="https://... ou Google Drive, Imgur..."
+                 placeholder="https://..."
                  value="${im.img || ''}"
-                 oninput="onImgInput_(${im.id}, this.value)">
+                 oninput="onImgInput_(${im.id}, this.value); markDirty_(${im.id})">
         </div>
         <p style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:4px">
-          Cole URL de uma foto real. Se vazio, usa thumbnail do YouTube ou foto do Unsplash.
+          Foto real do imóvel. Se vazio, usa thumbnail do YouTube ou Unsplash.
         </p>
       </div>
 
       <!-- Campos -->
       <div>
-
         <div class="ed-section">
           <div class="ed-title">Vídeo YouTube</div>
           <div class="yt-row">
-            <input class="ed-inp ${ytClass}" id="yt_${im.id}" type="text"
+            <input class="ed-inp ${im.youtube ? 'yt-ok' : ''}" id="yt_${im.id}" type="text"
                    placeholder="Cole o ID ou URL do YouTube"
                    value="${im.youtube || ''}"
-                   oninput="onYtInput_(${im.id}, this)">
+                   oninput="onYtInput_(${im.id}, this); markDirty_(${im.id})">
             <button class="btn-yt-ver" onclick="verYt_(${im.id})">▶ Ver</button>
           </div>
         </div>
@@ -718,20 +706,23 @@ function cardHtml_(im) {
           <div class="ed-title">Identificação</div>
           <div class="efg">
             <label class="ed-lbl">Título</label>
-            <input class="ed-inp" id="titulo_${im.id}" type="text" value="${attrEsc_(im.titulo)}">
+            <input class="ed-inp" id="titulo_${im.id}" type="text" value="${attrEsc_(im.titulo)}"
+                   oninput="markDirty_(${im.id})">
           </div>
           <div class="efg">
             <label class="ed-lbl">Subtítulo</label>
-            <input class="ed-inp" id="subtitulo_${im.id}" type="text" value="${attrEsc_(im.subtitulo)}">
+            <input class="ed-inp" id="subtitulo_${im.id}" type="text" value="${attrEsc_(im.subtitulo)}"
+                   oninput="markDirty_(${im.id})">
           </div>
           <div class="ed-row">
             <div class="efg">
               <label class="ed-lbl">Bairro</label>
-              <input class="ed-inp" id="bairro_${im.id}" type="text" value="${attrEsc_(im.bairro)}">
+              <input class="ed-inp" id="bairro_${im.id}" type="text" value="${attrEsc_(im.bairro)}"
+                     oninput="markDirty_(${im.id})">
             </div>
             <div class="efg">
               <label class="ed-lbl">Estágio</label>
-              <select class="ed-sel" id="estagio_${im.id}">
+              <select class="ed-sel" id="estagio_${im.id}" onchange="markDirty_(${im.id})">
                 ${['Pronto para Morar','Em Obras','Lançamento'].map(e =>
                   `<option value="${e}" ${im.entrega === e ? 'selected' : ''}>${e}</option>`
                 ).join('')}
@@ -745,71 +736,92 @@ function cardHtml_(im) {
           <div class="ed-row">
             <div class="efg">
               <label class="ed-lbl">Quartos</label>
-              <input class="ed-inp" id="quartos_${im.id}" type="number" min="0" value="${im.quartos}">
+              <input class="ed-inp" id="quartos_${im.id}" type="number" min="0" value="${im.quartos}"
+                     oninput="markDirty_(${im.id})">
             </div>
             <div class="efg">
               <label class="ed-lbl">Suítes</label>
-              <input class="ed-inp" id="suites_${im.id}" type="number" min="0" value="${im.suites || 0}">
+              <input class="ed-inp" id="suites_${im.id}" type="number" min="0" value="${im.suites || 0}"
+                     oninput="markDirty_(${im.id})">
             </div>
             <div class="efg">
               <label class="ed-lbl">Área m²</label>
-              <input class="ed-inp" id="area_${im.id}" type="number" min="0" value="${im.area}">
+              <input class="ed-inp" id="area_${im.id}" type="number" min="0" value="${im.area}"
+                     oninput="markDirty_(${im.id})">
             </div>
             <div class="efg">
               <label class="ed-lbl">Vagas</label>
-              <input class="ed-inp" id="vagas_${im.id}" type="number" min="0" value="${im.vagas}">
+              <input class="ed-inp" id="vagas_${im.id}" type="number" min="0" value="${im.vagas}"
+                     oninput="markDirty_(${im.id})">
             </div>
           </div>
           <div class="efg">
             <label class="ed-lbl">Preço (R$)</label>
             <input class="ed-inp" id="preco_${im.id}" type="text"
-                   value="${Number(im.preco).toLocaleString('pt-BR')}">
+                   value="${Number(im.preco).toLocaleString('pt-BR')}"
+                   oninput="markDirty_(${im.id})">
           </div>
         </div>
 
         <div class="ed-section">
           <div class="ed-title">Descrição</div>
-          <textarea class="ed-inp" id="descricao_${im.id}" rows="4">${im.descricao || ''}</textarea>
+          <textarea class="ed-inp" id="descricao_${im.id}" rows="4"
+                    oninput="markDirty_(${im.id})">${im.descricao || ''}</textarea>
         </div>
 
+        <!-- Footer com botão Salvar -->
+        <div class="im-footer">
+          <span class="save-note" id="saveNote_${im.id}" style="display:none">
+            ● Alterações pendentes
+          </span>
+          <button class="btn-salvar-card" id="btnSalvar_${im.id}"
+                  onclick="salvarImovel_(${im.id})" disabled>
+            ✓ Salvar e publicar
+          </button>
+        </div>
       </div>
     </div><!-- /body-grid -->
   </div><!-- /im-body -->
 </div>`;
 }
 
-// ── Toggle ─────────────────────────────────────────
+// ── Toggle ───────────────────────────────────────
 function toggleCard_(id) {
   document.getElementById(`card_${id}`).classList.toggle('open');
 }
 
-// ── YouTube ────────────────────────────────────────
+// ── Dirty (pendente) ─────────────────────────────
+function markDirty_(id) {
+  const card = document.getElementById(`card_${id}`);
+  if (!card.classList.contains('dirty')) {
+    card.dataset.prevStatus = card.dataset.status;
+    card.classList.add('dirty');
+    const badge = document.getElementById(`badge_${id}`);
+    badge.classList.add('dirty');
+    badge.textContent = '✏ Editando';
+  }
+  document.getElementById(`saveNote_${id}`).style.display = 'flex';
+  const btn = document.getElementById(`btnSalvar_${id}`);
+  btn.disabled = false;
+}
+
+// ── YouTube ──────────────────────────────────────
 function onYtInput_(id, el) {
   const raw = el.value.trim();
   const vid = ytId_(raw);
   if (vid && vid !== raw) el.value = vid;
   el.classList.toggle('yt-ok', !!vid);
-  const card  = document.getElementById(`card_${id}`);
-  const badge = document.getElementById(`badge_${id}`);
   if (vid) {
-    badge.textContent = '▶ Com vídeo'; badge.className = 'im-badge ok';
-    card.classList.replace('warn', 'ok'); card.dataset.status = 'ok';
-    const thumb = document.getElementById(`thumb_${id}`);
-    const fotoImg = document.getElementById(`fotoImg_${id}`);
     const newThumb = `https://img.youtube.com/vi/${vid}/hqdefault.jpg`;
-    if (thumb) thumb.src = newThumb;
-    if (fotoImg && !document.getElementById(`img_${id}`)?.value.trim()) fotoImg.src = newThumb;
-  } else {
-    badge.textContent = '○ Sem vídeo'; badge.className = 'im-badge warn';
-    if (card.classList.contains('ok')) card.classList.replace('ok', 'warn');
-    card.dataset.status = 'warn';
+    const t = document.getElementById(`thumb_${id}`);
+    const f = document.getElementById(`fotoImg_${id}`);
+    if (t) t.src = newThumb;
+    if (f && !document.getElementById(`img_${id}`)?.value.trim()) f.src = newThumb;
   }
-  atualizarStats_();
 }
-
 function verYt_(id) {
   const v = ytId_(document.getElementById(`yt_${id}`).value.trim());
-  if (!v) { alert('Cole um YouTube ID ou URL válido primeiro.'); return; }
+  if (!v) { mostrarToast_('Cole um YouTube ID ou URL válido primeiro.', 'err'); return; }
   document.getElementById('modalIframe').src = `https://www.youtube.com/embed/${v}?autoplay=1&rel=0`;
   document.getElementById('modalYt').classList.add('vis');
 }
@@ -818,18 +830,16 @@ function fecharModalYt_() {
   document.getElementById('modalIframe').src = '';
 }
 
-// ── Foto ──────────────────────────────────────────
+// ── Foto ─────────────────────────────────────────
 function onImgInput_(id, url) {
   const fp = document.getElementById(`fotoPreview_${id}`);
-  if (!fp) return;
-  if (url) {
-    const existing = document.getElementById(`fotoImg_${id}`);
-    if (existing) { existing.src = url; }
-    else { fp.innerHTML = `<img class="foto-preview-img" id="fotoImg_${id}" src="${url}" onerror="this.style.display='none'">`; }
-  }
+  if (!fp || !url) return;
+  const existing = document.getElementById(`fotoImg_${id}`);
+  if (existing) { existing.src = url; }
+  else { fp.innerHTML = `<img class="foto-preview-img" id="fotoImg_${id}" src="${url}" onerror="this.style.display='none'">`; }
 }
 
-// ── Filtrar ───────────────────────────────────────
+// ── Filtrar ──────────────────────────────────────
 function filtrarCards_() {
   const q = document.getElementById('searchInp').value.toLowerCase();
   const s = document.getElementById('filterSel').value;
@@ -838,16 +848,18 @@ function filtrarCards_() {
     if (!card) return;
     const txt   = (im.titulo + im.bairro + im.subtitulo).toLowerCase();
     const matchQ = !q || txt.includes(q);
-    const matchS = !s || card.dataset.status === s;
+    const matchS = !s || card.dataset.status === s || (s === 'ok' && card.classList.contains('dirty') && card.dataset.prevStatus === 'warn' && !!document.getElementById(`yt_${im.id}`)?.value.trim());
     card.style.display = (matchQ && matchS) ? '' : 'none';
   });
 }
 
-// ── Gerar data.js ─────────────────────────────────
-function gerarCodigo_() {
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GITHUB API — PUBLICAÇÃO AUTOMÁTICA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function montarDataJs_() {
   const lista = IMOVEIS.map(im => {
     const ytid   = ytId_(document.getElementById(`yt_${im.id}`)?.value.trim() || '') || im.youtube || '';
-    const imgVal = (document.getElementById(`img_${im.id}`)?.value.trim())         || im.img || '';
+    const imgVal = document.getElementById(`img_${im.id}`)?.value.trim() || im.img || '';
     const prStr  = (document.getElementById(`preco_${im.id}`)?.value || String(im.preco)).replace(/\D/g,'');
     return {
       ...im,
@@ -868,7 +880,6 @@ function gerarCodigo_() {
 
   const cfgW = document.getElementById('cfgWhats').value.trim() || CONFIG.corretorWhats;
   const cfgG = document.getElementById('cfgGas').value.trim()   || CONFIG.gUrl;
-
   const imStr = lista.map(im => `  {
     id: ${im.id},
     titulo: '${e_(im.titulo)}',
@@ -883,11 +894,10 @@ function gerarCodigo_() {
     descricao: '${e_(im.descricao)}',
   }`).join(',\n');
 
-  document.getElementById('codeTa').value =
-`// ══════════════════════════════════════════════════════════
+  return `// ══════════════════════════════════════════════════════
 // PRONTOS PARA MORAR — data.js
-// Gerado em ${new Date().toLocaleString('pt-BR')} via gerenciar.html
-// ══════════════════════════════════════════════════════════
+// Atualizado em ${new Date().toLocaleString('pt-BR')}
+// ══════════════════════════════════════════════════════
 
 const CONFIG = {
   gUrl: '${e_(cfgG)}',
@@ -930,24 +940,110 @@ function fotos(imovelId, n = 8) {
   return Array.from({ length: n }, (_, i) => fotoUrl(imovelId, i + 1));
 }
 `;
-
-  document.getElementById('gerarPanel').style.display = '';
-  document.getElementById('gerarPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+async function salvarImovel_(id) {
+  const btn = document.getElementById(`btnSalvar_${id}`);
+  const card = document.getElementById(`card_${id}`);
+  const titulo = document.getElementById(`titulo_${id}`)?.value || `Imóvel #${id}`;
+
+  if (!temGitHub_()) {
+    mostrarToast_('Configure o GitHub Token nas configurações acima.', 'err');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Publicando...';
+  setPubStatus_('saving', 'Publicando...');
+
+  try {
+    const conteudo = montarDataJs_();
+    const repo    = cfg.repo;
+    const token   = cfg.token;
+    const path    = 'prontos-para-morar/data.js';
+    const branch  = 'main';
+
+    // 1. Busca o SHA atual do arquivo
+    const r1 = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!r1.ok) throw new Error(`Erro ao buscar arquivo: ${r1.status} ${r1.statusText}`);
+    const { sha } = await r1.json();
+
+    // 2. Faz o commit com o conteúdo atualizado
+    const r2 = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `update: ${titulo} — via gerenciar.html`,
+        content: btoa(unescape(encodeURIComponent(conteudo))),
+        sha,
+        branch,
+      }),
+    });
+    if (!r2.ok) {
+      const err = await r2.json();
+      throw new Error(err.message || `Erro ${r2.status}`);
+    }
+
+    // Sucesso
+    const ytNovo = !!document.getElementById(`yt_${id}`)?.value.trim();
+    card.classList.remove('dirty');
+    card.dataset.status = ytNovo ? 'ok' : 'warn';
+    const badge = document.getElementById(`badge_${id}`);
+    badge.className = `im-badge ${ytNovo ? 'ok' : 'warn'}`;
+    badge.textContent = ytNovo ? '▶ Com vídeo' : '○ Sem vídeo';
+    document.getElementById(`saveNote_${id}`).style.display = 'none';
+    btn.innerHTML = '✓ Salvar e publicar';
+    btn.disabled = true;
+
+    setPubStatus_('ok', '✓ Publicado — aguardando ~1 min');
+    mostrarToast_(`✓ "${titulo}" publicado com sucesso!`, 'ok');
+    atualizarStats_();
+
+    // Limpa o status depois de 8 s
+    setTimeout(() => setPubStatus_('idle'), 8000);
+
+  } catch(err) {
+    btn.disabled = false;
+    btn.innerHTML = '✓ Salvar e publicar';
+    setPubStatus_('erro', '✕ Erro ao publicar');
+    mostrarToast_(`Erro: ${err.message}`, 'err');
+    console.error(err);
+  }
+}
+
+function setPubStatus_(estado, texto = '') {
+  const el = document.getElementById('pubStatus');
+  el.className = `pub-status ${estado}`;
+  if (estado === 'saving') {
+    el.innerHTML = `<div class="pub-spin"></div> ${texto}`;
+  } else if (estado === 'ok') {
+    el.innerHTML = `✓ ${texto}`;
+  } else if (estado === 'erro') {
+    el.innerHTML = `✕ ${texto}`;
+  }
+}
+
+// ── Toast ────────────────────────────────────────
+let toastTimer = null;
+function mostrarToast_(msg, tipo = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${tipo} vis`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.remove('vis'); }, 4000);
+}
+
+// ── Helpers ──────────────────────────────────────
 function e_(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
 function attrEsc_(s) { return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
-async function copiarCodigo_() {
-  const ta = document.getElementById('codeTa');
-  try { await navigator.clipboard.writeText(ta.value); }
-  catch(_) { ta.select(); document.execCommand('copy'); }
-  const btn = document.getElementById('btnCopiar');
-  btn.textContent = '✓ Copiado!'; btn.classList.add('done');
-  setTimeout(() => { btn.textContent = '📋 Copiar tudo'; btn.classList.remove('done'); }, 2500);
-}
-
-// Init: checar ?tab= na URL
+// Init
 const urlTab = new URLSearchParams(location.search).get('tab');
 if (urlTab === 'gerenciar') clicarGerenciar_();
 </script>
