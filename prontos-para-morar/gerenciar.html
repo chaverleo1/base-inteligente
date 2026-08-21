@@ -732,9 +732,24 @@ function editarImovel_(id) {
   document.getElementById('cadYt').value          = im.youtube   || '';
 
   // Foto preview
-  const thumb = thumbUrl(im);
-  if (thumb) {
-    mostrarFotoPreview_(thumb);
+  if (im.img) {
+    // Foto de capa personalizada
+    mostrarFotoPreview_(im.img);
+  } else if (im.youtube) {
+    // Sem foto de capa: mostra thumbnail do YouTube como fallback
+    const ytThumb = `https://img.youtube.com/vi/${im.youtube}/hqdefault.jpg`;
+    document.getElementById('fotoPreviewWrap').innerHTML = `
+      <div style="position:relative">
+        <img class="foto-preview-img" src="${ytThumb}" style="opacity:.65">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+                    flex-direction:column;gap:6px;pointer-events:none">
+          <span style="background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;
+                       padding:4px 10px;border-radius:20px;backdrop-filter:blur(4px)">
+            ▶ Capa do YouTube (padrão)
+          </span>
+        </div>
+      </div>`;
+    document.getElementById('fotoActionsRow').style.display = 'flex';
   } else {
     resetFotoUi_();
   }
@@ -800,7 +815,26 @@ function removerFoto_() {
   document.getElementById('cadImg').value = '';
   document.getElementById('fotoStatus').textContent = '';
   document.getElementById('fotoStatus').className = 'foto-status';
-  resetFotoUi_();
+
+  // Se há YouTube configurado, exibe o thumbnail como fallback visual
+  const ytid = ytId_(document.getElementById('cadYt').value);
+  if (ytid) {
+    const ytThumb = `https://img.youtube.com/vi/${ytid}/hqdefault.jpg`;
+    document.getElementById('fotoPreviewWrap').innerHTML = `
+      <div style="position:relative">
+        <img class="foto-preview-img" src="${ytThumb}" style="opacity:.65">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+                    flex-direction:column;gap:6px;pointer-events:none">
+          <span style="background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-weight:700;
+                       padding:4px 10px;border-radius:20px;backdrop-filter:blur(4px)">
+            ▶ Capa do YouTube (padrão)
+          </span>
+        </div>
+      </div>`;
+    document.getElementById('fotoActionsRow').style.display = 'flex';
+  } else {
+    resetFotoUi_();
+  }
 }
 
 function resetFotoUi_() {
