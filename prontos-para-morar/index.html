@@ -85,10 +85,10 @@ body {
 .hero-strip strong { color: #fff; font-weight: 800; }
 
 /* ── GRID ────────────────────────────────────────────────── */
-.grid-wrap { max-width: 1600px; margin: 0 auto; padding: 12px 12px 60px; }
+.grid-wrap { max-width: 1400px; margin: 0 auto; padding: 10px 10px 60px; }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  grid-template-columns: repeat(5, 1fr);  /* desktop: 5 colunas fixas */
   gap: 8px;
 }
 
@@ -159,13 +159,17 @@ body {
 
 /* ── CARD INFO (texto abaixo, fundo transparente) ────────── */
 .card-info {
-  padding: 7px 3px 0;
+  padding: 6px 2px 0;
   background: transparent;
   display: flex; flex-direction: column;
 }
-.card-titulo {
-  font-size: 12.5px; font-weight: 700; line-height: 1.3; color: var(--text);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+.card-bairro {
+  font-size: 12px; font-weight: 700; line-height: 1.25; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card-specs-row {
+  font-size: 10.5px; font-weight: 500; color: var(--text3);
+  margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .card-preco {
   font-size: 11.5px; font-weight: 800; color: var(--accent);
@@ -182,13 +186,16 @@ body {
 .footer a { color: var(--accent); font-weight: 700; }
 
 /* ── RESPONSIVE ──────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .header-name { font-size: 15px; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
-  .grid-wrap { padding: 8px 8px 48px; }
+@media (max-width: 900px) {
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
 }
-@media (max-width: 360px) {
-  .grid { grid-template-columns: repeat(2, 1fr); gap: 5px; }
+@media (max-width: 600px) {
+  .header-name { font-size: 15px; }
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .grid-wrap { padding: 6px 6px 48px; }
+  .card-bairro { font-size: 11px; }
+  .card-specs-row { font-size: 9.5px; }
+  .card-preco { font-size: 10.5px; }
 }
 </style>
 </head>
@@ -275,7 +282,8 @@ function renderCard(im) {
       </div>
     </div>
     <div class="card-info">
-      <div class="card-titulo">${im.titulo}</div>
+      <div class="card-bairro">${im.bairro}</div>
+      <div class="card-specs-row">${im.quartos} qtos · ${im.area} m² · ${im.vagas} vg</div>
       <div class="card-preco">${formatBRL(im.preco)}</div>
     </div>
   </article>`;

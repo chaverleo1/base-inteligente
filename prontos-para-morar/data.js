@@ -164,14 +164,41 @@ const IMOVEIS = [
 function formatBRL(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR');
 }
+
+// Seeds de fotos de imóveis/arquitetura do Unsplash (portrait 9:16)
+// Troque pelo ID do YouTube ou pela URL da foto real quando disponível
+const FOTO_SEEDS = [
+  '1545324418-cc1a3fa10c00', // edifício moderno
+  '1560448204-e02f11c3d0e2', // sala de estar
+  '1502672260266-1c1ef2d93688', // apartamento moderno
+  '1554995207-c18c203602cb', // sala aconchegante
+  '1522708323590-d24dbb6b0267', // interior minimalista
+  '1484154218962-a197022b5858', // cozinha
+  '1578683010236-d716f9a3f461', // quarto
+  '1507089947368-19c1da9775ae', // apartamento contemporâneo
+  '1493809842364-78817add7ffb', // sala com sofá
+  '1560184897-ae75f418493e',  // vista janela
+  '1556909114-f6e7ad7d3136', // cozinha americana
+  '1551361415-69c87624334f', // fachada edifício
+];
+
 function thumbUrl(imovel) {
-  return imovel.youtube
-    ? `https://img.youtube.com/vi/${imovel.youtube}/hqdefault.jpg`
-    : null;
+  if (imovel.youtube) return `https://img.youtube.com/vi/${imovel.youtube}/hqdefault.jpg`;
+  if (imovel.img)    return imovel.img;
+  // foto de apartamento do Unsplash em formato portrait 9:16
+  const seed = FOTO_SEEDS[(imovel.id - 1) % FOTO_SEEDS.length];
+  return `https://images.unsplash.com/photo-${seed}?w=400&h=711&fit=crop&auto=format&q=80`;
 }
+
 function fotoUrl(imovelId, idx) {
-  // picsum.photos com seed fixo por imóvel → sempre a mesma foto
-  return `https://picsum.photos/seed/pm-${imovelId}-${idx}/800/450`;
+  // fotos da galeria no detalhe: Unsplash landscape
+  const seeds = [
+    '1560448204-e02f11c3d0e2','1502672260266-1c1ef2d93688','1554995207-c18c203602cb',
+    '1522708323590-d24dbb6b0267','1484154218962-a197022b5858','1578683010236-d716f9a3f461',
+    '1507089947368-19c1da9775ae','1493809842364-78817add7ffb',
+  ];
+  const seed = seeds[(imovelId + idx) % seeds.length];
+  return `https://images.unsplash.com/photo-${seed}?w=800&h=450&fit=crop&auto=format&q=80`;
 }
 function fotos(imovelId, n = 8) {
   return Array.from({ length: n }, (_, i) => fotoUrl(imovelId, i + 1));
