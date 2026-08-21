@@ -1,7 +1,7 @@
-// ═══════════════════════════════════════════════════════════════
-// PRONTOS PARA MORAR — Dados e Configuração
-// Gerado em 21/08/2026, 13:11:34 via gerenciar.html
-// ═══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// PRONTOS PARA MORAR — data.js
+// Atualizado em 21/08/2026, 14:01:33
+// ══════════════════════════════════════════════════════
 
 const CONFIG = {
   gUrl: '',
@@ -166,26 +166,31 @@ const IMOVEIS = [
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento compacto e funcional, 2 dormitórios, sala, cozinha e área de serviço. Ótimo custo-benefício para moradia ou investimento. Acesso fácil a shoppings, hospitais e transporte.',
   },
+  {
+    id: 13,
+    titulo: 'Alphaville Araguaia',
+    subtitulo: 'Sobrado novo',
+    bairro: 'Alphaville',
+    quartos: 5, suites: 5, area: 250, vagas: 4,
+    preco: 4500000,
+    youtube: 'wb4uctT5j4Q',
+    img: '',
+    grad: ['#2A6A4A','#48A872'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Seu novo lar é aqui.
+Entre e contato.',
+  },
 ];
 
-// ── Utilitários ──────────────────────────────────────────────
 function formatBRL(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR');
 }
 
 const FOTO_SEEDS = [
-  '1545324418-cc1a3fa10c00',
-  '1560448204-e02f11c3d0e2',
-  '1502672260266-1c1ef2d93688',
-  '1554995207-c18c203602cb',
-  '1522708323590-d24dbb6b0267',
-  '1484154218962-a197022b5858',
-  '1578683010236-d716f9a3f461',
-  '1507089947368-19c1da9775ae',
-  '1493809842364-78817add7ffb',
-  '1560184897-ae75f418493e',
-  '1556909114-f6e7ad7d3136',
-  '1551361415-69c87624334f',
+  '1545324418-cc1a3fa10c00','1560448204-e02f11c3d0e2','1502672260266-1c1ef2d93688',
+  '1554995207-c18c203602cb','1522708323590-d24dbb6b0267','1484154218962-a197022b5858',
+  '1578683010236-d716f9a3f461','1507089947368-19c1da9775ae','1493809842364-78817add7ffb',
+  '1560184897-ae75f418493e','1556909114-f6e7ad7d3136','1551361415-69c87624334f',
 ];
 
 function thumbUrl(imovel) {
