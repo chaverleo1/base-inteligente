@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerenciar Imóveis — Prontos para Morar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+a { text-decoration: none; color: inherit; }
+textarea { font-family: 'Courier New', monospace; }
+
+:root {
+  --accent:  #1B5540;
+  --accent2: rgba(27,85,64,.08);
+  --orange:  #F56E14;
+  --danger:  #E5342E;
+  --ok:      #22A452;
+  --bg:      #F4F2EF;
+  --surface: #FFFFFF;
+  --text:    #1A1A1A;
+  --text2:   #6B6B6B;
+  --text3:   #9B9B9B;
+  --border:  rgba(0,0,0,.08);
+  --font: 'Manrope', system-ui, sans-serif;
+}
+body { background: var(--bg); font-family: var(--font); color: var(--text); min-height: 100vh; }
+
+/* ── LOCK SCREEN ── */
+.lock {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; z-index: 999; padding: 24px;
+}
+.lock.hidden { display: none; }
+.lock-box {
+  background: #fff; border-radius: 16px; padding: 36px 32px;
+  text-align: center; max-width: 340px; width: 100%;
+  box-shadow: 0 8px 40px rgba(0,0,0,.12);
+}
+.lock-icon { font-size: 40px; margin-bottom: 12px; }
+.lock-titulo { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.lock-sub { font-size: 13px; color: var(--text3); margin-bottom: 22px; }
+.lock-input {
+  width: 100%; padding: 14px; text-align: center; letter-spacing: 8px;
+  font-size: 22px; font-weight: 800; border: 2px solid rgba(0,0,0,.12);
+  border-radius: 10px; outline: none; font-family: monospace;
+  transition: border-color .2s;
+}
+.lock-input:focus { border-color: var(--accent); }
+.lock-input.erro { border-color: var(--danger); animation: shake .3s; }
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+}
+.lock-btn {
+  width: 100%; padding: 13px; margin-top: 12px;
+  background: var(--accent); color: #fff;
+  font-size: 14px; font-weight: 800; border-radius: 10px;
+  transition: background .15s;
+}
+.lock-btn:hover { background: #154430; }
+.lock-hint { font-size: 12px; color: var(--text3); margin-top: 10px; }
+
+/* ── HEADER ── */
+.header {
+  background: #fff; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+}
+.header-inner {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 20px; height: 60px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.header-nome { font-size: 15px; font-weight: 800; letter-spacing: -.3px; }
+.header-sub  { font-size: 11px; color: var(--text3); font-weight: 500; }
+.header-actions { display: flex; gap: 10px; align-items: center; }
+.btn-sm {
+  padding: 8px 14px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 700;
+}
+.btn-sm-outline {
+  border: 1.5px solid rgba(0,0,0,.12); color: var(--text2);
+  transition: border-color .15s, color .15s;
+}
+.btn-sm-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm-green { background: var(--accent); color: #fff; transition: background .15s; }
+.btn-sm-green:hover { background: #154430; }
+.btn-sm-orange { background: var(--orange); color: #fff; transition: background .15s; }
+.btn-sm-orange:hover { background: #d95e0f; }
+
+/* ── WRAP ── */
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* ── STATS BAR ── */
+.stats { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.stat-card {
+  background: #fff; border-radius: 10px; padding: 14px 20px;
+  border: 1px solid var(--border); min-width: 120px;
+}
+.stat-val { font-size: 26px; font-weight: 900; letter-spacing: -1px; }
+.stat-val.ok     { color: var(--ok); }
+.stat-val.warn   { color: var(--orange); }
+.stat-label { font-size: 11px; color: var(--text3); font-weight: 600; margin-top: 2px; }
+
+/* ── IMOVEL CARD ── */
+.imovel-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+.imovel-card {
+  background: #fff; border-radius: 12px; padding: 16px;
+  border: 1px solid var(--border);
+  transition: box-shadow .2s;
+}
+.imovel-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.1); }
+.imovel-card.tem-video { border-left: 3px solid var(--ok); }
+.imovel-card.sem-video { border-left: 3px solid rgba(0,0,0,.1); }
+
+.ic-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.ic-thumb {
+  width: 64px; flex-shrink: 0;
+  position: relative; padding-top: 113px;  /* ~9:16 de 64px */
+  border-radius: 8px; overflow: hidden; background: #eee;
+}
+.ic-thumb img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+.ic-info { flex: 1; min-width: 0; }
+.ic-id    { font-size: 10px; font-weight: 800; color: var(--text3); letter-spacing: 1px; margin-bottom: 2px; }
+.ic-nome  { font-size: 14px; font-weight: 800; letter-spacing: -.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ic-bairro { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
+.ic-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+}
+.ic-status.ok   { background: rgba(34,164,82,.1); color: var(--ok); }
+.ic-status.warn { background: rgba(245,110,20,.1); color: var(--orange); }
+
+.ic-fields { display: flex; flex-direction: column; gap: 8px; }
+.field-row { display: flex; gap: 8px; align-items: center; }
+.field-label {
+  font-size: 10.5px; font-weight: 800; color: var(--text3);
+  letter-spacing: .4px; text-transform: uppercase;
+  white-space: nowrap; min-width: 72px;
+}
+.field-input {
+  flex: 1; padding: 8px 10px; border: 1.5px solid rgba(0,0,0,.1);
+  border-radius: 7px; font-family: var(--font);
+  font-size: 12.5px; font-weight: 600; color: var(--text);
+  background: var(--bg); outline: none;
+  transition: border-color .15s, background .15s;
+}
+.field-input:focus { border-color: var(--accent); background: #fff; }
+.field-input.youtube { font-family: monospace; font-size: 12px; letter-spacing: .5px; }
+.field-input.com-video { border-color: var(--ok); background: rgba(34,164,82,.04); }
+
+.ic-preview-btn {
+  padding: 4px 10px; border-radius: 6px;
+  border: 1.5px solid rgba(0,0,0,.1); font-size: 11px; font-weight: 700;
+  color: var(--text2); white-space: nowrap;
+  transition: border-color .15s, color .15s;
+}
+.ic-preview-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── MODAL PREVIEW ── */
+.modal {
+  display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.85);
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+.modal.vis { display: flex; }
+.modal-box {
+  width: min(400px, 92vw);
+  background: #000; border-radius: 12px; overflow: hidden;
+  position: relative; padding-top: min(711px, calc(92vw * 1.778));
+}
+.modal-box iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: none;
+}
+.modal-close {
+  color: #fff; font-size: 26px; cursor: pointer; opacity: .7;
+  transition: opacity .15s;
+}
+.modal-close:hover { opacity: 1; }
+
+/* ── GERAR CÓDIGO ── */
+.gerar-wrap {
+  background: #fff; border-radius: 12px; padding: 24px;
+  border: 1px solid var(--border); margin-top: 28px;
+}
+.gerar-titulo { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+.gerar-sub    { font-size: 13px; color: var(--text3); margin-bottom: 16px; }
+.gerar-textarea {
+  width: 100%; height: 200px; padding: 12px; font-size: 11.5px;
+  border: 1.5px solid rgba(0,0,0,.1); border-radius: 8px; resize: vertical;
+  background: #1e1e2e; color: #a6e3a1; line-height: 1.55;
+}
+.gerar-actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.btn-copiar {
+  padding: 10px 20px; background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 800; border-radius: 8px;
+  transition: background .15s;
+}
+.btn-copiar:hover { background: #154430; }
+.btn-copiar.copiado { background: var(--ok); }
+.instrucoes {
+  background: var(--accent2); border-radius: 8px;
+  padding: 12px 14px; margin-top: 14px;
+  font-size: 12.5px; color: var(--accent); font-weight: 600; line-height: 1.6;
+}
+.instrucoes ol { padding-left: 18px; }
+.instrucoes li { margin-bottom: 3px; }
+.instrucoes code {
+  background: rgba(27,85,64,.15); padding: 1px 6px;
+  border-radius: 4px; font-size: 11px;
+}
+
+/* CONFIG BOX */
+.config-box {
+  background: #fff3e0; border: 1.5px solid var(--orange);
+  border-radius: 10px; padding: 16px 18px; margin-bottom: 24px;
+}
+.config-titulo { font-size: 13px; font-weight: 800; color: #c45200; margin-bottom: 10px; }
+.config-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.config-label { font-size: 12px; font-weight: 700; color: var(--text2); white-space: nowrap; min-width: 160px; }
+.config-input {
+  flex: 1; min-width: 200px; padding: 8px 12px;
+  border: 1.5px solid rgba(0,0,0,.1); border-radius: 7px;
+  font-family: var(--font); font-size: 13px; font-weight: 600; outline: none;
+}
+.config-input:focus { border-color: var(--orange); }
+
+@media (max-width: 600px) {
+  .imovel-grid { grid-template-columns: 1fr; }
+  .header-actions .btn-sm:not(.btn-sm-green) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOCK SCREEN ─────────────────────────────────────────── -->
+<div class="lock" id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon">🔐</div>
+    <div class="lock-titulo">Área Restrita</div>
+    <div class="lock-sub">Digite o PIN para acessar o painel de gerenciamento</div>
+    <input class="lock-input" id="lockPin" type="password" maxlength="6"
+           placeholder="••••••" inputmode="numeric"
+           onkeydown="if(event.key==='Enter')verificarPin_()">
+    <button class="lock-btn" onclick="verificarPin_()">ENTRAR</button>
+    <div class="lock-hint">PIN padrão: <strong>123456</strong> — altere em CONFIG.</div>
+  </div>
+</div>
+
+<!-- ── HEADER ─────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="header-icon">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="white">
+          <path d="M10 2L2 8.5V18h5.5v-5h5v5H18V8.5L10 2z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="header-nome">SITE — PRONTOS PARA MORAR</div>
+        <div class="header-sub">Gerenciamento de imóveis</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <a class="btn-sm btn-sm-outline" href="index.html" target="_blank">↗ Ver site</a>
+      <a class="btn-sm btn-sm-outline" href="enviar.html" target="_blank">Formulário de envio</a>
+      <button class="btn-sm btn-sm-green" onclick="gerarCodigo_()">⬇ Gerar data.js</button>
+    </div>
+  </div>
+</header>
+
+<!-- ── CONTEÚDO ───────────────────────────────────────────── -->
+<div class="wrap" id="appWrap">
+
+  <!-- STATS -->
+  <div class="stats" id="statsBar"></div>
+
+  <!-- CONFIG WHATSAPP / GAS -->
+  <div class="config-box" id="configBox">
+    <div class="config-titulo">⚙️ Configurações (salvas localmente)</div>
+    <div class="config-row">
+      <span class="config-label">WhatsApp do corretor</span>
+      <input class="config-input" id="cfgWhats" type="tel" placeholder="5562999999999"
+             oninput="salvarConfig_()">
+    </div>
+    <div class="config-row">
+      <span class="config-label">URL do Google Apps Script</span>
+      <input class="config-input" id="cfgGas" type="url" placeholder="https://script.google.com/..."
+             oninput="salvarConfig_()">
+    </div>
+    <div class="config-row">
+      <span class="config-label">PIN de acesso</span>
+      <input class="config-input" id="cfgPin" type="password" placeholder="123456" maxlength="8"
+             oninput="salvarConfig_()">
+    </div>
+  </div>
+
+  <!-- LISTA DE IMÓVEIS -->
+  <div class="imovel-grid" id="imovelGrid"></div>
+
+  <!-- GERAR CÓDIGO -->
+  <div class="gerar-wrap" id="gerarWrap" style="display:none">
+    <div class="gerar-titulo">📋 Código gerado — data.js atualizado</div>
+    <div class="gerar-sub">Copie o conteúdo abaixo e cole no arquivo <code>data.js</code></div>
+    <textarea class="gerar-textarea" id="gerarTextarea" readonly></textarea>
+    <div class="gerar-actions">
+      <button class="btn-copiar" id="btnCopiar" onclick="copiarCodigo_()">📋 Copiar tudo</button>
+      <button class="btn-sm btn-sm-orange" onclick="document.getElementById('gerarWrap').style.display='none'">Fechar</button>
+    </div>
+    <div class="instrucoes">
+      <strong>Como aplicar:</strong>
+      <ol>
+        <li>Clique em <strong>Copiar tudo</strong></li>
+        <li>Abra o arquivo <code>prontos-para-morar/data.js</code> no seu editor</li>
+        <li>Selecione tudo (<code>Ctrl+A</code>) e cole (<code>Ctrl+V</code>)</li>
+        <li>Salve e faça o push para o GitHub — o site atualiza em ~1 min</li>
+      </ol>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- MODAL PREVIEW VÍDEO -->
+<div class="modal" id="modal" onclick="fecharModal_()">
+  <button class="modal-close" onclick="fecharModal_()">✕</button>
+  <div class="modal-box">
+    <iframe id="modalIframe" src="" allowfullscreen
+      allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+// ── PIN e config local ────────────────────────────────────────
+const CFG_KEY = 'ppm_admin_cfg';
+let cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+const PIN_DEFAULT = '123456';
+
+function salvarConfig_() {
+  cfg.whats = document.getElementById('cfgWhats').value.trim();
+  cfg.gas   = document.getElementById('cfgGas').value.trim();
+  cfg.pin   = document.getElementById('cfgPin').value.trim();
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+}
+function carregarConfig_() {
+  document.getElementById('cfgWhats').value = cfg.whats || CONFIG.corretorWhats || '';
+  document.getElementById('cfgGas').value   = cfg.gas   || CONFIG.gUrl || '';
+  document.getElementById('cfgPin').value   = cfg.pin   || '';
+}
+
+function verificarPin_() {
+  const pin = document.getElementById('lockPin').value.trim();
+  const corretoPIN = cfg.pin || PIN_DEFAULT;
+  if (pin === corretoPIN) {
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('lockPin').value = '';
+    init_();
+  } else {
+    const el = document.getElementById('lockPin');
+    el.classList.add('erro');
+    setTimeout(() => el.classList.remove('erro'), 600);
+    el.value = '';
+    el.focus();
+  }
+}
+document.getElementById('lockPin').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verificarPin_();
+});
+
+// ── Estado local dos imóveis (edits) ─────────────────────────
+let EDITS = {}; // { id: { youtube, preco, titulo, bairro, area, quartos, vagas, suites, entrega, descricao } }
+
+function getEdit_(id) {
+  return EDITS[id] || {};
+}
+function setEdit_(id, campo, val) {
+  if (!EDITS[id]) EDITS[id] = {};
+  EDITS[id][campo] = val;
+  // atualiza status visual do card
+  const card = document.querySelector(`[data-id="${id}"]`);
+  if (!card) return;
+  const ytVal = document.getElementById(`yt_${id}`).value.trim();
+  card.classList.toggle('tem-video', !!ytVal);
+  card.classList.toggle('sem-video', !ytVal);
+  const status = card.querySelector('.ic-status');
+  if (ytVal) { status.textContent = '✓ Com vídeo'; status.className = 'ic-status ok'; }
+  else        { status.textContent = '○ Sem vídeo'; status.className = 'ic-status warn'; }
+  // campo amarelo se mudou
+  const inp = document.getElementById(`yt_${id}`);
+  if (ytVal) inp.classList.add('com-video');
+  else        inp.classList.remove('com-video');
+  atualizarStats_();
+}
+
+// ── Render ────────────────────────────────────────────────────
+function init_() {
+  carregarConfig_();
+  renderCards_();
+  atualizarStats_();
+}
+
+function renderCards_() {
+  const grid = document.getElementById('imovelGrid');
+  grid.innerHTML = IMOVEIS.map(im => {
+    const thumb = thumbUrl(im) || '';
+    const ytAtual = im.youtube || '';
+    const temVideo = !!ytAtual;
+    return `
+    <div class="imovel-card ${temVideo ? 'tem-video' : 'sem-video'}" data-id="${im.id}">
+      <div class="ic-top">
+        <div class="ic-thumb">
+          ${thumb ? `<img src="${thumb}" alt="" onerror="this.style.display='none'">` : ''}
+        </div>
+        <div class="ic-info">
+          <div class="ic-id">ID #${im.id}</div>
+          <div class="ic-nome">${im.titulo}</div>
+          <div class="ic-bairro">${im.bairro} · ${im.area} m² · ${im.quartos} qtos</div>
+          <span class="ic-status ${temVideo ? 'ok' : 'warn'}">
+            ${temVideo ? '✓ Com vídeo' : '○ Sem vídeo'}
+          </span>
+        </div>
+      </div>
+      <div class="ic-fields">
+        <div class="field-row">
+          <span class="field-label">YouTube ID</span>
+          <input class="field-input youtube ${ytAtual ? 'com-video' : ''}"
+                 id="yt_${im.id}" type="text"
+                 placeholder="Cole o ID ou URL do YouTube"
+                 value="${ytAtual}"
+                 oninput="onYtInput_(${im.id}, this)">
+          <button class="ic-preview-btn" onclick="previewYt_(${im.id})">▶ Ver</button>
+        </div>
+        <div class="field-row">
+          <span class="field-label">Preço (R$)</span>
+          <input class="field-input" id="preco_${im.id}" type="text"
+                 value="${Number(im.preco).toLocaleString('pt-BR')}"
+                 oninput="setEdit_(${im.id},'preco',this.value)"
+                 placeholder="Ex: 680.000">
+        </div>
+        <div class="field-row">
+          <span class="field-label">Estágio</span>
+          <select class="field-input" id="estagio_${im.id}"
+                  onchange="setEdit_(${im.id},'entrega',this.value)">
+            ${['Pronto para Morar','Em Obras','Lançamento'].map(e =>
+              `<option value="${e}" ${im.entrega===e?'selected':''}>${e}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Extrai ID do YouTube de qualquer formato
+function ytId_(url) {
+  if (!url) return '';
+  url = url.trim();
+  // já é só o ID (11 chars)
+  if (/^[A-Za-z0-9_\-]{11}$/.test(url)) return url;
+  let m;
+  m = url.match(/youtu\.be\/([A-Za-z0-9_\-]{11})/);     if (m) return m[1];
+  m = url.match(/[?&]v=([A-Za-z0-9_\-]{11})/);          if (m) return m[1];
+  m = url.match(/shorts\/([A-Za-z0-9_\-]{11})/);        if (m) return m[1];
+  m = url.match(/embed\/([A-Za-z0-9_\-]{11})/);         if (m) return m[1];
+  return url; // retorna como está
+}
+
+function onYtInput_(id, el) {
+  const raw = el.value.trim();
+  const ytid = ytId_(raw);
+  // normaliza para o ID limpo
+  if (ytid && ytid !== raw) el.value = ytid;
+  setEdit_(id, 'youtube', ytid);
+}
+
+// Preview no modal
+function previewYt_(id) {
+  const raw  = document.getElementById(`yt_${id}`).value.trim();
+  const ytid = ytId_(raw);
+  if (!ytid) { alert('Cole um YouTube ID ou URL válido primeiro.'); return; }
+  document.getElementById('modalIframe').src =
+    `https://www.youtube.com/embed/${ytid}?autoplay=1&rel=0`;
+  document.getElementById('modal').classList.add('vis');
+}
+function fecharModal_() {
+  document.getElementById('modal').classList.remove('vis');
+  document.getElementById('modalIframe').src = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal_(); });
+
+// Stats
+function atualizarStats_() {
+  const total    = IMOVEIS.length;
+  const comVideo = IMOVEIS.filter(im => {
+    const v = document.getElementById(`yt_${im.id}`)?.value.trim() || im.youtube;
+    return !!v;
+  }).length;
+  const semVideo = total - comVideo;
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-val">${total}</div>
+      <div class="stat-label">Imóveis cadastrados</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val ok">${comVideo}</div>
+      <div class="stat-label">Com vídeo ✓</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val warn">${semVideo}</div>
+      <div class="stat-label">Sem vídeo</div>
+    </div>`;
+}
+
+// ── Gerar data.js ─────────────────────────────────────────────
+function gerarCodigo_() {
+  // Lê valores atuais dos campos do DOM
+  const lista = IMOVEIS.map(im => {
+    const ytRaw  = document.getElementById(`yt_${im.id}`)?.value.trim() || '';
+    const ytid   = ytId_(ytRaw) || im.youtube || '';
+    const precoRaw = document.getElementById(`preco_${im.id}`)?.value.replace(/\D/g,'') || String(im.preco);
+    const estagio  = document.getElementById(`estagio_${im.id}`)?.value || im.entrega;
+    return { ...im, youtube: ytid, preco: parseInt(precoRaw) || im.preco, entrega: estagio };
+  });
+
+  // Configuraçãos atuais
+  const cfgWhats = document.getElementById('cfgWhats').value.trim() || CONFIG.corretorWhats;
+  const cfgGas   = document.getElementById('cfgGas').value.trim()   || CONFIG.gUrl;
+
+  const imoveisStr = lista.map(im => {
+    return `  {
+    id: ${im.id},
+    titulo: '${esc(im.titulo)}',
+    subtitulo: '${esc(im.subtitulo)}',
+    bairro: '${esc(im.bairro)}',
+    quartos: ${im.quartos}, suites: ${im.suites || 0}, area: ${im.area}, vagas: ${im.vagas},
+    preco: ${im.preco},
+    youtube: '${esc(im.youtube || '')}',
+    img: '${esc(im.img || '')}',
+    grad: ['${im.grad[0]}','${im.grad[1]}'],
+    entrega: '${esc(im.entrega)}',
+    descricao: '${esc(im.descricao)}',
+  }`;
+  }).join(',\n');
+
+  const FOTO_SEEDS_str = `const FOTO_SEEDS = [
+  '1545324418-cc1a3fa10c00',
+  '1560448204-e02f11c3d0e2',
+  '1502672260266-1c1ef2d93688',
+  '1554995207-c18c203602cb',
+  '1522708323590-d24dbb6b0267',
+  '1484154218962-a197022b5858',
+  '1578683010236-d716f9a3f461',
+  '1507089947368-19c1da9775ae',
+  '1493809842364-78817add7ffb',
+  '1560184897-ae75f418493e',
+  '1556909114-f6e7ad7d3136',
+  '1551361415-69c87624334f',
+];`;
+
+  const code = `// ═══════════════════════════════════════════════════════════════
+// PRONTOS PARA MORAR — Dados e Configuração
+// Gerado em ${new Date().toLocaleString('pt-BR')} via gerenciar.html
+// ═══════════════════════════════════════════════════════════════
+
+const CONFIG = {
+  gUrl: '${esc(cfgGas)}',
+  corretorWhats: '${esc(cfgWhats)}',
+  corretorNome: '${esc(CONFIG.corretorNome || 'Imóveis em Goiânia')}',
+};
+
+const IMOVEIS = [
+${imoveisStr},
+];
+
+// ── Utilitários ──────────────────────────────────────────────
+function formatBRL(v) {
+  return 'R$ ' + Number(v).toLocaleString('pt-BR');
+}
+
+${FOTO_SEEDS_str}
+
+function thumbUrl(imovel) {
+  if (imovel.youtube) return \`https://img.youtube.com/vi/\${imovel.youtube}/hqdefault.jpg\`;
+  if (imovel.img)    return imovel.img;
+  const seed = FOTO_SEEDS[(imovel.id - 1) % FOTO_SEEDS.length];
+  return \`https://images.unsplash.com/photo-\${seed}?w=400&h=711&fit=crop&auto=format&q=80\`;
+}
+
+function fotoUrl(imovelId, idx) {
+  const seeds = [
+    '1560448204-e02f11c3d0e2','1502672260266-1c1ef2d93688','1554995207-c18c203602cb',
+    '1522708323590-d24dbb6b0267','1484154218962-a197022b5858','1578683010236-d716f9a3f461',
+    '1507089947368-19c1da9775ae','1493809842364-78817add7ffb',
+  ];
+  const seed = seeds[(imovelId + idx) % seeds.length];
+  return \`https://images.unsplash.com/photo-\${seed}?w=800&h=450&fit=crop&auto=format&q=80\`;
+}
+function fotos(imovelId, n = 8) {
+  return Array.from({ length: n }, (_, i) => fotoUrl(imovelId, i + 1));
+}
+`;
+
+  document.getElementById('gerarTextarea').value = code;
+  document.getElementById('gerarWrap').style.display = '';
+  document.getElementById('gerarWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function esc(s) {
+  return String(s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
+async function copiarCodigo_() {
+  const ta = document.getElementById('gerarTextarea');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+  } catch(_) {
+    ta.select(); document.execCommand('copy');
+  }
+  const btn = document.getElementById('btnCopiar');
+  btn.textContent = '✓ Copiado!'; btn.classList.add('copiado');
+  setTimeout(() => { btn.textContent = '📋 Copiar tudo'; btn.classList.remove('copiado'); }, 2500);
+}
+</script>
+</body>
+</html>
