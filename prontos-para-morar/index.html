@@ -197,6 +197,155 @@ body {
   .card-specs-row { font-size: 9.5px; }
   .card-preco { font-size: 10.5px; }
 }
+
+/* ── BOTÃO FILTRO FIXO ───────────────────────────────────── */
+.btn-filtro {
+  position: fixed;
+  top: calc(64px + 14px);
+  left: 14px;
+  z-index: 98;
+  background: #fff;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  padding: 9px 16px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--text);
+  font-family: var(--font);
+  box-shadow: 0 2px 14px rgba(0,0,0,.18);
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s, background .15s, color .15s;
+}
+.btn-filtro:hover { box-shadow: 0 4px 22px rgba(0,0,0,.24); }
+.btn-filtro.ativo { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-filtro-badge {
+  background: var(--orange); color: #fff;
+  font-size: 10px; font-weight: 900;
+  min-width: 18px; height: 18px; border-radius: 999px; padding: 0 5px;
+  display: none; align-items: center; justify-content: center;
+}
+.btn-filtro.tem-filtros .btn-filtro-badge { display: flex; }
+
+/* ── OVERLAY ─────────────────────────────────────────────── */
+.filtro-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 200;
+}
+.filtro-overlay.ativo { display: block; }
+
+/* ── PAINEL LATERAL ──────────────────────────────────────── */
+.filtro-panel {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(360px, 92vw);
+  background: #fff; z-index: 201;
+  display: flex; flex-direction: column;
+  transform: translateX(110%);
+  transition: transform .32s cubic-bezier(.4,0,.2,1);
+  box-shadow: -4px 0 32px rgba(0,0,0,.16);
+}
+.filtro-panel.aberto { transform: translateX(0); }
+.filtro-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid rgba(0,0,0,.07); flex-shrink: 0;
+}
+.filtro-panel-titulo { font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
+.btn-fechar-panel {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(0,0,0,.06); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--text2);
+  transition: background .15s;
+}
+.btn-fechar-panel:hover { background: rgba(0,0,0,.12); }
+.filtro-corpo { flex: 1; overflow-y: auto; padding: 22px 20px 8px; }
+.filtro-corpo::-webkit-scrollbar { width: 4px; }
+.filtro-corpo::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 99px; }
+
+/* ── SEÇÃO ───────────────────────────────────────────────── */
+.filtro-secao { margin-bottom: 28px; }
+.filtro-secao-label {
+  display: block; font-size: 10.5px; font-weight: 800;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 12px;
+}
+
+/* ── TAGS ────────────────────────────────────────────────── */
+.filtro-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.ftag {
+  padding: 8px 14px; border: 1.5px solid rgba(0,0,0,.12);
+  border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  color: var(--text2); background: #fff; cursor: pointer;
+  font-family: var(--font);
+  transition: border-color .15s, color .15s, background .15s;
+}
+.ftag:hover  { border-color: var(--accent); color: var(--accent); }
+.ftag.sel    { background: var(--accent2); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.ftag-outro  { border-style: dashed; color: var(--text3); }
+.bairro-input-wrap {
+  display: none; align-items: center; gap: 8px; margin-top: 10px;
+}
+.bairro-input-wrap.vis { display: flex; }
+.bairro-input {
+  flex: 1; padding: 9px 12px; border: 1.5px solid rgba(0,0,0,.12);
+  border-radius: 8px; font-size: 13px; font-family: var(--font); outline: none;
+}
+.bairro-input:focus { border-color: var(--accent); }
+.bairro-btn-ok {
+  padding: 9px 14px; background: var(--accent); color: #fff;
+  border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer;
+}
+
+/* ── RANGE DUPLO ─────────────────────────────────────────── */
+.range-labels {
+  display: flex; justify-content: space-between;
+  font-size: 12px; font-weight: 800; color: var(--accent); margin-bottom: 10px;
+}
+.range-dual { position: relative; height: 34px; margin: 0 4px; }
+.range-track {
+  position: absolute; top: 50%; left: 0; right: 0;
+  height: 4px; background: rgba(0,0,0,.1); border-radius: 2px; transform: translateY(-50%);
+}
+.range-fill { position: absolute; height: 100%; background: var(--accent); border-radius: 2px; }
+.range-dual input[type=range] {
+  position: absolute; width: 100%; top: 50%; transform: translateY(-50%);
+  -webkit-appearance: none; appearance: none;
+  background: transparent; pointer-events: none; margin: 0; height: 4px;
+}
+.range-dual input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; pointer-events: all;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; border: 2.5px solid var(--accent);
+  box-shadow: 0 1px 6px rgba(0,0,0,.2); cursor: pointer;
+}
+.range-dual input[type=range]::-moz-range-thumb {
+  pointer-events: all; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; border: 2.5px solid var(--accent);
+  box-shadow: 0 1px 6px rgba(0,0,0,.2); cursor: pointer; border: 2.5px solid var(--accent);
+}
+
+/* ── RODAPÉ DO PAINEL ────────────────────────────────────── */
+.filtro-footer {
+  padding: 14px 20px; border-top: 1px solid rgba(0,0,0,.07);
+  display: flex; gap: 10px; flex-shrink: 0;
+}
+.btn-limpar {
+  flex: 1; padding: 12px; border: 1.5px solid rgba(0,0,0,.12);
+  border-radius: 10px; font-size: 13px; font-weight: 700;
+  color: var(--text2); background: #fff; cursor: pointer; font-family: var(--font);
+  transition: border-color .15s, color .15s;
+}
+.btn-limpar:hover { border-color: var(--accent); color: var(--accent); }
+.btn-aplicar {
+  flex: 2; padding: 12px; background: var(--accent); color: #fff;
+  border: none; border-radius: 10px; font-size: 13px; font-weight: 800;
+  cursor: pointer; font-family: var(--font); transition: background .15s;
+}
+.btn-aplicar:hover { background: #154430; }
+
+/* sem resultados */
+.sem-resultados {
+  grid-column: 1/-1; text-align: center; padding: 64px 20px;
+  color: var(--text3); font-size: 15px; font-weight: 600; line-height: 1.6;
+}
 </style>
 </head>
 <body>
@@ -246,6 +395,83 @@ body {
   </div>
 </header>
 
+<!-- BOTÃO FILTRO FIXO -->
+<button class="btn-filtro" id="btnFiltro" onclick="abrirFiltro()">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="4" y1="6" x2="20" y2="6"/>
+    <line x1="8" y1="12" x2="16" y2="12"/>
+    <line x1="10" y1="18" x2="14" y2="18"/>
+  </svg>
+  Filtros
+  <span class="btn-filtro-badge" id="filtroBadge">0</span>
+</button>
+
+<!-- OVERLAY -->
+<div class="filtro-overlay" id="filtroOverlay" onclick="fecharFiltro()"></div>
+
+<!-- PAINEL LATERAL -->
+<aside class="filtro-panel" id="filtroPanel">
+  <div class="filtro-panel-header">
+    <span class="filtro-panel-titulo">Filtros</span>
+    <button class="btn-fechar-panel" onclick="fecharFiltro()">✕</button>
+  </div>
+
+  <div class="filtro-corpo">
+
+    <!-- ESTÁGIO -->
+    <div class="filtro-secao">
+      <span class="filtro-secao-label">Estágio</span>
+      <div class="filtro-tags" id="estagioTags"></div>
+    </div>
+
+    <!-- ÁREA ÚTIL -->
+    <div class="filtro-secao">
+      <span class="filtro-secao-label">Área Útil</span>
+      <div class="range-labels">
+        <span id="areaMinLabel">—</span>
+        <span id="areaMaxLabel">—</span>
+      </div>
+      <div class="range-dual">
+        <div class="range-track"><div class="range-fill" id="areaFill"></div></div>
+        <input type="range" id="areaMinR" oninput="onRangeArea()">
+        <input type="range" id="areaMaxR" oninput="onRangeArea()">
+      </div>
+    </div>
+
+    <!-- ORÇAMENTO -->
+    <div class="filtro-secao">
+      <span class="filtro-secao-label">Orçamento</span>
+      <div class="range-labels">
+        <span id="orcMinLabel">—</span>
+        <span id="orcMaxLabel">—</span>
+      </div>
+      <div class="range-dual">
+        <div class="range-track"><div class="range-fill" id="orcFill"></div></div>
+        <input type="range" id="orcMinR" oninput="onRangeOrc()">
+        <input type="range" id="orcMaxR" oninput="onRangeOrc()">
+      </div>
+    </div>
+
+    <!-- BAIRROS -->
+    <div class="filtro-secao">
+      <span class="filtro-secao-label">Bairros</span>
+      <div class="filtro-tags" id="bairrosTags"></div>
+      <div class="bairro-input-wrap" id="bairroInputWrap">
+        <input class="bairro-input" id="bairroCustomInput" type="text"
+               placeholder="Digite o bairro..."
+               onkeydown="if(event.key==='Enter')adicionarBairroCustom()">
+        <button class="bairro-btn-ok" onclick="adicionarBairroCustom()">OK</button>
+      </div>
+    </div>
+
+  </div><!-- /filtro-corpo -->
+
+  <div class="filtro-footer">
+    <button class="btn-limpar" onclick="limparFiltros()">LIMPAR</button>
+    <button class="btn-aplicar" id="btnAplicar" onclick="fecharFiltro()">VER RESULTADOS</button>
+  </div>
+</aside>
+
 <!-- GRID -->
 <div class="grid-wrap">
   <div class="grid" id="grid"></div>
@@ -260,7 +486,7 @@ body {
 
 <script src="data.js"></script>
 <script>
-// ── Renderiza os cards (estilo Pinterest) ───────────────────
+// ── Renderiza card (estilo Pinterest) ────────────────────────
 function renderCard(im) {
   const thumb = thumbUrl(im);
   const thumbHtml = thumb
@@ -268,7 +494,6 @@ function renderCard(im) {
             onerror="this.style.display='none'">`
     : '';
   const gradStyle = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
-
   return `
   <article class="card" onclick="window.location='imovel.html?id=${im.id}'" role="button" tabindex="0"
            onkeydown="if(event.key==='Enter')window.location='imovel.html?id=${im.id}'">
@@ -289,13 +514,182 @@ function renderCard(im) {
   </article>`;
 }
 
-function init() {
-  const grid = document.getElementById('grid');
-  grid.innerHTML = IMOVEIS.map(renderCard).join('');
-  document.getElementById('headerBadge').textContent =
-    `${IMOVEIS.length} imóvel${IMOVEIS.length !== 1 ? 'is' : ''}`;
+// ── FILTROS ──────────────────────────────────────────────────
+let AREA_MIN, AREA_MAX, ORC_MIN, ORC_MAX;
+const F = { estagios: new Set(), bairros: new Set(),
+            areaMin: 0, areaMax: 9999, orcMin: 0, orcMax: 9e9 };
+
+function initFiltros() {
+  const areas = IMOVEIS.map(im => im.area);
+  const precs = IMOVEIS.map(im => im.preco);
+  AREA_MIN = Math.floor(Math.min(...areas) / 5) * 5;
+  AREA_MAX = Math.ceil (Math.max(...areas) / 5) * 5;
+  ORC_MIN  = Math.floor(Math.min(...precs) / 50000) * 50000;
+  ORC_MAX  = Math.ceil (Math.max(...precs) / 50000) * 50000;
+  F.areaMin = AREA_MIN; F.areaMax = AREA_MAX;
+  F.orcMin  = ORC_MIN;  F.orcMax  = ORC_MAX;
+
+  // Tags de Estágio
+  const estagios = [...new Set(IMOVEIS.map(im => im.entrega))];
+  document.getElementById('estagioTags').innerHTML =
+    estagios.map(e =>
+      `<button class="ftag" data-v="${e}" onclick="toggleTag(this,F.estagios,'${e}')">${e}</button>`
+    ).join('');
+
+  // Tags de Bairro
+  const bairros = [...new Set(IMOVEIS.map(im => im.bairro))].sort();
+  document.getElementById('bairrosTags').innerHTML =
+    bairros.map(b =>
+      `<button class="ftag" data-v="${b}" onclick="toggleTag(this,F.bairros,'${b}')">${b}</button>`
+    ).join('') +
+    `<button class="ftag ftag-outro" onclick="abrirBairroInput()">+ OUTRO</button>`;
+
+  // Sliders Área
+  ['areaMinR','areaMaxR'].forEach(id => {
+    const el = document.getElementById(id);
+    el.min = AREA_MIN; el.max = AREA_MAX; el.step = 5;
+  });
+  document.getElementById('areaMinR').value = AREA_MIN;
+  document.getElementById('areaMaxR').value = AREA_MAX;
+
+  // Sliders Orçamento
+  ['orcMinR','orcMaxR'].forEach(id => {
+    const el = document.getElementById(id);
+    el.min = ORC_MIN; el.max = ORC_MAX; el.step = 50000;
+  });
+  document.getElementById('orcMinR').value = ORC_MIN;
+  document.getElementById('orcMaxR').value = ORC_MAX;
+
+  onRangeArea(); onRangeOrc();
 }
 
+// Abre / fecha painel
+function abrirFiltro() {
+  document.getElementById('filtroPanel').classList.add('aberto');
+  document.getElementById('filtroOverlay').classList.add('ativo');
+  document.body.style.overflow = 'hidden';
+}
+function fecharFiltro() {
+  document.getElementById('filtroPanel').classList.remove('aberto');
+  document.getElementById('filtroOverlay').classList.remove('ativo');
+  document.body.style.overflow = '';
+}
+
+// Toggle de tag genérico (estágio ou bairro)
+function toggleTag(el, conjunto, val) {
+  el.classList.toggle('sel');
+  conjunto.has(val) ? conjunto.delete(val) : conjunto.add(val);
+  filtrar();
+}
+
+// Range de Área
+function onRangeArea() {
+  const rMin = document.getElementById('areaMinR');
+  const rMax = document.getElementById('areaMaxR');
+  let vMin = +rMin.value, vMax = +rMax.value;
+  if (vMin > vMax) { vMin = vMax; rMin.value = vMin; }
+  const p1 = (vMin - AREA_MIN) / (AREA_MAX - AREA_MIN) * 100;
+  const p2 = (vMax - AREA_MIN) / (AREA_MAX - AREA_MIN) * 100;
+  const fill = document.getElementById('areaFill');
+  fill.style.left = p1 + '%'; fill.style.width = (p2 - p1) + '%';
+  document.getElementById('areaMinLabel').textContent = vMin + ' m²';
+  document.getElementById('areaMaxLabel').textContent = vMax + ' m²';
+  F.areaMin = vMin; F.areaMax = vMax;
+  filtrar();
+}
+
+// Range de Orçamento
+function fmtK(v) {
+  if (v >= 1e6) return 'R$' + (v/1e6).toFixed(v%1e6===0?0:1) + 'M';
+  return 'R$' + Math.round(v/1000) + 'k';
+}
+function onRangeOrc() {
+  const rMin = document.getElementById('orcMinR');
+  const rMax = document.getElementById('orcMaxR');
+  let vMin = +rMin.value, vMax = +rMax.value;
+  if (vMin > vMax) { vMin = vMax; rMin.value = vMin; }
+  const p1 = (vMin - ORC_MIN) / (ORC_MAX - ORC_MIN) * 100;
+  const p2 = (vMax - ORC_MIN) / (ORC_MAX - ORC_MIN) * 100;
+  const fill = document.getElementById('orcFill');
+  fill.style.left = p1 + '%'; fill.style.width = (p2 - p1) + '%';
+  document.getElementById('orcMinLabel').textContent = fmtK(vMin);
+  document.getElementById('orcMaxLabel').textContent = fmtK(vMax);
+  F.orcMin = vMin; F.orcMax = vMax;
+  filtrar();
+}
+
+// Input de bairro customizado
+function abrirBairroInput() {
+  const w = document.getElementById('bairroInputWrap');
+  w.classList.toggle('vis');
+  if (w.classList.contains('vis')) document.getElementById('bairroCustomInput').focus();
+}
+function adicionarBairroCustom() {
+  const inp = document.getElementById('bairroCustomInput');
+  const val = inp.value.trim();
+  if (!val) return;
+  const existente = document.querySelector(`#bairrosTags [data-v="${val}"]`);
+  if (existente) {
+    if (!existente.classList.contains('sel')) toggleTag(existente, F.bairros, val);
+  } else {
+    const btn = document.createElement('button');
+    btn.className = 'ftag sel'; btn.dataset.v = val; btn.textContent = val;
+    btn.onclick = () => toggleTag(btn, F.bairros, val);
+    F.bairros.add(val);
+    const tags = document.getElementById('bairrosTags');
+    tags.insertBefore(btn, tags.lastElementChild);
+    filtrar();
+  }
+  inp.value = '';
+  document.getElementById('bairroInputWrap').classList.remove('vis');
+}
+
+// Filtragem em tempo real
+function filtrar() {
+  const lista = IMOVEIS.filter(im =>
+    (F.estagios.size === 0 || F.estagios.has(im.entrega)) &&
+    im.area  >= F.areaMin && im.area  <= F.areaMax &&
+    im.preco >= F.orcMin  && im.preco <= F.orcMax  &&
+    (F.bairros.size === 0 || F.bairros.has(im.bairro))
+  );
+
+  document.getElementById('grid').innerHTML = lista.length
+    ? lista.map(renderCard).join('')
+    : `<p class="sem-resultados">Nenhum imóvel com esses filtros.<br>
+       <small style="font-size:13px;font-weight:400">Tente ajustar as opções ao lado.</small></p>`;
+
+  // Badge + botão VER RESULTADOS
+  const nFiltros = F.estagios.size + F.bairros.size
+    + (F.areaMin > AREA_MIN || F.areaMax < AREA_MAX ? 1 : 0)
+    + (F.orcMin  > ORC_MIN  || F.orcMax  < ORC_MAX  ? 1 : 0);
+  const btn = document.getElementById('btnFiltro');
+  btn.classList.toggle('tem-filtros', nFiltros > 0);
+  btn.classList.toggle('ativo', nFiltros > 0);
+  document.getElementById('filtroBadge').textContent = nFiltros;
+  document.getElementById('btnAplicar').textContent =
+    lista.length ? `VER ${lista.length} IMÓVE${lista.length===1?'L':'IS'}` : 'NENHUM RESULTADO';
+  document.getElementById('headerBadge').textContent =
+    `${lista.length} imóvel${lista.length!==1?'is':''}`;
+}
+
+function limparFiltros() {
+  F.estagios.clear(); F.bairros.clear();
+  document.querySelectorAll('.ftag.sel').forEach(el => el.classList.remove('sel'));
+  document.getElementById('areaMinR').value = AREA_MIN;
+  document.getElementById('areaMaxR').value = AREA_MAX;
+  document.getElementById('orcMinR').value  = ORC_MIN;
+  document.getElementById('orcMaxR').value  = ORC_MAX;
+  document.getElementById('bairroInputWrap').classList.remove('vis');
+  onRangeArea(); onRangeOrc();
+}
+
+// Boot
+function init() {
+  document.getElementById('grid').innerHTML = IMOVEIS.map(renderCard).join('');
+  document.getElementById('headerBadge').textContent =
+    `${IMOVEIS.length} imóvel${IMOVEIS.length!==1?'is':''}`;
+  initFiltros();
+}
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
