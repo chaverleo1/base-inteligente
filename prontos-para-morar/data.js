@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════
 // PRONTOS PARA MORAR — data.js
-// Atualizado em 21/08/2026, 14:35:36
+// Atualizado em 21/08/2026 via gerenciar.html
 // ══════════════════════════════════════════════════════
 
 const CONFIG = {
@@ -199,15 +199,24 @@ function formatBRL(v) {
 }
 
 const FOTO_SEEDS = [
-  '1545324418-cc1a3fa10c00','1560448204-e02f11c3d0e2','1502672260266-1c1ef2d93688',
-  '1554995207-c18c203602cb','1522708323590-d24dbb6b0267','1484154218962-a197022b5858',
-  '1578683010236-d716f9a3f461','1507089947368-19c1da9775ae','1493809842364-78817add7ffb',
-  '1560184897-ae75f418493e','1556909114-f6e7ad7d3136','1551361415-69c87624334f',
+  '1545324418-cc1a3fa10c00',
+  '1560448204-e02f11c3d0e2',
+  '1502672260266-1c1ef2d93688',
+  '1554995207-c18c203602cb',
+  '1522708323590-d24dbb6b0267',
+  '1484154218962-a197022b5858',
+  '1578683010236-d716f9a3f461',
+  '1507089947368-19c1da9775ae',
+  '1493809842364-78817add7ffb',
+  '1560184897-ae75f418493e',
+  '1556909114-f6e7ad7d3136',
+  '1551361415-69c87624334f',
 ];
 
 function thumbUrl(imovel) {
+  // foto de capa personalizada tem prioridade sobre thumbnail do YouTube
+  if (imovel.img)     return imovel.img;
   if (imovel.youtube) return `https://img.youtube.com/vi/${imovel.youtube}/hqdefault.jpg`;
-  if (imovel.img)    return imovel.img;
   const seed = FOTO_SEEDS[(imovel.id - 1) % FOTO_SEEDS.length];
   return `https://images.unsplash.com/photo-${seed}?w=400&h=711&fit=crop&auto=format&q=80`;
 }
