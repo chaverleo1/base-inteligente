@@ -243,6 +243,32 @@ textarea.finp { resize: vertical; min-height: 90px; line-height: 1.6; }
   font-size: 13px; font-weight: 800; border-radius: 9px; transition: background .15s; }
 .btn-cfg-save:hover { background: #154430; }
 
+/* ── GALERIA UPLOAD ── */
+.galeria-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 500px) { .galeria-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.gal-slot { position: relative; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; background: var(--bg); border: 1.5px solid var(--border); }
+.gal-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-slot .gal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  opacity: 0; transition: opacity .2s; }
+.gal-slot:hover .gal-overlay { opacity: 1; }
+.gal-slot .gal-rm { width: 28px; height: 28px; background: var(--danger); border-radius: 50%;
+  color: #fff; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; transition: transform .15s; }
+.gal-slot .gal-rm:hover { transform: scale(1.15); }
+.gal-slot .gal-num { position: absolute; top: 4px; left: 5px; background: rgba(0,0,0,.55);
+  color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+.gal-slot .gal-status { position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px; font-size: 10px; font-weight: 700;
+  color: rgba(255,255,255,.8); background: rgba(0,0,0,.5); }
+.gal-slot .gal-spin { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.3);
+  border-top-color: #fff; border-radius: 50%; animation: rot .8s linear infinite; }
+.gal-empty { border: 2px dashed var(--border); border-radius: 8px; aspect-ratio: 16/9;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: var(--text3); cursor: pointer; transition: border-color .2s, color .2s; }
+.gal-empty:hover { border-color: var(--accent); color: var(--accent); }
+
 /* Modal YT */
 .modal-yt { display: none; position: fixed; inset: 0; z-index: 500;
   background: rgba(0,0,0,.88); align-items: center; justify-content: center;
@@ -466,6 +492,28 @@ textarea.finp { resize: vertical; min-height: 90px; line-height: 1.6; }
             placeholder="Descreva os diferenciais, localização, condomínio..."></textarea>
         </div>
 
+        <!-- GALERIA -->
+        <div class="form-card" style="margin-top:12px">
+          <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>🖼 Galeria de fotos</span>
+            <span id="galeriaCount" style="font-size:10px;font-weight:700;color:var(--text3)">0 / 8</span>
+          </div>
+
+          <div class="galeria-grid" id="galeriaGrid"></div>
+
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+            <button class="btn-foto btn-foto-primary" id="btnAddFoto"
+                    onclick="document.getElementById('galeriaFileInput').click()">
+              + Adicionar fotos
+            </button>
+            <span style="font-size:11.5px;color:var(--text3);font-weight:500">
+              JPG, PNG ou WEBP · máx 5 MB por foto · até 8 fotos
+            </span>
+          </div>
+          <input type="file" id="galeriaFileInput" accept="image/*" multiple style="display:none"
+                 onchange="adicionarFotosGaleria_(this.files)">
+        </div>
+
         <div class="form-actions">
           <button class="btn-pub" id="btnPublicar" onclick="publicarImovel_()">
             ☁ Salvar e publicar
@@ -654,6 +702,7 @@ function novoImovel_() {
   document.getElementById('cadEstagio').value = 'Pronto para Morar';
   resetFotoUi_();
   resetYtPreview_();
+  resetGaleria_();
 }
 
 function editarImovel_(id) {
@@ -697,6 +746,9 @@ function editarImovel_(id) {
   } else {
     resetYtPreview_();
   }
+
+  // Galeria existente
+  carregarGaleriaExistente_(im.galeria || []);
 
   trocarAba_('cadastrar');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -809,6 +861,114 @@ function fecharModalYt_() {
   document.getElementById('modalIframe').src = '';
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GALERIA
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// galeriaItems: array de { preview: string (dataURL ou URL), file?: File, url?: string }
+let galeriaItems = [];
+const MAX_GAL = 8;
+
+function renderGaleriaGrid_() {
+  const grid = document.getElementById('galeriaGrid');
+  const count = document.getElementById('galeriaCount');
+  if (!grid) return;
+  count.textContent = `${galeriaItems.length} / ${MAX_GAL}`;
+
+  let html = galeriaItems.map((item, i) => `
+    <div class="gal-slot" id="galSlot_${i}">
+      <img src="${item.preview}" alt="Foto ${i+1}">
+      <div class="gal-num">${i + 1}</div>
+      <div class="gal-overlay">
+        <button class="gal-rm" onclick="removerGaleria_(${i})">✕</button>
+      </div>
+    </div>`).join('');
+
+  if (galeriaItems.length < MAX_GAL) {
+    html += `<div class="gal-empty" onclick="document.getElementById('galeriaFileInput').click()" title="Adicionar foto">＋</div>`;
+  }
+
+  grid.innerHTML = html;
+  document.getElementById('btnAddFoto').style.display = galeriaItems.length >= MAX_GAL ? 'none' : '';
+}
+
+function adicionarFotosGaleria_(files) {
+  const arr = Array.from(files);
+  const vagas = MAX_GAL - galeriaItems.length;
+  const lote  = arr.slice(0, vagas);
+  if (arr.length > vagas) toast_(`Limite de ${MAX_GAL} fotos. ${arr.length - vagas} foto(s) ignorada(s).`, '');
+
+  lote.forEach(file => {
+    if (file.size > 5 * 1024 * 1024) { toast_(`"${file.name}" maior que 5 MB — ignorado`, 'err'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      galeriaItems.push({ preview: e.target.result, file });
+      renderGaleriaGrid_();
+    };
+    reader.readAsDataURL(file);
+  });
+  // limpa o input para poder selecionar os mesmos arquivos novamente
+  document.getElementById('galeriaFileInput').value = '';
+}
+
+function removerGaleria_(idx) {
+  galeriaItems.splice(idx, 1);
+  renderGaleriaGrid_();
+}
+
+function resetGaleria_() {
+  galeriaItems = [];
+  renderGaleriaGrid_();
+}
+
+// Carrega galeria existente (ao editar um imóvel)
+function carregarGaleriaExistente_(urls) {
+  galeriaItems = (urls || []).map(url => ({ preview: url, url }));
+  renderGaleriaGrid_();
+}
+
+// Faz upload de todas as fotos da galeria que ainda são File (novas)
+// Retorna array de URLs finais (na ordem original)
+async function uploadGaleria_(imovelId) {
+  const resultUrls = [];
+  for (let i = 0; i < galeriaItems.length; i++) {
+    const item = galeriaItems[i];
+    if (item.file) {
+      // Mostra progresso no slot
+      const slot = document.getElementById(`galSlot_${i}`);
+      if (slot) slot.innerHTML += `<div class="gal-status"><div class="gal-spin"></div>${i+1}/${galeriaItems.length}</div>`;
+      const ext  = item.file.name.split('.').pop().toLowerCase() || 'jpg';
+      const fname = `prontos-para-morar/fotos/galeria-${imovelId}-${i+1}-${Date.now()}.${ext}`;
+      const url  = await uploadArquivo_(item.file, fname);
+      resultUrls.push(url);
+    } else {
+      resultUrls.push(item.url || item.preview);
+    }
+  }
+  return resultUrls;
+}
+
+// Upload genérico de File para o GitHub
+async function uploadArquivo_(file, path) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result.split(',')[1];
+        const res = await fetch(`https://api.github.com/repos/${cfg.repo}/contents/${path}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `foto: galeria via gerenciar.html`, content: base64, branch: 'main' }),
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.message || `Erro ${res.status}`); }
+        const data = await res.json();
+        resolve(data.content.download_url);
+      } catch(e) { reject(e); }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Máscara preço ─────────────────────────────
 function mascaraPreco_(el) {
   let v = el.value.replace(/\D/g,'');
@@ -846,7 +1006,15 @@ async function publicarImovel_() {
       fotoArquivo = null;
     }
 
-    // 2. Monta o objeto do imóvel
+    // 2. Upload da galeria (fotos novas)
+    let galeriaFinal = [];
+    if (galeriaItems.length > 0) {
+      const tmpId = editandoId !== null ? editandoId : (LOCAL.length ? Math.max(...LOCAL.map(x => x.id)) + 1 : 1);
+      document.getElementById('btnPublicar').innerHTML = '<span class="spin"></span> Enviando galeria...';
+      galeriaFinal = await uploadGaleria_(tmpId);
+    }
+
+    // 3. Monta o objeto do imóvel
     const ytid  = ytId_(document.getElementById('cadYt').value.trim()) || '';
     const precoRaw = document.getElementById('cadPreco').value.replace(/\D/g,'');
     const CORES_GRAD = [
@@ -871,6 +1039,7 @@ async function publicarImovel_() {
           preco:     parseInt(precoRaw) || LOCAL[idx].preco,
           youtube:   ytid,
           img:       imgUrl,
+          galeria:   galeriaFinal,
           entrega:   document.getElementById('cadEstagio').value,
           descricao: document.getElementById('cadDescricao').value.trim(),
         };
@@ -891,6 +1060,7 @@ async function publicarImovel_() {
         preco:     parseInt(precoRaw) || 0,
         youtube:   ytid,
         img:       imgUrl,
+        galeria:   galeriaFinal,
         grad:      grad,
         entrega:   document.getElementById('cadEstagio').value,
         descricao: document.getElementById('cadDescricao').value.trim(),
@@ -982,6 +1152,7 @@ function montarDataJs_() {
     preco: ${im.preco},
     youtube: '${e_(im.youtube || '')}',
     img: '${e_(im.img || '')}',
+    galeria: ${JSON.stringify(im.galeria || [])},
     grad: ['${im.grad[0]}','${im.grad[1]}'],
     entrega: '${e_(im.entrega)}',
     descricao: '${e_(im.descricao || '')}',
@@ -1098,7 +1269,7 @@ function toast_(msg, tipo = '') {
   toastTimer = setTimeout(() => t.classList.remove('vis'), 4500);
 }
 
-function e_(s) { return String(s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function e_(s) { return String(s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,'\\n'); }
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-// ══════════════════════════════════════════════════════
-// PRONTOS PARA MORAR — data.js
-// Atualizado em 21/08/2026, 14:01:33
-// ══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// PRONTOS PARA MORAR — Dados e Configuração
+// Gerado em 21/08/2026 via gerenciar.html
+// ═══════════════════════════════════════════════════════════════
 
 const CONFIG = {
   gUrl: '',
@@ -19,6 +19,7 @@ const IMOVEIS = [
     preco: 680000,
     youtube: 'icO4WuUMMg4',
     img: '',
+    galeria: [],
     grad: ['#1B5540','#2A7A5A'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento de alto padrão com 3 quartos (1 suíte máster), varanda gourmet com churrasqueira e vista para a cidade. 2 vagas cobertas. Condomínio completo com piscina aquecida, academia, salão de festas e playground.',
@@ -30,8 +31,9 @@ const IMOVEIS = [
     bairro: 'Setor Marista',
     quartos: 4, suites: 2, area: 140, vagas: 3,
     preco: 950000,
-    youtube: '',
+    youtube: 'wb4uctT5j4Q',
     img: '',
+    galeria: [],
     grad: ['#2D4B7A','#4A78B8'],
     entrega: 'Pronto para Morar',
     descricao: 'Cobertura duplex com terraço privativo de 60m², 4 suítes, living amplo com pé-direito duplo. Empreendimento de altíssimo padrão com spa, academia, concierge e segurança 24h.',
@@ -45,6 +47,7 @@ const IMOVEIS = [
     preco: 420000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#5A3D8A','#8864C0'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento moderno com 2 quartos (1 suíte), sala ampliada, cozinha americana integrada. Condomínio com piscina, academia e portaria 24h. A 5 minutos do Shopping Flamboyant.',
@@ -58,6 +61,7 @@ const IMOVEIS = [
     preco: 350000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#2A6A4A','#48A872'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento com 2 dormitórios, sala, cozinha e área de serviço. Condomínio verde com playground, área de convivência e segurança 24h. Excelente opção de entrada ou investimento.',
@@ -71,6 +75,7 @@ const IMOVEIS = [
     preco: 580000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#1E6A8A','#30A0CC'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento com varanda, 3 quartos (1 suíte), sala com 2 ambientes e cozinha planejada. Andar alto com vista panorâmica. Condomínio com piscina, sauna e salão gourmet.',
@@ -84,6 +89,7 @@ const IMOVEIS = [
     preco: 1200000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#8A6A1E','#C4A040'],
     entrega: 'Pronto para Morar',
     descricao: 'Casa de luxo com 4 suítes, piscina privativa, jardim paisagístico e home theater. Condomínio fechado com clube, segurança 24h e áreas de lazer exclusivas.',
@@ -97,6 +103,7 @@ const IMOVEIS = [
     preco: 380000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#484848','#787878'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento com layout inteligente, 2 dormitórios (1 suíte), sala, cozinha aberta e área de serviço. Próximo a hospitais, comércio e aeroporto. Condomínio com rooftop e coworking.',
@@ -110,6 +117,7 @@ const IMOVEIS = [
     preco: 520000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#8A1E5A','#C040A0'],
     entrega: 'Pronto para Morar',
     descricao: 'Raro apartamento garden térreo com área privativa de 40m², 3 quartos com suíte, sala integrada com saída para o jardim. Ideal para quem tem pets ou filhos pequenos.',
@@ -123,6 +131,7 @@ const IMOVEIS = [
     preco: 620000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#2D3B6A','#1B5540'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento reformado com acabamento premium, 3 suítes, varanda, sala de TV e sala de jantar separadas. Edifício tradicional do Setor Sul, a 300m do Bosque dos Buritis.',
@@ -136,6 +145,7 @@ const IMOVEIS = [
     preco: 490000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#2A4A6A','#4A7AB2'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento com 3 quartos (1 suíte), sala ampla, varanda e 2 vagas. Condomínio com academia, piscina e salão de eventos. Excelente localização para quem trabalha na região hospitalar.',
@@ -149,6 +159,7 @@ const IMOVEIS = [
     preco: 315000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#3A6A1A','#5AA038'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento com 2 quartos, sala, cozinha e área de serviço em condomínio com área verde generosa. Campo de futebol society, quadra poliesportiva, piscina e playground.',
@@ -162,6 +173,7 @@ const IMOVEIS = [
     preco: 385000,
     youtube: '',
     img: '',
+    galeria: [],
     grad: ['#6A2A4A','#AA4880'],
     entrega: 'Pronto para Morar',
     descricao: 'Apartamento compacto e funcional, 2 dormitórios, sala, cozinha e área de serviço. Ótimo custo-benefício para moradia ou investimento. Acesso fácil a shoppings, hospitais e transporte.',
@@ -175,22 +187,31 @@ const IMOVEIS = [
     preco: 4500000,
     youtube: 'wb4uctT5j4Q',
     img: '',
+    galeria: [],
     grad: ['#2A6A4A','#48A872'],
     entrega: 'Pronto para Morar',
-    descricao: 'Seu novo lar é aqui.
-Entre e contato.',
+    descricao: 'Seu novo lar é aqui. Entre em contato.',
   },
 ];
 
+// ── Utilitários ──────────────────────────────────────────────
 function formatBRL(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR');
 }
 
 const FOTO_SEEDS = [
-  '1545324418-cc1a3fa10c00','1560448204-e02f11c3d0e2','1502672260266-1c1ef2d93688',
-  '1554995207-c18c203602cb','1522708323590-d24dbb6b0267','1484154218962-a197022b5858',
-  '1578683010236-d716f9a3f461','1507089947368-19c1da9775ae','1493809842364-78817add7ffb',
-  '1560184897-ae75f418493e','1556909114-f6e7ad7d3136','1551361415-69c87624334f',
+  '1545324418-cc1a3fa10c00',
+  '1560448204-e02f11c3d0e2',
+  '1502672260266-1c1ef2d93688',
+  '1554995207-c18c203602cb',
+  '1522708323590-d24dbb6b0267',
+  '1484154218962-a197022b5858',
+  '1578683010236-d716f9a3f461',
+  '1507089947368-19c1da9775ae',
+  '1493809842364-78817add7ffb',
+  '1560184897-ae75f418493e',
+  '1556909114-f6e7ad7d3136',
+  '1551361415-69c87624334f',
 ];
 
 function thumbUrl(imovel) {
