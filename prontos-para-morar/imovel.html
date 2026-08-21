@@ -77,18 +77,14 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); }
   .detail-layout { grid-template-columns: 1fr; gap: 0; }
   .detail-col-left {
     position: static;
-    max-width: 100%;
-    margin: 0 0 20px;
+    max-width: 360px;
+    margin: 0 auto 20px;
   }
   .info-titulo { font-size: 20px !important; }
   .info-preco  { font-size: 20px !important; }
   .info-row { gap: 8px; }
-  .galeria-foto { width: 180px; height: 101px; }
   .form-card { padding: 20px 16px; }
   .spec-pill { font-size: 12px; padding: 7px 11px; }
-}
-@media (max-width: 420px) {
-  .galeria-foto { width: 150px; height: 84px; }
 }
 
 /* ── HERO VÍDEO ──────────────────────────────────────────── */
@@ -208,25 +204,23 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); }
 }
 
 /* ── GALERIA ─────────────────────────────────────────────── */
-.galeria-scroll {
-  display: flex; gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
+.galeria-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
-.galeria-scroll::-webkit-scrollbar { height: 4px; }
-.galeria-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 99px; }
 .galeria-foto {
-  flex-shrink: 0;
-  width: 240px; height: 135px;   /* 16:9 */
-  border-radius: 10px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
   object-fit: cover;
-  scroll-snap-align: start;
   cursor: pointer;
   transition: transform .2s, box-shadow .2s;
 }
 .galeria-foto:hover { transform: scale(1.03); box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+@media (max-width: 600px) {
+  .galeria-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+}
 
 /* lightbox simples */
 .lightbox {
@@ -337,7 +331,6 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); }
 @media (max-width: 600px) {
   .info-row { flex-direction: column; gap: 8px; }
   .info-preco-wrap { text-align: left; }
-  .galeria-foto { width: 200px; height: 112px; }
   .form-card { padding: 22px 18px; }
 }
 </style>
@@ -552,7 +545,7 @@ function renderGaleria(im) {
   document.getElementById('galeriaWrap').innerHTML = `
     <div class="section">
       <div class="section-label">Ver fotos</div>
-      <div class="galeria-scroll">
+      <div class="galeria-grid">
         ${lightboxFotos.map((url, i) => `
           <img class="galeria-foto" src="${url}" alt="Foto ${i+1}" loading="lazy"
                onclick="abrirLightbox(${i})"
