@@ -69,11 +69,12 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); }
   max-width: 420px;      /* centralizado, não estica em desktop */
   box-shadow: 0 4px 24px rgba(0,0,0,.18);
 }
-.hero-video iframe, .hero-video .hero-grad {
+.hero-video iframe, .hero-video .hero-grad, .hero-video .hero-foto {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
 }
 .hero-video iframe { border: none; }
+.hero-foto { object-fit: cover; display: block; }
 .hero-grad {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 14px;
@@ -371,19 +372,21 @@ function renderPage(im) {
 // ── Hero (vídeo ou gradiente) ─────────────────────────────────
 function renderHero(im) {
   const wrap = document.getElementById('heroWrap');
-  const gradStyle = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
+  const thumb = thumbUrl(im);   // mesma imagem do card na listagem
 
   let interior = '';
   if (im.youtube) {
     interior = `<iframe src="https://www.youtube.com/embed/${im.youtube}?autoplay=0&rel=0&modestbranding=1&color=white"
                   allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"
                   allowfullscreen title="${im.titulo}"></iframe>`;
+  } else if (thumb) {
+    // exibe a mesma foto que aparece no card da listagem
+    interior = `<img class="hero-foto" src="${thumb}" alt="${im.titulo}">`;
   } else {
-    interior = `
-      <div class="hero-grad" style="${gradStyle}">
-        <div class="hero-play-circle"><svg width="30" height="30"><use href="#ico-play"/></svg></div>
-        <span class="hero-no-video">Tour em vídeo em breve<br><small style="opacity:.6;font-size:11px">Configure um ID do YouTube em data.js</small></span>
-      </div>`;
+    const gradStyle = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
+    interior = `<div class="hero-grad" style="${gradStyle}">
+      <div class="hero-play-circle"><svg width="30" height="30"><use href="#ico-play"/></svg></div>
+    </div>`;
   }
   wrap.innerHTML = `${interior}<div class="hero-pill">${im.entrega}</div>`;
 }
