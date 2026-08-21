@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enviar Vídeo — Prontos para Morar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+a { text-decoration: none; color: inherit; }
+
+:root {
+  --accent:  #1B5540;
+  --accent2: rgba(27,85,64,.08);
+  --orange:  #F56E14;
+  --green-wa:#25D366;
+  --bg:      #F4F2EF;
+  --surface: #FFFFFF;
+  --text:    #1A1A1A;
+  --text2:   #6B6B6B;
+  --text3:   #9B9B9B;
+  --border:  rgba(0,0,0,.08);
+  --r: 14px;
+  --font: 'Manrope', system-ui, sans-serif;
+}
+
+body { background: var(--bg); font-family: var(--font); color: var(--text); min-height: 100vh; }
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+}
+.header-inner {
+  max-width: 760px; margin: 0 auto;
+  padding: 0 20px; height: 60px;
+  display: flex; align-items: center; gap: 12px;
+}
+.btn-back {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 700; color: var(--accent);
+  padding: 8px 0; white-space: nowrap; transition: opacity .15s;
+}
+.btn-back:hover { opacity: .7; }
+.header-title {
+  font-size: 15px; font-weight: 800; color: var(--text);
+  letter-spacing: -.3px;
+}
+
+/* ── HERO ── */
+.hero {
+  background: var(--accent);
+  padding: 36px 20px 32px;
+  text-align: center;
+}
+.hero-titulo {
+  font-size: clamp(22px, 5vw, 30px);
+  font-weight: 800; color: #fff; letter-spacing: -.6px; margin-bottom: 10px;
+}
+.hero-sub {
+  font-size: 15px; color: rgba(255,255,255,.78);
+  font-weight: 500; max-width: 500px; margin: 0 auto; line-height: 1.6;
+}
+
+/* ── WRAP ── */
+.wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+
+/* ── PASSOS ── */
+.passos {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 12px;
+  margin-bottom: 36px;
+}
+.passo {
+  background: var(--surface); border-radius: var(--r);
+  padding: 20px 16px; text-align: center;
+  border: 1px solid var(--border);
+}
+.passo-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent2); color: var(--accent);
+  font-size: 15px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px;
+}
+.passo-titulo { font-size: 13px; font-weight: 800; margin-bottom: 6px; }
+.passo-desc   { font-size: 12px; color: var(--text3); font-weight: 500; line-height: 1.5; }
+
+@media (max-width: 520px) {
+  .passos { grid-template-columns: 1fr; gap: 10px; }
+  .passo  { display: flex; align-items: flex-start; gap: 14px; text-align: left; padding: 16px; }
+  .passo-num { flex-shrink: 0; margin: 0; }
+}
+
+/* ── DICA YOUTUBE ── */
+.dica-yt {
+  background: #fff3e0; border: 1.5px solid #F56E14;
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 28px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.dica-yt-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.dica-yt-text { font-size: 13px; font-weight: 500; color: #7a3800; line-height: 1.55; }
+.dica-yt-text strong { color: #c45200; font-weight: 800; }
+.dica-yt-link {
+  display: inline-block; margin-top: 6px;
+  background: var(--orange); color: #fff;
+  font-size: 12px; font-weight: 800; padding: 6px 14px;
+  border-radius: 999px; transition: background .15s;
+}
+.dica-yt-link:hover { background: #d95e0f; }
+
+/* ── CARD FORM ── */
+.form-card {
+  background: var(--surface); border-radius: var(--r);
+  padding: 28px 24px; border: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+.form-section-label {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text3);
+  margin: 0 0 16px; padding-top: 4px;
+}
+.form-section-label:not(:first-child) { margin-top: 24px; }
+.form-divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 24px 0 20px;
+}
+.form-row {
+  display: grid; gap: 14px; margin-bottom: 14px;
+}
+.form-row.cols2 { grid-template-columns: 1fr 1fr; }
+.form-row.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label {
+  font-size: 11.5px; font-weight: 800; color: var(--text2);
+  letter-spacing: .3px;
+}
+.form-label .req { color: var(--orange); margin-left: 2px; }
+.form-input, .form-select, .form-textarea {
+  padding: 12px 14px; border: 1.5px solid rgba(0,0,0,.12);
+  border-radius: 10px; font-family: var(--font);
+  font-size: 14px; font-weight: 600; color: var(--text);
+  background: var(--bg); outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(27,85,64,.08);
+}
+.form-input::placeholder, .form-textarea::placeholder { color: var(--text3); font-weight: 400; }
+.form-input.erro, .form-textarea.erro { border-color: #E5342E; }
+.form-select { appearance: none; -webkit-appearance: none; cursor: pointer; }
+.form-textarea { resize: vertical; min-height: 90px; line-height: 1.5; font-weight: 500; }
+
+/* link YouTube */
+.video-link-wrap { position: relative; }
+.video-link-wrap .form-input { padding-left: 40px; }
+.video-link-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 18px; pointer-events: none;
+}
+.video-preview {
+  display: none; margin-top: 10px;
+  border-radius: 8px; overflow: hidden;
+  position: relative; padding-top: 56.25%;
+  background: #000;
+}
+.video-preview.vis { display: block; }
+.video-preview iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: none;
+}
+.video-hint {
+  font-size: 11.5px; color: var(--text3); margin-top: 5px; font-weight: 500;
+}
+.video-hint a { color: var(--accent); font-weight: 700; }
+
+/* ── SUBMIT ── */
+.btn-enviar {
+  width: 100%; padding: 15px 20px; margin-top: 24px;
+  background: var(--accent); color: #fff;
+  font-size: 14px; font-weight: 800; letter-spacing: .6px;
+  border-radius: 10px; transition: background .15s, transform .12s;
+}
+.btn-enviar:hover:not(:disabled) { background: #154430; }
+.btn-enviar:active:not(:disabled) { transform: scale(.98); }
+.btn-enviar:disabled { opacity: .55; cursor: not-allowed; }
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+  border-radius: 50%; animation: spin .8s linear infinite;
+  vertical-align: middle; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SUCESSO ── */
+.sucesso {
+  display: none; text-align: center; padding: 20px 0;
+}
+.sucesso.vis { display: block; }
+.sucesso-icon { font-size: 52px; margin-bottom: 16px; }
+.sucesso-titulo { font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 8px; }
+.sucesso-sub { font-size: 14px; color: var(--text2); font-weight: 500; line-height: 1.6; max-width: 440px; margin: 0 auto 24px; }
+.btn-wa {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--green-wa); color: #fff;
+  font-size: 14px; font-weight: 800;
+  padding: 14px 28px; border-radius: 10px;
+  transition: background .15s;
+}
+.btn-wa:hover { background: #1ebe5a; }
+
+/* responsivo */
+@media (max-width: 520px) {
+  .form-card { padding: 20px 16px; }
+  .form-row.cols2, .form-row.cols3 { grid-template-columns: 1fr 1fr; }
+  .form-row.cols3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 380px) {
+  .form-row.cols2, .form-row.cols3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <a class="btn-back" href="index.html">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M13 4L7 10l6 6"/>
+      </svg>
+      Voltar
+    </a>
+    <span class="header-title">Enviar Vídeo de Imóvel</span>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-titulo">📹 Publicar um imóvel</div>
+  <div class="hero-sub">Envie o vídeo e as informações do imóvel. Nossa equipe revisa e publica em breve.</div>
+</div>
+
+<div class="wrap">
+
+  <!-- PASSOS -->
+  <div class="passos">
+    <div class="passo">
+      <div class="passo-num">1</div>
+      <div>
+        <div class="passo-titulo">Grave o vídeo</div>
+        <div class="passo-desc">Filme o imóvel no celular em modo retrato (vertical). Duração: 30 seg a 3 min.</div>
+      </div>
+    </div>
+    <div class="passo">
+      <div class="passo-num">2</div>
+      <div>
+        <div class="passo-titulo">Suba no YouTube</div>
+        <div class="passo-desc">Faça upload como <strong>"Não listado"</strong> — só quem tiver o link acessa. Copie a URL.</div>
+      </div>
+    </div>
+    <div class="passo">
+      <div class="passo-num">3</div>
+      <div>
+        <div class="passo-titulo">Preencha o formulário</div>
+        <div class="passo-desc">Cole o link e preencha os dados do imóvel. Clique em enviar.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DICA YOUTUBE -->
+  <div class="dica-yt">
+    <div class="dica-yt-icon">▶️</div>
+    <div class="dica-yt-text">
+      <strong>Como subir no YouTube:</strong> acesse youtube.com → clique em "+" → "Fazer upload de vídeo" → escolha o arquivo → em Visibilidade selecione <strong>"Não listado"</strong> → Publicar → copie a URL da página.
+      <br>
+      <a class="dica-yt-link" href="https://studio.youtube.com" target="_blank" rel="noopener">Abrir YouTube Studio ↗</a>
+    </div>
+  </div>
+
+  <!-- FORMULÁRIO -->
+  <div class="form-card">
+    <form id="formEnvio" onsubmit="enviar_(event)" novalidate>
+
+      <!-- SEU CONTATO -->
+      <div class="form-section-label">Seu contato</div>
+      <div class="form-row cols2">
+        <div class="form-group">
+          <label class="form-label" for="fNome">Nome <span class="req">*</span></label>
+          <input class="form-input" id="fNome" type="text" placeholder="Seu nome completo" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fWhats">WhatsApp <span class="req">*</span></label>
+          <input class="form-input" id="fWhats" type="tel" placeholder="(62) 9 9999-9999" inputmode="numeric" required>
+        </div>
+      </div>
+
+      <hr class="form-divider">
+
+      <!-- VÍDEO -->
+      <div class="form-section-label">Link do vídeo</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fVideo">URL do YouTube <span class="req">*</span></label>
+          <div class="video-link-wrap">
+            <span class="video-link-icon">🎬</span>
+            <input class="form-input" id="fVideo" type="url"
+                   placeholder="https://youtube.com/watch?v=... ou https://youtu.be/..."
+                   oninput="previewVideo_(this.value)" required>
+          </div>
+          <div class="video-hint">
+            Cole o link do YouTube. Não tem vídeo? Envie por
+            <a href="https://wa.me/5562999999999" target="_blank">WhatsApp</a> e nós ajudamos.
+          </div>
+        </div>
+      </div>
+      <!-- preview do vídeo -->
+      <div class="video-preview" id="videoPreview">
+        <iframe id="videoIframe" src="" allowfullscreen
+          allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"></iframe>
+      </div>
+
+      <hr class="form-divider">
+
+      <!-- DADOS DO IMÓVEL -->
+      <div class="form-section-label">Dados do imóvel</div>
+      <div class="form-row cols2">
+        <div class="form-group">
+          <label class="form-label" for="fImovel">Nome / Empreendimento <span class="req">*</span></label>
+          <input class="form-input" id="fImovel" type="text" placeholder="Ex: Residencial Nobile" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fBairro">Bairro <span class="req">*</span></label>
+          <input class="form-input" id="fBairro" type="text" placeholder="Ex: Setor Bueno" required>
+        </div>
+      </div>
+      <div class="form-row cols2">
+        <div class="form-group">
+          <label class="form-label" for="fEstagio">Estágio</label>
+          <select class="form-select" id="fEstagio">
+            <option value="Pronto para Morar">Pronto para Morar</option>
+            <option value="Em Obras">Em Obras</option>
+            <option value="Lançamento">Lançamento</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fPreco">Preço (R$)</label>
+          <input class="form-input" id="fPreco" type="text" placeholder="Ex: 650.000"
+                 oninput="mascaraPreco_(this)" inputmode="numeric">
+        </div>
+      </div>
+      <div class="form-row cols3">
+        <div class="form-group">
+          <label class="form-label" for="fArea">Área útil (m²)</label>
+          <input class="form-input" id="fArea" type="number" placeholder="Ex: 85" min="20" max="1000">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fQuartos">Quartos</label>
+          <input class="form-input" id="fQuartos" type="number" placeholder="Ex: 3" min="0" max="20">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="fVagas">Vagas</label>
+          <input class="form-input" id="fVagas" type="number" placeholder="Ex: 2" min="0" max="20">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="fDesc">Descrição do imóvel</label>
+          <textarea class="form-textarea" id="fDesc"
+            placeholder="Descreva os diferenciais: acabamento, vista, lazer do condomínio, localização..."></textarea>
+        </div>
+      </div>
+
+      <!-- BOTÃO ENVIAR -->
+      <button class="btn-enviar" type="submit" id="btnEnviar">
+        ENVIAR PARA PUBLICAÇÃO
+      </button>
+
+    </form>
+
+    <!-- TELA DE SUCESSO -->
+    <div class="sucesso" id="sucesso">
+      <div class="sucesso-icon">🎉</div>
+      <div class="sucesso-titulo">Vídeo enviado com sucesso!</div>
+      <div class="sucesso-sub" id="sucessoSub"></div>
+      <a class="btn-wa" id="btnWaSucesso" href="#" target="_blank" rel="noopener">
+        <svg width="22" height="22" viewBox="0 0 32 32">
+          <path fill="currentColor" d="M16 3C8.82 3 3 8.82 3 16c0 2.3.6 4.5 1.7 6.4L3 29l6.8-1.7A13 13 0 0016 29c7.18 0 13-5.82 13-13S23.18 3 16 3zm6.7 18.4c-.3.8-1.6 1.5-2.2 1.6-.6.1-1.2.2-3.9-.8-3.3-1.2-5.4-4.5-5.6-4.7-.2-.2-1.4-1.9-1.4-3.6 0-1.7.9-2.5 1.2-2.9.3-.3.7-.4 1-.4l.7.01c.2 0 .5-.08.8.6l1.1 2.7c.1.2.1.5 0 .7l-.5.6-.4.5c.2.3.9 1.4 1.9 2.3 1.3 1.1 2.3 1.4 2.7 1.6.3.2.7.1.9-.1l.7-.8c.2-.3.5-.3.8-.2l2.5 1.2c.3.1.5.2.6.4.1.3.1.9-.2 1.7z"/>
+        </svg>
+        Falar com a equipe
+      </a>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script src="data.js"></script>
+<script>
+// ── Extrai ID do YouTube de qualquer formato de URL ───────────
+function ytId_(url) {
+  if (!url) return null;
+  url = url.trim();
+  // youtu.be/ID
+  let m = url.match(/youtu\.be\/([A-Za-z0-9_\-]{11})/);
+  if (m) return m[1];
+  // youtube.com/watch?v=ID
+  m = url.match(/[?&]v=([A-Za-z0-9_\-]{11})/);
+  if (m) return m[1];
+  // youtube.com/shorts/ID
+  m = url.match(/shorts\/([A-Za-z0-9_\-]{11})/);
+  if (m) return m[1];
+  // youtube.com/embed/ID
+  m = url.match(/embed\/([A-Za-z0-9_\-]{11})/);
+  if (m) return m[1];
+  return null;
+}
+
+// Preview em tempo real
+function previewVideo_(url) {
+  const id  = ytId_(url);
+  const box = document.getElementById('videoPreview');
+  const frm = document.getElementById('videoIframe');
+  if (id) {
+    frm.src = `https://www.youtube.com/embed/${id}?autoplay=0&rel=0&modestbranding=1`;
+    box.classList.add('vis');
+  } else {
+    frm.src = '';
+    box.classList.remove('vis');
+  }
+}
+
+// Máscara de preço
+function mascaraPreco_(el) {
+  let v = el.value.replace(/\D/g,'');
+  if (v) v = Number(v).toLocaleString('pt-BR');
+  el.value = v;
+}
+
+// Máscara de telefone
+document.getElementById('fWhats').addEventListener('input', function() {
+  let v = this.value.replace(/\D/g,'').slice(0,11);
+  if (v.length >= 10) v = v.replace(/^(\d{2})(\d{1})(\d{4})(\d{0,4})/,'($1) $2 $3-$4');
+  else if (v.length >= 6) v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');
+  else if (v.length >= 2) v = v.replace(/^(\d{2})(\d*)/,'($1) $2');
+  this.value = v;
+});
+
+// ── Envio ─────────────────────────────────────────────────────
+async function enviar_(ev) {
+  ev.preventDefault();
+
+  const campos = {
+    nome:   document.getElementById('fNome').value.trim(),
+    whats:  document.getElementById('fWhats').value.trim(),
+    video:  document.getElementById('fVideo').value.trim(),
+    imovel: document.getElementById('fImovel').value.trim(),
+    bairro: document.getElementById('fBairro').value.trim(),
+    estagio:document.getElementById('fEstagio').value,
+    preco:  document.getElementById('fPreco').value.trim(),
+    area:   document.getElementById('fArea').value.trim(),
+    quartos:document.getElementById('fQuartos').value.trim(),
+    vagas:  document.getElementById('fVagas').value.trim(),
+    descricao:document.getElementById('fDesc').value.trim(),
+  };
+
+  // Validação básica
+  let ok = true;
+  ['fNome','fWhats','fVideo','fImovel','fBairro'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) { el.classList.add('erro'); ok = false; }
+    else el.classList.remove('erro');
+  });
+
+  const ytid = ytId_(campos.video);
+  if (!ytid) {
+    document.getElementById('fVideo').classList.add('erro');
+    ok = false;
+  }
+
+  if (!ok) {
+    document.querySelector('.erro')?.scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+
+  // Loading
+  const btn = document.getElementById('btnEnviar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Enviando...';
+
+  const payload = {
+    acao: 'envio_video_prontos',
+    ytId: ytid, ytUrl: campos.video,
+    ...campos,
+    whatsRaw: campos.whats.replace(/\D/g,''),
+    enviadoEm: new Date().toISOString(),
+  };
+
+  // Tenta enviar para GAS
+  if (CONFIG.gUrl) {
+    try {
+      await fetch(CONFIG.gUrl, {
+        method: 'POST', mode: 'no-cors',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    } catch(_) {}
+  }
+
+  // Monta mensagem para WhatsApp da equipe
+  const waMsg = encodeURIComponent(
+    `🏠 *Novo vídeo para publicação*\n\n` +
+    `*Imóvel:* ${campos.imovel}\n` +
+    `*Bairro:* ${campos.bairro}\n` +
+    `*Estágio:* ${campos.estagio}\n` +
+    (campos.area    ? `*Área:* ${campos.area} m²\n` : '') +
+    (campos.quartos ? `*Quartos:* ${campos.quartos}\n` : '') +
+    (campos.preco   ? `*Preço:* R$ ${campos.preco}\n` : '') +
+    `\n*Vídeo YouTube:* ${campos.video}\n` +
+    `\n*Enviado por:* ${campos.nome} — ${campos.whats}`
+  );
+  const waLink = `https://wa.me/${CONFIG.corretorWhats}?text=${waMsg}`;
+
+  // Exibe sucesso
+  document.getElementById('formEnvio').style.display = 'none';
+  document.getElementById('sucessoSub').innerHTML =
+    `<strong>${campos.nome}</strong>, recebemos o vídeo de <strong>${campos.imovel}</strong>!` +
+    `<br>Nossa equipe vai revisar e publicar em breve. Clique abaixo para acompanhar pelo WhatsApp.`;
+  document.getElementById('btnWaSucesso').href = waLink;
+  document.getElementById('sucesso').classList.add('vis');
+
+  // Abre WhatsApp automaticamente após 600ms
+  setTimeout(() => window.open(waLink, '_blank'), 600);
+}
+</script>
+</body>
+</html>
