@@ -1,6 +1,6 @@
 // ══════════════════════════════════════════════════════
 // PRONTOS PARA MORAR — data.js
-// Atualizado em 21/08/2026, 14:44:44
+// Atualizado em 21/08/2026, 14:46:06
 // ══════════════════════════════════════════════════════
 
 const CONFIG = {
@@ -32,7 +32,7 @@ const IMOVEIS = [
     quartos: 4, suites: 2, area: 140, vagas: 3,
     preco: 950000,
     youtube: 'wb4uctT5j4Q',
-    img: '',
+    img: 'https://raw.githubusercontent.com/chaverleo1/base-inteligente/main/prontos-para-morar/fotos/foto-1787334364487.jpg',
     galeria: [],
     grad: ['#2D4B7A','#4A78B8'],
     entrega: 'Pronto para Morar',
@@ -206,8 +206,8 @@ const FOTO_SEEDS = [
 ];
 
 function thumbUrl(imovel) {
+  if (imovel.img)     return imovel.img;
   if (imovel.youtube) return `https://img.youtube.com/vi/${imovel.youtube}/hqdefault.jpg`;
-  if (imovel.img)    return imovel.img;
   const seed = FOTO_SEEDS[(imovel.id - 1) % FOTO_SEEDS.length];
   return `https://images.unsplash.com/photo-${seed}?w=400&h=711&fit=crop&auto=format&q=80`;
 }
