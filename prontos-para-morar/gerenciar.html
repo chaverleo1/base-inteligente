@@ -245,15 +245,23 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
 .btn-yt-ver:hover { background: rgba(27,85,64,.16); }
 
 /* Salvar card footer */
-.im-footer { display: flex; justify-content: flex-end; gap: 8px;
+.im-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px;
   padding-top: 12px; border-top: 1px solid var(--border); margin-top: 4px; }
 .btn-salvar-card { padding: 9px 20px; background: var(--accent); color: #fff;
   font-size: 13px; font-weight: 800; border-radius: 8px;
   display: flex; align-items: center; gap: 7px; transition: background .15s; }
 .btn-salvar-card:hover:not(:disabled) { background: #154430; }
 .btn-salvar-card:disabled { opacity: .55; cursor: not-allowed; }
-.save-note { font-size: 12px; color: var(--text3); font-weight: 600;
-  display: flex; align-items: center; gap: 5px; }
+.save-note { font-size: 12px; color: var(--orange); font-weight: 700;
+  display: none; align-items: center; gap: 5px; }
+
+/* Salvar tudo */
+.btn-salvar-tudo { padding: 9px 18px; background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 800; border-radius: 8px;
+  display: flex; align-items: center; gap: 7px; white-space: nowrap;
+  transition: background .15s; }
+.btn-salvar-tudo:hover:not(:disabled) { background: #154430; }
+.btn-salvar-tudo:disabled { opacity: .55; cursor: not-allowed; }
 
 /* Modal YT */
 .modal-yt { display: none; position: fixed; inset: 0; z-index: 500;
@@ -472,6 +480,9 @@ textarea.ed-inp { resize: vertical; min-height: 80px; line-height: 1.5; }
         <option value="ok">Com vídeo ✓</option>
         <option value="warn">Sem vídeo</option>
       </select>
+      <button class="btn-salvar-tudo" id="btnSalvarTudo" onclick="salvarTudo_()">
+        ☁ Salvar e publicar tudo
+      </button>
     </div>
 
     <div class="im-grid" id="imGrid"></div>
@@ -771,12 +782,10 @@ function cardHtml_(im) {
 
         <!-- Footer com botão Salvar -->
         <div class="im-footer">
-          <span class="save-note" id="saveNote_${im.id}" style="display:none">
-            ● Alterações pendentes
-          </span>
+          <span class="save-note" id="saveNote_${im.id}">● Alterações não salvas</span>
           <button class="btn-salvar-card" id="btnSalvar_${im.id}"
-                  onclick="salvarImovel_(${im.id})" disabled>
-            ✓ Salvar e publicar
+                  onclick="salvarImovel_(${im.id})">
+            ☁ Salvar e publicar
           </button>
         </div>
       </div>
@@ -794,15 +803,12 @@ function toggleCard_(id) {
 function markDirty_(id) {
   const card = document.getElementById(`card_${id}`);
   if (!card.classList.contains('dirty')) {
-    card.dataset.prevStatus = card.dataset.status;
     card.classList.add('dirty');
     const badge = document.getElementById(`badge_${id}`);
     badge.classList.add('dirty');
     badge.textContent = '✏ Editando';
   }
   document.getElementById(`saveNote_${id}`).style.display = 'flex';
-  const btn = document.getElementById(`btnSalvar_${id}`);
-  btn.disabled = false;
 }
 
 // ── YouTube ──────────────────────────────────────
@@ -998,8 +1004,8 @@ async function salvarImovel_(id) {
     badge.className = `im-badge ${ytNovo ? 'ok' : 'warn'}`;
     badge.textContent = ytNovo ? '▶ Com vídeo' : '○ Sem vídeo';
     document.getElementById(`saveNote_${id}`).style.display = 'none';
-    btn.innerHTML = '✓ Salvar e publicar';
-    btn.disabled = true;
+    btn.innerHTML = '☁ Salvar e publicar';
+    btn.disabled = false;
 
     setPubStatus_('ok', '✓ Publicado — aguardando ~1 min');
     mostrarToast_(`✓ "${titulo}" publicado com sucesso!`, 'ok');
@@ -1014,6 +1020,66 @@ async function salvarImovel_(id) {
     setPubStatus_('erro', '✕ Erro ao publicar');
     mostrarToast_(`Erro: ${err.message}`, 'err');
     console.error(err);
+  }
+}
+
+async function salvarTudo_() {
+  if (!temGitHub_()) {
+    mostrarToast_('Configure o GitHub Token nas configurações acima.', 'err');
+    return;
+  }
+  const btn = document.getElementById('btnSalvarTudo');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Publicando...';
+  setPubStatus_('saving', 'Publicando...');
+
+  try {
+    const conteudo = montarDataJs_();
+    const repo = cfg.repo; const token = cfg.token;
+    const path = 'prontos-para-morar/data.js';
+
+    const r1 = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=main`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' }
+    });
+    if (!r1.ok) throw new Error(`Erro ao buscar arquivo: ${r1.status}`);
+    const { sha } = await r1.json();
+
+    const r2 = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `update: todos os imóveis — via gerenciar.html`,
+        content: btoa(unescape(encodeURIComponent(conteudo))),
+        sha, branch: 'main',
+      }),
+    });
+    if (!r2.ok) { const e = await r2.json(); throw new Error(e.message || `Erro ${r2.status}`); }
+
+    // Limpa dirty em todos
+    IMOVEIS.forEach(im => {
+      const card = document.getElementById(`card_${im.id}`);
+      if (!card) return;
+      card.classList.remove('dirty');
+      const ytNovo = !!document.getElementById(`yt_${im.id}`)?.value.trim();
+      card.dataset.status = ytNovo ? 'ok' : 'warn';
+      const badge = document.getElementById(`badge_${im.id}`);
+      if (badge) { badge.className = `im-badge ${ytNovo ? 'ok' : 'warn'}`; badge.textContent = ytNovo ? '▶ Com vídeo' : '○ Sem vídeo'; }
+      const note = document.getElementById(`saveNote_${im.id}`);
+      if (note) note.style.display = 'none';
+    });
+
+    btn.innerHTML = '☁ Salvar e publicar tudo';
+    btn.disabled = false;
+    setPubStatus_('ok', '✓ Publicado — aguardando ~1 min');
+    mostrarToast_('✓ Todos os imóveis publicados com sucesso!', 'ok');
+    atualizarStats_();
+    setTimeout(() => setPubStatus_('idle'), 8000);
+
+  } catch(err) {
+    btn.innerHTML = '☁ Salvar e publicar tudo';
+    btn.disabled = false;
+    setPubStatus_('erro', '✕ Erro ao publicar');
+    mostrarToast_(`Erro: ${err.message}`, 'err');
   }
 }
 
