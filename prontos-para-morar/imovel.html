@@ -56,17 +56,35 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); }
 .header-crumb { font-size: 13px; color: var(--text3); font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* ── LAYOUT ──────────────────────────────────────────────── */
-.page-wrap { max-width: 900px; margin: 0 auto; padding: 28px 20px 80px; }
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* 2 colunas: vídeo sticky | conteúdo rolável */
+.detail-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 32px;
+  /* padrão do grid é stretch — ambas as colunas ficam com mesma altura */
+}
+.detail-col-left {
+  /* permite que o vídeo dentro seja sticky */
+  align-self: start;
+  position: sticky;
+  top: 72px;
+}
+.detail-col-right .divider { margin: 20px 0; }
+
+@media (max-width: 720px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-col-left { position: static; max-width: 360px; margin: 0 auto 20px; }
+}
 
 /* ── HERO VÍDEO ──────────────────────────────────────────── */
 .hero-video {
-  position: relative;
-  padding-top: 177.78%;  /* 9:16 vertical */
-  border-radius: var(--r);
+  position: relative;     /* containing block para filhos absolute */
+  padding-top: 177.78%;   /* 9:16 → 300px largura × 1.778 = 534px altura */
+  border-radius: 14px;
   overflow: hidden;
   background: #111;
-  margin: 0 auto 24px;
-  max-width: 420px;      /* centralizado, não estica em desktop */
   box-shadow: 0 4px 24px rgba(0,0,0,.18);
 }
 .hero-video iframe, .hero-video .hero-grad, .hero-video .hero-foto {
@@ -319,18 +337,27 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); }
 
 <!-- CONTEÚDO (preenchido por JS) -->
 <div class="page-wrap" id="pageWrap">
-  <!-- Hero placeholder enquanto carrega -->
-  <div class="hero-video" id="heroWrap">
-    <div class="hero-grad" style="background:#2a2a2a">
-      <div class="hero-play-circle"><svg width="28" height="28"><use href="#ico-play"/></svg></div>
-    </div>
-  </div>
+  <div class="detail-layout">
 
-  <div id="infoWrap"></div>
-  <hr class="divider">
-  <div id="galeriaWrap"></div>
-  <hr class="divider">
-  <div id="formWrap"></div>
+    <!-- COLUNA ESQUERDA: vídeo / foto (sticky) -->
+    <div class="detail-col-left">
+      <div class="hero-video" id="heroWrap">
+        <div class="hero-grad" style="background:#2a2a2a">
+          <div class="hero-play-circle"><svg width="28" height="28"><use href="#ico-play"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: info, galeria, formulário -->
+    <div class="detail-col-right">
+      <div id="infoWrap"></div>
+      <hr class="divider">
+      <div id="galeriaWrap"></div>
+      <hr class="divider">
+      <div id="formWrap"></div>
+    </div>
+
+  </div>
 </div>
 
 <footer class="footer">
