@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imóvel — Prontos para Morar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+a { text-decoration: none; color: inherit; }
+
+/* ── TOKENS ──────────────────────────────────────────────── */
+:root {
+  --accent:  #1B5540;
+  --accent2: rgba(27,85,64,.08);
+  --orange:  #F56E14;
+  --green-wa:#25D366;
+  --bg:      #F4F2EF;
+  --surface: #FFFFFF;
+  --text:    #1A1A1A;
+  --text2:   #6B6B6B;
+  --text3:   #9B9B9B;
+  --border:  rgba(0,0,0,.07);
+  --shadow:  0 2px 10px rgba(0,0,0,.07);
+  --r: 14px;
+  --font: 'Manrope', system-ui, sans-serif;
+}
+
+body { background: var(--bg); font-family: var(--font); color: var(--text); }
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+}
+.header-inner {
+  max-width: 900px; margin: 0 auto;
+  padding: 0 20px; height: 60px;
+  display: flex; align-items: center; gap: 12px;
+}
+.btn-back {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 700; color: var(--accent);
+  padding: 8px 0; white-space: nowrap;
+  transition: opacity .15s;
+}
+.btn-back:hover { opacity: .7; }
+.btn-back svg { flex-shrink: 0; }
+.header-crumb { font-size: 13px; color: var(--text3); font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.page-wrap { max-width: 900px; margin: 0 auto; padding: 28px 20px 80px; }
+
+/* ── HERO VÍDEO ──────────────────────────────────────────── */
+.hero-video {
+  position: relative;
+  padding-top: 56.25%;
+  border-radius: var(--r);
+  overflow: hidden;
+  background: #111;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+}
+.hero-video iframe, .hero-video .hero-grad {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
+.hero-video iframe { border: none; }
+.hero-grad {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+}
+.hero-play-circle {
+  width: 72px; height: 72px;
+  background: rgba(255,255,255,.2);
+  border: 2px solid rgba(255,255,255,.5);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-play-circle svg { fill: #fff; margin-left: 5px; }
+.hero-no-video { color: rgba(255,255,255,.6); font-size: 13px; font-weight: 600; text-align: center; padding: 0 16px; }
+.hero-pill {
+  position: absolute; top: 14px; left: 14px;
+  background: var(--accent); color: #fff;
+  font-size: 11px; font-weight: 800;
+  padding: 5px 12px; border-radius: 999px;
+  letter-spacing: .4px;
+}
+
+/* ── INFO PRINCIPAL ──────────────────────────────────────── */
+.info-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.info-main { flex: 1; min-width: 200px; }
+.info-titulo { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.2; letter-spacing: -.5px; }
+.info-bairro { font-size: 14px; color: var(--text3); font-weight: 600; margin-top: 4px; }
+.info-preco-wrap { text-align: right; flex-shrink: 0; }
+.info-preco { font-size: clamp(22px, 4vw, 28px); font-weight: 800; color: var(--accent); letter-spacing: -.8px; }
+.info-preco-sub { font-size: 11px; color: var(--text3); font-weight: 600; margin-top: 2px; }
+
+/* specs pills */
+.specs-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; }
+.spec-pill {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--accent2); color: var(--accent);
+  font-size: 13px; font-weight: 700;
+  padding: 8px 14px; border-radius: 999px;
+}
+.spec-pill svg { opacity: .8; flex-shrink: 0; }
+
+/* ── SEÇÃO ───────────────────────────────────────────────── */
+.section { margin-bottom: 28px; }
+.section-label {
+  font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text3);
+  margin-bottom: 10px;
+}
+.descricao-text {
+  font-size: 15px; line-height: 1.7; color: var(--text2);
+  font-weight: 500;
+}
+
+/* ── GALERIA ─────────────────────────────────────────────── */
+.galeria-scroll {
+  display: flex; gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.galeria-scroll::-webkit-scrollbar { height: 4px; }
+.galeria-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 99px; }
+.galeria-foto {
+  flex-shrink: 0;
+  width: 240px; height: 135px;   /* 16:9 */
+  border-radius: 10px;
+  object-fit: cover;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+}
+.galeria-foto:hover { transform: scale(1.03); box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+
+/* lightbox simples */
+.lightbox {
+  display: none; position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,.92);
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px;
+}
+.lightbox.ativo { display: flex; }
+.lightbox img { max-width: 92vw; max-height: 80vh; border-radius: 8px; object-fit: contain; }
+.lightbox-close {
+  position: absolute; top: 16px; right: 20px;
+  font-size: 28px; color: #fff; opacity: .7;
+  cursor: pointer; line-height: 1; background: none; border: none;
+}
+.lightbox-nav { display: flex; gap: 20px; }
+.lightbox-nav button {
+  color: #fff; font-size: 24px; opacity: .7;
+  transition: opacity .15s;
+}
+.lightbox-nav button:hover { opacity: 1; }
+
+/* ── DIVISOR ─────────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+/* ── FORMULÁRIO DE LEAD ──────────────────────────────────── */
+.form-card {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: 28px 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+.form-titulo {
+  font-size: 18px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 4px;
+}
+.form-sub { font-size: 13px; color: var(--text3); font-weight: 500; margin-bottom: 22px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 12px; font-weight: 800; color: var(--text2); letter-spacing: .4px; text-transform: uppercase; margin-bottom: 6px; }
+.form-input {
+  width: 100%; padding: 14px 16px;
+  border: 1.5px solid rgba(0,0,0,.12);
+  border-radius: 10px;
+  font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text);
+  background: var(--bg);
+  outline: none; transition: border-color .18s, box-shadow .18s;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(27,85,64,.10);
+}
+.form-input::placeholder { color: var(--text3); font-weight: 400; }
+.form-input.erro { border-color: #E5342E; }
+
+.btn-submit {
+  width: 100%; padding: 15px 20px;
+  background: var(--orange); color: #fff;
+  font-size: 14px; font-weight: 800; letter-spacing: .8px;
+  border-radius: 10px;
+  transition: background .15s, transform .12s;
+  margin-top: 4px;
+}
+.btn-submit:hover:not(:disabled) { background: #d95e0f; }
+.btn-submit:active:not(:disabled) { transform: scale(.98); }
+.btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn-whats {
+  width: 100%; padding: 15px 20px;
+  background: var(--green-wa); color: #fff;
+  font-size: 14px; font-weight: 800; letter-spacing: .4px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 10px;
+  transition: background .15s;
+}
+.btn-whats:hover { background: #1ebe5a; }
+.btn-whats svg { flex-shrink: 0; }
+
+/* obrigado */
+.obrigado {
+  display: none;
+  text-align: center; padding: 8px 0 4px;
+}
+.obrigado-icon { font-size: 42px; margin-bottom: 10px; }
+.obrigado-titulo { font-size: 20px; font-weight: 800; margin-bottom: 6px; color: var(--accent); }
+.obrigado-sub { font-size: 14px; color: var(--text2); font-weight: 500; line-height: 1.6; margin-bottom: 20px; }
+
+/* loading spinner */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  vertical-align: middle; margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── FOOTER ──────────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 20px;
+  text-align: center;
+  font-size: 12px; color: var(--text3);
+}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .info-row { flex-direction: column; gap: 8px; }
+  .info-preco-wrap { text-align: left; }
+  .galeria-foto { width: 200px; height: 112px; }
+  .form-card { padding: 22px 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- SVG sprite ícones -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ico-bed" viewBox="0 0 20 20">
+    <rect x="2" y="10" width="16" height="7" rx="1.5"/>
+    <rect x="2" y="5" width="7" height="5" rx="1.5"/>
+    <rect x="11" y="5" width="7" height="5" rx="1.5"/>
+  </symbol>
+  <symbol id="ico-area" viewBox="0 0 20 20">
+    <rect x="3" y="3" width="14" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>
+    <path d="M7 13l6-6M11 7h2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  </symbol>
+  <symbol id="ico-car" viewBox="0 0 20 20">
+    <rect x="2" y="9" width="16" height="7" rx="2"/>
+    <path d="M4 9l2-4h8l2 4"/>
+    <circle cx="5.5" cy="16.5" r="1.5"/>
+    <circle cx="14.5" cy="16.5" r="1.5"/>
+  </symbol>
+  <symbol id="ico-suite" viewBox="0 0 20 20">
+    <rect x="3" y="3" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+    <path d="M10 7v6M7 10h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  </symbol>
+  <symbol id="ico-play" viewBox="0 0 20 20">
+    <polygon points="6,3 17,10 6,17"/>
+  </symbol>
+  <symbol id="ico-back" viewBox="0 0 20 20">
+    <path d="M13 4L7 10l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </symbol>
+  <symbol id="ico-whats" viewBox="0 0 32 32">
+    <path fill="currentColor" d="M16 3C8.82 3 3 8.82 3 16c0 2.3.6 4.5 1.7 6.4L3 29l6.8-1.7A13 13 0 0016 29c7.18 0 13-5.82 13-13S23.18 3 16 3zm6.7 18.4c-.3.8-1.6 1.5-2.2 1.6-.6.1-1.2.2-3.9-.8-3.3-1.2-5.4-4.5-5.6-4.7-.2-.2-1.4-1.9-1.4-3.6 0-1.7.9-2.5 1.2-2.9.3-.3.7-.4 1-.4l.7.01c.2 0 .5-.08.8.6l1.1 2.7c.1.2.1.5 0 .7l-.5.6-.4.5c.2.3.9 1.4 1.9 2.3 1.3 1.1 2.3 1.4 2.7 1.6.3.2.7.1.9-.1l.7-.8c.2-.3.5-.3.8-.2l2.5 1.2c.3.1.5.2.6.4.1.3.1.9-.2 1.7z"/>
+  </symbol>
+</svg>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="fecharLightbox()">
+  <button class="lightbox-close" onclick="fecharLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="">
+  <div class="lightbox-nav">
+    <button onclick="event.stopPropagation();navLightbox(-1)">‹</button>
+    <button onclick="event.stopPropagation();navLightbox(1)">›</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <a class="btn-back" href="index.html">
+      <svg width="18" height="18"><use href="#ico-back"/></svg>
+      Voltar
+    </a>
+    <span class="header-crumb" id="headerCrumb"></span>
+  </div>
+</header>
+
+<!-- CONTEÚDO (preenchido por JS) -->
+<div class="page-wrap" id="pageWrap">
+  <!-- Hero placeholder enquanto carrega -->
+  <div class="hero-video" id="heroWrap">
+    <div class="hero-grad" style="background:#2a2a2a">
+      <div class="hero-play-circle"><svg width="28" height="28"><use href="#ico-play"/></svg></div>
+    </div>
+  </div>
+
+  <div id="infoWrap"></div>
+  <hr class="divider">
+  <div id="galeriaWrap"></div>
+  <hr class="divider">
+  <div id="formWrap"></div>
+</div>
+
+<footer class="footer">
+  <p>Prontos para Morar &mdash; Goiânia, GO</p>
+</footer>
+
+<script src="data.js"></script>
+<script>
+// ── Helpers ──────────────────────────────────────────────────
+const qs = s => document.querySelector(s);
+
+let IMOVEL = null;
+let lightboxFotos = [];
+let lightboxIdx = 0;
+
+// ── Boot ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const id = parseInt(new URLSearchParams(location.search).get('id'));
+  IMOVEL = IMOVEIS.find(im => im.id === id);
+  if (!IMOVEL) {
+    document.getElementById('pageWrap').innerHTML =
+      '<p style="padding:40px;text-align:center;color:#888">Imóvel não encontrado. <a href="index.html" style="color:#1B5540;font-weight:700">Voltar ao início</a></p>';
+    return;
+  }
+  renderPage(IMOVEL);
+});
+
+// ── Render completo ───────────────────────────────────────────
+function renderPage(im) {
+  document.title = `${im.titulo} — Prontos para Morar`;
+  document.getElementById('headerCrumb').textContent = im.titulo;
+
+  renderHero(im);
+  renderInfo(im);
+  renderGaleria(im);
+  renderForm(im);
+}
+
+// ── Hero (vídeo ou gradiente) ─────────────────────────────────
+function renderHero(im) {
+  const wrap = document.getElementById('heroWrap');
+  const gradStyle = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
+
+  let interior = '';
+  if (im.youtube) {
+    interior = `<iframe src="https://www.youtube.com/embed/${im.youtube}?autoplay=0&rel=0&modestbranding=1&color=white"
+                  allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"
+                  allowfullscreen title="${im.titulo}"></iframe>`;
+  } else {
+    interior = `
+      <div class="hero-grad" style="${gradStyle}">
+        <div class="hero-play-circle"><svg width="30" height="30"><use href="#ico-play"/></svg></div>
+        <span class="hero-no-video">Tour em vídeo em breve<br><small style="opacity:.6;font-size:11px">Configure um ID do YouTube em data.js</small></span>
+      </div>`;
+  }
+  wrap.innerHTML = `${interior}<div class="hero-pill">${im.entrega}</div>`;
+}
+
+// ── Info: título + specs + descrição ─────────────────────────
+function renderInfo(im) {
+  const specs = [
+    { icon: 'ico-bed',   txt: `${im.quartos} quarto${im.quartos > 1 ? 's' : ''}` },
+    im.suites ? { icon: 'ico-suite', txt: `${im.suites} suíte${im.suites > 1 ? 's' : ''}` } : null,
+    { icon: 'ico-area',  txt: `${im.area} m²` },
+    { icon: 'ico-car',   txt: `${im.vagas} vaga${im.vagas > 1 ? 's' : ''}` },
+  ].filter(Boolean);
+
+  document.getElementById('infoWrap').innerHTML = `
+    <div class="info-row">
+      <div class="info-main">
+        <h1 class="info-titulo">${im.titulo}</h1>
+        <div class="info-bairro">${im.bairro} · Goiânia, GO</div>
+      </div>
+      <div class="info-preco-wrap">
+        <div class="info-preco">${formatBRL(im.preco)}</div>
+        <div class="info-preco-sub">Valor do imóvel</div>
+      </div>
+    </div>
+    <div class="specs-row">
+      ${specs.map(s => `
+        <div class="spec-pill">
+          <svg width="16" height="16"><use href="#${s.icon}"/></svg>
+          ${s.txt}
+        </div>`).join('')}
+    </div>
+    <div class="section">
+      <div class="section-label">Sobre o imóvel</div>
+      <p class="descricao-text">${im.descricao}</p>
+    </div>`;
+}
+
+// ── Galeria ───────────────────────────────────────────────────
+function renderGaleria(im) {
+  lightboxFotos = fotos(im.id, 8);
+  document.getElementById('galeriaWrap').innerHTML = `
+    <div class="section">
+      <div class="section-label">Ver fotos</div>
+      <div class="galeria-scroll">
+        ${lightboxFotos.map((url, i) => `
+          <img class="galeria-foto" src="${url}" alt="Foto ${i+1}" loading="lazy"
+               onclick="abrirLightbox(${i})"
+               onerror="this.style.display='none'">`).join('')}
+      </div>
+    </div>`;
+}
+
+// ── Lightbox ──────────────────────────────────────────────────
+function abrirLightbox(idx) {
+  lightboxIdx = idx;
+  document.getElementById('lightboxImg').src = lightboxFotos[idx];
+  document.getElementById('lightbox').classList.add('ativo');
+  document.body.style.overflow = 'hidden';
+}
+function fecharLightbox() {
+  document.getElementById('lightbox').classList.remove('ativo');
+  document.body.style.overflow = '';
+}
+function navLightbox(dir) {
+  lightboxIdx = (lightboxIdx + dir + lightboxFotos.length) % lightboxFotos.length;
+  document.getElementById('lightboxImg').src = lightboxFotos[lightboxIdx];
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('ativo')) return;
+  if (e.key === 'Escape') fecharLightbox();
+  if (e.key === 'ArrowLeft') navLightbox(-1);
+  if (e.key === 'ArrowRight') navLightbox(1);
+});
+
+// ── Formulário de lead ────────────────────────────────────────
+function renderForm(im) {
+  document.getElementById('formWrap').innerHTML = `
+    <div class="form-card">
+      <div class="form-titulo">Quero mais informações</div>
+      <div class="form-sub">Deixe seu nome e WhatsApp — o corretor entra em contato hoje.</div>
+
+      <form id="formLead" onsubmit="enviarLead(event)">
+        <div class="form-group">
+          <label class="form-label" for="inputNome">Seu nome</label>
+          <input class="form-input" id="inputNome" type="text"
+                 placeholder="Como podemos te chamar?" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="inputWhats">WhatsApp</label>
+          <input class="form-input" id="inputWhats" type="tel"
+                 placeholder="(62) 9 9999-9999" inputmode="numeric" required>
+        </div>
+        <button class="btn-submit" type="submit" id="btnSubmit">
+          QUERO SER CONTATADO
+        </button>
+        <a class="btn-whats" id="btnWhats"
+           href="${whatsLink(im, '', '')}"
+           target="_blank" rel="noopener">
+          <svg width="22" height="22"><use href="#ico-whats"/></svg>
+          Chamar pelo WhatsApp
+        </a>
+      </form>
+
+      <div class="obrigado" id="obrigado">
+        <div class="obrigado-icon">✅</div>
+        <div class="obrigado-titulo">Recebemos sua mensagem!</div>
+        <div class="obrigado-sub" id="obrigadoSub"></div>
+        <a class="btn-whats" id="btnWhatsObrigado" href="#" target="_blank" rel="noopener">
+          <svg width="22" height="22"><use href="#ico-whats"/></svg>
+          Chamar pelo WhatsApp agora
+        </a>
+      </div>
+    </div>`;
+
+  // Máscara simples de telefone
+  document.getElementById('inputWhats').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '').slice(0, 11);
+    if (v.length >= 10) {
+      v = v.replace(/^(\d{2})(\d{1})(\d{4})(\d{0,4})/, '($1) $2 $3-$4');
+    } else if (v.length >= 6) {
+      v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    } else if (v.length >= 2) {
+      v = v.replace(/^(\d{2})(\d*)/, '($1) $2');
+    }
+    this.value = v;
+  });
+}
+
+function whatsLink(im, nome, imovelTitulo) {
+  const n = nome ? ` Meu nome é *${nome}*.` : '';
+  const titulo = imovelTitulo || im.titulo;
+  const msg = encodeURIComponent(`Olá! Vi o imóvel *${titulo}* no site Prontos para Morar e gostaria de mais informações.${n}`);
+  return `https://wa.me/${CONFIG.corretorWhats}?text=${msg}`;
+}
+
+async function enviarLead(ev) {
+  ev.preventDefault();
+  const nome  = document.getElementById('inputNome').value.trim();
+  const whats = document.getElementById('inputWhats').value.trim();
+
+  if (!nome) { document.getElementById('inputNome').classList.add('erro'); return; }
+  if (whats.replace(/\D/g,'').length < 10) { document.getElementById('inputWhats').classList.add('erro'); return; }
+  document.getElementById('inputNome').classList.remove('erro');
+  document.getElementById('inputWhats').classList.remove('erro');
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Enviando...';
+
+  // Tenta postar no GAS se configurado
+  if (CONFIG.gUrl) {
+    try {
+      await fetch(CONFIG.gUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({
+          acao: 'lead_prontos',
+          nome, whatsapp: whats.replace(/\D/g,''),
+          imovel: IMOVEL.titulo, bairro: IMOVEL.bairro,
+          preco: IMOVEL.preco, imovelId: IMOVEL.id,
+          origem: location.href,
+        }),
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    } catch(_) {}
+  }
+
+  // Exibe obrigado + WhatsApp
+  document.getElementById('formLead').style.display = 'none';
+  const link = whatsLink(IMOVEL, nome, IMOVEL.titulo);
+  document.getElementById('obrigadoSub').textContent =
+    `${nome}, o corretor vai entrar em contato com você em breve. Se preferir, clique abaixo para falar agora pelo WhatsApp!`;
+  document.getElementById('btnWhatsObrigado').href = link;
+  document.getElementById('obrigado').style.display = '';
+}
+</script>
+</body>
+</html>

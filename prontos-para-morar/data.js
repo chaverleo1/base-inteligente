@@ -1,0 +1,178 @@
+// ═══════════════════════════════════════════════════════════════
+// PRONTOS PARA MORAR — Dados e Configuração
+// Edite CONFIG e IMOVEIS com os dados reais
+// ═══════════════════════════════════════════════════════════════
+
+const CONFIG = {
+  // URL do Google Apps Script para captura de leads (opcional)
+  // Copie de painel/config.js se quiser integrar ao backend existente
+  gUrl: '',
+  // WhatsApp do corretor — com DDD (ex: 5562999999999)
+  corretorWhats: '5562999999999',
+  // Nome do corretor/empresa para a mensagem de WhatsApp
+  corretorNome: 'Imóveis em Goiânia',
+};
+
+const IMOVEIS = [
+  {
+    id: 1,
+    titulo: 'Residencial Nobile Bueno',
+    subtitulo: 'Varanda gourmet e vista panorâmica',
+    bairro: 'Setor Bueno',
+    quartos: 3, suites: 1, area: 92, vagas: 2,
+    preco: 680000,
+    youtube: '',            // ← cole o ID do YouTube aqui (ex: 'dQw4w9WgXcQ')
+    grad: ['#1B5540','#2A7A5A'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento de alto padrão com 3 quartos (1 suíte máster), varanda gourmet com churrasqueira e vista para a cidade. 2 vagas cobertas. Condomínio completo com piscina aquecida, academia, salão de festas e playground.',
+  },
+  {
+    id: 2,
+    titulo: 'Marista Premium',
+    subtitulo: 'Cobertura duplex com terraço privativo',
+    bairro: 'Setor Marista',
+    quartos: 4, suites: 2, area: 140, vagas: 3,
+    preco: 950000,
+    youtube: '',
+    grad: ['#2D4B7A','#4A78B8'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Cobertura duplex com terraço privativo de 60m², 4 suítes, living amplo com pé-direito duplo. Empreendimento de altíssimo padrão com spa, academia, concierge e segurança 24h.',
+  },
+  {
+    id: 3,
+    titulo: 'Jardim Goiás Residence',
+    subtitulo: 'Localização estratégica e custo-benefício',
+    bairro: 'Jardim Goiás',
+    quartos: 2, suites: 1, area: 68, vagas: 1,
+    preco: 420000,
+    youtube: '',
+    grad: ['#5A3D8A','#8864C0'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento moderno com 2 quartos (1 suíte), sala ampliada, cozinha americana integrada. Condomínio com piscina, academia e portaria 24h. A 5 minutos do Shopping Flamboyant.',
+  },
+  {
+    id: 4,
+    titulo: 'Verde Amazônia',
+    subtitulo: 'Natureza e conforto no mesmo endereço',
+    bairro: 'Parque Amazônia',
+    quartos: 2, suites: 0, area: 58, vagas: 1,
+    preco: 350000,
+    youtube: '',
+    grad: ['#2A6A4A','#48A872'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento com 2 dormitórios, sala, cozinha e área de serviço. Condomínio verde com playground, área de convivência e segurança 24h. Excelente opção de entrada ou investimento.',
+  },
+  {
+    id: 5,
+    titulo: 'Nova Suíça Tower',
+    subtitulo: 'Vista livre e lazer de alto nível',
+    bairro: 'Setor Nova Suíça',
+    quartos: 3, suites: 1, area: 85, vagas: 2,
+    preco: 580000,
+    youtube: '',
+    grad: ['#1E6A8A','#30A0CC'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento com varanda, 3 quartos (1 suíte), sala com 2 ambientes e cozinha planejada. Andar alto com vista panorâmica. Condomínio com piscina, sauna e salão gourmet.',
+  },
+  {
+    id: 6,
+    titulo: 'Alphavile Premium',
+    subtitulo: 'Privacidade e luxo em condomínio fechado',
+    bairro: 'Alphavile Goiânia',
+    quartos: 4, suites: 4, area: 220, vagas: 4,
+    preco: 1200000,
+    youtube: '',
+    grad: ['#8A6A1E','#C4A040'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Casa de luxo com 4 suítes, piscina privativa, jardim paisagístico e home theater. Condomínio fechado com clube, segurança 24h e áreas de lazer exclusivas.',
+  },
+  {
+    id: 7,
+    titulo: 'Aeroporto Business Living',
+    subtitulo: 'Praticidade urbana para o dia a dia',
+    bairro: 'Setor Aeroporto',
+    quartos: 2, suites: 1, area: 62, vagas: 1,
+    preco: 380000,
+    youtube: '',
+    grad: ['#484848','#787878'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento com layout inteligente, 2 dormitórios (1 suíte), sala, cozinha aberta e área de serviço. Próximo a hospitais, comércio e aeroporto. Condomínio com rooftop e coworking.',
+  },
+  {
+    id: 8,
+    titulo: 'Vila Rosa Garden',
+    subtitulo: 'Apartamento térreo com jardim privativo',
+    bairro: 'Vila Rosa',
+    quartos: 3, suites: 1, area: 80, vagas: 2,
+    preco: 520000,
+    youtube: '',
+    grad: ['#8A1E5A','#C040A0'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Raro apartamento garden térreo com área privativa de 40m², 3 quartos com suíte, sala integrada com saída para o jardim. Ideal para quem tem pets ou filhos pequenos.',
+  },
+  {
+    id: 9,
+    titulo: 'Sul Residence Classic',
+    subtitulo: 'Endereço nobre próximo ao Bosque dos Buritis',
+    bairro: 'Setor Sul',
+    quartos: 3, suites: 2, area: 95, vagas: 2,
+    preco: 620000,
+    youtube: '',
+    grad: ['#2D3B6A','#1B5540'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento reformado com acabamento premium, 3 suítes, varanda, sala de TV e sala de jantar separadas. Edifício tradicional do Setor Sul, a 300m do Bosque dos Buritis.',
+  },
+  {
+    id: 10,
+    titulo: 'Leste Universitário Smart',
+    subtitulo: 'Próximo à UFG e hospitais',
+    bairro: 'Setor Leste Universitário',
+    quartos: 3, suites: 1, area: 78, vagas: 2,
+    preco: 490000,
+    youtube: '',
+    grad: ['#2A4A6A','#4A7AB2'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento com 3 quartos (1 suíte), sala ampla, varanda e 2 vagas. Condomínio com academia, piscina e salão de eventos. Excelente localização para quem trabalha na região hospitalar.',
+  },
+  {
+    id: 11,
+    titulo: 'Parque Anhanguera Família',
+    subtitulo: 'Espaço e lazer para toda a família',
+    bairro: 'Parque Anhanguera',
+    quartos: 2, suites: 0, area: 60, vagas: 1,
+    preco: 315000,
+    youtube: '',
+    grad: ['#3A6A1A','#5AA038'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento com 2 quartos, sala, cozinha e área de serviço em condomínio com área verde generosa. Campo de futebol society, quadra poliesportiva, piscina e playground.',
+  },
+  {
+    id: 12,
+    titulo: 'Pedro Ludovico Central',
+    subtitulo: 'Localização central e funcionalidade',
+    bairro: 'Setor Pedro Ludovico',
+    quartos: 2, suites: 0, area: 55, vagas: 1,
+    preco: 385000,
+    youtube: '',
+    grad: ['#6A2A4A','#AA4880'],
+    entrega: 'Pronto para Morar',
+    descricao: 'Apartamento compacto e funcional, 2 dormitórios, sala, cozinha e área de serviço. Ótimo custo-benefício para moradia ou investimento. Acesso fácil a shoppings, hospitais e transporte.',
+  },
+];
+
+// ── Utilitários ──────────────────────────────────────────────
+function formatBRL(v) {
+  return 'R$ ' + Number(v).toLocaleString('pt-BR');
+}
+function thumbUrl(imovel) {
+  return imovel.youtube
+    ? `https://img.youtube.com/vi/${imovel.youtube}/hqdefault.jpg`
+    : null;
+}
+function fotoUrl(imovelId, idx) {
+  // picsum.photos com seed fixo por imóvel → sempre a mesma foto
+  return `https://picsum.photos/seed/pm-${imovelId}-${idx}/800/450`;
+}
+function fotos(imovelId, n = 8) {
+  return Array.from({ length: n }, (_, i) => fotoUrl(imovelId, i + 1));
+}

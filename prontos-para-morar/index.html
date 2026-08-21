@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prontos para Morar — Goiânia</title>
+<meta name="description" content="Apartamentos e imóveis prontos para morar em Goiânia. Encontre o apartamento ideal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+a { text-decoration: none; color: inherit; }
+
+/* ── TOKENS ──────────────────────────────────────────────── */
+:root {
+  --accent:  #1B5540;
+  --accent2: rgba(27,85,64,.08);
+  --orange:  #F56E14;
+  --orange2: rgba(245,110,20,.10);
+  --bg:      #F4F2EF;
+  --surface: #FFFFFF;
+  --text:    #1A1A1A;
+  --text2:   #6B6B6B;
+  --text3:   #9B9B9B;
+  --border:  rgba(0,0,0,.07);
+  --shadow:  0 2px 10px rgba(0,0,0,.07);
+  --shadow-h:0 8px 28px rgba(0,0,0,.14);
+  --r: 14px;
+  --font: 'Manrope', system-ui, sans-serif;
+}
+
+/* ── BASE ────────────────────────────────────────────────── */
+body {
+  background: var(--bg);
+  font-family: var(--font);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 1px 8px rgba(0,0,0,.06);
+}
+.header-inner {
+  max-width: 1600px; margin: 0 auto;
+  padding: 0 24px; height: 64px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.header-logo { display: flex; align-items: center; gap: 12px; }
+.header-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.header-name {
+  font-size: 17px; font-weight: 800; letter-spacing: -.4px; line-height: 1.15;
+  color: var(--text);
+}
+.header-sub { font-size: 11px; font-weight: 500; color: var(--text3); letter-spacing: .4px; }
+.header-badge {
+  background: var(--accent2); color: var(--accent);
+  font-size: 13px; font-weight: 700; padding: 6px 14px;
+  border-radius: 999px; white-space: nowrap;
+}
+
+/* ── STRIP ───────────────────────────────────────────────── */
+.hero-strip {
+  background: var(--accent);
+  padding: 14px 24px;
+  text-align: center;
+}
+.hero-strip p {
+  color: rgba(255,255,255,.85);
+  font-size: clamp(13px, 2vw, 15px);
+  font-weight: 500; line-height: 1.4;
+  max-width: 700px; margin: 0 auto;
+}
+.hero-strip strong { color: #fff; font-weight: 800; }
+
+/* ── GRID ────────────────────────────────────────────────── */
+.grid-wrap { max-width: 1600px; margin: 0 auto; padding: 28px 20px 60px; }
+.grid-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+}
+.grid-titulo {
+  font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -.3px;
+}
+.grid-sub { font-size: 13px; color: var(--text3); font-weight: 500; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 16px;
+}
+
+/* ── CARD ────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform .22s ease, box-shadow .22s ease;
+  display: flex; flex-direction: column;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-h);
+}
+
+/* thumbnail 16:9 */
+.card-thumb-wrap {
+  position: relative;
+  padding-top: 56.25%;   /* 16:9 */
+  overflow: hidden;
+  border-radius: var(--r) var(--r) 0 0;
+  flex-shrink: 0;
+}
+.card-thumb {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform .35s ease;
+}
+.card:hover .card-thumb { transform: scale(1.04); }
+.card-thumb-grad {
+  position: absolute; inset: 0;
+  transition: opacity .25s;
+}
+/* sombra inferior suave sobre o thumb */
+.card-thumb-shadow {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom,
+    transparent 40%,
+    rgba(0,0,0,.38) 100%);
+  pointer-events: none;
+}
+/* pill de status */
+.card-pill {
+  position: absolute; top: 12px; left: 12px;
+  background: var(--accent); color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 4px 10px; border-radius: 999px;
+  letter-spacing: .4px;
+  pointer-events: none;
+}
+/* botão play (aparece no hover) */
+.card-play {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-play-btn {
+  width: 54px; height: 54px;
+  background: rgba(255,255,255,.92);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(.75);
+  transition: opacity .22s ease, transform .22s ease;
+  box-shadow: 0 4px 18px rgba(0,0,0,.25);
+}
+.card:hover .card-play-btn {
+  opacity: 1; transform: scale(1);
+}
+.card-play-btn svg { fill: var(--accent); margin-left: 4px; }
+
+/* ── CARD INFO ───────────────────────────────────────────── */
+.card-info { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; }
+.card-titulo {
+  font-size: 14.5px; font-weight: 800; line-height: 1.3;
+  color: var(--text); margin-bottom: 3px;
+}
+.card-sub { font-size: 11.5px; font-weight: 500; color: var(--text3); margin-bottom: 10px; }
+.card-specs {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+}
+.card-spec {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 600; color: var(--text2);
+}
+.card-spec svg { opacity: .55; flex-shrink: 0; }
+.card-preco {
+  font-size: 18px; font-weight: 800; color: var(--accent);
+  letter-spacing: -.5px; margin-bottom: 14px; margin-top: auto;
+}
+.btn-ver-mais {
+  display: block; width: 100%;
+  padding: 12px 20px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 12.5px; font-weight: 800; letter-spacing: .8px;
+  border-radius: 8px;
+  transition: background .15s, transform .12s;
+  text-align: center;
+}
+.btn-ver-mais:hover { background: #d95e0f; transform: scale(.98); }
+
+/* ── FOOTER ──────────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 24px;
+  text-align: center;
+  font-size: 13px; color: var(--text3); font-weight: 500;
+}
+.footer a { color: var(--accent); font-weight: 700; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 500px) {
+  .header-name { font-size: 15px; }
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid-wrap { padding: 16px 12px 48px; }
+}
+@media (max-width: 360px) {
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- SVG sprite (ícones inline) -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ico-home" viewBox="0 0 20 20">
+    <path d="M10 2L2 8.5V18h5.5v-5h5v5H18V8.5L10 2z"/>
+  </symbol>
+  <symbol id="ico-bed" viewBox="0 0 20 20">
+    <rect x="2" y="10" width="16" height="7" rx="1.5"/>
+    <rect x="2" y="5" width="7" height="5" rx="1.5"/>
+    <rect x="11" y="5" width="7" height="5" rx="1.5"/>
+    <rect x="2" y="17" width="2" height="2" rx="1"/>
+    <rect x="16" y="17" width="2" height="2" rx="1"/>
+  </symbol>
+  <symbol id="ico-area" viewBox="0 0 20 20">
+    <rect x="3" y="3" width="14" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>
+    <path d="M7 13l6-6M11 7h2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="ico-car" viewBox="0 0 20 20">
+    <rect x="2" y="9" width="16" height="7" rx="2"/>
+    <path d="M4 9l2-4h8l2 4"/>
+    <circle cx="5.5" cy="16.5" r="1.5"/>
+    <circle cx="14.5" cy="16.5" r="1.5"/>
+  </symbol>
+  <symbol id="ico-play" viewBox="0 0 20 20">
+    <polygon points="6,3 17,10 6,17"/>
+  </symbol>
+</svg>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <div class="header-icon">
+        <svg width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2L2 8.5V18h5.5v-5h5v5H18V8.5L10 2z" fill="#fff"/>
+        </svg>
+      </div>
+      <div>
+        <div class="header-name">PRONTOS PARA MORAR</div>
+        <div class="header-sub">Goiânia · GO</div>
+      </div>
+    </div>
+    <span class="header-badge" id="headerBadge">— imóveis</span>
+  </div>
+</header>
+
+<!-- STRIP -->
+<div class="hero-strip">
+  <p>Imóveis <strong>prontos para morar</strong> em Goiânia — assista ao tour virtual e agende sua visita hoje.</p>
+</div>
+
+<!-- GRID -->
+<div class="grid-wrap">
+  <div class="grid-header">
+    <div>
+      <div class="grid-titulo">Disponíveis agora</div>
+      <div class="grid-sub">Clique em VER MAIS para tour completo, fotos e falar com o corretor</div>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>© 2026 Prontos para Morar · Goiânia, GO &nbsp;·&nbsp;
+     <a href="../app-lancamentos.html">Ver lançamentos</a>
+  </p>
+</footer>
+
+<script src="data.js"></script>
+<script>
+// ── Renderiza os cards ───────────────────────────────────────
+function renderCard(im) {
+  const thumb = thumbUrl(im);
+  const thumbHtml = thumb
+    ? `<img class="card-thumb" src="${thumb}" alt="${im.titulo}" loading="lazy"
+            onerror="this.style.display='none'">`
+    : '';
+  const gradStyle = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
+
+  return `
+  <article class="card" onclick="window.location='imovel.html?id=${im.id}'">
+    <div class="card-thumb-wrap">
+      <div class="card-thumb-grad" style="${gradStyle}"></div>
+      ${thumbHtml}
+      <div class="card-thumb-shadow"></div>
+      <div class="card-pill">${im.entrega}</div>
+      <div class="card-play">
+        <div class="card-play-btn">
+          <svg width="20" height="20"><use href="#ico-play"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-titulo">${im.titulo}</div>
+      <div class="card-sub">${im.bairro} &middot; ${im.subtitulo}</div>
+      <div class="card-specs">
+        <span class="card-spec">
+          <svg width="14" height="14"><use href="#ico-bed"/></svg>
+          ${im.quartos} quartos${im.suites ? ` · ${im.suites} suíte${im.suites > 1 ? 's' : ''}` : ''}
+        </span>
+        <span class="card-spec">
+          <svg width="14" height="14"><use href="#ico-area"/></svg>
+          ${im.area} m²
+        </span>
+        <span class="card-spec">
+          <svg width="14" height="14"><use href="#ico-car"/></svg>
+          ${im.vagas} vaga${im.vagas > 1 ? 's' : ''}
+        </span>
+      </div>
+      <div class="card-preco">${formatBRL(im.preco)}</div>
+      <a class="btn-ver-mais" href="imovel.html?id=${im.id}" onclick="event.stopPropagation()">VER MAIS ›</a>
+    </div>
+  </article>`;
+}
+
+function init() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = IMOVEIS.map(renderCard).join('');
+  document.getElementById('headerBadge').textContent =
+    `${IMOVEIS.length} imóvel${IMOVEIS.length !== 1 ? 'is' : ''}`;
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
