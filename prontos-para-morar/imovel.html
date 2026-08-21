@@ -63,56 +63,118 @@ body { background: var(--bg); font-family: var(--font); color: var(--text); }
   display: grid;
   grid-template-columns: 300px 1fr;
   gap: 32px;
-  /* padrão do grid é stretch — ambas as colunas ficam com mesma altura */
 }
 .detail-col-left {
-  /* permite que o vídeo dentro seja sticky */
   align-self: start;
   position: sticky;
   top: 72px;
 }
 .detail-col-right .divider { margin: 20px 0; }
 
-@media (max-width: 720px) {
-  .detail-layout { grid-template-columns: 1fr; }
-  .detail-col-left { position: static; max-width: 360px; margin: 0 auto 20px; }
+/* ── RESPONSIVO ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-wrap { padding: 16px 14px 60px; }
+  .detail-layout { grid-template-columns: 1fr; gap: 0; }
+  .detail-col-left {
+    position: static;
+    max-width: 100%;
+    margin: 0 0 20px;
+  }
+  .info-titulo { font-size: 20px !important; }
+  .info-preco  { font-size: 20px !important; }
+  .info-row { gap: 8px; }
+  .galeria-foto { width: 180px; height: 101px; }
+  .form-card { padding: 20px 16px; }
+  .spec-pill { font-size: 12px; padding: 7px 11px; }
+}
+@media (max-width: 420px) {
+  .galeria-foto { width: 150px; height: 84px; }
 }
 
 /* ── HERO VÍDEO ──────────────────────────────────────────── */
 .hero-video {
-  position: relative;     /* containing block para filhos absolute */
-  padding-top: 177.78%;   /* 9:16 → 300px largura × 1.778 = 534px altura */
+  position: relative;
+  padding-top: 177.78%;  /* 9:16 */
   border-radius: 14px;
   overflow: hidden;
   background: #111;
-  box-shadow: 0 4px 24px rgba(0,0,0,.18);
+  box-shadow: 0 4px 24px rgba(0,0,0,.22);
 }
-.hero-video iframe, .hero-video .hero-grad, .hero-video .hero-foto {
+.hero-video iframe {
   position: absolute; inset: 0;
-  width: 100%; height: 100%;
+  width: 100%; height: 100%; border: none;
 }
-.hero-video iframe { border: none; }
-.hero-foto { object-fit: cover; display: block; }
-.hero-grad {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 14px;
-}
-.hero-play-circle {
-  width: 72px; height: 72px;
-  background: rgba(255,255,255,.2);
-  border: 2px solid rgba(255,255,255,.5);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-}
-.hero-play-circle svg { fill: #fff; margin-left: 5px; }
-.hero-no-video { color: rgba(255,255,255,.6); font-size: 13px; font-weight: 600; text-align: center; padding: 0 16px; }
 .hero-pill {
-  position: absolute; top: 14px; left: 14px;
-  background: var(--accent); color: #fff;
-  font-size: 11px; font-weight: 800;
-  padding: 5px 12px; border-radius: 999px;
-  letter-spacing: .4px;
+  position: absolute; top: 12px; left: 12px;
+  background: rgba(0,0,0,.55); color: #fff;
+  font-size: 10px; font-weight: 800;
+  padding: 4px 10px; border-radius: 999px;
+  letter-spacing: .3px; backdrop-filter: blur(6px);
+  z-index: 5;
 }
+
+/* ── SIMULAÇÃO DE PLAYER DE VÍDEO ────────────────────────── */
+.vsim {
+  position: absolute; inset: 0;
+}
+.vsim-foto {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+/* overlay gradiente top e bottom */
+.vsim-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,.2) 0%, transparent 20%,
+    transparent 55%, rgba(0,0,0,.75) 100%
+  );
+}
+/* botão play central */
+.vsim-play {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px; height: 60px;
+  background: rgba(0,0,0,.6); border: 2px solid rgba(255,255,255,.45);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; backdrop-filter: blur(4px);
+  transition: background .2s, transform .15s;
+  z-index: 4;
+}
+.vsim-play:hover {
+  background: rgba(0,0,0,.82);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+.vsim-play svg { fill: #fff; margin-left: 4px; }
+/* barra de controles inferior */
+.vsim-controls {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 6px 10px 9px; z-index: 4;
+}
+.vsim-progress {
+  height: 2px; background: rgba(255,255,255,.28);
+  border-radius: 1px; margin-bottom: 7px; position: relative;
+}
+.vsim-progress-fill {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 0%; background: #fff; border-radius: 1px;
+}
+.vsim-progress-dot {
+  position: absolute; top: 50%; left: 0%;
+  width: 9px; height: 9px; background: #fff; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 4px rgba(0,0,0,.5);
+}
+.vsim-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.vsim-left  { display: flex; align-items: center; gap: 8px; }
+.vsim-btn-mini {
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; background: none; border: none; padding: 0;
+}
+.vsim-btn-mini svg { fill: rgba(255,255,255,.9); }
+.vsim-time  { font-size: 10.5px; font-weight: 600; color: rgba(255,255,255,.85); }
+.vsim-vol   { font-size: 13px; color: rgba(255,255,255,.75); cursor: pointer; }
 
 /* ── INFO PRINCIPAL ──────────────────────────────────────── */
 .info-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
@@ -396,26 +458,59 @@ function renderPage(im) {
   renderForm(im);
 }
 
-// ── Hero (vídeo ou gradiente) ─────────────────────────────────
+// Durações simuladas por imóvel
+const DURACOES_ = ['0:32','0:44','0:51','1:05','0:38','0:47','1:12','0:29','0:55','1:08','0:41','0:36'];
+
+// ── Hero ──────────────────────────────────────────────────────
 function renderHero(im) {
   const wrap = document.getElementById('heroWrap');
-  const thumb = thumbUrl(im);   // mesma imagem do card na listagem
+  const thumb = thumbUrl(im);
+  const dur   = im.duracao || DURACOES_[(im.id - 1) % DURACOES_.length];
 
   let interior = '';
   if (im.youtube) {
+    // vídeo real do YouTube
     interior = `<iframe src="https://www.youtube.com/embed/${im.youtube}?autoplay=0&rel=0&modestbranding=1&color=white"
                   allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"
                   allowfullscreen title="${im.titulo}"></iframe>`;
   } else if (thumb) {
-    // exibe a mesma foto que aparece no card da listagem
-    interior = `<img class="hero-foto" src="${thumb}" alt="${im.titulo}">`;
+    // simulação de player — mesma foto do card
+    interior = `
+      <div class="vsim">
+        <img class="vsim-foto" src="${thumb}" alt="${im.titulo}">
+        <div class="vsim-overlay"></div>
+        <button class="vsim-play" onclick="scrollParaForm_()" title="Quero saber mais">
+          <svg width="26" height="26" viewBox="0 0 24 24"><polygon points="5,3 20,12 5,21"/></svg>
+        </button>
+        <div class="vsim-controls">
+          <div class="vsim-progress">
+            <div class="vsim-progress-fill"></div>
+            <div class="vsim-progress-dot"></div>
+          </div>
+          <div class="vsim-row">
+            <div class="vsim-left">
+              <button class="vsim-btn-mini" onclick="scrollParaForm_()">
+                <svg width="14" height="14" viewBox="0 0 24 24"><polygon points="5,3 20,12 5,21"/></svg>
+              </button>
+              <span class="vsim-time">0:00 / ${dur}</span>
+            </div>
+            <span class="vsim-vol">🔇</span>
+          </div>
+        </div>
+      </div>`;
   } else {
-    const gradStyle = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
-    interior = `<div class="hero-grad" style="${gradStyle}">
-      <div class="hero-play-circle"><svg width="30" height="30"><use href="#ico-play"/></svg></div>
+    const gs = `background:linear-gradient(135deg,${im.grad[0]},${im.grad[1]})`;
+    interior = `<div style="position:absolute;inset:0;${gs};display:flex;align-items:center;justify-content:center">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="rgba(255,255,255,.6)"><polygon points="5,3 20,12 5,21"/></svg>
     </div>`;
   }
-  wrap.innerHTML = `${interior}<div class="hero-pill">${im.entrega}</div>`;
+  wrap.innerHTML = `${interior}<span class="hero-pill">${im.entrega}</span>`;
+}
+
+// Rola para o formulário de lead
+function scrollParaForm_() {
+  const el = document.getElementById('formWrap');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Info: título + specs + descrição ─────────────────────────
