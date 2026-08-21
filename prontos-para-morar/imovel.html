@@ -462,10 +462,19 @@ function renderHero(im) {
 
   let interior = '';
   if (im.youtube) {
-    // vídeo real do YouTube
-    interior = `<iframe src="https://www.youtube.com/embed/${im.youtube}?autoplay=0&rel=0&modestbranding=1&color=white"
-                  allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture"
-                  allowfullscreen title="${im.titulo}"></iframe>`;
+    // Thumbnail clicável — iframe só carrega ao clicar (sem título/canal do YouTube)
+    const ytThumb = `https://img.youtube.com/vi/${im.youtube}/maxresdefault.jpg`;
+    const ytThumbFallback = `https://img.youtube.com/vi/${im.youtube}/hqdefault.jpg`;
+    interior = `
+      <div class="vsim" id="ytPoster" onclick="ativarYt_('${im.youtube}')" style="cursor:pointer">
+        <img class="vsim-foto" src="${ytThumb}"
+             onerror="this.src='${ytThumbFallback}'"
+             alt="${im.titulo}">
+        <div class="vsim-overlay"></div>
+        <div class="vsim-play" style="pointer-events:none">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><polygon points="5,3 20,12 5,21"/></svg>
+        </div>
+      </div>`;
   } else if (thumb) {
     // simulação de player — mesma foto do card
     interior = `
@@ -504,6 +513,18 @@ function renderHero(im) {
 function scrollParaForm_() {
   const el = document.getElementById('formWrap');
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Substitui poster do YouTube pelo iframe com autoplay (sem título/canal)
+function ativarYt_(ytid) {
+  const poster = document.getElementById('ytPoster');
+  if (!poster) return;
+  const iframe = document.createElement('iframe');
+  iframe.src = `https://www.youtube.com/embed/${ytid}?autoplay=1&rel=0&modestbranding=1&color=white&playsinline=1`;
+  iframe.allow = 'accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture';
+  iframe.allowFullscreen = true;
+  iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;';
+  poster.replaceWith(iframe);
 }
 
 // ── Info: título + specs + descrição ─────────────────────────
