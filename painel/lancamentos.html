@@ -1034,6 +1034,41 @@ select.form-input option { background: var(--surface2); }
 .rank-ver-btn { font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; transition:background .12s; }
 .rank-ver-btn:hover { background:var(--surface2); }
 .rank-loading, .rank-vazio { padding:36px; text-align:center; color:var(--text3); font-size:13px; }
+/* ── Mix de Construtoras ────────────────────────────────────────────────── */
+.rank-check-cell { text-align:center; width:44px; }
+.rank-check-cb { width:16px; height:16px; cursor:pointer; accent-color:#6366f1; }
+/* Botão flutuante */
+.rank-float-wrap { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); z-index:8000; pointer-events:none; }
+.rank-float-wrap.visivel { pointer-events:auto; }
+.rank-float-btn  { padding:12px 26px; border-radius:999px; border:none; background:#6366f1; color:#fff; font-size:14px; font-weight:800; cursor:pointer; box-shadow:0 4px 24px rgba(99,102,241,.45); transition:transform .15s,opacity .2s; white-space:nowrap; }
+.rank-float-btn:hover { transform:scale(1.04); }
+/* Overlay do mix */
+.mix-overlay { position:fixed; inset:0; z-index:9000; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; }
+.mix-overlay-hd { padding:14px 20px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; justify-content:space-between; flex-shrink:0; gap:16px; }
+.mix-overlay-title { font-size:16px; font-weight:900; color:var(--text); margin-bottom:6px; }
+.mix-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.mix-chip { display:inline-flex; align-items:center; gap:5px; border-radius:12px; padding:3px 10px; font-size:11px; font-weight:700; }
+.mix-chip-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.mix-close-btn { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; font-size:12px; font-weight:700; flex-shrink:0; margin-top:2px; }
+.mix-tabs { padding:10px 20px; border-bottom:1px solid var(--border); display:flex; gap:7px; flex-shrink:0; flex-wrap:wrap; }
+.mix-tab-btn { padding:6px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; font-size:12px; font-weight:600; transition:background .12s; }
+.mix-tab-btn.active { background:var(--text); color:var(--bg); border-color:transparent; }
+.mix-conteudo { flex:1; overflow-y:auto; padding:18px 20px; }
+.mix-grupo { margin-bottom:26px; }
+.mix-grupo-titulo { font-size:13px; font-weight:800; color:var(--text); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.mix-grupo-count { font-size:11px; font-weight:600; background:var(--surface2); border:1px solid var(--border); color:var(--text3); border-radius:10px; padding:1px 7px; }
+.mix-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
+.mix-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+.mix-card-top { display:flex; align-items:flex-start; gap:9px; margin-bottom:8px; }
+.mix-card-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.mix-card-nome { font-size:13px; font-weight:700; color:var(--text); line-height:1.3; }
+.mix-card-const { font-size:11px; font-weight:700; margin-top:1px; }
+.mix-card-info { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.mix-card-tag { font-size:11px; background:var(--surface2); border:1px solid var(--border2); color:var(--text3); padding:2px 7px; border-radius:6px; }
+.mix-card-pct-bar { height:3px; border-radius:999px; background:var(--surface2); margin-top:8px; overflow:hidden; }
+.mix-card-pct-fill { height:100%; border-radius:999px; }
+.mix-vazio-grupo { padding:18px; text-align:center; color:var(--text3); font-size:12px; background:var(--surface2); border-radius:8px; }
+.mix-sem-grupo { padding:36px; text-align:center; color:var(--text3); font-size:13px; }
 .ca-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
 .ca-select-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .ca-select { padding:7px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:13px; font-family:inherit; outline:none; min-width:200px; cursor:pointer; }
@@ -12984,6 +13019,208 @@ function caVerAnaliseRanking_(btn) {
   setTimeout(() => caGerarAnalise_(), 80); // auto-gerar após o render da UI
 }
 
+// ─── MIX DE CONSTRUTORAS ────────────────────────────────────────────────────
+// Estado: quais construtoras estão selecionadas no ranking para gerar o mix.
+let _rankSelecionadas = new Set();
+let _mixDados         = null;   // { todosProds, cores, selecionadas }
+
+const MIX_CORES_ = [
+  '#6366f1','#ef4444','#10b981','#f59e0b','#8b5cf6',
+  '#ec4899','#06b6d4','#f97316','#84cc16','#0ea5e9',
+];
+
+// ── Checkbox de linha ───────────────────────────────────────────────────────
+function caRankCheck_(cb) {
+  const nome = cb && cb.dataset && cb.dataset.nome;
+  if (!nome) return;
+  if (cb.checked) _rankSelecionadas.add(nome);
+  else            _rankSelecionadas.delete(nome);
+  _caRankAtualizarFloat_();
+}
+
+// ── Checkbox "selecionar todas" ─────────────────────────────────────────────
+function caRankTodas_(allCb) {
+  const cbs = document.querySelectorAll('.rank-check-cb');
+  cbs.forEach(cb => {
+    cb.checked = allCb.checked;
+    const n = cb.dataset.nome;
+    if (n) { if (allCb.checked) _rankSelecionadas.add(n); else _rankSelecionadas.delete(n); }
+  });
+  _caRankAtualizarFloat_();
+}
+
+// ── Mostra/esconde botão flutuante ──────────────────────────────────────────
+function _caRankAtualizarFloat_() {
+  const n   = _rankSelecionadas.size;
+  const wrap = document.getElementById('rankFloatWrap');
+  if (!wrap) return;
+  wrap.style.display = n > 0 ? '' : 'none';
+  const lbl = wrap.querySelector('#rankFloatCount');
+  if (lbl) lbl.textContent = n;
+  // sync "select all" state
+  const all   = document.getElementById('rankCheckAll');
+  const total = document.querySelectorAll('.rank-check-cb').length;
+  if (all) { all.indeterminate = n > 0 && n < total; all.checked = n > 0 && n === total; }
+}
+
+// ── Gerar Mix ───────────────────────────────────────────────────────────────
+function caGerarMixConstrutoras_() {
+  const selecionadas = [..._rankSelecionadas];
+  if (!selecionadas.length) return;
+
+  // Atribuir uma cor fixa a cada construtora selecionada
+  const cores = {};
+  selecionadas.forEach((nome, i) => { cores[nome] = MIX_CORES_[i % MIX_CORES_.length]; });
+
+  // Coletar produtos de cada construtora
+  const todosProds = [];
+  selecionadas.forEach(nome => {
+    const itens = (_itensScoredCache || []).filter(it =>
+      (it.e.construtora || '').toLowerCase().trim() === nome.toLowerCase().trim()
+    );
+    itens.forEach(it => {
+      const e    = it.e;
+      const tot  = parseInt(e.totalUnidades, 10) || 0;
+      const est  = parseInt(e.estoque, 10) || 0;
+      const pct  = caPctVendido_(est, tot);
+      const meses = caMesesAteEntrega_(e.previsaoEntrega);
+      const uns  = e.unidades || [];
+      const areas  = uns.map(u => Number(u.areaUtil) || Number(u.areaTerr) || 0).filter(v => v > 0);
+      const precos = uns.map(u => Number(u.precoMin) || Number(u.preco) || Number(u.precoMedio) || Number(u.precoTotal) || 0).filter(v => v > 0);
+      todosProds.push({
+        nomeEmp   : e.nomeEmpreendimento || '—',
+        construtora: nome,
+        cor       : cores[nome],
+        bairro    : e.bairro || '—',
+        status    : e.status || '',
+        padrao    : (e.padrao || '').toLowerCase(),
+        pct, estoque: est, total: tot, meses,
+        menorPreco: precos.length ? Math.min(...precos) : 0,
+        areaMin   : areas.length  ? Math.min(...areas)  : 0,
+        areaMax   : areas.length  ? Math.max(...areas)  : 0,
+        comp      : it.comp || 0,
+      });
+    });
+  });
+
+  _mixDados = { todosProds, cores, selecionadas };
+
+  // Chips das construtoras selecionadas
+  const chipsHtml = selecionadas.map(n =>
+    `<span class="mix-chip" style="background:${cores[n]}22;border:1px solid ${cores[n]}55;color:${cores[n]}">` +
+    `<span class="mix-chip-dot" style="background:${cores[n]}"></span>${n}</span>`
+  ).join('');
+  const chipsEl = document.getElementById('mixChips');
+  if (chipsEl) chipsEl.innerHTML = chipsHtml;
+
+  // Mostrar overlay
+  const ov = document.getElementById('mixOverlay');
+  if (ov) { ov.style.display = 'flex'; }
+
+  // Renderizar primeira aba
+  caMixAtivarTab_('preco');
+}
+
+// ── Fechar overlay ──────────────────────────────────────────────────────────
+function caFecharMixConstrutoras_() {
+  const ov = document.getElementById('mixOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+// ── Alternar aba do mix ─────────────────────────────────────────────────────
+function caMixAtivarTab_(tab) {
+  document.querySelectorAll('.mix-tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab)
+  );
+  if (!_mixDados) return;
+  const { todosProds } = _mixDados;
+  const cont = document.getElementById('mixConteudo');
+  if (!cont) return;
+
+  let grupos = [];
+
+  if (tab === 'preco') {
+    grupos = [
+      { titulo:'💰 Entrada — até R$ 600 mil',          prods: todosProds.filter(p => p.menorPreco > 0 && p.menorPreco <= 600000) },
+      { titulo:'💰 Médio — R$ 600 mil a R$ 1,2 mi',    prods: todosProds.filter(p => p.menorPreco > 600000 && p.menorPreco <= 1200000) },
+      { titulo:'💰 Alto — R$ 1,2 mi a R$ 2,5 mi',      prods: todosProds.filter(p => p.menorPreco > 1200000 && p.menorPreco <= 2500000) },
+      { titulo:'💰 Luxo — acima de R$ 2,5 mi',         prods: todosProds.filter(p => p.menorPreco > 2500000) },
+      { titulo:'💰 Sem preço informado',                prods: todosProds.filter(p => !p.menorPreco) },
+    ];
+  } else if (tab === 'area') {
+    grupos = [
+      { titulo:'📐 Compactos — até 70 m²',              prods: todosProds.filter(p => p.areaMin > 0 && p.areaMin <= 70) },
+      { titulo:'📐 Médios — 70 a 120 m²',               prods: todosProds.filter(p => p.areaMin > 70 && p.areaMin <= 120) },
+      { titulo:'📐 Grandes — 120 a 200 m²',             prods: todosProds.filter(p => p.areaMin > 120 && p.areaMin <= 200) },
+      { titulo:'📐 Amplos — acima de 200 m²',           prods: todosProds.filter(p => p.areaMin > 200) },
+      { titulo:'📐 Sem área informada',                  prods: todosProds.filter(p => !p.areaMin) },
+    ];
+  } else if (tab === 'bairro') {
+    const bairros = [...new Set(todosProds.map(p => p.bairro))].sort();
+    grupos = bairros.map(b => ({
+      titulo: `📍 ${b}`,
+      prods : todosProds.filter(p => p.bairro === b),
+    }));
+  } else if (tab === 'invest') {
+    grupos = [
+      {
+        titulo: '📈 Alta liquidez — compactos com alta absorção (ideal para aluguel)',
+        prods : todosProds.filter(p => p.areaMin > 0 && p.areaMin <= 70 && p.pct >= 70),
+      },
+      {
+        titulo: '📈 Entrega próxima — financiamento na planta (≤ 12 meses)',
+        prods : todosProds.filter(p => p.meses !== null && p.meses >= 0 && p.meses <= 12 && !caPronte_(p.status)),
+      },
+      {
+        titulo: '📈 Prontos com boa demanda — entrega imediata e estoque controlado',
+        prods : todosProds.filter(p => caPronte_(p.status) && p.pct >= 70 && p.estoque >= 5),
+      },
+      {
+        titulo: '📈 Oportunidade de valorização — obras avançadas (> 70% vendido)',
+        prods : todosProds.filter(p => caEmObras_(p.status) && p.pct >= 70),
+      },
+    ];
+  }
+
+  // Renderizar grupos
+  const html = grupos
+    .filter(g => g.prods.length > 0)
+    .map(g => `
+      <div class="mix-grupo">
+        <div class="mix-grupo-titulo">${g.titulo} <span class="mix-grupo-count">${g.prods.length} produto${g.prods.length > 1 ? 's' : ''}</span></div>
+        <div class="mix-cards">${g.prods.map(_mixCardHtml_).join('')}</div>
+      </div>
+    `).join('');
+
+  cont.innerHTML = html || '<div class="mix-sem-grupo">Nenhum produto encontrado neste grupo para as construtoras selecionadas.</div>';
+}
+
+// ── Renderizar card de produto no mix ───────────────────────────────────────
+function _mixCardHtml_(p) {
+  const fmtArea  = p.areaMin
+    ? (p.areaMax && p.areaMax > p.areaMin ? `${p.areaMin}–${p.areaMax} m²` : `${p.areaMin} m²`)
+    : '';
+  const fmtPreco = p.menorPreco ? 'a partir de ' + fmtR$_(p.menorPreco) : '';
+  const fmtMeses = p.meses !== null
+    ? (p.meses < 0 ? `⚠ ${Math.abs(p.meses)}m de atraso` : p.meses === 0 ? '✅ Pronto' : `🏗 ${p.meses}m p/ entrega`)
+    : '';
+  const tags = [p.bairro !== '—' ? p.bairro : '', fmtArea, fmtPreco, fmtMeses, `${p.pct}% vendido · ${p.estoque} un.`]
+    .filter(Boolean).map(t => `<span class="mix-card-tag">${t}</span>`).join('');
+  const pctColor = p.pct >= 85 ? '#ef4444' : p.pct >= 70 ? '#f59e0b' : '#10b981';
+  return `
+    <div class="mix-card">
+      <div class="mix-card-top">
+        <span class="mix-card-dot" style="background:${p.cor}"></span>
+        <div style="flex:1;min-width:0">
+          <div class="mix-card-nome">${p.nomeEmp}</div>
+          <div class="mix-card-const" style="color:${p.cor}">${p.construtora}</div>
+        </div>
+      </div>
+      <div class="mix-card-info">${tags}</div>
+      <div class="mix-card-pct-bar"><div class="mix-card-pct-fill" style="width:${p.pct}%;background:${pctColor}"></div></div>
+    </div>`;
+}
+
 // ─── RANKING DE OPORTUNIDADE ────────────────────────────────────────────────
 // Calcula o score de TODAS as construtoras da base e exibe tabela ordenada.
 function renderRankingUI_() {
@@ -12999,6 +13236,9 @@ function renderRankingUI_() {
     return;
   }
   cont.innerHTML = '<div class="rank-loading">⏳ Calculando scores de ' + construtoras.length + ' construtoras…</div>';
+
+  // Reset seleção ao abrir o ranking
+  _rankSelecionadas.clear();
 
   // setTimeout para não bloquear o paint do estado "calculando..."
   setTimeout(() => {
@@ -13064,8 +13304,9 @@ function renderRankingUI_() {
       const bg  = _corBg[l.cor]  || 'transparent';
       const brd = hex + '50';
       const bairroStr = l.bairros.slice(0,2).join(', ') + (l.bairros.length>2 ? ` +${l.bairros.length-2}` : '');
-      const nomeEsc   = l.nome.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      const nomeEscQ  = l.nome.replace(/"/g,'&quot;');
       return `<tr>
+        <td class="rank-check-cell"><input type="checkbox" class="rank-check-cb" data-nome="${nomeEscQ}" onchange="caRankCheck_(this)"></td>
         <td class="rank-pos">${medais[i] || i+1}</td>
         <td>
           <div class="rank-nome">${l.nome}</div>
@@ -13079,7 +13320,7 @@ function renderRankingUI_() {
         <td style="font-variant-numeric:tabular-nums">${l.estoqueTotal}</td>
         <td style="font-variant-numeric:tabular-nums">${l.pctMedio}%</td>
         <td style="font-size:11px;color:var(--text3);white-space:nowrap">+${l.somaPos} / ${l.somaNeg}</td>
-        <td><button class="rank-ver-btn" data-nome="${l.nome.replace(/"/g,'&quot;')}" onclick="caVerAnaliseRanking_(this)">Ver análise →</button></td>
+        <td><button class="rank-ver-btn" data-nome="${nomeEscQ}" onclick="caVerAnaliseRanking_(this)">Ver análise →</button></td>
       </tr>`;
     }).join('');
 
@@ -13090,12 +13331,41 @@ function renderRankingUI_() {
         <div style="overflow-x:auto">
           <table class="rank-table">
             <thead><tr>
+              <th class="rank-check-cell" title="Selecionar para mix"><input type="checkbox" id="rankCheckAll" onchange="caRankTodas_(this)" title="Selecionar todas"><br><span style="font-size:9px;font-weight:600;color:var(--text3);letter-spacing:.02em">MIX</span></th>
               <th>#</th><th>Construtora</th><th>Score</th><th>Classificação</th>
               <th>Estoque</th><th>% vendido</th><th>Pts F·O / Fr·A</th><th></th>
             </tr></thead>
             <tbody>${corpoHtml}</tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Botão flutuante — aparece ao selecionar checkboxes -->
+      <div id="rankFloatWrap" class="rank-float-wrap" style="display:none">
+        <button class="rank-float-btn" onclick="caGerarMixConstrutoras_()">
+          🎯 GERAR MIX · <span id="rankFloatCount">0</span> construtora(s)
+        </button>
+      </div>
+
+      <!-- Overlay full-screen do Mix Comparativo -->
+      <div id="mixOverlay" class="mix-overlay" style="display:none">
+        <!-- Cabeçalho -->
+        <div class="mix-overlay-hd">
+          <div>
+            <div class="mix-overlay-title">🎯 Mix Comparativo de Construtoras</div>
+            <div id="mixChips" class="mix-chips"></div>
+          </div>
+          <button class="mix-close-btn" onclick="caFecharMixConstrutoras_()">✕ Fechar</button>
+        </div>
+        <!-- Abas de agrupamento -->
+        <div class="mix-tabs">
+          <button class="mix-tab-btn active" data-tab="preco"  onclick="caMixAtivarTab_('preco')">💰 Faixa de preço</button>
+          <button class="mix-tab-btn"         data-tab="area"  onclick="caMixAtivarTab_('area')">📐 Metragem</button>
+          <button class="mix-tab-btn"         data-tab="bairro" onclick="caMixAtivarTab_('bairro')">📍 Bairro</button>
+          <button class="mix-tab-btn"         data-tab="invest" onclick="caMixAtivarTab_('invest')">📈 Investimento</button>
+        </div>
+        <!-- Conteúdo do grupo ativo -->
+        <div id="mixConteudo" class="mix-conteudo"></div>
       </div>`;
   }, 30);
 }
