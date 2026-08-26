@@ -162,6 +162,11 @@ const CABECALHO_LANCAMENTOS = [
   // linkMaps — URL do Google Maps do empreendimento. Adicionado ao fim do array
   // pelo motivo de sempre: migrarCabecalhoLancamentos() só sabe anexar colunas novas.
   'linkMaps',
+  // dataUltimaVerificacao — data em que o corretor confirmou os dados diretamente
+  // com a construtora (ex: "15/08/2026"). Distinta de dataUltimaAtualizacao (edição
+  // técnica do cadastro) -- esta é a verificação humana do campo comercial.
+  // Gravada via botão "Marcar verificado hoje" na aba CONSTRUTORA ALVO.
+  'dataUltimaVerificacao',
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -896,6 +901,7 @@ function doPost(e) {
   if (d.acao === 'cadastrar_construtora_parceira')  return ok(cadastrarConstrutoraParceira_(d.dados || d));
   if (d.acao === 'excluir_construtora_parceira')    return ok(excluirConstrutoraParceira_(d));
   if (d.acao === 'set_status_imovel')     return ok(setStatusImovel_(d));
+  if (d.acao === 'marcar_verificado_lancamento') return ok(marcarVerificadoLancamento_(d));
   if (d.acao === 'migrar_lead_baseimob')  return ok(migrarLeadBaseimob_(d));
   if (d.acao === 'qualificar_lead_baseimob') return ok(qualificarLeadBaseimob_(d));
   if (d.acao === 'converter_lead_venda_baseimob') return ok(converterLeadVendaBaseimob_(d));
@@ -3034,6 +3040,33 @@ function migrarCabecalhoContatos() {
 
 // Rode UMA VEZ no editor do Apps Script após atualizar CABECALHO_LANCAMENTOS.
 // Reescreve apenas a linha 1 da aba preservando todos os dados existentes.
+// Grava dataUltimaVerificacao = hoje em TODAS as linhas do empreendimento.
+// d.idEmpreendimento = código EMP-NNN (estável entre reimportações).
+function marcarVerificadoLancamento_(d) {
+  if (!d || !d.idEmpreendimento) return { ok: false, erro: 'idEmpreendimento obrigatorio' };
+  try {
+    var aba    = obterAbaLancamentos_();
+    var lr     = aba.getLastRow();
+    if (lr < 2) return { ok: false, erro: 'sem dados' };
+    var idxIdEmp   = CABECALHO_LANCAMENTOS.indexOf('idEmpreendimento') + 1;
+    var idxVerif   = CABECALHO_LANCAMENTOS.indexOf('dataUltimaVerificacao') + 1;
+    if (idxIdEmp <= 0 || idxVerif <= 0) return { ok: false, erro: 'coluna nao encontrada — rode migrarCabecalhoLancamentos()' };
+    var nCols  = Math.max(idxIdEmp, idxVerif);
+    var dados  = aba.getRange(2, 1, lr - 1, nCols).getValues();
+    var hoje   = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy');
+    var atualizadas = 0;
+    for (var i = 0; i < dados.length; i++) {
+      if (String(dados[i][idxIdEmp - 1] || '') === String(d.idEmpreendimento)) {
+        aba.getRange(i + 2, idxVerif).setValue(hoje);
+        atualizadas++;
+      }
+    }
+    return { ok: true, atualizadas: atualizadas, data: hoje };
+  } catch (e) {
+    return { ok: false, erro: e.message };
+  }
+}
+
 function migrarCabecalhoLancamentos() {
   var ss  = SpreadsheetApp.openById(SHEET_ID);
   var aba = ss.getSheetByName('LANCAMENTOS');
