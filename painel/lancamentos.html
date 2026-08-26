@@ -13022,9 +13022,12 @@ function renderRankingUI_() {
         };
       });
 
-      // SWOT + Score (novoLanc=false e nConcs=0 no ranking — análise rápida)
-      const swot = caCalcularSWOT_(prods, false);
-      const sd   = caCalcularScore_(prods, swot, 0);
+      // SWOT + Score — mesmos critérios de CONSTRUTORA ALVO
+      // novoLanc=false (não há checkbox por construtora no ranking)
+      // nConcs calculado real via caBuscarConcorrentes_ (idêntico à análise individual)
+      const swot  = caCalcularSWOT_(prods, false);
+      const concs = caBuscarConcorrentes_(prods);
+      const sd    = caCalcularScore_(prods, swot, concs.length);
 
       // Agregados para exibição
       const estoqueTotal = prods.reduce((s,p) => s+p.estoque, 0);
@@ -13071,7 +13074,7 @@ function renderRankingUI_() {
     cont.innerHTML = `
       <div class="rank-wrap">
         <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">🏆 Ranking de Oportunidade — ${linhas.length} construtora${linhas.length!==1?'s':''}</div>
-        <div class="rank-subtitle">Score de 0–10 calculado a partir do SWOT de cada portfólio em ${hoje}.<br>Concorrência direta (A3) não considerada aqui — use "Ver análise" para score completo com contexto regional.</div>
+        <div class="rank-subtitle">Score de 0–10 com critérios idênticos à análise individual (incluindo concorrência regional A3). Calculado em ${hoje}.<br><em>O checkbox "novo lançamento" (O8) não é considerado no ranking — apenas na análise individual.</em></div>
         <div style="overflow-x:auto">
           <table class="rank-table">
             <thead><tr>
