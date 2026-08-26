@@ -12973,6 +12973,17 @@ function caGerarPlano_(prods) {
   return grupos;
 }
 
+// Navegação a partir do botão "Ver análise →" do RANKING
+// Usa data-nome para evitar problemas de escaping no onclick inline
+function caVerAnaliseRanking_(btn) {
+  const nome = btn && btn.dataset && btn.dataset.nome;
+  if (!nome) return;
+  _caConstrutora  = nome;
+  _caRelatCurrent = null; // limpar relatório anterior para não re-renderizar o da construtora errada
+  setSituacaoAba_('CONSTRUTORA_ALVO');
+  setTimeout(() => caGerarAnalise_(), 80); // auto-gerar após o render da UI
+}
+
 // ─── RANKING DE OPORTUNIDADE ────────────────────────────────────────────────
 // Calcula o score de TODAS as construtoras da base e exibe tabela ordenada.
 function renderRankingUI_() {
@@ -13068,7 +13079,7 @@ function renderRankingUI_() {
         <td style="font-variant-numeric:tabular-nums">${l.estoqueTotal}</td>
         <td style="font-variant-numeric:tabular-nums">${l.pctMedio}%</td>
         <td style="font-size:11px;color:var(--text3);white-space:nowrap">+${l.somaPos} / ${l.somaNeg}</td>
-        <td><button class="rank-ver-btn" onclick="_caConstrutora='${nomeEsc}';setSituacaoAba_('CONSTRUTORA_ALVO')">Ver análise →</button></td>
+        <td><button class="rank-ver-btn" data-nome="${l.nome.replace(/"/g,'&quot;')}" onclick="caVerAnaliseRanking_(this)">Ver análise →</button></td>
       </tr>`;
     }).join('');
 
