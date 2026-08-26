@@ -1110,6 +1110,44 @@ select.form-input option { background: var(--surface2); }
 .ca-conc-table th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text3); padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); }
 .ca-conc-table td { padding:7px 10px; border-bottom:1px solid var(--border2); color:var(--text2); }
 .ca-conc-table tr:last-child td { border-bottom:none; }
+/* Score de Oportunidade */
+.ca-score-box { border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:18px; }
+.ca-score-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); margin-bottom:10px; }
+.ca-score-main { display:flex; align-items:center; gap:16px; }
+.ca-score-num { font-size:46px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; min-width:72px; }
+.ca-score-num small { font-size:18px; font-weight:600; opacity:.55; }
+.ca-score-right { flex:1; display:flex; flex-direction:column; gap:7px; }
+.ca-score-bar-wrap { background:var(--surface); border:1px solid var(--border); border-radius:999px; height:10px; overflow:hidden; }
+.ca-score-bar-fill { height:100%; border-radius:999px; transition:width .85s cubic-bezier(.4,0,.2,1); }
+.ca-score-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.ca-score-badge { font-size:11px; font-weight:800; letter-spacing:.04em; padding:3px 9px; border-radius:6px; }
+.ca-score-hint { font-size:11px; color:var(--text3); }
+.ca-score-btn-just { font-size:11px; font-weight:600; padding:3px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; transition:background .15s; }
+.ca-score-btn-just:hover { background:var(--surface2); }
+/* paleta por faixa */
+.ca-score-excepcional { background:rgba(21,128,61,.07); border-color:rgba(21,128,61,.3); }
+.ca-score-excepcional .ca-score-num { color:#15803d; }
+.ca-score-excepcional .ca-score-bar-fill { background:#15803d; }
+.ca-score-excepcional .ca-score-badge { background:rgba(21,128,61,.14); color:#15803d; border:1px solid rgba(21,128,61,.3); }
+.ca-score-alta { background:rgba(22,163,74,.07); border-color:rgba(22,163,74,.3); }
+.ca-score-alta .ca-score-num { color:#16a34a; }
+.ca-score-alta .ca-score-bar-fill { background:#16a34a; }
+.ca-score-alta .ca-score-badge { background:rgba(22,163,74,.14); color:#16a34a; border:1px solid rgba(22,163,74,.3); }
+.ca-score-moderada { background:rgba(217,119,6,.07); border-color:rgba(217,119,6,.3); }
+.ca-score-moderada .ca-score-num { color:#d97706; }
+.ca-score-moderada .ca-score-bar-fill { background:#d97706; }
+.ca-score-moderada .ca-score-badge { background:rgba(217,119,6,.14); color:#d97706; border:1px solid rgba(217,119,6,.3); }
+.ca-score-limitada { background:rgba(234,88,12,.07); border-color:rgba(234,88,12,.3); }
+.ca-score-limitada .ca-score-num { color:#ea580c; }
+.ca-score-limitada .ca-score-bar-fill { background:#ea580c; }
+.ca-score-limitada .ca-score-badge { background:rgba(234,88,12,.14); color:#ea580c; border:1px solid rgba(234,88,12,.3); }
+.ca-score-baixa { background:rgba(220,38,38,.07); border-color:rgba(220,38,38,.3); }
+.ca-score-baixa .ca-score-num { color:#dc2626; }
+.ca-score-baixa .ca-score-bar-fill { background:#dc2626; }
+.ca-score-baixa .ca-score-badge { background:rgba(220,38,38,.14); color:#dc2626; border:1px solid rgba(220,38,38,.3); }
+/* kpi score no cabeçalho */
+.ca-kpi-score .ca-kpi-val { font-size:20px !important; }
+.ca-kpi-score .ca-kpi-sub { font-size:10px !important; max-width:90px; }
 /* section + loading */
 .ca-section { margin-bottom:24px; }
 .ca-section-title { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); padding-bottom:8px; border-bottom:1px solid var(--border); margin-bottom:12px; }
@@ -12609,6 +12647,7 @@ if (new URLSearchParams(location.search).get('tab') === 'estrategias') {
 let _caConstrutora   = '';    // construtora selecionada
 let _caNovoLanc      = false; // checkbox O8 — novo lançamento confirmado
 let _caRelatCurrent  = null;  // último relatório gerado
+let _caScoreAtual    = null;  // { scoreData, texto, nome } — para modal de justificativa
 
 // Bairros nobres que ativam regras SWOT
 const CA_BAIRROS_NOBRES_ = [
@@ -12906,6 +12945,139 @@ function caGerarPlano_(prods) {
   return grupos;
 }
 
+// ─── SCORE DE OPORTUNIDADE ─────────────────────────────────────────────────
+// Recebe: prods (itensEnriq), swot (objeto já calculado), nConcs (n.° concorrentes)
+// Retorna: { score, classificacao, cor, pontosPositivos, pontosNegativos,
+//            somaPos, somaNeg, top3Pos, top3Neg }
+// Máximo positivo: 54 pts  /  Máximo negativo: -38 pts
+// Normalização: (bruto + 38) / 92 × 10
+function caCalcularScore_(prods, swot, nConcs) {
+  const pos = [], neg = [];
+
+  // FORÇAS — até +28 pts
+  swot.forcas.forEach(f => {
+    const l = f.label;
+    if      (l.includes('validado pelo mercado'))    pos.push({cod:'F1',label:l,pontos:5, detalhe:f.detalhe||''});
+    else if (l.includes('Alta absorção'))            pos.push({cod:'F2',label:l,pontos:4, detalhe:f.detalhe||''});
+    else if (l.includes('alto padrão consolidado'))  pos.push({cod:'F3',label:l,pontos:3, detalhe:f.detalhe||''});
+    else if (l.includes('bairros nobres'))           pos.push({cod:'F4',label:l,pontos:4, detalhe:f.detalhe||''});
+    else if (l.includes('Estoque relevante'))        pos.push({cod:'F5',label:l,pontos:4, detalhe:f.detalhe||''});
+    else if (l.includes('pronto disponível'))        pos.push({cod:'F6',label:l,pontos:3, detalhe:f.detalhe||''});
+    else if (l.includes('Ticket acessível'))         pos.push({cod:'F7',label:l,pontos:2, detalhe:f.detalhe||''});
+    else if (l.includes('Similaridade alta'))        pos.push({cod:'F8',label:l,pontos:3, detalhe:f.detalhe||''});
+  });
+
+  // OPORTUNIDADES — até +26 pts
+  swot.oportunidades.forEach(o => {
+    const l = o.label;
+    if      (l.includes('pronto para fechar'))       pos.push({cod:'O1',label:l,pontos:5, detalhe:o.detalhe||''});
+    else if (l.includes('Urgência real'))            pos.push({cod:'O2',label:l,pontos:4, detalhe:o.detalhe||''});
+    else if (l.includes('âncora de alto estoque'))   pos.push({cod:'O3',label:l,pontos:3, detalhe:o.detalhe||''});
+    else if (l.includes('entrada acessível'))        pos.push({cod:'O4',label:l,pontos:2, detalhe:o.detalhe||''});
+    else if (l.includes('escassez real'))            pos.push({cod:'O5',label:l,pontos:4, detalhe:o.detalhe||''});
+    else if (l.includes('Diversidade'))              pos.push({cod:'O6',label:l,pontos:3, detalhe:o.detalhe||''});
+    else if (l.includes('investimento'))             pos.push({cod:'O7',label:l,pontos:3, detalhe:o.detalhe||''});
+    else if (l.includes('Novos produtos'))           pos.push({cod:'O8',label:l,pontos:2, detalhe:o.detalhe||''});
+  });
+
+  // FRAQUEZAS — até -20 pts
+  swot.fraquezas.forEach(fr => {
+    const l = fr.label;
+    if      (l.includes('Portfólio pequeno'))        neg.push({cod:'Fr1',label:l,pontos:-3, detalhe:fr.detalhe||''});
+    else if (l.includes('Estoque total reduzido'))   neg.push({cod:'Fr2',label:l,pontos:-5, detalhe:fr.detalhe||''});
+    else if (l.includes('entrega iminente'))         neg.push({cod:'Fr3',label:l,pontos:-3, detalhe:fr.detalhe||''});
+    else if (l.includes('atraso de entrega')) {
+      const n = (fr.detalhe||'').split(';').filter(Boolean).length || 1;
+      neg.push({cod:'Fr4',label:l,pontos:Math.max(-6,-2*n), detalhe:fr.detalhe||''});
+    }
+    else if (l.includes('Ticket alto'))              neg.push({cod:'Fr5',label:l,pontos:-2, detalhe:fr.detalhe||''});
+    else if (l.includes('Nenhum produto pronto'))    neg.push({cod:'Fr6',label:l,pontos:-3, detalhe:fr.detalhe||''});
+    else if (l.includes('Concentração'))             neg.push({cod:'Fr7',label:l,pontos:-2, detalhe:fr.detalhe||''});
+    else if (l.includes('parado'))                   neg.push({cod:'Fr8',label:l,pontos:-4, detalhe:fr.detalhe||''});
+  });
+
+  // AMEAÇAS — até -18 pts
+  swot.ameacas.forEach(a => {
+    const l = a.label;
+    if      (l.includes('se esgotando'))             neg.push({cod:'A1',label:l,pontos:-4, detalhe:a.detalhe||''});
+    else if (l.includes('atraso grave')) {
+      const n = (a.detalhe||'').split(';').filter(Boolean).length || 1;
+      neg.push({cod:'A2',label:l,pontos:Math.max(-6,-3*n), detalhe:a.detalhe||''});
+    }
+    else if (l.includes('Ciclo de venda longo'))     neg.push({cod:'A4',label:l,pontos:-2, detalhe:a.detalhe||''});
+    else if (l.includes('baixa absorção'))           neg.push({cod:'A5',label:l,pontos:-3, detalhe:a.detalhe||''});
+    else if (l.includes('Nenhum lançamento novo'))   neg.push({cod:'A6',label:l,pontos:-3, detalhe:a.detalhe||''});
+    // "Novo lançamento anunciado..." (O8 ativo) → NÃO penaliza
+  });
+
+  // A3 — concorrência (calculado de nConcs, não do SWOT)
+  if      (nConcs >= 6) neg.push({cod:'A3',label:'Concorrência intensa na região',pontos:-4, detalhe:`${nConcs} concorrentes diretos identificados`});
+  else if (nConcs >= 3) neg.push({cod:'A3',label:'Concorrência moderada na região',pontos:-2, detalhe:`${nConcs} concorrentes diretos identificados`});
+
+  const somaPos = pos.reduce((s,i) => s+i.pontos, 0);
+  const somaNeg = neg.reduce((s,i) => s+i.pontos, 0);
+  const bruto   = somaPos + somaNeg;
+  const norm    = Math.min(10, Math.max(0, (bruto + 38) / 92 * 10));
+  const score   = Math.round(norm * 10) / 10;
+
+  const [classificacao, cor] =
+    score >= 9.0 ? ['OPORTUNIDADE EXCEPCIONAL','excepcional'] :
+    score >= 7.5 ? ['ALTA OPORTUNIDADE',        'alta']        :
+    score >= 6.0 ? ['OPORTUNIDADE MODERADA',    'moderada']    :
+    score >= 4.0 ? ['OPORTUNIDADE LIMITADA',    'limitada']    :
+                   ['BAIXA OPORTUNIDADE',       'baixa'];
+
+  const top3Pos = [...pos].sort((a,b) => b.pontos - a.pontos).slice(0,3);
+  const top3Neg = [...neg].sort((a,b) => a.pontos - b.pontos).slice(0,3);
+
+  return { score, classificacao, cor, pontosPositivos:pos, pontosNegativos:neg, somaPos, somaNeg, top3Pos, top3Neg };
+}
+
+// Gera o texto corrido de justificativa (5 blocos)
+function caGerarJustificativa_(nome, prods, swot, sd) {
+  const nEst = prods.reduce((s,p) => s+p.estoque, 0);
+  const hoje = new Date().toLocaleDateString('pt-BR');
+
+  // Bloco 1 — abertura
+  const nF = swot.forcas.length, nFr = swot.fraquezas.length;
+  const nO = swot.oportunidades.length, nA = swot.ameacas.length;
+  const b1 = `A ${nome} recebeu score ${sd.score} de 10, classificado como ${sd.classificacao.toLowerCase()}. A análise considera ${nF} força${nF!==1?'s':''}, ${nFr} fraqueza${nFr!==1?'s':''}, ${nO} oportunidade${nO!==1?'s':''} e ${nA} ameaça${nA!==1?'s':''} identificadas no portfólio atual de ${prods.length} empreendimento${prods.length!==1?'s':''} e ${nEst} unidade${nEst!==1?'s':''} disponíveis.`;
+
+  // Bloco 2 — fatores positivos (top 3)
+  const b2list = sd.top3Pos.map(i => `${i.label.toLowerCase()}${i.detalhe?' ('+i.detalhe+')':''} (+${i.pontos} pts)`);
+  const b2 = `Os principais fatores que elevam a nota são:\n${b2list.map((t,i)=>`${i+1}. ${t}`).join(';\n')}.`;
+
+  // Bloco 3 — fatores negativos (top 3)
+  const b3list = sd.top3Neg.map(i => `${i.label.toLowerCase()}${i.detalhe?' ('+i.detalhe+')':''} (${i.pontos} pts)`);
+  const b3 = `Os fatores que reduziram a nota são:\n${b3list.map((t,i)=>`${i+1}. ${t}`).join(';\n')}.`;
+
+  // Bloco 4 — recomendação por faixa
+  const b4 =
+    sd.score >= 9.0 ? 'Esta construtora representa uma oportunidade excepcional para trabalho de estoque. O portfólio está validado, o produto existe e o mercado compra. A recomendação é priorizar o trabalho com esta construtora imediatamente, focando nos produtos de maior urgência.' :
+    sd.score >= 7.5 ? 'Esta construtora representa uma boa oportunidade de trabalho. O portfólio tem produto sólido e validado, com alguns pontos de atenção que não comprometem o resultado. A recomendação é trabalhar ativamente os produtos prioritários enquanto monitora os pontos de risco identificados.' :
+    sd.score >= 6.0 ? 'Esta construtora oferece oportunidade moderada. Existem produtos interessantes, mas também limitações relevantes no portfólio atual. A recomendação é selecionar apenas os produtos de maior tração e evitar investir energia nos produtos com sinal de resistência.' :
+    sd.score >= 4.0 ? 'Esta construtora apresenta oportunidade limitada no momento. Os riscos identificados superam os benefícios para um trabalho de estoque ativo. A recomendação é monitorar a evolução do portfólio e considerar outras construtoras como prioridade.' :
+                      'Esta construtora não representa uma boa oportunidade de trabalho no momento. O portfólio atual apresenta mais desvantagens do que vantagens. A recomendação é não investir energia nesta construtora agora e reavaliar em 60–90 dias.';
+
+  // Bloco 5 — fechamento
+  const b5 = `Esta análise é baseada nos dados cadastrados na base em ${hoje} e é recalculada automaticamente a cada vez que a análise é gerada.`;
+
+  return [b1, b2, b3, b4, b5].join('\n\n');
+}
+
+// Abre modal de justificativa reutilizando o modalExport já existente
+function caAbrirJustificativa_() {
+  if (!_caScoreAtual) return;
+  const { scoreData, texto, nome } = _caScoreAtual;
+  const header = `${scoreData.score}/10 — ${scoreData.classificacao}\nScore de Oportunidade — ${nome}\n${'─'.repeat(50)}`;
+  const elTit  = document.getElementById('modalExportTitulo');
+  const elTxt  = document.getElementById('modalExportTexto');
+  const modal  = document.getElementById('modalExport');
+  if (elTit) elTit.textContent = `Score de Oportunidade — ${nome}`;
+  if (elTxt) elTxt.value = header + '\n\n' + texto;
+  if (modal) modal.style.display = 'flex';
+}
+
 function caListarConstrutoras_() {
   if (!_itensScoredCache) return [];
   const s = new Set();
@@ -13117,6 +13289,11 @@ function caRenderRelatorio_(relat) {
       </table></div>
     </div>` : '';
 
+  // ── Score de Oportunidade ────────────────────────────────
+  const sd   = caCalcularScore_(prods, swot, concs.length);
+  const just = caGerarJustificativa_(nome, prods, swot, sd);
+  _caScoreAtual = { scoreData:sd, texto:just, nome };
+
   cont.innerHTML = `
     <div class="ca-cab">
       <div class="ca-cab-nome">${nome.toUpperCase()}</div>
@@ -13128,6 +13305,28 @@ function caRenderRelatorio_(relat) {
         <div class="ca-kpi"><span class="ca-kpi-label">Padrão</span><span class="ca-kpi-val">${padraoPredom}</span></div>
         ${bairros.length?`<div class="ca-kpi"><span class="ca-kpi-label">Bairros</span><span class="ca-kpi-val" style="font-size:13px">${bairros.slice(0,4).join(', ')}${bairros.length>4?` +${bairros.length-4}`:''}</span></div>`:''}
         ${ticketMin?`<div class="ca-kpi"><span class="ca-kpi-label">Faixa de ticket</span><span class="ca-kpi-val" style="font-size:13px">${fmtR$_(ticketMin)}${ticketMax&&ticketMax>ticketMin?' – '+fmtR$_(ticketMax):''}</span></div>`:''}
+        <div class="ca-kpi ca-kpi-score ca-score-${sd.cor}" style="cursor:pointer" onclick="caAbrirJustificativa_()">
+          <span class="ca-kpi-label">Score de oportunidade</span>
+          <span class="ca-kpi-val">${sd.score}<small style="font-size:12px;opacity:.55">/10</small></span>
+          <span class="ca-kpi-sub">${sd.classificacao}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ca-score-box ca-score-${sd.cor}">
+      <div class="ca-score-title">📊 Score de Oportunidade</div>
+      <div class="ca-score-main">
+        <div class="ca-score-num">${sd.score}<small>/10</small></div>
+        <div class="ca-score-right">
+          <div class="ca-score-bar-wrap">
+            <div class="ca-score-bar-fill" id="caScoreBarFill" style="width:0"></div>
+          </div>
+          <div class="ca-score-meta">
+            <span class="ca-score-badge">${sd.classificacao}</span>
+            <button class="ca-score-btn-just" onclick="caAbrirJustificativa_()">💬 JUSTIFICATIVA</button>
+          </div>
+          <div class="ca-score-hint">+${sd.somaPos} pts (forças/oportunidades) &nbsp;·&nbsp; ${sd.somaNeg} pts (fraquezas/ameaças)</div>
+        </div>
       </div>
     </div>
 
@@ -13157,6 +13356,12 @@ function caRenderRelatorio_(relat) {
     </div>
 
     ${concHtml}`;
+
+  // Animar barra do score após o render
+  setTimeout(() => {
+    const bar = document.getElementById('caScoreBarFill');
+    if (bar) bar.style.width = (sd.score * 10) + '%';
+  }, 60);
 }
 
 function caToggleCard_(idx) {
