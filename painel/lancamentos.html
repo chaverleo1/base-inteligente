@@ -1048,9 +1048,10 @@ select.form-input option { background: var(--surface2); }
 .ca-swot-vazio { font-size:12px; color:var(--text3); font-style:italic; }
 /* priority badge */
 .ca-prio-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
-.ca-prio-urgente  { background:rgba(239,68,68,.18); color:#ef4444; border:1px solid rgba(239,68,68,.4); }
-.ca-prio-ativo    { background:rgba(249,115,22,.18); color:#f97316; border:1px solid rgba(249,115,22,.4); }
-.ca-prio-monitorar{ background:rgba(234,179,8,.18);  color:#eab308;  border:1px solid rgba(234,179,8,.4); }
+.ca-prio-urgente    { background:rgba(239,68,68,.18);  color:#ef4444; border:1px solid rgba(239,68,68,.4); }
+.ca-prio-ativo      { background:rgba(249,115,22,.18); color:#f97316; border:1px solid rgba(249,115,22,.4); }
+.ca-prio-monitorar  { background:rgba(234,179,8,.18);  color:#eab308; border:1px solid rgba(234,179,8,.4); }
+.ca-prio-isca-esc   { background:rgba(168,85,247,.18); color:#a855f7; border:1px solid rgba(168,85,247,.4); }
 /* produto cards */
 .ca-produtos-wrap { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
 .ca-prod-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
@@ -1089,9 +1090,11 @@ select.form-input option { background: var(--surface2); }
 .ca-plano-title { font-size:14px; font-weight:800; color:var(--text); margin-bottom:14px; }
 .ca-plano-grupo { margin-bottom:14px; }
 .ca-plano-grupo-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
-.ca-plano-grupo-urgente   .ca-plano-grupo-label { color:#ef4444; }
-.ca-plano-grupo-ativo     .ca-plano-grupo-label { color:#f97316; }
-.ca-plano-grupo-monitorar .ca-plano-grupo-label { color:#eab308; }
+.ca-plano-grupo-urgente       .ca-plano-grupo-label { color:#ef4444; }
+.ca-plano-grupo-ativo         .ca-plano-grupo-label { color:#f97316; }
+.ca-plano-grupo-monitorar     .ca-plano-grupo-label { color:#eab308; }
+.ca-plano-grupo-isca-escassez .ca-plano-grupo-label { color:#a855f7; }
+.ca-plano-secao-header { font-size:13px; font-weight:800; color:var(--text); margin:14px 0 6px; padding:6px 10px; background:var(--surface2); border-radius:7px; border-left:3px solid var(--text3); letter-spacing:.02em; }
 .ca-plano-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px; }
 .ca-plano-item { font-size:13px; color:var(--text2); padding-left:18px; position:relative; }
 .ca-plano-item::before { content:'→'; position:absolute; left:0; color:var(--text3); }
@@ -12657,6 +12660,8 @@ function caClassificarPrioridade_(e, comp, pct, meses) {
   const pronto  = caPronte_(e.status||'');
   const emObras = caEmObras_(e.status||'');
   const estoque = parseInt(e.estoque,10)||0;
+  // ISCA DE ESCASSEZ — estoque mínimo + atraso grave (não entra no plano de visitas)
+  if (estoque <= 5 && meses !== null && meses < -24) return 'ISCA_ESCASSEZ';
   // URGENTE
   if (pronto && pct >= 85 && estoque <= 15) return 'URGENTE';
   if (emObras && meses !== null && meses >= 0 && meses <= 4 && estoque >= 5) return 'URGENTE';
@@ -12668,22 +12673,33 @@ function caClassificarPrioridade_(e, comp, pct, meses) {
   return 'MONITORAR';
 }
 
-const CA_PAPEL_LABEL_ = { ISCA:'Isca', ALVO_1:'Alvo Primário', ALVO_2:'Alvo Sec.', ANCORA:'Âncora' };
+const CA_PAPEL_LABEL_ = {
+  ISCA:'Isca', ALVO_1:'Alvo Primário', ALVO_2:'Alvo Sec.',
+  ANCORA:'Âncora', ANCORA_TICKET:'Âncora (ticket)', ANCORA_METRAGEM:'Âncora (metragem)'
+};
 
 function caClassificarPapeis_(prods) {
   const papeis = {};
-  const key = p => p.e.idEmpreendimento || p.e.nomeEmpreendimento;
+  const key    = p => p.e.idEmpreendimento || p.e.nomeEmpreendimento;
   const comPreco = prods.filter(p => p.menorPreco > 0);
-  const byPrecoD = [...comPreco].sort((a,b)=>b.menorPreco-a.menorPreco);
-  const byPrecoA = [...comPreco].sort((a,b)=>a.menorPreco-b.menorPreco);
-  const byScore  = [...prods].sort((a,b)=>b.comp-a.comp);
-  const byPct    = [...prods].sort((a,b)=>b.pct-a.pct);
-  if (byPrecoD[0]) papeis[key(byPrecoD[0])] = 'ANCORA';
-  const isca = byPrecoA.find(p=>!papeis[key(p)]) || byPct.find(p=>!papeis[key(p)]);
+  const comArea  = prods.filter(p => p.areaMax > 0);
+  const byPrecoD  = [...comPreco].sort((a,b) => b.menorPreco - a.menorPreco);
+  const byPrecoA  = [...comPreco].sort((a,b) => a.menorPreco - b.menorPreco);
+  const byAreaD   = [...comArea].sort((a,b)  => b.areaMax - a.areaMax);
+  const byScore   = [...prods].sort((a,b)    => b.comp - a.comp);
+  const byPct     = [...prods].sort((a,b)    => b.pct  - a.pct);
+  // Âncora de ticket — produto de maior valor (referência premium de preço)
+  if (byPrecoD[0]) papeis[key(byPrecoD[0])] = 'ANCORA_TICKET';
+  // Âncora de metragem — produto de maior área (referência de espaço), se distinto
+  const ancoraMet = byAreaD.find(p => !papeis[key(p)]);
+  if (ancoraMet) papeis[key(ancoraMet)] = 'ANCORA_METRAGEM';
+  // Isca — menor preço (entrada de ticket) ou maior % vendido (escassez)
+  const isca = byPrecoA.find(p => !papeis[key(p)]) || byPct.find(p => !papeis[key(p)]);
   if (isca) papeis[key(isca)] = 'ISCA';
-  const alvo = byScore.find(p=>!papeis[key(p)]);
+  // Alvo primário — melhor score de tração (excluindo os papéis já atribuídos)
+  const alvo = byScore.find(p => !papeis[key(p)]);
   if (alvo) papeis[key(alvo)] = 'ALVO_1';
-  prods.forEach(p=>{ if(!papeis[key(p)]) papeis[key(p)]='ALVO_2'; });
+  prods.forEach(p => { if (!papeis[key(p)]) papeis[key(p)] = 'ALVO_2'; });
   return papeis;
 }
 
@@ -12777,7 +12793,10 @@ function caCalcularSWOT_(prods, novoLanc) {
   const baixaAbs = prods.filter(p=>caPronte_(p.e.status||'')&&p.pct<60);
   if (baixaAbs.length) A.push({label:'Produto com baixa absorção — sinal de resistência',detalhe:baixaAbs.map(p=>`${p.e.nomeEmpreendimento} (${p.pct}%)`).join(', ')});
   const todosQuase = prods.every(p=>caPronte_(p.e.status||'')||(p.meses!==null&&p.meses>-6));
-  if (todosQuase && !novoLanc) A.push({label:'Nenhum lançamento novo confirmado — risco de encerramento',detalhe:'Todos os produtos prontos ou com entrega iminente'});
+  if (todosQuase) {
+    if (novoLanc) A.push({label:'Novo lançamento anunciado — aguardar confirmação de tabela',detalhe:'Monitore a data oficial de lançamento e as condições de pagamento'});
+    else          A.push({label:'Nenhum lançamento novo confirmado — risco de encerramento',detalhe:'Todos os produtos prontos ou com entrega iminente'});
+  }
   return { forcas:F, fraquezas:Fr, oportunidades:O, ameacas:A };
 }
 
@@ -12804,39 +12823,86 @@ function caBuscarConcorrentes_(prods) {
     vistos.add(k);
     const tot = parseInt(e.totalUnidades,10)||0;
     const est = parseInt(e.estoque,10)||0;
-    concs.push({ nome:e.nomeEmpreendimento||'—', construtora:e.construtora||'—', bairro:e.bairro||'—', pct:caPctVendido_(est,tot), estoque:est, menorPreco:pMin });
+    const pctConc = caPctVendido_(est,tot);
+    // Posicionamento — comparar vs melhor produto alvo no mesmo bairro
+    const melhAlvo = prods.filter(p=>caNorm_(p.e.bairro)===caNorm_(e.bairro)).sort((a,b)=>b.pct-a.pct)[0];
+    let pos = '—';
+    if (melhAlvo) {
+      const diffPct = pctConc - melhAlvo.pct;
+      const diffPre = (pMin>0 && melhAlvo.menorPreco>0) ? (melhAlvo.menorPreco/pMin - 1)*100 : null;
+      const partes  = [];
+      if (Math.abs(diffPct) >= 4) partes.push(diffPct > 0 ? `Conc. vende mais (+${Math.round(diffPct)}pp)` : `Brasal vende mais (+${Math.round(-diffPct)}pp)`);
+      if (diffPre !== null && Math.abs(diffPre) >= 5) partes.push(diffPre > 0 ? `entramos mais caro (+${Math.round(diffPre)}%)` : `entramos mais barato (${Math.round(diffPre)}%)`);
+      if (!partes.length) partes.push('Posicionamento similar');
+      pos = partes.join(', ');
+    }
+    concs.push({ nome:e.nomeEmpreendimento||'—', construtora:e.construtora||'—', bairro:e.bairro||'—', pct:pctConc, estoque:est, menorPreco:pMin, posicionamento:pos });
   });
   return concs.slice(0,10);
 }
 
 function caGerarPlano_(prods) {
+  // Separar por status físico para facilitar priorização comercial
+  const prontos   = prods.filter(p => caPronte_(p.e.status||'') || (p.e.status||'').toLowerCase()==='entregue');
+  const emObras   = prods.filter(p => !prontos.includes(p));
+  const monitores = prods.filter(p => p.prioridade==='MONITORAR');
+  const iscas     = prods.filter(p => p.prioridade==='ISCA_ESCASSEZ');
+
   const grupos = [];
-  const urgentes  = prods.filter(p=>p.prioridade==='URGENTE');
-  const ativos    = prods.filter(p=>p.prioridade==='ATIVO');
-  const monitores = prods.filter(p=>p.prioridade==='MONITORAR');
-  urgentes.forEach(p => {
-    const nome = p.e.nomeEmpreendimento||'';
-    grupos.push({ tipo:'urgente', nome, acoes:[
-      `Visitar decorado do ${nome} esta semana — confirmar condições atuais`,
-      `Ligar para gerente comercial — confirmar disponibilidade de ${p.estoque} unidade${p.estoque!==1?'s':''}`,
-      `Identificar 3 clientes da carteira com perfil compatível e abordar com urgência`,
-      `Criar isca no WhatsApp Status com dado de escassez (${p.pct}% vendido)`,
-    ]});
-  });
-  ativos.forEach(p => {
-    const nome = p.e.nomeEmpreendimento||'';
-    grupos.push({ tipo:'ativo', nome, acoes:[
-      `Visitar decorado do ${nome} — conhecer produto em profundidade`,
-      `Incluir no mix estratégico como ${CA_PAPEL_LABEL_[p.papel]||'alvo'}`,
-      `Criar card de dado de mercado (${p.pct}% vendido) para Instagram`,
-    ]});
-  });
+
+  // === PRONTOS — fechar rápido ===
+  const prontosAtivos = prontos.filter(p => p.prioridade==='URGENTE' || p.prioridade==='ATIVO');
+  if (prontosAtivos.length) {
+    grupos.push({ tipo:'secao-prontos', nome:null, acoes:[], secaoHeader:true, titulo:'🟢 PRONTOS — fechar rápido' });
+    prontosAtivos.forEach(p => {
+      const nome = p.e.nomeEmpreendimento||'';
+      grupos.push({ tipo: p.prioridade==='URGENTE'?'urgente':'ativo', nome, acoes:[
+        `Visitar decorado do ${nome} esta semana — confirmar estoque e condições atuais`,
+        `Identificar 3 clientes na carteira com perfil compatível — abordar com urgência`,
+        `Criar isca no WhatsApp Status: "${p.pct}% vendido, só ${p.estoque} unidade${p.estoque!==1?'s':''} restante${p.estoque!==1?'s':''}"`,
+        `Ligar para gerente comercial — confirmar disponibilidade e condições de pagamento`,
+      ]});
+    });
+  }
+
+  // === EM OBRAS — urgência de prazo ===
+  const obrasAtivos = emObras.filter(p => p.prioridade==='URGENTE' || p.prioridade==='ATIVO');
+  if (obrasAtivos.length) {
+    grupos.push({ tipo:'secao-obras', nome:null, acoes:[], secaoHeader:true, titulo:'🔨 EM OBRAS — urgência de prazo' });
+    obrasAtivos.forEach(p => {
+      const nome = p.e.nomeEmpreendimento||'';
+      const mStr = p.meses!==null ? (p.meses<0?`${Math.abs(p.meses)}m atrasado`:`${p.meses}m p/ entrega`) : '';
+      grupos.push({ tipo: p.prioridade==='URGENTE'?'urgente':'ativo', nome, acoes:[
+        `Visitar stand/decorado do ${nome}${mStr?' ('+mStr+')':''}`,
+        `Incluir no mix como ${CA_PAPEL_LABEL_[p.papel]||'alvo'} — criar conteúdo de acompanhamento de obra`,
+        `Criar card de dado de mercado (${p.pct}% vendido) para Instagram/WhatsApp Status`,
+        `Identificar clientes em busca de prazo de financiamento — este produto pode ser a solução`,
+      ]});
+    });
+  }
+
+  // === MONITORAR ===
   if (monitores.length) {
     grupos.push({ tipo:'monitorar', nome:null, acoes:[
-      `Registrar data de próxima revisão dos ${monitores.length} produto(s) monitorados (30 dias)`,
-      `Não anunciar ainda — aguardar evolução do % vendido`,
+      `Agendar revisão dos ${monitores.length} produto(s) monitorados em 30 dias`,
+      `Não anunciar ainda — aguardar evolução do % vendido acima de 70%`,
     ]});
   }
+
+  // === ISCA DE ESCASSEZ (conteúdo apenas, sem visita operacional) ===
+  if (iscas.length) {
+    grupos.push({ tipo:'secao-isca', nome:null, acoes:[], secaoHeader:true, titulo:'🟣 ISCA DE ESCASSEZ — conteúdo apenas' });
+    iscas.forEach(p => {
+      const nome  = p.e.nomeEmpreendimento||'';
+      const atras = p.meses!==null ? Math.abs(p.meses) : '?';
+      grupos.push({ tipo:'isca-escassez', nome, acoes:[
+        `Usar escassez em conteúdo de redes: "${p.estoque} unidade${p.estoque!==1?'s':''} restante${p.estoque!==1?'s':''} — ${p.pct}% vendido"`,
+        `NÃO agendar visita operacional — ${atras}m de atraso inviabiliza fechamento imediato`,
+        `Usar dado de escassez como gatilho para leads quentes em negociação avançada`,
+      ]});
+    });
+  }
+
   return grupos;
 }
 
@@ -12901,7 +12967,7 @@ async function caGerarAnalise_() {
     const comp = it.comp||0;
     const simil= it.simil||0;
     const areas  = (e.unidades||[]).map(u=>Number(u.areaUtil)||Number(u.areaTerr)||0).filter(v=>v>0);
-    const precos = (e.unidades||[]).map(u=>Number(u.precoMin)||Number(u.precoMedio)||0).filter(v=>v>0);
+    const precos = (e.unidades||[]).map(u=>Number(u.precoMin)||Number(u.preco)||Number(u.precoMedio)||Number(u.precoTotal)||0).filter(v=>v>0);
     return { e, comp, simil,
       menorPreco: precos.length?Math.min(...precos):(it.menorPreco||0),
       maiorPreco: precos.length?Math.max(...precos):0,
@@ -12951,14 +13017,23 @@ function caRenderRelatorio_(relat) {
   }
 
   function prioBadge(p) {
-    const cls = p==='URGENTE'?'ca-prio-urgente':p==='ATIVO'?'ca-prio-ativo':'ca-prio-monitorar';
-    const ico = p==='URGENTE'?'🔴':p==='ATIVO'?'🟠':'🟡';
-    return `<span class="ca-prio-badge ${cls}">${ico} ${p}</span>`;
+    const map = {
+      URGENTE:      ['ca-prio-urgente',  '🔴', 'URGENTE'],
+      ATIVO:        ['ca-prio-ativo',    '🟠', 'ATIVO'],
+      MONITORAR:    ['ca-prio-monitorar','🟡', 'MONITORAR'],
+      ISCA_ESCASSEZ:['ca-prio-isca-esc', '🟣', 'ISCA ESCASSEZ'],
+    };
+    const [cls, ico, label] = map[p] || ['ca-prio-monitorar','🟡', p||'—'];
+    return `<span class="ca-prio-badge ${cls}">${ico} ${label}</span>`;
   }
 
   function textoAcao(p) {
-    if (p.prioridade==='URGENTE') return 'Priorizar visita ao decorado esta semana. Identificar 3 clientes com perfil compatível e abordar com urgência. Usar dado de escassez como isca no WhatsApp Status.';
-    if (p.prioridade==='ATIVO')   return `Visitar decorado para conhecer produto. Criar card com dado de % vendido para WhatsApp Status. Incluir no mix como ${CA_PAPEL_LABEL_[p.papel]||'alvo'}.`;
+    if (p.prioridade==='URGENTE')
+      return 'Priorizar visita ao decorado esta semana. Identificar 3 clientes com perfil compatível e abordar com urgência. Usar dado de escassez como isca no WhatsApp Status.';
+    if (p.prioridade==='ATIVO')
+      return `Visitar decorado para conhecer produto. Criar card com dado de % vendido para WhatsApp Status. Incluir no mix como ${CA_PAPEL_LABEL_[p.papel]||'alvo'}.`;
+    if (p.prioridade==='ISCA_ESCASSEZ')
+      return `Não agendar visita operacional — ${p.meses!==null?Math.abs(p.meses)+'m':'?'} de atraso inviabiliza fechamento. Usar escassez em conteúdo (${p.estoque} unidade${p.estoque!==1?'s':''}, ${p.pct}% vendido) como gatilho para leads quentes.`;
     return 'Não anunciar ainda. Acompanhar evolução do % vendido mensalmente. Caso atinja 70%, reclassificar para ATIVO.';
   }
 
@@ -12970,7 +13045,7 @@ function caRenderRelatorio_(relat) {
       if (!m) return false;
       return (Date.now() - new Date(+m[3],+m[2]-1,+m[1]).getTime()) > 30*864e5;
     })();
-    const iscaText   = (p.prioridade==='URGENTE'||p.prioridade==='ATIVO') ? caGerarIsca_(e,p.pct) : '';
+    const iscaText   = (p.prioridade==='URGENTE'||p.prioridade==='ATIVO'||p.prioridade==='ISCA_ESCASSEZ') ? caGerarIsca_(e,p.pct) : '';
     const perfilText = caGerarPerfil_(e,p.pct,p.meses);
     const idKey = e.idEmpreendimento || (e.nomeEmpreendimento||'').replace(/'/g,"\\'");
     return `
@@ -13017,20 +13092,27 @@ function caRenderRelatorio_(relat) {
     </div>`;
   }).join('');
 
-  const planoHtml = plano.map(g=>`
-    <div class="ca-plano-grupo ca-plano-grupo-${g.tipo}">
-      <div class="ca-plano-grupo-label">${g.tipo.toUpperCase()}${g.nome?' — '+g.nome:''}</div>
-      <ul class="ca-plano-list">${g.acoes.map(a=>`<li class="ca-plano-item">${a}</li>`).join('')}</ul>
-    </div>`).join('');
+  const planoHtml = plano.map(g => {
+    if (g.secaoHeader) return `<div class="ca-plano-secao-header">${g.titulo}</div>`;
+    const nomePart = g.nome ? ' — '+g.nome : '';
+    const tipo = g.tipo;
+    const label = tipo==='urgente'?'🔴 URGENTE':tipo==='ativo'?'🟠 ATIVO':tipo==='monitorar'?'🟡 MONITORAR':'🟣 ISCA ESCASSEZ';
+    return `
+      <div class="ca-plano-grupo ca-plano-grupo-${tipo}">
+        <div class="ca-plano-grupo-label">${label}${nomePart}</div>
+        <ul class="ca-plano-list">${g.acoes.map(a=>`<li class="ca-plano-item">${a}</li>`).join('')}</ul>
+      </div>`;
+  }).join('');
 
   const concHtml = concs.length ? `
     <div class="ca-conc-wrap">
       <div class="ca-conc-title">🏆 Concorrência regional (${concs.length})</div>
       <div class="mapa-wrap" style="overflow-x:auto"><table class="ca-conc-table">
-        <thead><tr><th>Produto</th><th>Construtora</th><th>Bairro</th><th>% vendido</th><th>Estoque</th><th>Menor preço</th></tr></thead>
+        <thead><tr><th>Produto</th><th>Construtora</th><th>Bairro</th><th>% vendido</th><th>Estoque</th><th>Menor preço</th><th>Posicionamento</th></tr></thead>
         <tbody>${concs.map(c=>`<tr>
           <td><strong>${c.nome}</strong></td><td>${c.construtora}</td><td>${c.bairro}</td>
           <td>${c.pct}%</td><td>${c.estoque}</td><td>${fmtR$_(c.menorPreco)}</td>
+          <td style="font-size:11px;color:var(--text3)">${c.posicionamento||'—'}</td>
         </tr>`).join('')}</tbody>
       </table></div>
     </div>` : '';
