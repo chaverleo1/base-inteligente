@@ -12829,8 +12829,9 @@ function caCalcularSWOT_(prods, novoLanc) {
   if (estoqueTotal <= 30) Fr.push({label:'Estoque total reduzido',detalhe:`${estoqueTotal} unidades no total`});
   const entImin = prods.filter(p=>p.meses!==null&&p.meses>=0&&p.meses<=3&&p.estoque>=20);
   if (entImin.length) Fr.push({label:'Entrega iminente com estoque ainda alto',detalhe:entImin.map(p=>`${p.e.nomeEmpreendimento} (${p.meses}m, ${p.estoque}un.)`).join('; ')});
-  const atrasados = prods.filter(p=>p.meses!==null&&p.meses<0);
-  if (atrasados.length) Fr.push({label:'Produto em atraso de entrega',detalhe:atrasados.map(p=>`${p.e.nomeEmpreendimento} (${Math.abs(p.meses)}m atrasado)`).join('; ')});
+  // Atraso tolerável até 6 meses (é comum no mercado) — penaliza apenas a partir do 7º mês
+  const atrasados = prods.filter(p=>p.meses!==null&&p.meses<-6);
+  if (atrasados.length) Fr.push({label:'Produto em atraso relevante de entrega (7+ meses)',detalhe:atrasados.map(p=>`${p.e.nomeEmpreendimento} (${Math.abs(p.meses)}m atrasado)`).join('; ')});
   if (menorPrecoP !== Infinity && menorPrecoP >= 800000) Fr.push({label:'Ticket alto — público restrito',detalhe:`Mínimo ${fmtR$_(menorPrecoP)}`});
   if (!prods.some(p=>caPronte_(p.e.status||''))) Fr.push({label:'Nenhum produto pronto disponível',detalhe:'Todos em obras ou na planta'});
   if (n > 0 && maxBairro/n >= 0.7) { const b=Object.entries(bCnt).sort((a,b2)=>b2[1]-a[1])[0]; Fr.push({label:'Concentração em único bairro',detalhe:`${Math.round(maxBairro/n*100)}% no ${b[0]}`}); }
@@ -13129,7 +13130,7 @@ function caCalcularScore_(prods, swot, nConcs) {
     if      (l.includes('Portfólio pequeno'))        neg.push({cod:'Fr1',label:l,pontos:-3, detalhe:fr.detalhe||''});
     else if (l.includes('Estoque total reduzido'))   neg.push({cod:'Fr2',label:l,pontos:-5, detalhe:fr.detalhe||''});
     else if (l.includes('entrega iminente'))         neg.push({cod:'Fr3',label:l,pontos:-3, detalhe:fr.detalhe||''});
-    else if (l.includes('atraso de entrega')) {
+    else if (l.includes('atraso relevante')) {
       const n = (fr.detalhe||'').split(';').filter(Boolean).length || 1;
       neg.push({cod:'Fr4',label:l,pontos:Math.max(-6,-2*n), detalhe:fr.detalhe||''});
     }
