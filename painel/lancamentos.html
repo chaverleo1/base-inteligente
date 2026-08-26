@@ -1068,6 +1068,8 @@ select.form-input option { background: var(--surface2); }
 .mix-card-pct-fill { height:100%; border-radius:999px; }
 .mix-vazio-grupo { padding:18px; text-align:center; color:var(--text3); font-size:12px; background:var(--surface2); border-radius:8px; }
 .mix-sem-grupo { padding:36px; text-align:center; color:var(--text3); font-size:13px; }
+.mix-print-btn { margin-left:auto; flex-shrink:0; padding:4px 11px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); cursor:pointer; font-size:11px; font-weight:600; transition:background .12s; }
+.mix-print-btn:hover { background:var(--surface); color:var(--text); }
 .ca-header { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
 .ca-select-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .ca-select { padding:7px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface2); color:var(--text); font-size:13px; font-family:inherit; outline:none; min-width:200px; cursor:pointer; }
@@ -13022,6 +13024,7 @@ function caVerAnaliseRanking_(btn) {
 // Estado: quais construtoras estão selecionadas no ranking para gerar o mix.
 let _rankSelecionadas = new Set();
 let _mixDados         = null;   // { todosProds, cores, selecionadas }
+let _mixGruposAtivos  = [];     // grupos visíveis na aba atual (para imprimir por grupo)
 
 const MIX_CORES_ = [
   '#6366f1','#ef4444','#10b981','#f59e0b','#8b5cf6',
@@ -13181,17 +13184,119 @@ function caMixAtivarTab_(tab) {
     ];
   }
 
+  // Armazenar grupos filtrados (para acesso pelo botão imprimir por índice)
+  _mixGruposAtivos = grupos.filter(g => g.prods.length > 0);
+
   // Renderizar grupos
-  const html = grupos
-    .filter(g => g.prods.length > 0)
-    .map(g => `
-      <div class="mix-grupo">
-        <div class="mix-grupo-titulo">${g.titulo} <span class="mix-grupo-count">${g.prods.length} produto${g.prods.length > 1 ? 's' : ''}</span></div>
-        <div class="mix-cards">${g.prods.map(_mixCardHtml_).join('')}</div>
+  const html = _mixGruposAtivos.map((g, idx) => `
+    <div class="mix-grupo">
+      <div class="mix-grupo-titulo">
+        ${g.titulo}
+        <span class="mix-grupo-count">${g.prods.length} produto${g.prods.length > 1 ? 's' : ''}</span>
+        <button class="mix-print-btn" onclick="caMixImprimirGrupo_(${idx})">🖨️ Imprimir lista</button>
       </div>
-    `).join('');
+      <div class="mix-cards">${g.prods.map(_mixCardHtml_).join('')}</div>
+    </div>
+  `).join('');
 
   cont.innerHTML = html || '<div class="mix-sem-grupo">Nenhum produto encontrado neste grupo para as construtoras selecionadas.</div>';
+}
+
+// ── Imprimir grupo do mix em janela separada (layout paisagem A4) ───────────
+function caMixImprimirGrupo_(idx) {
+  const g = _mixGruposAtivos[idx];
+  if (!g || !g.prods.length) return;
+  const { selecionadas } = _mixDados || {};
+  const data = new Date().toLocaleDateString('pt-BR');
+  const tituloTexto = g.titulo.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+  const rows = g.prods.map((p, i) => {
+    const fmtArea  = p.areaMin
+      ? (p.areaMax && p.areaMax > p.areaMin ? `${p.areaMin}–${p.areaMax} m²` : `${p.areaMin} m²`)
+      : '—';
+    const fmtPreco = p.menorPreco
+      ? p.menorPreco.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 })
+      : '—';
+    const fmtStatus = caPronte_(p.status)
+      ? 'Pronto'
+      : caEmObras_(p.status)
+        ? (p.meses === null ? 'Em obras'
+          : p.meses < 0  ? `Atraso ${Math.abs(p.meses)}m`
+          : p.meses === 0 ? 'Entregando'
+          : `${p.meses}m p/ entrega`)
+      : p.status || '—';
+    return `<tr>
+      <td class="num">${i + 1}</td>
+      <td>${p.construtora}</td>
+      <td><strong>${p.nomeEmp}</strong></td>
+      <td>${p.bairro}</td>
+      <td class="center">${fmtArea}</td>
+      <td class="right">${fmtPreco}</td>
+      <td class="center">${p.pct}%</td>
+      <td class="center">${p.estoque}</td>
+      <td>${fmtStatus}</td>
+    </tr>`;
+  }).join('');
+
+  const constList = (selecionadas || []).join(' · ');
+
+  const doc = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mix — ${tituloTexto}</title>
+<style>
+  @page { size: A4 landscape; margin: 14mm 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 10.5px; color: #111; background: #fff; }
+  .hd { margin-bottom: 10px; padding-bottom: 7px; border-bottom: 2px solid #111; display: flex; justify-content: space-between; align-items: flex-end; }
+  .hd-left h1 { font-size: 13px; font-weight: 800; }
+  .hd-left p  { font-size: 9.5px; color: #555; margin-top: 4px; }
+  .hd-right   { font-size: 9px; color: #888; text-align: right; }
+  table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+  thead tr { background: #1a1a1a; color: #fff; }
+  thead th { padding: 5px 8px; text-align: left; font-size: 9.5px; font-weight: 700; white-space: nowrap; letter-spacing: .03em; }
+  tbody tr:nth-child(even) { background: #f4f4f4; }
+  tbody tr:nth-child(odd)  { background: #fff; }
+  td { padding: 4px 8px; border-bottom: 1px solid #e0e0e0; vertical-align: middle; }
+  .num    { text-align: center; color: #aaa; font-size: 9.5px; }
+  .center { text-align: center; font-variant-numeric: tabular-nums; }
+  .right  { text-align: right;  font-variant-numeric: tabular-nums; }
+  tfoot td { font-size: 9px; color: #999; padding-top: 8px; border: none; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+  <div class="hd">
+    <div class="hd-left">
+      <h1>🎯 Mix Comparativo — ${tituloTexto}</h1>
+      <p>Construtoras selecionadas: <strong>${constList}</strong>&nbsp;&nbsp;|&nbsp;&nbsp;${g.prods.length} produto${g.prods.length !== 1 ? 's' : ''}</p>
+    </div>
+    <div class="hd-right">BASE INTELIGENTE<br>Gerado em ${data}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Construtora</th>
+        <th>Empreendimento</th>
+        <th>Bairro</th>
+        <th>Área</th>
+        <th>Preço a partir de</th>
+        <th>% Vendido</th>
+        <th>Estoque</th>
+        <th>Status / Entrega</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="9">BASE INTELIGENTE · ${data} · Confidencial</td></tr></tfoot>
+  </table>
+  <script>window.onload = () => { window.focus(); window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=1000,height=700');
+  if (win) { win.document.write(doc); win.document.close(); }
 }
 
 // ── Renderizar card de produto no mix ───────────────────────────────────────
