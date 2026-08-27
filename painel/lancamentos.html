@@ -13563,6 +13563,12 @@ function renderRankingUI_() {
                    AÇÃO de seleção, não um valor por linha). -->
               <th class="rank-check-cell" title="Marque as construtoras que quer comparar lado a lado"><input type="checkbox" id="rankCheckAll" onchange="caRankTodas_(this)" title="Selecionar todas"><br><span style="font-size:9px;font-weight:600;color:var(--text3);letter-spacing:.02em">Comparar</span></th>
               <th>#</th><th>Construtora</th><th>Score</th><th>Classificação</th>
+              <!-- Pedido explícito do usuário: coluna própria pro total
+                   JÁ CONSTRUÍDO (base do multiplicador de escala), ao
+                   lado do Estoque (só o remanescente) -- os dois números
+                   lado a lado deixam a diferença óbvia de relance, sem
+                   depender só do hover no multiplicador. -->
+              <th title="Unidades já construídas (vendidas+estoque), soma de todos os produtos -- é a base do multiplicador de escala ao lado do Score">Total constr.</th>
               <th>Estoque</th><th>% vendido</th><th>Pts F·O / Fr·A</th><th></th>
             </tr></thead>
             <tbody id="rankCorpo"></tbody>
@@ -13683,7 +13689,9 @@ function caRenderCorpoRanking_(linhas, ordenarPor) {
     let separadorHtml = '';
     if (!separadorInserido && !ALTA_OU_MAIS.has(l.cor)) {
       separadorInserido = true;
-      separadorHtml = `<tr class="rank-separador"><td colspan="8">Abaixo: Oportunidade Moderada ou Limitada</td></tr>`;
+      // colspan=10: 10 colunas no <thead> (Comparar/#/Construtora/Score/
+      // Classificação/Total constr./Estoque/%vendido/Pts/Ver análise).
+      separadorHtml = `<tr class="rank-separador"><td colspan="10">Abaixo: Oportunidade Moderada ou Limitada</td></tr>`;
     }
 
     return separadorHtml + `<tr>
@@ -13691,13 +13699,17 @@ function caRenderCorpoRanking_(linhas, ordenarPor) {
         <td class="rank-pos">${medais[i] || i+1}</td>
         <td>
           <div class="rank-nome">${badgePort} ${l.nome}</div>
-          <div class="rank-nome-sub">${l.nProd} produto${l.nProd!==1?'s':''} · padrão ${l.padrao} · ${l.totalUnidades} unid. construídas${bairroStr?' · '+bairroStr:''}</div>
+          <div class="rank-nome-sub">${l.nProd} produto${l.nProd!==1?'s':''} · padrão ${l.padrao}${bairroStr?' · '+bairroStr:''}</div>
         </td>
         <td>
           <span class="rank-score-num" style="color:${hex}">${l.score}</span>${notaEscala}
           <span class="rank-mini-bar-wrap"><span class="rank-mini-bar-fill" style="width:${l.score*10}%;background:${hex}"></span></span>
         </td>
         <td><span class="rank-badge" style="background:${bg};color:${hex};border:1px solid ${brd}">${l.classificacao}</span></td>
+        <!-- Pedido explícito do usuário: coluna própria pro total já
+             construído, ao lado do Estoque -- ver <th> "Total constr."
+             no cabeçalho. -->
+        <td style="font-variant-numeric:tabular-nums">${l.totalUnidades}</td>
         <td style="font-variant-numeric:tabular-nums">${l.estoqueTotal}</td>
         <td style="font-variant-numeric:tabular-nums">${l.pctMedio}%</td>
         <td style="font-size:11px;color:var(--text3);white-space:nowrap;cursor:help" title="${ptsTitle}" onclick="caMostrarTooltipPontos_(_caRankLinhasCache[${i}].top3Pos,_caRankLinhasCache[${i}].top3Neg)">+${l.somaPos} / ${l.somaNeg}</td>
@@ -13708,7 +13720,7 @@ function caRenderCorpoRanking_(linhas, ordenarPor) {
   const corpo = document.getElementById('rankCorpo');
   if (corpo) corpo.innerHTML = linhas.length
     ? linhasHtml
-    : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Nenhuma construtora bate com o filtro selecionado.</td></tr>';
+    : '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px">Nenhuma construtora bate com o filtro selecionado.</td></tr>';
 }
 
 // Badge de tamanho de portfólio (nº de produtos, não de unidades -- é uma
