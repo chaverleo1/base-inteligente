@@ -5186,6 +5186,26 @@ function obterAbaLeadsLpExternas_() {
   return aba;
 }
 
+// Converte um telefone digitado em qualquer formato (com DDD, com/sem
+// parênteses, traço, espaço, "+55" etc.) no formato puro que o wa.me exige
+// (55 + DDD + número, só dígitos). Só prefixa "55" quando o número já não
+// vem com o código do país — DDD+celular tem 11 dígitos, DDD+fixo tem 10.
+function normalizarTelefoneBR_(tel) {
+  var digitos = String(tel || '').replace(/\D/g, '');
+  if (digitos.length === 10 || digitos.length === 11) digitos = '55' + digitos;
+  return digitos;
+}
+
+// Escapa texto vindo do visitante antes de jogar dentro do htmlBody do
+// e-mail de notificação — nome/interesse/imóvel/canal chegam de um form
+// público, então tratamos como não confiável (evita HTML injection no
+// e-mail caso alguém digite "<img>" ou similar no campo Nome).
+function escaparHtml_(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // Grava um lead vindo de uma landing page avulsa (fora do funil de
 // lançamentos). Sem upsert por e-mail (essas LPs pedem só nome+telefone) —
 // cada envio vira uma linha nova; duplicata eventual (o visitante reenviando
@@ -5216,17 +5236,54 @@ function salvarLeadLpExterna_(d) {
     // MailApp, por exemplo), o lead já está salvo na planilha e a resposta
     // pro visitante do site continua sendo sucesso — não faz sentido a
     // pessoa ver erro no formulário por causa de um e-mail que não é dela.
+    //
+    // E-mail em HTML (2026-08-27, feedback do usuário: "está tudo
+    // misturado" no corpo em texto puro) — nome/telefone/data em destaque,
+    // e um botão de link direto pro WhatsApp do LEAD (não do corretor) já
+    // com mensagem pronta mencionando o imóvel anunciado, pra agilizar o
+    // primeiro contato (Etapa 4 do framework de compra: responder rápido).
     try {
+      var telWhats = normalizarTelefoneBR_(tel);
+      var msgWhats = 'Olá ' + nome + '! Aqui é da Lídder Imobiliária, sobre o seu interesse em ' +
+                     (d.imovel || 'um dos nossos imóveis') + '. Podemos conversar?';
+      var linkWhats = 'https://wa.me/' + telWhats + '?text=' + encodeURIComponent(msgWhats);
+
+      var html =
+        '<div style="font-family:Arial,Helvetica,sans-serif; max-width:480px; margin:0 auto;">' +
+          '<div style="background:#262625; color:#fff; padding:16px 20px; border-radius:6px 6px 0 0;">' +
+            '<span style="font-size:12px; letter-spacing:0.06em; text-transform:uppercase; color:#FF8656;">Novo cadastro</span><br>' +
+            '<span style="font-size:15px;">' + escaparHtml_(d.imovel || 'Landing page') + '</span>' +
+          '</div>' +
+          '<div style="border:1px solid #e2ded6; border-top:none; padding:20px; border-radius:0 0 6px 6px;">' +
+            '<div style="background:#FFF3EC; border:1px solid #FFD9BE; border-radius:4px; padding:14px 16px; margin-bottom:16px;">' +
+              '<div style="font-size:20px; font-weight:bold; color:#262625;">' + escaparHtml_(nome) + '</div>' +
+              '<div style="font-size:16px; color:#B2441A; font-weight:bold; margin-top:4px;">' + escaparHtml_(tel) + '</div>' +
+              '<div style="font-size:12px; color:#625F58; margin-top:6px;">Cadastrado em ' + agora + '</div>' +
+            '</div>' +
+            '<a href="' + linkWhats + '" style="display:block; text-align:center; background:#25D366; color:#fff; ' +
+              'font-weight:bold; text-decoration:none; padding:12px; border-radius:4px; margin-bottom:18px;">' +
+              '💬 Falar com ' + escaparHtml_(nome) + ' no WhatsApp</a>' +
+            '<table style="width:100%; border-collapse:collapse; font-size:13.5px; color:#333;">' +
+              '<tr><td style="padding:6px 0; color:#625F58; width:110px;">Interesse</td><td style="padding:6px 0;">' + escaparHtml_(d.interesse || '-') + '</td></tr>' +
+              '<tr><td style="padding:6px 0; color:#625F58;">Imóvel</td><td style="padding:6px 0;">' + escaparHtml_(d.imovel || '-') + '</td></tr>' +
+              '<tr><td style="padding:6px 0; color:#625F58;">Canal</td><td style="padding:6px 0;">' + escaparHtml_(d.canal || '-') + '</td></tr>' +
+              '<tr><td style="padding:6px 0; color:#625F58;">ID</td><td style="padding:6px 0; font-family:monospace;">' + id + '</td></tr>' +
+            '</table>' +
+          '</div>' +
+        '</div>';
+
       MailApp.sendEmail({
         to:      ADM_EMAIL,
-        subject: 'Novo cadastro — ' + (d.imovel || 'Landing page') + ' (' + id + ')',
-        body:    'Nome: ' + nome +
+        subject: 'Novo cadastro — ' + nome + ' · ' + (d.imovel || 'Landing page'),
+        body:    'Nome: ' + nome +           // fallback texto puro (clientes de e-mail sem HTML)
                  '\nTelefone: ' + tel +
                  '\nInteresse: ' + (d.interesse || '-') +
                  '\nImóvel: ' + (d.imovel || '-') +
                  '\nCanal: ' + (d.canal || '-') +
                  '\nData: ' + agora +
-                 '\nID: ' + id
+                 '\nID: ' + id +
+                 '\nWhatsApp: ' + linkWhats,
+        htmlBody: html
       });
     } catch (mailErr) {}
 
