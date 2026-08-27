@@ -1166,6 +1166,11 @@ select.form-input option { background: var(--surface2); }
 .ca-conc-table th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text3); padding:6px 10px; text-align:left; border-bottom:1px solid var(--border); }
 .ca-conc-table td { padding:7px 10px; border-bottom:1px solid var(--border2); color:var(--text2); }
 .ca-conc-table tr:last-child td { border-bottom:none; }
+/* Destaque automático de gap médio vs. concorrência -- pedido explícito
+   do usuário (ver caGapMedioTexto_). */
+.ca-gap-destaque { font-size:13px; font-weight:700; padding:10px 14px; border-radius:10px; margin-bottom:12px; border:1px solid; }
+.ca-gap-pos { background:rgba(22,163,74,.08); border-color:rgba(22,163,74,.3); color:#16a34a; }
+.ca-gap-neg { background:rgba(220,38,38,.08); border-color:rgba(220,38,38,.3); color:#dc2626; }
 /* Score de Oportunidade */
 .ca-score-box { border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:18px; }
 .ca-score-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text3); margin-bottom:10px; }
@@ -12711,6 +12716,7 @@ let _caConstrutora   = '';    // construtora selecionada
 let _caNovoLanc      = false; // checkbox O8 — novo lançamento confirmado
 let _caRelatCurrent  = null;  // último relatório gerado
 let _caScoreAtual    = null;  // { scoreData, texto, nome } — para modal de justificativa
+let _caRankLinhasCache = [];  // última tabela do RANKING renderizada -- usado pelo tooltip de pontos (caMostrarTooltipPontos_) pra achar top3Pos/top3Neg por índice de linha sem reescapar tudo no onclick
 
 // Bairros nobres que ativam regras SWOT
 const CA_BAIRROS_NOBRES_ = [
@@ -12758,6 +12764,24 @@ function caPadraoPredom_(prods) {
   return (Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]||['médio'])[0];
 }
 
+// Lista de bairros sem duplicata -- achado explícito do usuário: um mesmo
+// bairro aparecia 2x no cabeçalho da análise (ex.: "Setor Bueno, Setor
+// Marista, Setor Bueno"). Um Set direto sobre a string bruta não pega
+// quando o cadastro tem grafias levemente diferentes do MESMO bairro
+// (espaço a mais, maiúscula/minúscula, acento) -- por isso usa a mesma
+// normalização já usada em CA_BAIRROS_NOBRES_/caBuscarConcorrentes_
+// (caNorm_) como chave de dedupe, preservando a 1ª grafia encontrada.
+function caDedupeBairros_(prods) {
+  const vistos = new Map();
+  prods.forEach(p => {
+    const raw = String(p.e.bairro || '').trim();
+    if (!raw) return;
+    const chave = caNorm_(raw);
+    if (!vistos.has(chave)) vistos.set(chave, raw);
+  });
+  return [...vistos.values()];
+}
+
 function caClassificarPrioridade_(e, comp, pct, meses) {
   const pronto  = caPronte_(e.status||'');
   const emObras = caEmObras_(e.status||'');
@@ -12769,7 +12793,13 @@ function caClassificarPrioridade_(e, comp, pct, meses) {
   if (emObras && meses !== null && meses >= 0 && meses <= 4 && estoque >= 5) return 'URGENTE';
   if (pct >= 95) return 'URGENTE';
   // ATIVO
-  if (pronto && pct >= 70 && pct < 85 && estoque >= 16) return 'ATIVO';
+  // Achado explícito do usuário: produtos prontos com MUITA venda (pct>=85)
+  // mas estoque relevante (>15, então não entram em URGENTE, que exige
+  // estoque<=15) caíam sem classificação -- iam parar em MONITORAR mesmo
+  // sendo, na prática, os que mais vendem. Removido o teto pct<85 daqui:
+  // qualquer pronto com pct>=70 e estoque>=16 é ATIVO, sem limite superior
+  // de %vendido (a diferenciação com URGENTE já é feita pelo estoque).
+  if (pronto && pct >= 70 && estoque >= 16) return 'ATIVO';
   if (emObras && pct >= 70 && meses !== null && meses >= 5 && meses <= 24) return 'ATIVO';
   if (comp >= 6.5) return 'ATIVO';
   return 'MONITORAR';
@@ -12907,6 +12937,11 @@ function caBuscarConcorrentes_(prods) {
   if (!_itensScoredCache || !prods.length) return [];
   const bairrosAlvo  = new Set(prods.map(p=>caNorm_(p.e.bairro)));
   const padraoAlvo   = caPadraoPredom_(prods);
+  // Nome de EXIBIÇÃO da construtora-alvo (usado no texto de posicionamento
+  // abaixo) -- achado durante o estudo do módulo: estava "Brasal" fixo no
+  // texto, só não tinha sido notado porque a 1ª análise real foi feita
+  // com a própria Brasal. Precisa ser o nome de quem está sendo analisado.
+  const nomeExibicaoAlvo = String(prods[0].e.construtora || 'a construtora').trim();
   const nomeConstAlvo= (prods[0].e.construtora||'').toLowerCase().trim();
   const precoMinPort = Math.min(...prods.filter(p=>p.menorPreco>0).map(p=>p.menorPreco).concat([0]));
   const precoMaxPort = Math.max(...prods.filter(p=>p.menorPreco>0).map(p=>p.menorPreco).concat([0]));
@@ -12930,18 +12965,53 @@ function caBuscarConcorrentes_(prods) {
     // Posicionamento — comparar vs melhor produto alvo no mesmo bairro
     const melhAlvo = prods.filter(p=>caNorm_(p.e.bairro)===caNorm_(e.bairro)).sort((a,b)=>b.pct-a.pct)[0];
     let pos = '—';
+    // gapPct: positivo = a construtora-alvo vende mais que esse concorrente
+    // (em pontos percentuais); null quando não há produto alvo no mesmo
+    // bairro pra comparar. Usado no destaque automático de gap médio
+    // (pedido explícito do usuário, ver caGapMedioTexto_ abaixo).
+    let gapPct = null;
     if (melhAlvo) {
       const diffPct = pctConc - melhAlvo.pct;
+      gapPct = -diffPct;
       const diffPre = (pMin>0 && melhAlvo.menorPreco>0) ? (melhAlvo.menorPreco/pMin - 1)*100 : null;
       const partes  = [];
-      if (Math.abs(diffPct) >= 4) partes.push(diffPct > 0 ? `Conc. vende mais (+${Math.round(diffPct)}pp)` : `Brasal vende mais (+${Math.round(-diffPct)}pp)`);
+      if (Math.abs(diffPct) >= 4) partes.push(diffPct > 0 ? `Conc. vende mais (+${Math.round(diffPct)}pp)` : `${nomeExibicaoAlvo} vende mais (+${Math.round(-diffPct)}pp)`);
       if (diffPre !== null && Math.abs(diffPre) >= 5) partes.push(diffPre > 0 ? `entramos mais caro (+${Math.round(diffPre)}%)` : `entramos mais barato (${Math.round(diffPre)}%)`);
       if (!partes.length) partes.push('Posicionamento similar');
       pos = partes.join(', ');
     }
-    concs.push({ nome:e.nomeEmpreendimento||'—', construtora:e.construtora||'—', bairro:e.bairro||'—', pct:pctConc, estoque:est, menorPreco:pMin, posicionamento:pos });
+    concs.push({ nome:e.nomeEmpreendimento||'—', construtora:e.construtora||'—', bairro:e.bairro||'—', pct:pctConc, estoque:est, menorPreco:pMin, posicionamento:pos, gapPct });
   });
   return concs.slice(0,10);
+}
+
+// Destaque automático do gap médio de absorção de mercado vs. os
+// concorrentes diretos -- pedido explícito do usuário: "a construtora
+// vende mais/menos que TODOS os concorrentes" é sozinho um dos melhores
+// argumentos de venda (ou alerta) e ficava perdido dentro da tabela linha
+// a linha. Usa gapPct (positivo = alvo vende mais), calculado por
+// caBuscarConcorrentes_ só pras linhas com produto alvo comparável no
+// mesmo bairro. Retorna '' quando não há base de comparação.
+function caGapMedioTexto_(concs, nomeAlvo) {
+  const comGap = concs.filter(c => c.gapPct !== null && c.gapPct !== undefined);
+  if (!comGap.length) return '';
+  const media  = comGap.reduce((s,c) => s + c.gapPct, 0) / comGap.length;
+  const mediaR = Math.round(media);
+  if (mediaR === 0) return '';
+  const nPos = comGap.filter(c => c.gapPct > 0).length;
+  const nNeg = comGap.filter(c => c.gapPct < 0).length;
+  const n    = comGap.length;
+  const plural = n !== 1 ? 's' : '';
+  if (nPos === n) {
+    return `<div class="ca-gap-destaque ca-gap-pos">🏆 A ${nomeAlvo} supera todos os ${n} concorrente${plural} direto${plural} em absorção de mercado. Gap médio: +${mediaR} pontos percentuais.</div>`;
+  }
+  if (nNeg === n) {
+    return `<div class="ca-gap-destaque ca-gap-neg">⚠ Todos os ${n} concorrente${plural} direto${plural} vendem mais que a ${nomeAlvo} nesta região. Gap médio: ${mediaR} pontos percentuais.</div>`;
+  }
+  if (media > 0) {
+    return `<div class="ca-gap-destaque ca-gap-pos">📈 A ${nomeAlvo} vende mais que ${nPos} de ${n} concorrentes diretos. Gap médio: +${mediaR} pontos percentuais.</div>`;
+  }
+  return `<div class="ca-gap-destaque ca-gap-neg">⚠ Concorrentes diretos vendem, em média, ${Math.abs(mediaR)}pp a mais que a ${nomeAlvo} nesta região (${nNeg} de ${n} à frente).</div>`;
 }
 
 function caGerarPlano_(prods) {
@@ -12969,7 +13039,24 @@ function caGerarPlano_(prods) {
   }
 
   // === EM OBRAS — urgência de prazo ===
-  const obrasAtivos = emObras.filter(p => p.prioridade==='URGENTE' || p.prioridade==='ATIVO');
+  // Ordenação por urgência real (pedido explícito do usuário): dentro de
+  // cada tier (URGENTE antes de ATIVO), quem tem MENOR relação
+  // estoque÷prazo vem primeiro -- pouco estoque pra vender num prazo
+  // curto é mais urgente que muito estoque num prazo folgado, mesmo que
+  // o estoque absoluto seja maior. Sem previsão de entrega (meses=null)
+  // fica por último dentro do tier; atrasado/entrega este mês (meses<=0)
+  // é o mais urgente possível, sempre à frente.
+  function caUrgenciaRatio_(p) {
+    if (p.meses === null) return Infinity;
+    if (p.meses <= 0) return -Infinity;
+    return p.estoque / p.meses;
+  }
+  const obrasAtivos = emObras
+    .filter(p => p.prioridade==='URGENTE' || p.prioridade==='ATIVO')
+    .sort((a,b) => {
+      if (a.prioridade !== b.prioridade) return a.prioridade==='URGENTE' ? -1 : 1;
+      return caUrgenciaRatio_(a) - caUrgenciaRatio_(b);
+    });
   if (obrasAtivos.length) {
     grupos.push({ tipo:'secao-obras', nome:null, acoes:[], secaoHeader:true, titulo:'🔨 EM OBRAS — urgência de prazo' });
     obrasAtivos.forEach(p => {
@@ -13391,14 +13478,17 @@ function renderRankingUI_() {
       const vendidas     = prods.reduce((s,p) => s+(p.total-p.estoque), 0);
       const pctMedio     = totalAll > 0 ? Math.round(vendidas/totalAll*100) : 0;
       const padrao       = caPadraoPredom_(prods);
-      const bairros      = [...new Set(prods.map(p=>p.e.bairro).filter(Boolean))];
+      const bairros      = caDedupeBairros_(prods);
 
       return {
         nome, score:sd.score, classificacao:sd.classificacao, cor:sd.cor,
-        somaPos:sd.somaPos, somaNeg:sd.somaNeg,
+        somaPos:sd.somaPos, somaNeg:sd.somaNeg, top3Pos:sd.top3Pos, top3Neg:sd.top3Neg,
         nProd:prods.length, estoqueTotal, pctMedio, padrao, bairros,
       };
     }).filter(Boolean).sort((a,b) => b.score - a.score);
+    // Cache pro tooltip de pontos (caMostrarTooltipPontos_) achar top3Pos/
+    // top3Neg por índice de linha, sem precisar reescapar tudo no onclick.
+    _caRankLinhasCache = linhas;
 
     const medais = ['🥇','🥈','🥉'];
     const hoje   = new Date().toLocaleDateString('pt-BR');
@@ -13409,6 +13499,10 @@ function renderRankingUI_() {
       const brd = hex + '50';
       const bairroStr = l.bairros.slice(0,2).join(', ') + (l.bairros.length>2 ? ` +${l.bairros.length-2}` : '');
       const nomeEscQ  = l.nome.replace(/"/g,'&quot;');
+      // Pedido explícito do usuário: tooltip com top 3 pontos positivos/
+      // negativos -- hover (title nativo) no desktop, toque rápido
+      // (onclick, mostrarToast) no mobile. Mesmo texto nos dois.
+      const ptsTitle  = escapeHtmlPainel_(caTop3Texto_(l.top3Pos, l.top3Neg)).replace(/"/g,'&quot;');
       return `<tr>
         <td class="rank-check-cell"><input type="checkbox" class="rank-check-cb" data-nome="${nomeEscQ}" onchange="caRankCheck_(this)"></td>
         <td class="rank-pos">${medais[i] || i+1}</td>
@@ -13423,7 +13517,7 @@ function renderRankingUI_() {
         <td><span class="rank-badge" style="background:${bg};color:${hex};border:1px solid ${brd}">${l.classificacao}</span></td>
         <td style="font-variant-numeric:tabular-nums">${l.estoqueTotal}</td>
         <td style="font-variant-numeric:tabular-nums">${l.pctMedio}%</td>
-        <td style="font-size:11px;color:var(--text3);white-space:nowrap">+${l.somaPos} / ${l.somaNeg}</td>
+        <td style="font-size:11px;color:var(--text3);white-space:nowrap;cursor:help" title="${ptsTitle}" onclick="caMostrarTooltipPontos_(_caRankLinhasCache[${i}].top3Pos,_caRankLinhasCache[${i}].top3Neg)">+${l.somaPos} / ${l.somaNeg}</td>
         <td><button class="rank-ver-btn" data-nome="${nomeEscQ}" onclick="caVerAnaliseRanking_(this)">Ver análise →</button></td>
       </tr>`;
     }).join('');
@@ -13549,9 +13643,12 @@ function caCalcularScore_(prods, swot, nConcs) {
   const norm    = Math.min(10, Math.max(0, (bruto + 38) / 92 * 10));
   const score   = Math.round(norm * 10) / 10;
 
+  // Faixa de ALTA corrigida: 7.5 -> 7.0 (achado real: score 7.1 caía em
+  // MODERADA quando deveria ser ALTA -- feedback explícito do usuário
+  // sobre a análise da Brasal). EXCEPCIONAL/LIMITADA/BAIXA inalteradas.
   const [classificacao, cor] =
     score >= 9.0 ? ['OPORTUNIDADE EXCEPCIONAL','excepcional'] :
-    score >= 7.5 ? ['ALTA OPORTUNIDADE',        'alta']        :
+    score >= 7.0 ? ['ALTA OPORTUNIDADE',        'alta']        :
     score >= 6.0 ? ['OPORTUNIDADE MODERADA',    'moderada']    :
     score >= 4.0 ? ['OPORTUNIDADE LIMITADA',    'limitada']    :
                    ['BAIXA OPORTUNIDADE',       'baixa'];
@@ -13560,6 +13657,23 @@ function caCalcularScore_(prods, swot, nConcs) {
   const top3Neg = [...neg].sort((a,b) => a.pontos - b.pontos).slice(0,3);
 
   return { score, classificacao, cor, pontosPositivos:pos, pontosNegativos:neg, somaPos, somaNeg, top3Pos, top3Neg };
+}
+
+// Texto curto (top 3 positivos + top 3 negativos) pra tooltip do resumo de
+// pontos -- pedido explícito do usuário: ver de relance quais itens geraram
+// a nota, sem precisar abrir a JUSTIFICATIVA completa. Usado tanto no
+// hover (title nativo, desktop) quanto no toque rápido (mostrarToast,
+// mobile) -- ver caMostrarTooltipPontos_.
+function caTop3Texto_(top3Pos, top3Neg) {
+  const pos = (top3Pos||[]).map(i => `${i.cod} ${i.label} (+${i.pontos})`).join(' · ') || '—';
+  const neg = (top3Neg||[]).map(i => `${i.cod} ${i.label} (${i.pontos})`).join(' · ') || '—';
+  return `Top positivos: ${pos}\nTop negativos: ${neg}`;
+}
+
+// Toque rápido no mobile (onclick) -- no desktop o hover já mostra o
+// mesmo texto via atributo title nativo, sem precisar de JS.
+function caMostrarTooltipPontos_(top3Pos, top3Neg) {
+  mostrarToast(caTop3Texto_(top3Pos, top3Neg).replace(/\n/g, '  |  '), 'ok');
 }
 
 // Gera o texto corrido de justificativa (5 blocos)
@@ -13703,7 +13817,7 @@ function caRenderRelatorio_(relat) {
   const totalAll      = prods.reduce((s,p)=>s+p.total,0);
   const pctMedioPond  = totalAll>0?Math.round(vendidasTotal/totalAll*100):0;
   const padraoPredom  = caPadraoPredom_(prods);
-  const bairros       = [...new Set(prods.map(p=>p.e.bairro).filter(Boolean))];
+  const bairros       = caDedupeBairros_(prods);
   const allPrecos     = prods.filter(p=>p.menorPreco>0).map(p=>p.menorPreco);
   const allMaiorPrecos= prods.filter(p=>p.maiorPreco>0).map(p=>p.maiorPreco);
   const ticketMin     = allPrecos.length?Math.min(...allPrecos):0;
@@ -13808,6 +13922,7 @@ function caRenderRelatorio_(relat) {
   const concHtml = concs.length ? `
     <div class="ca-conc-wrap">
       <div class="ca-conc-title">🏆 Concorrência regional (${concs.length})</div>
+      ${caGapMedioTexto_(concs, nome)}
       <div class="mapa-wrap" style="overflow-x:auto"><table class="ca-conc-table">
         <thead><tr><th>Produto</th><th>Construtora</th><th>Bairro</th><th>% vendido</th><th>Estoque</th><th>Menor preço</th><th>Posicionamento</th></tr></thead>
         <tbody>${concs.map(c=>`<tr>
@@ -13854,7 +13969,7 @@ function caRenderRelatorio_(relat) {
             <span class="ca-score-badge">${sd.classificacao}</span>
             <button class="ca-score-btn-just" onclick="caAbrirJustificativa_()">💬 JUSTIFICATIVA</button>
           </div>
-          <div class="ca-score-hint">+${sd.somaPos} pts (forças/oportunidades) &nbsp;·&nbsp; ${sd.somaNeg} pts (fraquezas/ameaças)</div>
+          <div class="ca-score-hint" style="cursor:help" title="${escapeHtmlPainel_(caTop3Texto_(sd.top3Pos, sd.top3Neg)).replace(/"/g,'&quot;')}" onclick="caMostrarTooltipPontos_(_caScoreAtual.scoreData.top3Pos,_caScoreAtual.scoreData.top3Neg)">+${sd.somaPos} pts (forças/oportunidades) &nbsp;·&nbsp; ${sd.somaNeg} pts (fraquezas/ameaças)</div>
         </div>
       </div>
     </div>
