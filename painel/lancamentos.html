@@ -12884,7 +12884,13 @@ function caCalcularSWOT_(prods, novoLanc) {
   if (pctMedio >= 75) F.push({label:'Portfólio validado pelo mercado',detalhe:`${Math.round(pctMedio)}% vendido em média`});
   if (prods.filter(p=>p.pct>=80).length/n > 0.6) F.push({label:'Alta absorção de demanda',detalhe:`${prods.filter(p=>p.pct>=80).length} de ${n} produtos acima de 80%`});
   if (['alto','luxo'].includes(padraoP)) F.push({label:'Produto de alto padrão consolidado',detalhe:`Padrão predominante: ${padraoP}`});
-  const nobres = prods.filter(p=>CA_BAIRROS_NOBRES_.includes(caNorm_(p.e.bairro))).map(p=>p.e.bairro);
+  // Pedido explícito do usuário: F4 mostrava bairro repetido (ex.: "Setor
+  // Bueno, Setor Marista, Setor Marista") -- a lista era montada por
+  // PRODUTO, não por bairro único, então 2 produtos no mesmo bairro nobre
+  // ocupavam 2 posições antes do slice(0,3) alcançar o 3º bairro
+  // diferente. Corrigido com o mesmo dedupe do cabeçalho (caDedupeBairros_).
+  const nobresProds = prods.filter(p=>CA_BAIRROS_NOBRES_.includes(caNorm_(p.e.bairro)));
+  const nobres = caDedupeBairros_(nobresProds);
   if (nobres.length) F.push({label:'Presença em bairros nobres',detalhe:nobres.slice(0,3).join(', ')});
   if (estoqueTotal >= 50) F.push({label:'Estoque relevante para trabalho contínuo',detalhe:`${estoqueTotal} unidades disponíveis`});
   if (prods.some(p=>caPronte_(p.e.status||''))) F.push({label:'Produto pronto disponível',detalhe:`${prods.filter(p=>caPronte_(p.e.status||'')).length} produto(s) pronto(s)`});
