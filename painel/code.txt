@@ -5210,6 +5210,26 @@ function salvarLeadLpExterna_(d) {
     });
     aba.appendRow(linha);
 
+    // Notifica por e-mail a cada cadastro novo (pedido do usuário, 2026-08-27:
+    // "enviar os cadastro para email chaverleo@gmail.com"). Em try/catch
+    // separado do try principal: se o envio de e-mail falhar (cota do
+    // MailApp, por exemplo), o lead já está salvo na planilha e a resposta
+    // pro visitante do site continua sendo sucesso — não faz sentido a
+    // pessoa ver erro no formulário por causa de um e-mail que não é dela.
+    try {
+      MailApp.sendEmail({
+        to:      ADM_EMAIL,
+        subject: 'Novo cadastro — ' + (d.imovel || 'Landing page') + ' (' + id + ')',
+        body:    'Nome: ' + nome +
+                 '\nTelefone: ' + tel +
+                 '\nInteresse: ' + (d.interesse || '-') +
+                 '\nImóvel: ' + (d.imovel || '-') +
+                 '\nCanal: ' + (d.canal || '-') +
+                 '\nData: ' + agora +
+                 '\nID: ' + id
+      });
+    } catch (mailErr) {}
+
     return { ok: true, idLead: id };
   } finally {
     lock.releaseLock();
