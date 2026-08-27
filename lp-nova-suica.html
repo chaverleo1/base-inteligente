@@ -286,6 +286,23 @@
   .submit-btn:active{transform:translateY(0); box-shadow:none;}
   .form-note{font-size:12px; color:var(--ink-soft); margin-top:14px; text-align:center;}
 
+  /* ---------- FORM: ERRO / SUCESSO ---------- */
+  .form-erro{
+    display:none;
+    background:#FDECEA; border:1px solid #F1B6B0; color:#B3261E;
+    padding:12px 14px; border-radius:2px; font-size:13.5px; margin-top:14px;
+  }
+  .form-sucesso{
+    display:none; text-align:center; padding:14px 6px 6px;
+  }
+  .form-sucesso .check-ico{
+    width:54px; height:54px; border-radius:50%; background:var(--brass);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 18px;
+    color:var(--white); font-size:26px; font-family:'Manrope',sans-serif;
+  }
+  .form-sucesso h3{font-size:21px; margin-bottom:10px;}
+  .form-sucesso p{color:var(--ink-soft); font-size:14.5px;}
+
   /* ---------- FOOTER ---------- */
   footer{padding:40px 0; background:#414041; }
   footer .wrap{
@@ -502,9 +519,15 @@
           <label class="radio-opt"><input type="radio" name="interesse" value="Quero entender melhor"> Ainda não sei / quero entender melhor</label>
         </div>
       </div>
-      <button type="submit" class="submit-btn">Quero agendar minha visita</button>
+      <button type="submit" class="submit-btn" id="submitBtn">Quero agendar minha visita</button>
+      <p class="form-erro" id="formErro"></p>
       <p class="form-note">Seus dados são usados apenas para contato sobre este imóvel.</p>
     </form>
+    <div class="form-sucesso" id="formSucesso">
+      <div class="check-ico">✓</div>
+      <h3>Cadastro recebido!</h3>
+      <p>Nosso time já recebeu seus dados e entra em contato em breve para agendar sua visita e apresentar as condições da negociação.</p>
+    </div>
   </div>
 </section>
 
@@ -542,18 +565,45 @@
     }, 2500);
   })();
 
-  const WHATSAPP_NUMBER = "5562999999999"; // substituir pelo número real
+  // Mesmo backend (Apps Script) do Base Inteligente — grava em LEADS_LP_EXTERNAS,
+  // aba própria pra leads de landing pages avulsas (nunca em CONTATOS/LEADS_LANCAMENTOS).
+  const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxxlKelRh51vwcPq86z8pIWRF4YSwAE6K8b7Gh7Isu1ia8J4xiRAW_8EAOMI6sEmJd5/exec";
 
-  document.getElementById('leadForm').addEventListener('submit', function(e){
+  document.getElementById('leadForm').addEventListener('submit', async function(e){
     e.preventDefault();
-    const nome = document.getElementById('nome').value.trim();
-    const whats = document.getElementById('whatsapp').value.trim();
+    const btn    = document.getElementById('submitBtn');
+    const erroEl = document.getElementById('formErro');
+    const nome   = document.getElementById('nome').value.trim();
+    const whats  = document.getElementById('whatsapp').value.trim();
     const interesseEl = document.querySelector('input[name="interesse"]:checked');
-    const interesse = interesseEl ? interesseEl.value : '';
+    const interesse   = interesseEl ? interesseEl.value : '';
 
-    const msg = `Olá! Quero agendar uma visita à área comercial da Av. C-255, Setor Nova Suíça (R$ 2.450.000).%0A%0ANome: ${encodeURIComponent(nome)}%0AWhatsApp: ${encodeURIComponent(whats)}%0AInteresse: ${encodeURIComponent(interesse)}`;
+    erroEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
 
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+    const payload = {
+      acao: 'lead_lp_externa',
+      nome: nome,
+      telefone: whats,
+      interesse: interesse,
+      imovel: 'Área Comercial · Av. C-255, Setor Nova Suíça · Cód. 3420',
+      canal: 'LP Nova Suíça',
+    };
+
+    try {
+      const resp = await fetch(WEBHOOK_URL + '?dados=' + encodeURIComponent(JSON.stringify(payload)));
+      const data = await resp.json().catch(function(){ return { ok: true }; });
+      if (data && data.ok === false) throw new Error(data.erro || 'falha ao salvar');
+
+      document.getElementById('leadForm').style.display = 'none';
+      document.getElementById('formSucesso').style.display = 'block';
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Quero agendar minha visita';
+      erroEl.textContent = 'Não conseguimos enviar agora — verifique sua internet e tente novamente.';
+      erroEl.style.display = 'block';
+    }
   });
 </script>
 

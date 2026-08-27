@@ -215,6 +215,7 @@ function doGet(e) {
     var dadosGet = {};
     try { dadosGet = JSON.parse(e.parameter.dados); } catch(errGet) {}
     if (dadosGet.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(dadosGet));
+    if (dadosGet.acao === 'lead_lp_externa')      return ok(salvarLeadLpExterna_(dadosGet));
     if (dadosGet.acao === 'interesse_lancamento') {
       if (!chaveAppValida_(dadosGet.chave)) return ok({ status: 'nao_autorizado' });
       return ok(salvarInteresse_(dadosGet));
@@ -869,6 +870,7 @@ function doPost(e) {
   // além do GET com ?dados=, caso o front mande assim no futuro.
   if (d.acao === 'lead_lancamento')      return ok(salvarLeadLancamento_(d));
   if (d.acao === 'interesse_lancamento') return ok(salvarInteresse_(d));
+  if (d.acao === 'lead_lp_externa')      return ok(salvarLeadLpExterna_(d));
   // Beacon de abandono (navigator.sendBeacon, disparado no beforeunload) --
   // chega aqui via POST, corpo é o JSON puro (parseBody já trata isso).
   if (d.acao === 'registrar_evento_funil') return ok(registrarEventoFunil_(d));
@@ -5157,6 +5159,61 @@ function desativarAcaoPlanejada_(d) {
   var iStatus = CABECALHO_ACOES_PLANEJADAS.indexOf('status');
   aba.getRange(lin, iStatus + 1).setValue('Inativa');
   return { status: 'ok' };
+}
+
+// ── LEADS_LP_EXTERNAS — leads de landing pages avulsas (imóveis fora do ────
+// catálogo de lançamentos, ex: venda de ativo comercial pra cliente externo
+// como a Lídder Imobiliária). Propositalmente genérica/desacoplada do schema
+// de LEADS_LANCAMENTOS (que é específico do funil de apartamento — quartos,
+// precoLimite etc. não fazem sentido aqui) e nunca grava em CONTATOS, mesma
+// lógica do módulo BASEIMOB acima: público externo, sem sessão.
+var CABECALHO_LEADS_LP_EXTERNAS = [
+  'idLead', 'dataCadastro', 'nome', 'telefone',
+  'interesse', 'imovel', 'canal', 'obs'
+];
+
+function obterAbaLeadsLpExternas_() {
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var aba = ss.getSheetByName('LEADS_LP_EXTERNAS');
+  if (!aba) {
+    aba = ss.insertSheet('LEADS_LP_EXTERNAS');
+    aba.setTabColor('#F0602E');
+    aba.appendRow(CABECALHO_LEADS_LP_EXTERNAS);
+    aba.setFrozenRows(1);
+    aba.getRange(1, 1, 1, CABECALHO_LEADS_LP_EXTERNAS.length)
+       .setFontWeight('bold').setBackground('#F0602E').setFontColor('#ffffff');
+  }
+  return aba;
+}
+
+// Grava um lead vindo de uma landing page avulsa (fora do funil de
+// lançamentos). Sem upsert por e-mail (essas LPs pedem só nome+telefone) —
+// cada envio vira uma linha nova; duplicata eventual (o visitante reenviando
+// o form) fica visível pro corretor filtrar, não é tratada como erro aqui.
+function salvarLeadLpExterna_(d) {
+  d = d || {};
+  var nome = String(d.nome || '').trim();
+  var tel  = String(d.telefone || '').trim();
+  if (!nome || !tel) return { ok: false, erro: 'nome e telefone sao obrigatorios' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var aba   = obterAbaLeadsLpExternas_();
+    var agora = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy HH:mm');
+    var id    = 'LPX-' + Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'yyMMddHHmmss');
+
+    var linha = CABECALHO_LEADS_LP_EXTERNAS.map(function(col) {
+      if (col === 'idLead')       return id;
+      if (col === 'dataCadastro') return agora;
+      return d[col] !== undefined ? d[col] : '';
+    });
+    aba.appendRow(linha);
+
+    return { ok: true, idLead: id };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function obterAbaLeadsLancamentos_() {
