@@ -13553,7 +13553,15 @@ function renderRankingUI_() {
         <div style="overflow-x:auto">
           <table class="rank-table">
             <thead><tr>
-              <th class="rank-check-cell" title="Selecionar para mix"><input type="checkbox" id="rankCheckAll" onchange="caRankTodas_(this)" title="Selecionar todas"><br><span style="font-size:9px;font-weight:600;color:var(--text3);letter-spacing:.02em">MIX</span></th>
+              <!-- Pedido explícito do usuário: "coluna MIX vazia" --
+                   NÃO é uma coluna de dado vazia/quebrada, é o checkbox
+                   de SELEÇÃO pra gerar o Mix Comparativo (feature já
+                   existente e funcionando, ver caGerarMixConstrutoras_).
+                   Removê-la quebraria essa feature inteira -- em vez
+                   disso, rótulo trocado de "MIX" (ambíguo, parecia uma
+                   coluna de dado) pra "Comparar" (deixa claro que é uma
+                   AÇÃO de seleção, não um valor por linha). -->
+              <th class="rank-check-cell" title="Marque as construtoras que quer comparar lado a lado"><input type="checkbox" id="rankCheckAll" onchange="caRankTodas_(this)" title="Selecionar todas"><br><span style="font-size:9px;font-weight:600;color:var(--text3);letter-spacing:.02em">Comparar</span></th>
               <th>#</th><th>Construtora</th><th>Score</th><th>Classificação</th>
               <th>Estoque</th><th>% vendido</th><th>Pts F·O / Fr·A</th><th></th>
             </tr></thead>
@@ -13660,13 +13668,17 @@ function caRenderCorpoRanking_(linhas, ordenarPor) {
     // negativos -- hover (title nativo) no desktop, toque rápido
     // (onclick, mostrarToast) no mobile. Mesmo texto nos dois.
     const ptsTitle  = escapeHtmlPainel_(caTop3Texto_(l.top3Pos, l.top3Neg)).replace(/"/g,'&quot;');
-    // Badge de tamanho de portfólio + nota do multiplicador de escala
-    // (pedido explícito do usuário) -- só aparece quando o multiplicador
-    // realmente alterou o score (≠1).
+    // Badge de tamanho de portfólio + nota do multiplicador de escala.
+    // Pedido explícito do usuário (2ª rodada): mostrar SEMPRE (mesmo
+    // ×1.00, faixa neutra) -- antes só aparecia quando ≠1, e isso gerava
+    // dúvida "foi calculado ou omitido?" pra construtoras na faixa
+    // neutra (31-99 unid.). E o total usado no cálculo agora fica visível
+    // na própria sub-linha (não só no hover) -- a métrica é unidades
+    // TOTAIS JÁ CONSTRUÍDAS (vendidas+estoque) somadas em todo o
+    // portfólio, DIFERENTE do Estoque (coluna própria, só o remanescente).
     const badgePort  = caBadgePortfolio_(l.nProd);
-    const notaEscala = l.escalaMult && l.escalaMult !== 1
-      ? `<span style="color:${l.escalaMult<1?'var(--danger)':'#16a34a'};font-weight:700;font-size:11px" title="Multiplicador de escala por volume total: ×${l.escalaMult} (${l.totalUnidades} unidade${l.totalUnidades!==1?'s':''} no portfólio)"> ×${l.escalaMult}</span>`
-      : '';
+    const corEscala  = l.escalaMult < 1 ? 'var(--danger)' : (l.escalaMult > 1 ? '#16a34a' : 'var(--text3)');
+    const notaEscala = `<span style="color:${corEscala};font-weight:700;font-size:11px" title="Multiplicador de escala por volume total já construído: ×${l.escalaMult} (${l.totalUnidades} unidade${l.totalUnidades!==1?'s':''} no portfólio -- soma de todos os produtos, não é o Estoque)"> ×${l.escalaMult}</span>`;
 
     let separadorHtml = '';
     if (!separadorInserido && !ALTA_OU_MAIS.has(l.cor)) {
@@ -13679,7 +13691,7 @@ function caRenderCorpoRanking_(linhas, ordenarPor) {
         <td class="rank-pos">${medais[i] || i+1}</td>
         <td>
           <div class="rank-nome">${badgePort} ${l.nome}</div>
-          <div class="rank-nome-sub">${l.nProd} produto${l.nProd!==1?'s':''} · padrão ${l.padrao}${bairroStr?' · '+bairroStr:''}</div>
+          <div class="rank-nome-sub">${l.nProd} produto${l.nProd!==1?'s':''} · padrão ${l.padrao} · ${l.totalUnidades} unid. construídas${bairroStr?' · '+bairroStr:''}</div>
         </td>
         <td>
           <span class="rank-score-num" style="color:${hex}">${l.score}</span>${notaEscala}
@@ -14150,7 +14162,13 @@ function caRenderRelatorio_(relat) {
             <button class="ca-score-btn-just" onclick="caAbrirJustificativa_()">💬 JUSTIFICATIVA</button>
           </div>
           <div class="ca-score-hint" style="cursor:help" title="${escapeHtmlPainel_(caTop3Texto_(sd.top3Pos, sd.top3Neg)).replace(/"/g,'&quot;')}" onclick="caMostrarTooltipPontos_(_caScoreAtual.scoreData.top3Pos,_caScoreAtual.scoreData.top3Neg)">+${sd.somaPos} pts (forças/oportunidades) &nbsp;·&nbsp; ${sd.somaNeg} pts (fraquezas/ameaças)</div>
-          ${sd.escalaMult && sd.escalaMult !== 1 ? `<div class="ca-score-hint" style="color:${sd.escalaMult<1?'var(--danger)':'#16a34a'};font-weight:700">${sd.escalaMult<1?'⚠':'📈'} Score ajustado por volume de portfólio: ×${sd.escalaMult} (${sd.totalUnidades} unidade${sd.totalUnidades!==1?'s':''} no total)</div>` : ''}
+          <!-- Pedido explícito do usuário (2ª rodada): mostrar SEMPRE
+               (mesmo ×1.00), não só quando o multiplicador altera o
+               score -- evita dúvida se foi calculado ou omitido. Total
+               = unidades JÁ CONSTRUÍDAS (vendidas+estoque) somadas em
+               todo o portfólio -- diferente do Estoque (só o
+               remanescente), que é outro número já mostrado alhures. -->
+          <div class="ca-score-hint" style="color:${sd.escalaMult<1?'var(--danger)':(sd.escalaMult>1?'#16a34a':'var(--text3)')};font-weight:700">${sd.escalaMult<1?'⚠':(sd.escalaMult>1?'📈':'•')} Multiplicador de escala: ×${sd.escalaMult} (${sd.totalUnidades} unidade${sd.totalUnidades!==1?'s':''} já construídas no portfólio, soma de todos os produtos)</div>
         </div>
       </div>
     </div>
