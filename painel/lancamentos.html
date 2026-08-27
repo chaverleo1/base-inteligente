@@ -1034,6 +1034,19 @@ select.form-input option { background: var(--surface2); }
 .rank-ver-btn { font-size:11px; padding:3px 9px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; transition:background .12s; }
 .rank-ver-btn:hover { background:var(--surface2); }
 .rank-loading, .rank-vazio { padding:36px; text-align:center; color:var(--text3); font-size:13px; }
+/* Filtros/ordenação do ranking + contagem + separador de faixa -- pedido
+   explícito do usuário. */
+.rank-filtros { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.rank-filtros select {
+  font-size:12px; font-weight:600; padding:6px 10px; border-radius:8px;
+  border:1px solid var(--border2); background:var(--surface); color:var(--text2); cursor:pointer;
+}
+.rank-contagem { font-size:11px; color:var(--text3); font-weight:600; margin-bottom:8px; }
+.rank-separador td {
+  padding:8px 10px !important; text-align:center; font-size:11px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.05em; color:var(--text3);
+  background:var(--surface2); border-bottom:2px solid var(--border) !important;
+}
 /* ── Mix de Construtoras ────────────────────────────────────────────────── */
 .rank-check-cell { text-align:center; width:44px; }
 .rank-check-cb { width:16px; height:16px; cursor:pointer; accent-color:#6366f1; }
@@ -12716,7 +12729,8 @@ let _caConstrutora   = '';    // construtora selecionada
 let _caNovoLanc      = false; // checkbox O8 — novo lançamento confirmado
 let _caRelatCurrent  = null;  // último relatório gerado
 let _caScoreAtual    = null;  // { scoreData, texto, nome } — para modal de justificativa
-let _caRankLinhasCache = [];  // última tabela do RANKING renderizada -- usado pelo tooltip de pontos (caMostrarTooltipPontos_) pra achar top3Pos/top3Neg por índice de linha sem reescapar tudo no onclick
+let _caRankLinhasCache = [];  // linhas CURRENTEMENTE renderizadas na tabela (após filtro/ordenação) -- usado pelo tooltip de pontos (caMostrarTooltipPontos_) pra achar top3Pos/top3Neg por índice de linha sem reescapar tudo no onclick
+let _caRankLinhasTodas = [];  // dataset COMPLETO (todas as construtoras, sem filtro) -- fonte pra caAplicarFiltrosRanking_ reaplicar filtro/ordenação sem recalcular score de novo
 
 // Bairros nobres que ativam regras SWOT
 const CA_BAIRROS_NOBRES_ = [
@@ -13419,6 +13433,9 @@ function _mixCardHtml_(p) {
 }
 
 // ─── RANKING DE OPORTUNIDADE ────────────────────────────────────────────────
+const CA_COR_HEX_ = { excepcional:'#15803d', alta:'#16a34a', moderada:'#d97706', limitada:'#ea580c', baixa:'#dc2626' };
+const CA_COR_BG_  = { excepcional:'rgba(21,128,61,.13)', alta:'rgba(22,163,74,.13)', moderada:'rgba(217,119,6,.13)', limitada:'rgba(234,88,12,.13)', baixa:'rgba(220,38,38,.13)' };
+
 // Calcula o score de TODAS as construtoras da base e exibe tabela ordenada.
 function renderRankingUI_() {
   const cont = document.getElementById('blocoRanking');
@@ -13439,9 +13456,6 @@ function renderRankingUI_() {
 
   // setTimeout para não bloquear o paint do estado "calculando..."
   setTimeout(() => {
-    const _corHex = { excepcional:'#15803d', alta:'#16a34a', moderada:'#d97706', limitada:'#ea580c', baixa:'#dc2626' };
-    const _corBg  = { excepcional:'rgba(21,128,61,.13)', alta:'rgba(22,163,74,.13)', moderada:'rgba(217,119,6,.13)', limitada:'rgba(234,88,12,.13)', baixa:'rgba(220,38,38,.13)' };
-
     const linhas = construtoras.map(nome => {
       const itens = _itensScoredCache.filter(it =>
         (it.e.construtora||'').toLowerCase().trim() === nome.toLowerCase().trim()
@@ -13490,48 +13504,52 @@ function renderRankingUI_() {
         nome, score:sd.score, classificacao:sd.classificacao, cor:sd.cor,
         somaPos:sd.somaPos, somaNeg:sd.somaNeg, top3Pos:sd.top3Pos, top3Neg:sd.top3Neg,
         nProd:prods.length, estoqueTotal, pctMedio, padrao, bairros,
+        totalUnidades:sd.totalUnidades, escalaMult:sd.escalaMult,
       };
     }).filter(Boolean).sort((a,b) => b.score - a.score);
-    // Cache pro tooltip de pontos (caMostrarTooltipPontos_) achar top3Pos/
-    // top3Neg por índice de linha, sem precisar reescapar tudo no onclick.
-    _caRankLinhasCache = linhas;
+    // Dataset COMPLETO -- fonte de verdade pra filtros/ordenação (pedido
+    // explícito do usuário) reaplicarem sem recalcular score de novo.
+    _caRankLinhasTodas = linhas;
 
-    const medais = ['🥇','🥈','🥉'];
-    const hoje   = new Date().toLocaleDateString('pt-BR');
-
-    const corpoHtml = linhas.map((l,i) => {
-      const hex = _corHex[l.cor] || '#888';
-      const bg  = _corBg[l.cor]  || 'transparent';
-      const brd = hex + '50';
-      const bairroStr = l.bairros.slice(0,2).join(', ') + (l.bairros.length>2 ? ` +${l.bairros.length-2}` : '');
-      const nomeEscQ  = l.nome.replace(/"/g,'&quot;');
-      // Pedido explícito do usuário: tooltip com top 3 pontos positivos/
-      // negativos -- hover (title nativo) no desktop, toque rápido
-      // (onclick, mostrarToast) no mobile. Mesmo texto nos dois.
-      const ptsTitle  = escapeHtmlPainel_(caTop3Texto_(l.top3Pos, l.top3Neg)).replace(/"/g,'&quot;');
-      return `<tr>
-        <td class="rank-check-cell"><input type="checkbox" class="rank-check-cb" data-nome="${nomeEscQ}" onchange="caRankCheck_(this)"></td>
-        <td class="rank-pos">${medais[i] || i+1}</td>
-        <td>
-          <div class="rank-nome">${l.nome}</div>
-          <div class="rank-nome-sub">${l.nProd} produto${l.nProd!==1?'s':''} · padrão ${l.padrao}${bairroStr?' · '+bairroStr:''}</div>
-        </td>
-        <td>
-          <span class="rank-score-num" style="color:${hex}">${l.score}</span>
-          <span class="rank-mini-bar-wrap"><span class="rank-mini-bar-fill" style="width:${l.score*10}%;background:${hex}"></span></span>
-        </td>
-        <td><span class="rank-badge" style="background:${bg};color:${hex};border:1px solid ${brd}">${l.classificacao}</span></td>
-        <td style="font-variant-numeric:tabular-nums">${l.estoqueTotal}</td>
-        <td style="font-variant-numeric:tabular-nums">${l.pctMedio}%</td>
-        <td style="font-size:11px;color:var(--text3);white-space:nowrap;cursor:help" title="${ptsTitle}" onclick="caMostrarTooltipPontos_(_caRankLinhasCache[${i}].top3Pos,_caRankLinhasCache[${i}].top3Neg)">+${l.somaPos} / ${l.somaNeg}</td>
-        <td><button class="rank-ver-btn" data-nome="${nomeEscQ}" onclick="caVerAnaliseRanking_(this)">Ver análise →</button></td>
-      </tr>`;
-    }).join('');
+    const hoje = new Date().toLocaleDateString('pt-BR');
 
     cont.innerHTML = `
       <div class="rank-wrap">
-        <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">🏆 Ranking de Oportunidade — ${linhas.length} construtora${linhas.length!==1?'s':''}</div>
-        <div class="rank-subtitle">Score de 0–10 com critérios idênticos à análise individual (incluindo concorrência regional A3). Calculado em ${hoje}.<br><em>O checkbox "novo lançamento" (O8) não é considerado no ranking — apenas na análise individual.</em></div>
+        <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:6px">🏆 Ranking de Oportunidade</div>
+        <div class="rank-subtitle">Score de 0–10 com critérios idênticos à análise individual (incluindo concorrência regional A3 e multiplicador de escala por volume total de unidades). Calculado em ${hoje}.<br><em>O checkbox "novo lançamento" (O8) não é considerado no ranking — apenas na análise individual.</em></div>
+
+        <!-- Filtros e ordenação -- pedido explícito do usuário: com 40+
+             construtoras, o ranking precisa de filtro rápido pra virar
+             ferramenta de decisão, não só lista estática. -->
+        <div class="rank-filtros">
+          <select id="rankFiltroPadrao" onchange="caAplicarFiltrosRanking_()">
+            <option value="">Padrão: todos</option>
+            <option value="médio">Médio</option>
+            <option value="alto">Alto</option>
+            <option value="luxo">Luxo</option>
+          </select>
+          <select id="rankFiltroClasse" onchange="caAplicarFiltrosRanking_()">
+            <option value="">Classificação: todas</option>
+            <option value="excepcional">Excepcional</option>
+            <option value="alta">Alta</option>
+            <option value="moderada">Moderada</option>
+            <option value="limitada">Limitada</option>
+            <option value="baixa">Baixa</option>
+          </select>
+          <select id="rankFiltroEstoque" onchange="caAplicarFiltrosRanking_()">
+            <option value="0">Estoque: qualquer</option>
+            <option value="50">&gt; 50 unidades</option>
+            <option value="100">&gt; 100 unidades</option>
+            <option value="200">&gt; 200 unidades</option>
+          </select>
+          <select id="rankOrdenarPor" onchange="caAplicarFiltrosRanking_()">
+            <option value="score">Ordenar por: Score</option>
+            <option value="estoque">Ordenar por: Estoque</option>
+            <option value="pct">Ordenar por: % vendido</option>
+          </select>
+        </div>
+        <div id="rankContagem" class="rank-contagem"></div>
+
         <div style="overflow-x:auto">
           <table class="rank-table">
             <thead><tr>
@@ -13539,7 +13557,7 @@ function renderRankingUI_() {
               <th>#</th><th>Construtora</th><th>Score</th><th>Classificação</th>
               <th>Estoque</th><th>% vendido</th><th>Pts F·O / Fr·A</th><th></th>
             </tr></thead>
-            <tbody>${corpoHtml}</tbody>
+            <tbody id="rankCorpo"></tbody>
           </table>
         </div>
       </div>
@@ -13571,10 +13589,154 @@ function renderRankingUI_() {
         <!-- Conteúdo do grupo ativo -->
         <div id="mixConteudo" class="mix-conteudo"></div>
       </div>`;
+
+    // 1ª renderização do corpo (sem filtro nenhum aplicado ainda).
+    caAplicarFiltrosRanking_();
   }, 30);
 }
 
+// Filtros/ordenação do RANKING -- pedido explícito do usuário: com 40+
+// construtoras, o ranking precisa de filtro rápido pra virar ferramenta
+// de decisão, não só lista estática. Reaplica sobre o dataset COMPLETO já
+// calculado (_caRankLinhasTodas), sem recalcular score de novo a cada
+// mudança de filtro/ordenação.
+function caAplicarFiltrosRanking_() {
+  const padrao     = document.getElementById('rankFiltroPadrao')?.value || '';
+  const classe     = document.getElementById('rankFiltroClasse')?.value || '';
+  const estoqueMin = parseInt(document.getElementById('rankFiltroEstoque')?.value, 10) || 0;
+  const ordenarPor = document.getElementById('rankOrdenarPor')?.value || 'score';
+
+  let linhas = _caRankLinhasTodas.filter(l => {
+    if (padrao && l.padrao !== padrao) return false;
+    if (classe && l.cor !== classe) return false;
+    if (estoqueMin && l.estoqueTotal <= estoqueMin) return false;
+    return true;
+  });
+
+  const ordenadores = {
+    score:   (a,b) => b.score - a.score,
+    estoque: (a,b) => b.estoqueTotal - a.estoqueTotal,
+    pct:     (a,b) => b.pctMedio - a.pctMedio,
+  };
+  linhas = [...linhas].sort(ordenadores[ordenarPor] || ordenadores.score);
+
+  caRenderCorpoRanking_(linhas, ordenarPor);
+}
+
+// Reconstrói só o <tbody> + contagem do RANKING -- chamada tanto na 1ª
+// carga quanto a cada mudança de filtro/ordenação (caAplicarFiltrosRanking_).
+function caRenderCorpoRanking_(linhas, ordenarPor) {
+  // Linhas CURRENTEMENTE na tela -- o tooltip de pontos (onclick) usa esse
+  // array por índice, precisa ser exatamente o que está renderizado agora
+  // (não o dataset completo, senão o índice apontaria pra linha errada
+  // depois de filtrar/reordenar).
+  _caRankLinhasCache = linhas;
+
+  const medais    = ['🥇','🥈','🥉'];
+  const totalTodas = _caRankLinhasTodas.length;
+
+  const contagemEl = document.getElementById('rankContagem');
+  if (contagemEl) {
+    contagemEl.textContent = linhas.length === totalTodas
+      ? `${totalTodas} construtora${totalTodas!==1?'s':''}`
+      : `${linhas.length} de ${totalTodas} construtora${totalTodas!==1?'s':''} (filtro aplicado)`;
+  }
+
+  // Separador visual entre ALTA+ e o restante -- pedido explícito do
+  // usuário. Só faz sentido quando a ordem é por Score: nos outros
+  // critérios (Estoque/% vendido) as faixas de classificação ficam
+  // espalhadas pela lista, não contíguas, e o separador perderia o
+  // sentido de "daqui pra baixo é tudo moderado/limitado".
+  const ALTA_OU_MAIS = new Set(['excepcional','alta']);
+  let separadorInserido = ordenarPor !== 'score'; // != score -> nunca insere
+
+  const linhasHtml = linhas.map((l,i) => {
+    const hex = CA_COR_HEX_[l.cor] || '#888';
+    const bg  = CA_COR_BG_[l.cor]  || 'transparent';
+    const brd = hex + '50';
+    const bairroStr = l.bairros.slice(0,2).join(', ') + (l.bairros.length>2 ? ` +${l.bairros.length-2}` : '');
+    const nomeEscQ  = l.nome.replace(/"/g,'&quot;');
+    // Pedido explícito do usuário: tooltip com top 3 pontos positivos/
+    // negativos -- hover (title nativo) no desktop, toque rápido
+    // (onclick, mostrarToast) no mobile. Mesmo texto nos dois.
+    const ptsTitle  = escapeHtmlPainel_(caTop3Texto_(l.top3Pos, l.top3Neg)).replace(/"/g,'&quot;');
+    // Badge de tamanho de portfólio + nota do multiplicador de escala
+    // (pedido explícito do usuário) -- só aparece quando o multiplicador
+    // realmente alterou o score (≠1).
+    const badgePort  = caBadgePortfolio_(l.nProd);
+    const notaEscala = l.escalaMult && l.escalaMult !== 1
+      ? `<span style="color:${l.escalaMult<1?'var(--danger)':'#16a34a'};font-weight:700;font-size:11px" title="Multiplicador de escala por volume total: ×${l.escalaMult} (${l.totalUnidades} unidade${l.totalUnidades!==1?'s':''} no portfólio)"> ×${l.escalaMult}</span>`
+      : '';
+
+    let separadorHtml = '';
+    if (!separadorInserido && !ALTA_OU_MAIS.has(l.cor)) {
+      separadorInserido = true;
+      separadorHtml = `<tr class="rank-separador"><td colspan="8">Abaixo: Oportunidade Moderada ou Limitada</td></tr>`;
+    }
+
+    return separadorHtml + `<tr>
+        <td class="rank-check-cell"><input type="checkbox" class="rank-check-cb" data-nome="${nomeEscQ}" onchange="caRankCheck_(this)"></td>
+        <td class="rank-pos">${medais[i] || i+1}</td>
+        <td>
+          <div class="rank-nome">${badgePort} ${l.nome}</div>
+          <div class="rank-nome-sub">${l.nProd} produto${l.nProd!==1?'s':''} · padrão ${l.padrao}${bairroStr?' · '+bairroStr:''}</div>
+        </td>
+        <td>
+          <span class="rank-score-num" style="color:${hex}">${l.score}</span>${notaEscala}
+          <span class="rank-mini-bar-wrap"><span class="rank-mini-bar-fill" style="width:${l.score*10}%;background:${hex}"></span></span>
+        </td>
+        <td><span class="rank-badge" style="background:${bg};color:${hex};border:1px solid ${brd}">${l.classificacao}</span></td>
+        <td style="font-variant-numeric:tabular-nums">${l.estoqueTotal}</td>
+        <td style="font-variant-numeric:tabular-nums">${l.pctMedio}%</td>
+        <td style="font-size:11px;color:var(--text3);white-space:nowrap;cursor:help" title="${ptsTitle}" onclick="caMostrarTooltipPontos_(_caRankLinhasCache[${i}].top3Pos,_caRankLinhasCache[${i}].top3Neg)">+${l.somaPos} / ${l.somaNeg}</td>
+        <td><button class="rank-ver-btn" data-nome="${nomeEscQ}" onclick="caVerAnaliseRanking_(this)">Ver análise →</button></td>
+      </tr>`;
+  }).join('');
+
+  const corpo = document.getElementById('rankCorpo');
+  if (corpo) corpo.innerHTML = linhas.length
+    ? linhasHtml
+    : '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">Nenhuma construtora bate com o filtro selecionado.</td></tr>';
+}
+
+// Badge de tamanho de portfólio (nº de produtos, não de unidades -- é uma
+// métrica DIFERENTE do multiplicador de escala acima) -- pedido explícito
+// do usuário: das 44 construtoras do ranking, 18 têm só 1 produto (41%),
+// misturadas sem distinção visual com construtoras de portfólio grande.
+function caBadgePortfolio_(nProd) {
+  if (nProd <= 2) return '🏢';
+  if (nProd <= 6) return '🏢🏢';
+  return '🏢🏢🏢';
+}
+
+// Multiplicador de escala do Score de Oportunidade -- pedido explícito do
+// usuário. total = soma de TODAS as unidades do portfólio (vendidas +
+// estoque). Faixas mutuamente exclusivas (checadas da mais extrema pra
+// não precisar de else-if aninhado):
+//   <=10 unid.   -> ×0.85 (portfólio mínimo, risco alto de ficar sem produto)
+//   <=30 unid.   -> ×0.92
+//   31-99 unid.  -> ×1.00 (neutro)
+//   >=100 unid.  -> ×1.05 (bônus de escala)
+//   >=200 unid.  -> ×1.08
+function caMultiplicadorEscala_(totalUnidades) {
+  if (totalUnidades <= 10)  return 0.85;
+  if (totalUnidades <= 30)  return 0.92;
+  if (totalUnidades >= 200) return 1.08;
+  if (totalUnidades >= 100) return 1.05;
+  return 1.0;
+}
+
 // ─── SCORE DE OPORTUNIDADE ─────────────────────────────────────────────────
+// LIMITAÇÃO CONHECIDA (documentada a pedido do usuário, não é bug): o
+// score agrega TODOS os produtos da construtora numa nota só. Uma
+// construtora que atua em bairros/públicos muito diferentes entre si
+// (ex.: um produto no Setor Bueno e outro no Setor Aeroporto -- perfis de
+// comprador completamente distintos) pode ter produtos excelentes
+// misturados com produtos parados, e o score final fica na média, sem
+// distinguir isso. O ranking é um PONTO DE PARTIDA pra escolher quais
+// construtoras vale abrir a análise individual; a decisão real (qual
+// produto específico priorizar) sempre acontece na análise individual
+// (caGerarAnalise_/caRenderRelatorio_), não no número do ranking sozinho.
 // Recebe: prods (itensEnriq), swot (objeto já calculado), nConcs (n.° concorrentes)
 // Retorna: { score, classificacao, cor, pontosPositivos, pontosNegativos,
 //            somaPos, somaNeg, top3Pos, top3Neg }
@@ -13646,8 +13808,20 @@ function caCalcularScore_(prods, swot, nConcs) {
   const somaPos = pos.reduce((s,i) => s+i.pontos, 0);
   const somaNeg = neg.reduce((s,i) => s+i.pontos, 0);
   const bruto   = somaPos + somaNeg;
-  const norm    = Math.min(10, Math.max(0, (bruto + 38) / 92 * 10));
-  const score   = Math.round(norm * 10) / 10;
+  const normBase = Math.min(10, Math.max(0, (bruto + 38) / 92 * 10));
+
+  // Multiplicador de escala -- pedido explícito do usuário: o score bruto
+  // (baseado só em %vendido/estoque/etc RELATIVOS) não diferenciava um
+  // portfólio de 1 produto/3 unidades de um de 14 produtos/305 unidades --
+  // o risco de ficar sem produto pra oferecer é radicalmente diferente
+  // entre os dois, mesmo com métricas relativas parecidas. Aplicado
+  // ANTES da classificação (não só no número exibido), pra faixa também
+  // refletir a diferença de escala. total = soma de TODAS as unidades do
+  // portfólio (vendidas + estoque), não só o estoque restante.
+  const totalUnidades = prods.reduce((s,p) => s+(p.total||0), 0);
+  const escalaMult = caMultiplicadorEscala_(totalUnidades);
+  const norm  = Math.min(10, Math.max(0, normBase * escalaMult));
+  const score = Math.round(norm * 10) / 10;
 
   // Faixa de ALTA corrigida: 7.5 -> 7.0 (achado real: score 7.1 caía em
   // MODERADA quando deveria ser ALTA -- feedback explícito do usuário
@@ -13662,7 +13836,7 @@ function caCalcularScore_(prods, swot, nConcs) {
   const top3Pos = [...pos].sort((a,b) => b.pontos - a.pontos).slice(0,3);
   const top3Neg = [...neg].sort((a,b) => a.pontos - b.pontos).slice(0,3);
 
-  return { score, classificacao, cor, pontosPositivos:pos, pontosNegativos:neg, somaPos, somaNeg, top3Pos, top3Neg };
+  return { score, classificacao, cor, pontosPositivos:pos, pontosNegativos:neg, somaPos, somaNeg, top3Pos, top3Neg, totalUnidades, escalaMult };
 }
 
 // Texto curto (top 3 positivos + top 3 negativos) pra tooltip do resumo de
@@ -13976,6 +14150,7 @@ function caRenderRelatorio_(relat) {
             <button class="ca-score-btn-just" onclick="caAbrirJustificativa_()">💬 JUSTIFICATIVA</button>
           </div>
           <div class="ca-score-hint" style="cursor:help" title="${escapeHtmlPainel_(caTop3Texto_(sd.top3Pos, sd.top3Neg)).replace(/"/g,'&quot;')}" onclick="caMostrarTooltipPontos_(_caScoreAtual.scoreData.top3Pos,_caScoreAtual.scoreData.top3Neg)">+${sd.somaPos} pts (forças/oportunidades) &nbsp;·&nbsp; ${sd.somaNeg} pts (fraquezas/ameaças)</div>
+          ${sd.escalaMult && sd.escalaMult !== 1 ? `<div class="ca-score-hint" style="color:${sd.escalaMult<1?'var(--danger)':'#16a34a'};font-weight:700">${sd.escalaMult<1?'⚠':'📈'} Score ajustado por volume de portfólio: ×${sd.escalaMult} (${sd.totalUnidades} unidade${sd.totalUnidades!==1?'s':''} no total)</div>` : ''}
         </div>
       </div>
     </div>
