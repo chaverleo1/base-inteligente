@@ -370,6 +370,11 @@
     background:#FDECEA; border:1px solid #F1B6B0; color:#B3261E;
     padding:12px 14px; border-radius:2px; font-size:13.5px; margin-top:14px;
   }
+  .aviso-telefone{
+    display:none;
+    font-weight:700; color:#B3261E; font-size:13px; margin-top:8px;
+  }
+  .field input.campo-invalido{border-color:#B3261E; background:#FDECEA;}
   .form-sucesso{
     display:none; text-align:center; padding:14px 6px 6px;
   }
@@ -593,6 +598,11 @@
         <input type="tel" id="whatsapp" name="whatsapp" placeholder="(62) 9 0000-0000" required>
       </div>
       <div class="field">
+        <label for="whatsappConfirma">Confirmar WhatsApp</label>
+        <input type="tel" id="whatsappConfirma" name="whatsappConfirma" placeholder="(62) 9 0000-0000" required>
+        <p class="aviso-telefone" id="avisoTelefone">Os números de WhatsApp digitados não são iguais. Confira e digite novamente.</p>
+      </div>
+      <div class="field">
         <label>Qual seu interesse?</label>
         <div class="radio-group">
           <label class="radio-opt"><input type="radio" name="interesse" value="Investimento" required> Investimento (renda / valorização)</label>
@@ -734,6 +744,35 @@
   // aba própria pra leads de landing pages avulsas (nunca em CONTATOS/LEADS_LANCAMENTOS).
   const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxxlKelRh51vwcPq86z8pIWRF4YSwAE6K8b7Gh7Isu1ia8J4xiRAW_8EAOMI6sEmJd5/exec";
 
+  // Confirmação de WhatsApp: os dois campos precisam bater (só dígitos, pra
+  // não travar por causa de espaço/traço digitado diferente entre os dois).
+  // Aviso em negrito aparece assim que os dois campos tiverem conteúdo e
+  // não baterem — não espera o usuário tentar enviar pra avisar.
+  (function(){
+    var campoWhats    = document.getElementById('whatsapp');
+    var campoConfirma = document.getElementById('whatsappConfirma');
+    var aviso         = document.getElementById('avisoTelefone');
+
+    function soDigitos(v){ return String(v || '').replace(/\D/g, ''); }
+    function telefonesBatem(){
+      var a = soDigitos(campoWhats.value), b = soDigitos(campoConfirma.value);
+      return a !== '' && b !== '' && a === b;
+    }
+    function validar(){
+      var ambosPreenchidos = campoWhats.value.trim() && campoConfirma.value.trim();
+      var bate = telefonesBatem();
+      var mostrarAviso = ambosPreenchidos && !bate;
+      aviso.style.display = mostrarAviso ? 'block' : 'none';
+      campoWhats.classList.toggle('campo-invalido', mostrarAviso);
+      campoConfirma.classList.toggle('campo-invalido', mostrarAviso);
+      return bate;
+    }
+    campoWhats.addEventListener('input', validar);
+    campoConfirma.addEventListener('input', validar);
+    window.__telefonesConferem = telefonesBatem;
+    window.__validarTelefones  = validar;
+  })();
+
   document.getElementById('leadForm').addEventListener('submit', async function(e){
     e.preventDefault();
     const btn    = document.getElementById('submitBtn');
@@ -744,6 +783,12 @@
     const interesse   = interesseEl ? interesseEl.value : '';
 
     erroEl.style.display = 'none';
+
+    if (!window.__validarTelefones()) {
+      document.getElementById('whatsappConfirma').focus();
+      return; // não envia enquanto os dois WhatsApp não baterem
+    }
+
     btn.disabled = true;
     btn.textContent = 'Enviando...';
 
