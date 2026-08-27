@@ -6,7 +6,7 @@
 <title>Área Comercial · Setor Nova Suíça · Goiânia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg: #F4F3EF;
@@ -267,9 +267,29 @@
   }
   .lightbox-fechar:hover{background:rgba(255,255,255,0.2);}
   .lightbox-fechar:active{transform:scale(.94);}
+  .lightbox-nav{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:48px; height:48px; border-radius:50%;
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25);
+    color:var(--white); font-size:24px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:background .2s ease, transform .15s ease;
+  }
+  .lightbox-nav:hover{background:rgba(255,255,255,0.2);}
+  .lightbox-nav:active{transform:translateY(-50%) scale(.92);}
+  .lightbox-prev{left:18px;}
+  .lightbox-next{right:18px;}
+  .lightbox-contador{
+    position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.04em;
+    color:rgba(255,255,255,0.7);
+  }
   @media (max-width:600px){
     .lightbox{padding:16px;}
     .lightbox-fechar{top:14px; right:14px; width:38px; height:38px; font-size:19px;}
+    .lightbox-nav{width:40px; height:40px; font-size:19px;}
+    .lightbox-prev{left:6px;}
+    .lightbox-next{right:6px;}
   }
   .ph{
     background:
@@ -299,6 +319,10 @@
     width:7px; height:7px; border-radius:50%; background:var(--brass-light); flex-shrink:0;
     animation:pulseOportunidade 1.8s ease-in-out infinite;
   }
+  .oportunidade-banner strong{
+    color:var(--brass-light); font-weight:600; text-transform:uppercase;
+  }
+  .oportunidade-banner span.resto{color:rgba(255,255,255,0.75); font-weight:400;}
   @keyframes pulseOportunidade{0%,100%{opacity:1;} 50%{opacity:.3;}}
   @media (prefers-reduced-motion: reduce){
     .oportunidade-banner .dot{animation:none;}
@@ -309,19 +333,20 @@
   }
   .field{margin-bottom:20px;}
   .field label{
-    display:block; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    display:block; font-family:'IBM Plex Mono', monospace; font-size:11.5px; font-weight:600;
     text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); margin-bottom:8px;
   }
   .field input[type=text], .field input[type=tel]{
     width:100%; padding:13px 14px; border:1px solid var(--line); border-radius:2px;
-    background:var(--bg-soft); font-family:'Manrope',sans-serif; font-size:15px; color:var(--ink);
+    background:var(--bg-soft); font-family:'Manrope',sans-serif; font-size:15px; font-weight:600; color:var(--ink);
   }
+  .field input::placeholder{font-weight:500; color:var(--ink-soft);}
   .field input:focus{outline:2px solid var(--brass); outline-offset:1px;}
   .radio-group{display:flex; flex-direction:column; gap:10px;}
   .radio-opt{
     display:flex; align-items:center; gap:10px;
     border:1px solid var(--line); border-radius:2px; padding:12px 14px;
-    cursor:pointer; font-size:14.5px; transition:border-color .15s ease;
+    cursor:pointer; font-size:14.5px; font-weight:600; transition:border-color .15s ease;
   }
   .radio-opt:has(input:checked){border-color:var(--brass); background:#FFF3EC;}
   .radio-opt input{accent-color:var(--brass);}
@@ -553,7 +578,7 @@
 <section class="form-section reveal" id="form">
   <div class="wrap form-inner">
     <div class="form-copy">
-      <div class="oportunidade-banner"><span class="dot"></span> Oportunidade limitada — ativos assim raramente ficam disponíveis</div>
+      <div class="oportunidade-banner"><span class="dot"></span> <strong>Oportunidade limitada</strong><span class="resto"> — ativos assim raramente ficam disponíveis</span></div>
       <div class="eyebrow">Próximo passo</div>
       <h2>Agende sua visita e conheça a oportunidade de perto</h2>
       <p>Envie seus dados e nosso time entra em contato para agendar sua visita e apresentar as condições de locação atual e documentação. Ver o local pessoalmente muda a forma como você enxerga esse ativo.</p>
@@ -599,7 +624,10 @@
 
 <div class="lightbox" id="lightbox">
   <button type="button" class="lightbox-fechar" id="lightboxFechar" aria-label="Fechar">✕</button>
+  <button type="button" class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Foto anterior">‹</button>
+  <button type="button" class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Próxima foto">›</button>
   <img src="" alt="Foto ampliada do imóvel" id="lightboxImg">
+  <div class="lightbox-contador" id="lightboxContador"></div>
 </div>
 
 <script>
@@ -626,19 +654,35 @@
     }, 2500);
   })();
 
-  // Lightbox da galeria: clique numa foto amplia, com botão "fechar", clique
-  // fora e tecla Esc. Delegação de clique no container (em vez de um listener
-  // por <img>) pra não precisar tocar nas tags de imagem em si.
+  // Lightbox da galeria: clique numa foto amplia, com botão "fechar", setas
+  // laterais (mouse), swipe (touch) e teclado (Esc/setas) pra passar de uma
+  // foto pra outra sem fechar e reabrir. Delegação de clique no container
+  // (em vez de um listener por <img>) pra não precisar tocar nas tags de
+  // imagem em si.
   (function(){
-    var grid      = document.querySelector('.gallery-grid');
-    var lightbox  = document.getElementById('lightbox');
-    var lbImg     = document.getElementById('lightboxImg');
-    var btnFechar = document.getElementById('lightboxFechar');
+    var grid       = document.querySelector('.gallery-grid');
+    var lightbox   = document.getElementById('lightbox');
+    var lbImg      = document.getElementById('lightboxImg');
+    var lbContador = document.getElementById('lightboxContador');
+    var btnFechar  = document.getElementById('lightboxFechar');
+    var btnPrev    = document.getElementById('lightboxPrev');
+    var btnNext    = document.getElementById('lightboxNext');
     if (!grid || !lightbox) return;
 
-    function abrir(src, alt){
-      lbImg.src = src;
-      lbImg.alt = alt || 'Foto ampliada do imóvel';
+    var fotos = Array.prototype.map.call(grid.querySelectorAll('img'), function(img){
+      return { src: img.src, alt: img.alt };
+    });
+    var indiceAtual = 0;
+
+    function mostrarFoto(i){
+      indiceAtual = (i + fotos.length) % fotos.length; // circular
+      var foto = fotos[indiceAtual];
+      lbImg.src = foto.src;
+      lbImg.alt = foto.alt || 'Foto ampliada do imóvel';
+      lbContador.textContent = (indiceAtual + 1) + ' / ' + fotos.length;
+    }
+    function abrir(i){
+      mostrarFoto(i);
       lightbox.classList.add('aberto');
       document.body.style.overflow = 'hidden';
       requestAnimationFrame(function(){ lightbox.classList.add('mostrar'); });
@@ -651,18 +695,39 @@
         lbImg.src = '';
       }, 250);
     }
+    function proxima(){ mostrarFoto(indiceAtual + 1); }
+    function anterior(){ mostrarFoto(indiceAtual - 1); }
 
     grid.addEventListener('click', function(e){
       var img = e.target.closest('img');
-      if (img) abrir(img.src, img.alt);
+      if (!img) return;
+      var i = Array.prototype.indexOf.call(grid.querySelectorAll('img'), img);
+      abrir(i);
     });
     btnFechar.addEventListener('click', fechar);
+    btnNext.addEventListener('click', function(e){ e.stopPropagation(); proxima(); });
+    btnPrev.addEventListener('click', function(e){ e.stopPropagation(); anterior(); });
     lightbox.addEventListener('click', function(e){
       if (e.target === lightbox) fechar(); // clique fora da foto
     });
     document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape' && lightbox.classList.contains('aberto')) fechar();
+      if (!lightbox.classList.contains('aberto')) return;
+      if (e.key === 'Escape')     fechar();
+      if (e.key === 'ArrowRight') proxima();
+      if (e.key === 'ArrowLeft')  anterior();
     });
+
+    // Swipe lateral (touch) — passa de foto sem precisar dos botões
+    var touchX0 = null;
+    lightbox.addEventListener('touchstart', function(e){
+      touchX0 = e.changedTouches[0].clientX;
+    }, { passive: true });
+    lightbox.addEventListener('touchend', function(e){
+      if (touchX0 === null) return;
+      var dx = e.changedTouches[0].clientX - touchX0;
+      if (Math.abs(dx) > 40) { dx < 0 ? proxima() : anterior(); }
+      touchX0 = null;
+    }, { passive: true });
   })();
 
   // Mesmo backend (Apps Script) do Base Inteligente — grava em LEADS_LP_EXTERNAS,
