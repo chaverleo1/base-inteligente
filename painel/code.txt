@@ -5206,6 +5206,40 @@ function escaparHtml_(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Notifica o corretor por WhatsApp via CallMeBot (API gratuita de uso
+// pessoal — https://www.callmebot.com/blog/free-api-whatsapp-messages/).
+// Número e apikey ficam em Script Properties (Apps Script → ⚙ Configurações
+// do projeto → Propriedades do script), NUNCA hardcoded aqui — assim dá pra
+// trocar/testar sem precisar editar código e reimplantar:
+//   WHATSAPP_TESTE_NUMERO  -> número com DDI, ex: 5562999999999
+//   WHATSAPP_TESTE_APIKEY  -> apikey recebida na ativação do CallMeBot
+// (nomeado "_TESTE_" de propósito: fase de teste no número do próprio
+// usuário, antes de existir o rodízio real entre os 2 corretores — quando
+// os apikeys deles chegarem, essa função vira a base do rodízio, só
+// trocando a leitura de uma propriedade fixa por uma lista + índice
+// alternando via PropertiesService, como já é feito noutros contadores do
+// projeto). Se número ou apikey não estiverem configurados, não faz nada —
+// silencioso, não quebra o salvamento do lead.
+function enviarWhatsAppLeadLpExterna_(nome, tel, interesse, imovel) {
+  try {
+    var props  = PropertiesService.getScriptProperties();
+    var numero = props.getProperty('WHATSAPP_TESTE_NUMERO');
+    var apikey = props.getProperty('WHATSAPP_TESTE_APIKEY');
+    if (!numero || !apikey) return;
+
+    var msg = 'Novo LEAD (LP) — ' + nome + ' · ' + tel +
+              (interesse ? ' · ' + interesse : '') +
+              (imovel ? '\n' + imovel : '');
+
+    var url = 'https://api.callmebot.com/whatsapp.php'
+      + '?phone=' + encodeURIComponent(numero)
+      + '&text=' + encodeURIComponent(msg)
+      + '&apikey=' + encodeURIComponent(apikey);
+
+    UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+  } catch (e) {}
+}
+
 // Grava um lead vindo de uma landing page avulsa (fora do funil de
 // lançamentos). Sem upsert por e-mail (essas LPs pedem só nome+telefone) —
 // cada envio vira uma linha nova; duplicata eventual (o visitante reenviando
@@ -5286,6 +5320,13 @@ function salvarLeadLpExterna_(d) {
         htmlBody: html
       });
     } catch (mailErr) {}
+
+    // Aviso direto no WhatsApp do corretor (2026-08-27, pedido do usuário:
+    // rodízio entre corretores fica pra depois — por ora só o teste no
+    // número dele). Separado num try/catch próprio pelo mesmo motivo do
+    // e-mail: se falhar, o lead já está salvo e o visitante do site não
+    // deve ver erro por causa disso.
+    enviarWhatsAppLeadLpExterna_(nome, tel, d.interesse, d.imovel);
 
     return { ok: true, idLead: id };
   } finally {
