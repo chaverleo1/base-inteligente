@@ -5240,6 +5240,98 @@ function enviarWhatsAppLeadLpExterna_(nome, tel, interesse, imovel) {
   } catch (e) {}
 }
 
+// ── RODÍZIO DE LEADS ENTRE CORRETORES (Z-API) ────────────────────────────
+// Diferente do CallMeBot acima (cada corretor ativa o PRÓPRIO número, só
+// recebe): aqui um número DEDICADO (conectado via QR code no painel do
+// Z-API, de propósito não o número pessoal de nenhum corretor — decisão do
+// usuário em 2026-08-27 justamente pra isolar o risco de banimento de quem
+// atende cliente de verdade) dispara pra uma lista de corretores, alternando
+// quem é o responsável a cada lead novo.
+//
+// Config em Script Properties (Apps Script → ⚙ Configurações do projeto →
+// Propriedades do script), nada hardcoded:
+//   ZAPI_INSTANCE_ID   -> Instance ID da instância no painel do Z-API
+//   ZAPI_TOKEN         -> Token da instância
+//   ZAPI_CLIENT_TOKEN  -> opcional — só criar essa propriedade se a conta
+//                         tiver "Segurança > Client-Token" ativado
+//   ZAPI_CORRETORES    -> JSON com a lista, ex:
+//                         [{"nome":"João","numero":"5562999999999"},
+//                          {"nome":"Maria","numero":"5562888888888"}]
+// Se ZAPI_CORRETORES não existir/vier vazio, o rodízio simplesmente não
+// roda (retorna null) — mesma lógica silenciosa das outras notificações,
+// seguro publicar antes de configurar.
+
+// Lê a lista de corretores e devolve o próximo da fila (round-robin),
+// avançando e persistindo o índice em Script Properties pra sobreviver
+// entre execuções (Apps Script não mantém estado de uma chamada pra
+// outra). Protegido por lock — dois leads chegando quase juntos não podem
+// pegar o mesmo índice e "pular" um corretor da fila.
+function proximoCorretorRodizio_() {
+  var props    = PropertiesService.getScriptProperties();
+  var listaRaw = props.getProperty('ZAPI_CORRETORES');
+  if (!listaRaw) return null;
+
+  var lista;
+  try { lista = JSON.parse(listaRaw); } catch (e) { return null; }
+  if (!lista || !lista.length) return null;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var indiceAtual = parseInt(props.getProperty('ZAPI_RODIZIO_INDICE') || '0', 10);
+    if (isNaN(indiceAtual)) indiceAtual = 0;
+    var corretor = lista[indiceAtual % lista.length];
+    props.setProperty('ZAPI_RODIZIO_INDICE', String(indiceAtual + 1));
+    return corretor;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Envia uma mensagem de texto via Z-API (send-text) — ver
+// https://developer.z-api.io/message/send-text. Client-Token só é
+// mandado se a propriedade existir (recurso de segurança opcional do
+// Z-API, desligado por padrão na conta).
+function enviarWhatsAppZAPI_(numero, mensagem) {
+  var props      = PropertiesService.getScriptProperties();
+  var instanceId = props.getProperty('ZAPI_INSTANCE_ID');
+  var token      = props.getProperty('ZAPI_TOKEN');
+  if (!instanceId || !token) return;
+
+  var url = 'https://api.z-api.io/instances/' + instanceId + '/token/' + token + '/send-text';
+  var options = {
+    method:      'post',
+    contentType: 'application/json',
+    payload:     JSON.stringify({ phone: numero, message: mensagem }),
+    muteHttpExceptions: true
+  };
+  var clientToken = props.getProperty('ZAPI_CLIENT_TOKEN');
+  if (clientToken) options.headers = { 'Client-Token': clientToken };
+
+  UrlFetchApp.fetch(url, options);
+}
+
+// Escolhe o próximo corretor do rodízio, manda a notificação pra ele via
+// Z-API, e devolve o nome dele (ou null se o rodízio não estiver
+// configurado ainda) — quem chama usa isso pra registrar/exibir "Atendendo:
+// <corretor>" no e-mail de acompanhamento dos administrativos.
+function distribuirLeadRodizioZAPI_(nome, tel, interesse, imovel, idLead) {
+  try {
+    var corretor = proximoCorretorRodizio_();
+    if (!corretor || !corretor.numero) return null;
+
+    var msg = 'Novo LEAD (' + idLead + ') — ' + nome + ' · ' + tel +
+              (interesse ? ' · ' + interesse : '') +
+              (imovel ? '\n' + imovel : '') +
+              '\n\nVocê é o responsável por este atendimento.';
+
+    enviarWhatsAppZAPI_(corretor.numero, msg);
+    return corretor.nome || corretor.numero;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Grava um lead vindo de uma landing page avulsa (fora do funil de
 // lançamentos). Sem upsert por e-mail (essas LPs pedem só nome+telefone) —
 // cada envio vira uma linha nova; duplicata eventual (o visitante reenviando
@@ -5263,6 +5355,14 @@ function salvarLeadLpExterna_(d) {
       return d[col] !== undefined ? d[col] : '';
     });
     aba.appendRow(linha);
+
+    // Rodízio Z-API: escolhe o corretor responsável ANTES de montar o
+    // e-mail, pra já poder incluir "Atendendo: <corretor>" nele (mesma
+    // fonte de verdade pra WhatsApp e e-mail, evita ter duas lógicas de
+    // rodízio separadas). Retorna null se ZAPI_CORRETORES não estiver
+    // configurado ainda — nesse caso o e-mail simplesmente não mostra essa
+    // linha, sem erro nenhum.
+    var corretorResponsavel = distribuirLeadRodizioZAPI_(nome, tel, d.interesse, d.imovel, id);
 
     // Notifica por e-mail a cada cadastro novo (pedido do usuário, 2026-08-27:
     // "enviar os cadastro para email chaverleo@gmail.com"). Em try/catch
@@ -5293,6 +5393,7 @@ function salvarLeadLpExterna_(d) {
               '<div style="font-size:20px; font-weight:bold; color:#262625;">' + escaparHtml_(nome) + '</div>' +
               '<div style="font-size:16px; color:#B2441A; font-weight:bold; margin-top:4px;">' + escaparHtml_(tel) + '</div>' +
               '<div style="font-size:12px; color:#625F58; margin-top:6px;">Cadastrado em ' + agora + '</div>' +
+              (corretorResponsavel ? '<div style="font-size:13px; color:#333; margin-top:8px; padding-top:8px; border-top:1px dashed #FFD9BE;">Atendendo: <b>' + escaparHtml_(corretorResponsavel) + '</b></div>' : '') +
             '</div>' +
             '<a href="' + linkWhats + '" style="display:block; text-align:center; background:#25D366; color:#fff; ' +
               'font-weight:bold; text-decoration:none; padding:12px; border-radius:4px; margin-bottom:18px;">' +
@@ -5316,16 +5417,16 @@ function salvarLeadLpExterna_(d) {
                  '\nCanal: ' + (d.canal || '-') +
                  '\nData: ' + agora +
                  '\nID: ' + id +
-                 '\nWhatsApp: ' + linkWhats,
+                 '\nWhatsApp: ' + linkWhats +
+                 (corretorResponsavel ? '\nAtendendo: ' + corretorResponsavel : ''),
         htmlBody: html
       });
     } catch (mailErr) {}
 
-    // Aviso direto no WhatsApp do corretor (2026-08-27, pedido do usuário:
-    // rodízio entre corretores fica pra depois — por ora só o teste no
-    // número dele). Separado num try/catch próprio pelo mesmo motivo do
-    // e-mail: se falhar, o lead já está salvo e o visitante do site não
-    // deve ver erro por causa disso.
+    // Aviso direto no WhatsApp do corretor de teste (número pessoal do
+    // usuário, via CallMeBot — ver comentário na função). Independente do
+    // rodízio Z-API acima: os dois podem rodar juntos, ou esse aqui sai
+    // quando o rodízio real estiver validado.
     enviarWhatsAppLeadLpExterna_(nome, tel, d.interesse, d.imovel);
 
     return { ok: true, idLead: id };
