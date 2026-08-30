@@ -434,15 +434,27 @@
   }
 
   /* ---------- ENTRADA / MICRO-INTERAÇÃO ---------- */
+  /* Base: fade + sobe */
   .reveal{
-    opacity:0; transform:translateY(28px);
-    transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+    opacity:0; transform:translateY(56px);
+    transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1);
   }
-  .reveal.in{opacity:1; transform:translateY(0);}
+  /* Variantes de direção */
+  .from-left  { opacity:0; transform:translateX(-64px); transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); }
+  .from-right { opacity:0; transform:translateX(64px);  transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); }
+  .from-scale { opacity:0; transform:scale(.88);        transition:opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1); }
+  /* Estado visível */
+  .reveal.in, .from-left.in, .from-right.in, .from-scale.in { opacity:1; transform:none; }
+  /* Delay de entrada para elementos irmãos (stagger via data-attr) */
+  [data-delay="1"]{ transition-delay:80ms;  }
+  [data-delay="2"]{ transition-delay:160ms; }
+  [data-delay="3"]{ transition-delay:240ms; }
+  [data-delay="4"]{ transition-delay:320ms; }
   .cta-primary, .cta-secondary, .header-cta, .submit-btn{transition:background .2s ease, transform .1s ease, box-shadow .2s ease;}
   .cta-primary:active, .header-cta:active, .submit-btn:active{transform:scale(.98);}
   @media (prefers-reduced-motion: reduce){
-    .reveal{opacity:1; transform:none; transition:none;}
+    .reveal,.from-left,.from-right,.from-scale{ opacity:1; transform:none; transition:none; }
+    [data-delay]{ transition-delay:0ms; }
   }
 
   @media (max-width:860px){
@@ -470,7 +482,7 @@
   </div>
 </header>
 
-<section class="hero reveal">
+<section class="hero">
   <div class="wrap">
     <div>
       <h1>Um ativo comercial <em>já em operação</em>, no coração de uma das regiões mais valorizadas de Goiânia.</h1>
@@ -491,18 +503,18 @@
   </div>
 </section>
 
-<div class="facts reveal">
+<div class="facts">
   <div class="wrap">
-    <div class="fact"><span class="num">653 m²</span><span class="lbl">ÁREA TOTAL</span></div>
-    <div class="fact"><span class="num">Alugado</span><span class="lbl">SITUAÇÃO ATUAL</span></div>
-    <div class="fact"><span class="num">Nova Suíça</span><span class="lbl">REGIÃO NOBRE</span></div>
-    <div class="fact"><span class="num">Renda ativa</span><span class="lbl">GERANDO RECEITA HOJE</span></div>
+    <div class="fact reveal" data-delay="0"><span class="num">653 m²</span><span class="lbl">ÁREA TOTAL</span></div>
+    <div class="fact reveal" data-delay="1"><span class="num">Alugado</span><span class="lbl">SITUAÇÃO ATUAL</span></div>
+    <div class="fact reveal" data-delay="2"><span class="num">Nova Suíça</span><span class="lbl">REGIÃO NOBRE</span></div>
+    <div class="fact reveal" data-delay="3"><span class="num">Renda ativa</span><span class="lbl">GERANDO RECEITA HOJE</span></div>
   </div>
 </div>
 
-<section id="localizacao" class="reveal">
+<section id="localizacao">
   <div class="wrap loc-grid">
-    <div class="loc-text">
+    <div class="loc-text reveal from-left">
       <div class="eyebrow">Localização</div>
       <h2>Um dos endereços mais consolidados da Nova Suíça</h2>
       <p>O imóvel está localizado na Avenida C-255, ao lado da Praça Nova Suíça e em frente ao Centro Empresarial SEBBA — um dos pontos de maior fluxo urbano, comércio e serviços da região.</p>
@@ -516,7 +528,7 @@
         <li><span class="dot"></span> Próximo ao <b>Burger King</b></li>
       </ul>
     </div>
-    <div class="map-frame">
+    <div class="map-frame reveal from-right">
       <iframe
         src="https://www.google.com/maps?q=Avenida+C-255,+Setor+Nova+Sui%C3%A7a,+Goi%C3%A2nia,+GO,+Brasil&output=embed&hl=pt-BR"
         allowfullscreen
@@ -528,15 +540,15 @@
   </div>
 </section>
 
-<section class="renda reveal">
+<section class="renda">
   <div class="wrap">
-    <div>
+    <div class="reveal from-left">
       <div class="eyebrow">Ativo em operação</div>
       <h2>Esse imóvel já está alugado. E já está gerando receita.</h2>
       <p>Isso significa que, diferente de um terreno vazio ou uma sala à espera de operação, esse ativo já tem inquilino ativo — patrimônio comercial ocupado desde o primeiro dia da negociação.</p>
       <p>Para quem busca renda passiva com lastro em imóvel físico, essa condição muda o cálculo de risco por completo.</p>
     </div>
-    <div class="renda-card">
+    <div class="renda-card reveal from-right">
       <p class="q">"Preferimos não divulgar o valor do aluguel aqui."</p>
       <p>Não porque seja segredo — mas porque esse número, isolado de uma planilha, não traduz o real potencial do ativo. A localização, o entorno e o contexto da negociação valem mais do que uma conta rápida.</p>
       <p>Quem visita o local entende o motivo. Fale com nosso time e agende uma visita para ver de perto o que faz desse ativo uma oportunidade rara.</p>
@@ -545,9 +557,9 @@
   </div>
 </section>
 
-<section class="reveal">
+<section>
   <div class="wrap">
-    <div class="section-head">
+    <div class="section-head reveal">
       <div class="eyebrow">Galeria</div>
       <h2>O imóvel em detalhes</h2>
       <p>Vista aérea do imóvel e da região da Praça Nova Suíça.</p>
@@ -595,14 +607,14 @@
   </div>
 </section>
 
-<section class="reveal">
+<section>
   <div class="wrap">
-    <div class="section-head">
+    <div class="section-head reveal">
       <div class="eyebrow">Para quem é</div>
       <h2>Dois perfis, um mesmo ativo estratégico</h2>
     </div>
     <div class="quem-grid">
-      <div class="quem-card">
+      <div class="quem-card reveal from-left">
         <span class="tag">Investidor</span>
         <h3>Patrimônio ocupado, renda desde o início</h3>
         <ul>
@@ -612,7 +624,7 @@
           <li>Ativo raro: já em operação em uma das regiões mais disputadas de Goiânia</li>
         </ul>
       </div>
-      <div class="quem-card">
+      <div class="quem-card reveal from-right">
         <span class="tag">Uso próprio</span>
         <h3>Visibilidade e localização estratégica</h3>
         <ul>
@@ -727,9 +739,20 @@
     }, 4500);
   })();
 
-  // Entrada suave ao rolar (fade + translateY)
+  // Entrada ao rolar — fade + direção + stagger
   (function(){
-    var els = document.querySelectorAll('.reveal');
+    var sel = '.reveal,.from-left,.from-right,.from-scale';
+    var els = document.querySelectorAll(sel);
+
+    // Stagger nos cards da galeria
+    document.querySelectorAll('.gallery-grid > div').forEach(function(card, i){
+      card.classList.add('reveal');
+      card.setAttribute('data-delay', Math.min(i, 4).toString());
+    });
+
+    // Reagrupa querySelectorAll depois do stagger
+    els = document.querySelectorAll(sel);
+
     if(!('IntersectionObserver' in window)){
       els.forEach(function(el){ el.classList.add('in'); });
       return;
@@ -741,7 +764,7 @@
           io.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+    }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
     els.forEach(function(el){ io.observe(el); });
 
     // Rede de segurança: garante que nada fique invisível para sempre
